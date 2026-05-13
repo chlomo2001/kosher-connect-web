@@ -1,9 +1,9 @@
 import { loadData } from '../../lib/data'
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
 
-  const customers = loadData('customers')
+  const customers = await loadData('customers')
   const rows = [
     ['First Name', 'Last Name', 'Phone', 'Email', 'Address', 'WhatsApp', 'Total Paid', 'Created At'],
     ...customers.map(c => [
