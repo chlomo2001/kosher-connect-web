@@ -1226,7 +1226,7 @@ function closeDynamicModal() {
 function renderCustomersTab() {
   applySearch();
   const content = document.getElementById('mainContent');
-  const totalPaid = customers.reduce((s, c) => s + (c.totalPaid || 0), 0);
+  const totalPaid = rentals.reduce((s, r) => s + (r.amountPaid || 0), 0);
 
   content.innerHTML = `
     <div class="stats-row">
@@ -1310,6 +1310,9 @@ function renderTableRows() {
     const customerDebt = rentals
       .filter(r => r.customerId === c.id)
       .reduce((sum, r) => sum + Math.max(0, (r.price || 0) - (r.amountPaid || 0)), 0);
+    const customerPaid = rentals
+      .filter(r => r.customerId === c.id)
+      .reduce((sum, r) => sum + (r.amountPaid || 0), 0);
 
     return `
     <tr class="${selected}" data-id="${c.id}">
@@ -1319,7 +1322,7 @@ function renderTableRows() {
       </td>
       <td>${escHtml(c.phone || '—')}</td>
       <td>${services || '<span style="color:var(--muted);font-size:12px;">None</span>'}</td>
-      <td style="color: ${customerDebt > 0 ? 'var(--danger)' : 'var(--success)'}; font-weight: 700;">${customerDebt > 0 ? `£${customerDebt} debt` : `£${c.totalPaid || 0}`}</td>
+      <td style="color: ${customerDebt > 0 ? 'var(--danger)' : 'var(--success)'}; font-weight: 700;">${customerDebt > 0 ? `£${customerDebt} debt` : `£${customerPaid}`}</td>
       <td>
         <div class="row-actions">
           <button class="action-btn" data-action="edit" data-id="${c.id}">Edit</button>
@@ -1385,6 +1388,9 @@ function renderDetailPanel(id) {
   const totalDebt = rentals
     .filter(r => r.customerId === c.id)
     .reduce((sum, r) => sum + Math.max(0, (r.price || 0) - (r.amountPaid || 0)), 0);
+  const customerPaid = rentals
+    .filter(r => r.customerId === c.id)
+    .reduce((sum, r) => sum + (r.amountPaid || 0), 0);
   const cActiveRentals = rentals.filter(r => r.customerId === c.id && (r.status === 'active' || r.status === 'overdue'));
   const otherServices = (c.services || []).filter(s => s.type !== 'rental');
   const activeVNs = otherServices.filter(s => s.type === 'vn').length;
@@ -1428,7 +1434,7 @@ function renderDetailPanel(id) {
       <div class="detail-stats">
         <div class="detail-stat">
           <div class="detail-stat-label">${totalDebt > 0 ? 'Total Debt' : 'Total Paid'}</div>
-          <div class="detail-stat-value" style="color:${totalDebt > 0 ? 'var(--danger)' : 'var(--success)'};">£${totalDebt > 0 ? totalDebt : totalPaid}</div>
+          <div class="detail-stat-value" style="color:${totalDebt > 0 ? 'var(--danger)' : 'var(--success)'};">£${totalDebt > 0 ? totalDebt : customerPaid}</div>
         </div>
         <div class="detail-stat">
           <div class="detail-stat-label">Active Rentals</div>
