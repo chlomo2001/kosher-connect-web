@@ -1141,6 +1141,7 @@ async function saveManageRental(rentalId) {
   else if (newTo < today) newStatus = 'overdue';
   else newStatus = 'active';
 
+  const oldPrice   = r.price;
   r.fromDate       = newFrom;
   r.toDate         = newTo;
   r.status         = newStatus;
@@ -1165,7 +1166,11 @@ async function saveManageRental(rentalId) {
   saveRentals(rentals);
 
   const c = customers.find(x => x.id === r.customerId);
-  if (c) await window.api.updateCustomer(c);
+  if (c) {
+    const priceDelta = newPrice - oldPrice;
+    if (priceDelta !== 0) c.totalPaid = (c.totalPaid || 0) + priceDelta;
+    await window.api.updateCustomer(c);
+  }
 
   closeDynamicModal();
   toast('Rental updated! ✅', 'success');
@@ -1302,6 +1307,10 @@ function renderTableRows() {
       ...otherServices.map(s => `<span class="badge badge-${s.type}">${escHtml(s.label)}</span>`),
     ].join('');
 
+    const customerDebt = rentals
+      .filter(r => r.customerId === c.id)
+      .reduce((sum, r) => sum + Math.max(0, (r.price || 0) - (r.amountPaid || 0)), 0);
+
     return `
     <tr class="${selected}" data-id="${c.id}">
       <td>
@@ -1310,7 +1319,7 @@ function renderTableRows() {
       </td>
       <td>${escHtml(c.phone || '—')}</td>
       <td>${services || '<span style="color:var(--muted);font-size:12px;">None</span>'}</td>
-      <td style="color: var(--success); font-weight: 700;">£${c.totalPaid || 0}</td>
+      <td style="color: ${customerDebt > 0 ? 'var(--danger)' : 'var(--success)'}; font-weight: 700;">${customerDebt > 0 ? `£${customerDebt} debt` : `£${c.totalPaid || 0}`}</td>
       <td>
         <div class="row-actions">
           <button class="action-btn" data-action="edit" data-id="${c.id}">Edit</button>
@@ -1373,6 +1382,9 @@ function renderDetailPanel(id) {
 
   const history = c.history || [];
   const totalPaid = c.totalPaid || 0;
+  const totalDebt = rentals
+    .filter(r => r.customerId === c.id)
+    .reduce((sum, r) => sum + Math.max(0, (r.price || 0) - (r.amountPaid || 0)), 0);
   const cActiveRentals = rentals.filter(r => r.customerId === c.id && (r.status === 'active' || r.status === 'overdue'));
   const otherServices = (c.services || []).filter(s => s.type !== 'rental');
   const activeVNs = otherServices.filter(s => s.type === 'vn').length;
@@ -1415,8 +1427,8 @@ function renderDetailPanel(id) {
 
       <div class="detail-stats">
         <div class="detail-stat">
-          <div class="detail-stat-label">Total Paid</div>
-          <div class="detail-stat-value" style="color:var(--success);">£${totalPaid}</div>
+          <div class="detail-stat-label">${totalDebt > 0 ? 'Total Debt' : 'Total Paid'}</div>
+          <div class="detail-stat-value" style="color:${totalDebt > 0 ? 'var(--danger)' : 'var(--success)'};">£${totalDebt > 0 ? totalDebt : totalPaid}</div>
         </div>
         <div class="detail-stat">
           <div class="detail-stat-label">Active Rentals</div>
