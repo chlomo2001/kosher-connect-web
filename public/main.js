@@ -371,6 +371,7 @@ let rentals = [];
 let phones  = [];
 let sims    = [];
 let rentalSearchTerm = '';
+let filterCustomer = '', filterStatus = 'all', filterPaid = 'all';
 
 function renderRentalsTab() {
   const content = document.getElementById('mainContent');
@@ -417,6 +418,27 @@ function renderRentalsTab() {
         <div class="section-header">
           <div class="section-title">Active & Recent Rentals</div>
         </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
+          <input type="text" class="search-box" id="filterCustomer" placeholder="Filter by customer..."
+            style="width:180px;" value="${filterCustomer}"
+            oninput="filterCustomer=this.value;renderRentalRows()">
+          <select id="filterStatus" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-secondary);color:var(--text);font-size:13px;"
+            onchange="filterStatus=this.value;renderRentalRows()">
+            <option value="all" ${filterStatus==='all'?'selected':''}>All statuses</option>
+            <option value="active" ${filterStatus==='active'?'selected':''}>Active</option>
+            <option value="overdue" ${filterStatus==='overdue'?'selected':''}>Overdue</option>
+            <option value="returned" ${filterStatus==='returned'?'selected':''}>Returned</option>
+            <option value="returned_incomplete" ${filterStatus==='returned_incomplete'?'selected':''}>Returned ⚠️</option>
+          </select>
+          <select id="filterPaid" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-secondary);color:var(--text);font-size:13px;"
+            onchange="filterPaid=this.value;renderRentalRows()">
+            <option value="all" ${filterPaid==='all'?'selected':''}>All paid</option>
+            <option value="paid" ${filterPaid==='paid'?'selected':''}>Fully Paid</option>
+            <option value="debt" ${filterPaid==='debt'?'selected':''}>Has Debt</option>
+          </select>
+          <button class="btn btn-outline" style="font-size:12px;padding:5px 12px;"
+            onclick="filterCustomer='';filterStatus='all';filterPaid='all';renderRentalRows()">Clear</button>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -452,16 +474,40 @@ function renderRentalsTab() {
   renderPhoneRows();
 }
 
+function getComputedStatus(r, today) {
+  if (r.status !== 'returned') return r.toDate < today ? 'overdue' : 'active';
+  const eq  = r.equipmentGiven || { phone: true, sim: true, plug: true, cable: true };
+  const ret = r.returnedItems  || {};
+  const incomplete = ['phone', 'sim', 'plug', 'cable'].some(k => (eq[k] ?? true) && ret[k] !== true);
+  return incomplete ? 'returned_incomplete' : 'returned';
+}
+
 function renderRentalRows() {
   const tbody = document.getElementById('rentalTableBody');
   if (!tbody) return;
+  const today = new Date().toISOString().slice(0, 10);
+
   const term = rentalSearchTerm.toLowerCase();
   let filtered = rentals;
   if (term) {
-    filtered = rentals.filter(r =>
+    filtered = filtered.filter(r =>
       (r.customerName || '').toLowerCase().includes(term) ||
       (r.phoneNumber  || '').toLowerCase().includes(term)
     );
+  }
+  if (filterCustomer) {
+    const fc = filterCustomer.toLowerCase();
+    filtered = filtered.filter(r => (r.customerName || '').toLowerCase().includes(fc));
+  }
+  if (filterStatus !== 'all') {
+    filtered = filtered.filter(r => getComputedStatus(r, today) === filterStatus);
+  }
+  if (filterPaid !== 'all') {
+    filtered = filtered.filter(r => {
+      const totalOwed = (r.price || 0) + calcLateFeeDays(r);
+      const fullyPaid = (r.amountPaid || 0) >= totalOwed;
+      return filterPaid === 'paid' ? fullyPaid : !fullyPaid;
+    });
   }
 
   if (filtered.length === 0) {
@@ -469,24 +515,20 @@ function renderRentalRows() {
     return;
   }
 
-  const today = new Date().toISOString().slice(0,10);
   tbody.innerHTML = filtered.map(r => {
-    let computedStatus;
-    if (r.status === 'returned') computedStatus = 'returned';
-    else if (r.toDate < today)   computedStatus = 'overdue';
-    else                         computedStatus = 'active';
-
+    const computedStatus = getComputedStatus(r, today);
     let statusBadge;
-    if (computedStatus === 'returned')     statusBadge = `<span class="badge badge-active">Returned</span>`;
-    else if (computedStatus === 'overdue') statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--danger);">Overdue ⚠️</span>`;
-    else if (r.toDate === today)           statusBadge = `<span class="badge badge-sim">Due Today</span>`;
-    else                                   statusBadge = `<span class="badge badge-rental">Active</span>`;
+    if      (computedStatus === 'active' && r.toDate === today) statusBadge = `<span class="badge badge-sim">Due Today</span>`;
+    else if (computedStatus === 'active')               statusBadge = `<span class="badge badge-rental">Active</span>`;
+    else if (computedStatus === 'overdue')              statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--danger);">Overdue ⚠️</span>`;
+    else if (computedStatus === 'returned')             statusBadge = `<span class="badge badge-active">Returned</span>`;
+    else                                                statusBadge = `<span class="badge" style="background:rgba(251,146,60,0.15);color:#fb923c;">Returned ⚠️</span>`;
 
     const paid = r.amountPaid || 0;
     const debt = r.price - paid;
     const lateFee = calcLateFeeDays(r);
-    const debtColor = (debt + lateFee) > 0 ? 'color:var(--danger);' : 'color:var(--success);';
-    const lateFeeLabel = lateFee > 0 ? `<div style="font-size:10px;color:var(--danger);">⚠️ +£${lateFee} late fee</div>` : '';
+    const totalOwed = debt + lateFee;
+    const debtColor = totalOwed > 0 ? 'color:var(--danger);' : 'color:var(--success);';
     return `<tr>
       <td>
         <div class="customer-name">${escHtml(r.customerName || '—')}</div>
@@ -496,7 +538,7 @@ function renderRentalRows() {
       <td style="font-size:11px;">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}</td>
       <td style="text-align:center;">${r.chargeableDays}d</td>
       <td style="color:var(--success);font-weight:700;">£${r.price}</td>
-      <td style="font-weight:700;${debtColor}">${(debt + lateFee) > 0 ? '£'+(debt+lateFee)+' owed' : '✓ Paid'}${lateFeeLabel}</td>
+      <td style="font-weight:700;${debtColor}">${totalOwed > 0 ? '£'+totalOwed+' owed' : '✓ Paid'}</td>
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
@@ -1159,6 +1201,7 @@ function openManageRentalModal(rentalId) {
   if (!r) return;
   const paid = r.amountPaid || 0;
   const debt = Math.max(0, r.price - paid);
+  const mgLateFee = calcLateFeeDays(r);
 
   showDynamicModal(`
     <div class="modal-title">⚙ Manage Rental — ${escHtml(r.phoneNumber)}</div>
@@ -1202,10 +1245,22 @@ function openManageRentalModal(rentalId) {
 
     <div class="section-divider" style="margin-top:12px;">Payment</div>
     <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px;">
+        <span style="color:var(--muted);">Total charge:</span>
+        <strong style="color:var(--text);">£${r.price + mgLateFee}</strong>
+      </div>
+      ${mgLateFee > 0 ? `<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">of which £${mgLateFee} is a late fee</div>` : ''}
       <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">
         <span style="font-size:13px;color:var(--muted);white-space:nowrap;">Amount paid: £</span>
         <input class="form-input" type="number" id="mgPaid" value="${paid}" min="0" step="0.5"
           style="width:100px;padding:7px 10px;" oninput="mgUpdateDebt()">
+      </div>
+      <div style="margin-bottom:8px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+          <input type="checkbox" id="mgFullyPaid" style="accent-color:var(--accent);"
+            onchange="if(this.checked){document.getElementById('mgPaid').value=document.getElementById('mgPrice').value;mgUpdateDebt();}else{document.getElementById('mgPaid').value='';mgUpdateDebt();}">
+          Mark as fully paid
+        </label>
       </div>
       <div id="mgDebtDisplay" style="font-size:13px;font-weight:600;color:${debt>0?'var(--danger)':'var(--success)'};">
         ${debt > 0 ? 'Remaining debt: £'+debt : '✓ Fully paid'}
@@ -1222,12 +1277,13 @@ function openManageRentalModal(rentalId) {
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="mgGivenCable" ${(r.equipmentGiven?.cable??true)?'checked':''} style="accent-color:var(--accent);"> 🔋 Cable</label>
       </div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Returned by customer</div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;"><input type="checkbox" id="mgPhone" ${r.returnedItems?.phone!==false?'checked':''} style="accent-color:var(--accent);"> 📱 Phone handset returned</label>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;"><input type="checkbox" id="mgSIM"   ${r.returnedItems?.sim!==false?'checked':''} style="accent-color:var(--accent);"> 💳 SIM card returned</label>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;"><input type="checkbox" id="mgPlug"  ${r.returnedItems?.plug!==false?'checked':''} style="accent-color:var(--accent);"> 🔌 Plug / Charger returned</label>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;"><input type="checkbox" id="mgCable" ${r.returnedItems?.cable!==false?'checked':''} style="accent-color:var(--accent);"> 🔋 Cable returned</label>
+      <div id="mgReturnedItemsSection" style="display:flex;flex-direction:column;gap:6px;">
+        ${(r.equipmentGiven?.phone  ?? true) ? `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;"><input type="checkbox" id="mgPhone" ${r.returnedItems?.phone!==false?'checked':''} style="accent-color:var(--accent);"> 📱 Phone handset returned</label>` : ''}
+        ${(r.equipmentGiven?.sim    ?? true) ? `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;"><input type="checkbox" id="mgSIM"   ${r.returnedItems?.sim!==false?'checked':''} style="accent-color:var(--accent);"> 💳 SIM card returned</label>` : ''}
+        ${(r.equipmentGiven?.plug   ?? true) ? `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;"><input type="checkbox" id="mgPlug"  ${r.returnedItems?.plug!==false?'checked':''} style="accent-color:var(--accent);"> 🔌 Plug / Charger returned</label>` : ''}
+        ${(r.equipmentGiven?.cable  ?? true) ? `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;"><input type="checkbox" id="mgCable" ${r.returnedItems?.cable!==false?'checked':''} style="accent-color:var(--accent);"> 🔋 Cable returned</label>` : ''}
       </div>
+      <div id="mgReturnItemsError" style="display:none;color:var(--danger);font-size:12px;margin-top:6px;">Please select at least one returned item.</div>
     </div>
 
     <div class="section-divider" style="margin-top:12px;">Discount</div>
@@ -1327,6 +1383,16 @@ async function saveManageRental(rentalId) {
   const newPaid    = parseFloat(document.getElementById('mgPaid').value)  || 0;
   const { chargeableDays, totalDays } = calcRentalPrice(newFrom, newTo, r.country, r.ukPlan || 'standard');
 
+  if (isReturned) {
+    const anyChecked = ['mgPhone','mgSIM','mgPlug','mgCable'].some(id => document.getElementById(id)?.checked);
+    const errEl = document.getElementById('mgReturnItemsError');
+    if (!anyChecked) {
+      if (errEl) errEl.style.display = 'block';
+      return;
+    }
+    if (errEl) errEl.style.display = 'none';
+  }
+
   const today = new Date().toISOString().slice(0,10);
   let newStatus;
   if (isReturned) newStatus = 'returned';
@@ -1344,10 +1410,10 @@ async function saveManageRental(rentalId) {
   r.totalDays      = totalDays;
   r.notes          = document.getElementById('mgNotes').value.trim();
   r.returnedItems  = {
-    phone: document.getElementById('mgPhone').checked,
-    sim:   document.getElementById('mgSIM').checked,
-    plug:  document.getElementById('mgPlug').checked,
-    cable: document.getElementById('mgCable').checked,
+    phone: document.getElementById('mgPhone')?.checked  ?? false,
+    sim:   document.getElementById('mgSIM')?.checked    ?? false,
+    plug:  document.getElementById('mgPlug')?.checked   ?? false,
+    cable: document.getElementById('mgCable')?.checked  ?? false,
   };
   r.equipmentGiven = {
     phone: document.getElementById('mgGivenPhone').checked,
