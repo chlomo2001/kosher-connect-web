@@ -271,28 +271,36 @@ document.addEventListener('click', e => {
 function getJewishHolidays() {
   const jewishHolidaysByYear = {
     2024: [
-      '2024-04-22','2024-04-23','2024-04-28','2024-04-29',
-      '2024-06-11','2024-06-12',
-      '2024-10-02','2024-10-03','2024-10-11','2024-10-12',
-      '2024-10-16','2024-10-17','2024-10-23','2024-10-24',
+      '2024-04-22','2024-04-23','2024-04-28','2024-04-29',  // Pesach first 2 + last 2
+      '2024-06-11','2024-06-12',                             // Shavuot
+      '2024-10-02','2024-10-03',                             // Rosh Hashana
+      '2024-10-11',                                          // Yom Kippur (1 day only)
+      '2024-10-16','2024-10-17',                             // First 2 days Sukkot
+      '2024-10-23','2024-10-24',                             // Shemini Atzeret + Simchas Torah
     ],
     2025: [
-      '2025-04-12','2025-04-13','2025-04-18','2025-04-19',
-      '2025-06-01','2025-06-02',
-      '2025-09-22','2025-09-23','2025-10-01','2025-10-02',
-      '2025-10-05','2025-10-06','2025-10-12','2025-10-13',
+      '2025-04-12','2025-04-13','2025-04-18','2025-04-19',  // Pesach first 2 + last 2
+      '2025-06-01','2025-06-02',                             // Shavuot
+      '2025-09-22','2025-09-23',                             // Rosh Hashana
+      '2025-10-01',                                          // Yom Kippur (1 day only)
+      '2025-10-06','2025-10-07',                             // First 2 days Sukkot (fixed: was 05-06)
+      '2025-10-13','2025-10-14',                             // Shemini Atzeret + Simchas Torah (fixed: was 12-13)
     ],
     2026: [
-      '2026-04-01','2026-04-02','2026-04-07','2026-04-08',
-      '2026-05-21','2026-05-22',
-      '2026-09-11','2026-09-12','2026-09-20','2026-09-21',
-      '2026-09-24','2026-09-25','2026-10-01','2026-10-02',
+      '2026-04-01','2026-04-02','2026-04-07','2026-04-08',  // Pesach first 2 + last 2
+      '2026-05-21','2026-05-22',                             // Shavuot
+      '2026-09-11','2026-09-12',                             // Rosh Hashana
+      '2026-09-20',                                          // Yom Kippur (1 day only)
+      '2026-09-25','2026-09-26',                             // First 2 days Sukkot (fixed: was 24-25)
+      '2026-10-02','2026-10-03',                             // Shemini Atzeret + Simchas Torah (fixed: was 01-02)
     ],
     2027: [
-      '2027-04-21','2027-04-22','2027-04-27','2027-04-28',
-      '2027-06-11','2027-06-12',
-      '2027-10-01','2027-10-02','2027-10-10','2027-10-11',
-      '2027-10-14','2027-10-15','2027-10-21','2027-10-22',
+      '2027-04-21','2027-04-22','2027-04-27','2027-04-28',  // Pesach first 2 + last 2
+      '2027-06-11','2027-06-12',                             // Shavuot
+      '2027-10-01','2027-10-02',                             // Rosh Hashana
+      '2027-10-10',                                          // Yom Kippur (1 day only)
+      '2027-10-15','2027-10-16',                             // First 2 days Sukkot (fixed: was 14-15)
+      '2027-10-22','2027-10-23',                             // Shemini Atzeret + Simchas Torah (fixed: was 21-22)
     ],
   };
   const result = new Set();
@@ -320,7 +328,7 @@ function calcRentalPrice(fromDate, toDate, country = 'USA', ukPlan = 'standard')
   }
   let ratePerDay, minCharge, maxCharge;
   if (country === 'UK') {
-    if (ukPlan === 'unlimited') { ratePerDay = 2.5; minCharge = 20; maxCharge = null; }
+    if (ukPlan === 'unlimited') { ratePerDay = 2.5; minCharge = 20; maxCharge = 45; }
     else                        { ratePerDay = 2;   minCharge = 15; maxCharge = 40;   }
   } else if (country === 'Canada') { ratePerDay = 3; minCharge = 25; maxCharge = 45; }
   else if (country === 'Israel')   { ratePerDay = 3; minCharge = 20; maxCharge = 50; }
@@ -340,6 +348,14 @@ function countChargeableDays(fromDate, toDate) {
     cur.setDate(cur.getDate() + 1);
   }
   return days;
+}
+
+function calcLateFeeDays(rental) {
+  const today = new Date().toISOString().slice(0, 10);
+  if (rental.status === 'returned' || rental.toDate >= today) return 0;
+  const lateDayStart = new Date(rental.toDate);
+  lateDayStart.setDate(lateDayStart.getDate() + 1);
+  return countChargeableDays(lateDayStart.toISOString().slice(0, 10), today);
 }
 
 function saveRentals(data) {
@@ -468,7 +484,9 @@ function renderRentalRows() {
 
     const paid = r.amountPaid || 0;
     const debt = r.price - paid;
-    const debtColor = debt > 0 ? 'color:var(--danger);' : 'color:var(--success);';
+    const lateFee = calcLateFeeDays(r);
+    const debtColor = (debt + lateFee) > 0 ? 'color:var(--danger);' : 'color:var(--success);';
+    const lateFeeLabel = lateFee > 0 ? `<div style="font-size:10px;color:var(--danger);">⚠️ +£${lateFee} late fee</div>` : '';
     return `<tr>
       <td>
         <div class="customer-name">${escHtml(r.customerName || '—')}</div>
@@ -478,7 +496,7 @@ function renderRentalRows() {
       <td style="font-size:11px;">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}</td>
       <td style="text-align:center;">${r.chargeableDays}d</td>
       <td style="color:var(--success);font-weight:700;">£${r.price}</td>
-      <td style="font-weight:700;${debtColor}">${debt > 0 ? '£'+debt+' owed' : '✓ Paid'}</td>
+      <td style="font-weight:700;${debtColor}">${(debt + lateFee) > 0 ? '£'+(debt+lateFee)+' owed' : '✓ Paid'}${lateFeeLabel}</td>
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
@@ -511,7 +529,7 @@ function renderPhoneRows() {
 
     return `<tr>
       <td style="font-weight:600;font-size:12px;">${escHtml(p.number)}</td>
-      <td>${p.country === 'USA' ? '🇺🇸' : p.country === 'Israel' ? '🇮🇱' : p.country === 'UK' ? '🇬🇧' : '🇪🇺'} ${escHtml(p.country)}</td>
+      <td>${p.country === 'USA' ? '🇺🇸' : p.country === 'Israel' ? '🇮🇱' : p.country === 'UK' ? '🇬🇧' : p.country === 'Canada' ? '🇨🇦' : '🇪🇺'} ${escHtml(p.country)}</td>
       <td style="font-size:12px;">${escHtml(p.pool || '—')}</td>
       <td style="font-size:11px;color:${poolExpired?'var(--danger)':'var(--muted)'};">${p.poolExpiry || '—'}</td>
       <td>${statusBadge}</td>
@@ -619,6 +637,32 @@ function openNewRentalModal() {
       </div>
 
       <div class="form-group form-full">
+        <div class="section-divider" style="margin-bottom:8px;">Equipment given to customer</div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" id="givenPhone" checked style="accent-color:var(--accent);"> 📱 Phone handset</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" id="givenSIM"   checked style="accent-color:var(--accent);"> 💳 SIM card</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" id="givenPlug"  checked style="accent-color:var(--accent);"> 🔌 Plug / Charger</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;"><input type="checkbox" id="givenCable" checked style="accent-color:var(--accent);"> 🔋 Cable</label>
+        </div>
+      </div>
+
+      <div class="form-group form-full" id="rDiscountRow">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+          <input type="checkbox" id="rAddDiscount" style="accent-color:var(--accent);"
+            onchange="document.getElementById('rDiscountBox').style.display=this.checked?'flex':'none'; updateRentalCalc()">
+          🏷️ Apply discount
+        </label>
+        <div id="rDiscountBox" style="display:none;gap:8px;align-items:center;margin-top:8px;">
+          <select class="form-input" id="rDiscountType" style="width:100px;padding:7px 10px;" onchange="updateRentalCalc()">
+            <option value="percent">% off</option>
+            <option value="fixed">£ off</option>
+          </select>
+          <input class="form-input" type="number" id="rDiscountValue" value="0" min="0" step="0.5"
+            style="width:90px;padding:7px 10px;" oninput="updateRentalCalc()">
+        </div>
+      </div>
+
+      <div class="form-group form-full">
         <label class="form-label">Notes</label>
         <input class="form-input" type="text" id="rNotes" placeholder="Any notes...">
       </div>
@@ -663,14 +707,23 @@ function updateRentalCalc() {
   const ukPlan   = phone?.ukPlan  || 'standard';
   const { chargeableDays, totalDays, price } = calcRentalPrice(from, to, country, ukPlan);
   const excluded = totalDays - chargeableDays;
-  const cap = country === 'UK' ? (ukPlan === 'unlimited' ? null : 40) : country === 'Canada' ? 45 : country === 'Israel' ? 50 : 45;
+  const cap = country === 'UK' ? (ukPlan === 'unlimited' ? 45 : 40) : country === 'Canada' ? 45 : country === 'Israel' ? 50 : 45;
+  let finalPrice = price;
+  let discountLine = '';
+  const addDiscount = document.getElementById('rAddDiscount')?.checked;
+  if (addDiscount) {
+    const dtype = document.getElementById('rDiscountType')?.value || 'percent';
+    const dval  = parseFloat(document.getElementById('rDiscountValue')?.value) || 0;
+    finalPrice  = dtype === 'percent' ? Math.max(0, price * (1 - dval / 100)) : Math.max(0, price - dval);
+    if (dval > 0) discountLine = ` &nbsp;|&nbsp; <span style="color:var(--gold);font-size:12px;">-${dtype==='percent'?dval+'%':'£'+dval} discount → <strong>£${finalPrice.toFixed(2)}</strong></span>`;
+  }
   box.style.display = 'block';
   txt.innerHTML = `
     <span style="color:var(--muted);">Total days:</span> ${totalDays} &nbsp;|&nbsp;
     <span style="color:var(--muted);">Shabbat/Yom Tov excluded:</span> <span style="color:var(--gold);">${excluded}</span> &nbsp;|&nbsp;
     <span style="color:var(--muted);">Chargeable days:</span> ${chargeableDays} &nbsp;|&nbsp;
     <strong style="color:var(--success);font-size:15px;">£${price}</strong>
-    ${cap !== null && price >= cap ? ' <span style="color:var(--muted);font-size:11px;">(monthly cap)</span>' : ''}
+    ${price >= cap ? ' <span style="color:var(--muted);font-size:11px;">(monthly cap)</span>' : ''}${discountLine}
   `;
 }
 
@@ -697,7 +750,14 @@ async function saveNewRental() {
     vnPrice  = parseFloat(document.getElementById('rVNPrice').value) || 0;
   }
 
-  const totalPrice = price + vnPrice;
+  const addDiscount   = document.getElementById('rAddDiscount').checked;
+  const discountType  = addDiscount ? document.getElementById('rDiscountType').value : 'percent';
+  const discountValue = addDiscount ? (parseFloat(document.getElementById('rDiscountValue').value) || 0) : 0;
+  const discountedRental = addDiscount
+    ? (discountType === 'percent' ? Math.max(0, price * (1 - discountValue / 100)) : Math.max(0, price - discountValue))
+    : price;
+
+  const totalPrice = discountedRental + vnPrice;
   const rental = {
     id:           Date.now().toString(),
     customerId,
@@ -712,6 +772,9 @@ async function saveNewRental() {
     chargeableDays,
     totalDays,
     price:        totalPrice,
+    basePrice:    price,
+    discountValue,
+    discountType,
     rentalPrice:  price,
     vn:           addVN,
     vnPrefix,
@@ -721,6 +784,12 @@ async function saveNewRental() {
     status:       'active',
     createdAt:    new Date().toISOString(),
     returnedItems: {},
+    equipmentGiven: {
+      phone: document.getElementById('givenPhone').checked,
+      sim:   document.getElementById('givenSIM').checked,
+      plug:  document.getElementById('givenPlug').checked,
+      cable: document.getElementById('givenCable').checked,
+    },
   };
 
   rentals.push(rental);
@@ -763,12 +832,13 @@ function openReturnModal(rentalId) {
 
     <div class="section-divider">What was returned?</div>
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;">
-      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;"><input type="checkbox" id="retPhone" checked style="width:16px;height:16px;accent-color:var(--accent);"> <span>📱 Phone handset</span></label>
-      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;"><input type="checkbox" id="retSIM" checked style="width:16px;height:16px;accent-color:var(--accent);"> <span>💳 SIM card</span></label>
-      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;"><input type="checkbox" id="retPlug" checked style="width:16px;height:16px;accent-color:var(--accent);"> <span>🔌 Plug / Charger</span></label>
-      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;"><input type="checkbox" id="retCable" checked style="width:16px;height:16px;accent-color:var(--accent);"> <span>🔋 Cable</span></label>
+      ${(r.equipmentGiven?.phone  ?? true)  ? `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;"><input type="checkbox" id="retPhone" checked style="width:16px;height:16px;accent-color:var(--accent);"> <span>📱 Phone handset</span></label>` : ''}
+      ${(r.equipmentGiven?.sim    ?? true)   ? `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;"><input type="checkbox" id="retSIM"   checked style="width:16px;height:16px;accent-color:var(--accent);"> <span>💳 SIM card</span></label>` : ''}
+      ${(r.equipmentGiven?.plug   ?? true)   ? `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;"><input type="checkbox" id="retPlug"  checked style="width:16px;height:16px;accent-color:var(--accent);"> <span>🔌 Plug / Charger</span></label>` : ''}
+      ${(r.equipmentGiven?.cable  ?? true)   ? `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;"><input type="checkbox" id="retCable" checked style="width:16px;height:16px;accent-color:var(--accent);"> <span>🔋 Cable</span></label>` : ''}
     </div>
 
+    ${r.country === 'USA' ? `
     <div class="section-divider">Pool status</div>
     <div class="form-group" style="margin-bottom:16px;">
       <label class="form-label">Is this phone still active in a pool?</label>
@@ -783,24 +853,38 @@ function openReturnModal(rentalId) {
         <input type="radio" name="poolStatus" value="expired" id="poolNo" style="accent-color:var(--accent);" checked>
         <span style="font-size:13px;">No — pool expired, phone is free</span>
       </label>
-    </div>
+    </div>` : ''}
 
     <div class="section-divider">Payment</div>
     <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;">
       <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;">
         <span style="color:var(--muted);">Total charge:</span>
-        <strong style="color:var(--text);">£${r.price}</strong>
+        <strong style="color:var(--text);" id="retTotalDisplay">£${r.price}</strong>
       </div>
-      <div style="display:flex;gap:10px;align-items:center;">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">
         <span style="font-size:13px;color:var(--muted);white-space:nowrap;">Amount paid: £</span>
         <input class="form-input" type="number" id="retAmountPaid" value="${r.amountPaid || r.price}" min="0" step="0.5" style="width:100px;padding:7px 10px;">
         <div id="retDebtPreview" style="font-size:12px;"></div>
       </div>
-      <div style="margin-top:8px;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+          <input type="checkbox" id="retAddDiscount" style="accent-color:var(--accent);"
+            onchange="document.getElementById('retDiscountBox').style.display=this.checked?'flex':'none'; updateDebtPreview(${r.price})">
+          🏷️ Discount at return
+        </label>
+        <div id="retDiscountBox" style="display:none;gap:6px;align-items:center;">
+          <select id="retDiscountType" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-secondary);color:var(--text);font-size:13px;" onchange="updateDebtPreview(${r.price})">
+            <option value="percent">%</option><option value="fixed">£</option>
+          </select>
+          <input type="number" id="retDiscountValue" value="0" min="0" step="0.5"
+            style="width:70px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-secondary);color:var(--text);font-size:13px;" oninput="updateDebtPreview(${r.price})">
+        </div>
+      </div>
+      <div>
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
           <input type="checkbox" id="retFullyPaid" style="accent-color:var(--accent);"
-            onchange="if(this.checked){document.getElementById('retAmountPaid').value=${r.price};updateDebtPreview(${r.price})}">
-          Mark as fully paid (£${r.price})
+            onchange="if(this.checked){document.getElementById('retAmountPaid').value=document.getElementById('retTotalDisplay').textContent.replace('£','');updateDebtPreview(${r.price})}">
+          Mark as fully paid
         </label>
       </div>
     </div>
@@ -819,8 +903,17 @@ function openReturnModal(rentalId) {
 }
 
 function updateDebtPreview(totalPrice) {
+  const addDiscount = document.getElementById('retAddDiscount')?.checked;
+  let effectiveTotal = totalPrice;
+  if (addDiscount) {
+    const dtype = document.getElementById('retDiscountType')?.value || 'percent';
+    const dval  = parseFloat(document.getElementById('retDiscountValue')?.value) || 0;
+    effectiveTotal = dtype === 'percent' ? Math.max(0, totalPrice * (1 - dval / 100)) : Math.max(0, totalPrice - dval);
+  }
+  const totalEl = document.getElementById('retTotalDisplay');
+  if (totalEl) totalEl.textContent = '£' + effectiveTotal.toFixed(2);
   const paid = parseFloat(document.getElementById('retAmountPaid')?.value) || 0;
-  const debt = totalPrice - paid;
+  const debt = effectiveTotal - paid;
   const el = document.getElementById('retDebtPreview');
   if (!el) return;
   if (debt <= 0) {
@@ -834,19 +927,31 @@ async function processReturn(rentalId) {
   const r = rentals.find(x => x.id === rentalId);
   if (!r) return;
 
-  const retPhone  = document.getElementById('retPhone').checked;
-  const retSIM    = document.getElementById('retSIM').checked;
-  const retPlug   = document.getElementById('retPlug').checked;
-  const retCable  = document.getElementById('retCable').checked;
-  const poolActive = document.getElementById('poolYes').checked;
-  const poolExpiry = document.getElementById('poolExpiry').value;
+  const eq = r.equipmentGiven || { phone: true, sim: true, plug: true, cable: true };
+  const retPhone  = (eq.phone  ?? true) ? (document.getElementById('retPhone')?.checked  ?? true) : false;
+  const retSIM    = (eq.sim    ?? true) ? (document.getElementById('retSIM')?.checked    ?? true) : false;
+  const retPlug   = (eq.plug   ?? true) ? (document.getElementById('retPlug')?.checked   ?? true) : false;
+  const retCable  = (eq.cable  ?? true) ? (document.getElementById('retCable')?.checked  ?? true) : false;
+  const poolActive = r.country === 'USA' ? (document.getElementById('poolYes')?.checked || false) : false;
+  const poolExpiry = r.country === 'USA' ? (document.getElementById('poolExpiry')?.value || '') : '';
   const amountPaid = parseFloat(document.getElementById('retAmountPaid').value) || 0;
+
+  const addRetDiscount   = document.getElementById('retAddDiscount')?.checked || false;
+  const retDiscountType  = document.getElementById('retDiscountType')?.value  || 'percent';
+  const retDiscountValue = parseFloat(document.getElementById('retDiscountValue')?.value) || 0;
+  const effectivePrice   = addRetDiscount
+    ? (retDiscountType === 'percent' ? Math.max(0, r.price * (1 - retDiscountValue / 100)) : Math.max(0, r.price - retDiscountValue))
+    : r.price;
 
   r.status       = 'returned';
   r.returnedAt   = new Date().toISOString();
   r.returnedItems = { phone: retPhone, sim: retSIM, plug: retPlug, cable: retCable };
   r.amountPaid   = amountPaid;
-  r.debt         = Math.max(0, r.price - amountPaid);
+  r.debt         = Math.max(0, effectivePrice - amountPaid);
+  if (addRetDiscount && retDiscountValue > 0) {
+    r.returnDiscount     = retDiscountValue;
+    r.returnDiscountType = retDiscountType;
+  }
   saveRentals(rentals);
 
   const phone = phones.find(p => p.id === r.phoneId);
@@ -869,10 +974,10 @@ async function processReturn(rentalId) {
     const lateDays = countChargeableDays(lateDayStart.toISOString().slice(0, 10), today2);
     if (lateDays > 0) missing.push({ item: `Late return (${lateDays}d × £1)`, price: lateDays });
   }
-  if (!retPhone) missing.push({ item: 'Phone handset', price: phoneCharge });
-  if (!retSIM)   missing.push({ item: 'SIM card', price: 10 });
-  if (!retPlug)  missing.push({ item: 'Plug/Charger', price: plugCharge });
-  if (!retCable) missing.push({ item: 'Cable', price: 5 });
+  if ((eq.phone  ?? true) && !retPhone) missing.push({ item: 'Phone handset',  price: phoneCharge });
+  if ((eq.sim    ?? true) && !retSIM)   missing.push({ item: 'SIM card',       price: 10 });
+  if ((eq.plug   ?? true) && !retPlug)  missing.push({ item: 'Plug/Charger',   price: plugCharge });
+  if ((eq.cable  ?? true) && !retCable) missing.push({ item: 'Cable',          price: 5 });
 
   if (missing.length > 0) {
     const totalMissing = missing.reduce((s, m) => s + m.price, 0);
@@ -911,7 +1016,7 @@ function openManagePhonesModal() {
       </div>
       <div class="form-group">
         <label class="form-label">Country *</label>
-        <select class="form-input" id="pCountry" onchange="document.getElementById('pUKPlanGroup').style.display=this.value==='UK'?'block':'none';">
+        <select class="form-input" id="pCountry" onchange="document.getElementById('pUKPlanGroup').style.display=this.value==='UK'?'block':'none'; document.getElementById('pPoolGroup').style.display=this.value==='USA'?'contents':'none';">
           <option value="USA">🇺🇸 USA</option>
           <option value="UK">🇬🇧 UK</option>
           <option value="Israel">🇮🇱 Israel</option>
@@ -930,6 +1035,7 @@ function openManagePhonesModal() {
         <label class="form-label">Company</label>
         <input class="form-input" id="pCompany" type="text" placeholder="USMobile, Lebara...">
       </div>
+      <div id="pPoolGroup" style="display:contents;">
       <div class="form-group">
         <label class="form-label">Pool Name (USA)</label>
         <input class="form-input" id="pPool" type="text" placeholder="Pool 24">
@@ -937,6 +1043,7 @@ function openManagePhonesModal() {
       <div class="form-group">
         <label class="form-label">Pool Expiry Date</label>
         <input class="form-input" id="pPoolExpiry" type="date">
+      </div>
       </div>
       <div class="form-group">
         <label class="form-label">SIM Card ID</label>
@@ -1105,24 +1212,38 @@ function openManageRentalModal(rentalId) {
       </div>
     </div>
 
-    <div class="section-divider">Return Items</div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
-      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;">
-        <input type="checkbox" id="mgPhone" ${r.returnedItems?.phone!==false?'checked':''} style="accent-color:var(--accent);">
-        📱 Phone handset returned
+    <div class="section-divider" style="margin-top:12px;">Equipment</div>
+    <div style="margin-bottom:8px;">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Given to customer</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="mgGivenPhone" ${(r.equipmentGiven?.phone??true)?'checked':''} style="accent-color:var(--accent);"> 📱 Phone</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="mgGivenSIM"   ${(r.equipmentGiven?.sim??true)?'checked':''} style="accent-color:var(--accent);"> 💳 SIM</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="mgGivenPlug"  ${(r.equipmentGiven?.plug??true)?'checked':''} style="accent-color:var(--accent);"> 🔌 Plug</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="mgGivenCable" ${(r.equipmentGiven?.cable??true)?'checked':''} style="accent-color:var(--accent);"> 🔋 Cable</label>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Returned by customer</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;"><input type="checkbox" id="mgPhone" ${r.returnedItems?.phone!==false?'checked':''} style="accent-color:var(--accent);"> 📱 Phone handset returned</label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;"><input type="checkbox" id="mgSIM"   ${r.returnedItems?.sim!==false?'checked':''} style="accent-color:var(--accent);"> 💳 SIM card returned</label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;"><input type="checkbox" id="mgPlug"  ${r.returnedItems?.plug!==false?'checked':''} style="accent-color:var(--accent);"> 🔌 Plug / Charger returned</label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;"><input type="checkbox" id="mgCable" ${r.returnedItems?.cable!==false?'checked':''} style="accent-color:var(--accent);"> 🔋 Cable returned</label>
+      </div>
+    </div>
+
+    <div class="section-divider" style="margin-top:12px;">Discount</div>
+    <div style="margin-bottom:16px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <input type="checkbox" id="mgAddDiscount" style="accent-color:var(--accent);" ${(r.discountValue||0)>0?'checked':''} onchange="document.getElementById('mgDiscountBox').style.display=this.checked?'flex':'none'; mgUpdateCalc()">
+        🏷️ Apply discount
       </label>
-      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;">
-        <input type="checkbox" id="mgSIM" ${r.returnedItems?.sim!==false?'checked':''} style="accent-color:var(--accent);">
-        💳 SIM card returned
-      </label>
-      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;">
-        <input type="checkbox" id="mgPlug" ${r.returnedItems?.plug!==false?'checked':''} style="accent-color:var(--accent);">
-        🔌 Plug / Charger returned
-      </label>
-      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;">
-        <input type="checkbox" id="mgCable" ${r.returnedItems?.cable!==false?'checked':''} style="accent-color:var(--accent);">
-        🔋 Cable returned
-      </label>
+      <div id="mgDiscountBox" style="display:${(r.discountValue||0)>0?'flex':'none'};gap:8px;align-items:center;margin-top:8px;">
+        <select id="mgDiscountType" style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-secondary);color:var(--text);font-size:13px;" onchange="mgUpdateCalc()">
+          <option value="percent" ${(r.discountType||'percent')==='percent'?'selected':''}>% off</option>
+          <option value="fixed"   ${r.discountType==='fixed'?'selected':''}>£ off</option>
+        </select>
+        <input type="number" id="mgDiscountValue" value="${r.discountValue||0}" min="0" step="0.5"
+          style="width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-secondary);color:var(--text);font-size:13px;" oninput="mgUpdateCalc()">
+      </div>
     </div>
 
     <div class="form-group" style="margin-bottom:16px;">
@@ -1132,6 +1253,7 @@ function openManageRentalModal(rentalId) {
 
     <input type="hidden" id="mgCountry" value="${r.country || 'USA'}">
     <input type="hidden" id="mgUKPlan" value="${r.ukPlan || 'standard'}">
+    <input type="hidden" id="mgBasePrice" value="${r.basePrice || r.price}">
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveManageRental('${rentalId}')">💾 Save Changes</button>
@@ -1153,9 +1275,21 @@ function mgUpdateCalc() {
   const ukPlan  = document.getElementById('mgUKPlan')?.value  || 'standard';
   const { chargeableDays, totalDays, price } = calcRentalPrice(from, to, country, ukPlan);
   const excl = totalDays - chargeableDays;
+
+  let finalPrice = price;
+  let discountLine = '';
+  const addDiscount = document.getElementById('mgAddDiscount')?.checked;
+  if (addDiscount) {
+    const dtype = document.getElementById('mgDiscountType')?.value || 'percent';
+    const dval  = parseFloat(document.getElementById('mgDiscountValue')?.value) || 0;
+    finalPrice  = dtype === 'percent' ? Math.max(0, price * (1 - dval / 100)) : Math.max(0, price - dval);
+    if (dval > 0) discountLine = ` &nbsp;|&nbsp; -${dtype==='percent'?dval+'%':'£'+dval} → <strong style="color:var(--accent);">£${finalPrice.toFixed(2)}</strong>`;
+  }
+
   document.getElementById('mgCalcText').innerHTML =
-    `Total: ${totalDays}d &nbsp;|&nbsp; Shabbat/YT excluded: <span style="color:var(--gold);">${excl}</span> &nbsp;|&nbsp; Chargeable: ${chargeableDays}d &nbsp;|&nbsp; <strong style="color:var(--success);">£${price}</strong>`;
-  document.getElementById('mgPrice').value = price;
+    `Total: ${totalDays}d &nbsp;|&nbsp; Shabbat/YT excluded: <span style="color:var(--gold);">${excl}</span> &nbsp;|&nbsp; Chargeable: ${chargeableDays}d &nbsp;|&nbsp; <strong style="color:var(--success);">£${price}</strong>${discountLine}`;
+  document.getElementById('mgPrice').value = finalPrice.toFixed(2);
+  document.getElementById('mgBasePrice').value = price;
   mgUpdateDebt();
 }
 
@@ -1215,6 +1349,18 @@ async function saveManageRental(rentalId) {
     plug:  document.getElementById('mgPlug').checked,
     cable: document.getElementById('mgCable').checked,
   };
+  r.equipmentGiven = {
+    phone: document.getElementById('mgGivenPhone').checked,
+    sim:   document.getElementById('mgGivenSIM').checked,
+    plug:  document.getElementById('mgGivenPlug').checked,
+    cable: document.getElementById('mgGivenCable').checked,
+  };
+  const mgAddDiscount   = document.getElementById('mgAddDiscount')?.checked || false;
+  const mgDiscountType  = document.getElementById('mgDiscountType')?.value  || 'percent';
+  const mgDiscountValue = parseFloat(document.getElementById('mgDiscountValue')?.value) || 0;
+  r.basePrice    = parseFloat(document.getElementById('mgBasePrice')?.value) || newPrice;
+  r.discountValue = mgAddDiscount ? mgDiscountValue : 0;
+  r.discountType  = mgDiscountType;
 
   const phone = phones.find(p => p.id === r.phoneId);
   if (phone) {
@@ -1367,7 +1513,7 @@ function renderTableRows() {
 
     const customerDebt = rentals
       .filter(r => r.customerId === c.id)
-      .reduce((sum, r) => sum + Math.max(0, (r.price || 0) - (r.amountPaid || 0)), 0);
+      .reduce((sum, r) => sum + Math.max(0, (r.price || 0) - (r.amountPaid || 0)) + calcLateFeeDays(r), 0);
     const customerPaid = rentals
       .filter(r => r.customerId === c.id)
       .reduce((sum, r) => sum + (r.amountPaid || 0), 0);
@@ -1445,7 +1591,7 @@ function renderDetailPanel(id) {
   const totalPaid = c.totalPaid || 0;
   const totalDebt = rentals
     .filter(r => r.customerId === c.id)
-    .reduce((sum, r) => sum + Math.max(0, (r.price || 0) - (r.amountPaid || 0)), 0);
+    .reduce((sum, r) => sum + Math.max(0, (r.price || 0) - (r.amountPaid || 0)) + calcLateFeeDays(r), 0);
   const customerPaid = rentals
     .filter(r => r.customerId === c.id)
     .reduce((sum, r) => sum + (r.amountPaid || 0), 0);
