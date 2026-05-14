@@ -308,7 +308,7 @@ function isShabbatOrHoliday(date) {
   return ALL_HOLIDAYS.has(d.toISOString().slice(0, 10));
 }
 
-function calcRentalPrice(fromDate, toDate) {
+function calcRentalPrice(fromDate, toDate, country = 'USA', ukPlan = 'standard') {
   let chargeableDays = 0;
   let totalDays = 0;
   const cur = new Date(fromDate);
@@ -318,10 +318,28 @@ function calcRentalPrice(fromDate, toDate) {
     if (!isShabbatOrHoliday(cur)) chargeableDays++;
     cur.setDate(cur.getDate() + 1);
   }
-  let price = chargeableDays * 3;
-  if (chargeableDays > 0 && price < 20) price = 20;
-  if (price > 50) price = 50;
+  let ratePerDay, minCharge, maxCharge;
+  if (country === 'UK') {
+    if (ukPlan === 'unlimited') { ratePerDay = 2.5; minCharge = 20; maxCharge = null; }
+    else                        { ratePerDay = 2;   minCharge = 15; maxCharge = 40;   }
+  } else if (country === 'Canada') { ratePerDay = 3; minCharge = 25; maxCharge = 45; }
+  else if (country === 'Israel')   { ratePerDay = 3; minCharge = 20; maxCharge = 50; }
+  else /* USA / EU / default */    { ratePerDay = 3; minCharge = 20; maxCharge = 45; }
+  let price = chargeableDays * ratePerDay;
+  if (chargeableDays > 0 && price < minCharge) price = minCharge;
+  if (maxCharge !== null && price > maxCharge) price = maxCharge;
   return { chargeableDays, totalDays, price };
+}
+
+function countChargeableDays(fromDate, toDate) {
+  let days = 0;
+  const cur = new Date(fromDate);
+  const end = new Date(toDate);
+  while (cur <= end) {
+    if (!isShabbatOrHoliday(cur)) days++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return days;
 }
 
 function saveRentals(data) {
@@ -538,7 +556,7 @@ function openNewRentalModal() {
 
       <div class="form-group form-full">
         <label class="form-label">Phone *</label>
-        <select class="form-input" id="rPhone" onchange="updateRentalPhoneInfo()">
+        <select class="form-input" id="rPhone" onchange="updateRentalPhoneInfo(); updateRentalCalc();">
           <option value="">— Select phone —</option>
           ${availablePhoneOptions}
         </select>
@@ -588,14 +606,14 @@ function openNewRentalModal() {
           </div>
           <div class="form-group">
             <label class="form-label">Subscription</label>
-            <select class="form-input" id="rVNSub">
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
+            <select class="form-input" id="rVNSub" onchange="document.getElementById('rVNPrice').value=this.value==='monthly'?10:5;">
+              <option value="weekly">Weekly (£5)</option>
+              <option value="monthly">Monthly / 30 days (£10)</option>
             </select>
           </div>
           <div class="form-group">
             <label class="form-label">VN Price (£)</label>
-            <input class="form-input" type="number" id="rVNPrice" value="5" min="0" step="0.5">
+            <input class="form-input" type="number" id="rVNPrice" value="5" readonly style="background:var(--bg-secondary);cursor:default;color:var(--muted);">
           </div>
         </div>
       </div>
@@ -639,16 +657,20 @@ function updateRentalCalc() {
   const box  = document.getElementById('rCalcBox');
   const txt  = document.getElementById('rCalcText');
   if (!from || !to || to <= from) { box.style.display='none'; return; }
-  const { chargeableDays, totalDays, price } = calcRentalPrice(from, to);
+  const selPhone = document.getElementById('rPhone');
+  const phone    = selPhone ? phones.find(p => p.id === selPhone.value) : null;
+  const country  = phone?.country || 'USA';
+  const ukPlan   = phone?.ukPlan  || 'standard';
+  const { chargeableDays, totalDays, price } = calcRentalPrice(from, to, country, ukPlan);
   const excluded = totalDays - chargeableDays;
+  const cap = country === 'UK' ? (ukPlan === 'unlimited' ? null : 40) : country === 'Canada' ? 45 : country === 'Israel' ? 50 : 45;
   box.style.display = 'block';
   txt.innerHTML = `
     <span style="color:var(--muted);">Total days:</span> ${totalDays} &nbsp;|&nbsp;
     <span style="color:var(--muted);">Shabbat/Yom Tov excluded:</span> <span style="color:var(--gold);">${excluded}</span> &nbsp;|&nbsp;
     <span style="color:var(--muted);">Chargeable days:</span> ${chargeableDays} &nbsp;|&nbsp;
     <strong style="color:var(--success);font-size:15px;">£${price}</strong>
-    ${price === 20 ? ' <span style="color:var(--muted);font-size:11px;">(minimum)</span>' : ''}
-    ${price === 50 ? ' <span style="color:var(--muted);font-size:11px;">(monthly cap)</span>' : ''}
+    ${cap !== null && price >= cap ? ' <span style="color:var(--muted);font-size:11px;">(monthly cap)</span>' : ''}
   `;
 }
 
@@ -666,7 +688,7 @@ async function saveNewRental() {
 
   const customer = customers.find(c => c.id === customerId);
   const phone    = phones.find(p => p.id === phoneId);
-  const { chargeableDays, totalDays, price } = calcRentalPrice(from, to);
+  const { chargeableDays, totalDays, price } = calcRentalPrice(from, to, phone.country, phone.ukPlan || 'standard');
 
   let vnPrice = 0, vnPrefix = '', vnSub = '';
   if (addVN) {
@@ -684,6 +706,7 @@ async function saveNewRental() {
     phoneId,
     phoneNumber:  phone.number,
     country:      phone.country,
+    ukPlan:       phone.ukPlan || 'standard',
     fromDate:     from,
     toDate:       to,
     chargeableDays,
@@ -736,7 +759,7 @@ function openReturnModal(rentalId) {
 
   showDynamicModal(`
     <div class="modal-title">↩ Return Phone — ${escHtml(r.phoneNumber)}</div>
-    <div style="color:var(--muted);font-size:13px;margin-bottom:16px;">Customer: <strong style="color:var(--text);">${escHtml(r.customerName)}</strong> · Rental period: ${r.fromDate} → ${r.toDate}</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:16px;">Customer: <strong style="color:var(--text);">${escHtml(r.customerName)}</strong> · Rental period: ${r.fromDate} → ${r.toDate}${new Date().toISOString().slice(0,10) > r.toDate ? '<div style="color:var(--danger);font-size:12px;margin-top:4px;">⚠️ Overdue — £1/chargeable day late fee applies</div>' : ''}</div>
 
     <div class="section-divider">What was returned?</div>
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;">
@@ -834,10 +857,21 @@ async function processReturn(rentalId) {
     savePhones(phones);
   }
 
+  const country = r.country || 'USA';
+  const phoneCharge = country === 'UK' ? 45 : country === 'Israel' ? 120 : 100;
+  const plugCharge  = country === 'UK' ? 5 : 10;
+
+  const today2 = new Date().toISOString().slice(0, 10);
   const missing = [];
-  if (!retPhone) missing.push({ item: 'Phone handset', price: 50 });
+  if (r.toDate < today2) {
+    const lateDayStart = new Date(r.toDate);
+    lateDayStart.setDate(lateDayStart.getDate() + 1);
+    const lateDays = countChargeableDays(lateDayStart.toISOString().slice(0, 10), today2);
+    if (lateDays > 0) missing.push({ item: `Late return (${lateDays}d × £1)`, price: lateDays });
+  }
+  if (!retPhone) missing.push({ item: 'Phone handset', price: phoneCharge });
   if (!retSIM)   missing.push({ item: 'SIM card', price: 10 });
-  if (!retPlug)  missing.push({ item: 'Plug/Charger', price: 8 });
+  if (!retPlug)  missing.push({ item: 'Plug/Charger', price: plugCharge });
   if (!retCable) missing.push({ item: 'Cable', price: 5 });
 
   if (missing.length > 0) {
@@ -877,11 +911,19 @@ function openManagePhonesModal() {
       </div>
       <div class="form-group">
         <label class="form-label">Country *</label>
-        <select class="form-input" id="pCountry">
+        <select class="form-input" id="pCountry" onchange="document.getElementById('pUKPlanGroup').style.display=this.value==='UK'?'block':'none';">
           <option value="USA">🇺🇸 USA</option>
           <option value="UK">🇬🇧 UK</option>
           <option value="Israel">🇮🇱 Israel</option>
           <option value="EU">🇪🇺 EU</option>
+          <option value="Canada">🇨🇦 Canada</option>
+        </select>
+      </div>
+      <div class="form-group" id="pUKPlanGroup" style="display:none;">
+        <label class="form-label">UK Plan Type</label>
+        <select class="form-input" id="pUKPlan">
+          <option value="standard">Standard (UK minutes) – £2/day</option>
+          <option value="unlimited">Unlimited International – £2.50/day</option>
         </select>
       </div>
       <div class="form-group">
@@ -927,10 +969,12 @@ function openManagePhonesModal() {
 function saveNewPhone() {
   const number = document.getElementById('pNumber').value.trim();
   if (!number) { toast('Phone number is required.', 'error'); return; }
+  const pCountryVal = document.getElementById('pCountry').value;
   const phone = {
     id:         Date.now().toString(),
     number,
-    country:    document.getElementById('pCountry').value,
+    country:    pCountryVal,
+    ukPlan:     pCountryVal === 'UK' ? document.getElementById('pUKPlan').value : undefined,
     company:    document.getElementById('pCompany').value.trim(),
     pool:       document.getElementById('pPool').value.trim(),
     poolExpiry: document.getElementById('pPoolExpiry').value || null,
@@ -971,6 +1015,14 @@ function openEditPhoneModal(phoneId) {
           <option value="rented"    ${p.status==='rented'?'selected':''}>Rented</option>
         </select>
       </div>
+      ${p.country === 'UK' ? `
+      <div class="form-group">
+        <label class="form-label">UK Plan Type</label>
+        <select class="form-input" id="epUKPlan">
+          <option value="standard" ${(p.ukPlan||'standard')==='standard'?'selected':''}>Standard (UK minutes) – £2/day</option>
+          <option value="unlimited" ${p.ukPlan==='unlimited'?'selected':''}>Unlimited International – £2.50/day</option>
+        </select>
+      </div>` : ''}
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
@@ -986,6 +1038,8 @@ function saveEditPhone(phoneId) {
   p.poolExpiry = document.getElementById('epExpiry').value || null;
   p.company    = document.getElementById('epCompany').value.trim();
   p.status     = document.getElementById('epStatus').value;
+  const epUKPlan = document.getElementById('epUKPlan');
+  if (epUKPlan) p.ukPlan = epUKPlan.value;
   savePhones(phones);
   toast('Phone updated!', 'success');
   closeDynamicModal();
@@ -1076,6 +1130,8 @@ function openManageRentalModal(rentalId) {
       <input class="form-input" type="text" id="mgNotes" value="${escHtml(r.notes||'')}">
     </div>
 
+    <input type="hidden" id="mgCountry" value="${r.country || 'USA'}">
+    <input type="hidden" id="mgUKPlan" value="${r.ukPlan || 'standard'}">
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveManageRental('${rentalId}')">💾 Save Changes</button>
@@ -1093,7 +1149,9 @@ function mgUpdateCalc() {
   showHebrewDate('mgFrom','mgFromHeb');
   showHebrewDate('mgTo','mgToHeb');
   if (!from || !to || to < from) return;
-  const { chargeableDays, totalDays, price } = calcRentalPrice(from, to);
+  const country = document.getElementById('mgCountry')?.value || 'USA';
+  const ukPlan  = document.getElementById('mgUKPlan')?.value  || 'standard';
+  const { chargeableDays, totalDays, price } = calcRentalPrice(from, to, country, ukPlan);
   const excl = totalDays - chargeableDays;
   document.getElementById('mgCalcText').innerHTML =
     `Total: ${totalDays}d &nbsp;|&nbsp; Shabbat/YT excluded: <span style="color:var(--gold);">${excl}</span> &nbsp;|&nbsp; Chargeable: ${chargeableDays}d &nbsp;|&nbsp; <strong style="color:var(--success);">£${price}</strong>`;
@@ -1133,7 +1191,7 @@ async function saveManageRental(rentalId) {
   const isReturned = document.getElementById('mgReturned').value === '1';
   const newPrice   = parseFloat(document.getElementById('mgPrice').value) || 0;
   const newPaid    = parseFloat(document.getElementById('mgPaid').value)  || 0;
-  const { chargeableDays, totalDays } = calcRentalPrice(newFrom, newTo);
+  const { chargeableDays, totalDays } = calcRentalPrice(newFrom, newTo, r.country, r.ukPlan || 'standard');
 
   const today = new Date().toISOString().slice(0,10);
   let newStatus;
@@ -1716,6 +1774,15 @@ async function deleteCustomer(id) {
   if (!c) return;
   const confirmed = await window.api.confirmDelete(`Delete "${c.firstName} ${c.lastName}"?\n\nThis cannot be undone.`);
   if (!confirmed) return;
+  rentals.filter(r => r.customerId === id && r.status !== 'returned').forEach(r => {
+    const phone = phones.find(p => p.id === r.phoneId);
+    if (phone) { phone.status = 'available'; phone.currentRental = null; }
+  });
+  rentals = rentals.filter(r => r.customerId !== id);
+  sims    = sims.filter(s => s.customerId !== id);
+  savePhones(phones);
+  saveRentals(rentals);
+  saveSims(sims);
   await window.api.deleteCustomer(id);
   customers = customers.filter(x => x.id !== id);
   if (selectedId === id) {
