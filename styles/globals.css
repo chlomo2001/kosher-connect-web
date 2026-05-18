@@ -107,7 +107,7 @@ body {
 .topbar {
   padding: 16px 28px;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 3px solid #bf8e5f;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -146,8 +146,8 @@ body {
   transition: all 0.15s;
   white-space: nowrap;
 }
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: #3b78e7; }
+.btn-primary { background: var(--gold); color: #fff; }
+.btn-primary:hover { background: #a67848; }
 .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
 .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
 .btn-danger { background: var(--danger); color: #fff; border: none; }
