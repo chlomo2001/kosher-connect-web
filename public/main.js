@@ -2390,7 +2390,7 @@ async function saveSimForm(editId) {
     renewalDate:    document.getElementById('simRenewal').value,
     paymentType,
     status:         document.getElementById('simStatus').value,
-    ddDate:         paymentType !== 'direct' ? (parseInt(document.getElementById('simDdDate')?.value) || 1) : null,
+    ddDate:         paymentType !== 'direct' ? Math.min(31, Math.max(1, parseInt(document.getElementById('simDdDate')?.value) || 1)) : null,
     simMonthlyCost: paymentType !== 'direct' ? (parseFloat(document.getElementById('simMonthlyCost')?.value) || 0) : 0,
   };
 
