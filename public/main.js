@@ -2326,10 +2326,20 @@ function openSimFormModal(id) {
       </div>
       <div class="form-group">
         <label class="form-label">Payment Type</label>
-        <select class="form-input" id="simPayment">
+        <select class="form-input" id="simPayment" onchange="const show=this.value!=='direct';document.getElementById('simDdGroup').style.display=show?'block':'none';document.getElementById('simCostGroup').style.display=show?'block':'none';">
           <option value="through-me" ${!s || s.paymentType === 'through-me' ? 'selected' : ''}>🔄 Through me</option>
           <option value="direct" ${s?.paymentType === 'direct' ? 'selected' : ''}>👤 Customer pays directly</option>
         </select>
+      </div>
+      <div class="form-group" id="simDdGroup" style="display:${(!s || s.paymentType !== 'direct') ? 'block' : 'none'};">
+        <label class="form-label">DD Collection Day</label>
+        <input class="form-input" id="simDdDate" type="number" min="1" max="31" placeholder="1" value="${s?.ddDate || 1}">
+        <span style="font-size:11px;color:var(--muted);">Day of month DD is collected (e.g. 1 = 1st of each month)</span>
+      </div>
+      <div class="form-group" id="simCostGroup" style="display:${(!s || s.paymentType !== 'direct') ? 'block' : 'none'};">
+        <label class="form-label">Provider Monthly Cost (£)</label>
+        <input class="form-input" id="simMonthlyCost" type="number" min="0" step="0.01" placeholder="0.00" value="${s?.simMonthlyCost || ''}">
+        <span style="font-size:11px;color:var(--muted);">What you pay the provider — DD charge = this + 10% (min £2)</span>
       </div>
       <div class="form-group form-full">
         <label class="form-label">Status</label>
@@ -2367,25 +2377,40 @@ async function saveSimForm(editId) {
   if (!valid) return;
 
   const customer = customers.find(c => c.id === customerId);
+  const paymentType = document.getElementById('simPayment').value;
   const fields = {
     customerId,
-    customerName: customer ? `${customer.firstName} ${customer.lastName}` : '',
+    customerName:   customer ? `${customer.firstName} ${customer.lastName}` : '',
     provider,
-    simNumber:   document.getElementById('simNumber').value.trim(),
-    iccid:       document.getElementById('simIccid').value.trim(),
-    email:       document.getElementById('simEmail').value.trim(),
-    password:    document.getElementById('simPassword').value,
-    plan:        document.getElementById('simPlan').value.trim(),
-    renewalDate: document.getElementById('simRenewal').value,
-    paymentType: document.getElementById('simPayment').value,
-    status:      document.getElementById('simStatus').value,
+    simNumber:      document.getElementById('simNumber').value.trim(),
+    iccid:          document.getElementById('simIccid').value.trim(),
+    email:          document.getElementById('simEmail').value.trim(),
+    password:       document.getElementById('simPassword').value,
+    plan:           document.getElementById('simPlan').value.trim(),
+    renewalDate:    document.getElementById('simRenewal').value,
+    paymentType,
+    status:         document.getElementById('simStatus').value,
+    ddDate:         paymentType !== 'direct' ? (parseInt(document.getElementById('simDdDate')?.value) || 1) : null,
+    simMonthlyCost: paymentType !== 'direct' ? (parseFloat(document.getElementById('simMonthlyCost')?.value) || 0) : 0,
   };
 
   if (editId) {
     const idx = sims.findIndex(s => s.id === editId);
     if (idx !== -1) sims[idx] = { ...sims[idx], ...fields };
   } else {
-    sims.push({ id: Date.now().toString(), ...fields, history: [], createdAt: new Date().toISOString() });
+    const setupDate = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+    sims.push({
+      id: Date.now().toString(),
+      ...fields,
+      history: [{
+        id: (Date.now() + 1).toString(),
+        type: 'activation',
+        desc: 'Initial SIM Setup',
+        amount: 20,
+        date: setupDate,
+      }],
+      createdAt: new Date().toISOString(),
+    });
   }
 
   saveSims(sims);
@@ -2427,6 +2452,10 @@ function openManageSimModal(id) {
       <div style="color:var(--muted);">Plan</div><div>${escHtml(s.plan||'—')}</div>
       <div style="color:var(--muted);">Renewal</div><div>${fmtDate(s.renewalDate)}</div>
       <div style="color:var(--muted);">Payment</div><div>${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}</div>
+      ${s.paymentType !== 'direct' ? `
+      <div style="color:var(--muted);">DD Day</div><div style="font-weight:600;">${s.ddDate ? `${s.ddDate}${s.ddDate===1?'st':s.ddDate===2?'nd':s.ddDate===3?'rd':'th'} of each month` : '—'}</div>
+      <div style="color:var(--muted);">Next DD Amount</div><div style="font-weight:700;color:var(--success);">${s.simMonthlyCost ? '£'+(s.simMonthlyCost + Math.max(s.simMonthlyCost*0.1,2)).toFixed(2) : '—'}</div>
+      ` : ''}
       <div style="color:var(--muted);">Status</div><div>${s.status}</div>
     </div>
 
@@ -2438,11 +2467,11 @@ function openManageSimModal(id) {
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
         <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;">
           <label style="font-size:11px;color:var(--muted);font-weight:600;">Type</label>
-          <select class="form-input" id="simChargeType" onchange="onSimChargeTypeChange()" style="font-size:13px;">
-            <option value="activation">🟢 Initial Activation — £20</option>
+          <select class="form-input" id="simChargeType" onchange="onSimChargeTypeChange('${id}')" style="font-size:13px;">
+            <option value="activation">🟢 Initial Setup — £20</option>
             <option value="service">🔧 Service (roaming/swap/reactivation) — £5</option>
             <option value="sim-replacement">📦 SIM Replacement — £10</option>
-            <option value="monthly">📅 Monthly Subscription — £2</option>
+            <option value="monthly">${s.paymentType !== 'direct' && s.simMonthlyCost ? `📅 Monthly DD — £${(s.simMonthlyCost + Math.max(s.simMonthlyCost*0.1,2)).toFixed(2)}` : '📅 Monthly Subscription'}</option>
             <option value="annual">📅 Annual Subscription — £20</option>
             <option value="custom">✏️ Custom</option>
           </select>
@@ -2469,19 +2498,31 @@ function openManageSimModal(id) {
   `);
 }
 
-const SIM_CHARGE_PRICES = { activation: 20, service: 5, 'sim-replacement': 10, monthly: 2, annual: 20 };
+const SIM_CHARGE_PRICES = { activation: 20, service: 5, 'sim-replacement': 10, annual: 20 };
 const SIM_CHARGE_DESCS  = {
-  activation: 'Initial SIM Activation',
+  activation: 'Initial SIM Setup',
   service: 'Service (roaming / swap / reactivation)',
   'sim-replacement': 'SIM Replacement',
-  monthly: 'Monthly Subscription',
+  monthly: 'Monthly DD',
   annual: 'Annual Subscription',
 };
 
-function onSimChargeTypeChange() {
+function onSimChargeTypeChange(simId) {
   const type  = document.getElementById('simChargeType').value;
   const amtEl = document.getElementById('simChargeAmount');
-  if (SIM_CHARGE_PRICES[type] !== undefined) amtEl.value = SIM_CHARGE_PRICES[type];
+  if (type === 'monthly') {
+    const s = simId ? sims.find(x => x.id === simId) : null;
+    if (s && s.paymentType !== 'direct' && s.simMonthlyCost) {
+      const fee = Math.max(s.simMonthlyCost * 0.1, 2);
+      amtEl.value = (s.simMonthlyCost + fee).toFixed(2);
+    } else {
+      amtEl.value = 0;
+    }
+  } else if (SIM_CHARGE_PRICES[type] !== undefined) {
+    amtEl.value = SIM_CHARGE_PRICES[type];
+  } else {
+    amtEl.value = 0;
+  }
 }
 
 function toggleMgSimPw(pw) {
@@ -2495,6 +2536,7 @@ function addSimCharge(simId) {
   if (!s) return;
   const type   = document.getElementById('simChargeType').value;
   const amount = parseFloat(document.getElementById('simChargeAmount').value) || 0;
+  if (amount <= 0) { toast('Amount must be greater than £0', 'error'); return; }
   const note   = document.getElementById('simChargeNote').value.trim();
   const desc   = note ? `${SIM_CHARGE_DESCS[type] || 'Custom'} — ${note}` : (SIM_CHARGE_DESCS[type] || 'Custom charge');
   if (!s.history) s.history = [];
@@ -2503,6 +2545,11 @@ function addSimCharge(simId) {
     type, desc, amount,
     date: new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }),
   });
+  if (type === 'monthly' && s.renewalDate) {
+    const d = new Date(s.renewalDate);
+    d.setMonth(d.getMonth() + 1);
+    s.renewalDate = d.toISOString().slice(0, 10);
+  }
   saveSims(sims);
   toast(`Charge of £${amount} added ✅`, 'success');
   openManageSimModal(simId);
