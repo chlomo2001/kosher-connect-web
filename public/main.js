@@ -422,17 +422,30 @@ function mgToggleGiven(item) {
   if (eqRow) eqRow.style.display = isNowGiven ? 'flex' : 'none';
 }
 
-// Toggle item status in Manage Rental modal. Clicking the active side again → undecided.
+// Toggle item status. Clicking the active side again → undecided (pending).
 function mgSetItemStatus(item, newStatus) {
   const hiddenEl = document.getElementById('mgItemStatus_' + item);
   if (!hiddenEl) return;
   const resolved = hiddenEl.value === newStatus ? 'undecided' : newStatus;
-  hiddenEl.value = resolved;
+  mgApplyItemStatus(item, resolved);
+}
 
-  const track   = document.getElementById('mgSlide_' + item);
-  const lostAmt = document.getElementById('mgLostAmt_' + item);
+// Reset an item to undecided (called by the × clear button).
+function mgClearItemStatus(item) { mgApplyItemStatus(item, 'undecided'); }
 
-  if (track) track.dataset.status = resolved;
+function mgApplyItemStatus(item, resolved) {
+  const hiddenEl = document.getElementById('mgItemStatus_' + item);
+  if (hiddenEl) hiddenEl.value = resolved;
+
+  const track   = document.getElementById('mgSlide_'        + item);
+  const badge   = document.getElementById('mgPendingBadge_' + item);
+  const clearBtn= document.getElementById('mgClearItem_'    + item);
+  const lostAmt = document.getElementById('mgLostAmt_'      + item);
+
+  if (track)    track.dataset.status     = resolved;
+  const pending = resolved === 'undecided';
+  if (badge)    badge.style.display      = pending ? 'inline-block' : 'none';
+  if (clearBtn) clearBtn.style.display   = pending ? 'none' : 'inline-flex';
 
   if (lostAmt) {
     const show = resolved === 'lost';
@@ -1319,17 +1332,23 @@ function openManageRentalModal(rentalId) {
     const given   = r.equipmentGiven?.[item] ?? EQ_DEFAULTS[item];
     const status  = getItemStatus(r, item);
     const lostAmt = r.lostCharges?.[item] ?? '';
+    const pending = status === 'undecided';
     return `
-      <div id="mgEqRow_${item}" style="display:${given ? 'flex' : 'none'};align-items:center;gap:10px;flex-wrap:wrap;padding:3px 0;">
+      <div id="mgEqRow_${item}" style="display:${given ? 'flex' : 'none'};align-items:center;gap:8px;flex-wrap:wrap;padding:3px 0;">
         <input type="hidden" id="mgItemStatus_${item}" value="${status}">
         <span style="font-size:13px;min-width:130px;">${EQ_LABELS[item]}</span>
         <div class="eq-slide-track" id="mgSlide_${item}" data-status="${status}">
           <div class="eq-slide-zone eq-slide-zone-left"  onclick="mgSetItemStatus('${item}','returned')"></div>
           <div class="eq-slide-zone eq-slide-zone-right" onclick="mgSetItemStatus('${item}','lost')"></div>
-          <span class="eq-slide-lbl eq-slide-lbl-ret">Returned</span>
-          <span class="eq-slide-lbl eq-slide-lbl-lost">Lost</span>
+          <span class="eq-slide-lbl eq-slide-lbl-n eq-slide-lbl-n-ret">Returned</span>
+          <span class="eq-slide-lbl eq-slide-lbl-n eq-slide-lbl-n-lost">Lost</span>
+          <span class="eq-slide-lbl eq-slide-lbl-a eq-slide-lbl-a-ret">✓ Returned</span>
+          <span class="eq-slide-lbl eq-slide-lbl-a eq-slide-lbl-a-lost">✗ Lost</span>
           <div class="eq-slide-knob"></div>
         </div>
+        <span id="mgPendingBadge_${item}" class="eq-item-pending" style="display:${pending?'inline-block':'none'};">Pending</span>
+        <button type="button" id="mgClearItem_${item}" class="eq-item-clear" onclick="mgClearItemStatus('${item}')"
+          style="display:${pending?'none':'inline-flex'};" title="Reset to pending">×</button>
         <input type="number" id="mgLostAmt_${item}" class="form-input" min="0" step="0.01" placeholder="£ amount"
           style="display:${status==='lost'?'inline-block':'none'};width:110px;padding:4px 10px;font-size:12px;border-radius:20px;"
           value="${lostAmt}" oninput="mgUpdateCalc()">

@@ -553,12 +553,12 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   gap: 10px;
 }
 
-/* EQUIPMENT SLIDING TOGGLE (A2 — Returned / Lost per item, three-position) */
-/* Track: 158px wide, 30px tall. Knob: 24px. Positions: left=3px, centre=67px, right=131px */
+/* EQUIPMENT SLIDING TOGGLE (A2 — three-position: undecided / returned / lost) */
+/* Track 164px × 30px. Knob 24px. Positions — left: 3px, centre: 70px, right: 137px */
 .eq-slide-track {
   position: relative;
   display: inline-block;
-  width: 158px;
+  width: 164px;
   height: 30px;
   border-radius: 999px;
   background: var(--border);
@@ -570,27 +570,35 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .eq-slide-track[data-status="returned"] { background: var(--success); }
 .eq-slide-track[data-status="lost"]     { background: var(--danger);  }
 
-/* Left and right click zones */
+/* Click zones — left half = returned, right half = lost */
 .eq-slide-zone { position: absolute; top: 0; bottom: 0; width: 50%; z-index: 1; cursor: pointer; }
 .eq-slide-zone-left  { left: 0;  border-radius: 999px 0 0 999px; }
 .eq-slide-zone-right { right: 0; border-radius: 0 999px 999px 0; }
 
-/* Labels inside the track — only visible when that side is active */
+/* All label spans share base positioning */
 .eq-slide-lbl {
   position: absolute;
   top: 50%; transform: translateY(-50%);
-  font-size: 11px; font-weight: 600;
-  color: rgba(255,255,255,0.92);
+  font-weight: 600;
   pointer-events: none;
+  white-space: nowrap;
   opacity: 0;
   transition: opacity 0.18s;
   z-index: 0;
-  white-space: nowrap;
 }
-.eq-slide-lbl-ret  { left: 36px; }
-.eq-slide-lbl-lost { right: 36px; }
-.eq-slide-track[data-status="returned"] .eq-slide-lbl-ret  { opacity: 1; }
-.eq-slide-track[data-status="lost"]     .eq-slide-lbl-lost { opacity: 1; }
+/* Neutral labels — muted, visible only in undecided state */
+.eq-slide-lbl-n { font-size: 10px; color: rgba(80,80,80,0.55); }
+.eq-slide-lbl-n-ret  { left: 7px; }
+.eq-slide-lbl-n-lost { right: 7px; }
+.eq-slide-track[data-status="undecided"] .eq-slide-lbl-n-ret  { opacity: 1; }
+.eq-slide-track[data-status="undecided"] .eq-slide-lbl-n-lost { opacity: 1; }
+
+/* Active labels — white, appear after/before the knob in their active state */
+.eq-slide-lbl-a { font-size: 11px; color: rgba(255,255,255,0.95); }
+.eq-slide-lbl-a-ret  { left: 34px; }
+.eq-slide-lbl-a-lost { right: 34px; }
+.eq-slide-track[data-status="returned"] .eq-slide-lbl-a-ret  { opacity: 1; }
+.eq-slide-track[data-status="lost"]     .eq-slide-lbl-a-lost { opacity: 1; }
 
 /* Sliding knob */
 .eq-slide-knob {
@@ -604,6 +612,37 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   z-index: 2;
   pointer-events: none;
 }
-.eq-slide-track[data-status="undecided"] .eq-slide-knob { left: 67px; }
+.eq-slide-track[data-status="undecided"] .eq-slide-knob { left: 70px; }
 .eq-slide-track[data-status="returned"]  .eq-slide-knob { left: 3px;  }
-.eq-slide-track[data-status="lost"]      .eq-slide-knob { left: 131px; }
+.eq-slide-track[data-status="lost"]      .eq-slide-knob { left: 137px; }
+
+/* Pending badge (amber) — shown only in undecided state */
+.eq-item-pending {
+  display: inline-block;
+  background: rgba(217,119,6,0.12);
+  color: var(--warning);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+/* Clear (×) button — shown when a side is selected */
+.eq-item-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.eq-item-clear:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
