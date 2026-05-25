@@ -1588,17 +1588,24 @@ async function saveManageRental(rentalId) {
   else if (newTo < today) newStatus = 'overdue';
   else newStatus = 'active';
 
+  // Capture late fee and lost charges at time of saving
+  const savedLateFee    = mgComputeLateFee();
+  const lostInfo        = mgComputeLostCharges();
+  const grandTotal      = newPrice + savedLateFee + lostInfo.total;
+
   const oldPrice   = r.price;
   r.fromDate       = newFrom;
   r.toDate         = newTo;
   r.status         = newStatus;
-  r.price          = newPrice;
+  r.price          = newPrice;           // rental price (after discount)
+  r.lateFee        = savedLateFee;       // late fee locked at save time
+  r.lostChargesTotal = lostInfo.total;   // sum of lost-item charges
   r.amountPaid     = newPaid;
-  r.debt           = Math.max(0, newPrice - newPaid);
+  r.debt           = Math.max(0, grandTotal - newPaid);
   r.chargeableDays = chargeableDays;
   r.totalDays      = totalDays;
   r.notes          = document.getElementById('mgNotes').value.trim();
-  // Persist per-item status (A1 data model: 'undecided' | 'returned' | 'lost') and loss amounts
+  // Per-item status and per-item loss amounts (A1 data model)
   r.itemStatus  = {};
   r.lostCharges = {};
   ['phone', 'sim', 'plug', 'cable'].forEach(item => {
