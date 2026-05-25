@@ -742,7 +742,7 @@ function renderRentalsTab() {
   const returningToday  = rentals.filter(r => r.status === 'active' && r.toDate === today0).length;
   const outstandingDebt = rentals.reduce((s, r) => {
     if (r.status === 'returned') return s;
-    return s + Math.max(0, (r.price || 0) + calcLateFeeDays(r) - (r.amountPaid || 0));
+    return s + Math.max(0, (r.price || 0) + calcLateFeeDays(r) + (r.lostChargesTotal || 0) - (r.amountPaid || 0));
   }, 0);
 
   const balLabel     = filterPaid==='paid'?'Fully Paid':filterPaid==='debt'?'Has Debt':'Balance';
@@ -884,7 +884,7 @@ function renderRentalRows() {
   }
   if (filterPaid !== 'all') {
     filtered = filtered.filter(r => {
-      const totalOwed = (r.price || 0) + calcLateFeeDays(r);
+      const totalOwed = (r.price || 0) + calcLateFeeDays(r) + (r.lostChargesTotal || 0);
       const fullyPaid = (r.amountPaid || 0) >= totalOwed;
       return filterPaid === 'paid' ? fullyPaid : !fullyPaid;
     });
@@ -905,9 +905,9 @@ function renderRentalRows() {
     else                                                statusBadge = `<span class="badge" style="background:rgba(251,146,60,0.15);color:#fb923c;">Returned ⚠️</span>`;
 
     const paid = r.amountPaid || 0;
-    const debt = r.price - paid;
     const lateFee = calcLateFeeDays(r);
-    const totalOwed = debt + lateFee;
+    const grandTotal = (r.price || 0) + lateFee + (r.lostChargesTotal || 0);
+    const totalOwed = grandTotal - paid;
     const debtColor = totalOwed > 0 ? 'color:var(--danger);' : 'color:var(--success);';
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('.action-btn'))openManageRentalModal('${r.id}')">
       <td>
