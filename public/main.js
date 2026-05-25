@@ -418,8 +418,38 @@ function mgToggleGiven(item) {
   if (!el) return;
   const isNowGiven = el.dataset.given !== '1';
   el.dataset.given = isNowGiven ? '1' : '0';
-  const retRow = document.getElementById('mgRetRow_' + item);
-  if (retRow) retRow.style.display = isNowGiven ? 'flex' : 'none';
+  const eqRow = document.getElementById('mgEqRow_' + item);
+  if (eqRow) eqRow.style.display = isNowGiven ? 'flex' : 'none';
+}
+
+// Toggle item status in Manage Rental modal. Clicking the active state again → undecided.
+function mgSetItemStatus(item, newStatus) {
+  const hiddenEl = document.getElementById('mgItemStatus_' + item);
+  if (!hiddenEl) return;
+  const current = hiddenEl.value;
+  const resolved = current === newStatus ? 'undecided' : newStatus;
+  hiddenEl.value = resolved;
+
+  const retBtn  = document.getElementById('mgRetBtn_'  + item);
+  const lostBtn = document.getElementById('mgLostBtn_' + item);
+  const lostAmt = document.getElementById('mgLostAmt_' + item);
+
+  if (retBtn) {
+    const on = resolved === 'returned';
+    retBtn.style.background = on ? 'var(--success)' : 'transparent';
+    retBtn.style.color      = on ? '#fff' : 'var(--success)';
+  }
+  if (lostBtn) {
+    const on = resolved === 'lost';
+    lostBtn.style.background = on ? 'var(--danger)' : 'transparent';
+    lostBtn.style.color      = on ? '#fff' : 'var(--danger)';
+  }
+  if (lostAmt) {
+    const show = resolved === 'lost';
+    lostAmt.style.display = show ? 'inline-block' : 'none';
+    if (!show) lostAmt.value = '';
+  }
+  mgUpdateCalc();
 }
 function mgSIMReturnChanged() {
   const checked = document.getElementById('mgSIM')?.checked;
@@ -547,11 +577,17 @@ function renderRentalsTab() {
   renderPhoneRows();
 }
 
+// Returns per-item status ('undecided' | 'returned' | 'lost'), with backwards-compat for old returnedItems boolean shape
+function getItemStatus(r, item) {
+  if (r.itemStatus?.[item] !== undefined) return r.itemStatus[item];
+  if (r.returnedItems?.[item] === true) return 'returned';
+  return 'undecided';
+}
+
 function getComputedStatus(r, today) {
   if (r.status !== 'returned') return r.toDate < today ? 'overdue' : 'active';
-  const eq  = r.equipmentGiven || { phone: true, sim: true, plug: true, cable: true };
-  const ret = r.returnedItems  || {};
-  const incomplete = ['phone', 'sim', 'plug', 'cable'].some(k => (eq[k] ?? true) && ret[k] !== true);
+  const eq = r.equipmentGiven || { phone: true, sim: true, plug: true, cable: true };
+  const incomplete = ['phone', 'sim', 'plug', 'cable'].some(k => (eq[k] ?? true) && getItemStatus(r, k) === 'undecided');
   return incomplete ? 'returned_incomplete' : 'returned';
 }
 
@@ -1286,6 +1322,29 @@ function openManageRentalModal(rentalId) {
   const debt = Math.max(0, r.price - paid);
   const mgLateFee = calcLateFeeDays(r);
 
+  // Build per-item status rows for A2 two-toggle UI
+  const EQ_LABELS   = { phone: '📱 Phone handset', sim: '💳 SIM card', plug: '🔌 Plug/Charger', cable: '🔋 Cable' };
+  const EQ_DEFAULTS = { phone: false, sim: true, plug: false, cable: false };
+  const eqRows = ['phone', 'sim', 'plug', 'cable'].map(item => {
+    const given     = r.equipmentGiven?.[item] ?? EQ_DEFAULTS[item];
+    const status    = getItemStatus(r, item);
+    const lostAmt   = r.lostCharges?.[item] ?? '';
+    const retActive = status === 'returned';
+    const lostActive= status === 'lost';
+    const retStyle  = `padding:4px 10px;border-radius:6px;border:1.5px solid var(--success);cursor:pointer;font-size:12px;background:${retActive  ? 'var(--success)' : 'transparent'};color:${retActive  ? '#fff' : 'var(--success)'};`;
+    const lostStyle = `padding:4px 10px;border-radius:6px;border:1.5px solid var(--danger);cursor:pointer;font-size:12px;background:${lostActive ? 'var(--danger)'  : 'transparent'};color:${lostActive ? '#fff' : 'var(--danger)'};`;
+    return `
+      <div id="mgEqRow_${item}" style="display:${given ? 'flex' : 'none'};align-items:center;gap:8px;flex-wrap:wrap;padding:3px 0;">
+        <input type="hidden" id="mgItemStatus_${item}" value="${status}">
+        <span style="font-size:13px;min-width:130px;">${EQ_LABELS[item]}</span>
+        <button type="button" id="mgRetBtn_${item}"  onclick="mgSetItemStatus('${item}','returned')" style="${retStyle}">✓ Returned</button>
+        <button type="button" id="mgLostBtn_${item}" onclick="mgSetItemStatus('${item}','lost')"     style="${lostStyle}">✗ Lost</button>
+        <input type="number" id="mgLostAmt_${item}" class="form-input" min="0" step="0.01" placeholder="Loss charge £"
+          style="display:${lostActive ? 'inline-block' : 'none'};width:120px;padding:4px 8px;font-size:12px;"
+          value="${lostAmt}" oninput="mgUpdateCalc()">
+      </div>`;
+  }).join('');
+
   showDynamicModal(`
     <div class="modal-title">⚙ Manage Rental — ${escHtml(r.phoneNumber)}</div>
     <div style="color:var(--muted);font-size:13px;margin-bottom:16px;">
@@ -1359,26 +1418,8 @@ function openManageRentalModal(rentalId) {
         <div class="eq-btn" id="mgGivenPlug"  data-given="${(r.equipmentGiven?.plug??false)?'1':'0'}" onclick="mgToggleGiven('plug')">🔌 Plug</div>
         <div class="eq-btn" id="mgGivenCable" data-given="${(r.equipmentGiven?.cable??false)?'1':'0'}" onclick="mgToggleGiven('cable')">🔋 Cable</div>
       </div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Returned by customer</div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <div id="mgRetRow_phone" style="display:${(r.equipmentGiven?.phone??false)?'flex':'none'};align-items:center;gap:10px;">
-          <input type="checkbox" id="mgPhone" ${r.returnedItems?.phone?'checked':''} style="width:15px;height:15px;accent-color:var(--accent);">
-          <span style="font-size:13px;cursor:pointer;" onclick="document.getElementById('mgPhone').click()">📱 Phone handset returned</span>
-        </div>
-        <div id="mgRetRow_sim" style="display:${(r.equipmentGiven?.sim??true)?'flex':'none'};align-items:center;gap:10px;">
-          <input type="checkbox" id="mgSIM" ${r.returnedItems?.sim?'checked':''} style="width:15px;height:15px;accent-color:var(--accent);" onchange="mgSIMReturnChanged()">
-          <span style="font-size:13px;cursor:pointer;" onclick="document.getElementById('mgSIM').click()">💳 SIM card returned</span>
-        </div>
-        <div id="mgRetRow_plug" style="display:${(r.equipmentGiven?.plug??false)?'flex':'none'};align-items:center;gap:10px;">
-          <input type="checkbox" id="mgPlug" ${r.returnedItems?.plug?'checked':''} style="width:15px;height:15px;accent-color:var(--accent);">
-          <span style="font-size:13px;cursor:pointer;" onclick="document.getElementById('mgPlug').click()">🔌 Plug / Charger returned</span>
-        </div>
-        <div id="mgRetRow_cable" style="display:${(r.equipmentGiven?.cable??false)?'flex':'none'};align-items:center;gap:10px;">
-          <input type="checkbox" id="mgCable" ${r.returnedItems?.cable?'checked':''} style="width:15px;height:15px;accent-color:var(--accent);">
-          <span style="font-size:13px;cursor:pointer;" onclick="document.getElementById('mgCable').click()">🔋 Cable returned</span>
-        </div>
-      </div>
-      <div id="mgReturnItemsError" style="display:none;color:var(--danger);font-size:12px;margin-top:6px;">Please select at least one returned item.</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Item status — tap Returned or Lost for each item given</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">${eqRows}</div>
     </div>
 
     <div class="section-divider" style="margin-top:12px;">Discount</div>
@@ -1497,17 +1538,7 @@ async function saveManageRental(rentalId) {
   const newPaid    = parseFloat(document.getElementById('mgPaid').value)  || 0;
   const { chargeableDays, totalDays } = calcRentalPrice(newFrom, newTo, r.country, r.ukPlan || 'standard');
 
-  if (isReturned) {
-    const givenCount = ['mgGivenPhone','mgGivenSim','mgGivenPlug','mgGivenCable']
-      .filter(id => document.getElementById(id)?.dataset.given === '1').length;
-    const anyChecked = givenCount === 0 || ['mgPhone','mgSIM','mgPlug','mgCable'].some(id => document.getElementById(id)?.checked);
-    const errEl = document.getElementById('mgReturnItemsError');
-    if (!anyChecked) {
-      if (errEl) errEl.style.display = 'block';
-      return;
-    }
-    if (errEl) errEl.style.display = 'none';
-  }
+  // No hard block on undecided items — undecided items show ⚠️ badge (getComputedStatus)
 
   const today = new Date().toISOString().slice(0,10);
   let newStatus;
@@ -1525,12 +1556,14 @@ async function saveManageRental(rentalId) {
   r.chargeableDays = chargeableDays;
   r.totalDays      = totalDays;
   r.notes          = document.getElementById('mgNotes').value.trim();
-  r.returnedItems  = {
-    phone: document.getElementById('mgPhone')?.checked  ?? false,
-    sim:   document.getElementById('mgSIM')?.checked    ?? false,
-    plug:  document.getElementById('mgPlug')?.checked   ?? false,
-    cable: document.getElementById('mgCable')?.checked  ?? false,
-  };
+  // Persist per-item status (A1 data model: 'undecided' | 'returned' | 'lost') and loss amounts
+  r.itemStatus  = {};
+  r.lostCharges = {};
+  ['phone', 'sim', 'plug', 'cable'].forEach(item => {
+    const st = document.getElementById('mgItemStatus_' + item)?.value || 'undecided';
+    r.itemStatus[item]  = st;
+    r.lostCharges[item] = st === 'lost' ? (parseFloat(document.getElementById('mgLostAmt_' + item)?.value) || null) : null;
+  });
   r.equipmentGiven = {
     phone: document.getElementById('mgGivenPhone')?.dataset.given === '1',
     sim:   document.getElementById('mgGivenSim')?.dataset.given   === '1',
