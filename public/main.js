@@ -422,28 +422,20 @@ function mgToggleGiven(item) {
   if (eqRow) eqRow.style.display = isNowGiven ? 'flex' : 'none';
 }
 
-// Toggle item status in Manage Rental modal. Clicking the active state again → undecided.
+// Toggle item status in Manage Rental modal. Clicking the active segment again → undecided.
 function mgSetItemStatus(item, newStatus) {
   const hiddenEl = document.getElementById('mgItemStatus_' + item);
   if (!hiddenEl) return;
-  const current = hiddenEl.value;
-  const resolved = current === newStatus ? 'undecided' : newStatus;
+  const resolved = hiddenEl.value === newStatus ? 'undecided' : newStatus;
   hiddenEl.value = resolved;
 
   const retBtn  = document.getElementById('mgRetBtn_'  + item);
   const lostBtn = document.getElementById('mgLostBtn_' + item);
   const lostAmt = document.getElementById('mgLostAmt_' + item);
 
-  if (retBtn) {
-    const on = resolved === 'returned';
-    retBtn.style.background = on ? 'var(--success)' : 'transparent';
-    retBtn.style.color      = on ? '#fff' : 'var(--success)';
-  }
-  if (lostBtn) {
-    const on = resolved === 'lost';
-    lostBtn.style.background = on ? 'var(--danger)' : 'transparent';
-    lostBtn.style.color      = on ? '#fff' : 'var(--danger)';
-  }
+  retBtn?.classList.toggle('active',  resolved === 'returned');
+  lostBtn?.classList.toggle('active', resolved === 'lost');
+
   if (lostAmt) {
     const show = resolved === 'lost';
     lostAmt.style.display = show ? 'inline-block' : 'none';
@@ -1326,21 +1318,19 @@ function openManageRentalModal(rentalId) {
   const EQ_LABELS   = { phone: '📱 Phone handset', sim: '💳 SIM card', plug: '🔌 Plug/Charger', cable: '🔋 Cable' };
   const EQ_DEFAULTS = { phone: false, sim: true, plug: false, cable: false };
   const eqRows = ['phone', 'sim', 'plug', 'cable'].map(item => {
-    const given     = r.equipmentGiven?.[item] ?? EQ_DEFAULTS[item];
-    const status    = getItemStatus(r, item);
-    const lostAmt   = r.lostCharges?.[item] ?? '';
-    const retActive = status === 'returned';
-    const lostActive= status === 'lost';
-    const retStyle  = `padding:4px 10px;border-radius:6px;border:1.5px solid var(--success);cursor:pointer;font-size:12px;background:${retActive  ? 'var(--success)' : 'transparent'};color:${retActive  ? '#fff' : 'var(--success)'};`;
-    const lostStyle = `padding:4px 10px;border-radius:6px;border:1.5px solid var(--danger);cursor:pointer;font-size:12px;background:${lostActive ? 'var(--danger)'  : 'transparent'};color:${lostActive ? '#fff' : 'var(--danger)'};`;
+    const given   = r.equipmentGiven?.[item] ?? EQ_DEFAULTS[item];
+    const status  = getItemStatus(r, item);
+    const lostAmt = r.lostCharges?.[item] ?? '';
     return `
-      <div id="mgEqRow_${item}" style="display:${given ? 'flex' : 'none'};align-items:center;gap:8px;flex-wrap:wrap;padding:3px 0;">
+      <div id="mgEqRow_${item}" style="display:${given ? 'flex' : 'none'};align-items:center;gap:10px;flex-wrap:wrap;padding:3px 0;">
         <input type="hidden" id="mgItemStatus_${item}" value="${status}">
         <span style="font-size:13px;min-width:130px;">${EQ_LABELS[item]}</span>
-        <button type="button" id="mgRetBtn_${item}"  onclick="mgSetItemStatus('${item}','returned')" style="${retStyle}">✓ Returned</button>
-        <button type="button" id="mgLostBtn_${item}" onclick="mgSetItemStatus('${item}','lost')"     style="${lostStyle}">✗ Lost</button>
-        <input type="number" id="mgLostAmt_${item}" class="form-input" min="0" step="0.01" placeholder="Loss charge £"
-          style="display:${lostActive ? 'inline-block' : 'none'};width:120px;padding:4px 8px;font-size:12px;"
+        <div class="eq-seg-track">
+          <button type="button" id="mgRetBtn_${item}"  class="eq-seg-btn eq-seg-ret ${status==='returned'?'active':''}" onclick="mgSetItemStatus('${item}','returned')">Returned</button>
+          <button type="button" id="mgLostBtn_${item}" class="eq-seg-btn eq-seg-lost ${status==='lost'?'active':''}"    onclick="mgSetItemStatus('${item}','lost')">Lost</button>
+        </div>
+        <input type="number" id="mgLostAmt_${item}" class="form-input" min="0" step="0.01" placeholder="£ amount"
+          style="display:${status==='lost'?'inline-block':'none'};width:110px;padding:4px 10px;font-size:12px;border-radius:20px;"
           value="${lostAmt}" oninput="mgUpdateCalc()">
       </div>`;
   }).join('');
