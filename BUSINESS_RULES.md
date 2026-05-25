@@ -61,3 +61,4 @@ All other Jewish holidays (e.g. Chol Hamoed, Rosh Chodesh, Tisha B'Av) are **cha
 ---
 
 _More sections to follow: Wallet rules, Permission rules, SIM/plan rules._
+
