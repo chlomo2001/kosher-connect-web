@@ -1554,11 +1554,19 @@ function toggleReturned() {
 function mgUpdateDebt() {
   const total = mgComputeTotal();
   const paid  = parseFloat(document.getElementById('mgPaid')?.value) || 0;
-  const debt  = Math.max(0, total - paid);
+  const diff  = total - paid;
   const el    = document.getElementById('mgDebtDisplay');
   if (!el) return;
-  el.style.color = debt > 0 ? 'var(--danger)' : 'var(--success)';
-  el.textContent = debt > 0 ? 'Remaining debt: £' + debt.toFixed(2) : '✓ Fully paid';
+  if (diff > 0.005) {
+    el.style.color = 'var(--danger)';
+    el.textContent = 'Remaining debt: £' + diff.toFixed(2);
+  } else if (diff < -0.005) {
+    el.style.color = 'var(--warning)';
+    el.textContent = '⚠ Paid £' + Math.abs(diff).toFixed(2) + ' over total — reconcile manually';
+  } else {
+    el.style.color = 'var(--success)';
+    el.textContent = '✓ Fully paid';
+  }
 }
 
 async function saveManageRental(rentalId) {
