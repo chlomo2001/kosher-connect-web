@@ -412,6 +412,26 @@ function mgComputeLateFee() {
   lateDayStart.setDate(lateDayStart.getDate() + 1);
   return countChargeableDays(lateDayStart.toISOString().slice(0, 10), today);
 }
+
+// Returns lost-item charges entered in the modal: { total, items: [{label, amount}] }
+function mgComputeLostCharges() {
+  const LABELS = { phone: 'Phone', sim: 'SIM card', plug: 'Plug/Charger', cable: 'Cable' };
+  const items = [];
+  let total = 0;
+  ['phone', 'sim', 'plug', 'cable'].forEach(item => {
+    if (document.getElementById('mgItemStatus_' + item)?.value !== 'lost') return;
+    const amt = parseFloat(document.getElementById('mgLostAmt_' + item)?.value) || 0;
+    if (amt > 0) { items.push({ label: LABELS[item], amount: amt }); total += amt; }
+  });
+  return { total, items };
+}
+
+// Grand total shown in the breakdown: rental price + late fee + lost charges
+function mgComputeTotal() {
+  const price = parseFloat(document.getElementById('mgPrice')?.value) || 0;
+  return price + mgComputeLateFee() + mgComputeLostCharges().total;
+}
+
 function mgToggleGiven(item) {
   const id = 'mgGiven' + item.charAt(0).toUpperCase() + item.slice(1);
   const el = document.getElementById(id);
@@ -1397,11 +1417,7 @@ function openManageRentalModal(rentalId) {
 
     <div class="section-divider" style="margin-top:12px;">Payment</div>
     <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;">
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px;">
-        <span style="color:var(--muted);">Total charge:</span>
-        <strong style="color:var(--text);" id="mgTotalChargeValue">£${(r.price + mgLateFee).toFixed(2)}</strong>
-      </div>
-      ${mgLateFee > 0 ? `<div id="mgLateFeeNote" style="font-size:14px;font-weight:700;color:#fb923c;margin-bottom:8px;">of which £${mgLateFee} is a late fee</div>` : `<div id="mgLateFeeNote" style="display:none;font-size:14px;font-weight:700;color:#fb923c;margin-bottom:8px;"></div>`}
+      <div id="mgChargeBreakdown" style="margin-bottom:10px;"></div>
       <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">
         <span style="font-size:13px;color:var(--muted);white-space:nowrap;">Amount paid: £</span>
         <input class="form-input" type="number" id="mgPaid" value="${paid}" min="0" step="0.5"
@@ -1410,7 +1426,7 @@ function openManageRentalModal(rentalId) {
       <div style="margin-bottom:8px;">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
           <input type="checkbox" id="mgFullyPaid" style="accent-color:var(--accent);"
-            onchange="if(this.checked){document.getElementById('mgPaid').value=(parseFloat(document.getElementById('mgPrice').value)+mgComputeLateFee()).toFixed(2);mgUpdateDebt();}else{document.getElementById('mgPaid').value='';mgUpdateDebt();}">
+            onchange="if(this.checked){document.getElementById('mgPaid').value=mgComputeTotal().toFixed(2);mgUpdateDebt();}else{document.getElementById('mgPaid').value='';mgUpdateDebt();}">
           Mark as fully paid
         </label>
       </div>
@@ -1492,23 +1508,32 @@ function mgUpdateCalc() {
     if (dval > 0) discountLine = ` &nbsp;|&nbsp; -${dtype==='percent'?dval+'%':'£'+dval} → <strong style="color:var(--accent);">£${finalPrice.toFixed(2)}</strong>`;
   }
 
-  const lateFee = mgComputeLateFee();
+  const lateFee  = mgComputeLateFee();
   document.getElementById('mgCalcText').innerHTML =
     `Total: ${totalDays}d &nbsp;|&nbsp; Shabbat/YT excluded: <span style="color:var(--gold);">${excl}</span> &nbsp;|&nbsp; Chargeable: ${chargeableDays}d &nbsp;|&nbsp; <strong style="color:var(--success);">£${price}</strong>${discountLine}`;
-  document.getElementById('mgPrice').value = finalPrice.toFixed(2);
+  document.getElementById('mgPrice').value    = finalPrice.toFixed(2);
   document.getElementById('mgBasePrice').value = price;
 
-  const totalEl = document.getElementById('mgTotalChargeValue');
-  if (totalEl) totalEl.textContent = '£' + (finalPrice + lateFee).toFixed(2);
-  const lateFeeEl = document.getElementById('mgLateFeeNote');
-  if (lateFeeEl) {
-    if (lateFee > 0) {
-      lateFeeEl.style.display = '';
-      lateFeeEl.textContent = `of which £${lateFee} is a late fee`;
-    } else {
-      lateFeeEl.style.display = 'none';
-    }
-  }
+  // Build itemised charge breakdown (A3)
+  const lostInfo   = mgComputeLostCharges();
+  const grandTotal = finalPrice + lateFee + lostInfo.total;
+  const row = (label, amount, colour) =>
+    `<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px;">
+      <span style="color:${colour||'var(--muted)'};">${label}</span>
+      <span style="color:${colour||'var(--text)'};">£${amount.toFixed(2)}</span>
+    </div>`;
+  let html = row('Rental', finalPrice);
+  if (lateFee > 0)     html += row('Late fee', lateFee, '#fb923c');
+  lostInfo.items.forEach(({ label, amount }) => {
+    html += row(label + ' — lost', amount, 'var(--danger)');
+  });
+  html += `<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;
+              margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">
+             <span>Total</span>
+             <span id="mgTotalChargeValue">£${grandTotal.toFixed(2)}</span>
+           </div>`;
+  const breakdown = document.getElementById('mgChargeBreakdown');
+  if (breakdown) breakdown.innerHTML = html;
 
   mgUpdateDebt();
 }
@@ -1527,11 +1552,10 @@ function toggleReturned() {
 }
 
 function mgUpdateDebt() {
-  const price   = parseFloat(document.getElementById('mgPrice')?.value) || 0;
-  const paid    = parseFloat(document.getElementById('mgPaid')?.value)  || 0;
-  const lateFee = mgComputeLateFee();
-  const debt    = Math.max(0, price + lateFee - paid);
-  const el      = document.getElementById('mgDebtDisplay');
+  const total = mgComputeTotal();
+  const paid  = parseFloat(document.getElementById('mgPaid')?.value) || 0;
+  const debt  = Math.max(0, total - paid);
+  const el    = document.getElementById('mgDebtDisplay');
   if (!el) return;
   el.style.color = debt > 0 ? 'var(--danger)' : 'var(--success)';
   el.textContent = debt > 0 ? 'Remaining debt: £' + debt.toFixed(2) : '✓ Fully paid';
