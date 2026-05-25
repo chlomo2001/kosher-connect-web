@@ -422,19 +422,17 @@ function mgToggleGiven(item) {
   if (eqRow) eqRow.style.display = isNowGiven ? 'flex' : 'none';
 }
 
-// Toggle item status in Manage Rental modal. Clicking the active segment again → undecided.
+// Toggle item status in Manage Rental modal. Clicking the active side again → undecided.
 function mgSetItemStatus(item, newStatus) {
   const hiddenEl = document.getElementById('mgItemStatus_' + item);
   if (!hiddenEl) return;
   const resolved = hiddenEl.value === newStatus ? 'undecided' : newStatus;
   hiddenEl.value = resolved;
 
-  const retBtn  = document.getElementById('mgRetBtn_'  + item);
-  const lostBtn = document.getElementById('mgLostBtn_' + item);
+  const track   = document.getElementById('mgSlide_' + item);
   const lostAmt = document.getElementById('mgLostAmt_' + item);
 
-  retBtn?.classList.toggle('active',  resolved === 'returned');
-  lostBtn?.classList.toggle('active', resolved === 'lost');
+  if (track) track.dataset.status = resolved;
 
   if (lostAmt) {
     const show = resolved === 'lost';
@@ -1314,7 +1312,7 @@ function openManageRentalModal(rentalId) {
   const debt = Math.max(0, r.price - paid);
   const mgLateFee = calcLateFeeDays(r);
 
-  // Build per-item status rows for A2 two-toggle UI
+  // Build per-item status rows — three-position sliding toggle (A2)
   const EQ_LABELS   = { phone: '📱 Phone handset', sim: '💳 SIM card', plug: '🔌 Plug/Charger', cable: '🔋 Cable' };
   const EQ_DEFAULTS = { phone: false, sim: true, plug: false, cable: false };
   const eqRows = ['phone', 'sim', 'plug', 'cable'].map(item => {
@@ -1325,9 +1323,12 @@ function openManageRentalModal(rentalId) {
       <div id="mgEqRow_${item}" style="display:${given ? 'flex' : 'none'};align-items:center;gap:10px;flex-wrap:wrap;padding:3px 0;">
         <input type="hidden" id="mgItemStatus_${item}" value="${status}">
         <span style="font-size:13px;min-width:130px;">${EQ_LABELS[item]}</span>
-        <div class="eq-seg-track">
-          <button type="button" id="mgRetBtn_${item}"  class="eq-seg-btn eq-seg-ret ${status==='returned'?'active':''}" onclick="mgSetItemStatus('${item}','returned')">Returned</button>
-          <button type="button" id="mgLostBtn_${item}" class="eq-seg-btn eq-seg-lost ${status==='lost'?'active':''}"    onclick="mgSetItemStatus('${item}','lost')">Lost</button>
+        <div class="eq-slide-track" id="mgSlide_${item}" data-status="${status}">
+          <div class="eq-slide-zone eq-slide-zone-left"  onclick="mgSetItemStatus('${item}','returned')"></div>
+          <div class="eq-slide-zone eq-slide-zone-right" onclick="mgSetItemStatus('${item}','lost')"></div>
+          <span class="eq-slide-lbl eq-slide-lbl-ret">Returned</span>
+          <span class="eq-slide-lbl eq-slide-lbl-lost">Lost</span>
+          <div class="eq-slide-knob"></div>
         </div>
         <input type="number" id="mgLostAmt_${item}" class="form-input" min="0" step="0.01" placeholder="£ amount"
           style="display:${status==='lost'?'inline-block':'none'};width:110px;padding:4px 10px;font-size:12px;border-radius:20px;"
