@@ -12,6 +12,8 @@
  */
 
 var BOOKINGS_SHEET_NAME = 'Bookings';
+var LEDGER_SHEET_NAME = 'Ledger';
+var TASKS_SHEET_NAME = 'Tasks';
 
 var BOOKINGS_HEADERS = [
   'BookingID', 'CustomerID', 'Passenger', 'Route', 'Airline',
@@ -305,17 +307,16 @@ function dateValue_(v) {
 
 /** True if any Ledger row's Reference equals the given reference. */
 function ledgerHasReference_(reference) {
-  var ledger = findSheetByHeaders_(['CustomerID', 'Type', 'Amount', 'Reference']);
-  if (!ledger) {
-    Logger.log('ledgerHasReference_: Ledger tab not found — cannot run double-charge guard.');
-    return false;
-  }
-  var sheet = ledger.sheet;
+  var sheet = getSheetOrThrow_(LEDGER_SHEET_NAME);
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) return false;
 
-  var refCol = ledger.index['Reference'] + 1;
-  var refs = sheet.getRange(2, refCol, lastRow - 1, 1).getValues();
+  var index = headerIndex_(sheet);
+  if (!index.hasOwnProperty('Reference')) {
+    throw new Error('"' + LEDGER_SHEET_NAME + '" tab has no "Reference" column — cannot run double-charge guard.');
+  }
+
+  var refs = sheet.getRange(2, index['Reference'] + 1, lastRow - 1, 1).getValues();
   var wanted = String(reference);
   for (var i = 0; i < refs.length; i++) {
     if (String(refs[i][0]) === wanted) return true;
@@ -325,17 +326,19 @@ function ledgerHasReference_(reference) {
 
 /** Titles of Tasks rows that are not marked Done. */
 function openTaskTitles_() {
-  var tasks = findSheetByHeaders_(['Title', 'Priority', 'Done']);
+  var sheet = getSheetOrThrow_(TASKS_SHEET_NAME);
   var map = {};
-  if (!tasks) return map;
-  var sheet = tasks.sheet;
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) return map;
 
-  var titleCol = tasks.index['Title'];
-  var doneCol = tasks.index['Done'];
-  var width = sheet.getLastColumn();
-  var data = sheet.getRange(2, 1, lastRow - 1, width).getValues();
+  var index = headerIndex_(sheet);
+  var titleCol = index['Title'];
+  var doneCol = index['Done'];
+  if (titleCol === undefined || doneCol === undefined) {
+    throw new Error('"' + TASKS_SHEET_NAME + '" tab is missing a "Title" or "Done" column.');
+  }
+
+  var data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
   for (var i = 0; i < data.length; i++) {
     var done = String(data[i][doneCol]).toLowerCase();
     if (done === 'y' || done === 'true' || done === 'yes') continue;
@@ -346,13 +349,9 @@ function openTaskTitles_() {
 
 /** Appends a row to the Tasks tab, mapping by header. */
 function appendTaskRow_(title, dueDate, priority) {
-  var tasks = findSheetByHeaders_(['TaskID', 'Title', 'Priority']);
-  if (!tasks) {
-    Logger.log('appendTaskRow_: Tasks tab not found — skipping task "' + title + '".');
-    return;
-  }
-  var sheet = tasks.sheet;
-  var headers = tasks.headers;
+  var sheet = getSheetOrThrow_(TASKS_SHEET_NAME);
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+    .map(function (h) { return String(h).trim(); });
 
   var values = {
     TaskID: Utilities.getUuid().substring(0, 8),
@@ -371,26 +370,22 @@ function appendTaskRow_(title, dueDate, priority) {
   sheet.appendRow(row);
 }
 
-/**
- * Finds the first sheet whose header row (row 1) contains all of the given
- * header names. Returns {sheet, headers, index} where index maps header ->
- * zero-based column, or null if no sheet matches.
- */
-function findSheetByHeaders_(required) {
-  var sheets = SpreadsheetApp.getActiveSpreadsheet().getSheets();
-  for (var s = 0; s < sheets.length; s++) {
-    var sheet = sheets[s];
-    if (sheet.getLastColumn() < 1 || sheet.getLastRow() < 1) continue;
-    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
-      .map(function (h) { return String(h).trim(); });
-
-    var index = {};
-    for (var i = 0; i < headers.length; i++) {
-      if (headers[i] !== '') index[headers[i]] = i;
-    }
-
-    var ok = required.every(function (h) { return index.hasOwnProperty(h); });
-    if (ok) return { sheet: sheet, headers: headers, index: index };
+/** Returns the named sheet, or throws a clear error if it isn't found. */
+function getSheetOrThrow_(name) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+  if (!sheet) {
+    throw new Error('"' + name + '" tab not found in this spreadsheet.');
   }
-  return null;
+  return sheet;
+}
+
+/** Maps header name -> zero-based column index for the sheet's row 1. */
+function headerIndex_(sheet) {
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var index = {};
+  for (var i = 0; i < headers.length; i++) {
+    var h = String(headers[i]).trim();
+    if (h !== '') index[h] = i;
+  }
+  return index;
 }
