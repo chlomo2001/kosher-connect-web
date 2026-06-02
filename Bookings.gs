@@ -76,7 +76,8 @@ function setupBookingsTab() {
  * Appends a Bookings row. BookingID = max in column A + 1.
  * Status defaults to "Booked". After appending, it immediately posts the
  * Price + BookingFee charge to the customer's wallet via
- * confirmBookingCharge() (the double-charge guard there still applies).
+ * confirmBookingCharge() (the double-charge guard there, keyed on the
+ * BOOKING-<id> tag, still applies).
  *
  * Returns { bookingId, balance } where balance is the new wallet balance.
  *
@@ -129,8 +130,13 @@ function addBooking(customerId, passenger, route, airline, bookingRef,
  * existing appendLedgerEntry(). Charge amount = -(Price + BookingFee).
  * Returns the new wallet balance from getWalletBalance(customerId).
  *
- * Double-charge guard: if a Ledger entry already exists with this booking's
- * BookingReference, it logs a warning, posts nothing, and returns the
+ * The ledger entry's Reference field stores a stable "BOOKING-<id>" tag so
+ * the charge can always be tied back to its booking. The airline
+ * BookingReference (which can be blank in real data) is kept in the memo
+ * when present.
+ *
+ * Double-charge guard: keyed on the BOOKING-<id> tag. If a Ledger entry with
+ * that tag already exists, it logs a warning, posts nothing, and returns the
  * current (unchanged) balance.
  */
 function confirmBookingCharge(bookingId) {
@@ -147,22 +153,31 @@ function confirmBookingCharge(bookingId) {
   var price = Number(b.Price) || 0;
   var bookingFee = Number(b.BookingFee) || 0;
 
-  // Double-charge guard, keyed on BookingReference.
-  if (bookingRef !== '' && bookingRef !== null && bookingRef !== undefined &&
-      ledgerHasReference_(bookingRef)) {
-    Logger.log('confirmBookingCharge: a Ledger entry with reference "' + bookingRef +
+  var bookingTag = bookingReferenceTag_(bookingId);
+
+  // Double-charge guard, keyed on the BOOKING-<id> tag.
+  if (ledgerHasReference_(bookingTag)) {
+    Logger.log('confirmBookingCharge: a Ledger entry tagged "' + bookingTag +
                '" already exists — refusing to charge again for BookingID ' + bookingId + '.');
     return getWalletBalance(customerId);
   }
 
   var amount = -(price + bookingFee);
   var memo = 'Flight ' + b.Route + ' (' + b.Airline + ')';
+  if (bookingRef !== '' && bookingRef !== null && bookingRef !== undefined) {
+    memo += ' — ref ' + bookingRef;
+  }
 
-  appendLedgerEntry(customerId, 'Charge', amount, '', bookingRef, memo);
+  appendLedgerEntry(customerId, 'Charge', amount, '', bookingTag, memo);
   Logger.log('confirmBookingCharge: posted ' + amount + ' to CustomerID ' + customerId +
-             ' for BookingID ' + bookingId + ' (ref "' + bookingRef + '").');
+             ' for BookingID ' + bookingId + ' (tag "' + bookingTag + '").');
 
   return getWalletBalance(customerId);
+}
+
+/** Stable ledger Reference tag for a booking, used as the dedupe key. */
+function bookingReferenceTag_(bookingId) {
+  return 'BOOKING-' + bookingId;
 }
 
 /* ------------------------------------------------------------------ *
