@@ -74,7 +74,11 @@ function setupBookingsTab() {
 
 /**
  * Appends a Bookings row. BookingID = max in column A + 1.
- * Status defaults to "Booked". Returns the new BookingID.
+ * Status defaults to "Booked". After appending, it immediately posts the
+ * Price + BookingFee charge to the customer's wallet via
+ * confirmBookingCharge() (the double-charge guard there still applies).
+ *
+ * Returns { bookingId, balance } where balance is the new wallet balance.
  *
  * No passport number or DOB is accepted or stored — only the
  * passportOnFile flag and passportExpiry date.
@@ -109,7 +113,11 @@ function addBooking(customerId, passenger, route, airline, bookingRef,
 
   sheet.appendRow(row);
   Logger.log('addBooking: added BookingID ' + nextId + ' for CustomerID ' + customerId + '.');
-  return nextId;
+
+  // Post the charge to the wallet ledger in the same step.
+  var balance = confirmBookingCharge(nextId);
+
+  return { bookingId: nextId, balance: balance };
 }
 
 /* ------------------------------------------------------------------ *
