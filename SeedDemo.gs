@@ -28,15 +28,25 @@ function seedDemoData() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
   // ---- GUARD ----
-  var rentals = ss.getSheetByName('Rentals');
-  if (!rentals) {
+  // Refuse if ANY demo tab already holds data. (A bare Rentals>1 check let a
+  // partially-failed run — which leaves 1 rental + seeded inventory — slip
+  // through and double-seed. This checks every tab the seeder writes.)
+  if (!ss.getSheetByName('Rentals')) {
     Logger.log('seedDemoData: "Rentals" tab not found — run setup() first.');
     return;
   }
-  var rentalDataRows = rentals.getLastRow() - 1;
-  if (rentalDataRows > 1) {
-    Logger.log('seedDemoData: Rentals already has ' + rentalDataRows +
-      ' data rows (>1). Refusing to seed to avoid double-seeding.');
+  var demoTabs = ['Rentals', 'Bookings', 'Phones', 'Pools', 'SIMs',
+                  'ResellerLinks', 'DIDs', 'SoldPhones'];
+  var populated = [];
+  for (var g = 0; g < demoTabs.length; g++) {
+    var gsh = ss.getSheetByName(demoTabs[g]);
+    if (gsh && gsh.getLastRow() > 1) {
+      populated.push(demoTabs[g] + ' (' + (gsh.getLastRow() - 1) + ')');
+    }
+  }
+  if (populated.length) {
+    Logger.log('seedDemoData: demo tabs already populated — ' + populated.join(', ') +
+      '. Run clearDemoData() first. Aborting to avoid double-seeding.');
     return;
   }
 
