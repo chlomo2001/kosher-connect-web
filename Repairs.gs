@@ -252,7 +252,7 @@ function chargeCompletedTimers() {
       // Both timers must be set.
       if (isNaN(startMs) || isNaN(stopMs)) continue;
 
-      // Skip rows already charged (TimerSeconds set and non-zero).
+      // Skip rows already charged (TimerSeconds holds a positive integer).
       if (!isUncharged_(row[idx['TimerSeconds']])) continue;
 
       var elapsedSeconds = Math.round((stopMs - startMs) / 1000);
@@ -332,6 +332,79 @@ function deleteTimerTrigger() {
     }
   }
   Logger.log('deleteTimerTrigger: removed ' + removed + ' trigger(s) for ' + TIMER_TRIGGER_HANDLER + '.');
+}
+
+/**
+ * fixLegacyTimerSeconds(apply)
+ * One-off cleanup for stale TimerSeconds values left by the old timer system
+ * (e.g. a "71170"-type integer, or a Date/duration value) on rows that were
+ * never actually billed by the sweep — i.e. there is no 'TIMER-'+RepairID
+ * entry in the Ledger. Clearing those cells lets chargeCompletedTimers bill
+ * the row correctly on its next run.
+ *
+ * REPORT-ONLY by default: it logs exactly which cells it WOULD clear and
+ * changes nothing. Eyeball the log, then run fixLegacyTimerSeconds(true) to
+ * apply. Always report-first for a bulk fix that touches money.
+ *
+ * A row is left untouched when TimerSeconds is blank, or when the Ledger
+ * already has its 'TIMER-'+RepairID entry (a legitimately charged row).
+ */
+function fixLegacyTimerSeconds(apply) {
+  var doApply = (apply === true);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Repairs');
+  if (!sheet) throw new Error('"Repairs" tab not found.');
+  var last = sheet.getLastRow();
+  if (last < 2) {
+    Logger.log('fixLegacyTimerSeconds: no repair rows to scan.');
+    return;
+  }
+
+  var idx = headerIndex_(sheet);
+  if (!idx.hasOwnProperty('RepairID') || !idx.hasOwnProperty('TimerSeconds')) {
+    throw new Error('"Repairs" tab missing a RepairID or TimerSeconds column.');
+  }
+
+  var existingRefs = ledgerReferenceSet_();
+  var width = sheet.getLastColumn();
+  var data = sheet.getRange(2, 1, last - 1, width).getValues();
+
+  var candidates = 0;
+  var cleared = 0;
+
+  Logger.log('fixLegacyTimerSeconds: ' + (doApply ? 'APPLY' : 'REPORT-ONLY') + ' mode.');
+
+  for (var i = 0; i < data.length; i++) {
+    var sheetRow = i + 2;
+    var ts = data[i][idx['TimerSeconds']];
+
+    if (ts === '' || ts === null || ts === undefined) continue; // nothing to clear
+
+    var repairId = data[i][idx['RepairID']];
+    var reference = 'TIMER-' + repairId;
+    if (existingRefs[reference]) continue; // legitimately charged — leave it
+
+    candidates++;
+    var shown = (Object.prototype.toString.call(ts) === '[object Date]')
+      ? ('Date(' + ts + ')')
+      : (String(ts) + ' [' + typeof ts + ']');
+    Logger.log('  row ' + sheetRow + '  RepairID ' + repairId +
+      '  TimerSeconds=' + shown + '  — no ' + reference +
+      ' in Ledger → ' + (doApply ? 'CLEARED' : 'would clear'));
+
+    if (doApply) {
+      sheet.getRange(sheetRow, idx['TimerSeconds'] + 1).clearContent();
+      cleared++;
+    }
+  }
+
+  if (doApply) {
+    Logger.log('fixLegacyTimerSeconds: cleared ' + cleared + ' of ' +
+      candidates + ' stale TimerSeconds cell(s).');
+  } else {
+    Logger.log('fixLegacyTimerSeconds: ' + candidates +
+      ' stale TimerSeconds cell(s) would be cleared. ' +
+      'Re-run as fixLegacyTimerSeconds(true) to apply.');
+  }
 }
 
 /* ============================================================
@@ -464,10 +537,22 @@ function ledgerReferenceSet_() {
   return set;
 }
 
-/** True when a TimerSeconds cell is empty or zero (i.e. not yet charged). */
+/**
+ * True when a TimerSeconds cell does NOT represent a completed charge, so the
+ * sweep should proceed. A row counts as "already charged" ONLY when the cell
+ * holds a positive integer second-count (what chargeCompletedTimers writes).
+ * Everything else — blank, zero, negative, non-integer, non-numeric text, or a
+ * Date/duration value — is treated as "not charged, proceed", so a stray
+ * format or value can never permanently block a charge.
+ */
 function isUncharged_(v) {
-  if (v === '' || v === null || v === undefined) return true;
-  return Number(v) === 0;
+  if (v === '' || v === null || v === undefined) return true;          // blank
+  if (Object.prototype.toString.call(v) === '[object Date]') return true; // date/duration
+  var n = Number(v);
+  if (!isFinite(n)) return true;        // non-numeric text
+  if (n <= 0) return true;              // zero / negative
+  if (Math.floor(n) !== n) return true; // non-integer
+  return false;                         // positive integer → already charged
 }
 
 /** Parses a cell value (Date or string) to epoch milliseconds, or NaN. */

@@ -106,7 +106,7 @@ var SCHEMA = [
     autoId: true,
     headers: ['RepairID', 'CustomerID', 'DeviceDescription', 'Services',
               'Total', 'Status', 'OpenedAt', 'ClosedAt', 'TimerSeconds',
-              'Notes'],
+              'TimerStart', 'TimerStop', 'Notes'],
     validations: {
       Status: ['Open', 'In Progress', 'Done', 'Collected']
     }
