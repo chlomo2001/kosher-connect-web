@@ -401,14 +401,3 @@ function getSheetOrThrow_(name) {
   }
   return sheet;
 }
-
-/** Maps header name -> zero-based column index for the sheet's row 1. */
-function headerIndex_(sheet) {
-  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  var index = {};
-  for (var i = 0; i < headers.length; i++) {
-    var h = String(headers[i]).trim();
-    if (h !== '') index[h] = i;
-  }
-  return index;
-}
