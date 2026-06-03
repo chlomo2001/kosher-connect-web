@@ -184,6 +184,33 @@ function seedDemoData() {
     ' (3 settle-to-zero, 5 positive top-ups; uncovered booking customers stay negative)');
 }
 
+/**
+ * Clear demo data so seedDemoData() can be re-run cleanly (e.g. after a
+ * partial/failed run). Clears only the data rows (row 2 down) of the
+ * inventory + Rentals/Bookings tabs, preserving headers, validations and
+ * formatting.
+ *
+ * Deliberately does NOT touch Ledger, Tasks, Repairs, Customers, PriceList,
+ * Settings or Holidays — those hold real/seed data this function can't safely
+ * distinguish from demo rows. If a FULL seed run completed, its ledger
+ * payments and auto-tasks must be removed by hand.
+ */
+function clearDemoData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var tabs = ['Rentals', 'Bookings', 'Phones', 'Pools', 'SIMs',
+              'ResellerLinks', 'DIDs', 'SoldPhones'];
+  for (var i = 0; i < tabs.length; i++) {
+    var sh = ss.getSheetByName(tabs[i]);
+    if (!sh) { Logger.log('clearDemoData: tab not found — ' + tabs[i]); continue; }
+    var last = sh.getLastRow();
+    if (last < 2) { Logger.log('clearDemoData: ' + tabs[i] + ' already empty.'); continue; }
+    sh.getRange(2, 1, last - 1, sh.getLastColumn()).clearContent();
+    Logger.log('clearDemoData: cleared ' + (last - 1) + ' row(s) from ' + tabs[i] + '.');
+  }
+  Logger.log('clearDemoData: done. Ledger / Tasks / Repairs / Customers / ' +
+    'PriceList / Settings / Holidays left untouched.');
+}
+
 /* ============================================================
  * INVENTORY SEEDERS (standalone — plain appends, computed IDs)
  * ============================================================ */
