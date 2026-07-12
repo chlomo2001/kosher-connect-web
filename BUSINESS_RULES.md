@@ -47,6 +47,11 @@ Days excluded from chargeable day count (phone use is forbidden):
 
 All other Jewish holidays (e.g. Chol Hamoed, Rosh Chodesh, Tisha B'Av) are **chargeable**.
 
+**One calendar for everyone (decided 12 Jul 2026):** the full 2-day Yom Tov
+calendar applies to **all** rentals, including Israel phones — guests renting
+for Eretz Yisroel keep both days of Yom Tov, so there is no separate 1-day
+Israel calendar in pricing.
+
 ### 1.3 Virtual Number Add-On
 
 - £5 per week (minimum 1 week charge)

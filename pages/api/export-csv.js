@@ -1,19 +1,22 @@
 import { loadData } from '../../lib/data'
 import { withStaff } from '../../lib/auth.js'
+import { tablesMode } from '../../lib/db'
+import { listCustomers } from '../../lib/tableStore'
 
 async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
 
-  const customers = await loadData('customers')
+  // Same data source as /api/customers — the old blob-store read returned []
+  // in tables mode, which exported a headers-only file.
+  const customers = tablesMode ? await listCustomers() : await loadData('customers')
   const rows = [
-    ['First Name', 'Last Name', 'Phone', 'Email', 'Address', 'WhatsApp', 'Total Paid', 'Created At'],
+    ['First Name', 'Last Name', 'Phone', 'Email', 'Address', 'Total Paid', 'Created At'],
     ...customers.map(c => [
       c.firstName || '',
       c.lastName || '',
       c.phone || '',
       c.email || '',
       c.address || '',
-      c.hasWhatsapp ? 'Yes' : 'No',
       c.totalPaid || 0,
       c.createdAt || '',
     ]),

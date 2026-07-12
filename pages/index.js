@@ -115,15 +115,6 @@ export default function Home() {
               <input className="form-input" id="fAddress" type="text" placeholder="123 Baker Street, London" autoComplete="off" />
             </div>
 
-            <div className="form-group form-full" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
-              <input
-                type="checkbox"
-                id="fWhatsapp"
-                style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--accent)' }}
-              />
-              <label htmlFor="fWhatsapp" style={{ fontSize: '14px', cursor: 'pointer' }}>Customer has WhatsApp</label>
-            </div>
-
             <div className="form-warning form-full" id="warnName">
               ⚠️ A customer with this name already exists. Please verify this is a different person.
             </div>
