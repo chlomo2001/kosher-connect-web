@@ -63,30 +63,35 @@ async function handler(req, res) {
       if (!customerId) {
         const since = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.since || ''))
           ? req.query.since : new Date().toISOString().slice(0, 10)
+        // recent=N lets the Wallet tab pull a longer feed than the dashboard.
+        const recentLimit = Math.min(Math.max(parseInt(req.query.recent, 10) || 12, 1), 200)
         const [recent, todays, balances, custRows] = await Promise.all([
-          db.select('ledger', 'select=*,customers(first_name,last_name)&order=created_at.desc&limit=12'),
+          db.select('ledger', `select=*,customers(first_name,last_name)&order=created_at.desc&limit=${recentLimit}`),
           db.select('ledger', `select=amount&created_at=gte.${since}`),
           db.select('customer_balances', ''),
           db.select('customers', 'select=id,legacy_id,first_name,last_name'),
         ])
         const names = new Map(custRows.map(c => [c.id, `${c.first_name || ''} ${c.last_name || ''}`.trim()]))
         const appIds = new Map(custRows.map(c => [c.id, c.legacy_id]))
-        const arrears = balances
-          .filter(b => Number(b.balance) < 0)
-          .map(b => ({
-            customerId: appIds.get(b.customer_id) || null, // app id — dashboard deep-link
-            customerName: names.get(b.customer_id) || '?',
-            balance: Number(b.balance),
-          }))
-          .sort((a, b) => a.balance - b.balance)
+        const balanceRow = b => ({
+          customerId: appIds.get(b.customer_id) || null, // app id — deep-link
+          customerName: names.get(b.customer_id) || '?',
+          balance: Number(b.balance),
+        })
+        const arrears = balances.filter(b => Number(b.balance) < 0)
+          .map(balanceRow).sort((a, b) => a.balance - b.balance)
+        const credits = balances.filter(b => Number(b.balance) > 0)
+          .map(balanceRow).sort((a, b) => b.balance - a.balance)
         return res.json({
           success: true,
           recent: recent.map(r => ({
             ...toAppEntry(r),
-            customerName: r.customers
-              ? `${r.customers.first_name || ''} ${r.customers.last_name || ''}`.trim() : '',
+            customerId: appIds.get(r.customer_id) || null,
+            customerName: names.get(r.customer_id) || '',
           })),
           arrears,
+          credits,
+          creditsTotal: credits.reduce((s, a) => s + a.balance, 0),
           arrearsTotal: arrears.reduce((s, a) => s + a.balance, 0),
           todayIn: todays.filter(r => Number(r.amount) > 0).reduce((s, r) => s + Number(r.amount), 0),
           todayOut: todays.filter(r => Number(r.amount) < 0).reduce((s, r) => s + Number(r.amount), 0),

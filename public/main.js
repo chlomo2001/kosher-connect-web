@@ -229,6 +229,11 @@ function renderTab(tab) {
     searchBox.style.display = 'none';
     btnNew.style.display = 'none';
     renderBookingsTab();
+  } else if (tab === 'wallet') {
+    document.getElementById('pageTitle').innerHTML = 'Wallet <span>& Ledger</span>';
+    searchBox.style.display = 'none';
+    btnNew.style.display = 'none';
+    renderWalletTab();
   } else if (tab === 'repairs') {
     document.getElementById('pageTitle').innerHTML = 'Phone <span>Repairs</span>';
     searchBox.style.display = 'none';
@@ -2198,7 +2203,109 @@ async function saveWalletEntry(customerId) {
   if (!res.success) { toast(res.error || 'Could not record it.', 'error'); return; }
   closeDynamicModal();
   toast(`Recorded — wallet balance now £${res.balance.toFixed(2)}.`, 'success');
-  loadWalletSection(customerId);
+  loadWalletSection(customerId); // no-ops unless the detail panel is open
+  if (currentTab === 'wallet') renderWalletTab();
+}
+
+// ─────────────────────────────────────────────
+//  WALLET TAB (business-wide ledger view)
+// ─────────────────────────────────────────────
+// The per-customer wallet lives in the customer detail panel; this tab is
+// the shop-wide view: today's money, who owes / who's in credit, and the
+// full recent ledger feed. Same append-only /api/ledger underneath.
+
+async function renderWalletTab() {
+  const content = document.getElementById('mainContent');
+  content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading wallet…</div>`;
+
+  const today = localISO();
+  const data = await kcFetch(`/api/ledger?since=${today}&recent=50`)
+    .then(r => r.ok ? r.json() : null).catch(() => null);
+  if (!data || !data.success) {
+    content.innerHTML = `<div class="empty-state"><div class="emoji">💰</div>
+      <p>Wallet unavailable${data?.error ? ' — ' + escHtml(data.error) : ''}.</p></div>`;
+    return;
+  }
+
+  const arrears = data.arrears || [];
+  const credits = data.credits || [];
+  const arrearsTotal = Math.abs(data.arrearsTotal || 0);
+  const creditsTotal = data.creditsTotal || 0;
+
+  const balanceRow = (b, negative) => `
+    <div class="feed-item${b.customerId ? ' dash-link' : ''}"${b.customerId
+      ? ` onclick="goToTab('customers',{customerId:'${escHtml(String(b.customerId))}'})" title="Open customer"` : ''}>
+      <span class="feed-icon">${negative ? '🔴' : '🟢'}</span>
+      <span style="flex:1;"><strong>${escHtml(b.customerName)}</strong></span>
+      <span style="font-feature-settings:'tnum';color:${negative ? 'var(--danger)' : 'var(--success)'};font-weight:600;">
+        ${negative ? '−' : '+'}£${Math.abs(b.balance).toFixed(2)}</span>
+      ${b.customerId ? `<button class="btn btn-outline btn-sm" style="margin-left:10px;font-size:11px;padding:4px 10px;"
+        onclick="event.stopPropagation();openWalletModal('${escHtml(String(b.customerId))}')">💰 Record</button>` : ''}
+      <span class="feed-go">›</span>
+    </div>`;
+
+  const arrearsHtml = arrears.length === 0
+    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">Nobody owes money. 🎉</div>`
+    : arrears.map(b => balanceRow(b, true)).join('');
+  const creditsHtml = credits.length === 0
+    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No prepaid credit held.</div>`
+    : credits.map(b => balanceRow(b, false)).join('');
+
+  const feedHtml = (data.recent || []).length === 0
+    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No wallet activity yet.</div>`
+    : data.recent.map(e => `
+        <div class="history-item${e.customerId ? ' dash-link' : ''}"
+          style="background:transparent;border-bottom:1px solid var(--border);border-radius:0;padding:9px 2px;"
+          ${e.customerId ? `onclick="goToTab('customers',{customerId:'${escHtml(String(e.customerId))}'})" title="Open customer"` : ''}>
+          <div style="display:flex;align-items:center;flex:1;min-width:0;">
+            <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>
+            <div class="history-desc" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+              <strong>${escHtml(e.customerName || '—')}</strong> · ${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}${e.method ? ` <span style="color:var(--muted);">(${escHtml(e.method.replace('_', ' '))})</span>` : ''}</div>
+          </div>
+          <div class="history-date" style="margin:0 12px;">${fmtDate(e.at)}</div>
+          <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--text)'};font-feature-settings:'tnum';">
+            ${e.amount >= 0 ? '+' : '−'}£${Math.abs(e.amount).toFixed(2)}</div>
+        </div>`).join('');
+
+  const customerOptions = [...customers]
+    .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))
+    .map(c => `<option value="${escHtml(c.id)}">${escHtml(c.firstName)} ${escHtml(c.lastName)}</option>`)
+    .join('');
+
+  content.innerHTML = `
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Money In Today</div>
+        <div class="stat-value" style="color:var(--success);">£${(data.todayIn || 0).toFixed(2)}</div></div>
+      <div class="stat-card"><div class="stat-label">Charged Out Today</div>
+        <div class="stat-value">£${Math.abs(data.todayOut || 0).toFixed(2)}</div></div>
+      <div class="stat-card"><div class="stat-label">Outstanding</div>
+        <div class="stat-value" style="color:${arrearsTotal > 0 ? 'var(--danger)' : 'var(--success)'};">£${arrearsTotal.toFixed(2)}</div>
+        <div class="stat-sub">${arrears.length} customer${arrears.length === 1 ? '' : 's'} in arrears</div></div>
+      <div class="stat-card"><div class="stat-label">Credit Held</div>
+        <div class="stat-value">£${creditsTotal.toFixed(2)}</div>
+        <div class="stat-sub">${credits.length} customer${credits.length === 1 ? '' : 's'} in credit</div></div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+      <select class="form-input" id="wtCustomer" style="width:260px;min-height:0;padding:8px 12px;font-size:13px;">
+        <option value="">Choose a customer…</option>${customerOptions}
+      </select>
+      <button class="btn btn-primary" onclick="(()=>{const id=document.getElementById('wtCustomer').value;
+        if(!id){toast('Choose a customer first.','error');return;}openWalletModal(id)})()">💰 Record Money</button>
+    </div>
+
+    <div class="dash-cols">
+      <div class="table-card" style="padding:8px 18px 14px;">
+        <div class="section-divider" style="margin-top:12px;">Owes money</div>
+        ${arrearsHtml}
+        <div class="section-divider" style="margin-top:16px;">In credit</div>
+        ${creditsHtml}
+      </div>
+      <div class="table-card" style="padding:8px 18px 14px;">
+        <div class="section-divider" style="margin-top:12px;">Recent activity <span style="color:var(--muted);font-weight:400;">· last ${(data.recent || []).length}</span></div>
+        <div>${feedHtml}</div>
+      </div>
+    </div>`;
 }
 
 async function addPayment(id) {
