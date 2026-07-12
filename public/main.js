@@ -1060,7 +1060,7 @@ function renderRentalRows() {
     else if (computedStatus === 'active')               statusBadge = `<span class="badge badge-rental">Active</span>`;
     else if (computedStatus === 'overdue')              statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--danger);">Overdue ⚠️</span>`;
     else if (computedStatus === 'returned')             statusBadge = `<span class="badge badge-active">Returned</span>`;
-    else                                                statusBadge = `<span class="badge" style="background:rgba(251,146,60,0.15);color:#fb923c;">Returned ⚠️</span>`;
+    else                                                statusBadge = `<span class="badge" style="background:#f5e9d4;color:#9b6829;">Returned ⚠️</span>`;
 
     const paid = r.amountPaid || 0;
     const totalOwed = rentalGrandTotal(r) - paid;
@@ -1766,7 +1766,7 @@ function mgUpdateCalc() {
       <span style="color:${colour||'var(--text)'};">£${amount.toFixed(2)}</span>
     </div>`;
   let html = row('Rental', finalPrice);
-  if (lateFee > 0)     html += row('Late fee', lateFee, '#fb923c');
+  if (lateFee > 0)     html += row('Late fee', lateFee, 'var(--gold)');
   lostInfo.items.forEach(({ label, amount }) => {
     html += row(label + ' — lost', amount, 'var(--danger)');
   });
@@ -2153,7 +2153,7 @@ function renderDetailPanel(id) {
         </div>
         <div class="detail-stat">
           <div class="detail-stat-label">Virtual Numbers</div>
-          <div class="detail-stat-value" style="color:#a78bfa;">${activeVNs}</div>
+          <div class="detail-stat-value" style="color:#c026d3;">${activeVNs}</div>
         </div>
       </div>
 
@@ -3057,8 +3057,8 @@ const BOOKING_STATUSES = ['Booked', 'Ticketed', 'Completed', 'Cancelled'];
 
 function bookingStatusBadge(status) {
   const styles = {
-    Booked:    'background:rgba(59,130,246,0.15);color:#3b82f6;',
-    Ticketed:  'background:rgba(168,85,247,0.15);color:#a855f7;',
+    Booked:    'background:rgba(185,185,249,0.45);color:#4434d4;',
+    Ticketed:  'background:rgba(249,107,238,0.14);color:#c026d3;',
     Completed: 'background:rgba(34,197,94,0.15);color:var(--success);',
     Cancelled: 'background:rgba(239,68,68,0.15);color:var(--danger);',
   };
@@ -3243,9 +3243,9 @@ const REPAIR_STATUSES = ['Open', 'In Progress', 'Ready', 'Collected', 'Cancelled
 
 function repairStatusBadge(status) {
   const styles = {
-    'Open':        'background:rgba(59,130,246,0.15);color:#3b82f6;',
-    'In Progress': 'background:rgba(251,146,60,0.15);color:#fb923c;',
-    'Ready':       'background:rgba(168,85,247,0.15);color:#a855f7;',
+    'Open':        'background:rgba(185,185,249,0.45);color:#4434d4;',
+    'In Progress': 'background:#f5e9d4;color:#9b6829;',
+    'Ready':       'background:rgba(249,107,238,0.14);color:#c026d3;',
     'Collected':   'background:rgba(34,197,94,0.15);color:var(--success);',
     'Cancelled':   'background:rgba(239,68,68,0.15);color:var(--danger);',
   };
@@ -3398,7 +3398,7 @@ let tasksList = [];
 function taskPriorityBadge(p) {
   const styles = {
     High:   'background:rgba(239,68,68,0.15);color:var(--danger);',
-    Normal: 'background:rgba(59,130,246,0.15);color:#3b82f6;',
+    Normal: 'background:rgba(185,185,249,0.45);color:#4434d4;',
     Low:    'background:rgba(148,163,184,0.15);color:var(--muted);',
   };
   return `<span class="badge" style="${styles[p] || styles.Normal}">${escHtml(p)}</span>`;
@@ -3560,8 +3560,8 @@ async function renderDashboardTab() {
              arrearsCount ? arrearsCount + ' customer' + (arrearsCount === 1 ? '' : 's') + ' in arrears' : '')}
       ${stat('Active Rentals', activeRentals.length, 'var(--accent)',
              (overdue.length ? overdue.length + ' overdue' : '') + (dueToday.length ? (overdue.length ? ' · ' : '') + dueToday.length + ' due today' : ''))}
-      ${stat('Open Repairs', openRepairs.length, '#fb923c', readyRepairs.length ? readyRepairs.length + ' ready to collect' : '')}
-      ${stat('Travel Next 7 Days', travel7.length, '#a855f7', renewals7.length ? renewals7.length + ' SIM renewals too' : '')}
+      ${stat('Open Repairs', openRepairs.length, 'var(--gold)', readyRepairs.length ? readyRepairs.length + ' ready to collect' : '')}
+      ${stat('Travel Next 7 Days', travel7.length, '#c026d3', renewals7.length ? renewals7.length + ' SIM renewals too' : '')}
       ${stat('Open Tasks', openTasks.length, highTasks.length ? 'var(--danger)' : '', highTasks.length ? highTasks.length + ' high priority' : '')}
     </div>
 

@@ -33,19 +33,13 @@ export default function Login() {
   return (
     <>
       <Head><title>Sign in · KosherConnect</title></Head>
-      <div style={{
-        minHeight: '100vh', display: 'flex', alignItems: 'center',
-        justifyContent: 'center', background: 'var(--bg, #0f1115)',
-      }}>
-        <form onSubmit={submit} style={{
-          width: 340, padding: '32px 28px', borderRadius: 14,
-          background: 'var(--bg-card, #171a21)',
-          border: '1px solid var(--border, #262b36)',
-        }}>
-          <div style={{ textAlign: 'center', marginBottom: 22 }}>
-            <img src="/logo.png" alt="" style={{ height: 46, marginBottom: 10 }} />
-            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text, #e7eaf0)' }}>KosherConnect</div>
-            <div style={{ fontSize: 12, color: 'var(--muted, #8b93a3)' }}>Staff sign in</div>
+      <div className="login-shell">
+        <div className="login-mesh" aria-hidden="true" />
+        <form className="login-card" onSubmit={submit}>
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <img src="/logo.png" alt="" style={{ height: 48, marginBottom: 12, borderRadius: '50%' }} />
+            <div className="login-title">KosherConnect</div>
+            <div className="login-sub">Staff sign in</div>
           </div>
           <input
             className="form-input" type="email" placeholder="Email" value={email}
@@ -57,8 +51,8 @@ export default function Login() {
             onChange={e => setPassword(e.target.value)} required
             style={{ width: '100%', marginBottom: 14 }}
           />
-          {error && <div style={{ color: '#ef4444', fontSize: 12, marginBottom: 12 }}>{error}</div>}
-          <button className="btn btn-primary" type="submit" disabled={busy} style={{ width: '100%' }}>
+          {error && <div style={{ color: 'var(--danger)', fontSize: 12, marginBottom: 12 }}>{error}</div>}
+          <button className="btn btn-primary" type="submit" disabled={busy} style={{ width: '100%', padding: '10px 16px' }}>
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
