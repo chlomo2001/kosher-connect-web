@@ -3763,13 +3763,53 @@ async function deleteVN(id, number) {
 async function renderSettingsTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading settings…</div>`;
-  const cfg = await window.api.getSettings();
+  const [cfg, team] = await Promise.all([
+    window.api.getSettings(),
+    kcFetch('/api/team').then(r => r.status === 403 ? null : r.json()).catch(() => null),
+  ]);
   if (!cfg || !cfg.success) {
     content.innerHTML = `<div class="tab-placeholder"><div class="big">⚙️</div>
       <h2>Pricing Settings</h2><p style="color:var(--muted)">${escHtml(cfg?.error || 'Settings unavailable.')}</p></div>`;
     return;
   }
   pricingConfig = cfg; // keep live pricing in sync with what's displayed
+
+  // Team card — rendered only for the owner (helpers get a 403 from /api/team).
+  const teamHtml = team?.success ? `
+    <div class="table-card" style="margin-bottom:16px;">
+      <div class="section-divider" style="margin:12px 14px 4px;">👥 Team</div>
+      <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
+      <tbody>
+        ${team.members.map(m => `
+          <tr>
+            <td><span class="customer-name">${escHtml(m.fullName || '—')}</span>${m.isYou ? ' <span class="badge badge-rental">you</span>' : ''}</td>
+            <td>${escHtml(m.email || '—')}</td>
+            <td>
+              <select class="form-input" style="width:110px;padding:5px 8px;font-size:13px;min-height:0;"
+                onchange="changeTeamRole('${escHtml(m.id)}', this.value)" ${m.isYou ? 'disabled' : ''}>
+                <option value="owner" ${m.role === 'owner' ? 'selected' : ''}>Owner</option>
+                <option value="helper" ${m.role === 'helper' ? 'selected' : ''}>Helper</option>
+              </select>
+            </td>
+            <td>${m.isYou ? '' : `<button class="action-btn danger" style="font-size:11px;"
+              onclick="removeTeamMember('${escHtml(m.id)}', '${escHtml(m.fullName || m.email)}')">✕ Remove</button>`}</td>
+          </tr>`).join('')}
+        <tr>
+          <td><input class="form-input" id="tmName" placeholder="Full name" style="min-height:0;padding:6px 10px;font-size:13px;"></td>
+          <td style="white-space:nowrap;">
+            <input class="form-input" id="tmEmail" type="email" placeholder="Email" style="min-height:0;padding:6px 10px;font-size:13px;width:46%;display:inline-block;">
+            <input class="form-input" id="tmPassword" type="password" placeholder="Password (8+)" style="min-height:0;padding:6px 10px;font-size:13px;width:46%;display:inline-block;">
+          </td>
+          <td>
+            <select class="form-input" id="tmRole" style="width:110px;padding:5px 8px;font-size:13px;min-height:0;">
+              <option value="helper">Helper</option>
+              <option value="owner">Owner</option>
+            </select>
+          </td>
+          <td><button class="btn btn-primary btn-sm" onclick="saveNewTeamMember()">+ Add</button></td>
+        </tr>
+      </tbody></table>
+    </div>` : '';
 
   const num = (id, val, step = '0.01') =>
     `<input class="form-input" type="number" step="${step}" id="${id}" value="${val}" style="width:90px;padding:6px 8px;font-size:13px;">`;
@@ -3807,6 +3847,7 @@ async function renderSettingsTab() {
     </tr>`).join('');
 
   content.innerHTML = `
+    ${teamHtml}
     <div style="margin-bottom:10px;padding:10px 14px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);">
       These values drive live pricing (rental calculator, VN add-on, late fees, repair/SIM charges).
       Edits apply to <strong>new</strong> calculations only — existing tickets and frozen prices never reprice.
@@ -3868,6 +3909,47 @@ async function saveSettingKey(key) {
   });
 }
 
+// ── Team management (owner-only; server enforces) ──
+
+async function saveNewTeamMember() {
+  const payload = {
+    fullName: document.getElementById('tmName').value.trim(),
+    email: document.getElementById('tmEmail').value.trim(),
+    password: document.getElementById('tmPassword').value,
+    role: document.getElementById('tmRole').value,
+  };
+  if (!payload.email) { toast('Email is required.', 'error'); return; }
+  if (!payload.password || payload.password.length < 8) { toast('Password must be at least 8 characters.', 'error'); return; }
+  const res = await kcFetch('/api/team', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).then(r => r.json());
+  if (!res.success) { toast(res.error || 'Could not add the member.', 'error'); return; }
+  toast(`${payload.email} added as ${payload.role} ✔ They can sign in right away.`, 'success');
+  renderSettingsTab();
+}
+
+async function changeTeamRole(id, role) {
+  const res = await kcFetch('/api/team', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, role }),
+  }).then(r => r.json());
+  if (!res.success) { toast(res.error || 'Could not change the role.', 'error'); }
+  renderSettingsTab();
+}
+
+async function removeTeamMember(id, label) {
+  const ok = await window.api.confirmDelete(
+    `Remove "${label}" from the team?\n\nTheir access stops immediately. The login account is kept but no longer works for this app.`);
+  if (!ok) return;
+  const res = await kcFetch('/api/team?id=' + encodeURIComponent(id), { method: 'DELETE' }).then(r => r.json());
+  if (!res.success) { toast(res.error || 'Could not remove the member.', 'error'); return; }
+  toast('Team member removed.', 'warning');
+  renderSettingsTab();
+}
+
 // ─────────────────────────────────────────────
 //  DOUBLE-SUBMIT GUARD
 // ─────────────────────────────────────────────
@@ -3899,6 +3981,8 @@ saveDamageRate   = guardReentry(saveDamageRate);
 saveSettingKey   = guardReentry(saveSettingKey);
 saveNewVN        = guardReentry(saveNewVN);
 deleteVN         = guardReentry(deleteVN);
+saveNewTeamMember = guardReentry(saveNewTeamMember);
+removeTeamMember  = guardReentry(removeTeamMember);
 saveNewRental    = guardReentry(saveNewRental);
 saveManageRental = guardReentry(saveManageRental);
 saveSimForm      = guardReentry(saveSimForm);
