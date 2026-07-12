@@ -37,7 +37,7 @@ export default function Login() {
         <div className="login-mesh" aria-hidden="true" />
         <form className="login-card" onSubmit={submit}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <img src="/logo.png" alt="" style={{ height: 48, marginBottom: 12, borderRadius: '50%' }} />
+            <img src="/logo-full.svg" alt="KosherConnect" style={{ height: 64, marginBottom: 12 }} />
             <div className="login-title">KosherConnect</div>
             <div className="login-sub">Staff sign in</div>
           </div>
