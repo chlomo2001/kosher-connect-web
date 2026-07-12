@@ -3484,14 +3484,28 @@ async function toggleTaskDone(id, done) {
 // ─────────────────────────────────────────────
 //  DASHBOARD (business overview)
 // ─────────────────────────────────────────────
-// Aggregates every feature: money (ledger summary), rentals due/overdue,
-// repairs, upcoming travel, SIM renewals, open tasks, recent activity.
+// Stripi layout: featured dark-navy money card (the brand's featured-tier
+// treatment) + thin-display metric cards, over a two-column feed.
+
+// Hebrew calendar string for a Date (gematria day + month + gematria year).
+function hebrewDateString(d) {
+  try {
+    const parts = new Intl.DateTimeFormat('he-IL-u-ca-hebrew', {
+      day: 'numeric', month: 'long', year: 'numeric'
+    }).formatToParts(d);
+    const dayNum   = parseInt(parts.find(p => p.type === 'day')?.value || '0');
+    const monthStr = parts.find(p => p.type === 'month')?.value || '';
+    const yearNum  = parseInt(parts.find(p => p.type === 'year')?.value || '0');
+    return numToHebrew(dayNum) + ' ' + monthStr + ' ' + numToHebrew(yearNum);
+  } catch (e) { return ''; }
+}
 
 async function renderDashboardTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading dashboard…</div>`;
 
-  const today = localISO();
+  const now = new Date();
+  const today = localISO(now);
   const in7 = localISO(new Date(Date.now() + 7 * 86400000));
 
   // Rentals/phones/sims/bookings are already in memory; fetch the rest.
@@ -3514,76 +3528,109 @@ async function renderDashboardTab() {
   const highTasks = openTasks.filter(t => t.priority === 'High');
 
   const money = ledgerSummary?.success ? ledgerSummary : null;
-  const arrearsCount = money ? money.arrears.length : 0;
+  const arrears = money ? money.arrears : [];
   const arrearsTotal = money ? Math.abs(money.arrearsTotal) : 0;
 
-  const stat = (label, value, color, sub = '') => `
+  // ── Header: date (EN + Hebrew) · greeting · quick actions ──
+  const hour = now.getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const enDate = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const hebDate = hebrewDateString(now);
+
+  // ── Featured money card (dark navy) ──
+  const heroHtml = `
+    <div class="dash-hero">
+      <div class="dash-hero-label">Money in today</div>
+      <div class="dash-hero-value">£${money ? money.todayIn.toFixed(2) : '0.00'}</div>
+      <div class="dash-hero-sub">${money && money.todayOut ? '£' + Math.abs(money.todayOut).toFixed(2) + ' charged out today' : 'no charges yet today'}</div>
+      <div class="dash-hero-divider"></div>
+      <div class="dash-hero-label">Outstanding</div>
+      <div class="dash-hero-value" style="font-size:26px;letter-spacing:-0.26px;">£${arrearsTotal.toFixed(2)}</div>
+      <div class="dash-hero-sub">${arrears.length ? arrears.length + ' customer' + (arrears.length === 1 ? '' : 's') + ' in arrears' : 'nobody owes money 🎉'}</div>
+      ${arrears.length ? `<div class="dash-hero-divider"></div>` +
+        arrears.slice(0, 4).map(a => `
+          <div class="dash-hero-row">
+            <span>${escHtml(a.customerName)}</span>
+            <span class="amt">£${Math.abs(a.balance).toFixed(2)}</span>
+          </div>`).join('') : ''}
+    </div>`;
+
+  // ── Metric cards ──
+  const metric = (label, value, sub, valueStyle = '') => `
     <div class="stat-card">
       <div class="stat-label">${label}</div>
-      <div class="stat-value" ${color ? `style="color:${color};"` : ''}>${value}</div>
-      ${sub ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">${sub}</div>` : ''}
+      <div class="stat-value" ${valueStyle ? `style="${valueStyle}"` : ''}>${value}</div>
+      ${sub ? `<div class="stat-sub">${sub}</div>` : ''}
     </div>`;
+
+  const metricsHtml = `
+    <div class="dash-metrics">
+      ${metric('Active Rentals', activeRentals.length,
+        [overdue.length ? `<span style="color:var(--danger);">${overdue.length} overdue</span>` : '',
+         dueToday.length ? `${dueToday.length} due today` : ''].filter(Boolean).join(' · ') || 'all on schedule')}
+      ${metric('Open Repairs', openRepairs.length,
+        readyRepairs.length ? `<span style="color:var(--accent);">${readyRepairs.length} ready to collect</span>` : 'nothing waiting')}
+      ${metric('Travel · Next 7 Days', travel7.length,
+        renewals7.length ? `${renewals7.length} SIM renewal${renewals7.length === 1 ? '' : 's'} too` : 'plus SIM renewals')}
+      ${metric('Open Tasks', openTasks.length,
+        highTasks.length ? `<span style="color:var(--danger);">${highTasks.length} high priority</span>` : 'none urgent',
+        highTasks.length ? 'color:var(--danger);' : '')}
+    </div>`;
+
+  // ── Needs-attention feed ──
+  const attention = [];
+  overdue.forEach(r => attention.push(['📱', `<strong>${escHtml(r.customerName || '?')}</strong> — rental overdue since ${fmtDate(r.toDate)}`]));
+  readyRepairs.forEach(r => attention.push(['🔧', `<strong>${escHtml(r.customerName || '?')}</strong> — repair ready to collect (£${(r.total || 0).toFixed(2)})`]));
+  travel7.forEach(b => attention.push(['✈️', `<strong>${escHtml(b.customerName || '?')}</strong> — flies ${fmtDate(b.travelDate)} (${escHtml(b.route)})`]));
+  renewals7.forEach(s => attention.push(['💳', `<strong>${escHtml(s.customerName || '?')}</strong> — SIM renews ${fmtDate(s.renewalDate)}`]));
+  highTasks.slice(0, 5).forEach(t => attention.push(['❗', escHtml(t.title)]));
+
+  const attentionHtml = attention.length === 0
+    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">All clear. 🎉</div>`
+    : attention.slice(0, 10).map(([icon, html]) => `
+        <div class="feed-item"><span class="feed-icon">${icon}</span><span>${html}</span></div>`).join('');
 
   const activityHtml = !money || money.recent.length === 0
     ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No wallet activity yet.</div>`
     : money.recent.map(e => `
-        <div class="history-item">
-          <div style="display:flex;align-items:center;flex:1;">
+        <div class="history-item" style="background:transparent;border-bottom:1px solid var(--border);border-radius:0;padding:9px 2px;">
+          <div style="display:flex;align-items:center;flex:1;min-width:0;">
             <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>
-            <div class="history-desc">${escHtml(e.customerName || '—')} · ${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}</div>
+            <div class="history-desc" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+              ${escHtml(e.customerName || '—')} · ${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}</div>
           </div>
-          <div class="history-date" style="margin:0 14px;">${fmtDate(e.at)}</div>
-          <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--danger)'};">
+          <div class="history-date" style="margin:0 12px;">${fmtDate(e.at)}</div>
+          <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--text)'};">
             ${e.amount >= 0 ? '+' : '−'}£${Math.abs(e.amount).toFixed(2)}</div>
         </div>`).join('');
 
-  const arrearsHtml = !money || money.arrears.length === 0
-    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">Nobody owes money. 🎉</div>`
-    : money.arrears.slice(0, 6).map(a => `
-        <div class="history-item">
-          <div class="history-desc" style="flex:1;">${escHtml(a.customerName)}</div>
-          <div class="history-amount" style="color:var(--danger);">owes £${Math.abs(a.balance).toFixed(2)}</div>
-        </div>`).join('');
-
-  const needsAttention = [];
-  overdue.forEach(r => needsAttention.push(`📱 <strong>${escHtml(r.customerName || '?')}</strong> — rental overdue since ${fmtDate(r.toDate)}`));
-  readyRepairs.forEach(r => needsAttention.push(`🔧 <strong>${escHtml(r.customerName || '?')}</strong> — repair ready to collect (£${(r.total || 0).toFixed(2)})`));
-  travel7.forEach(b => needsAttention.push(`✈️ <strong>${escHtml(b.customerName || '?')}</strong> — flies ${fmtDate(b.travelDate)} (${escHtml(b.route)})`));
-  renewals7.forEach(s => needsAttention.push(`💳 <strong>${escHtml(s.customerName || '?')}</strong> — SIM renews ${fmtDate(s.renewalDate)}`));
-  highTasks.slice(0, 5).forEach(t => needsAttention.push(`❗ ${escHtml(t.title)}`));
-
   content.innerHTML = `
-    <div class="stats-row">
-      ${stat('Money In Today', money ? '£' + money.todayIn.toFixed(2) : '—', 'var(--success)',
-             money && money.todayOut ? '£' + Math.abs(money.todayOut).toFixed(2) + ' charged' : '')}
-      ${stat('Outstanding (wallets)', arrearsCount ? '£' + arrearsTotal.toFixed(2) : '£0', arrearsCount ? 'var(--danger)' : 'var(--success)',
-             arrearsCount ? arrearsCount + ' customer' + (arrearsCount === 1 ? '' : 's') + ' in arrears' : '')}
-      ${stat('Active Rentals', activeRentals.length, 'var(--accent)',
-             (overdue.length ? overdue.length + ' overdue' : '') + (dueToday.length ? (overdue.length ? ' · ' : '') + dueToday.length + ' due today' : ''))}
-      ${stat('Open Repairs', openRepairs.length, 'var(--gold)', readyRepairs.length ? readyRepairs.length + ' ready to collect' : '')}
-      ${stat('Travel Next 7 Days', travel7.length, '#c026d3', renewals7.length ? renewals7.length + ' SIM renewals too' : '')}
-      ${stat('Open Tasks', openTasks.length, highTasks.length ? 'var(--danger)' : '', highTasks.length ? highTasks.length + ' high priority' : '')}
-    </div>
-
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
-      <button class="btn btn-primary" style="font-size:13px;" onclick="openNewRentalModal()">📱 New Rental</button>
-      <button class="btn btn-outline" style="font-size:13px;" onclick="openNewBookingModal()">✈️ New Booking</button>
-      <button class="btn btn-outline" style="font-size:13px;" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal()})()">🔧 New Repair</button>
-      <button class="btn btn-outline" style="font-size:13px;" onclick="document.querySelector('[data-tab=customers]').click();setTimeout(()=>document.getElementById('btnNewCustomer')?.click(),100)">👤 New Customer</button>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
-      <div class="table-card" style="padding:6px 14px 14px;">
-        <div class="section-divider" style="margin-top:10px;">⚠️ Needs Attention</div>
-        ${needsAttention.length === 0
-          ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">All clear. 🎉</div>`
-          : needsAttention.slice(0, 10).map(x => `<div style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--border);">${x}</div>`).join('')}
-        <div class="section-divider" style="margin-top:14px;">💸 In Arrears</div>
-        ${arrearsHtml}
+    <div class="dash-head">
+      <div>
+        <div class="dash-date">${enDate}${hebDate ? ` &nbsp;·&nbsp; <span class="heb">${hebDate}</span>` : ''}</div>
+        <div class="dash-greeting">${greeting}.</div>
       </div>
-      <div class="table-card" style="padding:6px 14px 14px;">
-        <div class="section-divider" style="margin-top:10px;">💰 Recent Wallet Activity</div>
-        <div class="history-list">${activityHtml}</div>
+      <div class="dash-actions">
+        <button class="btn btn-primary" onclick="openNewRentalModal()">📱 New Rental</button>
+        <button class="btn btn-outline" onclick="openNewBookingModal()">✈️ New Booking</button>
+        <button class="btn btn-outline" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal()})()">🔧 New Repair</button>
+        <button class="btn btn-outline" onclick="document.querySelector('[data-tab=customers]').click();setTimeout(()=>document.getElementById('btnNewCustomer')?.click(),100)">👤 New Customer</button>
+      </div>
+    </div>
+
+    <div class="dash-grid">
+      ${heroHtml}
+      ${metricsHtml}
+    </div>
+
+    <div class="dash-cols">
+      <div class="table-card" style="padding:8px 18px 14px;">
+        <div class="section-divider" style="margin-top:12px;">Needs attention</div>
+        ${attentionHtml}
+      </div>
+      <div class="table-card" style="padding:8px 18px 14px;">
+        <div class="section-divider" style="margin-top:12px;">Recent wallet activity</div>
+        <div>${activityHtml}</div>
       </div>
     </div>`;
 }
