@@ -20,15 +20,12 @@ insert into damage_rates (country_code, phone_damage_loss, charger_missing, sim_
   ('Canada',    100.00, 10.00, 10.00);
 
 -- ---------- settings ----------
--- NOTE sim_annual_fee: schema draft said £12 but the app's SIM price list
--- charges £20 for annual — CONFIRM with the owner before go-live (seeded 12,
--- flagged in the description).
 
 insert into settings (key, num_value, description) values
   ('late_fee_per_day',           1.00, 'Late return: £ per chargeable day past due (Shabbos/YT excluded)'),
   ('vn_weekly',                  5.00, 'Virtual number: £ per week (minimum 1 week)'),
   ('vn_per_30_days',            10.00, 'Virtual number: flat £ for a 30-day rental'),
-  ('sim_annual_fee',            12.00, 'CONFIRM: app price list says £20 annual; this draft said £12'),
+  ('sim_annual_fee',            20.00, 'SIM annual fee (owner-confirmed 2026-07-12)'),
   ('sim_additional_fee',        10.00, 'Additional SIM fee'),
   ('sim_service_fee',            5.00, 'SIM service fee'),
   ('sim_replacement_fee',       10.00, 'SIM replacement fee (after free allowance)'),

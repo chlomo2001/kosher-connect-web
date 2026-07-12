@@ -1076,8 +1076,8 @@ function openNewRentalModal() {
           </div>
           <div class="form-group">
             <label class="form-label">Subscription</label>
-            <select class="form-input" id="rVNSub" onchange="document.getElementById('rVNPrice').value=this.value==='monthly'?10:5;">
-              <option value="weekly">Weekly (£5)</option>
+            <select class="form-input" id="rVNSub" onchange="updateVNPrice()">
+              <option value="weekly">Weekly (£5/week)</option>
               <option value="monthly">Monthly / 30 days (£10)</option>
             </select>
           </div>
@@ -1148,7 +1148,30 @@ function updateRentalPhoneInfo() {
   }
 }
 
+// BUSINESS_RULES §1.3: weekly virtual number is £5 PER WEEK (minimum 1 week);
+// a 30-day rental is £10 flat. Weeks are counted over the rental's total
+// calendar days, rounded up.
+function calcVNPrice(vnSub, fromDate, toDate) {
+  if (vnSub === 'monthly') return 10;
+  let weeks = 1;
+  if (fromDate && toDate && toDate > fromDate) {
+    const days = Math.round((parseLocalDate(toDate) - parseLocalDate(fromDate)) / 86400000) + 1;
+    weeks = Math.max(1, Math.ceil(days / 7));
+  }
+  return 5 * weeks;
+}
+
+function updateVNPrice() {
+  const priceEl = document.getElementById('rVNPrice');
+  if (!priceEl) return;
+  const vnSub = document.getElementById('rVNSub')?.value || 'weekly';
+  const from  = document.getElementById('rFrom')?.value;
+  const to    = document.getElementById('rTo')?.value;
+  priceEl.value = calcVNPrice(vnSub, from, to);
+}
+
 function updateRentalCalc() {
+  updateVNPrice(); // rental dates drive the weekly VN price
   const from = document.getElementById('rFrom')?.value;
   const to   = document.getElementById('rTo')?.value;
   const box  = document.getElementById('rCalcBox');

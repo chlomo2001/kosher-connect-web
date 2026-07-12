@@ -123,8 +123,9 @@ late fee + damage), `RENTAL-VOID-<id>` (the one refund per void),
 
 ## Open items
 
-- `sim_annual_fee`: draft said £12, the app's price list charges £20 —
-  **confirm before go-live** (seeded 12, flagged in `settings.description`).
+- ~~`sim_annual_fee` £12 vs £20~~ — resolved 2026-07-12: **£20** (owner
+  confirmed; seed + staging updated). VN weekly also confirmed as
+  **£5 × weeks (min 1)** and implemented in the app.
 - Per-SIM provider credentials (email/password currently plaintext in the web
   app) should move under `master_accounts` + `master_account_credentials`;
   no plaintext credential column exists in this schema by design.

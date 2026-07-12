@@ -60,5 +60,23 @@ All other Jewish holidays (e.g. Chol Hamoed, Rosh Chodesh, Tisha B'Av) are **cha
 
 ---
 
-_More sections to follow: Wallet rules, Permission rules, SIM/plan rules._
+## 2. SIM Fees (confirmed 12 Jul 2026)
+
+| Charge | £ |
+|---|---|
+| Activation / initial setup | £20 |
+| Annual fee | £20 |
+| Service | £5 |
+| Replacement (after free allowance of 2) | £10 |
+| Monthly DD (through-me plans) | provider cost + max(10%, £2) |
+
+### 2.1 Virtual Number clarification
+
+The weekly virtual number add-on is **£5 per week of the rental** (weeks =
+total calendar days ÷ 7, rounded up, minimum 1 week) — not a flat £5.
+The 30-day option stays £10 flat.
+
+---
+
+_More sections to follow: Wallet rules, Permission rules._
 
