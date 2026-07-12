@@ -610,6 +610,17 @@ function calcLateFeeDays(rental) {
   return countChargeableDays(lateDayStart.toISOString().slice(0, 10), today, rental.country || 'USA');
 }
 
+// Canonical money formulas — single source of truth for every debt display.
+// Returned rentals use the late fee frozen at save time; live rentals compute it.
+function rentalGrandTotal(r) {
+  const lateFee = r.status === 'returned' ? (r.lateFee || 0) : calcLateFeeDays(r);
+  return (r.price || 0) + lateFee + (r.lostChargesTotal || 0);
+}
+
+function rentalDebt(r) {
+  return Math.max(0, rentalGrandTotal(r) - (r.amountPaid || 0));
+}
+
 function saveRentals(data) {
   rentals = data;
   window.api.saveAllRentals(data);
@@ -740,10 +751,7 @@ function renderRentalsTab() {
   const activeRentals   = rentals.filter(r => r.status === 'active').length;
   const availablePhones = phones.filter(p => p.status === 'available').length;
   const returningToday  = rentals.filter(r => r.status === 'active' && r.toDate === today0).length;
-  const outstandingDebt = rentals.reduce((s, r) => {
-    const lf = r.status === 'returned' ? (r.lateFee || 0) : calcLateFeeDays(r);
-    return s + Math.max(0, (r.price || 0) + lf + (r.lostChargesTotal || 0) - (r.amountPaid || 0));
-  }, 0);
+  const outstandingDebt = rentals.reduce((s, r) => s + rentalDebt(r), 0);
 
   const balLabel     = filterPaid==='paid'?'Fully Paid':filterPaid==='debt'?'Has Debt':'Balance';
   const statusLabel  = filterStatus==='active'?'Active':filterStatus==='overdue'?'Overdue':filterStatus==='returned'?'Returned':filterStatus==='returned_incomplete'?'Returned ⚠️':'Status';
@@ -884,9 +892,7 @@ function renderRentalRows() {
   }
   if (filterPaid !== 'all') {
     filtered = filtered.filter(r => {
-      const lf = r.status === 'returned' ? (r.lateFee || 0) : calcLateFeeDays(r);
-      const totalOwed = (r.price || 0) + lf + (r.lostChargesTotal || 0);
-      const fullyPaid = (r.amountPaid || 0) >= totalOwed;
+      const fullyPaid = (r.amountPaid || 0) >= rentalGrandTotal(r);
       return filterPaid === 'paid' ? fullyPaid : !fullyPaid;
     });
   }
@@ -906,9 +912,7 @@ function renderRentalRows() {
     else                                                statusBadge = `<span class="badge" style="background:rgba(251,146,60,0.15);color:#fb923c;">Returned ⚠️</span>`;
 
     const paid = r.amountPaid || 0;
-    const lateFee = r.status === 'returned' ? (r.lateFee || 0) : calcLateFeeDays(r);
-    const grandTotal = (r.price || 0) + lateFee + (r.lostChargesTotal || 0);
-    const totalOwed = grandTotal - paid;
+    const totalOwed = rentalGrandTotal(r) - paid;
     const debtColor = totalOwed > 0 ? 'color:var(--danger);' : 'color:var(--success);';
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('.action-btn'))openManageRentalModal('${r.id}')">
       <td>
@@ -1210,7 +1214,6 @@ async function saveNewRental() {
     notes,
     status:       'active',
     createdAt:    new Date().toISOString(),
-    returnedItems: {},
     equipmentGiven: {
       phone: document.getElementById('nrGiven_phone')?.dataset.given === '1',
       sim:   document.getElementById('nrGiven_sim')?.dataset.given   === '1',
@@ -1843,7 +1846,7 @@ function renderTableRows() {
 
     const customerDebt = rentals
       .filter(r => r.customerId === c.id)
-      .reduce((sum, r) => sum + Math.max(0, (r.price || 0) - (r.amountPaid || 0)) + calcLateFeeDays(r), 0);
+      .reduce((sum, r) => sum + rentalDebt(r), 0);
     const customerPaid = rentals
       .filter(r => r.customerId === c.id)
       .reduce((sum, r) => sum + (r.amountPaid || 0), 0);
@@ -1921,7 +1924,7 @@ function renderDetailPanel(id) {
   const totalPaid = c.totalPaid || 0;
   const totalDebt = rentals
     .filter(r => r.customerId === c.id)
-    .reduce((sum, r) => sum + Math.max(0, (r.price || 0) - (r.amountPaid || 0)) + calcLateFeeDays(r), 0);
+    .reduce((sum, r) => sum + rentalDebt(r), 0);
   const customerPaid = rentals
     .filter(r => r.customerId === c.id)
     .reduce((sum, r) => sum + (r.amountPaid || 0), 0);
@@ -2249,15 +2252,11 @@ async function deleteCustomer(id) {
   const c = customers.find(x => x.id === id);
   if (!c) return;
   const today = new Date().toISOString().slice(0, 10);
-  const hasUnreturned = rentals.some(r => {
-    if (r.customerId !== id) return false;
-    if (r.status === 'returned') {
-      const eq  = r.equipmentGiven || { phone:true,sim:true,plug:true,cable:true };
-      const ret = r.returnedItems  || {};
-      return ['phone','sim','plug','cable'].some(k => (eq[k]??true) && ret[k]!==true);
-    }
-    return true;
-  });
+  // Block deletion unless every rental is returned with all given items decided
+  // (returned or lost) — uses the same itemStatus model as the rentals tab.
+  const hasUnreturned = rentals.some(r =>
+    r.customerId === id && getComputedStatus(r, today) !== 'returned'
+  );
   if (hasUnreturned) {
     toast('Cannot delete a customer who still has an unreturned rental.', 'error');
     return;
