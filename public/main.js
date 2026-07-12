@@ -2567,6 +2567,13 @@ async function deleteCustomer(id) {
   }
   const confirmed = await window.api.confirmDelete(`Delete "${c.firstName} ${c.lastName}"?\n\nThis cannot be undone.`);
   if (!confirmed) return;
+  // Ask the server FIRST — a customer with ledger money history is not
+  // deletable (append-only wallet), and nothing local should change then.
+  const res = await window.api.deleteCustomer(id);
+  if (!res || res.success === false) {
+    toast(res?.error || 'Could not delete this customer.', 'error');
+    return;
+  }
   rentals.filter(r => r.customerId === id && r.status !== 'returned').forEach(r => {
     const phone = phones.find(p => p.id === r.phoneId);
     if (phone) { phone.status = 'available'; phone.currentRental = null; }
@@ -2576,7 +2583,6 @@ async function deleteCustomer(id) {
   savePhones(phones);
   saveRentals(rentals);
   saveSims(sims);
-  await window.api.deleteCustomer(id);
   customers = customers.filter(x => x.id !== id);
   if (selectedId === id) {
     selectedId = null;

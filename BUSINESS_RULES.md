@@ -97,5 +97,26 @@ The 30-day option stays £10 flat.
 
 ---
 
-_More sections to follow: Wallet rules, Permission rules._
+## 3. Wallet rules (append-only ledger)
+
+Every pound the business is owed or holds lives in ONE place: the ledger.
+Balances are always computed (never stored); the database enforces the sign
+of every entry type and refuses any edit or deletion of a posted row.
+
+- **Charges post automatically** from their owning feature: bookings at
+  creation, repairs at collection, rentals on every save (base charge at
+  creation, late fee frozen at return, lost-item charges at return).
+- **Rental payments** are recorded on the rental (Manage → amount paid) and
+  flow into the wallet as `PAY-RENTAL` entries. Use the Wallet tab's
+  "Record Money" for everything else (booking payments, top-ups, refunds,
+  corrections) — don't record the same rental payment in both places.
+- **Live late fees** appear in the wallet only once frozen at return; while
+  a rental is overdue the accruing fee shows on the rental itself.
+- **Mistakes are corrected forward**: post an adjustment or refund. Nothing
+  is ever edited or deleted.
+- **Deleting things**: deleting a rental reverses its ledger position and
+  keeps the history on the customer (marked "Rental deleted"). A customer
+  with any money history can NOT be deleted — rename them instead.
+
+_More sections to follow: Permission rules._
 

@@ -43,6 +43,9 @@ async function tablesHandler(req, res) {
 
     return res.status(405).end()
   } catch (e) {
+    if (e.code === 'MONEY_HISTORY') {
+      return res.status(409).json({ success: false, error: e.message })
+    }
     console.error('[api/customers]', e)
     return res.status(500).json({ success: false, error: 'Storage error' })
   }
