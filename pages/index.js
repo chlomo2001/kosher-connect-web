@@ -30,7 +30,6 @@ export default function Home() {
         <div className="nav-item" data-tab="repairs"><span className="nav-icon">🔧</span> Repairs</div>
         <div className="nav-item" data-tab="virtual"><span className="nav-icon">🔢</span> Virtual Numbers</div>
         <div className="nav-item" data-tab="tasks"><span className="nav-icon">✅</span> Tasks</div>
-        <div className="nav-item" data-tab="support"><span className="nav-icon">🎫</span> Support</div>
         <div className="nav-item" data-tab="settings"><span className="nav-icon">⚙️</span> Settings</div>
 
         <div className="sidebar-bottom">Version 1.0 · KosherConnect</div>

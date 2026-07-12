@@ -231,20 +231,11 @@ function renderTab(tab) {
     btnNew.style.display = 'none';
     renderVirtualTab();
   } else {
-    const labels = {
-      support:  ['🎫', 'Support Tickets'],
-    };
-    const [icon, title] = labels[tab] || ['📌', tab];
-    const parts = title.split(' ');
-    document.getElementById('pageTitle').innerHTML = `${parts[0]} <span>${parts.slice(1).join(' ')}</span>`;
-    searchBox.style.display = 'none';
-    btnNew.style.display = 'none';
-    content.innerHTML = `
-      <div class="tab-placeholder">
-        <div class="big">${icon}</div>
-        <h2>${title}</h2>
-        <p style="color:var(--muted)">This section is coming soon.</p>
-      </div>`;
+    // No stub tabs remain; unknown tab ids fall back to Customers.
+    document.getElementById('pageTitle').innerHTML = 'Customer <span>Management</span>';
+    searchBox.style.display = '';
+    btnNew.style.display = '';
+    renderCustomersTab();
   }
 }
 
