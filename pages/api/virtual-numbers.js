@@ -1,6 +1,7 @@
 // Virtual numbers — standalone VN management (rental add-on VNs stay on the
 // rental; these are the independently-provisioned numbers).
 
+import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 
 const EMBED = 'customers(legacy_id,first_name,last_name)'

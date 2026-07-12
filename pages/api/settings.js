@@ -7,6 +7,7 @@
 // GET returns everything the app needs to price: rental_rates, damage_rates,
 // and the settings key/value list.
 
+import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 
 // Typed rules for editable settings keys. A key not listed here is shown

@@ -8,6 +8,7 @@
 //     (charge_reference unique); the ledger is append-only
 //   - balance is never stored: read from the customer_balances view
 
+import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 
 const BOOKING_STATUSES = ['Booked', 'Ticketed', 'Completed', 'Cancelled']

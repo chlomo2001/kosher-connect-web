@@ -10,6 +10,7 @@
 // Charges are posted only by their owning features (bookings, repairs, …),
 // each with a stable reference — never from this endpoint.
 
+import { withStaff } from '../../lib/auth.js'
 import crypto from 'node:crypto'
 import { db, tablesMode } from '../../lib/db.js'
 

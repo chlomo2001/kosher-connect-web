@@ -2,6 +2,7 @@
 // Prices are maintained in the service_prices table (seeded from the shop's
 // live price list); the app never hardcodes them.
 
+import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 
 async function handler(req, res) {

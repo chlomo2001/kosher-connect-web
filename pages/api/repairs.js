@@ -8,6 +8,7 @@
 //     amount -(total)
 //   - Cancelled tickets never charge
 
+import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 
 const REPAIR_STATUSES = ['Open', 'In Progress', 'Ready', 'Collected', 'Cancelled']

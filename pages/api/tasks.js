@@ -5,6 +5,7 @@
 // rentals). One OPEN task per reference is enforced by a partial unique
 // index, so closed keys can be re-raised later.
 
+import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 
 const PRIORITY_TO_DB = { High: 'high', Normal: 'medium', Low: 'low' }
