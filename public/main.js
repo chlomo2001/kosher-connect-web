@@ -694,12 +694,12 @@ function isShabbatOrHoliday(date, country) {
 let pricingConfig = null;
 
 const FALLBACK_RATES = {
-  'USA':       { ratePerDay: 3,   minCharge: 20, cap: 45 },
-  'UK-UKmins': { ratePerDay: 2,   minCharge: 15, cap: 40 },
-  'UK-Intl':   { ratePerDay: 2.5, minCharge: 20, cap: 45 },
-  'Israel':    { ratePerDay: 3,   minCharge: 20, cap: 50 },
-  'Canada':    { ratePerDay: 3,   minCharge: 25, cap: 45 },
-  'EU':        { ratePerDay: 3,   minCharge: 20, cap: 45 },
+  'USA':       { ratePerDay: 3,   minCharge: 20, cap: 45, capPeriodDays: 30 },
+  'UK-UKmins': { ratePerDay: 2,   minCharge: 15, cap: 40, capPeriodDays: 30 },
+  'UK-Intl':   { ratePerDay: 2.5, minCharge: 20, cap: 45, capPeriodDays: 30 },
+  'Israel':    { ratePerDay: 3,   minCharge: 20, cap: 50, capPeriodDays: 30 },
+  'Canada':    { ratePerDay: 3,   minCharge: 25, cap: 45, capPeriodDays: 30 },
+  'EU':        { ratePerDay: 3,   minCharge: 20, cap: 45, capPeriodDays: 30 },
 };
 
 // App country + phone plan → priced country code (same mapping as the
@@ -731,10 +731,16 @@ function calcRentalPrice(fromDate, toDate, country = 'USA', ukPlan = 'standard')
     if (!isShabbatOrHoliday(cur, country)) chargeableDays++;
     cur.setDate(cur.getDate() + 1);
   }
-  const { ratePerDay, minCharge, cap } = rateFor(country, ukPlan);
+  const { ratePerDay, minCharge, cap, capPeriodDays } = rateFor(country, ukPlan);
   let price = chargeableDays * ratePerDay;
   if (chargeableDays > 0 && price < minCharge) price = minCharge;
-  if (cap !== null && price > cap) price = cap;
+  // Cap scales per calendar window (default 30 days): chargeable days set the
+  // £, calendar days set how many cap periods the rental spans — so a 60-day
+  // rental caps at 2× cap, not 1×.
+  if (cap != null) {
+    const capTotal = cap * Math.max(1, Math.ceil(totalDays / (capPeriodDays || 30)));
+    if (price > capTotal) price = capTotal;
+  }
   return { chargeableDays, totalDays, price };
 }
 
@@ -1312,7 +1318,9 @@ function updateRentalCalc() {
   const ukPlan   = phone?.ukPlan  || 'standard';
   const { chargeableDays, totalDays, price } = calcRentalPrice(from, to, country, ukPlan);
   const excluded = totalDays - chargeableDays;
-  const cap = rateFor(country, ukPlan).cap;
+  const rate = rateFor(country, ukPlan);
+  const capTotal = rate.cap == null ? Infinity
+    : rate.cap * Math.max(1, Math.ceil(totalDays / (rate.capPeriodDays || 30)));
   let finalPrice = price;
   let discountLine = '';
   const addDiscount = document.getElementById('rAddDiscount')?.checked;
@@ -1328,7 +1336,7 @@ function updateRentalCalc() {
     <span style="color:var(--muted);">Shabbat/Yom Tov excluded:</span> <span style="color:var(--gold);">${excluded}</span> &nbsp;|&nbsp;
     <span style="color:var(--muted);">Chargeable days:</span> ${chargeableDays} &nbsp;|&nbsp;
     <strong style="color:var(--success);font-size:15px;">£${price}</strong>
-    ${price >= cap ? ' <span style="color:var(--muted);font-size:11px;">(price cap)</span>' : ''}${discountLine}
+    ${price >= capTotal ? ' <span style="color:var(--muted);font-size:11px;">(price cap)</span>' : ''}${discountLine}
   `;
 }
 
@@ -2497,6 +2505,18 @@ async function saveCustomer() {
     return;
   }
 
+  // Soft-warn on a same-name customer (schema build rule: block on email/phone
+  // duplicates, WARN on name — two Moshe Katzes are legal but usually a slip).
+  const nameKey = `${firstName} ${lastName}`.toLowerCase().replace(/\s+/g, ' ');
+  const nameDup = customers.find(c => c.id !== editId &&
+    `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase().replace(/\s+/g, ' ').trim() === nameKey);
+  if (nameDup) {
+    const proceed = await window.api.confirmDelete(
+      `A customer named "${firstName} ${lastName}" already exists (${nameDup.phone || 'no phone'}).\n\nSave anyway as a separate customer?`
+    );
+    if (!proceed) return;
+  }
+
   const payload = { firstName, lastName, phone: fullPhone, email, address, hasWhatsapp: hasWa };
 
   if (editId) {
@@ -2889,7 +2909,7 @@ function openManageSimModal(id) {
       <div style="color:var(--muted);">Payment</div><div>${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}</div>
       ${s.paymentType !== 'direct' ? `
       <div style="color:var(--muted);">DD Day</div><div style="font-weight:600;">${s.ddDate ? `${s.ddDate}${s.ddDate===1?'st':s.ddDate===2?'nd':s.ddDate===3?'rd':'th'} of each month` : '—'}</div>
-      <div style="color:var(--muted);">Next DD Amount</div><div style="font-weight:700;color:var(--success);">${s.simMonthlyCost ? '£'+(s.simMonthlyCost + Math.max(s.simMonthlyCost*0.1,2)).toFixed(2) : '—'}</div>
+      <div style="color:var(--muted);">Next DD Amount</div><div style="font-weight:700;color:var(--success);">${s.simMonthlyCost ? '£'+ddMonthlyAmount(s.simMonthlyCost).toFixed(2) : '—'}</div>
       ` : ''}
       <div style="color:var(--muted);">Status</div><div>${s.status}</div>
     </div>
@@ -2903,17 +2923,17 @@ function openManageSimModal(id) {
         <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;">
           <label style="font-size:11px;color:var(--muted);font-weight:600;">Type</label>
           <select class="form-input" id="simChargeType" onchange="onSimChargeTypeChange('${id}')" style="font-size:13px;">
-            <option value="activation">🟢 Initial Setup — £20</option>
-            <option value="service">🔧 Service (roaming/swap/reactivation) — £5</option>
-            <option value="sim-replacement">📦 SIM Replacement — £10</option>
-            <option value="monthly">${s.paymentType !== 'direct' && s.simMonthlyCost ? `📅 Monthly DD — £${(s.simMonthlyCost + Math.max(s.simMonthlyCost*0.1,2)).toFixed(2)}` : '📅 Monthly Subscription'}</option>
-            <option value="annual">📅 Annual Subscription — £20</option>
+            <option value="activation">🟢 Initial Setup — £${simChargePrice('activation')}</option>
+            <option value="service">🔧 Service (roaming/swap/reactivation) — £${simChargePrice('service')}</option>
+            <option value="sim-replacement">📦 SIM Replacement — £${simChargePrice('sim-replacement')}</option>
+            <option value="monthly">${s.paymentType !== 'direct' && s.simMonthlyCost ? `📅 Monthly DD — £${ddMonthlyAmount(s.simMonthlyCost).toFixed(2)}` : '📅 Monthly Subscription'}</option>
+            <option value="annual">📅 Annual Subscription — £${simChargePrice('annual')}</option>
             <option value="custom">✏️ Custom</option>
           </select>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;width:80px;">
           <label style="font-size:11px;color:var(--muted);font-weight:600;">Amount £</label>
-          <input class="form-input" id="simChargeAmount" type="number" value="20" min="0" step="0.5" style="font-size:13px;">
+          <input class="form-input" id="simChargeAmount" type="number" value="${simChargePrice('activation')}" min="0" step="0.5" style="font-size:13px;">
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;flex:2;min-width:140px;">
           <label style="font-size:11px;color:var(--muted);font-weight:600;">Note (optional)</label>
@@ -2933,7 +2953,25 @@ function openManageSimModal(id) {
   `);
 }
 
-const SIM_CHARGE_PRICES = { activation: 20, service: 5, 'sim-replacement': 10, annual: 20 };
+// SIM charge prices come from Settings (BUSINESS_RULES §2); numbers here are
+// only the offline fallback and MUST mirror the seed.
+function simChargePrice(type) {
+  switch (type) {
+    case 'activation':      return settingNum('sim_activation_fee', 20);
+    case 'service':         return settingNum('sim_service_fee', 5);
+    case 'sim-replacement': return settingNum('sim_replacement_fee', 10);
+    case 'annual':          return settingNum('sim_annual_fee', 20);
+    default:                return undefined;
+  }
+}
+
+// Monthly DD through-me price: provider cost + max(pct%, £min).
+function ddMonthlyAmount(cost) {
+  const pct = settingNum('collect_later_late_pct', 10) / 100;
+  const min = settingNum('collect_later_late_min', 2);
+  return cost + Math.max(cost * pct, min);
+}
+
 const SIM_CHARGE_DESCS  = {
   activation: 'Initial SIM Setup',
   service: 'Service (roaming / swap / reactivation)',
@@ -2948,13 +2986,12 @@ function onSimChargeTypeChange(simId) {
   if (type === 'monthly') {
     const s = simId ? sims.find(x => x.id === simId) : null;
     if (s && s.paymentType !== 'direct' && s.simMonthlyCost) {
-      const fee = Math.max(s.simMonthlyCost * 0.1, 2);
-      amtEl.value = (s.simMonthlyCost + fee).toFixed(2);
+      amtEl.value = ddMonthlyAmount(s.simMonthlyCost).toFixed(2);
     } else {
       amtEl.value = 0;
     }
-  } else if (SIM_CHARGE_PRICES[type] !== undefined) {
-    amtEl.value = SIM_CHARGE_PRICES[type];
+  } else if (simChargePrice(type) !== undefined) {
+    amtEl.value = simChargePrice(type);
   } else {
     amtEl.value = 0;
   }

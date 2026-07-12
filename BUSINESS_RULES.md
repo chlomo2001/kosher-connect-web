@@ -20,7 +20,19 @@ Mechl: when in doubt, check here before asking. Eliezer: keep this updated._
 
 ### 1.2 Chargeable Days
 
-Shabbos and Yom Tov days are **excluded** from chargeable days, **except** when the rental has hit the monthly cap — in that case all 30 days count regardless.
+Shabbos and Yom Tov days are **excluded** from chargeable days. The cap works
+per calendar window (resolved 12 Jul 2026, replacing the old "once capped all
+30 days count" sheet wording):
+
+```
+charge = min( max(chargeable_days × rate, min_charge),
+              cap × ceil(calendar_days / 30) )
+```
+
+Two day-counts: **chargeable** days (Shabbos/Yom Tov excluded) set the £;
+**calendar** days (everything included) set how many 30-day cap windows the
+rental spans — so a 60-day rental caps at 2× the cap, not 1×. The window
+length is per-country (`cap_period_days`, default 30, editable in Settings).
 
 Days excluded from chargeable day count (phone use is forbidden):
 
@@ -62,13 +74,15 @@ All other Jewish holidays (e.g. Chol Hamoed, Rosh Chodesh, Tisha B'Av) are **cha
 
 ## 2. SIM Fees (confirmed 12 Jul 2026)
 
-| Charge | £ |
-|---|---|
-| Activation / initial setup | £20 |
-| Annual fee | £20 |
-| Service | £5 |
-| Replacement (after free allowance of 2) | £10 |
-| Monthly DD (through-me plans) | provider cost + max(10%, £2) |
+All SIM fees are driven by Settings keys (editable in the Settings tab):
+
+| Charge | £ | Settings key |
+|---|---|---|
+| Activation / initial setup | £20 | `sim_activation_fee` |
+| Annual fee | £20 | `sim_annual_fee` |
+| Service | £5 | `sim_service_fee` |
+| Replacement (after free allowance of 2) | £10 | `sim_replacement_fee` |
+| Monthly DD (through-me plans) | provider cost + max(10%, £2) | `collect_later_late_pct`, `collect_later_late_min` |
 
 ### 2.1 Virtual Number clarification
 

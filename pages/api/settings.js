@@ -17,6 +17,7 @@ const SETTING_RULES = {
   vn_weekly:              { type: 'money',   unit: '£/week' },
   vn_per_30_days:         { type: 'money',   unit: '£/30 days' },
   sim_annual_fee:         { type: 'money',   unit: '£' },
+  sim_activation_fee:     { type: 'money',   unit: '£' },
   sim_additional_fee:     { type: 'money',   unit: '£' },
   sim_service_fee:        { type: 'money',   unit: '£' },
   sim_replacement_fee:    { type: 'money',   unit: '£' },

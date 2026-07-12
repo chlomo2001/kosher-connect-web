@@ -13,7 +13,16 @@ import { db, tablesMode } from '../../lib/db.js'
 
 const BOOKING_STATUSES = ['Booked', 'Ticketed', 'Completed', 'Cancelled']
 
-function toApp(row) {
+// passport_expiry is owner-only on READS (schema §9): helpers may enter it
+// when creating a booking (counter workflow, and the expiry sweep needs it)
+// but never see it back. passport_on_file stays visible to everyone.
+function toApp(row, staff) {
+  const app = toAppFull(row)
+  if (staff && staff.role !== 'owner') app.passportExpiry = ''
+  return app
+}
+
+function toAppFull(row) {
   return {
     id: row.id,
     customerId: row.customers?.legacy_id ?? null,
@@ -58,7 +67,7 @@ async function handler(req, res) {
         'bookings',
         `select=*,${CUSTOMER_EMBED}&order=created_at.desc`
       )
-      return res.json(rows.map(toApp))
+      return res.json(rows.map(r => toApp(r, req.staff)))
     }
 
     if (req.method === 'POST') {
@@ -127,7 +136,7 @@ async function handler(req, res) {
         'bookings',
         `select=*,${CUSTOMER_EMBED}&id=eq.${booking.id}`
       )
-      return res.json({ success: true, booking: toApp(full), chargePosted, charged: total, balance })
+      return res.json({ success: true, booking: toApp(full, req.staff), chargePosted, charged: total, balance })
     }
 
     if (req.method === 'PUT') {
@@ -148,7 +157,7 @@ async function handler(req, res) {
       const updated = await db.update('bookings', `id=eq.${encodeURIComponent(String(id))}`, patch)
       if (!updated.length) return res.status(404).json({ success: false, error: 'Booking not found.' })
       const [full] = await db.select('bookings', `select=*,${CUSTOMER_EMBED}&id=eq.${encodeURIComponent(String(id))}`)
-      return res.json({ success: true, booking: toApp(full) })
+      return res.json({ success: true, booking: toApp(full, req.staff) })
     }
 
     return res.status(405).end()
