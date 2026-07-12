@@ -939,7 +939,7 @@ function renderRentalRows() {
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('.action-btn'))openManageRentalModal('${r.id}')">
       <td>
         <div class="customer-name">${escHtml(r.customerName || '—')}</div>
-        <div class="customer-email" style="font-size:11px;">${r.vn ? '🔢 +'+r.vnPrefix : ''}</div>
+        <div class="customer-email" style="font-size:11px;">${r.vn ? '🔢 +'+escHtml(r.vnPrefix || '') : ''}</div>
       </td>
       <td style="font-weight:600;font-size:12px;">${escHtml(r.phoneNumber || '—')}</td>
       <td style="font-size:11px;">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}</td>
@@ -1003,7 +1003,7 @@ function openNewRentalModal() {
 
   const availablePhoneOptions = phones
     .filter(p => p.status !== 'rented')
-    .map(p => `<option value="${p.id}">${escHtml(p.number)} · ${escHtml(p.country)} · ${escHtml(p.company||'')} ${p.pool ? '(Pool: '+p.pool+')' : ''}</option>`)
+    .map(p => `<option value="${p.id}">${escHtml(p.number)} · ${escHtml(p.country)} · ${escHtml(p.company||'')} ${p.pool ? '(Pool: '+escHtml(p.pool)+')' : ''}</option>`)
     .join('');
 
   showDynamicModal(`
@@ -1385,7 +1385,7 @@ function openEditPhoneModal(phoneId) {
       </div>
       <div class="form-group">
         <label class="form-label">Pool Expiry</label>
-        <input class="form-input" id="epExpiry" type="date" value="${p.poolExpiry||''}">
+        <input class="form-input" id="epExpiry" type="date" value="${escHtml(p.poolExpiry||'')}">
       </div>` : ''}
       <div class="form-group">
         <label class="form-label">Company</label>
@@ -1964,7 +1964,7 @@ function renderDetailPanel(id) {
             <div class="history-dot ${dotColor[h.type] || 'dot-blue'}"></div>
             <div class="history-desc">${escHtml(h.desc)}</div>
           </div>
-          <div class="history-date" style="margin:0 16px;">${h.date}</div>
+          <div class="history-date" style="margin:0 16px;">${escHtml(h.date || '')}</div>
           <div class="history-amount">£${h.amount}</div>
         </div>`).join('');
 
@@ -2601,7 +2601,7 @@ function openManageSimModal(id) {
         <div class="history-item">
           <span class="history-dot dot-blue"></span>
           <span class="history-desc">${escHtml(h.desc)}</span>
-          <span class="history-date">${h.date}</span>
+          <span class="history-date">${escHtml(h.date || '')}</span>
           <span class="history-amount">${h.amount > 0 ? '£'+h.amount : '—'}</span>
           <button class="action-btn danger" style="margin-left:8px;padding:3px 8px;font-size:11px;"
             onclick="deleteSimCharge('${id}','${h.id}')">✕</button>
@@ -2616,7 +2616,7 @@ function openManageSimModal(id) {
       <div style="color:var(--muted);">Password</div>
       <div style="display:flex;align-items:center;gap:6px;">
         <span id="mgSimPwText" style="font-size:13px;">${pwMasked}</span>
-        ${s.password ? `<button class="pw-toggle" style="position:static;" onclick="toggleMgSimPw('${escHtml(s.password.replace(/'/g,"\\'"))||''}')">👁</button>` : ''}
+        ${s.password ? `<button class="pw-toggle" style="position:static;" onclick="toggleMgSimPw('${escHtml(s.id)}')">👁</button>` : ''}
       </div>
       <div style="color:var(--muted);">Plan</div><div>${escHtml(s.plan||'—')}</div>
       <div style="color:var(--muted);">Renewal</div><div>${fmtDate(s.renewalDate)}</div>
@@ -2694,10 +2694,14 @@ function onSimChargeTypeChange(simId) {
   }
 }
 
-function toggleMgSimPw(pw) {
+// Reveal/mask the SIM password. Takes the SIM id and looks the password up
+// from state at click time — the password itself must never be embedded in
+// the DOM/HTML attributes.
+function toggleMgSimPw(simId) {
   const el = document.getElementById('mgSimPwText');
-  if (!el) return;
-  el.textContent = el.textContent === '••••••••' ? pw : '••••••••';
+  const s = sims.find(x => x.id === simId);
+  if (!el || !s) return;
+  el.textContent = el.textContent === '••••••••' ? (s.password || '') : '••••••••';
 }
 
 function addSimCharge(simId) {
