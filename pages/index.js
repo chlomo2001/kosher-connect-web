@@ -33,7 +33,11 @@ export default function Home() {
         <div className="nav-item" data-tab="tasks"><span className="nav-icon">✅</span> Tasks</div>
         <div className="nav-item" data-tab="settings"><span className="nav-icon">⚙️</span> Settings</div>
 
-        <div className="sidebar-bottom">Version 1.0 · KosherConnect</div>
+        <div className="sidebar-bottom">
+          <a href="#" onClick={(e) => { e.preventDefault(); fetch('/api/auth/logout', { method: 'POST' }).then(() => { window.location.href = '/login' }) }}
+             style={{ color: 'inherit', textDecoration: 'none' }}>🚪 Sign out</a>
+          <div>Version 1.0 · KosherConnect</div>
+        </div>
       </div>
 
       {/* MAIN */}
@@ -137,4 +141,15 @@ export default function Home() {
       <Script src="/main.js" strategy="afterInteractive" />
     </>
   )
+}
+
+// Login gate: when auth is enabled (tables mode), an unauthenticated browser
+// goes to /login. This checks cookie PRESENCE only — every API call verifies
+// the token properly, and main.js redirects to /login on any 401.
+export async function getServerSideProps({ req }) {
+  const { authEnabled } = await import('../lib/auth.js')
+  if (authEnabled && !(req.headers.cookie || '').includes('kc_session=')) {
+    return { redirect: { destination: '/login', permanent: false } }
+  }
+  return { props: {} }
 }

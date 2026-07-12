@@ -60,3 +60,20 @@ refreshes). Omit `SOURCE_*` to import from local `./data/*.json`.
 3. Later: staff auth (step 1), then move money logic onto the ledger (step 3),
    then teach main.js to read typed columns and drop `legacy_extras` +
    the `store` table.
+
+## Staff authentication (added with the auth gate)
+
+When tables mode is on, the app requires login. Model: Supabase Auth
+(email/password) + `staff_profiles` decides who is staff and their role.
+Session = httpOnly cookie (access + refresh token); every API route verifies
+it server-side (`lib/auth.js` `withStaff`) and silently refreshes expired
+tokens; the browser is bounced to `/login` on any 401.
+
+**Bootstrap:** the first user ever to log in becomes the owner. Create the
+account in Supabase Dashboard → Authentication → Users → *Add user* (email +
+password, auto-confirm), then sign in at `/login`. Add helpers the same way,
+then insert their `staff_profiles` row with role `helper` (owner-run SQL or a
+future team screen).
+
+Blob/file mode (no service key) skips the gate entirely, so local dev and the
+legacy deployment behave as before.

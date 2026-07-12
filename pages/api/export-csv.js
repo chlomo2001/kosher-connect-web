@@ -1,6 +1,7 @@
 import { loadData } from '../../lib/data'
+import { withStaff } from '../../lib/auth.js'
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
 
   const customers = await loadData('customers')
@@ -23,3 +24,5 @@ export default async function handler(req, res) {
   res.setHeader('Content-Disposition', 'attachment; filename="customers.csv"')
   res.send(csv)
 }
+
+export default withStaff(handler)

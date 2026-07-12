@@ -1,8 +1,9 @@
 import { loadData, saveData } from '../../lib/data'
+import { withStaff } from '../../lib/auth.js'
 import { tablesMode } from '../../lib/db'
 import { listCustomers, upsertCustomer, deleteCustomer } from '../../lib/tableStore'
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (tablesMode) return tablesHandler(req, res)
   return legacyHandler(req, res)
 }
@@ -85,3 +86,5 @@ async function legacyHandler(req, res) {
 
   res.status(405).end()
 }
+
+export default withStaff(handler)

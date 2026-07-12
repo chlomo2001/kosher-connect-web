@@ -4,7 +4,7 @@
 
 import { db, tablesMode } from '../../lib/db.js'
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (!tablesMode) {
     return res.status(503).json({ success: false, error: 'Service menu needs the relational data layer.' })
   }
@@ -26,3 +26,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, error: 'Storage error' })
   }
 }
+
+export default withStaff(handler)

@@ -1,8 +1,9 @@
 import { loadData, saveData } from '../../lib/data'
+import { withStaff } from '../../lib/auth.js'
 import { tablesMode } from '../../lib/db'
 import { listRentals, syncRentals } from '../../lib/tableStore'
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       return res.json(tablesMode ? await listRentals() : await loadData('rentals'))
@@ -21,3 +22,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, error: 'Storage error' })
   }
 }
+
+export default withStaff(handler)

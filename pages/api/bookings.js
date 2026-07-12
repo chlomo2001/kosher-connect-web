@@ -43,7 +43,7 @@ async function walletBalance(customerUuid) {
   return rows.length ? Number(rows[0].balance) : 0
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (!tablesMode) {
     return res.status(503).json({
       success: false,
@@ -156,3 +156,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, error: 'Storage error' })
   }
 }
+
+export default withStaff(handler)

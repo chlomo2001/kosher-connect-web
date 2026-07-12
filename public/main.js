@@ -1,24 +1,38 @@
 // ─── API Bridge: replaces Electron IPC with fetch calls ───────────────────────
-window.api = {
-  getAllCustomers: () => fetch('/api/customers').then(r => r.json()),
 
-  addCustomer: (c) => fetch('/api/customers', {
+// Session-aware fetch: a 401 means the staff session ended — go sign in.
+// (Returns a never-resolving promise during the redirect so callers don't
+// try to render an error state that's about to be navigated away.)
+function kcFetch(url, opts) {
+  return fetch(url, opts).then(r => {
+    if (r.status === 401) {
+      window.location.href = '/login';
+      return new Promise(() => {});
+    }
+    return r;
+  });
+}
+
+window.api = {
+  getAllCustomers: () => kcFetch('/api/customers').then(r => r.json()),
+
+  addCustomer: (c) => kcFetch('/api/customers', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(c),
   }).then(r => r.json()),
 
-  updateCustomer: (c) => fetch('/api/customers', {
+  updateCustomer: (c) => kcFetch('/api/customers', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(c),
   }).then(r => r.json()),
 
-  deleteCustomer: (id) => fetch('/api/customers?id=' + id, { method: 'DELETE' }).then(r => r.json()),
+  deleteCustomer: (id) => kcFetch('/api/customers?id=' + id, { method: 'DELETE' }).then(r => r.json()),
 
   confirmDelete: (msg) => Promise.resolve(window.confirm(msg)),
 
-  exportCSV: () => fetch('/api/export-csv').then(async r => {
+  exportCSV: () => kcFetch('/api/export-csv').then(async r => {
     if (!r.ok) return { success: false };
     const blob = await r.blob();
     const url = URL.createObjectURL(blob);
@@ -30,86 +44,86 @@ window.api = {
     return { success: true };
   }),
 
-  getAllRentals: () => fetch('/api/rentals').then(r => r.json()),
-  saveAllRentals: (data) => fetch('/api/rentals', {
+  getAllRentals: () => kcFetch('/api/rentals').then(r => r.json()),
+  saveAllRentals: (data) => kcFetch('/api/rentals', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   }).then(r => r.json()),
 
-  getAllPhones: () => fetch('/api/phones').then(r => r.json()),
-  saveAllPhones: (data) => fetch('/api/phones', {
+  getAllPhones: () => kcFetch('/api/phones').then(r => r.json()),
+  saveAllPhones: (data) => kcFetch('/api/phones', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   }).then(r => r.json()),
 
-  getAllSims: () => fetch('/api/sims').then(r => r.json()),
-  saveAllSims: (data) => fetch('/api/sims', {
+  getAllSims: () => kcFetch('/api/sims').then(r => r.json()),
+  saveAllSims: (data) => kcFetch('/api/sims', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   }).then(r => r.json()),
 
-  getAllBookings: () => fetch('/api/bookings').then(r => r.ok ? r.json() : []),
-  addBooking: (b) => fetch('/api/bookings', {
+  getAllBookings: () => kcFetch('/api/bookings').then(r => r.ok ? r.json() : []),
+  addBooking: (b) => kcFetch('/api/bookings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(b),
   }).then(r => r.json()),
-  updateBooking: (b) => fetch('/api/bookings', {
+  updateBooking: (b) => kcFetch('/api/bookings', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(b),
   }).then(r => r.json()),
 
-  getRepairs: () => fetch('/api/repairs').then(r => r.ok ? r.json() : []),
-  addRepair: (r) => fetch('/api/repairs', {
+  getRepairs: () => kcFetch('/api/repairs').then(r => r.ok ? r.json() : []),
+  addRepair: (r) => kcFetch('/api/repairs', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(r),
   }).then(r => r.json()),
-  updateRepair: (r) => fetch('/api/repairs', {
+  updateRepair: (r) => kcFetch('/api/repairs', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(r),
   }).then(r => r.json()),
-  getServiceMenu: (category) => fetch('/api/services' + (category ? '?category=' + category : '')).then(r => r.ok ? r.json() : []),
+  getServiceMenu: (category) => kcFetch('/api/services' + (category ? '?category=' + category : '')).then(r => r.ok ? r.json() : []),
 
-  getTasks: () => fetch('/api/tasks').then(r => r.ok ? r.json() : []),
-  addTask: (t) => fetch('/api/tasks', {
+  getTasks: () => kcFetch('/api/tasks').then(r => r.ok ? r.json() : []),
+  addTask: (t) => kcFetch('/api/tasks', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(t),
   }).then(r => r.json()),
-  updateTask: (t) => fetch('/api/tasks', {
+  updateTask: (t) => kcFetch('/api/tasks', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(t),
   }).then(r => r.json()),
 
-  getVirtualNumbers: () => fetch('/api/virtual-numbers').then(r => r.ok ? r.json() : []),
-  addVirtualNumber: (v) => fetch('/api/virtual-numbers', {
+  getVirtualNumbers: () => kcFetch('/api/virtual-numbers').then(r => r.ok ? r.json() : []),
+  addVirtualNumber: (v) => kcFetch('/api/virtual-numbers', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(v),
   }).then(r => r.json()),
-  updateVirtualNumber: (v) => fetch('/api/virtual-numbers', {
+  updateVirtualNumber: (v) => kcFetch('/api/virtual-numbers', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(v),
   }).then(r => r.json()),
-  deleteVirtualNumber: (id) => fetch('/api/virtual-numbers?id=' + encodeURIComponent(id), { method: 'DELETE' }).then(r => r.json()),
+  deleteVirtualNumber: (id) => kcFetch('/api/virtual-numbers?id=' + encodeURIComponent(id), { method: 'DELETE' }).then(r => r.json()),
 
-  getSettings: () => fetch('/api/settings').then(r => r.ok ? r.json() : null),
-  updateSetting: (p) => fetch('/api/settings', {
+  getSettings: () => kcFetch('/api/settings').then(r => r.ok ? r.json() : null),
+  updateSetting: (p) => kcFetch('/api/settings', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(p),
   }).then(r => r.json()),
 
-  getLedger: (customerId) => fetch('/api/ledger?customerId=' + encodeURIComponent(customerId)).then(r => r.json()),
-  addLedgerEntry: (e) => fetch('/api/ledger', {
+  getLedger: (customerId) => kcFetch('/api/ledger?customerId=' + encodeURIComponent(customerId)).then(r => r.json()),
+  addLedgerEntry: (e) => kcFetch('/api/ledger', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(e),
@@ -3482,7 +3496,7 @@ async function renderDashboardTab() {
 
   // Rentals/phones/sims/bookings are already in memory; fetch the rest.
   const [ledgerSummary, repairsData, tasksData] = await Promise.all([
-    fetch('/api/ledger?since=' + today).then(r => r.ok ? r.json() : null).catch(() => null),
+    kcFetch('/api/ledger?since=' + today).then(r => r.ok ? r.json() : null).catch(() => null),
     window.api.getRepairs().catch(() => []),
     window.api.getTasks().catch(() => []),
   ]);
