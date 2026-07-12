@@ -3848,10 +3848,11 @@ async function renderSettingsTab() {
 
   content.innerHTML = `
     ${teamHtml}
-    <div style="margin-bottom:10px;padding:10px 14px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);">
-      These values drive live pricing (rental calculator, VN add-on, late fees, repair/SIM charges).
+    <div style="margin-bottom:10px;padding:10px 14px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:12px;">
+      <span style="flex:1;">These values drive live pricing (rental calculator, VN add-on, late fees, repair/SIM charges).
       Edits apply to <strong>new</strong> calculations only — existing tickets and frozen prices never reprice.
-      Keys can be edited, never added or removed.
+      Keys can be edited, never added or removed.</span>
+      <button class="btn btn-outline btn-sm" onclick="runSweepsNow()" title="Overdue rentals, arrears, passport expiry, SIM renewals">⏰ Run sweeps now</button>
     </div>
     <div class="table-card" style="margin-bottom:16px;">
       <div class="section-divider" style="margin:12px 14px 4px;">📱 Rental Rates</div>
@@ -3907,6 +3908,16 @@ async function saveSettingKey(key) {
     table: 'settings', key,
     values: { numValue: document.getElementById(`st_${key}`).value },
   });
+}
+
+// The daily 06:00 cron runs these on production; this button runs them on
+// demand (and is how previews exercise them — crons don't fire on previews).
+async function runSweepsNow() {
+  toast('Running sweeps…', 'warning');
+  const res = await kcFetch('/api/cron/sweep', { method: 'POST' }).then(r => r.json()).catch(() => null);
+  if (!res?.success) { toast(res?.error || 'Sweeps failed — check logs.', 'error'); return; }
+  const c = res.counts;
+  toast(`Sweeps done: ${c.rentalsFlippedOverdue} flipped overdue · ${c.overdueTasks + c.balanceTasks + c.passportTasks + c.simRenewalTasks} tasks raised · ${c.overdueClosed + c.balanceClosed + c.simClosed} closed.`, 'success');
 }
 
 // ── Team management (owner-only; server enforces) ──
