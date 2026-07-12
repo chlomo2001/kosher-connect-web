@@ -54,6 +54,8 @@ $$;
 
 create table customers (
   id                 uuid primary key default gen_random_uuid(),
+  legacy_id          text unique,        -- old app id (Date.now()) — cutover mapping
+  auth_user_id       uuid unique references auth.users(id),  -- future customer portal login
   first_name         text not null,
   last_name          text,
   phone_country_code text,
@@ -106,6 +108,7 @@ create table pools (
 
 create table lines (
   id                uuid primary key default gen_random_uuid(),
+  legacy_id         text unique,         -- old app phone id — cutover mapping
   label             text,
   number            text,
   region            text,                 -- US / Canada / UK
@@ -200,6 +203,7 @@ create table holidays (
 
 create table rentals (
   id                   uuid primary key default gen_random_uuid(),
+  legacy_id            text unique,      -- old app rental id — cutover mapping
   customer_id          uuid not null references customers(id),
   line_id              uuid not null references lines(id),
   device_stock_item_id uuid references stock_items(id),
@@ -250,6 +254,7 @@ create table rental_items (
 
 create table sims (
   id                    uuid primary key default gen_random_uuid(),
+  legacy_id             text unique,     -- old app SIM id — cutover mapping
   customer_id           uuid not null references customers(id),
   master_account_id     uuid references master_accounts(id),
   provider              text,

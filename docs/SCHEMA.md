@@ -114,6 +114,13 @@ late fee + damage), `RENTAL-VOID-<id>` (the one refund per void),
   `Auto-deduct` → `sim_*`/`manual_adjustment`, `Top-up` → `top_up`,
   `Payment` → `payment`, `LateFee` → folds into `RENTALRET-<id>`).
 
+11. **Cutover + portal affordances** (adopted from the July-6 staging bridge):
+    `legacy_id` on customers/lines/rentals/sims maps old app ids during the
+    one-shot import; `customers.auth_user_id` reserves the future
+    customer-portal login (self-service `my_profile`/`my_bookings` views come
+    back when that ships). The old `app_json` auto-link triggers are dropped —
+    cutover is an explicit import script, not write-time magic.
+
 ## Open items
 
 - `sim_annual_fee`: draft said £12, the app's price list charges £20 —
