@@ -162,7 +162,9 @@ function confirmBookingCharge(bookingId) {
     return getWalletBalance(customerId);
   }
 
-  var amount = -(price + bookingFee);
+  // appendLedgerEntry derives the sign from the type ('Charge' → negative)
+  // and takes the absolute value, so we pass the magnitude.
+  var amount = price + bookingFee;
   var memo = 'Flight ' + b.Route + ' (' + b.Airline + ')';
   if (bookingRef !== '' && bookingRef !== null && bookingRef !== undefined) {
     memo += ' — ref ' + bookingRef;
@@ -272,19 +274,7 @@ function getBookingsSheet_() {
   return sheet;
 }
 
-/** Next sequential id = max numeric value in column A (below header) + 1. */
-function nextSequentialId_(sheet) {
-  var lastRow = sheet.getLastRow();
-  var maxId = 0;
-  if (lastRow >= 2) {
-    var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-    for (var i = 0; i < ids.length; i++) {
-      var n = parseInt(ids[i][0], 10);
-      if (!isNaN(n) && n > maxId) maxId = n;
-    }
-  }
-  return maxId + 1;
-}
+/* nextSequentialId_ lives in CustomerOnboarding.gs — defined once per project. */
 
 /** Finds a booking by BookingID; returns {rowIndex, values} or null. */
 function findBookingRow_(sheet, bookingId) {
@@ -328,24 +318,8 @@ function dateValue_(v) {
   return isNaN(t) ? 0 : t;
 }
 
-/** True if any Ledger row's Reference equals the given reference. */
-function ledgerHasReference_(reference) {
-  var sheet = getSheetOrThrow_(LEDGER_SHEET_NAME);
-  var lastRow = sheet.getLastRow();
-  if (lastRow < 2) return false;
-
-  var index = headerIndex_(sheet);
-  if (!index.hasOwnProperty('Reference')) {
-    throw new Error('"' + LEDGER_SHEET_NAME + '" tab has no "Reference" column — cannot run double-charge guard.');
-  }
-
-  var refs = sheet.getRange(2, index['Reference'] + 1, lastRow - 1, 1).getValues();
-  var wanted = String(reference);
-  for (var i = 0; i < refs.length; i++) {
-    if (String(refs[i][0]) === wanted) return true;
-  }
-  return false;
-}
+/* ledgerHasReference_ lives in Ledger.gs — the canonical idempotency guard,
+ * defined once per project. Called here with reference only (no type filter). */
 
 /** Titles of Tasks rows that are not marked Done. */
 function openTaskTitles_() {

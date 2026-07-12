@@ -131,8 +131,11 @@ var SCHEMA = [
   {
     name: 'Tasks',
     autoId: true,
+    // Reference is the stable dedup key for auto-upserted tasks
+    // (BALANCE-<CustomerID>, RATEMISSING-<id> — see Ledger.gs). Appended last
+    // so positional 8-column writers (appendOverdueTask_) stay compatible.
     headers: ['TaskID', 'Title', 'DueDate', 'Source', 'Priority', 'Done',
-              'RawText', 'CreatedAt'],
+              'RawText', 'CreatedAt', 'Reference'],
     validations: {
       Source: ['Manual', 'SMS', 'Auto'],
       Priority: ['High', 'Normal', 'Low'],

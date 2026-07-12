@@ -141,14 +141,24 @@ function processMessage_(msg, simsSheet, tasksSheet, customersSheet) {
 
     // KC fronted this renewal → recover the fee from the customer's wallet.
     // (Customer-paid lines are not deducted.) autoDeduct lives in Ledger.gs.
+    // Deduped on SIMRENEW-<gmail message id>: if this message errors after the
+    // deduction (task append, labelling) it stays unread and is retried — the
+    // reference guard stops the retry from deducting the fee a second time.
     var deductNote = '';
     if (sim.paidBy === 'KC' && sim.feeApplied > 0) {
-      var ded = autoDeduct(sim.customerId, sim.feeApplied,
-        'SIM renewal — ' + sim.provider + ' (' + sim.alias + ')');
-      deductNote = ' (deducted £' + sim.feeApplied + ' from wallet)';
-      if (ded && ded.warning) {
-        Logger.log('SIM renewal deduction left CustomerID ' + sim.customerId +
-          ' in arrears: ' + ded.warning);
+      var dedupRef = 'SIMRENEW-' + msg.getId();
+      if (ledgerHasReference_(dedupRef, 'Auto-deduct')) {
+        Logger.log('SIM renewal deduction already ledgered (' + dedupRef +
+          ') — skipping duplicate.');
+        deductNote = ' (deducted £' + sim.feeApplied + ' from wallet)';
+      } else {
+        var ded = autoDeduct(sim.customerId, sim.feeApplied,
+          'SIM renewal — ' + sim.provider + ' (' + sim.alias + ')', dedupRef);
+        deductNote = ' (deducted £' + sim.feeApplied + ' from wallet)';
+        if (ded && ded.warning) {
+          Logger.log('SIM renewal deduction left CustomerID ' + sim.customerId +
+            ' in arrears: ' + ded.warning);
+        }
       }
     }
 
