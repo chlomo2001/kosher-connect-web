@@ -67,12 +67,17 @@ async function handler(req, res) {
           db.select('ledger', 'select=*,customers(first_name,last_name)&order=created_at.desc&limit=12'),
           db.select('ledger', `select=amount&created_at=gte.${since}`),
           db.select('customer_balances', ''),
-          db.select('customers', 'select=id,first_name,last_name'),
+          db.select('customers', 'select=id,legacy_id,first_name,last_name'),
         ])
         const names = new Map(custRows.map(c => [c.id, `${c.first_name || ''} ${c.last_name || ''}`.trim()]))
+        const appIds = new Map(custRows.map(c => [c.id, c.legacy_id]))
         const arrears = balances
           .filter(b => Number(b.balance) < 0)
-          .map(b => ({ customerName: names.get(b.customer_id) || '?', balance: Number(b.balance) }))
+          .map(b => ({
+            customerId: appIds.get(b.customer_id) || null, // app id — dashboard deep-link
+            customerName: names.get(b.customer_id) || '?',
+            balance: Number(b.balance),
+          }))
           .sort((a, b) => a.balance - b.balance)
         return res.json({
           success: true,

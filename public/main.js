@@ -3413,6 +3413,20 @@ async function toggleTaskDone(id, done) {
 // Stripi layout: featured dark-navy money card (the brand's featured-tier
 // treatment) + thin-display metric cards, over a two-column feed.
 
+// Dashboard deep-links: every "needs attention" line jumps to the page where
+// the problem can actually be dealt with. Uses the real sidebar click so the
+// active nav state stays consistent.
+let dashFeedActions = [];
+function goToTab(tab, opts = {}) {
+  if (opts.rentalSearch !== undefined) {
+    rentalSearchTerm = opts.rentalSearch;
+    filterCustomer = ''; filterStatus = 'all'; filterPaid = 'all';
+  }
+  document.querySelector(`.nav-item[data-tab="${tab}"]`)?.click();
+  // Customers tab renders synchronously from memory; open the detail after it.
+  if (opts.customerId) setTimeout(() => renderDetailPanel(opts.customerId), 120);
+}
+
 // Hebrew calendar string for a Date (gematria day + month + gematria year).
 function hebrewDateString(d) {
   try {
@@ -3475,15 +3489,16 @@ async function renderDashboardTab() {
       <div class="dash-hero-sub">${arrears.length ? arrears.length + ' customer' + (arrears.length === 1 ? '' : 's') + ' in arrears' : 'nobody owes money 🎉'}</div>
       ${arrears.length ? `<div class="dash-hero-divider"></div>` +
         arrears.slice(0, 4).map(a => `
-          <div class="dash-hero-row">
+          <div class="dash-hero-row${a.customerId ? ' dash-link' : ''}"${a.customerId
+            ? ` onclick="goToTab('customers',{customerId:'${escHtml(String(a.customerId))}'})" title="Open customer"` : ''}>
             <span>${escHtml(a.customerName)}</span>
             <span class="amt">£${Math.abs(a.balance).toFixed(2)}</span>
           </div>`).join('') : ''}
     </div>`;
 
-  // ── Metric cards ──
-  const metric = (label, value, sub, valueStyle = '') => `
-    <div class="stat-card">
+  // ── Metric cards (each links to its tab) ──
+  const metric = (label, value, sub, tab, valueStyle = '') => `
+    <div class="stat-card dash-link" onclick="goToTab('${tab}')" title="Open ${tab}">
       <div class="stat-label">${label}</div>
       <div class="stat-value" ${valueStyle ? `style="${valueStyle}"` : ''}>${value}</div>
       ${sub ? `<div class="stat-sub">${sub}</div>` : ''}
@@ -3493,28 +3508,43 @@ async function renderDashboardTab() {
     <div class="dash-metrics">
       ${metric('Active Rentals', activeRentals.length,
         [overdue.length ? `<span style="color:var(--danger);">${overdue.length} overdue</span>` : '',
-         dueToday.length ? `${dueToday.length} due today` : ''].filter(Boolean).join(' · ') || 'all on schedule')}
+         dueToday.length ? `${dueToday.length} due today` : ''].filter(Boolean).join(' · ') || 'all on schedule', 'rentals')}
       ${metric('Open Repairs', openRepairs.length,
-        readyRepairs.length ? `<span style="color:var(--accent);">${readyRepairs.length} ready to collect</span>` : 'nothing waiting')}
+        readyRepairs.length ? `<span style="color:var(--accent);">${readyRepairs.length} ready to collect</span>` : 'nothing waiting', 'repairs')}
       ${metric('Travel · Next 7 Days', travel7.length,
-        renewals7.length ? `${renewals7.length} SIM renewal${renewals7.length === 1 ? '' : 's'} too` : 'plus SIM renewals')}
+        renewals7.length ? `${renewals7.length} SIM renewal${renewals7.length === 1 ? '' : 's'} too` : 'plus SIM renewals', 'bookings')}
       ${metric('Open Tasks', openTasks.length,
-        highTasks.length ? `<span style="color:var(--danger);">${highTasks.length} high priority</span>` : 'none urgent',
+        highTasks.length ? `<span style="color:var(--danger);">${highTasks.length} high priority</span>` : 'none urgent', 'tasks',
         highTasks.length ? 'color:var(--danger);' : '')}
     </div>`;
 
-  // ── Needs-attention feed ──
+  // ── Needs-attention feed — each line deep-links to its problem page.
+  // Handlers live in dashFeedActions (closures), not inline strings, so
+  // customer names with quotes can't break the HTML.
   const attention = [];
-  overdue.forEach(r => attention.push(['📱', `<strong>${escHtml(r.customerName || '?')}</strong> — rental overdue since ${fmtDate(r.toDate)}`]));
-  readyRepairs.forEach(r => attention.push(['🔧', `<strong>${escHtml(r.customerName || '?')}</strong> — repair ready to collect (£${(r.total || 0).toFixed(2)})`]));
-  travel7.forEach(b => attention.push(['✈️', `<strong>${escHtml(b.customerName || '?')}</strong> — flies ${fmtDate(b.travelDate)} (${escHtml(b.route)})`]));
-  renewals7.forEach(s => attention.push(['💳', `<strong>${escHtml(s.customerName || '?')}</strong> — SIM renews ${fmtDate(s.renewalDate)}`]));
-  highTasks.slice(0, 5).forEach(t => attention.push(['❗', escHtml(t.title)]));
+  overdue.forEach(r => attention.push(['📱',
+    `<strong>${escHtml(r.customerName || '?')}</strong> — rental overdue since ${fmtDate(r.toDate)}`,
+    () => goToTab('rentals', { rentalSearch: r.customerName || '' })]));
+  readyRepairs.forEach(r => attention.push(['🔧',
+    `<strong>${escHtml(r.customerName || '?')}</strong> — repair ready to collect (£${(r.total || 0).toFixed(2)})`,
+    () => goToTab('repairs')]));
+  travel7.forEach(b => attention.push(['✈️',
+    `<strong>${escHtml(b.customerName || '?')}</strong> — flies ${fmtDate(b.travelDate)} (${escHtml(b.route)})`,
+    () => goToTab('bookings')]));
+  renewals7.forEach(s => attention.push(['💳',
+    `<strong>${escHtml(s.customerName || '?')}</strong> — SIM renews ${fmtDate(s.renewalDate)}`,
+    () => goToTab('sim')]));
+  highTasks.slice(0, 5).forEach(t => attention.push(['❗', escHtml(t.title), () => goToTab('tasks')]));
 
-  const attentionHtml = attention.length === 0
+  const shown = attention.slice(0, 10);
+  dashFeedActions = shown.map(a => a[2]);
+  const attentionHtml = shown.length === 0
     ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">All clear. 🎉</div>`
-    : attention.slice(0, 10).map(([icon, html]) => `
-        <div class="feed-item"><span class="feed-icon">${icon}</span><span>${html}</span></div>`).join('');
+    : shown.map(([icon, html], i) => `
+        <div class="feed-item dash-link" onclick="dashFeedActions[${i}]()" title="Open">
+          <span class="feed-icon">${icon}</span><span>${html}</span>
+          <span class="feed-go">›</span>
+        </div>`).join('');
 
   const activityHtml = !money || money.recent.length === 0
     ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No wallet activity yet.</div>`

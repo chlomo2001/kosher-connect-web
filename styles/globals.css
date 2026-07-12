@@ -670,6 +670,17 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .feed-item:last-child { border-bottom: none; }
 .feed-item .feed-icon { flex-shrink: 0; }
 
+/* Dashboard deep-links: anything wearing .dash-link navigates on click. */
+.dash-link { cursor: pointer; }
+.feed-item.dash-link { margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 8px; transition: background 0.12s; }
+.feed-item.dash-link:hover { background: var(--bg-secondary); }
+.feed-item .feed-go { margin-left: auto; color: var(--muted); font-size: 15px; opacity: 0; transition: opacity 0.12s; }
+.feed-item.dash-link:hover .feed-go { opacity: 1; }
+.stat-card.dash-link { transition: box-shadow 0.12s, transform 0.12s; }
+.stat-card.dash-link:hover { box-shadow: var(--shadow-2); transform: translateY(-1px); }
+.dash-hero-row.dash-link { border-radius: 6px; margin: 0 -6px; padding-left: 6px; padding-right: 6px; transition: background 0.12s; }
+.dash-hero-row.dash-link:hover { background: rgba(255,255,255,0.08); }
+
 @media (max-width: 1150px) {
   .dash-grid { grid-template-columns: 1fr; }
   .dash-cols { grid-template-columns: 1fr; }
