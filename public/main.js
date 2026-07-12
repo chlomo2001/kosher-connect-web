@@ -62,6 +62,38 @@ window.api = {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(b),
   }).then(r => r.json()),
+
+  getRepairs: () => fetch('/api/repairs').then(r => r.ok ? r.json() : []),
+  addRepair: (r) => fetch('/api/repairs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(r),
+  }).then(r => r.json()),
+  updateRepair: (r) => fetch('/api/repairs', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(r),
+  }).then(r => r.json()),
+  getServiceMenu: (category) => fetch('/api/services' + (category ? '?category=' + category : '')).then(r => r.ok ? r.json() : []),
+
+  getTasks: () => fetch('/api/tasks').then(r => r.ok ? r.json() : []),
+  addTask: (t) => fetch('/api/tasks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(t),
+  }).then(r => r.json()),
+  updateTask: (t) => fetch('/api/tasks', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(t),
+  }).then(r => r.json()),
+
+  getLedger: (customerId) => fetch('/api/ledger?customerId=' + encodeURIComponent(customerId)).then(r => r.json()),
+  addLedgerEntry: (e) => fetch('/api/ledger', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(e),
+  }).then(r => r.json()),
 };
 
 // ─────────────────────────────────────────────
@@ -157,10 +189,19 @@ function renderTab(tab) {
     searchBox.style.display = 'none';
     btnNew.style.display = 'none';
     renderBookingsTab();
+  } else if (tab === 'repairs') {
+    document.getElementById('pageTitle').innerHTML = 'Phone <span>Repairs</span>';
+    searchBox.style.display = 'none';
+    btnNew.style.display = 'none';
+    renderRepairsTab();
+  } else if (tab === 'tasks') {
+    document.getElementById('pageTitle').innerHTML = 'Task <span>List</span>';
+    searchBox.style.display = 'none';
+    btnNew.style.display = 'none';
+    renderTasksTab();
   } else {
     const labels = {
       virtual:  ['🔢', 'Virtual Numbers'],
-      tasks:    ['✅', 'Tasks'],
       support:  ['🎫', 'Support Tickets'],
       settings: ['⚙️', 'Settings'],
     };
@@ -2050,6 +2091,11 @@ function renderDetailPanel(id) {
       <div class="section-divider">Active Services</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">${servicesHTML}</div>
 
+      <div class="section-divider">💰 Wallet</div>
+      <div id="walletSection-${c.id}" style="margin-bottom:18px;">
+        <div style="color:var(--muted);font-size:13px;padding:6px 0;">Loading wallet…</div>
+      </div>
+
       <div class="section-divider">Add Manual Payment</div>
       <div class="add-payment-row" id="paymentRow-${c.id}">
         <select id="payType-${c.id}">
@@ -2074,7 +2120,116 @@ function renderDetailPanel(id) {
       </div>
     </div>`;
 
+  loadWalletSection(c.id);
   setTimeout(() => container.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+}
+
+// ─────────────────────────────────────────────
+//  WALLET (append-only ledger; balance always derived)
+// ─────────────────────────────────────────────
+
+const LEDGER_TYPE_LABELS = {
+  payment: '💷 Payment', top_up: '➕ Top-up', refund: '↩️ Refund',
+  manual_adjustment: '✏️ Adjustment', booking: '✈️ Flight', rental: '📱 Rental',
+  rental_adjustment: '📱 Rental adj.', rental_loss: '📱 Loss', rental_void: '📱 Void credit',
+  repair: '🔧 Repair', online_service: '🖨️ Service', sim_annual: '💳 SIM annual',
+  sim_additional: '💳 SIM extra', sim_replacement: '💳 SIM replacement',
+  sim_service: '💳 SIM service', phone_sale: '📦 Phone sale', stock_sale: '📦 Sale',
+};
+
+async function loadWalletSection(customerId) {
+  const el = document.getElementById(`walletSection-${customerId}`);
+  if (!el) return;
+  let data;
+  try { data = await window.api.getLedger(customerId); }
+  catch { data = null; }
+  if (!data || !data.success) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:12px;">Wallet unavailable${data?.error ? ' — ' + escHtml(data.error) : ''}.</div>`;
+    return;
+  }
+  const bal = data.balance || 0;
+  const balColor = bal < 0 ? 'var(--danger)' : 'var(--success)';
+  const balLabel = bal < 0 ? `owes £${Math.abs(bal).toFixed(2)}` : `£${bal.toFixed(2)} in credit`;
+  const entriesHtml = data.entries.length === 0
+    ? `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No wallet activity yet.</div>`
+    : data.entries.slice(0, 8).map(e => `
+        <div class="history-item">
+          <div style="display:flex;align-items:center;flex:1;">
+            <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>
+            <div class="history-desc">${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}</div>
+          </div>
+          <div class="history-date" style="margin:0 16px;">${fmtDate(e.at)}</div>
+          <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--danger)'};">
+            ${e.amount >= 0 ? '+' : '−'}£${Math.abs(e.amount).toFixed(2)}</div>
+        </div>`).join('');
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+      <span class="badge" style="font-size:14px;padding:7px 16px;background:${bal < 0 ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)'};color:${balColor};">
+        Balance: ${balLabel}</span>
+      <button class="btn btn-primary" style="font-size:12px;padding:6px 14px;"
+        onclick="openWalletModal('${escHtml(customerId)}')">💰 Record Money</button>
+      ${data.entries.length > 8 ? `<span style="color:var(--muted);font-size:11px;">showing 8 of ${data.entries.length}</span>` : ''}
+    </div>
+    <div class="history-list">${entriesHtml}</div>`;
+}
+
+function openWalletModal(customerId) {
+  const c = customers.find(x => x.id === customerId);
+  showDynamicModal(`
+    <div class="modal-title">💰 Record Money — ${c ? escHtml(c.firstName) + ' ' + escHtml(c.lastName) : ''}</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Type</label>
+        <select class="form-input" id="wlKind"
+          onchange="document.getElementById('wlMethodWrap').style.display=this.value==='payment'||this.value==='top_up'?'block':'none'">
+          <option value="payment">💷 Payment (settles what they owe)</option>
+          <option value="top_up">➕ Top-up (credit in advance)</option>
+          <option value="refund">↩️ Refund (money back to wallet)</option>
+          <option value="adjustment">✏️ Adjustment (correction, ± allowed)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amount (£)</label>
+        <input class="form-input" type="number" step="0.01" id="wlAmount" placeholder="0.00">
+      </div>
+      <div class="form-group" id="wlMethodWrap">
+        <label class="form-label">Method</label>
+        <select class="form-input" id="wlMethod">
+          <option value="cash">💵 Cash</option>
+          <option value="card">💳 Card</option>
+          <option value="bank_transfer">🏦 Bank transfer</option>
+          <option value="voucher">🎟️ Voucher</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Note</label>
+        <input class="form-input" id="wlNote" placeholder="What is this for?">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveWalletEntry('${escHtml(customerId)}')">💰 Record</button>
+    </div>
+  `);
+}
+
+async function saveWalletEntry(customerId) {
+  const kind = document.getElementById('wlKind').value;
+  const amount = parseFloat(document.getElementById('wlAmount').value);
+  if (!Number.isFinite(amount) || amount === 0) { toast('Enter a non-zero amount.', 'error'); return; }
+  const res = await window.api.addLedgerEntry({
+    customerId,
+    kind,
+    amount,
+    method: document.getElementById('wlMethod').value,
+    note: document.getElementById('wlNote').value.trim(),
+  });
+  if (!res.success) { toast(res.error || 'Could not record it.', 'error'); return; }
+  closeDynamicModal();
+  toast(`Recorded — wallet balance now £${res.balance.toFixed(2)}.`, 'success');
+  loadWalletSection(customerId);
 }
 
 async function addPayment(id) {
@@ -3008,6 +3163,256 @@ async function changeBookingStatus(id, status) {
 }
 
 // ─────────────────────────────────────────────
+//  REPAIRS
+// ─────────────────────────────────────────────
+// Tables-native. Prices freeze into the ticket at open time; the wallet
+// charge (REPAIR-<id>) posts once, when the repair is marked Collected.
+
+let repairs = [];
+let repairMenu = [];
+const REPAIR_STATUSES = ['Open', 'In Progress', 'Ready', 'Collected', 'Cancelled'];
+
+function repairStatusBadge(status) {
+  const styles = {
+    'Open':        'background:rgba(59,130,246,0.15);color:#3b82f6;',
+    'In Progress': 'background:rgba(251,146,60,0.15);color:#fb923c;',
+    'Ready':       'background:rgba(168,85,247,0.15);color:#a855f7;',
+    'Collected':   'background:rgba(34,197,94,0.15);color:var(--success);',
+    'Cancelled':   'background:rgba(239,68,68,0.15);color:var(--danger);',
+  };
+  return `<span class="badge" style="${styles[status] || styles.Open}">${escHtml(status)}</span>`;
+}
+
+async function renderRepairsTab() {
+  const content = document.getElementById('mainContent');
+  content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading repairs…</div>`;
+  [repairs, repairMenu] = await Promise.all([
+    window.api.getRepairs(),
+    window.api.getServiceMenu('repair'),
+  ]);
+  if (!Array.isArray(repairs)) repairs = [];
+
+  const open = repairs.filter(r => r.status === 'Open' || r.status === 'In Progress');
+  const ready = repairs.filter(r => r.status === 'Ready');
+  const revenue = repairs.filter(r => r.status === 'Collected').reduce((s, r) => s + (r.total || 0), 0);
+
+  const rows = repairs.length === 0
+    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔧</div><p>No repairs yet.</p><small>Click "New Repair" to open the first ticket.</small></div></td></tr>`
+    : repairs.map(r => `
+      <tr>
+        <td><div class="customer-name">${escHtml(r.customerName || '—')}</div></td>
+        <td>${escHtml(r.device || '—')}</td>
+        <td style="font-size:12px;">${r.services.map(s => escHtml(s.name)).join('<br>') || '—'}</td>
+        <td><strong>£${(r.total || 0).toFixed(2)}</strong></td>
+        <td>${r.openedAt ? fmtDate(r.openedAt) : '—'}</td>
+        <td>${repairStatusBadge(r.status)}</td>
+        <td>
+          <select class="form-input" style="width:120px;padding:5px 8px;font-size:12px;"
+            onchange="changeRepairStatus('${escHtml(r.id)}', this.value)">
+            ${REPAIR_STATUSES.map(s => `<option value="${s}" ${r.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+          </select>
+        </td>
+      </tr>`).join('');
+
+  content.innerHTML = `
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Open Tickets</div><div class="stat-value">${open.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Ready to Collect</div><div class="stat-value">${ready.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Repairs Revenue</div><div class="stat-value">£${revenue.toFixed(2)}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Tickets</div><div class="stat-value">${repairs.length}</div></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <button class="btn btn-primary" onclick="openNewRepairModal()">+ New Repair</button>
+    </div>
+    <div class="table-card">
+      <table>
+        <thead><tr>
+          <th>Customer</th><th>Device</th><th>Services</th><th>Total</th><th>Opened</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function openNewRepairModal() {
+  const customerOptions = customers.map(c =>
+    `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone || '')}</option>`
+  ).join('');
+  const serviceChecks = repairMenu.map(m => `
+    <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer;">
+      <input type="checkbox" class="rpService" value="${escHtml(m.id)}" data-price="${m.price}" onchange="updateRepairTotal()">
+      <span style="flex:1;">${escHtml(m.name)}</span>
+      <strong>£${m.price.toFixed(2)}</strong>
+    </label>`).join('');
+  showDynamicModal(`
+    <div class="modal-title">🔧 New Repair</div>
+    <div class="form-grid">
+      <div class="form-group form-full">
+        <label class="form-label">Customer *</label>
+        <select class="form-input" id="rpCustomer">
+          <option value="">Select customer…</option>${customerOptions}
+        </select>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Device</label>
+        <input class="form-input" id="rpDevice" placeholder="e.g. QIN F21, black">
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Services * <span style="color:var(--muted);font-weight:400;">(prices frozen at open)</span></label>
+        <div style="max-height:220px;overflow-y:auto;padding:0 4px;">${serviceChecks ||
+          '<div style="color:var(--muted);font-size:13px;">Price list unavailable.</div>'}</div>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="rpNotes">
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+      <div style="font-size:14px;">Total: <strong id="rpTotal" style="color:var(--success);">£0.00</strong>
+        <span style="color:var(--muted);font-size:11px;">— charged to wallet on collection</span></div>
+      <div class="modal-actions" style="margin:0;">
+        <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveNewRepair()">🔧 Open Ticket</button>
+      </div>
+    </div>
+  `);
+}
+
+function updateRepairTotal() {
+  const total = [...document.querySelectorAll('.rpService:checked')]
+    .reduce((s, el) => s + (parseFloat(el.dataset.price) || 0), 0);
+  document.getElementById('rpTotal').textContent = `£${total.toFixed(2)}`;
+}
+
+async function saveNewRepair() {
+  const customerId = document.getElementById('rpCustomer').value;
+  const serviceIds = [...document.querySelectorAll('.rpService:checked')].map(el => el.value);
+  if (!customerId) { toast('Select a customer.', 'error'); return; }
+  if (!serviceIds.length) { toast('Pick at least one service.', 'error'); return; }
+  const res = await window.api.addRepair({
+    customerId,
+    device: document.getElementById('rpDevice').value.trim(),
+    serviceIds,
+    notes: document.getElementById('rpNotes').value.trim(),
+  });
+  if (!res.success) { toast(res.error || 'Could not open the ticket.', 'error'); return; }
+  closeDynamicModal();
+  toast(`Repair ticket opened — £${res.repair.total.toFixed(2)} on collection.`, 'success');
+  renderRepairsTab();
+}
+
+async function changeRepairStatus(id, status) {
+  if (status === 'Collected') {
+    const r = repairs.find(x => x.id === id);
+    const ok = await window.api.confirmDelete(
+      `Mark this repair as Collected?\n\nThis charges £${(r?.total || 0).toFixed(2)} to the customer's wallet.`);
+    if (!ok) { renderRepairsTab(); return; }
+  }
+  const res = await window.api.updateRepair({ id, status });
+  if (!res.success) { toast(res.error || 'Could not update status.', 'error'); renderRepairsTab(); return; }
+  if (res.chargePosted) {
+    toast(`Collected — £${res.repair.total.toFixed(2)} charged. Wallet balance £${res.balance.toFixed(2)}.`, 'success');
+  } else {
+    toast(`Repair marked ${status}.`, 'success');
+  }
+  renderRepairsTab();
+}
+
+// ─────────────────────────────────────────────
+//  TASKS
+// ─────────────────────────────────────────────
+// Tables-native to-do list. Also displays the keyed auto-tasks the system
+// raises (BALANCE-<id> arrears, passport expiry, overdue rentals).
+
+let tasksList = [];
+
+function taskPriorityBadge(p) {
+  const styles = {
+    High:   'background:rgba(239,68,68,0.15);color:var(--danger);',
+    Normal: 'background:rgba(59,130,246,0.15);color:#3b82f6;',
+    Low:    'background:rgba(148,163,184,0.15);color:var(--muted);',
+  };
+  return `<span class="badge" style="${styles[p] || styles.Normal}">${escHtml(p)}</span>`;
+}
+
+async function renderTasksTab() {
+  const content = document.getElementById('mainContent');
+  content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading tasks…</div>`;
+  tasksList = await window.api.getTasks();
+  if (!Array.isArray(tasksList)) tasksList = [];
+
+  const today = localISO();
+  const openTasks = tasksList.filter(t => !t.done);
+  const highOpen = openTasks.filter(t => t.priority === 'High');
+  const dueNow = openTasks.filter(t => t.dueDate && t.dueDate <= today);
+
+  const row = (t) => `
+    <div class="history-item" style="${t.done ? 'opacity:0.45;' : ''}">
+      <input type="checkbox" ${t.done ? 'checked' : ''} style="margin-right:12px;cursor:pointer;"
+        onchange="toggleTaskDone('${escHtml(t.id)}', this.checked)">
+      <div style="flex:1;">
+        <div class="history-desc" style="${t.done ? 'text-decoration:line-through;' : ''}">${escHtml(t.title)}</div>
+        <div style="font-size:11px;color:var(--muted);">
+          ${t.customerName ? '👤 ' + escHtml(t.customerName) + ' · ' : ''}${t.source !== 'manual' ? '🤖 auto · ' : ''}${t.reference ? escHtml(t.reference) + ' · ' : ''}${t.notes ? escHtml(t.notes) : ''}
+        </div>
+      </div>
+      <div class="history-date" style="margin:0 14px;${!t.done && t.dueDate && t.dueDate < today ? 'color:var(--danger);font-weight:600;' : ''}">
+        ${t.dueDate ? fmtDate(t.dueDate) : ''}</div>
+      ${taskPriorityBadge(t.priority)}
+    </div>`;
+
+  const openHtml = openTasks.length === 0
+    ? `<div class="empty-state"><div class="emoji">🎉</div><p>Nothing to do.</p></div>`
+    : openTasks.map(row).join('');
+  const doneTasks = tasksList.filter(t => t.done);
+
+  content.innerHTML = `
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Open Tasks</div><div class="stat-value">${openTasks.length}</div></div>
+      <div class="stat-card"><div class="stat-label">High Priority</div><div class="stat-value" style="color:var(--danger);">${highOpen.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Due / Overdue</div><div class="stat-value">${dueNow.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Completed</div><div class="stat-value" style="color:var(--success);">${doneTasks.length}</div></div>
+    </div>
+    <div class="table-card" style="padding:14px;margin-bottom:14px;">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input class="form-input" id="tkTitle" placeholder="Add a task…" style="flex:1;"
+          onkeydown="if(event.key==='Enter')saveNewTask()">
+        <input class="form-input" type="date" id="tkDue" style="width:150px;">
+        <select class="form-input" id="tkPriority" style="width:110px;">
+          <option value="Normal">Normal</option>
+          <option value="High">High</option>
+          <option value="Low">Low</option>
+        </select>
+        <button class="btn btn-primary" onclick="saveNewTask()">+ Add</button>
+      </div>
+    </div>
+    <div class="table-card" style="padding:6px 14px;">
+      <div class="history-list">${openHtml}</div>
+      ${doneTasks.length ? `
+        <div class="section-divider" style="margin-top:10px;">Completed (${doneTasks.length})</div>
+        <div class="history-list">${doneTasks.slice(0, 15).map(row).join('')}</div>` : ''}
+    </div>`;
+}
+
+async function saveNewTask() {
+  const title = document.getElementById('tkTitle').value.trim();
+  if (!title) { toast('Type a task first.', 'error'); return; }
+  const res = await window.api.addTask({
+    title,
+    dueDate: document.getElementById('tkDue').value,
+    priority: document.getElementById('tkPriority').value,
+  });
+  if (!res.success) { toast(res.error || 'Could not add the task.', 'error'); return; }
+  renderTasksTab();
+}
+
+async function toggleTaskDone(id, done) {
+  const res = await window.api.updateTask({ id, done });
+  if (!res.success) { toast(res.error || 'Could not update the task.', 'error'); }
+  renderTasksTab();
+}
+
+// ─────────────────────────────────────────────
 //  DOUBLE-SUBMIT GUARD
 // ─────────────────────────────────────────────
 // The async save handlers await API calls before closing their modal, so a
@@ -3028,7 +3433,11 @@ function guardReentry(fn) {
   };
 }
 saveCustomer     = guardReentry(saveCustomer);
+saveWalletEntry  = guardReentry(saveWalletEntry);
 saveNewBooking   = guardReentry(saveNewBooking);
+saveNewRepair    = guardReentry(saveNewRepair);
+changeRepairStatus = guardReentry(changeRepairStatus);
+saveNewTask      = guardReentry(saveNewTask);
 saveNewRental    = guardReentry(saveNewRental);
 saveManageRental = guardReentry(saveManageRental);
 saveSimForm      = guardReentry(saveSimForm);
