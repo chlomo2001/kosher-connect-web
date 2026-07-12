@@ -2756,6 +2756,34 @@ function toast(msg, type = 'success') {
 }
 
 // ─────────────────────────────────────────────
+//  DOUBLE-SUBMIT GUARD
+// ─────────────────────────────────────────────
+// The async save handlers await API calls before closing their modal, so a
+// double-click fires the handler twice and creates duplicate records (or a
+// duplicate payment). Wrap them so re-entrant calls are ignored while a save
+// is in flight. Inline onclick handlers resolve these names at click time,
+// so rebinding here covers every call site.
+function guardReentry(fn) {
+  let inFlight = false;
+  return async function (...args) {
+    if (inFlight) return;
+    inFlight = true;
+    try {
+      return await fn.apply(this, args);
+    } finally {
+      inFlight = false;
+    }
+  };
+}
+saveCustomer     = guardReentry(saveCustomer);
+saveNewRental    = guardReentry(saveNewRental);
+saveManageRental = guardReentry(saveManageRental);
+saveSimForm      = guardReentry(saveSimForm);
+addPayment       = guardReentry(addPayment);
+deleteCustomer   = guardReentry(deleteCustomer);
+deleteRental     = guardReentry(deleteRental);
+
+// ─────────────────────────────────────────────
 //  START
 // ─────────────────────────────────────────────
 initApp();
