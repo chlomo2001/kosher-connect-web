@@ -50,6 +50,18 @@ window.api = {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   }).then(r => r.json()),
+
+  getAllBookings: () => fetch('/api/bookings').then(r => r.ok ? r.json() : []),
+  addBooking: (b) => fetch('/api/bookings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(b),
+  }).then(r => r.json()),
+  updateBooking: (b) => fetch('/api/bookings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(b),
+  }).then(r => r.json()),
 };
 
 // ─────────────────────────────────────────────
@@ -66,9 +78,10 @@ let searchTerm = '';
 // ─────────────────────────────────────────────
 async function initApp() {
   await loadCustomers();
-  rentals = await window.api.getAllRentals();
-  phones  = await window.api.getAllPhones();
-  sims    = await window.api.getAllSims();
+  rentals  = await window.api.getAllRentals();
+  phones   = await window.api.getAllPhones();
+  sims     = await window.api.getAllSims();
+  bookings = await window.api.getAllBookings().catch(() => []);
   reconcilePhoneStatuses();
   renderCustomersTab();
   setupNav();
@@ -139,6 +152,11 @@ function renderTab(tab) {
     searchBox.style.display = 'none';
     btnNew.style.display = 'none';
     renderSimsTab();
+  } else if (tab === 'bookings') {
+    document.getElementById('pageTitle').innerHTML = 'Tickets <span>& Flights</span>';
+    searchBox.style.display = 'none';
+    btnNew.style.display = 'none';
+    renderBookingsTab();
   } else {
     const labels = {
       virtual:  ['🔢', 'Virtual Numbers'],
@@ -652,9 +670,10 @@ function savePhones(data) {
   window.api.saveAllPhones(data);
 }
 
-let rentals = [];
-let phones  = [];
-let sims    = [];
+let rentals  = [];
+let phones   = [];
+let sims     = [];
+let bookings = [];
 let rentalSearchTerm = '';
 let filterCustomer = '', filterStatus = 'all', filterPaid = 'all';
 
@@ -2805,6 +2824,190 @@ function toast(msg, type = 'success') {
 }
 
 // ─────────────────────────────────────────────
+//  TICKETS & FLIGHTS (bookings)
+// ─────────────────────────────────────────────
+// Tables-native: rows live in the relational bookings table and creating a
+// booking posts a BOOKING-<id> wallet charge to the append-only ledger.
+
+const BOOKING_STATUSES = ['Booked', 'Ticketed', 'Completed', 'Cancelled'];
+
+function bookingStatusBadge(status) {
+  const styles = {
+    Booked:    'background:rgba(59,130,246,0.15);color:#3b82f6;',
+    Ticketed:  'background:rgba(168,85,247,0.15);color:#a855f7;',
+    Completed: 'background:rgba(34,197,94,0.15);color:var(--success);',
+    Cancelled: 'background:rgba(239,68,68,0.15);color:var(--danger);',
+  };
+  return `<span class="badge" style="${styles[status] || styles.Booked}">${escHtml(status)}</span>`;
+}
+
+function renderBookingsTab() {
+  const content = document.getElementById('mainContent');
+  const today = localISO();
+  const active = bookings.filter(b => b.status !== 'Cancelled');
+  const upcoming = active.filter(b => b.travelDate && b.travelDate >= today).length;
+  const feesEarned = active.reduce((s, b) => s + (b.bookingFee || 0), 0);
+  const totalCharged = active.reduce((s, b) => s + (b.price || 0) + (b.bookingFee || 0), 0);
+
+  const rows = bookings.length === 0
+    ? `<tr><td colspan="8"><div class="empty-state"><div class="emoji">✈️</div><p>No bookings yet.</p><small>Click "New Booking" to add the first one.</small></div></td></tr>`
+    : bookings.map(b => `
+      <tr>
+        <td><div class="customer-name">${escHtml(b.customerName || '—')}</div>
+            <div class="customer-email">${escHtml(b.passenger || '')}</div></td>
+        <td>${escHtml(b.route)}</td>
+        <td>${escHtml(b.airline || '—')}<div class="customer-email">${escHtml(b.bookingReference || '')}</div></td>
+        <td>${b.travelDate ? fmtDate(b.travelDate) : '—'}
+            <div class="customer-email">${escHtml(b.departureTime || '')}${b.arrivalTime ? ' → ' + escHtml(b.arrivalTime) : ''}</div></td>
+        <td>£${(b.price || 0).toFixed(2)}</td>
+        <td>£${(b.bookingFee || 0).toFixed(2)}</td>
+        <td>${bookingStatusBadge(b.status)}</td>
+        <td>
+          <select class="form-input" style="width:110px;padding:5px 8px;font-size:12px;"
+            onchange="changeBookingStatus('${escHtml(b.id)}', this.value)">
+            ${BOOKING_STATUSES.map(s => `<option value="${s}" ${b.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+          </select>
+        </td>
+      </tr>`).join('');
+
+  content.innerHTML = `
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Total Bookings</div><div class="stat-value">${bookings.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Upcoming Travel</div><div class="stat-value">${upcoming}</div></div>
+      <div class="stat-card"><div class="stat-label">Booking Fees</div><div class="stat-value">£${feesEarned.toFixed(2)}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Charged</div><div class="stat-value">£${totalCharged.toFixed(2)}</div></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <button class="btn btn-primary" onclick="openNewBookingModal()">+ New Booking</button>
+    </div>
+    <div class="table-card">
+      <table>
+        <thead><tr>
+          <th>Customer</th><th>Route</th><th>Airline / Ref</th><th>Travel</th>
+          <th>Price</th><th>Fee</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function openNewBookingModal() {
+  const customerOptions = customers.map(c =>
+    `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone || '')}</option>`
+  ).join('');
+  showDynamicModal(`
+    <div class="modal-title">✈️ New Booking</div>
+    <div class="form-grid">
+      <div class="form-group form-full">
+        <label class="form-label">Customer *</label>
+        <select class="form-input" id="bkCustomer">
+          <option value="">Select customer…</option>${customerOptions}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Passenger</label>
+        <input class="form-input" id="bkPassenger" placeholder="Name as on ticket">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Route *</label>
+        <input class="form-input" id="bkRoute" placeholder="e.g. LTN → TLV">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Airline</label>
+        <input class="form-input" id="bkAirline" placeholder="e.g. Wizz Air">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Booking Reference</label>
+        <input class="form-input" id="bkRef" placeholder="Airline ref (may come later)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Travel Date *</label>
+        <input class="form-input" type="date" id="bkTravelDate" onchange="showHebrewDate('bkTravelDate','bkTravelHeb')">
+        <div class="hebrew-date" id="bkTravelHeb"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Departure / Arrival</label>
+        <div style="display:flex;gap:6px;">
+          <input class="form-input" type="time" id="bkDep">
+          <input class="form-input" type="time" id="bkArr">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ticket Price (£) *</label>
+        <input class="form-input" type="number" min="0" step="0.01" id="bkPrice">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Booking Fee (£)</label>
+        <input class="form-input" type="number" min="0" step="0.01" id="bkFee" value="10">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Passport on file?</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="checkbox" id="bkPassport" onchange="document.getElementById('bkPassportExpiryWrap').style.display=this.checked?'block':'none'">
+          <div id="bkPassportExpiryWrap" style="display:none;flex:1;">
+            <input class="form-input" type="date" id="bkPassportExpiry" title="Passport expiry">
+          </div>
+        </div>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="bkNotes">
+      </div>
+    </div>
+    <div style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);">
+      Saving posts one wallet charge of <strong>price + fee</strong> to the customer's ledger (reference <code>BOOKING-…</code>).
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNewBooking()">✈️ Save Booking</button>
+    </div>
+  `);
+}
+
+async function saveNewBooking() {
+  const payload = {
+    customerId:       document.getElementById('bkCustomer').value,
+    passenger:        document.getElementById('bkPassenger').value.trim(),
+    route:            document.getElementById('bkRoute').value.trim(),
+    airline:          document.getElementById('bkAirline').value.trim(),
+    bookingReference: document.getElementById('bkRef').value.trim(),
+    travelDate:       document.getElementById('bkTravelDate').value,
+    departureTime:    document.getElementById('bkDep').value,
+    arrivalTime:      document.getElementById('bkArr').value,
+    price:            parseFloat(document.getElementById('bkPrice').value),
+    bookingFee:       parseFloat(document.getElementById('bkFee').value) || 0,
+    passportOnFile:   document.getElementById('bkPassport').checked,
+    passportExpiry:   document.getElementById('bkPassport').checked
+                        ? document.getElementById('bkPassportExpiry').value : '',
+    notes:            document.getElementById('bkNotes').value.trim(),
+  };
+  if (!payload.customerId) { toast('Select a customer.', 'error'); return; }
+  if (!payload.route)      { toast('Route is required.', 'error'); return; }
+  if (!payload.travelDate) { toast('Travel date is required.', 'error'); return; }
+  if (!Number.isFinite(payload.price) || payload.price < 0) { toast('Enter a valid ticket price.', 'error'); return; }
+
+  const res = await window.api.addBooking(payload);
+  if (!res.success) { toast(res.error || 'Could not save the booking.', 'error'); return; }
+
+  bookings.unshift(res.booking);
+  closeDynamicModal();
+  const chargeMsg = res.chargePosted
+    ? ` £${res.charged.toFixed(2)} charged — wallet balance £${res.balance.toFixed(2)}.`
+    : '';
+  toast(`Booking saved!${chargeMsg}`, 'success');
+  renderBookingsTab();
+}
+
+async function changeBookingStatus(id, status) {
+  const res = await window.api.updateBooking({ id, status });
+  if (!res.success) { toast(res.error || 'Could not update status.', 'error'); renderBookingsTab(); return; }
+  const idx = bookings.findIndex(b => b.id === id);
+  if (idx !== -1) bookings[idx] = res.booking;
+  renderBookingsTab();
+  toast(`Booking marked ${status}.`, 'success');
+}
+
+// ─────────────────────────────────────────────
 //  DOUBLE-SUBMIT GUARD
 // ─────────────────────────────────────────────
 // The async save handlers await API calls before closing their modal, so a
@@ -2825,6 +3028,7 @@ function guardReentry(fn) {
   };
 }
 saveCustomer     = guardReentry(saveCustomer);
+saveNewBooking   = guardReentry(saveNewBooking);
 saveNewRental    = guardReentry(saveNewRental);
 saveManageRental = guardReentry(saveManageRental);
 saveSimForm      = guardReentry(saveSimForm);
