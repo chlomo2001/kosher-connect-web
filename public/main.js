@@ -136,7 +136,7 @@ async function initApp() {
   bookings = await window.api.getAllBookings().catch(() => []);
   pricingConfig = await window.api.getSettings().catch(() => null);
   reconcilePhoneStatuses();
-  renderCustomersTab();
+  renderTab('dashboard');
   setupNav();
   setupSearch();
   setupModal();
@@ -190,7 +190,12 @@ function renderTab(tab) {
   const searchBox = document.getElementById('searchBox');
   const btnNew = document.getElementById('btnNewCustomer');
 
-  if (tab === 'customers') {
+  if (tab === 'dashboard') {
+    document.getElementById('pageTitle').innerHTML = 'Business <span>Dashboard</span>';
+    searchBox.style.display = 'none';
+    btnNew.style.display = 'none';
+    renderDashboardTab();
+  } else if (tab === 'customers') {
     document.getElementById('pageTitle').innerHTML = 'Customer <span>Management</span>';
     searchBox.style.display = '';
     btnNew.style.display = '';
@@ -3460,6 +3465,113 @@ async function toggleTaskDone(id, done) {
   const res = await window.api.updateTask({ id, done });
   if (!res.success) { toast(res.error || 'Could not update the task.', 'error'); }
   renderTasksTab();
+}
+
+// ─────────────────────────────────────────────
+//  DASHBOARD (business overview)
+// ─────────────────────────────────────────────
+// Aggregates every feature: money (ledger summary), rentals due/overdue,
+// repairs, upcoming travel, SIM renewals, open tasks, recent activity.
+
+async function renderDashboardTab() {
+  const content = document.getElementById('mainContent');
+  content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading dashboard…</div>`;
+
+  const today = localISO();
+  const in7 = localISO(new Date(Date.now() + 7 * 86400000));
+
+  // Rentals/phones/sims/bookings are already in memory; fetch the rest.
+  const [ledgerSummary, repairsData, tasksData] = await Promise.all([
+    fetch('/api/ledger?since=' + today).then(r => r.ok ? r.json() : null).catch(() => null),
+    window.api.getRepairs().catch(() => []),
+    window.api.getTasks().catch(() => []),
+  ]);
+  const reps = Array.isArray(repairsData) ? repairsData : [];
+  const tks = Array.isArray(tasksData) ? tasksData : [];
+
+  const activeRentals = rentals.filter(r => r.status !== 'returned');
+  const overdue = activeRentals.filter(r => r.toDate && r.toDate < today);
+  const dueToday = activeRentals.filter(r => r.toDate === today);
+  const openRepairs = reps.filter(r => r.status === 'Open' || r.status === 'In Progress');
+  const readyRepairs = reps.filter(r => r.status === 'Ready');
+  const travel7 = bookings.filter(b => b.status !== 'Cancelled' && b.travelDate >= today && b.travelDate <= in7);
+  const renewals7 = sims.filter(s => s.status === 'active' && s.renewalDate && s.renewalDate >= today && s.renewalDate <= in7);
+  const openTasks = tks.filter(t => !t.done);
+  const highTasks = openTasks.filter(t => t.priority === 'High');
+
+  const money = ledgerSummary?.success ? ledgerSummary : null;
+  const arrearsCount = money ? money.arrears.length : 0;
+  const arrearsTotal = money ? Math.abs(money.arrearsTotal) : 0;
+
+  const stat = (label, value, color, sub = '') => `
+    <div class="stat-card">
+      <div class="stat-label">${label}</div>
+      <div class="stat-value" ${color ? `style="color:${color};"` : ''}>${value}</div>
+      ${sub ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">${sub}</div>` : ''}
+    </div>`;
+
+  const activityHtml = !money || money.recent.length === 0
+    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No wallet activity yet.</div>`
+    : money.recent.map(e => `
+        <div class="history-item">
+          <div style="display:flex;align-items:center;flex:1;">
+            <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>
+            <div class="history-desc">${escHtml(e.customerName || '—')} · ${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}</div>
+          </div>
+          <div class="history-date" style="margin:0 14px;">${fmtDate(e.at)}</div>
+          <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--danger)'};">
+            ${e.amount >= 0 ? '+' : '−'}£${Math.abs(e.amount).toFixed(2)}</div>
+        </div>`).join('');
+
+  const arrearsHtml = !money || money.arrears.length === 0
+    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">Nobody owes money. 🎉</div>`
+    : money.arrears.slice(0, 6).map(a => `
+        <div class="history-item">
+          <div class="history-desc" style="flex:1;">${escHtml(a.customerName)}</div>
+          <div class="history-amount" style="color:var(--danger);">owes £${Math.abs(a.balance).toFixed(2)}</div>
+        </div>`).join('');
+
+  const needsAttention = [];
+  overdue.forEach(r => needsAttention.push(`📱 <strong>${escHtml(r.customerName || '?')}</strong> — rental overdue since ${fmtDate(r.toDate)}`));
+  readyRepairs.forEach(r => needsAttention.push(`🔧 <strong>${escHtml(r.customerName || '?')}</strong> — repair ready to collect (£${(r.total || 0).toFixed(2)})`));
+  travel7.forEach(b => needsAttention.push(`✈️ <strong>${escHtml(b.customerName || '?')}</strong> — flies ${fmtDate(b.travelDate)} (${escHtml(b.route)})`));
+  renewals7.forEach(s => needsAttention.push(`💳 <strong>${escHtml(s.customerName || '?')}</strong> — SIM renews ${fmtDate(s.renewalDate)}`));
+  highTasks.slice(0, 5).forEach(t => needsAttention.push(`❗ ${escHtml(t.title)}`));
+
+  content.innerHTML = `
+    <div class="stats-row">
+      ${stat('Money In Today', money ? '£' + money.todayIn.toFixed(2) : '—', 'var(--success)',
+             money && money.todayOut ? '£' + Math.abs(money.todayOut).toFixed(2) + ' charged' : '')}
+      ${stat('Outstanding (wallets)', arrearsCount ? '£' + arrearsTotal.toFixed(2) : '£0', arrearsCount ? 'var(--danger)' : 'var(--success)',
+             arrearsCount ? arrearsCount + ' customer' + (arrearsCount === 1 ? '' : 's') + ' in arrears' : '')}
+      ${stat('Active Rentals', activeRentals.length, 'var(--accent)',
+             (overdue.length ? overdue.length + ' overdue' : '') + (dueToday.length ? (overdue.length ? ' · ' : '') + dueToday.length + ' due today' : ''))}
+      ${stat('Open Repairs', openRepairs.length, '#fb923c', readyRepairs.length ? readyRepairs.length + ' ready to collect' : '')}
+      ${stat('Travel Next 7 Days', travel7.length, '#a855f7', renewals7.length ? renewals7.length + ' SIM renewals too' : '')}
+      ${stat('Open Tasks', openTasks.length, highTasks.length ? 'var(--danger)' : '', highTasks.length ? highTasks.length + ' high priority' : '')}
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+      <button class="btn btn-primary" style="font-size:13px;" onclick="openNewRentalModal()">📱 New Rental</button>
+      <button class="btn btn-outline" style="font-size:13px;" onclick="openNewBookingModal()">✈️ New Booking</button>
+      <button class="btn btn-outline" style="font-size:13px;" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal()})()">🔧 New Repair</button>
+      <button class="btn btn-outline" style="font-size:13px;" onclick="document.querySelector('[data-tab=customers]').click();setTimeout(()=>document.getElementById('btnNewCustomer')?.click(),100)">👤 New Customer</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+      <div class="table-card" style="padding:6px 14px 14px;">
+        <div class="section-divider" style="margin-top:10px;">⚠️ Needs Attention</div>
+        ${needsAttention.length === 0
+          ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">All clear. 🎉</div>`
+          : needsAttention.slice(0, 10).map(x => `<div style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--border);">${x}</div>`).join('')}
+        <div class="section-divider" style="margin-top:14px;">💸 In Arrears</div>
+        ${arrearsHtml}
+      </div>
+      <div class="table-card" style="padding:6px 14px 14px;">
+        <div class="section-divider" style="margin-top:10px;">💰 Recent Wallet Activity</div>
+        <div class="history-list">${activityHtml}</div>
+      </div>
+    </div>`;
 }
 
 // ─────────────────────────────────────────────

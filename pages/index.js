@@ -23,7 +23,8 @@ export default function Home() {
           <div className="logo-sub">Business Management System</div>
         </div>
 
-        <div className="nav-item active" data-tab="customers"><span className="nav-icon">👥</span> Customers</div>
+        <div className="nav-item active" data-tab="dashboard"><span className="nav-icon">🏠</span> Dashboard</div>
+        <div className="nav-item" data-tab="customers"><span className="nav-icon">👥</span> Customers</div>
         <div className="nav-item" data-tab="rentals"><span className="nav-icon">📱</span> Phone Rentals</div>
         <div className="nav-item" data-tab="sim"><span className="nav-icon">💳</span> SIM Plans</div>
         <div className="nav-item" data-tab="bookings"><span className="nav-icon">✈️</span> Tickets &amp; Flights</div>

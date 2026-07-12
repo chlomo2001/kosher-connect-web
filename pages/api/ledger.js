@@ -55,7 +55,37 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const { customerId } = req.query
-      if (!customerId) return res.status(400).json({ success: false, error: 'customerId is required.' })
+
+      // No customerId → business-wide summary for the dashboard.
+      // `since` is the shop's local date (client-computed) so "today's money"
+      // matches what the operator means by today.
+      if (!customerId) {
+        const since = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.since || ''))
+          ? req.query.since : new Date().toISOString().slice(0, 10)
+        const [recent, todays, balances, custRows] = await Promise.all([
+          db.select('ledger', 'select=*,customers(first_name,last_name)&order=created_at.desc&limit=12'),
+          db.select('ledger', `select=amount&created_at=gte.${since}`),
+          db.select('customer_balances', ''),
+          db.select('customers', 'select=id,first_name,last_name'),
+        ])
+        const names = new Map(custRows.map(c => [c.id, `${c.first_name || ''} ${c.last_name || ''}`.trim()]))
+        const arrears = balances
+          .filter(b => Number(b.balance) < 0)
+          .map(b => ({ customerName: names.get(b.customer_id) || '?', balance: Number(b.balance) }))
+          .sort((a, b) => a.balance - b.balance)
+        return res.json({
+          success: true,
+          recent: recent.map(r => ({
+            ...toAppEntry(r),
+            customerName: r.customers
+              ? `${r.customers.first_name || ''} ${r.customers.last_name || ''}`.trim() : '',
+          })),
+          arrears,
+          arrearsTotal: arrears.reduce((s, a) => s + a.balance, 0),
+          todayIn: todays.filter(r => Number(r.amount) > 0).reduce((s, r) => s + Number(r.amount), 0),
+          todayOut: todays.filter(r => Number(r.amount) < 0).reduce((s, r) => s + Number(r.amount), 0),
+        })
+      }
       const uuid = await resolveCustomer(customerId)
       if (!uuid) return res.json({ success: true, entries: [], balance: 0, known: false })
       const rows = await db.select(
