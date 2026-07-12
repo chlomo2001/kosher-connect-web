@@ -88,6 +88,26 @@ window.api = {
     body: JSON.stringify(t),
   }).then(r => r.json()),
 
+  getVirtualNumbers: () => fetch('/api/virtual-numbers').then(r => r.ok ? r.json() : []),
+  addVirtualNumber: (v) => fetch('/api/virtual-numbers', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(v),
+  }).then(r => r.json()),
+  updateVirtualNumber: (v) => fetch('/api/virtual-numbers', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(v),
+  }).then(r => r.json()),
+  deleteVirtualNumber: (id) => fetch('/api/virtual-numbers?id=' + encodeURIComponent(id), { method: 'DELETE' }).then(r => r.json()),
+
+  getSettings: () => fetch('/api/settings').then(r => r.ok ? r.json() : null),
+  updateSetting: (p) => fetch('/api/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(p),
+  }).then(r => r.json()),
+
   getLedger: (customerId) => fetch('/api/ledger?customerId=' + encodeURIComponent(customerId)).then(r => r.json()),
   addLedgerEntry: (e) => fetch('/api/ledger', {
     method: 'POST',
@@ -114,6 +134,7 @@ async function initApp() {
   phones   = await window.api.getAllPhones();
   sims     = await window.api.getAllSims();
   bookings = await window.api.getAllBookings().catch(() => []);
+  pricingConfig = await window.api.getSettings().catch(() => null);
   reconcilePhoneStatuses();
   renderCustomersTab();
   setupNav();
@@ -199,11 +220,19 @@ function renderTab(tab) {
     searchBox.style.display = 'none';
     btnNew.style.display = 'none';
     renderTasksTab();
+  } else if (tab === 'settings') {
+    document.getElementById('pageTitle').innerHTML = 'Pricing <span>Settings</span>';
+    searchBox.style.display = 'none';
+    btnNew.style.display = 'none';
+    renderSettingsTab();
+  } else if (tab === 'virtual') {
+    document.getElementById('pageTitle').innerHTML = 'Virtual <span>Numbers</span>';
+    searchBox.style.display = 'none';
+    btnNew.style.display = 'none';
+    renderVirtualTab();
   } else {
     const labels = {
-      virtual:  ['🔢', 'Virtual Numbers'],
       support:  ['🎫', 'Support Tickets'],
-      settings: ['⚙️', 'Settings'],
     };
     const [icon, title] = labels[tab] || ['📌', tab];
     const parts = title.split(' ');
@@ -649,6 +678,39 @@ function isShabbatOrHoliday(date, country) {
   return country === 'Israel' ? ISRAEL_HOLIDAYS.has(iso) : DIASPORA_HOLIDAYS.has(iso);
 }
 
+// ── Pricing configuration ────────────────────────────────────────────────
+// Rates come from the database (Settings tab edits them); the hardcoded
+// values below are only the offline fallback and MUST mirror the seed.
+let pricingConfig = null;
+
+const FALLBACK_RATES = {
+  'USA':       { ratePerDay: 3,   minCharge: 20, cap: 45 },
+  'UK-UKmins': { ratePerDay: 2,   minCharge: 15, cap: 40 },
+  'UK-Intl':   { ratePerDay: 2.5, minCharge: 20, cap: 45 },
+  'Israel':    { ratePerDay: 3,   minCharge: 20, cap: 50 },
+  'Canada':    { ratePerDay: 3,   minCharge: 25, cap: 45 },
+  'EU':        { ratePerDay: 3,   minCharge: 20, cap: 45 },
+};
+
+// App country + phone plan → priced country code (same mapping as the
+// server-side lib/mappers.js rentalCountryCode).
+function pricedCountryCode(country, ukPlan) {
+  if (country === 'UK') return ukPlan === 'unlimited' ? 'UK-Intl' : 'UK-UKmins';
+  if (FALLBACK_RATES[country]) return country;
+  return 'USA';
+}
+
+function rateFor(country, ukPlan) {
+  const code = pricedCountryCode(country, ukPlan);
+  const dbRate = pricingConfig?.rentalRates?.find(r => r.countryCode === code && r.active !== false);
+  return dbRate || FALLBACK_RATES[code];
+}
+
+function settingNum(key, fallback) {
+  const s = pricingConfig?.settings?.find(x => x.key === key);
+  return (s && Number.isFinite(s.numValue)) ? s.numValue : fallback;
+}
+
 function calcRentalPrice(fromDate, toDate, country = 'USA', ukPlan = 'standard') {
   let chargeableDays = 0;
   let totalDays = 0;
@@ -659,16 +721,10 @@ function calcRentalPrice(fromDate, toDate, country = 'USA', ukPlan = 'standard')
     if (!isShabbatOrHoliday(cur, country)) chargeableDays++;
     cur.setDate(cur.getDate() + 1);
   }
-  let ratePerDay, minCharge, maxCharge;
-  if (country === 'UK') {
-    if (ukPlan === 'unlimited') { ratePerDay = 2.5; minCharge = 20; maxCharge = 45; }
-    else                        { ratePerDay = 2;   minCharge = 15; maxCharge = 40;   }
-  } else if (country === 'Canada') { ratePerDay = 3; minCharge = 25; maxCharge = 45; }
-  else if (country === 'Israel')   { ratePerDay = 3; minCharge = 20; maxCharge = 50; }
-  else /* USA / EU / default */    { ratePerDay = 3; minCharge = 20; maxCharge = 45; }
+  const { ratePerDay, minCharge, cap } = rateFor(country, ukPlan);
   let price = chargeableDays * ratePerDay;
   if (chargeableDays > 0 && price < minCharge) price = minCharge;
-  if (maxCharge !== null && price > maxCharge) price = maxCharge;
+  if (cap !== null && price > cap) price = cap;
   return { chargeableDays, totalDays, price };
 }
 
@@ -683,12 +739,15 @@ function countChargeableDays(fromDate, toDate, country = 'USA') {
   return days;
 }
 
+// Returns the late fee in £ (chargeable late days × late_fee_per_day, which
+// is £1 by default so the value doubles as the day count in displays).
 function calcLateFeeDays(rental) {
   const today = localISO();
   if (rental.status === 'returned' || rental.toDate >= today) return 0;
   const lateDayStart = parseLocalDate(rental.toDate);
   lateDayStart.setDate(lateDayStart.getDate() + 1);
-  return countChargeableDays(localISO(lateDayStart), today, rental.country || 'USA');
+  const days = countChargeableDays(localISO(lateDayStart), today, rental.country || 'USA');
+  return days * settingNum('late_fee_per_day', 1);
 }
 
 // Canonical money formulas — single source of truth for every debt display.
@@ -751,7 +810,7 @@ function mgComputeLateFee() {
   const country = document.getElementById('mgCountry')?.value || 'USA';
   const lateDayStart = parseLocalDate(to);
   lateDayStart.setDate(lateDayStart.getDate() + 1);
-  return countChargeableDays(localISO(lateDayStart), today, country);
+  return countChargeableDays(localISO(lateDayStart), today, country) * settingNum('late_fee_per_day', 1);
 }
 
 // Returns lost-item charges entered in the modal: { total, items: [{label, amount}] }
@@ -1212,13 +1271,13 @@ function updateRentalPhoneInfo() {
 // a 30-day rental is £10 flat. Weeks are counted over the rental's total
 // calendar days, rounded up.
 function calcVNPrice(vnSub, fromDate, toDate) {
-  if (vnSub === 'monthly') return 10;
+  if (vnSub === 'monthly') return settingNum('vn_per_30_days', 10);
   let weeks = 1;
   if (fromDate && toDate && toDate > fromDate) {
     const days = Math.round((parseLocalDate(toDate) - parseLocalDate(fromDate)) / 86400000) + 1;
     weeks = Math.max(1, Math.ceil(days / 7));
   }
-  return 5 * weeks;
+  return settingNum('vn_weekly', 5) * weeks;
 }
 
 function updateVNPrice() {
@@ -1243,7 +1302,7 @@ function updateRentalCalc() {
   const ukPlan   = phone?.ukPlan  || 'standard';
   const { chargeableDays, totalDays, price } = calcRentalPrice(from, to, country, ukPlan);
   const excluded = totalDays - chargeableDays;
-  const cap = country === 'UK' ? (ukPlan === 'unlimited' ? 45 : 40) : country === 'Canada' ? 45 : country === 'Israel' ? 50 : 45;
+  const cap = rateFor(country, ukPlan).cap;
   let finalPrice = price;
   let discountLine = '';
   const addDiscount = document.getElementById('rAddDiscount')?.checked;
@@ -2115,7 +2174,7 @@ function renderDetailPanel(id) {
       <div class="section-divider" style="margin-top:18px;">New Service</div>
       <div class="service-actions">
         <button class="btn btn-rental" style="font-size:13px;padding:7px 16px;" onclick="openNewRentalModal()">📱 New Rental</button>
-        <button class="btn btn-vn" style="font-size:13px;padding:7px 16px;" onclick="toast('Virtual Numbers — coming soon!','warning')">🔢 New Virtual Number</button>
+        <button class="btn btn-vn" style="font-size:13px;padding:7px 16px;" onclick="openNewVNModal('${c.id}')">🔢 New Virtual Number</button>
         <button class="btn btn-sim" style="font-size:13px;padding:7px 16px;" onclick="toast('SIM Plans — coming soon!','warning')">💳 New SIM Plan</button>
       </div>
     </div>`;
@@ -3413,6 +3472,239 @@ async function toggleTaskDone(id, done) {
 }
 
 // ─────────────────────────────────────────────
+//  VIRTUAL NUMBERS
+// ─────────────────────────────────────────────
+
+let virtualNumbers = [];
+
+async function renderVirtualTab() {
+  const content = document.getElementById('mainContent');
+  content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading virtual numbers…</div>`;
+  virtualNumbers = await window.api.getVirtualNumbers();
+  if (!Array.isArray(virtualNumbers)) virtualNumbers = [];
+
+  const active = virtualNumbers.filter(v => v.status === 'Active');
+  const rows = virtualNumbers.length === 0
+    ? `<tr><td colspan="6"><div class="empty-state"><div class="emoji">🔢</div><p>No virtual numbers yet.</p></div></td></tr>`
+    : virtualNumbers.map(v => `
+      <tr>
+        <td><strong>${escHtml(v.number)}</strong></td>
+        <td>${escHtml(v.customerName || '—')}</td>
+        <td>${escHtml(v.platform || '—')}</td>
+        <td><span class="badge" style="${v.status === 'Active'
+          ? 'background:rgba(34,197,94,0.15);color:var(--success);'
+          : 'background:rgba(148,163,184,0.15);color:var(--muted);'}">${escHtml(v.status)}</span></td>
+        <td>${v.shortcutUrl ? `<a href="${escHtml(v.shortcutUrl)}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;">open ↗</a>` : '—'}</td>
+        <td style="white-space:nowrap;">
+          <button class="action-btn" style="font-size:11px;padding:4px 10px;"
+            onclick="toggleVNStatus('${escHtml(v.id)}', '${v.status === 'Active' ? 'Inactive' : 'Active'}')">
+            ${v.status === 'Active' ? '⏸ Deactivate' : '▶ Activate'}</button>
+          <button class="action-btn danger" style="font-size:11px;padding:4px 10px;"
+            onclick="deleteVN('${escHtml(v.id)}', '${escHtml(v.number)}')">✕</button>
+        </td>
+      </tr>`).join('');
+
+  content.innerHTML = `
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Total Numbers</div><div class="stat-value">${virtualNumbers.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Active</div><div class="stat-value" style="color:var(--success);">${active.length}</div></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <button class="btn btn-primary" onclick="openNewVNModal()">+ New Virtual Number</button>
+    </div>
+    <div class="table-card">
+      <table>
+        <thead><tr><th>Number</th><th>Customer</th><th>Platform</th><th>Status</th><th>Shortcut</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function openNewVNModal(preselectCustomerId) {
+  const customerOptions = customers.map(c =>
+    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)}</option>`
+  ).join('');
+  showDynamicModal(`
+    <div class="modal-title">🔢 New Virtual Number</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Number *</label>
+        <input class="form-input" id="vnNumber" placeholder="+1 732 555 0123">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Customer</label>
+        <select class="form-input" id="vnCustomer">
+          <option value="">— unassigned —</option>${customerOptions}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Platform</label>
+        <select class="form-input" id="vnPlatform">
+          <option value="elid">elid</option>
+          <option value="FreePBX">FreePBX</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Shortcut URL</label>
+        <input class="form-input" id="vnShortcut" placeholder="https://…">
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="vnNotes">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNewVN()">🔢 Save</button>
+    </div>
+  `);
+}
+
+async function saveNewVN() {
+  const number = document.getElementById('vnNumber').value.trim();
+  if (!number) { toast('Number is required.', 'error'); return; }
+  const res = await window.api.addVirtualNumber({
+    number,
+    customerId: document.getElementById('vnCustomer').value || null,
+    platform: document.getElementById('vnPlatform').value,
+    shortcutUrl: document.getElementById('vnShortcut').value.trim(),
+    notes: document.getElementById('vnNotes').value.trim(),
+  });
+  if (!res.success) { toast(res.error || 'Could not save.', 'error'); return; }
+  closeDynamicModal();
+  toast(`Virtual number ${number} saved ✔`, 'success');
+  renderVirtualTab();
+}
+
+async function toggleVNStatus(id, status) {
+  const res = await window.api.updateVirtualNumber({ id, status });
+  if (!res.success) { toast(res.error || 'Could not update.', 'error'); return; }
+  renderVirtualTab();
+}
+
+async function deleteVN(id, number) {
+  const ok = await window.api.confirmDelete(`Delete virtual number "${number}"?\n\nThis cannot be undone.`);
+  if (!ok) return;
+  const res = await window.api.deleteVirtualNumber(id);
+  if (!res.success) { toast(res.error || 'Could not delete.', 'error'); return; }
+  toast('Virtual number deleted.', 'warning');
+  renderVirtualTab();
+}
+
+// ─────────────────────────────────────────────
+//  SETTINGS (pricing editor — edit-only, typed, server-validated)
+// ─────────────────────────────────────────────
+
+async function renderSettingsTab() {
+  const content = document.getElementById('mainContent');
+  content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading settings…</div>`;
+  const cfg = await window.api.getSettings();
+  if (!cfg || !cfg.success) {
+    content.innerHTML = `<div class="tab-placeholder"><div class="big">⚙️</div>
+      <h2>Pricing Settings</h2><p style="color:var(--muted)">${escHtml(cfg?.error || 'Settings unavailable.')}</p></div>`;
+    return;
+  }
+  pricingConfig = cfg; // keep live pricing in sync with what's displayed
+
+  const num = (id, val, step = '0.01') =>
+    `<input class="form-input" type="number" step="${step}" id="${id}" value="${val}" style="width:90px;padding:6px 8px;font-size:13px;">`;
+
+  const rateRows = cfg.rentalRates.map(r => `
+    <tr>
+      <td><strong>${escHtml(r.displayName)}</strong><div class="customer-email">${escHtml(r.countryCode)}</div></td>
+      <td>${num(`rr_rate_${r.countryCode}`, r.ratePerDay)}</td>
+      <td>${num(`rr_min_${r.countryCode}`, r.minCharge)}</td>
+      <td>${num(`rr_cap_${r.countryCode}`, r.cap)}</td>
+      <td>${num(`rr_period_${r.countryCode}`, r.capPeriodDays, '1')}</td>
+      <td><button class="btn btn-outline" style="font-size:12px;padding:5px 12px;"
+        onclick="saveRentalRate('${escHtml(r.countryCode)}')">💾 Save</button></td>
+    </tr>`).join('');
+
+  const damageRows = cfg.damageRates.map(d => `
+    <tr>
+      <td><strong>${escHtml(d.countryCode)}</strong></td>
+      <td>${num(`dr_phone_${d.countryCode}`, d.phoneDamageLoss)}</td>
+      <td>${num(`dr_charger_${d.countryCode}`, d.chargerMissing)}</td>
+      <td>${num(`dr_sim_${d.countryCode}`, d.simMissing)}</td>
+      <td><button class="btn btn-outline" style="font-size:12px;padding:5px 12px;"
+        onclick="saveDamageRate('${escHtml(d.countryCode)}')">💾 Save</button></td>
+    </tr>`).join('');
+
+  const settingRows = cfg.settings.filter(s => s.numValue !== null).map(s => `
+    <tr>
+      <td>${escHtml(s.description || s.key)}<div class="customer-email">${escHtml(s.key)}</div></td>
+      <td>${s.editable
+        ? num(`st_${s.key}`, s.numValue)
+        : `<span style="color:var(--muted);">${s.numValue}</span>`} <span style="color:var(--muted);font-size:11px;">${escHtml(s.unit)}</span></td>
+      <td>${s.editable
+        ? `<button class="btn btn-outline" style="font-size:12px;padding:5px 12px;" onclick="saveSettingKey('${escHtml(s.key)}')">💾 Save</button>`
+        : `<span style="color:var(--muted);font-size:11px;">read-only</span>`}</td>
+    </tr>`).join('');
+
+  content.innerHTML = `
+    <div style="margin-bottom:10px;padding:10px 14px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);">
+      These values drive live pricing (rental calculator, VN add-on, late fees, repair/SIM charges).
+      Edits apply to <strong>new</strong> calculations only — existing tickets and frozen prices never reprice.
+      Keys can be edited, never added or removed.
+    </div>
+    <div class="table-card" style="margin-bottom:16px;">
+      <div class="section-divider" style="margin:12px 14px 4px;">📱 Rental Rates</div>
+      <table><thead><tr><th>Country</th><th>£/day</th><th>Min £</th><th>Cap £</th><th>Cap period (days)</th><th></th></tr></thead>
+      <tbody>${rateRows}</tbody></table>
+    </div>
+    <div class="table-card" style="margin-bottom:16px;">
+      <div class="section-divider" style="margin:12px 14px 4px;">💥 Damage / Loss Charges</div>
+      <table><thead><tr><th>Country</th><th>Phone £</th><th>Charger £</th><th>SIM £</th><th></th></tr></thead>
+      <tbody>${damageRows}</tbody></table>
+    </div>
+    <div class="table-card">
+      <div class="section-divider" style="margin:12px 14px 4px;">⚙️ Fees & Rules</div>
+      <table><thead><tr><th>Setting</th><th>Value</th><th></th></tr></thead>
+      <tbody>${settingRows}</tbody></table>
+    </div>`;
+}
+
+async function applySettingUpdate(payload) {
+  const res = await window.api.updateSetting(payload);
+  if (!res.success) { toast(res.error || 'Could not save.', 'error'); return false; }
+  (res.warnings || []).forEach(w => toast(w, 'warning'));
+  toast('Saved ✔ New calculations use the updated value.', 'success');
+  pricingConfig = await window.api.getSettings().catch(() => pricingConfig);
+  return true;
+}
+
+async function saveRentalRate(code) {
+  await applySettingUpdate({
+    table: 'rental_rates', key: code,
+    values: {
+      ratePerDay:    document.getElementById(`rr_rate_${code}`).value,
+      minCharge:     document.getElementById(`rr_min_${code}`).value,
+      cap:           document.getElementById(`rr_cap_${code}`).value,
+      capPeriodDays: document.getElementById(`rr_period_${code}`).value,
+    },
+  });
+}
+
+async function saveDamageRate(code) {
+  await applySettingUpdate({
+    table: 'damage_rates', key: code,
+    values: {
+      phoneDamageLoss: document.getElementById(`dr_phone_${code}`).value,
+      chargerMissing:  document.getElementById(`dr_charger_${code}`).value,
+      simMissing:      document.getElementById(`dr_sim_${code}`).value,
+    },
+  });
+}
+
+async function saveSettingKey(key) {
+  await applySettingUpdate({
+    table: 'settings', key,
+    values: { numValue: document.getElementById(`st_${key}`).value },
+  });
+}
+
+// ─────────────────────────────────────────────
 //  DOUBLE-SUBMIT GUARD
 // ─────────────────────────────────────────────
 // The async save handlers await API calls before closing their modal, so a
@@ -3438,6 +3730,11 @@ saveNewBooking   = guardReentry(saveNewBooking);
 saveNewRepair    = guardReentry(saveNewRepair);
 changeRepairStatus = guardReentry(changeRepairStatus);
 saveNewTask      = guardReentry(saveNewTask);
+saveRentalRate   = guardReentry(saveRentalRate);
+saveDamageRate   = guardReentry(saveDamageRate);
+saveSettingKey   = guardReentry(saveSettingKey);
+saveNewVN        = guardReentry(saveNewVN);
+deleteVN         = guardReentry(deleteVN);
 saveNewRental    = guardReentry(saveNewRental);
 saveManageRental = guardReentry(saveManageRental);
 saveSimForm      = guardReentry(saveSimForm);
