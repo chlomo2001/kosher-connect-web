@@ -561,18 +561,40 @@ const ISRAEL_HOLIDAYS = new Set([
   '2125-04-18','2125-04-24','2125-06-07','2125-09-28','2125-09-29','2125-10-07','2125-10-12','2125-10-19'
 ]);
 
+// ── Local-time date helpers ──────────────────────────────────────────────
+// All chargeable-day / late-fee / overdue logic must use the SHOP'S local
+// calendar date. toISOString() is UTC: during British Summer Time it lags an
+// hour behind, so between 00:00 and 01:00 local "today" was still yesterday —
+// shifting overdue flips, late-fee day counts, and Shabbat classification.
+
+// Local calendar date of a Date (default: now) as YYYY-MM-DD.
+function localISO(d = new Date()) {
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
+
+// Parse a YYYY-MM-DD string to LOCAL midnight (new Date(str) would anchor to
+// UTC midnight, desynchronising getDay()/localISO from the intended date).
+function parseLocalDate(v) {
+  if (v instanceof Date) return new Date(v.getFullYear(), v.getMonth(), v.getDate());
+  const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return new Date(v);
+}
+
 function isShabbatOrHoliday(date, country) {
-  const d = new Date(date);
+  const d = date instanceof Date ? date : parseLocalDate(date);
   if (d.getDay() === 6) return true;
-  const iso = d.toISOString().slice(0, 10);
+  const iso = localISO(d);
   return country === 'Israel' ? ISRAEL_HOLIDAYS.has(iso) : DIASPORA_HOLIDAYS.has(iso);
 }
 
 function calcRentalPrice(fromDate, toDate, country = 'USA', ukPlan = 'standard') {
   let chargeableDays = 0;
   let totalDays = 0;
-  const cur = new Date(fromDate);
-  const end = new Date(toDate);
+  const cur = parseLocalDate(fromDate);
+  const end = parseLocalDate(toDate);
   while (cur <= end) {
     totalDays++;
     if (!isShabbatOrHoliday(cur, country)) chargeableDays++;
@@ -593,8 +615,8 @@ function calcRentalPrice(fromDate, toDate, country = 'USA', ukPlan = 'standard')
 
 function countChargeableDays(fromDate, toDate, country = 'USA') {
   let days = 0;
-  const cur = new Date(fromDate);
-  const end = new Date(toDate);
+  const cur = parseLocalDate(fromDate);
+  const end = parseLocalDate(toDate);
   while (cur <= end) {
     if (!isShabbatOrHoliday(cur, country)) days++;
     cur.setDate(cur.getDate() + 1);
@@ -603,11 +625,11 @@ function countChargeableDays(fromDate, toDate, country = 'USA') {
 }
 
 function calcLateFeeDays(rental) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISO();
   if (rental.status === 'returned' || rental.toDate >= today) return 0;
-  const lateDayStart = new Date(rental.toDate);
+  const lateDayStart = parseLocalDate(rental.toDate);
   lateDayStart.setDate(lateDayStart.getDate() + 1);
-  return countChargeableDays(lateDayStart.toISOString().slice(0, 10), today, rental.country || 'USA');
+  return countChargeableDays(localISO(lateDayStart), today, rental.country || 'USA');
 }
 
 // Canonical money formulas — single source of truth for every debt display.
@@ -664,12 +686,12 @@ function clearRentalFilters() {
 function mgComputeLateFee() {
   const to = document.getElementById('mgTo')?.value;
   if (!to) return 0;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISO();
   if (to >= today) return 0;
   const country = document.getElementById('mgCountry')?.value || 'USA';
-  const lateDayStart = new Date(to);
+  const lateDayStart = parseLocalDate(to);
   lateDayStart.setDate(lateDayStart.getDate() + 1);
-  return countChargeableDays(lateDayStart.toISOString().slice(0, 10), today, country);
+  return countChargeableDays(localISO(lateDayStart), today, country);
 }
 
 // Returns lost-item charges entered in the modal: { total, items: [{label, amount}] }
@@ -747,7 +769,7 @@ function nrToggleGiven(item) {
 
 function renderRentalsTab() {
   const content = document.getElementById('mainContent');
-  const today0  = new Date().toISOString().slice(0,10);
+  const today0  = localISO();
   const activeRentals   = rentals.filter(r => r.status === 'active').length;
   const availablePhones = phones.filter(p => p.status === 'available').length;
   const returningToday  = rentals.filter(r => r.status === 'active' && r.toDate === today0).length;
@@ -873,7 +895,7 @@ function getComputedStatus(r, today) {
 function renderRentalRows() {
   const tbody = document.getElementById('rentalTableBody');
   if (!tbody) return;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISO();
 
   const term = rentalSearchTerm.toLowerCase();
   let filtered = rentals;
@@ -944,7 +966,7 @@ function renderPhoneRows() {
     return;
   }
 
-  const today = new Date().toISOString().slice(0,10);
+  const today = localISO();
   tbody.innerHTML = phones.map(p => {
     const poolExpired = p.poolExpiry && p.poolExpiry < today;
     let statusBadge;
@@ -1104,8 +1126,8 @@ function openNewRentalModal() {
     </div>
   `);
 
-  const today = new Date().toISOString().slice(0,10);
-  const next7 = new Date(Date.now() + 7*86400000).toISOString().slice(0,10);
+  const today = localISO();
+  const next7 = localISO(new Date(Date.now() + 7*86400000));
   document.getElementById('rFrom').value = today;
   document.getElementById('rTo').value   = next7;
   updateRentalCalc();
@@ -1651,7 +1673,7 @@ async function saveManageRental(rentalId) {
 
   // No hard block on undecided items — undecided items show ⚠️ badge (getComputedStatus)
 
-  const today = new Date().toISOString().slice(0,10);
+  const today = localISO();
   let newStatus;
   if (isReturned) newStatus = 'returned';
   else if (newTo < today) newStatus = 'overdue';
@@ -2251,7 +2273,7 @@ async function saveCustomer() {
 async function deleteCustomer(id) {
   const c = customers.find(x => x.id === id);
   if (!c) return;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISO();
   // Block deletion unless every rental is returned with all given items decided
   // (returned or lost) — uses the same itemStatus model as the rentals tab.
   const hasUnreturned = rentals.some(r =>
@@ -2299,8 +2321,8 @@ let simSearchTerm = '';
 
 function renderSimsTab() {
   const content  = document.getElementById('mainContent');
-  const today    = new Date().toISOString().slice(0, 10);
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const today    = localISO();
+  const tomorrow = localISO(new Date(Date.now() + 86400000));
 
   const active   = sims.filter(s => s.status === 'active').length;
   const renewing = sims.filter(s => s.status === 'active' && (s.renewalDate === today || s.renewalDate === tomorrow));
@@ -2364,8 +2386,8 @@ function renderSimsTab() {
 function renderSimRows() {
   const tbody = document.getElementById('simTableBody');
   if (!tbody) return;
-  const today    = new Date().toISOString().slice(0, 10);
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const today    = localISO();
+  const tomorrow = localISO(new Date(Date.now() + 86400000));
   const term     = simSearchTerm.toLowerCase();
 
   const filtered = sims.filter(s =>
@@ -2693,9 +2715,9 @@ function addSimCharge(simId) {
     date: new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }),
   });
   if (type === 'monthly' && s.renewalDate) {
-    const d = new Date(s.renewalDate);
+    const d = parseLocalDate(s.renewalDate);
     d.setMonth(d.getMonth() + 1);
-    s.renewalDate = d.toISOString().slice(0, 10);
+    s.renewalDate = localISO(d);
   }
   saveSims(sims);
   toast(`Charge of £${amount} added ✅`, 'success');
