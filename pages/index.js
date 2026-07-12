@@ -18,7 +18,7 @@ export default function Home() {
       {/* SIDEBAR */}
       <div className="sidebar">
         <div className="logo">
-          <img src="/logo.svg" alt="KosherConnect" style={{ background: '#fff', padding: 6 }} />
+          <img src="/logo.png" alt="KosherConnect" style={{ background: '#fff', padding: 5 }} />
           <div className="logo-title">KosherConnect</div>
           <div className="logo-sub">Business Management System</div>
         </div>
