@@ -154,6 +154,8 @@ async function initApp() {
   phones   = await window.api.getAllPhones();
   sims     = await window.api.getAllSims();
   bookings = await window.api.getAllBookings().catch(() => []);
+  virtualNumbers = await window.api.getVirtualNumbers().catch(() => []);
+  if (!Array.isArray(virtualNumbers)) virtualNumbers = [];
   pricingConfig = await window.api.getSettings().catch(() => null);
   simMenu = await window.api.getServiceMenu('sim').catch(() => []);
   if (!Array.isArray(simMenu)) simMenu = [];
@@ -1460,6 +1462,10 @@ function openManagePhonesModal() {
         <input class="form-input" id="pSIMID" type="text" placeholder="ICCID...">
       </div>
       <div class="form-group">
+        <label class="form-label">IMEI <span style="color:var(--muted);font-weight:400;">(scan the barcode)</span></label>
+        <input class="form-input" id="pIMEI" type="text" inputmode="numeric" placeholder="Scan or type 15 digits">
+      </div>
+      <div class="form-group">
         <label class="form-label">Registered Email</label>
         <input class="form-input" id="pEmail" type="email" placeholder="kosherconnect+sim@gmail.com">
       </div>
@@ -1496,6 +1502,7 @@ function saveNewPhone() {
     pool:       document.getElementById('pPool').value.trim(),
     poolExpiry: document.getElementById('pPoolExpiry').value || null,
     simId:      document.getElementById('pSIMID').value.trim(),
+    imei:       document.getElementById('pIMEI').value.trim(),
     email:      document.getElementById('pEmail').value.trim(),
     status:     'available',
     currentRental: null,
@@ -1533,6 +1540,10 @@ function openEditPhoneModal(phoneId) {
         <input class="form-input" id="epCompany" type="text" value="${escHtml(p.company||'')}">
       </div>
       <div class="form-group">
+        <label class="form-label">IMEI <span style="color:var(--muted);font-weight:400;">(scan)</span></label>
+        <input class="form-input" id="epIMEI" type="text" inputmode="numeric" value="${escHtml(p.imei||'')}" placeholder="Scan or type">
+      </div>
+      <div class="form-group">
         <label class="form-label">Status</label>
         <div style="font-size:13px;font-weight:600;color:${statusColor};padding:8px 0;">${statusLabel}</div>
         ${renterInfo}
@@ -1561,6 +1572,8 @@ function saveEditPhone(phoneId) {
     p.poolExpiry = document.getElementById('epExpiry')?.value || null;
   }
   p.company = document.getElementById('epCompany').value.trim();
+  const epIMEI = document.getElementById('epIMEI');
+  if (epIMEI) p.imei = epIMEI.value.trim();
   const epUKPlan = document.getElementById('epUKPlan');
   if (epUKPlan) p.ukPlan = epUKPlan.value;
   savePhones(phones);
@@ -2117,6 +2130,44 @@ function renderDetailPanel(id) {
     ? `<span style="color:var(--muted);font-size:13px;">No active services.</span>`
     : allActiveServices.map(s => `<span class="badge badge-${s.type}" style="font-size:12px;padding:5px 12px;">${escHtml(s.label)}</span>`).join('');
 
+  // ── Trip bundle: the next flight as a unit — flight + phone + SIM + VN,
+  // with what's missing flagged (travel-agent pattern).
+  const today2 = localISO();
+  const nextTrip = bookings
+    .filter(b => b.customerId === c.id && b.status !== 'Cancelled' && b.travelDate && b.travelDate >= today2)
+    .sort((a, b) => a.travelDate.localeCompare(b.travelDate))[0];
+  let tripHtml = '';
+  if (nextTrip) {
+    const phoneCover = rentals.find(r => r.customerId === c.id && r.status !== 'returned' &&
+      r.fromDate && r.toDate && r.fromDate <= nextTrip.travelDate && r.toDate >= nextTrip.travelDate);
+    const simCover = sims.find(s => s.customerId === c.id && s.status === 'active');
+    const vnCover = virtualNumbers.find(v => v.customerId === c.id && v.status === 'Active');
+    const item = (ok, okLabel, missingLabel, fixHtml) => `
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0;">
+        <span>${ok ? '✅' : '⚠️'}</span>
+        <span style="flex:1;">${ok ? okLabel : missingLabel}</span>
+        ${!ok ? fixHtml : ''}
+      </div>`;
+    tripHtml = `
+      <div class="section-divider">✈️ Next trip — ${escHtml(nextTrip.route)} on ${fmtDate(nextTrip.travelDate)}${nextTrip.departureTime ? ' · ' + escHtml(nextTrip.departureTime) : ''}</div>
+      <div style="background:var(--bg-secondary);border-radius:10px;padding:10px 14px;margin-bottom:18px;">
+        ${item(true, `Flight booked${nextTrip.airline ? ' — ' + escHtml(nextTrip.airline) : ''}${nextTrip.bookingReference ? ' (' + escHtml(nextTrip.bookingReference) + ')' : ''}`, '', '')}
+        ${item(!!phoneCover,
+          `Phone covered — ${escHtml(phoneCover?.phoneNumber || '')} until ${fmtDate(phoneCover?.toDate)}`,
+          'No rental phone covering the travel date',
+          `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openNewRentalModal()">📱 Book one</button>`)}
+        ${item(!!simCover,
+          `SIM plan active — ${escHtml(simCover?.provider || '')}`,
+          'No active SIM plan',
+          `<span style="color:var(--muted);font-size:11px;">add via SIM Plans tab</span>`)}
+        ${item(!!vnCover,
+          `Virtual number — ${escHtml(vnCover?.number || '')}`,
+          'No virtual number (family cannot call locally)',
+          `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openNewVNModal('${c.id}')">🔢 Add one</button>`)}
+        ${!nextTrip.passportOnFile ? item(false, '', 'Passport not on file', `<span style="color:var(--muted);font-size:11px;">check at counter</span>`) : ''}
+      </div>`;
+  }
+
   container.innerHTML = `
     <div class="detail-panel" id="detailPanel">
       <div class="detail-header">
@@ -2146,6 +2197,8 @@ function renderDetailPanel(id) {
           <div class="detail-stat-value" style="color:#c026d3;">${activeVNs}</div>
         </div>
       </div>
+
+      ${tripHtml}
 
       <div class="section-divider">Active Services</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">${servicesHTML}</div>
@@ -2527,6 +2580,18 @@ function applySearch() {
 // ─────────────────────────────────────────────
 function setupTopbarButtons() {
   document.getElementById('btnNewCustomer').addEventListener('click', openAddModal);
+  // Discoverable entry to the command palette (Ctrl/Cmd+K also opens it).
+  const btnNew = document.getElementById('btnNewCustomer');
+  if (btnNew && !document.getElementById('btnPalette')) {
+    const b = document.createElement('button');
+    b.id = 'btnPalette';
+    b.className = 'btn btn-outline';
+    b.style.cssText = 'font-size:12px;padding:8px 12px;margin-right:8px;';
+    b.title = 'Search everything (Ctrl+K)';
+    b.innerHTML = '🔍 <span style="color:var(--muted);font-size:11px;">Ctrl K</span>';
+    b.addEventListener('click', openPalette);
+    btnNew.parentElement.insertBefore(b, btnNew);
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -3946,6 +4011,129 @@ async function saveReminder(kind, id) {
   closeDynamicModal();
   toast(`Reminder set for ${fmtDate(date)}.`, 'success');
 }
+
+// ── Command palette (Ctrl/Cmd+K) ─────────────────────────────────────────
+// One box that finds anything: customers, phones (by number / IMEI / ICCID —
+// the barcode scanner types straight into it), rentals, bookings, and quick
+// commands. Keyboard: ↑↓ + Enter, Esc closes.
+
+let paletteIndex = 0;
+let paletteResults = [];
+
+const PALETTE_COMMANDS = [
+  { icon: '📱', label: 'New Rental', sub: 'command', run: () => openNewRentalModal() },
+  { icon: '✈️', label: 'New Booking', sub: 'command', run: () => openNewBookingModal() },
+  { icon: '🔧', label: 'New Repair', sub: 'command', run: async () => { repairMenu = await window.api.getServiceMenu('repair'); openNewRepairModal(); } },
+  { icon: '👤', label: 'New Customer', sub: 'command', run: () => goToTab('customers', {}) || setTimeout(() => document.getElementById('btnNewCustomer')?.click(), 120) },
+  { icon: '🖨️', label: 'Charge a Service', sub: 'command', run: async () => { goToTab('services'); } },
+  { icon: '🧾', label: 'Cash-up', sub: 'command', run: () => openCashupModal() },
+  { icon: '⏰', label: 'Run sweeps now', sub: 'command', run: () => runSweepsNow() },
+  ...['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'virtual', 'tasks', 'settings']
+    .map(t => ({ icon: '↪', label: `Go to ${t}`, sub: 'navigate', run: () => goToTab(t) })),
+];
+
+function paletteSearch(q) {
+  const needle = q.trim().toLowerCase();
+  const digits = needle.replace(/\D/g, '');
+  const out = [];
+  if (!needle) return PALETTE_COMMANDS.slice(0, 7);
+
+  for (const c of PALETTE_COMMANDS) {
+    if (c.label.toLowerCase().includes(needle)) out.push(c);
+  }
+  for (const c of customers) {
+    if (out.length >= 9) break;
+    const name = `${c.firstName} ${c.lastName}`;
+    if (name.toLowerCase().includes(needle) ||
+        (digits.length >= 4 && (c.phone || '').replace(/\D/g, '').includes(digits)) ||
+        (c.email || '').toLowerCase().includes(needle)) {
+      out.push({ icon: '👤', label: name, sub: c.phone || c.email || 'customer',
+        run: () => goToTab('customers', { customerId: c.id }) });
+    }
+  }
+  for (const p of phones) {
+    if (out.length >= 9) break;
+    const hay = `${p.number || ''} ${p.imei || ''} ${p.simId || ''}`.replace(/\D/g, '');
+    if ((p.number || '').toLowerCase().includes(needle) ||
+        (digits.length >= 5 && hay.includes(digits))) {
+      out.push({ icon: '📱', label: p.number || '(no number)',
+        sub: `${p.country || ''} · ${p.status}${p.imei ? ' · IMEI ' + p.imei : ''}`,
+        run: () => openEditPhoneModal(p.id) });
+    }
+  }
+  for (const b of bookings) {
+    if (out.length >= 9) break;
+    if ((b.route || '').toLowerCase().includes(needle) ||
+        (b.passenger || '').toLowerCase().includes(needle) ||
+        (b.bookingReference || '').toLowerCase().includes(needle)) {
+      out.push({ icon: '✈️', label: `${b.route} — ${b.customerName || b.passenger || ''}`,
+        sub: `flies ${fmtDate(b.travelDate)}`, run: () => goToTab('bookings') });
+    }
+  }
+  return out.slice(0, 9);
+}
+
+function paletteRender() {
+  const list = document.getElementById('paletteList');
+  if (!list) return;
+  list.innerHTML = paletteResults.length === 0
+    ? `<div style="padding:14px;color:var(--muted);font-size:13px;">No matches.</div>`
+    : paletteResults.map((r, i) => `
+      <div class="palette-item${i === paletteIndex ? ' active' : ''}" onclick="paletteRun(${i})">
+        <span style="width:22px;text-align:center;">${r.icon}</span>
+        <span style="flex:1;">${escHtml(r.label)}</span>
+        <span style="color:var(--muted);font-size:11px;">${escHtml(r.sub)}</span>
+      </div>`).join('');
+}
+
+function paletteRun(i) {
+  const r = paletteResults[i];
+  closePalette();
+  if (r) r.run();
+}
+
+function openPalette() {
+  if (document.getElementById('paletteOverlay')) return;
+  const el = document.createElement('div');
+  el.id = 'paletteOverlay';
+  el.className = 'palette-overlay';
+  el.innerHTML = `
+    <div class="palette-box">
+      <input class="palette-input" id="paletteInput" placeholder="Search customers, phones, IMEI… or type a command"
+        autocomplete="off" spellcheck="false">
+      <div id="paletteList"></div>
+      <div style="padding:7px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);">↑↓ navigate · Enter open · Esc close · scan a barcode straight in</div>
+    </div>`;
+  el.addEventListener('mousedown', e => { if (e.target === el) closePalette(); });
+  document.body.appendChild(el);
+  const input = document.getElementById('paletteInput');
+  paletteIndex = 0;
+  paletteResults = paletteSearch('');
+  paletteRender();
+  input.focus();
+  input.addEventListener('input', () => {
+    paletteIndex = 0;
+    paletteResults = paletteSearch(input.value);
+    paletteRender();
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); paletteIndex = Math.min(paletteIndex + 1, paletteResults.length - 1); paletteRender(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); paletteIndex = Math.max(paletteIndex - 1, 0); paletteRender(); }
+    else if (e.key === 'Enter') { e.preventDefault(); paletteRun(paletteIndex); }
+    else if (e.key === 'Escape') { closePalette(); }
+  });
+}
+
+function closePalette() {
+  document.getElementById('paletteOverlay')?.remove();
+}
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    openPalette();
+  }
+});
 
 // ── Priority suggestion engine ───────────────────────────────────────────
 // Deterministic scoring over what the task IS (its reference) and its due

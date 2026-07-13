@@ -670,6 +670,29 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .feed-item:last-child { border-bottom: none; }
 .feed-item .feed-icon { flex-shrink: 0; }
 
+/* Command palette (Ctrl/Cmd+K) */
+.palette-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(13, 37, 61, 0.42);
+  display: flex; justify-content: center; align-items: flex-start;
+  padding-top: 12vh;
+}
+.palette-box {
+  width: min(560px, 92vw); background: var(--surface);
+  border-radius: 14px; box-shadow: var(--shadow-2);
+  overflow: hidden; border: 1px solid var(--border);
+}
+.palette-input {
+  width: 100%; border: none; outline: none; background: transparent;
+  padding: 16px 18px; font-size: 15px; font-family: inherit; color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+.palette-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; font-size: 13px; cursor: pointer;
+}
+.palette-item.active, .palette-item:hover { background: var(--bg-secondary); }
+
 /* Task triage cards */
 .task-card { padding: 10px 2px; border-bottom: 1px solid var(--border); }
 .task-card:last-child { border-bottom: none; }
