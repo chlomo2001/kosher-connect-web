@@ -3787,6 +3787,91 @@ function taskPriorityBadge(p) {
   return `<span class="badge" style="${styles[p] || styles.Normal}">${escHtml(p)}</span>`;
 }
 
+// ── Priority suggestion engine ───────────────────────────────────────────
+// Deterministic scoring over what the task IS (its reference) and its due
+// date — the assistant proposes, the user disposes. Returns null when there
+// is nothing to say (no opinion, already at the suggested level, or the
+// same suggestion was rejected before).
+function suggestTaskPriority(t, todayISO) {
+  if (t.done) return null;
+  let s = null;
+  const ref = t.reference || '';
+  const daysUntilDue = t.dueDate
+    ? Math.round((parseLocalDate(t.dueDate) - parseLocalDate(todayISO)) / 86400000)
+    : null;
+
+  if (ref.startsWith('OVERDUE-')) {
+    s = { priority: 'High', reason: 'A phone is out past its return date — late fees are accruing and the handset is at risk.' };
+  } else if (ref.startsWith('BALANCE-')) {
+    const amt = parseFloat((t.title.match(/£(\d+(?:\.\d+)?)/) || [])[1]);
+    s = Number.isFinite(amt) && amt >= 50
+      ? { priority: 'High', reason: `£${amt.toFixed(2)} outstanding — chase before it grows.` }
+      : { priority: 'Normal', reason: 'Money owed — collect at the next visit.' };
+  } else if (ref.startsWith('SIMDUE-')) {
+    s = /KC pays/i.test(t.title)
+      ? { priority: 'High', reason: 'KC pays this renewal — make sure the payment goes out and gets recharged.' }
+      : { priority: 'Normal', reason: 'Customer-paid renewal — a quick check that it went through.' };
+  } else if (ref.startsWith('PASSPORT-')) {
+    s = daysUntilDue !== null && daysUntilDue <= 30
+      ? { priority: 'High', reason: `Passport expires in ${daysUntilDue} day${daysUntilDue === 1 ? '' : 's'} — travel is at risk.` }
+      : { priority: 'Low', reason: 'Expiry is a while away — safe to park for now.' };
+  } else if (daysUntilDue !== null && daysUntilDue < 0) {
+    s = { priority: 'High', reason: `${-daysUntilDue} day${daysUntilDue === -1 ? '' : 's'} past its due date.` };
+  } else if (daysUntilDue === 0) {
+    s = { priority: 'High', reason: 'Due today.' };
+  }
+
+  if (!s) return null;
+  if (s.priority === t.priority) return null;          // already there
+  if (s.priority === t.suggestionRejected) return null; // was rejected — don't nag
+  return s;
+}
+
+// Snoozed = parked until a future date; a passed date returns to the lanes.
+function taskSnoozed(t, todayISO) {
+  return !t.done && t.snoozedUntil && t.snoozedUntil > todayISO;
+}
+
+async function patchTask(patch) {
+  const res = await window.api.updateTask(patch);
+  if (!res.success) { toast(res.error || 'Could not update the task.', 'error'); return false; }
+  return true;
+}
+
+async function acceptSuggestion(id, priority) {
+  if (await patchTask({ id, priority })) {
+    toast(`Moved to ${priority}.`, 'success');
+    renderTasksTab();
+  }
+}
+
+async function rejectSuggestion(id, priority) {
+  if (await patchTask({ id, suggestionRejected: priority })) renderTasksTab();
+}
+
+async function setTaskPriority(id, priority) {
+  if (await patchTask({ id, priority })) renderTasksTab();
+}
+
+async function snoozeTask(id, choice) {
+  if (!choice) return;
+  let until = null;
+  const base = parseLocalDate(localISO());
+  if (choice === 'tomorrow')  { base.setDate(base.getDate() + 1); until = localISO(base); }
+  if (choice === '3days')     { base.setDate(base.getDate() + 3); until = localISO(base); }
+  if (choice === 'nextweek')  { base.setDate(base.getDate() + 7); until = localISO(base); }
+  if (choice === 'pick') {
+    const d = prompt('Snooze until (YYYY-MM-DD):', localISO(new Date(Date.now() + 14 * 86400000)));
+    if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    until = d;
+  }
+  if (choice === 'wake') until = '';
+  if (await patchTask({ id, snoozedUntil: until })) {
+    toast(until ? `Snoozed until ${fmtDate(until)}.` : 'Task is back in the list.', 'success');
+    renderTasksTab();
+  }
+}
+
 async function renderTasksTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading tasks…</div>`;
@@ -3794,36 +3879,81 @@ async function renderTasksTab() {
   if (!Array.isArray(tasksList)) tasksList = [];
 
   const today = localISO();
-  const openTasks = tasksList.filter(t => !t.done);
-  const highOpen = openTasks.filter(t => t.priority === 'High');
-  const dueNow = openTasks.filter(t => t.dueDate && t.dueDate <= today);
+  const doneTasks = tasksList.filter(t => t.done);
+  const snoozed = tasksList.filter(t => taskSnoozed(t, today));
+  const live = tasksList.filter(t => !t.done && !taskSnoozed(t, today));
+  const nowLane  = live.filter(t => t.priority === 'High' || (t.dueDate && t.dueDate <= today));
+  const nextLane = live.filter(t => !nowLane.includes(t));
+  const suggestions = live.map(t => [t, suggestTaskPriority(t, today)]).filter(([, s]) => s);
 
-  const row = (t) => `
-    <div class="history-item" style="${t.done ? 'opacity:0.45;' : ''}">
-      <input type="checkbox" ${t.done ? 'checked' : ''} style="margin-right:12px;cursor:pointer;"
-        onchange="toggleTaskDone('${escHtml(t.id)}', this.checked)">
-      <div style="flex:1;">
-        <div class="history-desc" style="${t.done ? 'text-decoration:line-through;' : ''}">${escHtml(t.title)}</div>
-        <div style="font-size:11px;color:var(--muted);">
-          ${t.customerName ? '👤 ' + escHtml(t.customerName) + ' · ' : ''}${t.source !== 'manual' ? '🤖 auto · ' : ''}${t.reference ? escHtml(t.reference) + ' · ' : ''}${t.notes ? escHtml(t.notes) : ''}
+  const card = (t) => {
+    const s = suggestTaskPriority(t, today);
+    const overdueDue = t.dueDate && t.dueDate < today;
+    return `
+    <div class="task-card${t.done ? ' task-done' : ''}">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <input type="checkbox" ${t.done ? 'checked' : ''} style="margin-top:3px;cursor:pointer;width:15px;height:15px;accent-color:var(--accent);"
+          onchange="toggleTaskDone('${escHtml(t.id)}', this.checked)">
+        <div style="flex:1;min-width:0;">
+          <div class="history-desc" style="${t.done ? 'text-decoration:line-through;' : ''}">${escHtml(t.title)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+            ${t.customerName ? '👤 ' + escHtml(t.customerName) + ' · ' : ''}${t.source !== 'manual' ? '🤖 auto · ' : ''}${t.dueDate ? `<span style="${overdueDue && !t.done ? 'color:var(--danger);font-weight:600;' : ''}">due ${fmtDate(t.dueDate)}</span> · ` : ''}${t.notes ? escHtml(t.notes) : ''}
+          </div>
         </div>
+        ${taskPriorityBadge(t.priority)}
       </div>
-      <div class="history-date" style="margin:0 14px;${!t.done && t.dueDate && t.dueDate < today ? 'color:var(--danger);font-weight:600;' : ''}">
-        ${t.dueDate ? fmtDate(t.dueDate) : ''}</div>
-      ${taskPriorityBadge(t.priority)}
+      ${!t.done ? `
+      <div class="task-actions">
+        <select class="task-mini" onchange="setTaskPriority('${escHtml(t.id)}', this.value)" title="Priority">
+          ${['High', 'Normal', 'Low'].map(p => `<option value="${p}" ${t.priority === p ? 'selected' : ''}>${p === 'High' ? '🔥 Now' : p === 'Normal' ? '📋 Next' : '🌙 Later'}</option>`).join('')}
+        </select>
+        <select class="task-mini" onchange="snoozeTask('${escHtml(t.id)}', this.value); this.value='';" title="Postpone">
+          <option value="">💤 Snooze…</option>
+          <option value="tomorrow">Until tomorrow</option>
+          <option value="3days">3 days</option>
+          <option value="nextweek">Next week</option>
+          <option value="pick">Pick a date…</option>
+        </select>
+      </div>` : ''}
+      ${s && !t.done ? `
+      <div class="task-suggest">
+        <span>💡 Suggests <strong>${s.priority === 'High' ? '🔥 Now' : s.priority === 'Normal' ? '📋 Next' : '🌙 Later'}</strong> — ${escHtml(s.reason)}</span>
+        <span style="white-space:nowrap;">
+          <button class="btn btn-primary btn-sm" style="font-size:11px;padding:3px 10px;"
+            onclick="acceptSuggestion('${escHtml(t.id)}', '${s.priority}')">✓ Accept</button>
+          <button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;"
+            onclick="rejectSuggestion('${escHtml(t.id)}', '${s.priority}')">✕ Keep ${escHtml(t.priority)}</button>
+        </span>
+      </div>` : ''}
+    </div>`;
+  };
+
+  const snoozeCard = (t) => `
+    <div class="task-card" style="opacity:0.75;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:15px;">💤</span>
+        <div style="flex:1;min-width:0;">
+          <div class="history-desc">${escHtml(t.title)}</div>
+          <div style="font-size:11px;color:var(--muted);">wakes ${fmtDate(t.snoozedUntil)}</div>
+        </div>
+        <button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;"
+          onclick="snoozeTask('${escHtml(t.id)}', 'wake')">⏰ Wake now</button>
+      </div>
     </div>`;
 
-  const openHtml = openTasks.length === 0
-    ? `<div class="empty-state"><div class="emoji">🎉</div><p>Nothing to do.</p></div>`
-    : openTasks.map(row).join('');
-  const doneTasks = tasksList.filter(t => t.done);
+  const lane = (title, list, empty) => `
+    <div class="table-card" style="padding:8px 16px 12px;">
+      <div class="section-divider" style="margin-top:10px;">${title} <span style="color:var(--muted);font-weight:400;">· ${list.length}</span></div>
+      ${list.length ? list.map(card).join('') : `<div style="color:var(--muted);font-size:13px;padding:8px 0;">${empty}</div>`}
+    </div>`;
 
   content.innerHTML = `
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-label">Open Tasks</div><div class="stat-value">${openTasks.length}</div></div>
-      <div class="stat-card"><div class="stat-label">High Priority</div><div class="stat-value" style="color:var(--danger);">${highOpen.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Due / Overdue</div><div class="stat-value">${dueNow.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Completed</div><div class="stat-value" style="color:var(--success);">${doneTasks.length}</div></div>
+      <div class="stat-card"><div class="stat-label">🔥 Now</div><div class="stat-value" style="color:${nowLane.length ? 'var(--danger)' : 'var(--success)'};">${nowLane.length}</div></div>
+      <div class="stat-card"><div class="stat-label">📋 Next</div><div class="stat-value">${nextLane.length}</div></div>
+      <div class="stat-card"><div class="stat-label">💤 Snoozed</div><div class="stat-value">${snoozed.length}</div></div>
+      <div class="stat-card"><div class="stat-label">💡 Suggestions</div><div class="stat-value" style="color:${suggestions.length ? 'var(--accent)' : 'var(--text)'};">${suggestions.length}</div>
+        ${suggestions.length ? '<div class="stat-sub">awaiting your call</div>' : '<div class="stat-sub">all agreed</div>'}</div>
     </div>
     <div class="table-card" style="padding:14px;margin-bottom:14px;">
       <div style="display:flex;gap:8px;align-items:center;">
@@ -3838,12 +3968,20 @@ async function renderTasksTab() {
         <button class="btn btn-primary" onclick="saveNewTask()">+ Add</button>
       </div>
     </div>
-    <div class="table-card" style="padding:6px 14px;">
-      <div class="history-list">${openHtml}</div>
-      ${doneTasks.length ? `
-        <div class="section-divider" style="margin-top:10px;">Completed (${doneTasks.length})</div>
-        <div class="history-list">${doneTasks.slice(0, 15).map(row).join('')}</div>` : ''}
-    </div>`;
+    <div class="dash-cols">
+      ${lane('🔥 Now — do these first', nowLane, 'Nothing urgent. 🎉')}
+      ${lane('📋 Next — when the counter is quiet', nextLane, 'Nothing queued.')}
+    </div>
+    ${snoozed.length ? `
+    <div class="table-card" style="padding:8px 16px 12px;margin-top:16px;">
+      <div class="section-divider" style="margin-top:10px;">💤 Snoozed <span style="color:var(--muted);font-weight:400;">· ${snoozed.length}</span></div>
+      ${snoozed.map(snoozeCard).join('')}
+    </div>` : ''}
+    ${doneTasks.length ? `
+    <div class="table-card" style="padding:8px 16px 12px;margin-top:16px;">
+      <div class="section-divider" style="margin-top:10px;">✓ Completed <span style="color:var(--muted);font-weight:400;">· ${doneTasks.length}</span></div>
+      ${doneTasks.slice(0, 10).map(card).join('')}
+    </div>` : ''}`;
 }
 
 async function saveNewTask() {
@@ -3921,7 +4059,8 @@ async function renderDashboardTab() {
   const readyRepairs = reps.filter(r => r.status === 'Ready');
   const travel7 = bookings.filter(b => b.status !== 'Cancelled' && b.travelDate >= today && b.travelDate <= in7);
   const renewals7 = sims.filter(s => s.status === 'active' && s.renewalDate && s.renewalDate >= today && s.renewalDate <= in7);
-  const openTasks = tks.filter(t => !t.done);
+  // Snoozed tasks are deliberately parked — keep them off the dashboard.
+  const openTasks = tks.filter(t => !t.done && !(t.snoozedUntil && t.snoozedUntil > today));
   const highTasks = openTasks.filter(t => t.priority === 'High');
 
   const money = ledgerSummary?.success ? ledgerSummary : null;

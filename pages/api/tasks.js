@@ -28,6 +28,8 @@ function toApp(row) {
     doneAt: row.done_at,
     notes: row.raw_text || '',
     reference: row.reference || '',
+    snoozedUntil: row.snoozed_until || '',
+    suggestionRejected: PRIORITY_TO_APP[row.suggestion_rejected] || '',
     createdAt: row.created_at,
   }
 }
@@ -72,7 +74,7 @@ async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
-      const { id, done, priority } = req.body || {}
+      const { id, done, priority, snoozedUntil, suggestionRejected } = req.body || {}
       if (!id) return res.status(400).json({ success: false, error: 'Task id is required.' })
       const patch = {}
       if (done !== undefined) {
@@ -82,6 +84,13 @@ async function handler(req, res) {
       if (priority !== undefined) {
         if (!PRIORITY_TO_DB[priority]) return res.status(400).json({ success: false, error: 'Priority must be High, Normal, or Low.' })
         patch.priority = PRIORITY_TO_DB[priority]
+        patch.suggestion_rejected = null // a fresh choice resets the dismissal
+      }
+      if (snoozedUntil !== undefined) {
+        patch.snoozed_until = /^\d{4}-\d{2}-\d{2}$/.test(String(snoozedUntil || '')) ? snoozedUntil : null
+      }
+      if (suggestionRejected !== undefined) {
+        patch.suggestion_rejected = PRIORITY_TO_DB[suggestionRejected] || null
       }
       if (!Object.keys(patch).length) return res.status(400).json({ success: false, error: 'Nothing to update.' })
       const updated = await db.update('tasks', `id=eq.${encodeURIComponent(String(id))}`, patch)

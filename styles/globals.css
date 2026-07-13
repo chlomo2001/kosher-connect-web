@@ -670,6 +670,24 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .feed-item:last-child { border-bottom: none; }
 .feed-item .feed-icon { flex-shrink: 0; }
 
+/* Task triage cards */
+.task-card { padding: 10px 2px; border-bottom: 1px solid var(--border); }
+.task-card:last-child { border-bottom: none; }
+.task-done { opacity: 0.45; }
+.task-actions { display: flex; gap: 6px; margin: 7px 0 0 25px; }
+.task-mini {
+  font-size: 11px; padding: 3px 8px; border-radius: 9999px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); cursor: pointer; font-family: inherit;
+}
+.task-mini:hover { border-color: var(--accent); }
+.task-suggest {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 8px 0 0 25px; padding: 7px 10px; border-radius: 8px;
+  background: rgba(83, 58, 253, 0.06); border: 1px solid rgba(83, 58, 253, 0.18);
+  font-size: 12px; color: var(--text);
+}
+
 /* Dashboard deep-links: anything wearing .dash-link navigates on click. */
 .dash-link { cursor: pointer; }
 .feed-item.dash-link { margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 8px; transition: background 0.12s; }
