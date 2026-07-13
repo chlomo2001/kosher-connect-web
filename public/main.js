@@ -176,6 +176,9 @@ async function initApp() {
       document.querySelectorAll('.cs-list.open').forEach(el => el.classList.remove('open'));
     }
   });
+  // Same-day ⏰ reminders: check every 20s while the app is open.
+  checkLocalReminders();
+  setInterval(checkLocalReminders, 20000);
 }
 
 function reconcilePhoneStatuses() {
@@ -4581,6 +4584,44 @@ function remindContextFor(kind, id) {
   return null;
 }
 
+// Same-day reminders: fire as an in-app popup (toast + browser notification)
+// while the app is open; a matching task due today is the safety net.
+function localReminders() {
+  try { return JSON.parse(localStorage.getItem('kcLocalReminders') || '[]'); } catch { return []; }
+}
+
+async function saveQuickReminder(kind, id, minutes) {
+  const ctx = remindContextFor(kind, id);
+  if (!ctx) return;
+  const list = localReminders();
+  list.push({ at: Date.now() + minutes * 60000, label: ctx.label });
+  localStorage.setItem('kcLocalReminders', JSON.stringify(list));
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+  // Safety net if the tab closes: a task in today's Now lane.
+  await window.api.addTask({
+    title: `⏰ ${ctx.label}`,
+    dueDate: localISO(),
+    priority: 'High',
+    notes: `quick reminder — ${minutes} min, set ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`,
+    customerId: ctx.customerId || null,
+  }).catch(() => null);
+  closeDynamicModal();
+  toast(`⏰ Will pop up in ${minutes >= 60 ? (minutes / 60) + ' hour' + (minutes > 60 ? 's' : '') : minutes + ' minutes'}.`, 'success');
+}
+
+function checkLocalReminders() {
+  const list = localReminders();
+  const due = list.filter(r => r.at <= Date.now());
+  if (!due.length) return;
+  localStorage.setItem('kcLocalReminders', JSON.stringify(list.filter(r => r.at > Date.now())));
+  for (const r of due) {
+    toast(`⏰ REMINDER: ${r.label}`, 'warning');
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('KosherConnect — reminder', { body: r.label, icon: '/logo.png' });
+    }
+  }
+}
+
 function openRemindModal(kind, id) {
   const ctx = remindContextFor(kind, id);
   if (!ctx) return;
@@ -4589,6 +4630,13 @@ function openRemindModal(kind, id) {
   showDynamicModal(`
     <div class="modal-title">⏰ Remind me</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">${escHtml(ctx.label)}</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:var(--muted);">Quick (pops up in-app):</span>
+      <button type="button" class="btn btn-outline btn-sm" onclick="saveQuickReminder('${escHtml(kind)}','${escHtml(String(id))}',30)">30 min</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="saveQuickReminder('${escHtml(kind)}','${escHtml(String(id))}',60)">1 hour</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="saveQuickReminder('${escHtml(kind)}','${escHtml(String(id))}',180)">3 hours</button>
+    </div>
+    <div class="section-divider" style="margin:0 0 10px;">or on a date</div>
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">When</label>
