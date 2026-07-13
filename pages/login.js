@@ -6,6 +6,8 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [ticket, setTicket] = useState('') // set → we're on the 2FA code step
+  const [code, setCode] = useState('')
 
   async function submit(e) {
     e.preventDefault()
@@ -19,13 +21,40 @@ export default function Login() {
         body: JSON.stringify({ email, password }),
       })
       const data = await res.json()
+      if (data.success && data.twofa) {
+        setTicket(data.ticket)
+      } else if (data.success) {
+        window.location.href = '/'
+        return
+      } else {
+        setError(data.error || 'Login failed.')
+      }
+    } catch {
+      setError('Login failed — try again.')
+    }
+    setBusy(false)
+  }
+
+  async function submitCode(e) {
+    e.preventDefault()
+    if (busy) return
+    setBusy(true)
+    setError('')
+    try {
+      const res = await fetch('/api/auth/verify-2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code, ticket }),
+      })
+      const data = await res.json()
       if (data.success) {
         window.location.href = '/'
         return
       }
-      setError(data.error || 'Login failed.')
+      setError(data.error || 'Wrong code.')
+      if (/start again/i.test(data.error || '')) { setTicket(''); setCode('') }
     } catch {
-      setError('Login failed — try again.')
+      setError('Verification failed — try again.')
     }
     setBusy(false)
   }
@@ -35,26 +64,49 @@ export default function Login() {
       <Head><title>Sign in · KosherConnect</title></Head>
       <div className="login-shell">
         <div className="login-mesh" aria-hidden="true" />
-        <form className="login-card" onSubmit={submit}>
+        <form className="login-card" onSubmit={ticket ? submitCode : submit}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <img src="/logo-full.png" alt="KosherConnect" style={{ height: 72, marginBottom: 10 }} />
             <div className="login-title">KosherConnect</div>
-            <div className="login-sub">Staff sign in</div>
+            <div className="login-sub">{ticket ? 'Check your email' : 'Staff sign in'}</div>
           </div>
-          <input
-            className="form-input" type="email" placeholder="Email" value={email}
-            onChange={e => setEmail(e.target.value)} autoFocus required
-            style={{ width: '100%', marginBottom: 10 }}
-          />
-          <input
-            className="form-input" type="password" placeholder="Password" value={password}
-            onChange={e => setPassword(e.target.value)} required
-            style={{ width: '100%', marginBottom: 14 }}
-          />
-          {error && <div style={{ color: 'var(--danger)', fontSize: 12, marginBottom: 12 }}>{error}</div>}
-          <button className="btn btn-primary" type="submit" disabled={busy} style={{ width: '100%', padding: '10px 16px' }}>
-            {busy ? 'Signing in…' : 'Sign in'}
-          </button>
+          {ticket ? (
+            <>
+              <div style={{ fontSize: 13, textAlign: 'center', marginBottom: 12, lineHeight: 1.5 }}>
+                📬 A 6-digit code is on its way to<br /><strong>{email}</strong>
+              </div>
+              <input
+                className="form-input" inputMode="numeric" placeholder="Enter the code" value={code}
+                onChange={e => setCode(e.target.value)} autoFocus required
+                style={{ width: '100%', marginBottom: 14, textAlign: 'center', letterSpacing: '0.3em', fontSize: 18 }}
+              />
+              {error && <div style={{ color: 'var(--danger)', fontSize: 12, marginBottom: 12 }}>{error}</div>}
+              <button className="btn btn-primary" type="submit" disabled={busy} style={{ width: '100%', padding: '10px 16px' }}>
+                {busy ? 'Checking…' : 'Verify code'}
+              </button>
+              <button type="button" className="btn btn-outline" onClick={() => { setTicket(''); setCode(''); setError('') }}
+                style={{ width: '100%', padding: '8px 16px', marginTop: 8, fontSize: 12 }}>
+                ← Back
+              </button>
+            </>
+          ) : (
+            <>
+              <input
+                className="form-input" type="email" placeholder="Email" value={email}
+                onChange={e => setEmail(e.target.value)} autoFocus required
+                style={{ width: '100%', marginBottom: 10 }}
+              />
+              <input
+                className="form-input" type="password" placeholder="Password" value={password}
+                onChange={e => setPassword(e.target.value)} required
+                style={{ width: '100%', marginBottom: 14 }}
+              />
+              {error && <div style={{ color: 'var(--danger)', fontSize: 12, marginBottom: 12 }}>{error}</div>}
+              <button className="btn btn-primary" type="submit" disabled={busy} style={{ width: '100%', padding: '10px 16px' }}>
+                {busy ? 'Signing in…' : 'Sign in'}
+              </button>
+            </>
+          )}
         </form>
       </div>
     </>

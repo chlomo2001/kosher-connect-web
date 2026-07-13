@@ -5429,8 +5429,8 @@ async function renderSettingsTab() {
             <td style="white-space:nowrap;">
               <button class="action-btn" style="font-size:11px;"
                 onclick="openResetPasswordModal('${escHtml(m.id)}', '${escHtml(m.fullName || m.email)}')">🔑 Reset password</button>
-              ${m.isYou ? '' : `<button class="action-btn danger" style="font-size:11px;"
-              onclick="removeTeamMember('${escHtml(m.id)}', '${escHtml(m.fullName || m.email)}')">✕ Remove</button>`}</td>
+              <button class="action-btn danger" style="font-size:11px;"
+                onclick="removeTeamMember('${escHtml(m.id)}', '${escHtml(m.fullName || m.email)}', ${m.isYou})">✕ Remove${m.isYou ? ' (you)' : ''}</button></td>
           </tr>`).join('')}
         <tr>
           <td><input class="form-input" id="tmName" placeholder="Full name" style="min-height:0;padding:6px 10px;font-size:13px;"></td>
@@ -5686,12 +5686,18 @@ async function changeTeamRole(id, role) {
   renderSettingsTab();
 }
 
-async function removeTeamMember(id, label) {
-  const ok = await window.api.confirmDelete(
-    `Remove "${label}" from the team?\n\nTheir access stops immediately. The login account is kept but no longer works for this app.`);
+async function removeTeamMember(id, label, isSelf = false) {
+  const ok = await window.api.confirmDelete(isSelf
+    ? `Remove YOURSELF from the team?\n\nYou will be signed out immediately and lose all access. Only possible while another owner remains.`
+    : `Remove "${label}" from the team?\n\nTheir access stops immediately. The login account is kept but no longer works for this app.`);
   if (!ok) return;
   const res = await kcFetch('/api/team?id=' + encodeURIComponent(id), { method: 'DELETE' }).then(r => r.json());
   if (!res.success) { toast(res.error || 'Could not remove the member.', 'error'); return; }
+  if (res.removedSelf) {
+    await kcFetch('/api/auth/logout', { method: 'POST' }).catch(() => null);
+    window.location.href = '/login';
+    return;
+  }
   toast('Team member removed.', 'warning');
   renderSettingsTab();
 }

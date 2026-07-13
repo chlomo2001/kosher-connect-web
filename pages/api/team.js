@@ -90,18 +90,17 @@ async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
+      // ANY member is removable — owners included, first owner included,
+      // yourself included — with one invariant: at least one owner remains.
       const { id } = req.query
       if (!id) return res.status(400).json({ success: false, error: 'id is required.' })
-      if (id === req.staff.id) {
-        return res.status(400).json({ success: false, error: 'You cannot remove yourself.' })
-      }
       const existing = await db.select('staff_profiles', `select=id,role&id=eq.${encodeURIComponent(String(id))}`)
       if (!existing.length) return res.status(404).json({ success: false, error: 'Member not found.' })
       if (existing[0].role === 'owner' && (await ownerCount()) <= 1) {
-        return res.status(400).json({ success: false, error: 'Cannot remove the last owner.' })
+        return res.status(400).json({ success: false, error: 'Cannot remove the last owner — make someone else an owner first.' })
       }
       await db.delete('staff_profiles', `id=eq.${encodeURIComponent(String(id))}`)
-      return res.json({ success: true })
+      return res.json({ success: true, removedSelf: id === req.staff.id })
     }
 
     return res.status(405).end()
