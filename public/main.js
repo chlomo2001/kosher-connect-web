@@ -3733,7 +3733,7 @@ function renderBookingsTab() {
   const rows = bookings.length === 0
     ? `<tr><td colspan="9"><div class="empty-state"><div class="emoji">✈️</div><p>No bookings yet.</p><small>Click "New Booking" to add the first one.</small></div></td></tr>`
     : bookings.map(b => `
-      <tr>
+      <tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a'))openEditBookingModal('${escHtml(b.id)}')" title="Open booking">
         <td><div class="customer-name">${escHtml(b.customerName || '—')}</div>
             <div class="customer-email">${escHtml(b.passenger || '')}${(b.passengers || []).length ? ` · 👥 ${b.passengers.length}` : ''}</div></td>
         <td>${escHtml(b.route)}</td>
@@ -4178,6 +4178,85 @@ async function changeBookingStatus(id, status) {
   if (idx !== -1) bookings[idx] = res.booking;
   renderBookingsTab();
   toast(`Booking marked ${status}.`, 'success');
+}
+
+// Open a booking to edit its flight details. Money (price + fee) is shown
+// read-only — corrections go through a wallet adjustment so the ledger
+// stays honest. Passengers and check-in have their own dedicated editors.
+function openEditBookingModal(id) {
+  const b = bookings.find(x => x.id === id);
+  if (!b) return;
+  showDynamicModal(`
+    <div class="modal-title">✈️ ${escHtml(b.customerName || 'Booking')} — ${escHtml(b.route || '')}</div>
+    <div class="form-grid">
+      <div class="form-group form-full">
+        <label class="form-label">Passenger(s) summary</label>
+        <input class="form-input" id="ebPassenger" value="${escHtml(b.passenger || '')}" placeholder="Names">
+      </div>
+      <div class="form-group"><label class="form-label">Route *</label>
+        <input class="form-input" id="ebRoute" value="${escHtml(b.route || '')}"></div>
+      <div class="form-group"><label class="form-label">Airline</label>
+        <input class="form-input" id="ebAirline" value="${escHtml(b.airline || '')}"></div>
+      <div class="form-group"><label class="form-label">Booking reference</label>
+        <input class="form-input" id="ebRef" value="${escHtml(b.bookingReference || '')}"></div>
+      <div class="form-group"><label class="form-label">Travel date</label>
+        <input class="form-input" type="date" id="ebTravel" value="${escHtml(b.travelDate || '')}"></div>
+      <div class="form-group"><label class="form-label">Departure / Arrival</label>
+        <div style="display:flex;gap:6px;">
+          <input class="form-input" type="time" id="ebDep" value="${escHtml(b.departureTime || '')}">
+          <input class="form-input" type="time" id="ebArr" value="${escHtml(b.arrivalTime || '')}">
+        </div></div>
+      <div class="form-group"><label class="form-label">Status</label>
+        <select class="form-input" id="ebStatus">
+          ${BOOKING_STATUSES.map(s => `<option value="${s}" ${b.status === s ? 'selected' : ''}>${s === 'Completed' ? 'Completed / Flown' : s}</option>`).join('')}
+        </select></div>
+      <div class="form-group"><label class="form-label">Passport on file?</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="checkbox" id="ebPassport" ${b.passportOnFile ? 'checked' : ''}
+            onchange="document.getElementById('ebPExpWrap').style.display=this.checked?'block':'none'">
+          <div id="ebPExpWrap" style="display:${b.passportOnFile ? 'block' : 'none'};flex:1;">
+            <input class="form-input" type="date" id="ebPExp" value="${escHtml(b.passportExpiry || '')}" title="Passport expiry">
+          </div>
+        </div></div>
+      <div class="form-group form-full"><label class="form-label">Notes</label>
+        <input class="form-input" id="ebNotes" value="${escHtml(b.notes || '')}"></div>
+    </div>
+    <div style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);">
+      💷 Price <strong>£${(b.price || 0).toFixed(2)}</strong> + fee <strong>£${(b.bookingFee || 0).toFixed(2)}</strong> (read-only — adjust money via the customer's wallet).
+      &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openPassengersModal('${escHtml(b.id)}');return false;">👥 Passengers</a>
+      &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openCheckinModal('${escHtml(b.id)}');return false;">🛫 Check-in</a>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditBooking('${escHtml(b.id)}')">💾 Save</button>
+    </div>
+  `);
+}
+
+async function saveEditBooking(id) {
+  const route = document.getElementById('ebRoute').value.trim();
+  if (!route) { toast('Route is required.', 'error'); return; }
+  const passportOnFile = document.getElementById('ebPassport').checked;
+  const res = await window.api.updateBooking({
+    id,
+    passenger: document.getElementById('ebPassenger').value.trim(),
+    route,
+    airline: document.getElementById('ebAirline').value.trim(),
+    bookingReference: document.getElementById('ebRef').value.trim(),
+    travelDate: document.getElementById('ebTravel').value,
+    departureTime: document.getElementById('ebDep').value,
+    arrivalTime: document.getElementById('ebArr').value,
+    status: document.getElementById('ebStatus').value,
+    passportOnFile,
+    passportExpiry: passportOnFile ? document.getElementById('ebPExp').value : '',
+    notes: document.getElementById('ebNotes').value.trim(),
+  });
+  if (!res.success) { toast(res.error || 'Could not save the booking.', 'error'); return; }
+  const idx = bookings.findIndex(x => x.id === id);
+  if (idx !== -1) bookings[idx] = res.booking;
+  closeDynamicModal();
+  toast('Booking updated.', 'success');
+  renderBookingsTab();
 }
 
 // ─────────────────────────────────────────────
@@ -6509,6 +6588,7 @@ saveWalletEntry  = guardReentry(saveWalletEntry);
 saveNewBooking   = guardReentry(saveNewBooking);
 savePassengers   = guardReentry(savePassengers);
 saveCheckin      = guardReentry(saveCheckin);
+saveEditBooking  = guardReentry(saveEditBooking);
 saveNewRepair    = guardReentry(saveNewRepair);
 changeRepairStatus = guardReentry(changeRepairStatus);
 confirmCollectRepair = guardReentry(confirmCollectRepair);

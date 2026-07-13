@@ -219,10 +219,12 @@ async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
-      // Status/notes/passengers only — money fields are immutable once
-      // charged; price corrections become explicit ledger adjustments
-      // (step-3 wallet UI).
-      const { id, status, notes, passengers, checkinDone, checkinBy, checkinDate } = req.body || {}
+      // Flight logistics + status/notes/passengers/check-in are editable.
+      // MONEY (price/booking_fee) stays immutable once charged — corrections
+      // go through an explicit wallet adjustment, so the ledger stays honest.
+      const { id, status, notes, passengers, checkinDone, checkinBy, checkinDate,
+        passenger, route, airline, bookingReference, travelDate, departureTime,
+        arrivalTime, passportOnFile, passportExpiry } = req.body || {}
       if (!id) return res.status(400).json({ success: false, error: 'Booking id is required.' })
       const patch = {}
       if (status !== undefined) {
@@ -232,6 +234,18 @@ async function handler(req, res) {
         patch.status = status
       }
       if (notes !== undefined) patch.notes = notes || null
+      if (passenger !== undefined) patch.passenger = passenger || null
+      if (route !== undefined) {
+        if (!String(route).trim()) return res.status(400).json({ success: false, error: 'Route cannot be empty.' })
+        patch.route = String(route).trim()
+      }
+      if (airline !== undefined) patch.airline = airline || null
+      if (bookingReference !== undefined) patch.booking_reference = bookingReference || null
+      if (travelDate !== undefined) patch.travel_date = travelDate || null
+      if (departureTime !== undefined) patch.departure_time = departureTime || null
+      if (arrivalTime !== undefined) patch.arrival_time = arrivalTime || null
+      if (passportOnFile !== undefined) patch.passport_on_file = !!passportOnFile
+      if (passportExpiry !== undefined) patch.passport_expiry = passportExpiry || null
       if (checkinDone !== undefined) patch.checkin_done = !!checkinDone
       if (checkinBy !== undefined) patch.checkin_by = (checkinBy === 'us' || checkinBy === 'customer') ? checkinBy : null
       if (checkinDate !== undefined) patch.checkin_date = checkinDate || null
