@@ -254,6 +254,11 @@ function renderTab(tab) {
     searchBox.style.display = 'none';
     btnNew.style.display = 'none';
     renderServicesTab();
+  } else if (tab === 'shop') {
+    document.getElementById('pageTitle').innerHTML = 'Shop <span>& Stock</span>';
+    searchBox.style.display = 'none';
+    btnNew.style.display = 'none';
+    renderShopTab();
   } else if (tab === 'tasks') {
     document.getElementById('pageTitle').innerHTML = 'Task <span>List</span>';
     searchBox.style.display = 'none';
@@ -4093,6 +4098,274 @@ async function saveNewServiceOrder() {
 }
 
 // ─────────────────────────────────────────────
+//  SHOP & STOCK (selling devices/accessories — separate from the rental fleet)
+// ─────────────────────────────────────────────
+
+let shopItems = [];
+let shopSales = [];
+
+const STOCK_CATEGORY_LABELS = { phone: '📱 Phone', accessory: '🔌 Accessory', sim: '💳 SIM', other: '📦 Other' };
+
+async function renderShopTab() {
+  const content = document.getElementById('mainContent');
+  content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading shop…</div>`;
+  const data = await kcFetch('/api/shop').then(r => r.json()).catch(() => null);
+  if (!data || !data.success) {
+    content.innerHTML = `<div class="empty-state"><div class="emoji">🛍️</div><p>Shop unavailable${data?.error ? ' — ' + escHtml(data.error) : ''}.</p></div>`;
+    return;
+  }
+  shopItems = data.items; shopSales = data.sales;
+
+  const today = localISO();
+  const active = shopItems.filter(i => i.active);
+  const inStock = active.reduce((s, i) => s + i.quantity, 0);
+  const low = active.filter(i => i.quantity <= i.lowStockAt);
+  const todaySales = shopSales.filter(s => (s.createdAt || '').slice(0, 10) === today);
+  const revenue = shopSales.reduce((s, x) => s + x.total, 0);
+
+  const lowBanner = low.length ? `
+    <div style="margin-bottom:14px;padding:10px 14px;border-radius:8px;background:rgba(234,34,97,0.07);border:1px solid rgba(234,34,97,0.25);font-size:13px;">
+      ⚠️ <strong>Low stock:</strong> ${low.map(i => `${escHtml(i.model)} (${i.quantity} left)`).join(' · ')}
+    </div>` : '';
+
+  const itemRows = active.length === 0
+    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🛍️</div><p>No stock yet — add your first item.</p></div></td></tr>`
+    : active.map(i => `
+      <tr style="${i.quantity <= i.lowStockAt ? 'background:rgba(234,34,97,0.04);' : ''}">
+        <td><strong>${escHtml([i.company, i.model].filter(Boolean).join(' '))}</strong>
+          <div class="customer-email">${escHtml(i.code || '')}</div></td>
+        <td>${STOCK_CATEGORY_LABELS[i.category] || escHtml(i.category)}</td>
+        <td style="color:var(--muted);">${i.netPrice === null ? '—' : '£' + i.netPrice.toFixed(2)}</td>
+        <td><strong>£${(i.sellingPrice || 0).toFixed(2)}</strong></td>
+        <td style="color:${i.profit === null ? 'var(--muted)' : i.profit >= 0 ? 'var(--success)' : 'var(--danger)'};">
+          ${i.profit === null ? '—' : '£' + i.profit.toFixed(2)}</td>
+        <td style="font-weight:700;${i.quantity <= i.lowStockAt ? 'color:var(--danger);' : ''}">${i.quantity}</td>
+        <td style="white-space:nowrap;">
+          <button class="action-btn" onclick="openSaleModal('${i.id}')">💷 Sell</button>
+          <button class="action-btn" onclick="openStockItemModal('${i.id}')">✏️</button>
+        </td>
+      </tr>`).join('');
+
+  const saleRows = shopSales.length === 0
+    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No sales recorded yet.</div>`
+    : shopSales.slice(0, 25).map(s => `
+      <div class="history-item" style="background:transparent;border-bottom:1px solid var(--border);border-radius:0;padding:8px 2px;">
+        <div style="flex:1;min-width:0;">
+          <div class="history-desc"><strong>${escHtml(s.item)}</strong>${s.qty > 1 ? ` × ${s.qty}` : ''} — ${escHtml(s.customerName || 'Walk-in')}</div>
+          <div style="font-size:11px;color:var(--muted);">${s.imei ? 'IMEI ' + escHtml(s.imei) + ' · ' : ''}${escHtml(s.notes || '')}</div>
+        </div>
+        <div class="history-date" style="margin:0 12px;">${fmtDate(s.createdAt)}</div>
+        <div class="history-amount">£${s.total.toFixed(2)}</div>
+      </div>`).join('');
+
+  content.innerHTML = `
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Units In Stock</div><div class="stat-value">${inStock}</div></div>
+      <div class="stat-card"><div class="stat-label">Low Stock</div>
+        <div class="stat-value" style="color:${low.length ? 'var(--danger)' : 'var(--success)'};">${low.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Sold Today</div>
+        <div class="stat-value">£${todaySales.reduce((s, x) => s + x.total, 0).toFixed(2)}</div>
+        <div class="stat-sub">${todaySales.length} sale${todaySales.length === 1 ? '' : 's'}</div></div>
+      <div class="stat-card"><div class="stat-label">All-Time Sales</div><div class="stat-value">£${revenue.toFixed(2)}</div></div>
+    </div>
+    ${lowBanner}
+    <div style="display:flex;gap:10px;margin-bottom:14px;">
+      <button class="btn btn-primary" onclick="openSaleModal()">💷 Sell</button>
+      <button class="btn btn-outline" onclick="openStockItemModal()">➕ Add Item</button>
+    </div>
+    <div class="dash-cols">
+      <div class="table-card">
+        <div class="section-divider" style="margin:12px 14px 4px;">Inventory</div>
+        <table>
+          <thead><tr><th>Item</th><th>Category</th><th>Cost</th><th>Price</th><th>Profit</th><th>Qty</th><th></th></tr></thead>
+          <tbody>${itemRows}</tbody>
+        </table>
+      </div>
+      <div class="table-card" style="padding:8px 18px 14px;">
+        <div class="section-divider" style="margin-top:12px;">Recent sales</div>
+        <div>${saleRows}</div>
+      </div>
+    </div>`;
+}
+
+function openStockItemModal(itemId = null) {
+  const i = itemId ? shopItems.find(x => x.id === itemId) : null;
+  showDynamicModal(`
+    <div class="modal-title">${i ? '✏️ Edit Item' : '➕ Add Stock Item'}</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-input" id="siCategory">
+          ${Object.entries(STOCK_CATEGORY_LABELS).map(([k, l]) =>
+            `<option value="${k}" ${i?.category === k ? 'selected' : ''}>${l}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Code</label>
+        <input class="form-input" id="siCode" value="${escHtml(i?.code || '')}" placeholder="e.g. AC-01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Brand / company</label>
+        <input class="form-input" id="siCompany" value="${escHtml(i?.company || '')}" placeholder="e.g. Anker">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Model / name *</label>
+        <input class="form-input" id="siModel" value="${escHtml(i?.model || '')}" placeholder="e.g. Powerbank 10000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cost (net) £</label>
+        <input class="form-input" type="number" step="0.01" min="0" id="siNet" value="${i?.netPrice ?? ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Selling price £ *</label>
+        <input class="form-input" type="number" step="0.01" min="0" id="siSell" value="${i?.sellingPrice ?? ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Quantity</label>
+        <input class="form-input" type="number" step="1" min="0" id="siQty" value="${i?.quantity ?? 0}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Warn when below</label>
+        <input class="form-input" type="number" step="1" min="0" id="siLow" value="${i?.lowStockAt ?? 1}">
+      </div>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <span>${i ? `<button class="btn btn-outline" onclick="retireStockItem('${i.id}')">🗑 Retire</button>` : ''}</span>
+      <span style="display:flex;gap:8px;">
+        <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveStockItem(${i ? `'${i.id}'` : 'null'})">💾 Save</button>
+      </span>
+    </div>
+  `);
+}
+
+async function saveStockItem(itemId) {
+  const payload = {
+    op: 'item',
+    category: document.getElementById('siCategory').value,
+    code: document.getElementById('siCode').value.trim(),
+    company: document.getElementById('siCompany').value.trim(),
+    model: document.getElementById('siModel').value.trim(),
+    netPrice: document.getElementById('siNet').value === '' ? undefined : parseFloat(document.getElementById('siNet').value),
+    sellingPrice: parseFloat(document.getElementById('siSell').value),
+    quantity: parseInt(document.getElementById('siQty').value, 10) || 0,
+    lowStockAt: parseInt(document.getElementById('siLow').value, 10) || 0,
+  };
+  if (!payload.model) { toast('Model / name is required.', 'error'); return; }
+  if (!Number.isFinite(payload.sellingPrice)) { toast('Enter a selling price.', 'error'); return; }
+  const res = await kcFetch('/api/shop', {
+    method: itemId ? 'PUT' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(itemId ? { ...payload, id: itemId } : payload),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not save the item.', 'error'); return; }
+  closeDynamicModal();
+  toast('Item saved.', 'success');
+  renderShopTab();
+}
+
+async function retireStockItem(itemId) {
+  const ok = await window.api.confirmDelete('Retire this item?\n\nIt disappears from the shop but past sales keep their history.');
+  if (!ok) return;
+  const res = await kcFetch('/api/shop', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: 'item', id: itemId, active: false }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not retire the item.', 'error'); return; }
+  closeDynamicModal();
+  toast('Item retired.', 'warning');
+  renderShopTab();
+}
+
+function openSaleModal(preselectItemId = null) {
+  const sellable = shopItems.filter(i => i.active && i.quantity > 0);
+  if (!sellable.length) { toast('Nothing in stock to sell — add quantities first.', 'warning'); return; }
+  const itemOptions = sellable.map(i =>
+    `<option value="${i.id}" ${preselectItemId === i.id ? 'selected' : ''}>${escHtml([i.company, i.model].filter(Boolean).join(' '))} — £${(i.sellingPrice || 0).toFixed(2)} (${i.quantity} left)</option>`).join('');
+  const customerOptions = customers.map(c =>
+    `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone || '')}</option>`).join('');
+  showDynamicModal(`
+    <div class="modal-title">💷 Sell</div>
+    <div class="form-grid">
+      <div class="form-group form-full">
+        <label class="form-label">Item *</label>
+        <select class="form-input" id="slItem" onchange="slUpdateTotal()">${itemOptions}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Quantity</label>
+        <input class="form-input" type="number" min="1" step="1" id="slQty" value="1" oninput="slUpdateTotal()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Total (£)</label>
+        <input class="form-input" type="number" min="0" step="0.01" id="slTotal">
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Customer</label>
+        <select class="form-input" id="slCustomer">
+          <option value="walkin">🚶 Walk-in (over the counter)</option>
+          ${customerOptions}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">IMEI <span style="color:var(--muted);font-weight:400;">(phones — scan)</span></label>
+        <input class="form-input" id="slIMEI" inputmode="numeric" placeholder="Scan or type">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Paid now?</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="checkbox" id="slPaid" checked style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+          <select class="form-input" id="slMethod" style="flex:1;">
+            <option value="cash">💵 Cash</option>
+            <option value="card">💳 Card</option>
+            <option value="bank_transfer">🏦 Bank transfer</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="slNotes">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSale()">💷 Sell</button>
+    </div>
+  `);
+  slUpdateTotal();
+}
+
+function slUpdateTotal() {
+  const item = shopItems.find(i => i.id === document.getElementById('slItem')?.value);
+  if (!item) return;
+  const qty = Math.max(1, parseInt(document.getElementById('slQty')?.value, 10) || 1);
+  document.getElementById('slTotal').value = ((item.sellingPrice || 0) * qty).toFixed(2);
+}
+
+async function saveSale() {
+  const res = await kcFetch('/api/shop', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      op: 'sale',
+      itemId: document.getElementById('slItem').value,
+      qty: parseInt(document.getElementById('slQty').value, 10) || 1,
+      total: parseFloat(document.getElementById('slTotal').value),
+      customerId: document.getElementById('slCustomer').value,
+      imei: document.getElementById('slIMEI').value.trim(),
+      paidNow: document.getElementById('slPaid').checked,
+      method: document.getElementById('slMethod').value,
+      notes: document.getElementById('slNotes').value.trim(),
+    }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not record the sale.', 'error'); return; }
+  closeDynamicModal();
+  toast(`Sold — £${res.total.toFixed(2)}. ${res.remaining} left in stock.`, 'success');
+  renderShopTab();
+}
+
+// ─────────────────────────────────────────────
 //  TASKS
 // ─────────────────────────────────────────────
 // Tables-native to-do list. Also displays the keyed auto-tasks the system
@@ -4198,7 +4471,7 @@ const PALETTE_COMMANDS = [
   { icon: '🖨️', label: 'Charge a Service', sub: 'command', run: async () => { goToTab('services'); } },
   { icon: '🧾', label: 'Cash-up', sub: 'command', run: () => openCashupModal() },
   { icon: '⏰', label: 'Run sweeps now', sub: 'command', run: () => runSweepsNow() },
-  ...['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'virtual', 'tasks', 'settings']
+  ...['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'shop', 'virtual', 'tasks', 'settings']
     .map(t => ({ icon: '↪', label: `Go to ${t}`, sub: 'navigate', run: () => goToTab(t) })),
 ];
 
@@ -4976,7 +5249,10 @@ async function renderSettingsTab() {
                 <option value="helper" ${m.role === 'helper' ? 'selected' : ''}>Helper</option>
               </select>
             </td>
-            <td>${m.isYou ? '' : `<button class="action-btn danger" style="font-size:11px;"
+            <td style="white-space:nowrap;">
+              <button class="action-btn" style="font-size:11px;"
+                onclick="openResetPasswordModal('${escHtml(m.id)}', '${escHtml(m.fullName || m.email)}')">🔑 Reset password</button>
+              ${m.isYou ? '' : `<button class="action-btn danger" style="font-size:11px;"
               onclick="removeTeamMember('${escHtml(m.id)}', '${escHtml(m.fullName || m.email)}')">✕ Remove</button>`}</td>
           </tr>`).join('')}
         <tr>
@@ -5039,6 +5315,7 @@ async function renderSettingsTab() {
       <span style="flex:1;">These values drive live pricing (rental calculator, VN add-on, late fees, repair/SIM charges).
       Edits apply to <strong>new</strong> calculations only — existing tickets and frozen prices never reprice.
       Keys can be edited, never added or removed.</span>
+      <button class="btn btn-outline btn-sm" onclick="openChangePasswordModal()" title="Change your own login password">🔑 My password</button>
       <button class="btn btn-outline btn-sm" onclick="runSweepsNow()" title="Overdue rentals, arrears, passport expiry, SIM renewals">⏰ Run sweeps now</button>
     </div>
     <div class="table-card" style="margin-bottom:16px;">
@@ -5109,6 +5386,76 @@ async function runSweepsNow() {
   if (!res?.success) { toast(res?.error || 'Sweeps failed — check logs.', 'error'); return; }
   const c = res.counts;
   toast(`Sweeps done: ${c.rentalsFlippedOverdue} flipped overdue · ${c.overdueTasks + c.balanceTasks + c.passportTasks + c.simRenewalTasks} tasks raised · ${c.overdueClosed + c.balanceClosed + c.simClosed} closed.`, 'success');
+}
+
+// ── Login credentials ────────────────────────────────────────────────────
+
+function openChangePasswordModal() {
+  showDynamicModal(`
+    <div class="modal-title">🔑 Change my password</div>
+    <div class="form-grid">
+      <div class="form-group form-full">
+        <label class="form-label">Current password</label>
+        <input class="form-input" type="password" id="cpCurrent" autocomplete="current-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">New password (8+)</label>
+        <input class="form-input" type="password" id="cpNew" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Repeat new password</label>
+        <input class="form-input" type="password" id="cpNew2" autocomplete="new-password">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveChangePassword()">🔑 Change</button>
+    </div>
+  `);
+}
+
+async function saveChangePassword() {
+  const now = document.getElementById('cpCurrent').value;
+  const next = document.getElementById('cpNew').value;
+  if (next.length < 8) { toast('New password must be at least 8 characters.', 'error'); return; }
+  if (next !== document.getElementById('cpNew2').value) { toast('New passwords do not match.', 'error'); return; }
+  const res = await kcFetch('/api/auth/change-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ currentPassword: now, newPassword: next }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not change the password.', 'error'); return; }
+  closeDynamicModal();
+  toast('Password changed. Use the new one from your next sign-in.', 'success');
+}
+
+function openResetPasswordModal(id, label) {
+  showDynamicModal(`
+    <div class="modal-title">🔑 Reset password — ${escHtml(label)}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">
+      Owner reset: no current password needed. Tell them the new one in person.</div>
+    <div class="form-group">
+      <label class="form-label">New password (8+)</label>
+      <input class="form-input" type="password" id="rpNewPw" autocomplete="new-password">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveResetPassword('${escHtml(id)}')">🔑 Set password</button>
+    </div>
+  `);
+}
+
+async function saveResetPassword(id) {
+  const pw = document.getElementById('rpNewPw').value;
+  if (pw.length < 8) { toast('Password must be at least 8 characters.', 'error'); return; }
+  const res = await kcFetch('/api/team', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, password: pw }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not reset the password.', 'error'); return; }
+  closeDynamicModal();
+  toast('Password reset — it takes effect on their next sign-in.', 'success');
 }
 
 // ── Team management (owner-only; server enforces) ──
@@ -5187,6 +5534,10 @@ saveNewServiceOrder = guardReentry(saveNewServiceOrder);
 saveReminder     = guardReentry(saveReminder);
 saveCashup       = guardReentry(saveCashup);
 startReservation = guardReentry(startReservation);
+saveChangePassword = guardReentry(saveChangePassword);
+saveResetPassword  = guardReentry(saveResetPassword);
+saveStockItem    = guardReentry(saveStockItem);
+saveSale         = guardReentry(saveSale);
 deleteVN         = guardReentry(deleteVN);
 saveNewTeamMember = guardReentry(saveNewTeamMember);
 removeTeamMember  = guardReentry(removeTeamMember);

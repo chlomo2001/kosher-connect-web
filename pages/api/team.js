@@ -8,7 +8,7 @@
 // Guards: you cannot remove yourself, and the last owner can never be
 // demoted or removed.
 
-import { withStaff, adminCreateUser, adminUserEmail } from '../../lib/auth.js'
+import { withStaff, adminCreateUser, adminUserEmail, adminSetPassword } from '../../lib/auth.js'
 import { db } from '../../lib/db.js'
 
 const ROLES = ['owner', 'helper']
@@ -62,9 +62,23 @@ async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
-      const { id, role } = req.body || {}
-      if (!id || !ROLES.includes(role)) {
-        return res.status(400).json({ success: false, error: 'id and a valid role are required.' })
+      const { id, role, password } = req.body || {}
+      if (!id) return res.status(400).json({ success: false, error: 'id is required.' })
+
+      // Owner resets a member's password (no current-password needed).
+      if (password !== undefined) {
+        if (String(password).length < 8) {
+          return res.status(400).json({ success: false, error: 'Password must be at least 8 characters.' })
+        }
+        const member = await db.select('staff_profiles', `select=id&id=eq.${encodeURIComponent(String(id))}`)
+        if (!member.length) return res.status(404).json({ success: false, error: 'Member not found.' })
+        const set = await adminSetPassword(String(id), String(password))
+        if (!set.ok) return res.status(500).json({ success: false, error: 'Could not set the password.' })
+        return res.json({ success: true })
+      }
+
+      if (!ROLES.includes(role)) {
+        return res.status(400).json({ success: false, error: 'A valid role is required.' })
       }
       const existing = await db.select('staff_profiles', `select=id,role&id=eq.${encodeURIComponent(String(id))}`)
       if (!existing.length) return res.status(404).json({ success: false, error: 'Member not found.' })
