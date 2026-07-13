@@ -21,6 +21,8 @@ async function handler(req, res) {
       name: r.name,
       category: r.category,
       price: Number(r.price),
+      // "Purchased at KC" tier; null = no KC price for this job
+      kcPrice: r.kc_price === null || r.kc_price === undefined ? null : Number(r.kc_price),
     })))
   } catch (e) {
     console.error('[api/services]', e)

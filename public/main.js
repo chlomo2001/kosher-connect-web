@@ -3359,7 +3359,7 @@ async function renderRepairsTab() {
     : repairs.map(r => `
       <tr>
         <td><div class="customer-name">${escHtml(r.customerName || '—')}</div></td>
-        <td>${escHtml(r.device || '—')}</td>
+        <td>${escHtml(r.device || '—')}${r.kcPurchase ? ' <span class="badge" style="background:rgba(83,58,253,0.1);color:var(--accent);font-size:10px;">KC phone</span>' : ''}</td>
         <td style="font-size:12px;">${r.services.map(s => escHtml(s.name)).join('<br>') || '—'}</td>
         <td><strong>£${(r.total || 0).toFixed(2)}</strong></td>
         <td>${r.openedAt ? fmtDate(r.openedAt) : '—'}</td>
@@ -3398,9 +3398,11 @@ function openNewRepairModal() {
   ).join('');
   const serviceChecks = repairMenu.map(m => `
     <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer;">
-      <input type="checkbox" class="rpService" value="${escHtml(m.id)}" data-price="${m.price}" onchange="updateRepairTotal()">
+      <input type="checkbox" class="rpService" value="${escHtml(m.id)}"
+        data-price="${m.price}" data-reg="${m.price}" data-kc="${m.kcPrice ?? ''}"
+        onchange="updateRepairTotal()">
       <span style="flex:1;">${escHtml(m.name)}</span>
-      <strong>£${m.price.toFixed(2)}</strong>
+      <strong class="rpPriceLbl">£${m.price.toFixed(2)}</strong>
     </label>`).join('');
   showDynamicModal(`
     <div class="modal-title">🔧 New Repair</div>
@@ -3414,6 +3416,13 @@ function openNewRepairModal() {
       <div class="form-group form-full">
         <label class="form-label">Device</label>
         <input class="form-input" id="rpDevice" placeholder="e.g. QIN F21, black">
+      </div>
+      <div class="form-group form-full" style="flex-direction:row;align-items:center;gap:10px;">
+        <input type="checkbox" id="rpKC" onchange="rpKCToggle()"
+          style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent);">
+        <label for="rpKC" style="font-size:13px;cursor:pointer;">
+          🏷️ Phone purchased at Kosher Connect — discounted prices
+        </label>
       </div>
       <div class="form-group form-full">
         <label class="form-label">Services * <span style="color:var(--muted);font-weight:400;">(prices frozen at open)</span></label>
@@ -3442,6 +3451,25 @@ function updateRepairTotal() {
   document.getElementById('rpTotal').textContent = `£${total.toFixed(2)}`;
 }
 
+// Swap the whole menu between regular and "Purchased at KC" prices. Jobs
+// without a KC tier (e.g. FIG Touch Mini) keep the regular price.
+function rpKCToggle() {
+  const kc = document.getElementById('rpKC')?.checked;
+  document.querySelectorAll('.rpService').forEach(el => {
+    const useKc = kc && el.dataset.kc !== '';
+    el.dataset.price = useKc ? el.dataset.kc : el.dataset.reg;
+    const lbl = el.parentElement.querySelector('.rpPriceLbl');
+    if (lbl) {
+      const eff = parseFloat(el.dataset.price) || 0;
+      const reg = parseFloat(el.dataset.reg) || 0;
+      lbl.innerHTML = useKc
+        ? `<span style="color:var(--muted);text-decoration:line-through;font-weight:400;">£${reg.toFixed(2)}</span> £${eff.toFixed(2)}`
+        : `£${reg.toFixed(2)}`;
+    }
+  });
+  updateRepairTotal();
+}
+
 async function saveNewRepair() {
   const customerId = document.getElementById('rpCustomer').value;
   const serviceIds = [...document.querySelectorAll('.rpService:checked')].map(el => el.value);
@@ -3451,6 +3479,7 @@ async function saveNewRepair() {
     customerId,
     device: document.getElementById('rpDevice').value.trim(),
     serviceIds,
+    kcPurchase: !!document.getElementById('rpKC')?.checked,
     notes: document.getElementById('rpNotes').value.trim(),
   });
   if (!res.success) { toast(res.error || 'Could not open the ticket.', 'error'); return; }

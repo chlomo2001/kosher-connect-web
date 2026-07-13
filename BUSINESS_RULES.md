@@ -111,8 +111,6 @@ service, replacement) are not discounted.
 
 ### 2.2 Not yet modeled in the app (from the customer price list)
 
-- Repair "Purchased at KC" price tier (~£5–15 less per job) + 30-day warranty
-  terms (charging port excluded for QIN/FIG); 24-working-hour turnaround
 - Ticket per-passenger tiers (each passenger up to 5 / 6+ rates)
 - Online-service second-application discounts (e.g. ESTA £45, passport £20)
 - Products: USA phone without SIM (£2/day, min £15, £30/mo), SIM-only
@@ -127,7 +125,19 @@ The 30-day option stays £10 flat.
 
 ---
 
-## 3. Wallet rules (append-only ledger)
+## 3. Repairs
+
+- **Two price tiers** (customer price list): regular, and **"Purchased at
+  Kosher Connect"** (~£5–15 less per job — tick the checkbox on the New
+  Repair ticket; jobs without a KC tier, e.g. FIG Touch Mini, charge
+  regular). Prices freeze when the ticket opens.
+- Phones not on the menu: price not confirmed; KC-purchased gets 10% off
+  (staff judgement — use a custom amount).
+- Warranty **30 days**, excluding the charging port on QIN and FIG.
+- Turnaround: up to **24 working hours**.
+- The wallet charge posts once, at collection.
+
+## 4. Wallet rules (append-only ledger)
 
 Every pound the business is owed or holds lives in ONE place: the ledger.
 Balances are always computed (never stored); the database enforces the sign

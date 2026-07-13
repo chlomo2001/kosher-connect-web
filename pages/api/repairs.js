@@ -27,6 +27,7 @@ function toApp(row) {
       price: Number(s.price),
     })),
     total: row.total === null ? 0 : Number(row.total),
+    kcPurchase: !!row.kc_purchase,
     status: row.status || 'Open',
     openedAt: row.opened_at,
     closedAt: row.closed_at,
@@ -64,7 +65,12 @@ async function handler(req, res) {
       if (menu.length !== serviceIds.length) {
         return res.status(400).json({ success: false, error: 'One of the chosen services is unknown or retired.' })
       }
-      const total = menu.reduce((s, m) => s + Number(m.price), 0)
+      // "Purchased at KC" tier: use kc_price where the menu has one; jobs
+      // without a KC price (kc_price NULL) charge the regular price.
+      const kcPurchase = !!b.kcPurchase
+      const priceOf = (m) =>
+        kcPurchase && m.kc_price !== null && m.kc_price !== undefined ? Number(m.kc_price) : Number(m.price)
+      const total = menu.reduce((s, m) => s + priceOf(m), 0)
 
       const [repair] = await db.insert('repairs', [{
         customer_id: custRows[0].id,
@@ -73,11 +79,12 @@ async function handler(req, res) {
         status: 'Open',
         opened_at: new Date().toISOString(),
         notes: b.notes || null,
+        kc_purchase: kcPurchase,
       }])
       await db.insert('repair_services', menu.map(m => ({
         repair_id: repair.id,
         service_price_id: m.id,
-        price: m.price,  // frozen at open time
+        price: priceOf(m),  // frozen at open time
       })))
 
       const [full] = await db.select('repairs', `select=*,${EMBED}&id=eq.${repair.id}`)
