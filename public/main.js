@@ -1043,6 +1043,7 @@ function renderRentalRows() {
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
+          <button class="action-btn" onclick="openRemindModal('rental','${r.id}')" title="Remind me">⏰</button>
           <button class="action-btn" onclick="openManageRentalModal('${r.id}')">⚙ Manage</button>
           <button class="action-btn danger" onclick="deleteRental('${r.id}')">Delete</button>
         </div>
@@ -2125,6 +2126,7 @@ function renderDetailPanel(id) {
           <div class="detail-meta">${escHtml(c.phone || '—')} · ${escHtml(c.email || 'No email')} ${addr} · Since ${since}</div>
         </div>
         <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer">⏰</button>
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openEditModal('${c.id}')">✏️ Edit</button>
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="toggleDetail('${c.id}')">✕</button>
         </div>
@@ -2376,6 +2378,7 @@ async function renderWalletTab() {
       </select>
       <button class="btn btn-primary" onclick="(()=>{const id=document.getElementById('wtCustomer').value;
         if(!id){toast('Choose a customer first.','error');return;}openWalletModal(id)})()">💰 Record Money</button>
+      <button class="btn btn-outline" onclick="openCashupModal()" style="margin-left:auto;">🧾 Cash-up</button>
     </div>
 
     <div class="dash-cols">
@@ -2390,6 +2393,87 @@ async function renderWalletTab() {
         <div>${feedHtml}</div>
       </div>
     </div>`;
+}
+
+// ── End-of-day cash-up (the Z-report) ────────────────────────────────────
+
+const METHOD_LABELS = {
+  cash: '💵 Cash', card: '💳 Card', bank_transfer: '🏦 Bank transfer',
+  voucher: '🎟️ Voucher', wallet: '👛 Wallet', other: 'Other', unspecified: '— no method recorded',
+};
+
+async function openCashupModal() {
+  const today = localISO();
+  const data = await kcFetch(`/api/cashup?date=${today}`).then(r => r.json()).catch(() => null);
+  if (!data || !data.success) { toast(data?.error || 'Cash-up unavailable.', 'error'); return; }
+
+  const methodRows = Object.entries(data.methods)
+    .sort((a, b) => b[1] - a[1])
+    .map(([m, amt]) => `
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);">
+        <span>${METHOD_LABELS[m] || escHtml(m)}</span>
+        <strong style="font-feature-settings:'tnum';">£${amt.toFixed(2)}</strong>
+      </div>`).join('') ||
+    `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No money in yet today.</div>`;
+
+  showDynamicModal(`
+    <div class="modal-title">🧾 Cash-up — ${fmtDate(today)}</div>
+    <div style="margin-bottom:14px;">${methodRows}
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:7px 0;color:var(--muted);">
+        <span>Charged out today</span><span style="font-feature-settings:'tnum';">−£${Math.abs(data.totalOut).toFixed(2)}</span>
+      </div>
+    </div>
+    <div style="background:var(--bg-secondary);border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;">
+        <span>Expected cash in till</span><span>£${data.expectedCash.toFixed(2)}</span>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Counted cash (£)</label>
+        <input class="form-input" type="number" min="0" step="0.01" id="cuCounted"
+          value="${data.count ? data.count.counted.toFixed(2) : ''}" placeholder="0.00"
+          oninput="cuUpdateVariance(this, ${data.expectedCash})">
+        <div id="cuVariance" style="font-size:12px;margin-top:4px;font-weight:600;">
+          ${data.count ? (data.count.variance === 0 ? '✓ Till balances' : `${data.count.variance > 0 ? '+' : '−'}£${Math.abs(data.count.variance).toFixed(2)} ${data.count.variance > 0 ? 'over' : 'short'}`) : ''}</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="cuNotes" value="${escHtml(data.count?.notes || '')}" placeholder="e.g. £5 float top-up">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
+      <button class="btn btn-primary" onclick="saveCashup('${today}')">🧾 Save count</button>
+    </div>
+  `);
+}
+
+function cuUpdateVariance(inputEl, expected) {
+  const el = document.getElementById('cuVariance');
+  const v = parseFloat(inputEl.value);
+  if (!el) return;
+  if (!Number.isFinite(v)) { el.textContent = ''; return; }
+  const d = +(v - expected).toFixed(2);
+  el.textContent = d === 0 ? '✓ Till balances'
+    : `${d > 0 ? '+' : '−'}£${Math.abs(d).toFixed(2)} ${d > 0 ? 'over' : 'short'}`;
+  el.style.color = d === 0 ? 'var(--success)' : 'var(--danger)';
+}
+
+async function saveCashup(date) {
+  const counted = parseFloat(document.getElementById('cuCounted').value);
+  if (!Number.isFinite(counted) || counted < 0) { toast('Enter the counted amount.', 'error'); return; }
+  const res = await kcFetch('/api/cashup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ date, counted, notes: document.getElementById('cuNotes').value.trim() }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not save the count.', 'error'); return; }
+  closeDynamicModal();
+  const v = res.variance;
+  toast(v === 0 ? 'Till counted — balances exactly. ✓'
+    : `Till counted — ${v > 0 ? '+' : '−'}£${Math.abs(v).toFixed(2)} ${v > 0 ? 'over' : 'short'}.`,
+    v === 0 ? 'success' : 'warning');
 }
 
 async function addPayment(id) {
@@ -2797,6 +2881,7 @@ function renderSimRows() {
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
+          <button class="action-btn" onclick="openRemindModal('sim','${s.id}')" title="Remind me">⏰</button>
           <button class="action-btn" onclick="openManageSimModal('${s.id}')">⚙ Manage</button>
           <button class="action-btn danger" onclick="deleteSim('${s.id}')">Delete</button>
         </div>
@@ -3225,7 +3310,8 @@ function renderBookingsTab() {
         <td>£${(b.price || 0).toFixed(2)}</td>
         <td>£${(b.bookingFee || 0).toFixed(2)}</td>
         <td>${bookingStatusBadge(b.status)}</td>
-        <td>
+        <td style="white-space:nowrap;">
+          <button class="action-btn" onclick="openRemindModal('booking','${escHtml(b.id)}')" title="Remind me">⏰</button>
           <select class="form-input" style="width:110px;padding:5px 8px;font-size:12px;"
             onchange="changeBookingStatus('${escHtml(b.id)}', this.value)">
             ${BOOKING_STATUSES.map(s => `<option value="${s}" ${b.status === s ? 'selected' : ''}>${s}</option>`).join('')}
@@ -3461,7 +3547,8 @@ async function renderRepairsTab() {
         <td><strong>£${(r.total || 0).toFixed(2)}</strong></td>
         <td>${r.openedAt ? fmtDate(r.openedAt) : '—'}</td>
         <td>${repairStatusBadge(r.status)}</td>
-        <td>
+        <td style="white-space:nowrap;">
+          <button class="action-btn" onclick="openRemindModal('repair','${escHtml(r.id)}')" title="Remind me">⏰</button>
           <select class="form-input" style="width:120px;padding:5px 8px;font-size:12px;"
             onchange="changeRepairStatus('${escHtml(r.id)}', this.value)">
             ${REPAIR_STATUSES.map(s => `<option value="${s}" ${r.status === s ? 'selected' : ''}>${s}</option>`).join('')}
@@ -3785,6 +3872,79 @@ function taskPriorityBadge(p) {
     Low:    'background:rgba(148,163,184,0.15);color:var(--muted);',
   };
   return `<span class="badge" style="${styles[p] || styles.Normal}">${escHtml(p)}</span>`;
+}
+
+// ── Remind-me everywhere (the Slack pattern) ─────────────────────────────
+// A ⏰ on any row creates a task that sleeps (snoozed) until its date, then
+// surfaces in the Now lane pointing back at the thing.
+
+function remindContextFor(kind, id) {
+  switch (kind) {
+    case 'customer': { const c = customers.find(x => x.id === id);
+      return c && { label: `Follow up with ${c.firstName} ${c.lastName}`, customerId: c.id }; }
+    case 'rental': { const r = rentals.find(x => x.id === id);
+      return r && { label: `Check rental — ${r.customerName} (${r.phoneNumber})`, customerId: r.customerId }; }
+    case 'booking': { const b = bookings.find(x => x.id === id);
+      return b && { label: `Booking ${b.route} — ${b.customerName || b.passenger || ''}`.trim(), customerId: b.customerId }; }
+    case 'repair': { const r = repairs.find(x => x.id === id);
+      return r && { label: `Repair — ${r.customerName} (${r.device || 'device'})`, customerId: r.customerId }; }
+    case 'sim': { const s = sims.find(x => x.id === id);
+      return s && { label: `SIM — ${s.customerName} (${s.provider || 'plan'})`, customerId: s.customerId }; }
+    case 'vn': { const v = virtualNumbers.find(x => x.id === id);
+      return v && { label: `Virtual number ${v.number}${v.customerName ? ' — ' + v.customerName : ''}`, customerId: v.customerId }; }
+  }
+  return null;
+}
+
+function openRemindModal(kind, id) {
+  const ctx = remindContextFor(kind, id);
+  if (!ctx) return;
+  const tomorrow = parseLocalDate(localISO());
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  showDynamicModal(`
+    <div class="modal-title">⏰ Remind me</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">${escHtml(ctx.label)}</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">When</label>
+        <input class="form-input" type="date" id="rmDate" value="${localISO(tomorrow)}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Priority</label>
+        <select class="form-input" id="rmPriority">
+          <option value="Normal">📋 Next</option>
+          <option value="High">🔥 Now</option>
+          <option value="Low">🌙 Later</option>
+        </select>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Note (optional)</label>
+        <input class="form-input" id="rmNote" placeholder="What should you remember?">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveReminder('${escHtml(kind)}','${escHtml(String(id))}')">⏰ Set reminder</button>
+    </div>
+  `);
+}
+
+async function saveReminder(kind, id) {
+  const ctx = remindContextFor(kind, id);
+  if (!ctx) return;
+  const date = document.getElementById('rmDate').value;
+  if (!date) { toast('Pick a date.', 'error'); return; }
+  const res = await window.api.addTask({
+    title: `⏰ ${ctx.label}`,
+    dueDate: date,
+    priority: document.getElementById('rmPriority').value,
+    notes: document.getElementById('rmNote').value.trim(),
+    customerId: ctx.customerId || null,
+    snoozedUntil: date, // sleeps until its day, then lands in the Now lane
+  });
+  if (!res.success) { toast(res.error || 'Could not set the reminder.', 'error'); return; }
+  closeDynamicModal();
+  toast(`Reminder set for ${fmtDate(date)}.`, 'success');
 }
 
 // ── Priority suggestion engine ───────────────────────────────────────────
@@ -4220,6 +4380,8 @@ async function renderVirtualTab() {
           : 'background:rgba(148,163,184,0.15);color:var(--muted);'}">${escHtml(v.status)}</span></td>
         <td>${v.shortcutUrl ? `<a href="${escHtml(v.shortcutUrl)}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;">open ↗</a>` : '—'}</td>
         <td style="white-space:nowrap;">
+          <button class="action-btn" style="font-size:11px;padding:4px 10px;"
+            onclick="openRemindModal('vn','${escHtml(v.id)}')" title="Remind me">⏰</button>
           <button class="action-btn" style="font-size:11px;padding:4px 10px;"
             onclick="openVNBillingModal('${escHtml(v.id)}')">💷 Billing</button>
           <button class="action-btn" style="font-size:11px;padding:4px 10px;"
@@ -4664,6 +4826,8 @@ saveSettingKey   = guardReentry(saveSettingKey);
 saveNewVN        = guardReentry(saveNewVN);
 saveVNBilling    = guardReentry(saveVNBilling);
 saveNewServiceOrder = guardReentry(saveNewServiceOrder);
+saveReminder     = guardReentry(saveReminder);
+saveCashup       = guardReentry(saveCashup);
 deleteVN         = guardReentry(deleteVN);
 saveNewTeamMember = guardReentry(saveNewTeamMember);
 removeTeamMember  = guardReentry(removeTeamMember);

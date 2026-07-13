@@ -68,6 +68,8 @@ async function handler(req, res) {
         source: 'manual',
         priority: PRIORITY_TO_DB[b.priority] || 'medium',
         raw_text: b.notes || null,
+        // reminders sleep until their date (⏰ remind-me flow)
+        snoozed_until: /^\d{4}-\d{2}-\d{2}$/.test(String(b.snoozedUntil || '')) ? b.snoozedUntil : null,
       }])
       const [full] = await db.select('tasks', `select=*,${EMBED}&id=eq.${row.id}`)
       return res.json({ success: true, task: toApp(full) })

@@ -155,6 +155,40 @@ async function handler(req, res) {
     }
     counts.passportTasks = passportTasks
 
+    // ── 3b. Flight-day reminders (flies today or tomorrow) ──
+    const flying = await db.select(
+      'bookings',
+      `select=id,passenger,route,travel_date,departure_time,customer_id,customers(first_name,last_name)` +
+      `&travel_date=gte.${today}&travel_date=lte.${localDate(1)}&status=neq.Cancelled`
+    )
+    let flightTasks = 0
+    for (const b of flying) {
+      const name = b.passenger || (b.customers ? `${b.customers.first_name || ''} ${b.customers.last_name || ''}`.trim() : '?')
+      const dep = b.departure_time ? ` ${String(b.departure_time).slice(0, 5)}` : ''
+      await upsertOpenTask({
+        reference: `FLIGHT-${b.id}`,
+        title: `Flies ${b.travel_date === today ? 'TODAY' : 'tomorrow'} — ${name} (${b.route}${dep})`,
+        customerUuid: b.customer_id,
+        priority: 'high',
+        notes: 'Check phone + SIM handed over; passport & check-in sorted.',
+        dueDate: b.travel_date,
+      })
+      flightTasks++
+    }
+    counts.flightTasks = flightTasks
+
+    // Close FLIGHT tasks once the travel date has passed.
+    const openFlights = await db.select('tasks', 'select=id,reference&done=is.false&reference=like.FLIGHT-*')
+    let flightsClosed = 0
+    for (const t of openFlights) {
+      const bookingId = t.reference.slice('FLIGHT-'.length)
+      const row = await db.select('bookings', `select=travel_date,status&id=eq.${enc(bookingId)}`)
+      if (!row.length || row[0].status === 'Cancelled' || row[0].travel_date < today) {
+        flightsClosed += await closeOpenTask(t.reference)
+      }
+    }
+    counts.flightsClosed = flightsClosed
+
     // ── 4. SIM renewals due within 3 days ──
     const renewing = await db.select(
       'sims',
