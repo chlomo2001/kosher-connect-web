@@ -57,6 +57,7 @@ async function handler(req, res) {
         id: created.json.id,
         role,
         full_name: fullName || null,
+        email: String(email).trim().toLowerCase(),
       }])
       return res.json({ success: true, member: { id: created.json.id, email, fullName: fullName || '', role } })
     }

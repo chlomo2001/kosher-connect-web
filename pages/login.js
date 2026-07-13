@@ -1,13 +1,20 @@
 import { useState } from 'react'
 import Head from 'next/head'
 
-export default function Login() {
+export default function Login({ supabaseUrl, googleEnabled }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [ticket, setTicket] = useState('') // set → we're on the 2FA code step
   const [code, setCode] = useState('')
+
+  function google() {
+    if (!supabaseUrl) return
+    const redirect = `${window.location.origin}/auth/google`
+    window.location.href =
+      `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirect)}`
+  }
 
   async function submit(e) {
     e.preventDefault()
@@ -105,6 +112,17 @@ export default function Login() {
               <button className="btn btn-primary" type="submit" disabled={busy} style={{ width: '100%', padding: '10px 16px' }}>
                 {busy ? 'Signing in…' : 'Sign in'}
               </button>
+              {googleEnabled && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0', color: 'var(--muted)', fontSize: 12 }}>
+                    <div style={{ flex: 1, height: 1, background: 'var(--border)' }} /> or <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                  </div>
+                  <button type="button" className="btn btn-outline" onClick={google}
+                    style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 700 }}>G</span> Continue with Google
+                  </button>
+                </>
+              )}
             </>
           )}
         </form>
@@ -118,5 +136,12 @@ export async function getServerSideProps({ req }) {
   if ((req.headers.cookie || '').includes('kc_session=')) {
     return { redirect: { destination: '/', permanent: false } }
   }
-  return { props: {} }
+  return {
+    props: {
+      supabaseUrl: (process.env.SUPABASE_URL || '').replace(/\/$/, ''),
+      // Staff Google button appears when STAFF_GOOGLE=1 (after enabling the
+      // Google provider in Supabase and allow-listing /auth/google).
+      googleEnabled: process.env.STAFF_GOOGLE === '1',
+    },
+  }
 }
