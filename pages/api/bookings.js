@@ -46,6 +46,9 @@ function toAppFull(row) {
     status: row.status || 'Booked',
     passportOnFile: !!row.passport_on_file,
     passportExpiry: row.passport_expiry || '',
+    checkinDone: !!row.checkin_done,
+    checkinBy: row.checkin_by || '',
+    checkinDate: row.checkin_date || '',
     notes: row.notes || '',
     createdAt: row.created_at,
     passengers: (row.booking_passengers || [])
@@ -135,6 +138,9 @@ async function handler(req, res) {
           status: BOOKING_STATUSES.includes(b.status) ? b.status : 'Booked',
           passport_on_file: !!b.passportOnFile,
           passport_expiry: b.passportExpiry || null,
+          checkin_done: !!b.checkinDone,
+          checkin_by: b.checkinBy === 'us' || b.checkinBy === 'customer' ? b.checkinBy : null,
+          checkin_date: b.checkinDate || null,
           notes: b.notes || null,
         }]
       )
@@ -199,7 +205,7 @@ async function handler(req, res) {
       // Status/notes/passengers only — money fields are immutable once
       // charged; price corrections become explicit ledger adjustments
       // (step-3 wallet UI).
-      const { id, status, notes, passengers } = req.body || {}
+      const { id, status, notes, passengers, checkinDone, checkinBy, checkinDate } = req.body || {}
       if (!id) return res.status(400).json({ success: false, error: 'Booking id is required.' })
       const patch = {}
       if (status !== undefined) {
@@ -209,6 +215,9 @@ async function handler(req, res) {
         patch.status = status
       }
       if (notes !== undefined) patch.notes = notes || null
+      if (checkinDone !== undefined) patch.checkin_done = !!checkinDone
+      if (checkinBy !== undefined) patch.checkin_by = (checkinBy === 'us' || checkinBy === 'customer') ? checkinBy : null
+      if (checkinDate !== undefined) patch.checkin_date = checkinDate || null
       if (!Object.keys(patch).length && passengers === undefined) {
         return res.status(400).json({ success: false, error: 'Nothing to update.' })
       }

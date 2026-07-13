@@ -156,6 +156,10 @@ async function initApp() {
   bookings = await window.api.getAllBookings().catch(() => []);
   virtualNumbers = await window.api.getVirtualNumbers().catch(() => []);
   if (!Array.isArray(virtualNumbers)) virtualNumbers = [];
+  // Load repairs up-front too, so customer badges/services reflect them
+  // before the Repairs tab is ever opened (same as bookings/SIMs/VNs).
+  repairs = await window.api.getRepairs().catch(() => []);
+  if (!Array.isArray(repairs)) repairs = [];
   pricingConfig = await window.api.getSettings().catch(() => null);
   simMenu = await window.api.getServiceMenu('sim').catch(() => []);
   if (!Array.isArray(simMenu)) simMenu = [];
@@ -2299,9 +2303,17 @@ function renderTableRows() {
   tbody.innerHTML = filteredCustomers.map(c => {
     const selected = c.id === selectedId ? 'selected' : '';
     const activeCustomerRentals = rentals.filter(r => r.customerId === c.id && (r.status === 'active' || r.status === 'overdue'));
-    const otherServices = (c.services || []).filter(s => s.type !== 'rental');
+    // Real linked services (not just legacy embedded ones) — same fix as the
+    // detail panel so SIMs/VNs/repairs aren't invisible in the list either.
+    const cSimCount = sims.filter(s => s.customerId === c.id && s.status === 'active').length;
+    const cVnCount = virtualNumbers.filter(v => v.customerId === c.id && v.status === 'Active').length;
+    const cOpenRepairs = repairs.filter(r => r.customerId === c.id && r.status !== 'Collected' && r.status !== 'Cancelled').length;
+    const otherServices = (c.services || []).filter(s => s.type !== 'rental' && s.type !== 'sim' && s.type !== 'vn');
     const services = [
       ...activeCustomerRentals.map(r => `<span class="badge badge-rental">Rental ${r.country === 'USA' ? '🇺🇸' : r.country === 'UK' ? '🇬🇧' : r.country === 'Israel' ? '🇮🇱' : '🌍'}</span>`),
+      ...(cSimCount ? [`<span class="badge badge-sim">💳 SIM${cSimCount > 1 ? ' ×' + cSimCount : ''}</span>`] : []),
+      ...(cVnCount ? [`<span class="badge badge-vn">🔢 VN${cVnCount > 1 ? ' ×' + cVnCount : ''}</span>`] : []),
+      ...(cOpenRepairs ? [`<span class="badge badge-repair">🔧 Repair${cOpenRepairs > 1 ? ' ×' + cOpenRepairs : ''}</span>`] : []),
       ...otherServices.map(s => `<span class="badge badge-${s.type}">${escHtml(s.label)}</span>`),
     ].join('');
 
@@ -2393,7 +2405,8 @@ function renderDetailPanel(id) {
   // embedded c.services — those seeded plans were being missed entirely.
   const cSims = sims.filter(s => s.customerId === c.id && s.status === 'active');
   const cVNs = virtualNumbers.filter(v => v.customerId === c.id && v.status === 'Active');
-  const otherServices = (c.services || []).filter(s => s.type !== 'rental' && s.type !== 'sim' && s.type !== 'vn');
+  const cOpenRepairs = repairs.filter(r => r.customerId === c.id && r.status !== 'Collected' && r.status !== 'Cancelled');
+  const otherServices = (c.services || []).filter(s => s.type !== 'rental' && s.type !== 'sim' && s.type !== 'vn' && s.type !== 'repair');
   const activeVNs = cVNs.length;
 
   const dotColor = { rental: 'dot-blue', vn: 'dot-purple', sim: 'dot-gold', payment: 'dot-green' };
@@ -2414,6 +2427,7 @@ function renderDetailPanel(id) {
     ...cActiveRentals.map(r => ({ type: 'rental', label: `Rental ${r.country === 'USA' ? '🇺🇸' : r.country === 'UK' ? '🇬🇧' : r.country === 'Israel' ? '🇮🇱' : '🌍'}` })),
     ...cSims.map(s => ({ type: 'sim', label: `SIM · ${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}` })),
     ...cVNs.map(v => ({ type: 'vn', label: `VN ${v.number || ''}` })),
+    ...cOpenRepairs.map(r => ({ type: 'repair', label: `🔧 Repair — ${r.status}` })),
     ...otherServices,
   ];
   const servicesHTML = allActiveServices.length === 0
@@ -3660,7 +3674,7 @@ function renderBookingsTab() {
   const totalCharged = active.reduce((s, b) => s + (b.price || 0) + (b.bookingFee || 0), 0);
 
   const rows = bookings.length === 0
-    ? `<tr><td colspan="8"><div class="empty-state"><div class="emoji">✈️</div><p>No bookings yet.</p><small>Click "New Booking" to add the first one.</small></div></td></tr>`
+    ? `<tr><td colspan="9"><div class="empty-state"><div class="emoji">✈️</div><p>No bookings yet.</p><small>Click "New Booking" to add the first one.</small></div></td></tr>`
     : bookings.map(b => `
       <tr>
         <td><div class="customer-name">${escHtml(b.customerName || '—')}</div>
@@ -3672,7 +3686,9 @@ function renderBookingsTab() {
         <td>£${(b.price || 0).toFixed(2)}</td>
         <td>£${(b.bookingFee || 0).toFixed(2)}</td>
         <td>${bookingStatusBadge(b.status)}</td>
+        <td style="cursor:pointer;" onclick="openCheckinModal('${escHtml(b.id)}')" title="Set check-in">${checkinChip(b)}</td>
         <td style="white-space:nowrap;">
+          <button class="action-btn" onclick="openCheckinModal('${escHtml(b.id)}')" title="Online check-in">🛫</button>
           <button class="action-btn" onclick="openPassengersModal('${escHtml(b.id)}')" title="Passengers (DOB, passport)">👥</button>
           <button class="action-btn" onclick="openRemindModal('booking','${escHtml(b.id)}')" title="Remind me">⏰</button>
           <select class="form-input" style="width:110px;padding:5px 8px;font-size:12px;"
@@ -3696,7 +3712,7 @@ function renderBookingsTab() {
       <table>
         <thead><tr>
           <th>Customer</th><th>Route</th><th>Airline / Ref</th><th>Travel</th>
-          <th>Price</th><th>Fee</th><th>Status</th><th></th>
+          <th>Price</th><th>Fee</th><th>Status</th><th>Check-in</th><th></th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -3876,6 +3892,23 @@ async function openNewBookingModal(preselectCustomerId = null) {
         </div>
       </div>
       <div class="form-group form-full">
+        <label class="form-label">Online check-in</label>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select class="form-input" id="bkCheckinBy" style="width:180px;" onchange="bkCheckinToggle()">
+            <option value="customer">Customer does check-in</option>
+            <option value="us">We do check-in</option>
+          </select>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+            <input type="checkbox" id="bkCheckinDone" style="width:15px;height:15px;accent-color:var(--accent);"> already done
+          </label>
+          <span id="bkCheckinDateWrap" style="display:none;align-items:center;gap:6px;">
+            <span style="font-size:12px;color:var(--muted);">do it on</span>
+            <input class="form-input" type="date" id="bkCheckinDate" style="width:150px;">
+          </span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">"We do check-in" + a date raises a task reminder for that day.</div>
+      </div>
+      <div class="form-group form-full">
         <label class="form-label">Notes</label>
         <input class="form-input" id="bkNotes">
       </div>
@@ -3910,6 +3943,19 @@ function bkCalcFee() {
     `${n} passenger${n === 1 ? '' : 's'}: ${parts.join(' + ')} = £${fee.toFixed(2)}`;
 }
 
+// Show the check-in date only when WE do the check-in; default it to the day
+// before travel (online check-in typically opens ~24h out).
+function bkCheckinToggle() {
+  const us = document.getElementById('bkCheckinBy')?.value === 'us';
+  const wrap = document.getElementById('bkCheckinDateWrap');
+  if (wrap) wrap.style.display = us ? 'inline-flex' : 'none';
+  const dateEl = document.getElementById('bkCheckinDate');
+  if (us && dateEl && !dateEl.value) {
+    const travel = document.getElementById('bkTravelDate')?.value;
+    if (travel) { const d = parseLocalDate(travel); d.setDate(d.getDate() - 1); dateEl.value = localISO(d); }
+  }
+}
+
 async function saveNewBooking() {
   const paxList = bkPassengers.filter(p => (p.fullName || '').trim());
   const payload = {
@@ -3928,6 +3974,10 @@ async function saveNewBooking() {
     passportExpiry:   document.getElementById('bkPassport').checked
                         ? document.getElementById('bkPassportExpiry').value : '',
     payment:          document.getElementById('bkPay').value,
+    checkinBy:        document.getElementById('bkCheckinBy').value,
+    checkinDone:      document.getElementById('bkCheckinDone').checked,
+    checkinDate:      document.getElementById('bkCheckinBy').value === 'us'
+                        ? document.getElementById('bkCheckinDate').value : '',
     notes:            document.getElementById('bkNotes').value.trim(),
   };
   if (!payload.customerId) { toast('Select a customer.', 'error'); return; }
@@ -3939,6 +3989,7 @@ async function saveNewBooking() {
   if (!res.success) { toast(res.error || 'Could not save the booking.', 'error'); return; }
 
   bookings.unshift(res.booking);
+  await maybeCheckinTask(res.booking);
   closeDynamicModal();
   let chargeMsg = '';
   if (res.chargePosted) {
@@ -3948,6 +3999,78 @@ async function saveNewBooking() {
   }
   toast(`Booking saved!${chargeMsg}`, 'success');
   renderBookingsTab();
+}
+
+// When WE own an unfinished check-in with a date, raise a High task on that
+// day so it isn't forgotten. Idempotent-ish: keyed note so re-saves don't
+// spam (best-effort — the tasks API dedups on nothing, so we only call this
+// on explicit save/toggle).
+async function maybeCheckinTask(b) {
+  if (!b || b.checkinBy !== 'us' || b.checkinDone || !b.checkinDate) return;
+  await window.api.addTask({
+    title: `🛫 Check in ${b.customerName || b.passenger || ''} — ${b.route}`.trim(),
+    dueDate: b.checkinDate,
+    priority: 'High',
+    notes: `Online check-in for flight ${b.route}${b.airline ? ' (' + b.airline + ')' : ''} on ${fmtDate(b.travelDate)}. Booking ref ${b.bookingReference || '—'}.`,
+    customerId: b.customerId || null,
+    snoozedUntil: b.checkinDate,
+  }).catch(() => null);
+}
+
+function openCheckinModal(bookingId) {
+  const b = bookings.find(x => x.id === bookingId);
+  if (!b) return;
+  showDynamicModal(`
+    <div class="modal-title">🛫 Check-in — ${escHtml(b.route)} ${b.travelDate ? fmtDate(b.travelDate) : ''}</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Who checks in?</label>
+        <select class="form-input" id="ciBy" onchange="document.getElementById('ciDateWrap').style.display=this.value==='us'?'block':'none'">
+          <option value="customer" ${b.checkinBy !== 'us' ? 'selected' : ''}>Customer does it</option>
+          <option value="us" ${b.checkinBy === 'us' ? 'selected' : ''}>We do it</option>
+        </select>
+      </div>
+      <div class="form-group" id="ciDateWrap" style="display:${b.checkinBy === 'us' ? 'block' : 'none'};">
+        <label class="form-label">Do it on</label>
+        <input class="form-input" type="date" id="ciDate" value="${escHtml(b.checkinDate || '')}">
+      </div>
+      <div class="form-group form-full">
+        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;">
+          <input type="checkbox" id="ciDone" ${b.checkinDone ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--accent);">
+          ✅ Check-in is done
+        </label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCheckin('${escHtml(bookingId)}')">Save</button>
+    </div>
+  `);
+}
+
+async function saveCheckin(bookingId) {
+  const by = document.getElementById('ciBy').value;
+  const res = await window.api.updateBooking({
+    id: bookingId,
+    checkinBy: by,
+    checkinDone: document.getElementById('ciDone').checked,
+    checkinDate: by === 'us' ? document.getElementById('ciDate').value : '',
+  });
+  if (!res.success) { toast(res.error || 'Could not save check-in.', 'error'); return; }
+  const idx = bookings.findIndex(x => x.id === bookingId);
+  if (idx !== -1) bookings[idx] = res.booking;
+  await maybeCheckinTask(res.booking);
+  closeDynamicModal();
+  toast('Check-in updated.', 'success');
+  renderBookingsTab();
+}
+
+// Small status chip for a booking's check-in state.
+function checkinChip(b) {
+  if (b.checkinDone) return `<span class="badge badge-active" title="Check-in done">✅ In</span>`;
+  if (b.checkinBy === 'us') return `<span class="badge badge-rental" title="We check in${b.checkinDate ? ' on ' + fmtDate(b.checkinDate) : ''}">🛫 us${b.checkinDate ? ' ' + fmtDate(b.checkinDate).slice(0, 5) : ''}</span>`;
+  if (b.checkinBy === 'customer') return `<span class="badge" style="background:rgba(148,163,184,0.15);color:var(--muted);" title="Customer checks in">👤 cust</span>`;
+  return `<span class="badge" style="background:rgba(234,179,8,0.15);color:var(--warning);" title="Check-in not set">⚠️ ?</span>`;
 }
 
 async function changeBookingStatus(id, status) {
@@ -6130,6 +6253,7 @@ saveCustomer     = guardReentry(saveCustomer);
 saveWalletEntry  = guardReentry(saveWalletEntry);
 saveNewBooking   = guardReentry(saveNewBooking);
 savePassengers   = guardReentry(savePassengers);
+saveCheckin      = guardReentry(saveCheckin);
 saveNewRepair    = guardReentry(saveNewRepair);
 changeRepairStatus = guardReentry(changeRepairStatus);
 saveNewTask      = guardReentry(saveNewTask);
