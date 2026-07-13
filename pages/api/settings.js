@@ -59,6 +59,8 @@ async function handler(req, res) {
           minCharge: Number(r.min_charge),
           cap: Number(r.cap),
           capPeriodDays: r.cap_period_days,
+          vnWeekly: r.vn_weekly === null ? null : Number(r.vn_weekly),
+          vnPer30Days: r.vn_per_30_days === null ? null : Number(r.vn_per_30_days),
           active: r.active,
         })),
         damageRates: damage.map(d => ({
@@ -84,11 +86,14 @@ async function handler(req, res) {
 
       if (table === 'rental_rates') {
         const patch = {}
-        for (const [field, type] of [['ratePerDay', 'money'], ['minCharge', 'money'], ['cap', 'money'], ['capPeriodDays', 'days']]) {
+        for (const [field, type] of [['ratePerDay', 'money'], ['minCharge', 'money'], ['cap', 'money'], ['capPeriodDays', 'days'], ['vnWeekly', 'money'], ['vnPer30Days', 'money']]) {
           if (values?.[field] === undefined) continue
           const v = validateTyped(type, values[field])
           if (!v.ok) return res.status(400).json({ success: false, error: `${field}: ${v.error}` })
-          patch[{ ratePerDay: 'rate_per_day', minCharge: 'min_charge', cap: 'cap', capPeriodDays: 'cap_period_days' }[field]] = v.value
+          patch[{
+            ratePerDay: 'rate_per_day', minCharge: 'min_charge', cap: 'cap',
+            capPeriodDays: 'cap_period_days', vnWeekly: 'vn_weekly', vnPer30Days: 'vn_per_30_days',
+          }[field]] = v.value
         }
         if (!Object.keys(patch).length) return res.status(400).json({ success: false, error: 'Nothing to update.' })
         patch.updated_at = new Date().toISOString()

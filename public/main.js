@@ -591,13 +591,16 @@ function isShabbatOrHoliday(date, country) {
 // values below are only the offline fallback and MUST mirror the seed.
 let pricingConfig = null;
 
+// Values follow the customer price list (30 Jun 2026): "Monthly" = the cap,
+// and the virtual-number add-on is per-country (£5/£10 USA+Canada,
+// £7/£15 Israel+UK).
 const FALLBACK_RATES = {
-  'USA':       { ratePerDay: 3,   minCharge: 20, cap: 45, capPeriodDays: 30 },
-  'UK-UKmins': { ratePerDay: 2,   minCharge: 15, cap: 40, capPeriodDays: 30 },
-  'UK-Intl':   { ratePerDay: 2.5, minCharge: 20, cap: 45, capPeriodDays: 30 },
-  'Israel':    { ratePerDay: 3,   minCharge: 20, cap: 50, capPeriodDays: 30 },
-  'Canada':    { ratePerDay: 3,   minCharge: 25, cap: 45, capPeriodDays: 30 },
-  'EU':        { ratePerDay: 3,   minCharge: 20, cap: 45, capPeriodDays: 30 },
+  'USA':       { ratePerDay: 3, minCharge: 20, cap: 50, capPeriodDays: 30, vnWeekly: 5, vnPer30Days: 10 },
+  'UK-UKmins': { ratePerDay: 2, minCharge: 20, cap: 35, capPeriodDays: 30, vnWeekly: 7, vnPer30Days: 15 },
+  'UK-Intl':   { ratePerDay: 2, minCharge: 25, cap: 40, capPeriodDays: 30, vnWeekly: 7, vnPer30Days: 15 },
+  'Israel':    { ratePerDay: 3, minCharge: 20, cap: 50, capPeriodDays: 30, vnWeekly: 7, vnPer30Days: 15 },
+  'Canada':    { ratePerDay: 3, minCharge: 25, cap: 50, capPeriodDays: 30, vnWeekly: 5, vnPer30Days: 10 },
+  'EU':        { ratePerDay: 3, minCharge: 20, cap: 45, capPeriodDays: 30, vnWeekly: 5, vnPer30Days: 10 },
 };
 
 // App country + phone plan → priced country code (same mapping as the
@@ -1181,17 +1184,20 @@ function updateRentalPhoneInfo() {
   }
 }
 
-// BUSINESS_RULES §1.3: weekly virtual number is £5 PER WEEK (minimum 1 week);
-// a 30-day rental is £10 flat. Weeks are counted over the rental's total
-// calendar days, rounded up.
-function calcVNPrice(vnSub, fromDate, toDate) {
-  if (vnSub === 'monthly') return settingNum('vn_per_30_days', 10);
+// BUSINESS_RULES §1.3: weekly virtual number is PER WEEK (minimum 1 week)
+// and PER COUNTRY — £5/wk £10/30d for USA & Canada, £7/wk £15/30d for
+// Israel & UK (customer price list, 30 Jun 2026). Weeks are counted over the
+// rental's total calendar days, rounded up. Global settings keys remain the
+// fallback when a country has no override.
+function calcVNPrice(vnSub, fromDate, toDate, country = 'USA', ukPlan = 'standard') {
+  const rate = rateFor(country, ukPlan);
+  if (vnSub === 'monthly') return rate.vnPer30Days ?? settingNum('vn_per_30_days', 10);
   let weeks = 1;
   if (fromDate && toDate && toDate > fromDate) {
     const days = Math.round((parseLocalDate(toDate) - parseLocalDate(fromDate)) / 86400000) + 1;
     weeks = Math.max(1, Math.ceil(days / 7));
   }
-  return settingNum('vn_weekly', 5) * weeks;
+  return (rate.vnWeekly ?? settingNum('vn_weekly', 5)) * weeks;
 }
 
 function updateVNPrice() {
@@ -1200,7 +1206,9 @@ function updateVNPrice() {
   const vnSub = document.getElementById('rVNSub')?.value || 'weekly';
   const from  = document.getElementById('rFrom')?.value;
   const to    = document.getElementById('rTo')?.value;
-  priceEl.value = calcVNPrice(vnSub, from, to);
+  const selPhone = document.getElementById('rPhone');
+  const phone = selPhone ? phones.find(p => p.id === selPhone.value) : null;
+  priceEl.value = calcVNPrice(vnSub, from, to, phone?.country || 'USA', phone?.ukPlan || 'standard');
 }
 
 function updateRentalCalc() {
@@ -3890,6 +3898,8 @@ async function renderSettingsTab() {
       <td>${num(`rr_min_${r.countryCode}`, r.minCharge)}</td>
       <td>${num(`rr_cap_${r.countryCode}`, r.cap)}</td>
       <td>${num(`rr_period_${r.countryCode}`, r.capPeriodDays, '1')}</td>
+      <td>${num(`rr_vnw_${r.countryCode}`, r.vnWeekly ?? '')}</td>
+      <td>${num(`rr_vnm_${r.countryCode}`, r.vnPer30Days ?? '')}</td>
       <td><button class="btn btn-outline" style="font-size:12px;padding:5px 12px;"
         onclick="saveRentalRate('${escHtml(r.countryCode)}')">💾 Save</button></td>
     </tr>`).join('');
@@ -3925,7 +3935,7 @@ async function renderSettingsTab() {
     </div>
     <div class="table-card" style="margin-bottom:16px;">
       <div class="section-divider" style="margin:12px 14px 4px;">📱 Rental Rates</div>
-      <table><thead><tr><th>Country</th><th>£/day</th><th>Min £</th><th>Cap £</th><th>Cap period (days)</th><th></th></tr></thead>
+      <table><thead><tr><th>Country</th><th>£/day</th><th>Min £</th><th>Cap £</th><th>Cap period (days)</th><th>VN £/wk</th><th>VN £/30d</th><th></th></tr></thead>
       <tbody>${rateRows}</tbody></table>
     </div>
     <div class="table-card" style="margin-bottom:16px;">
@@ -3950,14 +3960,18 @@ async function applySettingUpdate(payload) {
 }
 
 async function saveRentalRate(code) {
+  const raw = {
+    ratePerDay:    document.getElementById(`rr_rate_${code}`).value,
+    minCharge:     document.getElementById(`rr_min_${code}`).value,
+    cap:           document.getElementById(`rr_cap_${code}`).value,
+    capPeriodDays: document.getElementById(`rr_period_${code}`).value,
+    vnWeekly:      document.getElementById(`rr_vnw_${code}`).value,
+    vnPer30Days:   document.getElementById(`rr_vnm_${code}`).value,
+  };
+  // An emptied field means "leave as is" — never send '' (it would save as 0).
   await applySettingUpdate({
     table: 'rental_rates', key: code,
-    values: {
-      ratePerDay:    document.getElementById(`rr_rate_${code}`).value,
-      minCharge:     document.getElementById(`rr_min_${code}`).value,
-      cap:           document.getElementById(`rr_cap_${code}`).value,
-      capPeriodDays: document.getElementById(`rr_period_${code}`).value,
-    },
+    values: Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== '')),
   });
 }
 

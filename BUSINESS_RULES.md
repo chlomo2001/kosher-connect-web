@@ -10,13 +10,17 @@ Mechl: when in doubt, check here before asking. Eliezer: keep this updated._
 
 ### 1.1 Daily Rates by Phone Type
 
+Source of truth: the customer price list (30 Jun 2026), confirmed 12 Jul 2026.
+"Monthly" on the customer list = the 30-day cap.
+
 | Phone Type | Rate/Day | Min Charge | Max Charge (30 days) |
 |---|---|---|---|
-| USA | £3 | £20 | £45 |
-| UK Standard (UK minutes only) | £2 | £15 | £40 |
-| UK Unlimited (international minutes) | £2.50 | £20 | £45 |
+| USA | £3 | £20 | £50 |
+| UK Standard (UK minutes only) | £2 | £20 | £35 |
+| UK Unlimited (international minutes) | £2 | £25 | £40 |
 | Israel | £3 | £20 | £50 |
-| Canada | £3 | £25 | £45 |
+| Canada | £3 | £25 | £50 |
+| EU (internal grouping, not on the list) | £3 | £20 | £45 |
 
 ### 1.2 Chargeable Days
 
@@ -54,8 +58,12 @@ Israel calendar in pricing.
 
 ### 1.3 Virtual Number Add-On
 
-- £5 per week (minimum 1 week charge)
-- £10 flat for a 30-day rental
+Per-country (customer price list, 30 Jun 2026), minimum 1 week:
+
+| Rental country | Per week | Per 30 days |
+|---|---|---|
+| USA, Canada, EU | £5 | £10 |
+| Israel, UK | £7 | £15 |
 
 ### 1.4 Late Return Fee
 
@@ -88,6 +96,20 @@ All SIM fees are driven by Settings keys (editable in the Settings tab):
 | Service | £5 | `sim_service_fee` |
 | Replacement (after free allowance of 2) | £10 | `sim_replacement_fee` |
 | Monthly DD (through-me plans) | provider cost + max(10%, £2) | `collect_later_late_pct`, `collect_later_late_min` |
+
+After-sale service is **free for USA and Canada SIMs** (customer price list) —
+zero the amount in the charge modal for those. UK SIMs pay the £5.
+
+### 2.2 Not yet modeled in the app (from the customer price list)
+
+- Multi-item discounts: 3rd rental phone onwards 15% off; 3+ SIM plans 10% off
+- Repair "Purchased at KC" price tier (~£5–15 less per job) + 30-day warranty
+  terms (charging port excluded for QIN/FIG); 24-working-hour turnaround
+- Ticket per-passenger tiers (each passenger up to 5 / 6+ rates)
+- Online-service second-application discounts (e.g. ESTA £45, passport £20)
+- Products: USA phone without SIM (£2/day, min £15, £30/mo), SIM-only
+  monthlies (USA £35, UK local £15, UK intl £25), TomTom update (£25, £10
+  after-sale), standalone virtual-number bundle matrix
 
 ### 2.1 Virtual Number clarification
 
