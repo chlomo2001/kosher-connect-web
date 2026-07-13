@@ -2479,7 +2479,7 @@ async function loadWalletSection(customerId) {
       <span class="badge" style="font-size:14px;padding:7px 16px;background:${bal < 0 ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)'};color:${balColor};">
         Balance: ${balLabel}</span>
       <button class="btn btn-primary" style="font-size:12px;padding:6px 14px;"
-        onclick="openWalletModal('${escHtml(customerId)}')">💰 Record Money</button>
+        onclick="openWalletModal('${escHtml(customerId)}')">💰 Record payment / credit</button>
       ${data.entries.length > 8 ? `<span style="color:var(--muted);font-size:11px;">showing 8 of ${data.entries.length}</span>` : ''}
     </div>
     <div class="history-list">${entriesHtml}</div>`;
@@ -2488,7 +2488,7 @@ async function loadWalletSection(customerId) {
 function openWalletModal(customerId) {
   const c = customers.find(x => x.id === customerId);
   showDynamicModal(`
-    <div class="modal-title">💰 Record Money — ${c ? escHtml(c.firstName) + ' ' + escHtml(c.lastName) : ''}</div>
+    <div class="modal-title">💰 Record payment / credit — ${c ? escHtml(c.firstName) + ' ' + escHtml(c.lastName) : ''}</div>
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">Type</label>
@@ -2628,7 +2628,7 @@ async function renderWalletTab() {
         <option value="">Choose a customer…</option>${customerOptions}
       </select>
       <button class="btn btn-primary" onclick="(()=>{const id=document.getElementById('wtCustomer').value;
-        if(!id){toast('Choose a customer first.','error');return;}openWalletModal(id)})()">💰 Record Money</button>
+        if(!id){toast('Choose a customer first.','error');return;}openWalletModal(id)})()">💰 Record payment / credit</button>
       <button class="btn btn-outline" onclick="openCashupModal()" style="margin-left:auto;">🧾 Cash-up</button>
     </div>
 
@@ -3565,7 +3565,7 @@ function renderBookingsTab() {
     : bookings.map(b => `
       <tr>
         <td><div class="customer-name">${escHtml(b.customerName || '—')}</div>
-            <div class="customer-email">${escHtml(b.passenger || '')}</div></td>
+            <div class="customer-email">${escHtml(b.passenger || '')}${(b.passengers || []).length ? ` · 👥 ${b.passengers.length}` : ''}</div></td>
         <td>${escHtml(b.route)}</td>
         <td>${escHtml(b.airline || '—')}<div class="customer-email">${escHtml(b.bookingReference || '')}</div></td>
         <td>${b.travelDate ? fmtDate(b.travelDate) : '—'}
@@ -3574,6 +3574,7 @@ function renderBookingsTab() {
         <td>£${(b.bookingFee || 0).toFixed(2)}</td>
         <td>${bookingStatusBadge(b.status)}</td>
         <td style="white-space:nowrap;">
+          <button class="action-btn" onclick="openPassengersModal('${escHtml(b.id)}')" title="Passengers (DOB, passport)">👥</button>
           <button class="action-btn" onclick="openRemindModal('booking','${escHtml(b.id)}')" title="Remind me">⏰</button>
           <select class="form-input" style="width:110px;padding:5px 8px;font-size:12px;"
             onchange="changeBookingStatus('${escHtml(b.id)}', this.value)">
@@ -3605,7 +3606,79 @@ function renderBookingsTab() {
 
 let ticketsMenu = [];
 
+// ── Passengers editor (shared by New Booking + the 👥 modal) ──
+// Working copy lives in bkPassengers while a modal is open; inputs write
+// straight into it so re-renders (add/remove row) never lose typing.
+// Passport fields are owner-only on reads: helpers can type them in, but
+// existing values come back blank for them (blank = unchanged on save).
+let bkPassengers = [];
+
+function paxEditorHtml() {
+  const head = `
+    <div style="display:flex;gap:6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">
+      <span style="flex:2;min-width:140px;">Name (as on passport)</span>
+      <span style="width:138px;">Date of birth</span>
+      <span style="flex:1;min-width:110px;">Passport №</span>
+      <span style="width:138px;">Passport expiry</span>
+      <span style="width:30px;"></span>
+    </div>`;
+  const rows = bkPassengers.map((p, i) => `
+    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
+      <input class="form-input" placeholder="Full name" value="${escHtml(p.fullName || '')}"
+        oninput="bkPassengers[${i}].fullName=this.value" style="flex:2;min-width:140px;">
+      <input class="form-input" type="date" title="Date of birth" value="${escHtml(p.dob || '')}"
+        onchange="bkPassengers[${i}].dob=this.value" style="width:138px;">
+      <input class="form-input" placeholder="${currentStaff && currentStaff.role !== 'owner' ? 'hidden (owner-only)' : 'Passport №'}"
+        value="${escHtml(p.passportNumber || '')}"
+        oninput="bkPassengers[${i}].passportNumber=this.value" style="flex:1;min-width:110px;">
+      <input class="form-input" type="date" title="Passport expiry" value="${escHtml(p.passportExpiry || '')}"
+        onchange="bkPassengers[${i}].passportExpiry=this.value" style="width:138px;">
+      <button type="button" class="action-btn" onclick="bkRemovePax(${i})" title="Remove passenger" style="width:30px;">✕</button>
+    </div>`).join('');
+  return head + rows;
+}
+
+function bkRenderPax() {
+  const el = document.getElementById('bkPaxEditor');
+  if (el) el.innerHTML = paxEditorHtml();
+  // Keep the fee calculator's passenger count in step with the rows.
+  const pax = document.getElementById('bkPax');
+  if (pax) { pax.value = Math.max(1, bkPassengers.length); bkCalcFee(); }
+}
+
+function bkAddPax() { bkPassengers.push({}); bkRenderPax(); }
+function bkRemovePax(i) { bkPassengers.splice(i, 1); if (!bkPassengers.length) bkPassengers.push({}); bkRenderPax(); }
+
+// Post-creation editor: the 👥 button on each booking row.
+function openPassengersModal(bookingId) {
+  const b = bookings.find(x => x.id === bookingId);
+  if (!b) return;
+  bkPassengers = (b.passengers || []).map(p => ({ ...p }));
+  if (!bkPassengers.length) bkPassengers.push({});
+  showDynamicModal(`
+    <div class="modal-title">👥 Passengers — ${escHtml(b.route)} ${b.travelDate ? fmtDate(b.travelDate) : ''}</div>
+    <div id="bkPaxEditor">${paxEditorHtml()}</div>
+    <button type="button" class="btn btn-outline" onclick="bkAddPax()"
+      style="padding:5px 12px;font-size:12px;margin-top:2px;">+ Add passenger</button>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="savePassengers('${escHtml(bookingId)}')">Save passengers</button>
+    </div>
+  `);
+}
+
+async function savePassengers(bookingId) {
+  const res = await window.api.updateBooking({ id: bookingId, passengers: bkPassengers });
+  if (!res.success) { toast(res.error || 'Could not save passengers.', 'error'); return; }
+  const idx = bookings.findIndex(x => x.id === bookingId);
+  if (idx !== -1) bookings[idx] = res.booking;
+  closeDynamicModal();
+  toast('Passengers saved.', 'success');
+  renderBookingsTab();
+}
+
 async function openNewBookingModal() {
+  bkPassengers = [{}];
   if (!ticketsMenu.length) {
     ticketsMenu = await window.api.getServiceMenu('tickets').catch(() => []);
     if (!Array.isArray(ticketsMenu)) ticketsMenu = [];
@@ -3627,9 +3700,11 @@ async function openNewBookingModal() {
           <option value="">Select customer…</option>${customerOptions}
         </select>
       </div>
-      <div class="form-group">
-        <label class="form-label">Passenger</label>
-        <input class="form-input" id="bkPassenger" placeholder="Name as on ticket">
+      <div class="form-group form-full">
+        <label class="form-label">Passengers <span style="color:var(--muted);font-weight:400;">(name · date of birth · passport)</span></label>
+        <div id="bkPaxEditor">${paxEditorHtml()}</div>
+        <button type="button" class="btn btn-outline" onclick="bkAddPax()"
+          style="padding:5px 12px;font-size:12px;margin-top:2px;">+ Add passenger</button>
       </div>
       <div class="form-group">
         <label class="form-label">Route *</label>
@@ -3724,9 +3799,11 @@ function bkCalcFee() {
 }
 
 async function saveNewBooking() {
+  const paxList = bkPassengers.filter(p => (p.fullName || '').trim());
   const payload = {
     customerId:       document.getElementById('bkCustomer').value,
-    passenger:        document.getElementById('bkPassenger').value.trim(),
+    passenger:        paxList.map(p => p.fullName.trim()).join(', '),
+    passengers:       paxList,
     route:            document.getElementById('bkRoute').value.trim(),
     airline:          document.getElementById('bkAirline').value.trim(),
     bookingReference: document.getElementById('bkRef').value.trim(),
@@ -4281,7 +4358,7 @@ async function renderShopTab() {
     </div>
     ${lowBanner}
     <div style="display:flex;gap:10px;margin-bottom:14px;">
-      <button class="btn btn-primary" onclick="openSaleModal()">💷 Sell</button>
+      <button class="btn btn-primary" onclick="openSaleModal()">🧾 Open Till</button>
       <button class="btn btn-outline" onclick="openStockItemModal()">➕ Add Item</button>
     </div>
     <div class="dash-cols">
@@ -4314,6 +4391,11 @@ function openStockItemModal(itemId = null) {
       <div class="form-group">
         <label class="form-label">Code</label>
         <input class="form-input" id="siCode" value="${escHtml(i?.code || '')}" placeholder="e.g. AC-01">
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Barcode <span style="color:var(--muted);font-weight:400;">(click, then scan the packaging)</span></label>
+        <input class="form-input" id="siBarcode" value="${escHtml(i?.barcode || '')}" placeholder="EAN / UPC"
+          inputmode="numeric" autocomplete="off">
       </div>
       <div class="form-group">
         <label class="form-label">Brand / company</label>
@@ -4355,6 +4437,7 @@ async function saveStockItem(itemId) {
     op: 'item',
     category: document.getElementById('siCategory').value,
     code: document.getElementById('siCode').value.trim(),
+    barcode: document.getElementById('siBarcode').value.trim(),
     company: document.getElementById('siCompany').value.trim(),
     model: document.getElementById('siModel').value.trim(),
     netPrice: document.getElementById('siNet').value === '' ? undefined : parseFloat(document.getElementById('siNet').value),
@@ -4389,63 +4472,150 @@ async function retireStockItem(itemId) {
   renderShopTab();
 }
 
-// ── POS (shopfloor till): tap tiles → basket → one charge ──
+// ── POS (shopfloor till): full-screen till — scan/tap → receipt → tender ──
 let posBasket = []; // [{itemId, qty, imei}]
+let posCat = 'all';
+let posMethod = 'cash';
+let posLastSale = null; // { total, change } — shown as a banner until the next action
 
-function openSaleModal(preselectItemId = null) {
+function openSaleModal(preselectItemId = null) { // name kept: every Sell button calls it
   const sellable = shopItems.filter(i => i.active && i.quantity > 0);
   if (!sellable.length) { toast('Nothing in stock to sell — add quantities first.', 'warning'); return; }
   posBasket = preselectItemId ? [{ itemId: preselectItemId, qty: 1, imei: '' }] : [];
+  posCat = 'all';
+  posMethod = 'cash';
+  posLastSale = null;
+  renderPosView();
+}
+
+const POS_CAT_ICONS = { phone: '📱', accessory: '🔌', sim: '📶', other: '📦' };
+
+function renderPosView() {
+  const content = document.getElementById('mainContent');
   const customerOptions = customers.map(c =>
     `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)}</option>`).join('');
-  showDynamicModal(`
-    <div class="modal-title">🧾 Till</div>
-    <input class="form-input" id="posScan" placeholder="🔍 Scan a barcode or type to find an item…"
-      autocomplete="off" style="margin-bottom:10px;" oninput="posRenderTiles()"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();posScanEnter();}">
-    <div id="posTiles" class="pos-tiles"></div>
-    <div class="section-divider" style="margin:12px 0 6px;">Basket</div>
-    <div id="posBasket"></div>
-    <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;">
-      <select class="form-input" id="posCustomer" style="flex:1;min-width:170px;min-height:0;padding:8px 12px;">
-        <option value="walkin">🚶 Walk-in</option>
-        ${customerOptions}
-      </select>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
-        <input type="checkbox" id="posPaid" checked style="width:15px;height:15px;accent-color:var(--accent);"> Paid</label>
-      <select class="form-input" id="posMethod" style="width:110px;min-height:0;padding:8px 10px;">
-        <option value="cash">💵 Cash</option>
-        <option value="card">💳 Card</option>
-        <option value="bank_transfer">🏦 Transfer</option>
-      </select>
-    </div>
-    <div class="modal-actions" style="justify-content:space-between;align-items:center;">
-      <strong id="posTotal" style="font-size:19px;">£0.00</strong>
-      <span style="display:flex;gap:8px;">
-        <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-        <button class="btn btn-primary" style="padding:10px 22px;" onclick="saveSale()">💷 Charge</button>
-      </span>
-    </div>
-  `);
+  const cats = [...new Set(shopItems.filter(i => i.active && i.quantity > 0).map(i => i.category))];
+  content.innerHTML = `
+    <div class="pos-shell">
+      <div class="pos-main">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn btn-outline" onclick="renderShopTab()" style="white-space:nowrap;">← Shop</button>
+          <input class="form-input pos-scan" id="posScan" placeholder="🔍 Scan a barcode, or type to search…"
+            autocomplete="off" oninput="posRenderTiles()"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();posScanEnter();}">
+        </div>
+        <div class="pos-cats">
+          <button class="pos-cat${posCat === 'all' ? ' on' : ''}" onclick="posSetCat('all')">All</button>
+          ${cats.map(c => `<button class="pos-cat${posCat === c ? ' on' : ''}" onclick="posSetCat('${c}')">
+            ${POS_CAT_ICONS[c] || ''} ${STOCK_CATEGORY_LABELS[c] || escHtml(c)}</button>`).join('')}
+        </div>
+        <div id="posTiles" class="pos-tiles pos-tiles-full"></div>
+      </div>
+      <div class="pos-side">
+        <div class="pos-receipt-head">🧾 Current sale</div>
+        <div id="posLastSale"></div>
+        <div id="posBasket" class="pos-receipt"></div>
+        <div class="pos-summary">
+          <select class="form-input" id="posCustomer" style="width:100%;min-height:0;padding:8px 12px;margin-bottom:8px;">
+            <option value="walkin">🚶 Walk-in</option>
+            ${customerOptions}
+          </select>
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;flex-shrink:0;">
+              <input type="checkbox" id="posPaid" checked onchange="posRenderTender()"
+                style="width:15px;height:15px;accent-color:var(--accent);"> Paid now</label>
+            <div class="pos-methods" id="posMethods">${posMethodsHtml()}</div>
+          </div>
+          <div id="posTender"></div>
+          <div class="pos-total-row"><span>TOTAL</span><strong id="posTotal">£0.00</strong></div>
+          <button class="btn btn-primary pos-charge" onclick="saveSale()">💷 Charge</button>
+        </div>
+      </div>
+    </div>`;
   posRenderTiles();
   posRenderBasket();
+  posRenderTender();
   document.getElementById('posScan').focus();
+}
+
+function posMethodsHtml() {
+  const m = [['cash', '💵 Cash'], ['card', '💳 Card'], ['bank_transfer', '🏦 Transfer']];
+  return m.map(([k, label]) =>
+    `<button class="pos-method${posMethod === k ? ' on' : ''}" onclick="posSetMethod('${k}')">${label}</button>`).join('');
+}
+
+function posSetMethod(m) {
+  posMethod = m;
+  const el = document.getElementById('posMethods');
+  if (el) el.innerHTML = posMethodsHtml();
+  posRenderTender();
+  document.getElementById('posScan')?.focus();
+}
+
+function posSetCat(c) {
+  posCat = c;
+  document.querySelectorAll('.pos-cat').forEach(b => b.classList.toggle('on',
+    b.textContent.trim() === 'All' ? c === 'all' : b.getAttribute('onclick').includes(`'${c}'`)));
+  posRenderTiles();
+  document.getElementById('posScan')?.focus();
+}
+
+// Cash tender: quick notes + change due, exactly like a shop till.
+function posRenderTender() {
+  const el = document.getElementById('posTender');
+  if (!el) return;
+  const paid = document.getElementById('posPaid')?.checked;
+  if (!paid || posMethod !== 'cash') { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+      <input class="form-input" id="posTenderIn" type="number" min="0" step="0.01" placeholder="Cash given £"
+        oninput="posChangeCalc()" style="width:110px;min-height:0;padding:7px 10px;">
+      ${[5, 10, 20, 50].map(n => `<button class="pos-note" onclick="posTenderQuick(${n})">£${n}</button>`).join('')}
+      <span id="posChange" style="font-weight:700;font-size:14px;margin-left:auto;"></span>
+    </div>`;
+  posChangeCalc();
+}
+
+function posTotalNow() {
+  return posBasket.reduce((s, l) => {
+    const i = shopItems.find(x => x.id === l.itemId);
+    return s + (i ? (i.sellingPrice || 0) * l.qty : 0);
+  }, 0);
+}
+
+function posTenderQuick(n) {
+  const el = document.getElementById('posTenderIn');
+  if (!el) return;
+  el.value = ((parseFloat(el.value) || 0) + n).toFixed(2);
+  posChangeCalc();
+}
+
+function posChangeCalc() {
+  const out = document.getElementById('posChange');
+  if (!out) return;
+  const given = parseFloat(document.getElementById('posTenderIn')?.value);
+  if (!Number.isFinite(given)) { out.textContent = ''; return; }
+  const change = given - posTotalNow();
+  out.style.color = change < 0 ? 'var(--danger)' : 'var(--success)';
+  out.textContent = change < 0 ? `£${Math.abs(change).toFixed(2)} short` : `Change £${change.toFixed(2)}`;
 }
 
 function posFindItem(q) {
   const digits = q.replace(/\D/g, '');
-  return shopItems.find(i => i.active && i.quantity > 0 && (
-    (i.code && i.code.toLowerCase() === q.toLowerCase()) ||
-    (digits.length >= 5 && (i.code || '').replace(/\D/g, '') === digits) ||
-    [i.company, i.model].filter(Boolean).join(' ').toLowerCase() === q.toLowerCase()
-  ));
+  return shopItems.find(i => i.active && i.quantity > 0 && i.barcode && i.barcode === q)
+    || shopItems.find(i => i.active && i.quantity > 0 && (
+      (i.code && i.code.toLowerCase() === q.toLowerCase()) ||
+      (digits.length >= 5 && ((i.barcode || '').replace(/\D/g, '') === digits ||
+                              (i.code || '').replace(/\D/g, '') === digits)) ||
+      [i.company, i.model].filter(Boolean).join(' ').toLowerCase() === q.toLowerCase()
+    ));
 }
 
 function posScanEnter() {
   const el = document.getElementById('posScan');
   const q = el.value.trim();
   if (!q) return;
-  // Exact code/name hit (barcode) or the single visible tile.
+  // Exact barcode/code/name hit, or the single visible tile.
   const shown = shopItems.filter(i => i.active && i.quantity > 0 && posTileMatch(i, q));
   const item = posFindItem(q) || (shown.length === 1 ? shown[0] : null);
   if (item) { posAdd(item.id); el.value = ''; posRenderTiles(); }
@@ -4453,8 +4623,9 @@ function posScanEnter() {
 }
 
 function posTileMatch(i, q) {
+  if (posCat !== 'all' && i.category !== posCat) return false;
   if (!q) return true;
-  const hay = `${i.code || ''} ${i.company || ''} ${i.model || ''}`.toLowerCase();
+  const hay = `${i.barcode || ''} ${i.code || ''} ${i.company || ''} ${i.model || ''}`.toLowerCase();
   return hay.includes(q.toLowerCase());
 }
 
@@ -4462,7 +4633,7 @@ function posRenderTiles() {
   const q = document.getElementById('posScan')?.value.trim() || '';
   const el = document.getElementById('posTiles');
   if (!el) return;
-  const list = shopItems.filter(i => i.active && i.quantity > 0 && posTileMatch(i, q)).slice(0, 24);
+  const list = shopItems.filter(i => i.active && i.quantity > 0 && posTileMatch(i, q)).slice(0, 60);
   el.innerHTML = list.map(i => `
     <div class="pos-tile" onclick="posAdd('${i.id}')">
       <div style="font-weight:600;font-size:12px;">${escHtml([i.company, i.model].filter(Boolean).join(' '))}</div>
@@ -4476,6 +4647,7 @@ function posRenderTiles() {
 function posAdd(itemId) {
   const item = shopItems.find(i => i.id === itemId);
   if (!item) return;
+  if (posLastSale) { posLastSale = null; posShowLastSale(); } // new customer, clear the banner
   const line = posBasket.find(l => l.itemId === itemId);
   const inBasket = line ? line.qty : 0;
   if (inBasket + 1 > item.quantity) { toast(`Only ${item.quantity} in stock.`, 'warning'); return; }
@@ -4504,29 +4676,52 @@ function posRenderBasket() {
   if (!el) return;
   let total = 0;
   el.innerHTML = posBasket.length === 0
-    ? '<div style="color:var(--muted);font-size:13px;">Tap items above (or scan) to add them.</div>'
+    ? '<div style="color:var(--muted);font-size:13px;padding:10px 2px;">Scan a barcode or tap an item to start.</div>'
     : posBasket.map(l => {
         const i = shopItems.find(x => x.id === l.itemId);
         if (!i) return '';
         const lineTotal = (i.sellingPrice || 0) * l.qty;
         total += lineTotal;
         return `
-        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
-          <span style="flex:1;min-width:0;">${escHtml([i.company, i.model].filter(Boolean).join(' '))}</span>
-          ${i.category === 'phone' ? `<input class="form-input" placeholder="IMEI (scan)" value="${escHtml(l.imei)}"
-            oninput="posImei('${i.id}', this.value)" style="width:130px;min-height:0;padding:4px 8px;font-size:11px;">` : ''}
+        <div class="pos-line">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;">${escHtml([i.company, i.model].filter(Boolean).join(' '))}</div>
+            <div style="font-size:11px;color:var(--muted);">£${(i.sellingPrice || 0).toFixed(2)} each</div>
+            ${i.category === 'phone' ? `<input class="form-input" placeholder="IMEI (scan)" value="${escHtml(l.imei)}"
+              oninput="posImei('${i.id}', this.value)" style="width:100%;min-height:0;padding:4px 8px;font-size:11px;margin-top:3px;">` : ''}
+          </div>
           <button class="action-btn" style="padding:2px 9px;" onclick="posQty('${i.id}',-1)">−</button>
           <strong style="min-width:18px;text-align:center;">${l.qty}</strong>
           <button class="action-btn" style="padding:2px 9px;" onclick="posQty('${i.id}',1)">+</button>
-          <strong style="min-width:64px;text-align:right;font-feature-settings:'tnum';">£${lineTotal.toFixed(2)}</strong>
+          <strong style="min-width:58px;text-align:right;font-feature-settings:'tnum';">£${lineTotal.toFixed(2)}</strong>
+          <button class="action-btn" style="padding:2px 8px;color:var(--danger);" title="Void line"
+            onclick="posQty('${i.id}',-999)">✕</button>
         </div>`;
       }).join('');
   const totalEl = document.getElementById('posTotal');
   if (totalEl) totalEl.textContent = `£${total.toFixed(2)}`;
+  posChangeCalc();
+}
+
+function posShowLastSale() {
+  const el = document.getElementById('posLastSale');
+  if (!el) return;
+  el.innerHTML = posLastSale ? `
+    <div class="pos-done">
+      ✅ £${posLastSale.total.toFixed(2)} taken${posLastSale.change !== null
+        ? ` — <strong>change £${posLastSale.change.toFixed(2)}</strong>` : ''}
+    </div>` : '';
 }
 
 async function saveSale() {
   if (!posBasket.length) { toast('The basket is empty.', 'error'); return; }
+  const paidNow = document.getElementById('posPaid').checked;
+  const given = parseFloat(document.getElementById('posTenderIn')?.value);
+  const totalBefore = posTotalNow();
+  if (paidNow && posMethod === 'cash' && Number.isFinite(given) && given < totalBefore) {
+    toast(`Cash given (£${given.toFixed(2)}) is less than the total.`, 'error');
+    return;
+  }
   const res = await kcFetch('/api/shop', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -4534,15 +4729,30 @@ async function saveSale() {
       op: 'sale',
       lines: posBasket,
       customerId: document.getElementById('posCustomer').value,
-      paidNow: document.getElementById('posPaid').checked,
-      method: document.getElementById('posMethod').value,
+      paidNow,
+      method: posMethod,
     }),
   }).then(r => r.json()).catch(() => null);
   if (!res || !res.success) { toast(res?.error || 'Could not record the sale.', 'error'); return; }
-  closeDynamicModal();
+
+  // Stay in the till for the next customer: update local stock, clear the
+  // basket, show the change banner, keep the scanner focused.
+  posBasket.forEach(l => {
+    const i = shopItems.find(x => x.id === l.itemId);
+    if (i) i.quantity = Math.max(0, i.quantity - l.qty);
+  });
+  posLastSale = {
+    total: res.total,
+    change: paidNow && posMethod === 'cash' && Number.isFinite(given) ? Math.max(0, given - res.total) : null,
+  };
   posBasket = [];
   toast(`Sold ${res.lines} item${res.lines === 1 ? '' : 's'} — £${res.total.toFixed(2)}.`, 'success');
-  renderShopTab();
+  posRenderTiles();
+  posRenderBasket();
+  posRenderTender();
+  posShowLastSale();
+  const scan = document.getElementById('posScan');
+  if (scan) { scan.value = ''; scan.focus(); }
 }
 
 // ─────────────────────────────────────────────
@@ -5086,6 +5296,8 @@ async function renderDashboardTab() {
   // ── Header: date (EN + Hebrew) · greeting · quick actions ──
   const hour = now.getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const staffFirstName = (currentStaff?.full_name || '').trim().split(/\s+/)[0]
+    || (currentStaff?.email || '').split('@')[0] || '';
   const enDate = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const hebDate = hebrewDateString(now);
 
@@ -5176,7 +5388,7 @@ async function renderDashboardTab() {
     <div class="dash-head">
       <div>
         <div class="dash-date">${enDate}${hebDate ? ` &nbsp;·&nbsp; <span class="heb">${hebDate}</span>` : ''}</div>
-        <div class="dash-greeting">${greeting}.</div>
+        <div class="dash-greeting">${greeting}${staffFirstName ? ', ' + escHtml(staffFirstName) : ''}.</div>
       </div>
       <div class="dash-actions">
         <button class="btn btn-primary" onclick="openNewRentalModal()">📱 New Rental</button>
@@ -5773,6 +5985,7 @@ function guardReentry(fn) {
 saveCustomer     = guardReentry(saveCustomer);
 saveWalletEntry  = guardReentry(saveWalletEntry);
 saveNewBooking   = guardReentry(saveNewBooking);
+savePassengers   = guardReentry(savePassengers);
 saveNewRepair    = guardReentry(saveNewRepair);
 changeRepairStatus = guardReentry(changeRepairStatus);
 saveNewTask      = guardReentry(saveNewTask);

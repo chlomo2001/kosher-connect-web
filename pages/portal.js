@@ -11,6 +11,11 @@ export default function Portal() {
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)
 
+  // Personal touch: time-of-day greeting. Once portal sessions exist the
+  // customer's first name joins it ("Good afternoon, Rivka").
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+
   async function submit(e) {
     e.preventDefault()
     if (busy) return
@@ -35,7 +40,7 @@ export default function Portal() {
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <img src="/logo-full.png" alt="KosherConnect" style={{ height: 72, marginBottom: 10 }} />
             <div className="login-title">My KosherConnect</div>
-            <div className="login-sub">See your rentals, bookings and balance</div>
+            <div className="login-sub">{greeting}! See your rentals, bookings and balance</div>
           </div>
           {sent ? (
             <div style={{ fontSize: 14, textAlign: 'center', lineHeight: 1.5 }}>

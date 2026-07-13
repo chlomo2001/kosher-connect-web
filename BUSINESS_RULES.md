@@ -183,7 +183,7 @@ of every entry type and refuses any edit or deletion of a posted row.
   creation, late fee frozen at return, lost-item charges at return).
 - **Rental payments** are recorded on the rental (Manage → amount paid) and
   flow into the wallet as `PAY-RENTAL` entries. Use the Wallet tab's
-  "Record Money" for everything else (booking payments, top-ups, refunds,
+  "Record payment / credit" for everything else (booking payments, top-ups, refunds,
   corrections) — don't record the same rental payment in both places.
 - **Live late fees** appear in the wallet only once frozen at return; while
   a rental is overdue the accruing fee shows on the rental itself.

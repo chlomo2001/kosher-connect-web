@@ -16,9 +16,14 @@ const BOOKING_STATUSES = ['Booked', 'Ticketed', 'Completed', 'Cancelled']
 // passport_expiry is owner-only on READS (schema §9): helpers may enter it
 // when creating a booking (counter workflow, and the expiry sweep needs it)
 // but never see it back. passport_on_file stays visible to everyone.
+// Per-passenger passport number + expiry follow the same rule; DOB stays
+// visible (staff need it to make the airline booking).
 function toApp(row, staff) {
   const app = toAppFull(row)
-  if (staff && staff.role !== 'owner') app.passportExpiry = ''
+  if (staff && staff.role !== 'owner') {
+    app.passportExpiry = ''
+    app.passengers = app.passengers.map(p => ({ ...p, passportNumber: '', passportExpiry: '' }))
+  }
   return app
 }
 
@@ -43,10 +48,37 @@ function toAppFull(row) {
     passportExpiry: row.passport_expiry || '',
     notes: row.notes || '',
     createdAt: row.created_at,
+    passengers: (row.booking_passengers || [])
+      .slice()
+      .sort((a, b) => (a.position || 0) - (b.position || 0))
+      .map(p => ({
+        id: p.id,
+        fullName: p.full_name || '',
+        dob: p.dob || '',
+        passportNumber: p.passport_number || '',
+        passportExpiry: p.passport_expiry || '',
+      })),
   }
 }
 
 const CUSTOMER_EMBED = 'customers(legacy_id,first_name,last_name)'
+const PASSENGER_EMBED = 'booking_passengers(id,position,full_name,dob,passport_number,passport_expiry)'
+
+// Normalise a client passengers array into insertable rows. Rows with no
+// name are dropped (blank editor lines), everything else is trimmed.
+function passengerRows(bookingId, passengers) {
+  if (!Array.isArray(passengers)) return []
+  return passengers
+    .filter(p => p && String(p.fullName || '').trim())
+    .map((p, i) => ({
+      booking_id: bookingId,
+      position: i + 1,
+      full_name: String(p.fullName).trim(),
+      dob: p.dob || null,
+      passport_number: String(p.passportNumber || '').trim() || null,
+      passport_expiry: p.passportExpiry || null,
+    }))
+}
 
 async function walletBalance(customerUuid) {
   const rows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
@@ -65,7 +97,7 @@ async function handler(req, res) {
     if (req.method === 'GET') {
       const rows = await db.select(
         'bookings',
-        `select=*,${CUSTOMER_EMBED}&order=created_at.desc`
+        `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&order=created_at.desc`
       )
       return res.json(rows.map(r => toApp(r, req.staff)))
     }
@@ -108,6 +140,9 @@ async function handler(req, res) {
       )
       const booking = inserted[0]
 
+      const paxRows = passengerRows(booking.id, b.passengers)
+      if (paxRows.length) await db.insert('booking_passengers', paxRows)
+
       // Wallet charge: one signed, idempotent ledger row. A £0 booking posts
       // nothing (the ledger forbids zero amounts by design).
       const total = price + fee
@@ -134,15 +169,16 @@ async function handler(req, res) {
       const balance = await walletBalance(customerUuid)
       const [full] = await db.select(
         'bookings',
-        `select=*,${CUSTOMER_EMBED}&id=eq.${booking.id}`
+        `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&id=eq.${booking.id}`
       )
       return res.json({ success: true, booking: toApp(full, req.staff), chargePosted, charged: total, balance })
     }
 
     if (req.method === 'PUT') {
-      // Status/notes only — money fields are immutable once charged; price
-      // corrections become explicit ledger adjustments (step-3 wallet UI).
-      const { id, status, notes } = req.body || {}
+      // Status/notes/passengers only — money fields are immutable once
+      // charged; price corrections become explicit ledger adjustments
+      // (step-3 wallet UI).
+      const { id, status, notes, passengers } = req.body || {}
       if (!id) return res.status(400).json({ success: false, error: 'Booking id is required.' })
       const patch = {}
       if (status !== undefined) {
@@ -152,11 +188,42 @@ async function handler(req, res) {
         patch.status = status
       }
       if (notes !== undefined) patch.notes = notes || null
-      if (!Object.keys(patch).length) return res.status(400).json({ success: false, error: 'Nothing to update.' })
+      if (!Object.keys(patch).length && passengers === undefined) {
+        return res.status(400).json({ success: false, error: 'Nothing to update.' })
+      }
 
-      const updated = await db.update('bookings', `id=eq.${encodeURIComponent(String(id))}`, patch)
+      const bid = encodeURIComponent(String(id))
+      let updated
+      if (Object.keys(patch).length) {
+        updated = await db.update('bookings', `id=eq.${bid}`, patch)
+      } else {
+        updated = await db.select('bookings', `select=id&id=eq.${bid}`)
+      }
       if (!updated.length) return res.status(404).json({ success: false, error: 'Booking not found.' })
-      const [full] = await db.select('bookings', `select=*,${CUSTOMER_EMBED}&id=eq.${encodeURIComponent(String(id))}`)
+
+      if (passengers !== undefined) {
+        // Replace-all, with one wrinkle: helpers never see passport fields,
+        // so a blank passport on a row they round-trip means "unchanged",
+        // not "erase" — merge those back from the existing rows by id.
+        const rows = passengerRows(String(id), passengers)
+        if (req.staff && req.staff.role !== 'owner') {
+          const existing = await db.select('booking_passengers',
+            `select=id,passport_number,passport_expiry&booking_id=eq.${bid}`)
+          const byId = new Map(existing.map(p => [p.id, p]))
+          const sent = Array.isArray(passengers) ? passengers.filter(p => p && String(p.fullName || '').trim()) : []
+          rows.forEach((row, i) => {
+            const prev = byId.get(sent[i]?.id)
+            if (prev) {
+              if (!row.passport_number) row.passport_number = prev.passport_number
+              if (!row.passport_expiry) row.passport_expiry = prev.passport_expiry
+            }
+          })
+        }
+        await db.delete('booking_passengers', `booking_id=eq.${bid}`)
+        if (rows.length) await db.insert('booking_passengers', rows)
+      }
+
+      const [full] = await db.select('bookings', `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&id=eq.${bid}`)
       return res.json({ success: true, booking: toApp(full, req.staff) })
     }
 

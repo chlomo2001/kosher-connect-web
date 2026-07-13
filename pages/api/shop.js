@@ -21,6 +21,7 @@ const money = (v) => Math.round((Number(v) || 0) * 100) / 100
 const itemToApp = (r) => ({
   id: r.id,
   code: r.item_code || '',
+  barcode: r.barcode || '',
   category: r.category,
   company: r.company || '',
   model: r.model || '',
@@ -84,6 +85,7 @@ async function handler(req, res) {
       if (!Number.isFinite(sell) || sell < 0) return res.status(400).json({ success: false, error: 'Selling price must be ≥ 0.' })
       const [row] = await db.insert('stock_items', [{
         item_code: b.code || null,
+        barcode: String(b.barcode || '').trim() || null,
         category: b.category,
         company: b.company || null,
         model: String(b.model).trim(),
@@ -100,6 +102,7 @@ async function handler(req, res) {
       if (!b.id) return res.status(400).json({ success: false, error: 'Item id is required.' })
       const patch = { updated_at: new Date().toISOString() }
       if (b.code !== undefined) patch.item_code = b.code || null
+      if (b.barcode !== undefined) patch.barcode = String(b.barcode || '').trim() || null
       if (b.company !== undefined) patch.company = b.company || null
       if (b.model !== undefined) patch.model = String(b.model).trim()
       if (b.netPrice !== undefined) patch.net_price = Number.isFinite(Number(b.netPrice)) ? money(b.netPrice) : null
