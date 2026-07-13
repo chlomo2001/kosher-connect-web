@@ -55,6 +55,86 @@ async function closeOpenTask(reference) {
   return rows.length
 }
 
+// Fill {name}/{n} in a rule's title template.
+function fillTitle(tpl, fallback, name, n) {
+  const base = (tpl && tpl.trim()) || fallback
+  return base.replace(/\{name\}/g, name || '?').replace(/\{n\}/g, String(n))
+}
+
+// Evaluate every enabled automation rule. Returns the number of tasks raised.
+async function runCustomRules({ today, names }) {
+  const rules = await db.select('automation_rules', 'enabled=is.true')
+  if (!rules.length) return 0
+  let raised = 0
+
+  for (const rule of rules) {
+    const n = Number(rule.threshold) || 0
+    const priority = rule.priority || 'high'
+    const seen = new Set() // entity keys re-raised this run
+    const raise = async (entityId, title, customerUuid, dueDate) => {
+      const reference = `RULE-${rule.id}-${entityId}`
+      seen.add(reference)
+      await upsertOpenTask({ reference, title, customerUuid, priority, dueDate,
+        notes: `Automation: ${rule.name}` })
+      raised++
+    }
+
+    if (rule.trigger === 'balance_over') {
+      const balances = await db.select('customer_balances', '')
+      for (const b of balances) {
+        const owed = -Number(b.balance) // positive = owes
+        if (owed >= n && n > 0) {
+          await raise(b.customer_id,
+            fillTitle(rule.task_title, `Owes £{n}+ — {name}`, names.get(b.customer_id), owed.toFixed(2)),
+            b.customer_id)
+        }
+      }
+    } else if (rule.trigger === 'rental_overdue_days') {
+      const rows = await db.select('rentals',
+        `select=id,end_date,customer_id,customers(first_name,last_name)&status=eq.overdue&is_void=is.false&end_date=lte.${localDate(-n)}`)
+      for (const r of rows) {
+        const nm = r.customers ? `${r.customers.first_name || ''} ${r.customers.last_name || ''}`.trim() : '?'
+        await raise(r.id, fillTitle(rule.task_title, `Overdue {n}+ days — {name}`, nm, n), r.customer_id, r.end_date)
+      }
+    } else if (rule.trigger === 'flight_in_days') {
+      const rows = await db.select('bookings',
+        `select=id,passenger,route,travel_date,customer_id,customers(first_name,last_name)&status=neq.Cancelled&travel_date=gte.${today}&travel_date=lte.${localDate(n)}`)
+      for (const b of rows) {
+        const nm = b.passenger || (b.customers ? `${b.customers.first_name || ''} ${b.customers.last_name || ''}`.trim() : '?')
+        await raise(b.id, fillTitle(rule.task_title, `Flight in {n}d — {name} (${b.route})`, nm, n), b.customer_id, b.travel_date)
+      }
+    } else if (rule.trigger === 'passport_in_days') {
+      const rows = await db.select('bookings',
+        `select=id,passenger,passport_expiry,customer_id,customers(first_name,last_name)&status=neq.Cancelled&passport_expiry=gte.${today}&passport_expiry=lte.${localDate(n)}`)
+      for (const b of rows) {
+        const nm = b.passenger || (b.customers ? `${b.customers.first_name || ''} ${b.customers.last_name || ''}`.trim() : '?')
+        await raise(b.id, fillTitle(rule.task_title, `Passport expires in {n}d — {name}`, nm, n), b.customer_id, b.passport_expiry)
+      }
+    } else if (rule.trigger === 'sim_renewal_in_days') {
+      const rows = await db.select('sims',
+        `select=id,provider,next_renewal_date,customer_id,customers(first_name,last_name)&status=eq.active&next_renewal_date=gte.${today}&next_renewal_date=lte.${localDate(n)}`)
+      for (const s of rows) {
+        const nm = s.customers ? `${s.customers.first_name || ''} ${s.customers.last_name || ''}`.trim() : '?'
+        await raise(s.id, fillTitle(rule.task_title, `SIM renews in {n}d — {name} (${s.provider || 'SIM'})`, nm, n), s.customer_id, s.next_renewal_date)
+      }
+    } else if (rule.trigger === 'checkin_due') {
+      const rows = await db.select('bookings',
+        `select=id,passenger,route,checkin_date,customer_id,customers(first_name,last_name)&status=neq.Cancelled&checkin_by=eq.us&checkin_done=is.false&checkin_date=lte.${localDate(n)}`)
+      for (const b of rows) {
+        const nm = b.passenger || (b.customers ? `${b.customers.first_name || ''} ${b.customers.last_name || ''}`.trim() : '?')
+        await raise(b.id, fillTitle(rule.task_title, `Check in {name} — ${b.route}`, nm, n), b.customer_id, b.checkin_date)
+      }
+    } else {
+      continue // unknown trigger — skip
+    }
+
+    // Close this rule's tasks that no longer match.
+    const open = await db.select('tasks', `select=id,reference&done=is.false&reference=like.RULE-${enc(rule.id)}-*`)
+    for (const t of open) if (!seen.has(t.reference)) await closeOpenTask(t.reference)
+  }
+  return raised
+}
+
 async function handler(req, res) {
   if (!tablesMode) {
     return res.status(503).json({ success: false, error: 'Sweeps need the relational data layer.' })
@@ -284,6 +364,12 @@ async function handler(req, res) {
       }
     }
     counts.vnChargesPosted = vnCharges
+
+    // ── 6. Owner-defined automation rules (#20) ──
+    // Each enabled rule raises RULE-<ruleId>-<entityId> tasks for matching
+    // records; keys not re-raised this run are closed. Built on the same
+    // idempotent upsert as the fixed sweeps above.
+    counts.ruleTasks = await runCustomRules({ today, names, custRows })
 
     console.log('[cron/sweep]', JSON.stringify(counts))
     return res.json({ success: true, ranAt: new Date().toISOString(), by: isCron ? 'cron' : staff.email, counts })

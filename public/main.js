@@ -5959,9 +5959,10 @@ async function deleteVN(id, number) {
 async function renderSettingsTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading settings…</div>`;
-  const [cfg, team] = await Promise.all([
+  const [cfg, team, autos] = await Promise.all([
     window.api.getSettings(),
     kcFetch('/api/team').then(r => r.status === 403 ? null : r.json()).catch(() => null),
+    kcFetch('/api/automations').then(r => r.status === 403 ? null : r.json()).catch(() => null),
   ]);
   if (!cfg || !cfg.success) {
     content.innerHTML = `<div class="tab-placeholder"><div class="big">⚙️</div>
@@ -6020,6 +6021,33 @@ async function renderSettingsTab() {
       </div>
     </div>` : '';
 
+  // ── Automations card (owner-only) — custom "when X, do Y" rules ──
+  autoTriggers = autos?.triggers || autoTriggers;
+  autoRulesCache = autos?.rules || [];
+  const automationsHtml = autos?.success ? `
+    <div class="table-card" style="margin-bottom:16px;">
+      <div class="section-divider" style="margin:12px 14px 4px;">🤖 Automations <span style="color:var(--muted);font-weight:400;font-size:12px;">— run in the daily sweep</span></div>
+      <table><thead><tr><th>Rule</th><th>When</th><th>Raises</th><th>On</th><th></th></tr></thead>
+      <tbody>
+        ${autos.rules.length === 0 ? `<tr><td colspan="5" style="color:var(--muted);font-size:13px;padding:12px 16px;">No custom rules yet. The built-in sweeps (overdue, arrears, flights, passports, SIM renewals, VN billing) always run.</td></tr>` : ''}
+        ${autos.rules.map(r => `
+          <tr style="${r.enabled ? '' : 'opacity:0.5;'}">
+            <td><strong>${escHtml(r.name)}</strong></td>
+            <td style="font-size:12px;">${escHtml((autoTriggers[r.trigger]?.label || r.trigger).replace('N', r.threshold))}</td>
+            <td style="font-size:12px;">📋 task <span class="badge badge-${r.priority === 'high' ? 'rental' : 'sim'}" style="font-size:10px;">${escHtml(r.priority)}</span></td>
+            <td><label style="font-size:12px;cursor:pointer;"><input type="checkbox" ${r.enabled ? 'checked' : ''} onchange="toggleAutomation('${escHtml(r.id)}', this.checked)" style="accent-color:var(--accent);"> on</label></td>
+            <td style="white-space:nowrap;">
+              <button class="action-btn" onclick="openAutomationModal('${escHtml(r.id)}')">✏️</button>
+              <button class="action-btn danger" onclick="deleteAutomation('${escHtml(r.id)}')">✕</button>
+            </td>
+          </tr>`).join('')}
+      </tbody></table>
+      <div style="padding:8px 14px 14px;">
+        <button class="btn btn-outline btn-sm" onclick="openAutomationModal()">+ New automation rule</button>
+        <span style="font-size:11px;color:var(--muted);margin-left:8px;">e.g. "owes £100+ → urgent task", "flight in 7 days → task".</span>
+      </div>
+    </div>` : '';
+
   const num = (id, val, step = '0.01') =>
     `<input class="form-input" type="number" step="${step}" id="${id}" value="${val}" style="width:90px;padding:6px 8px;font-size:13px;">`;
 
@@ -6059,6 +6087,7 @@ async function renderSettingsTab() {
 
   content.innerHTML = `
     ${teamHtml}
+    ${automationsHtml}
     <div style="margin-bottom:10px;padding:10px 14px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:12px;">
       <span style="flex:1;">These values drive live pricing (rental calculator, VN add-on, late fees, repair/SIM charges).
       Edits apply to <strong>new</strong> calculations only — existing tickets and frozen prices never reprice.
@@ -6263,6 +6292,100 @@ async function removeTeamMember(id, label, isSelf = false) {
   renderSettingsTab();
 }
 
+// ── Automations (owner-only; server enforces) ──
+let autoTriggers = {
+  balance_over:        { label: 'Customer owes at least £N', unit: '£' },
+  rental_overdue_days: { label: 'Rental overdue by N+ days', unit: 'days' },
+  flight_in_days:      { label: 'Flight within N days', unit: 'days' },
+  passport_in_days:    { label: 'Passport expires within N days', unit: 'days' },
+  sim_renewal_in_days: { label: 'SIM renews within N days', unit: 'days' },
+  checkin_due:         { label: 'We-do check-in within N days (not done)', unit: 'days' },
+};
+let autoRulesCache = [];
+
+function openAutomationModal(id = null) {
+  // Cache is refreshed on each settings render via the API list; find by id.
+  const r = id ? autoRulesCache.find(x => x.id === id) : null;
+  const trigOptions = Object.entries(autoTriggers).map(([k, t]) =>
+    `<option value="${k}" ${r && r.trigger === k ? 'selected' : ''}>${escHtml(t.label)}</option>`).join('');
+  showDynamicModal(`
+    <div class="modal-title">🤖 ${r ? 'Edit' : 'New'} automation rule</div>
+    <div class="form-grid">
+      <div class="form-group form-full">
+        <label class="form-label">Rule name</label>
+        <input class="form-input" id="auName" value="${escHtml(r?.name || '')}" placeholder="e.g. Chase big debtors">
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">When…</label>
+        <select class="form-input" id="auTrigger">${trigOptions}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Threshold (£ or days)</label>
+        <input class="form-input" type="number" min="0" step="1" id="auThreshold" value="${r?.threshold ?? ''}" placeholder="e.g. 100 or 7">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Task priority</label>
+        <select class="form-input" id="auPriority">
+          ${['high', 'medium', 'low'].map(p => `<option value="${p}" ${(r?.priority || 'high') === p ? 'selected' : ''}>${p}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Task title <span style="color:var(--muted);font-weight:400;">(optional — {name} = customer, {n} = the number)</span></label>
+        <input class="form-input" id="auTitle" value="${escHtml(r?.taskTitle || '')}" placeholder="Chase {name} — owes £{n}">
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;">The rule raises a task in the daily sweep for every matching customer, and closes it automatically when the condition clears.</div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAutomation(${r ? `'${escHtml(r.id)}'` : 'null'})">💾 Save rule</button>
+    </div>
+  `);
+}
+
+async function saveAutomation(id) {
+  const payload = {
+    id: id || undefined,
+    name: document.getElementById('auName').value.trim(),
+    trigger: document.getElementById('auTrigger').value,
+    threshold: parseFloat(document.getElementById('auThreshold').value),
+    priority: document.getElementById('auPriority').value,
+    taskTitle: document.getElementById('auTitle').value.trim(),
+  };
+  if (!payload.name) { toast('Give the rule a name.', 'error'); return; }
+  if (!Number.isFinite(payload.threshold)) { toast('Enter a threshold.', 'error'); return; }
+  const res = await kcFetch('/api/automations', {
+    method: id ? 'PUT' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not save the rule.', 'error'); return; }
+  closeDynamicModal();
+  toast('Automation saved.', 'success');
+  renderSettingsTab();
+}
+
+async function toggleAutomation(id, enabled) {
+  const r = autoRulesCache.find(x => x.id === id);
+  if (!r) return;
+  const res = await kcFetch('/api/automations', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...r, enabled }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not update.', 'error'); renderSettingsTab(); return; }
+  toast(enabled ? 'Rule on.' : 'Rule paused.', 'success');
+  renderSettingsTab();
+}
+
+async function deleteAutomation(id) {
+  const ok = await window.api.confirmDelete('Delete this automation rule?\n\nAny open tasks it raised stay; it just stops running.');
+  if (!ok) return;
+  const res = await kcFetch('/api/automations?id=' + encodeURIComponent(id), { method: 'DELETE' }).then(r => r.json());
+  if (!res.success) { toast(res.error || 'Could not delete.', 'error'); return; }
+  toast('Rule deleted.', 'warning');
+  renderSettingsTab();
+}
+
 // ─────────────────────────────────────────────
 //  DOUBLE-SUBMIT GUARD
 // ─────────────────────────────────────────────
@@ -6291,6 +6414,8 @@ saveCheckin      = guardReentry(saveCheckin);
 saveNewRepair    = guardReentry(saveNewRepair);
 changeRepairStatus = guardReentry(changeRepairStatus);
 confirmCollectRepair = guardReentry(confirmCollectRepair);
+saveAutomation   = guardReentry(saveAutomation);
+deleteAutomation = guardReentry(deleteAutomation);
 saveNewTask      = guardReentry(saveNewTask);
 saveRentalRate   = guardReentry(saveRentalRate);
 saveDamageRate   = guardReentry(saveDamageRate);
