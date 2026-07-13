@@ -289,6 +289,15 @@ async function handler(req, res) {
     }
     counts.flightTasks = flightTasks
 
+    // Auto-complete flown bookings: once the travel date is in the past, a
+    // Booked/Ticketed flight becomes Completed on its own.
+    const flown = await db.update(
+      'bookings',
+      `status=in.(Booked,Ticketed)&travel_date=lt.${today}`,
+      { status: 'Completed' }
+    )
+    counts.bookingsFlown = flown.length
+
     // Close FLIGHT tasks once the travel date has passed.
     const openFlights = await db.select('tasks', 'select=id,reference&done=is.false&reference=like.FLIGHT-*')
     let flightsClosed = 0

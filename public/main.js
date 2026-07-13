@@ -3700,7 +3700,9 @@ function bookingStatusBadge(status) {
     Completed: 'background:rgba(34,197,94,0.15);color:var(--success);',
     Cancelled: 'background:rgba(239,68,68,0.15);color:var(--danger);',
   };
-  return `<span class="badge" style="${styles[status] || styles.Booked}">${escHtml(status)}</span>`;
+  // For flights, "Completed" reads more naturally as "Flown".
+  const label = status === 'Completed' ? '✈️ Flown' : status;
+  return `<span class="badge" style="${styles[status] || styles.Booked}">${escHtml(label)}</span>`;
 }
 
 function renderBookingsTab() {
