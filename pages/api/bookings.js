@@ -146,6 +146,12 @@ async function handler(req, res) {
       // Wallet charge: one signed, idempotent ledger row. A £0 booking posts
       // nothing (the ledger forbids zero amounts by design).
       const total = price + fee
+      // How the customer paid: 'account' leaves a wallet balance owing;
+      // any real method ('cash'/'card'/'card_on_file'/'bank_transfer')
+      // means paid on the spot, so we post an equal-and-opposite payment
+      // and the wallet nets to zero — no debt for a ticket already paid.
+      const PAY_METHODS = { cash: 'cash', card: 'card', card_on_file: 'card', bank_transfer: 'bank_transfer' }
+      const payMethod = PAY_METHODS[b.payment] || null
       let chargePosted = false
       if (total > 0) {
         const memo =
@@ -164,6 +170,21 @@ async function handler(req, res) {
           'charge_reference'
         )
         chargePosted = true
+        if (payMethod) {
+          await db.insertIgnoreDup(
+            'ledger',
+            [{
+              customer_id: customerUuid,
+              charge_reference: `PAY-BOOKING-${booking.id}`,
+              entry_type: 'payment',
+              amount: total,
+              method: payMethod,
+              description: `Paid (${b.payment === 'card_on_file' ? 'card on file' : payMethod}) — ${memo}`,
+              related_booking_id: booking.id,
+            }],
+            'charge_reference'
+          )
+        }
       }
 
       const balance = await walletBalance(customerUuid)
@@ -171,7 +192,7 @@ async function handler(req, res) {
         'bookings',
         `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&id=eq.${booking.id}`
       )
-      return res.json({ success: true, booking: toApp(full, req.staff), chargePosted, charged: total, balance })
+      return res.json({ success: true, booking: toApp(full, req.staff), chargePosted, charged: total, balance, paidNow: !!payMethod })
     }
 
     if (req.method === 'PUT') {

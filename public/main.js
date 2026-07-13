@@ -311,7 +311,10 @@ function renderTab(tab) {
 // ─────────────────────────────────────────────
 function fmtDate(iso) {
   if (!iso) return '—';
-  const [y, m, d] = iso.split('-');
+  // Accept a plain date (YYYY-MM-DD) or a full ISO timestamp
+  // (2026-07-13T16:03:02.6+00:00) — take just the date part either way.
+  const [y, m, d] = String(iso).slice(0, 10).split('-');
+  if (!y || !m || !d) return '—';
   return d + '/' + m + '/' + y;
 }
 
@@ -1472,13 +1475,27 @@ function updateRentalCalc() {
     }
   }
   box.style.display = 'block';
+  // Full reasoning: rate math, which days were dropped for Shabbat/Yom Tov,
+  // and whether the minimum or the cap kicked in.
+  const raw = chargeableDays * rate.ratePerDay;
+  const capPeriods = rate.cap == null ? 0 : Math.max(1, Math.ceil(totalDays / (rate.capPeriodDays || 30)));
+  const steps = [
+    `${chargeableDays} chargeable day${chargeableDays === 1 ? '' : 's'} × £${rate.ratePerDay}/day = £${raw.toFixed(2)}`,
+  ];
+  if (rate.minCharge && chargeableDays > 0 && raw < rate.minCharge)
+    steps.push(`below the £${rate.minCharge} minimum → £${rate.minCharge}`);
+  if (rate.cap != null && price >= capTotal)
+    steps.push(`capped at £${rate.cap}${capPeriods > 1 ? ` × ${capPeriods} periods (${rate.capPeriodDays || 30}d each) = £${capTotal}` : ''}`);
+  if (country === 'USA' && !simGiven) steps.push('no-SIM rate applied');
   txt.innerHTML = `
     <span style="color:var(--muted);">Total days:</span> ${totalDays} &nbsp;|&nbsp;
     <span style="color:var(--muted);">Shabbat/Yom Tov excluded:</span> <span style="color:var(--gold);">${excluded}</span> &nbsp;|&nbsp;
     <span style="color:var(--muted);">Chargeable days:</span> ${chargeableDays} &nbsp;|&nbsp;
-    <strong style="color:var(--success);font-size:15px;">£${price}</strong>
-    ${country === 'USA' && !simGiven ? ' <span style="color:var(--gold);font-size:11px;">(no-SIM rate)</span>' : ''}
-    ${price >= capTotal ? ' <span style="color:var(--muted);font-size:11px;">(price cap)</span>' : ''}${discountLine}
+    <strong style="color:var(--success);font-size:15px;">£${price}</strong>${discountLine}
+    <div style="margin-top:6px;font-size:11px;color:var(--muted);line-height:1.6;">
+      🧮 ${steps.join(' → ')}
+      ${excluded > 0 ? `<br>📅 <span style="cursor:help;" title="Every Shabbos and full Yom Tov in the rental window is free — guests keep the phone over those days at no charge.">${excluded} free day${excluded === 1 ? '' : 's'} (Shabbos / Yom Tov) — hover for why</span>` : ''}
+    </div>
   `;
 }
 
@@ -3749,6 +3766,19 @@ async function openNewBookingModal() {
         <label class="form-label">Booking Fee (£)</label>
         <input class="form-input" type="number" min="0" step="0.01" id="bkFee" value="10">
       </div>
+      <div class="form-group form-full">
+        <label class="form-label">Payment</label>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select class="form-input" id="bkPay" style="width:200px;">
+            <option value="account">Put on account (wallet)</option>
+            <option value="cash">Paid now — 💵 Cash</option>
+            <option value="card">Paid now — 💳 Card</option>
+            <option value="card_on_file">Paid now — card on file (Stripe)</option>
+            <option value="bank_transfer">Paid now — 🏦 Transfer</option>
+          </select>
+          <span style="font-size:11px;color:var(--muted);">"Paid now" settles it immediately — no wallet debt.</span>
+        </div>
+      </div>
       ${svcOptions ? `
       <div class="form-group form-full">
         <label class="form-label">Fee calculator <span style="color:var(--muted);font-weight:400;">(passenger tiers — fills Booking Fee)</span></label>
@@ -3826,6 +3856,7 @@ async function saveNewBooking() {
     passportOnFile:   document.getElementById('bkPassport').checked,
     passportExpiry:   document.getElementById('bkPassport').checked
                         ? document.getElementById('bkPassportExpiry').value : '',
+    payment:          document.getElementById('bkPay').value,
     notes:            document.getElementById('bkNotes').value.trim(),
   };
   if (!payload.customerId) { toast('Select a customer.', 'error'); return; }
@@ -3838,9 +3869,12 @@ async function saveNewBooking() {
 
   bookings.unshift(res.booking);
   closeDynamicModal();
-  const chargeMsg = res.chargePosted
-    ? ` £${res.charged.toFixed(2)} charged — wallet balance £${res.balance.toFixed(2)}.`
-    : '';
+  let chargeMsg = '';
+  if (res.chargePosted) {
+    chargeMsg = res.paidNow
+      ? ` £${res.charged.toFixed(2)} paid in full.`
+      : ` £${res.charged.toFixed(2)} on account — wallet balance £${res.balance.toFixed(2)}.`;
+  }
   toast(`Booking saved!${chargeMsg}`, 'success');
   renderBookingsTab();
 }
