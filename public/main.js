@@ -144,6 +144,7 @@ let filteredCustomers = [];
 let selectedId = null;
 let currentTab = 'customers';
 let searchTerm = '';
+let customerSort = 'name'; // name | name_desc | owed | recent | services
 
 // ─────────────────────────────────────────────
 //  INIT — called directly since script loads after DOM is ready
@@ -2256,7 +2257,17 @@ function renderCustomersTab() {
 
     <div class="section-header">
       <div class="section-title">Customer List</div>
-      <button class="btn btn-outline" id="btnExportCSV">Export CSV</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select class="form-input" style="width:170px;padding:6px 10px;font-size:13px;min-height:0;"
+          onchange="customerSort=this.value; renderTableRows()">
+          <option value="name" ${customerSort==='name'?'selected':''}>Sort: Name A–Z</option>
+          <option value="name_desc" ${customerSort==='name_desc'?'selected':''}>Name Z–A</option>
+          <option value="owed" ${customerSort==='owed'?'selected':''}>Most owed first</option>
+          <option value="recent" ${customerSort==='recent'?'selected':''}>Recently added</option>
+          <option value="services" ${customerSort==='services'?'selected':''}>Most services</option>
+        </select>
+        <button class="btn btn-outline" id="btnExportCSV">Export CSV</button>
+      </div>
     </div>
 
     <div class="table-wrap">
@@ -2284,9 +2295,33 @@ function renderCustomersTab() {
   });
 }
 
+// Live debt/services per customer, used for sorting.
+function customerOwed(c) {
+  return rentals.filter(r => r.customerId === c.id).reduce((s, r) => s + rentalDebt(r), 0);
+}
+function customerServiceCount(c) {
+  return rentals.filter(r => r.customerId === c.id && (r.status === 'active' || r.status === 'overdue')).length
+    + sims.filter(s => s.customerId === c.id && s.status === 'active').length
+    + virtualNumbers.filter(v => v.customerId === c.id && v.status === 'Active').length
+    + repairs.filter(r => r.customerId === c.id && r.status !== 'Collected' && r.status !== 'Cancelled').length;
+}
+function sortCustomers(list) {
+  const nm = c => `${c.firstName || ''} ${c.lastName || ''}`.trim().toLowerCase();
+  const arr = [...list];
+  switch (customerSort) {
+    case 'name_desc': arr.sort((a, b) => nm(b).localeCompare(nm(a))); break;
+    case 'owed':      arr.sort((a, b) => customerOwed(b) - customerOwed(a)); break;
+    case 'recent':    arr.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))); break;
+    case 'services':  arr.sort((a, b) => customerServiceCount(b) - customerServiceCount(a)); break;
+    default:          arr.sort((a, b) => nm(a).localeCompare(nm(b))); // name A–Z
+  }
+  return arr;
+}
+
 function renderTableRows() {
   const tbody = document.getElementById('customersTableBody');
   if (!tbody) return;
+  filteredCustomers = sortCustomers(filteredCustomers);
 
   if (filteredCustomers.length === 0) {
     tbody.innerHTML = `
@@ -2327,7 +2362,7 @@ function renderTableRows() {
     return `
     <tr class="${selected}" data-id="${c.id}">
       <td>
-        <div class="customer-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}</div>
+        <div class="customer-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}${c.passportOnFile ? ' <span title="Passport on file" style="cursor:help;">🛂</span>' : ''}</div>
         <div class="customer-email">${escHtml(c.email || '')}</div>
       </td>
       <td>${escHtml(c.phone || '—')}</td>
@@ -2477,7 +2512,7 @@ function renderDetailPanel(id) {
       <div class="detail-header">
         <div class="avatar">${initials}</div>
         <div style="flex:1;">
-          <div class="detail-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}</div>
+          <div class="detail-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}${c.passportOnFile ? ' <span title="Passport on file" style="cursor:help;font-size:16px;">🛂</span>' : ''}</div>
           <div class="detail-meta">${escHtml(c.phone || '—')} · ${escHtml(c.email || 'No email')} ${addr} · Since ${since}</div>
         </div>
         <div style="display:flex;gap:8px;">
@@ -2931,6 +2966,7 @@ function openEditModal(id) {
   document.getElementById('fPhoneNumber').value = phoneNum;
   document.getElementById('fEmail').value   = c.email   || '';
   document.getElementById('fAddress').value = c.address || '';
+  document.getElementById('fPassportOnFile').checked = !!c.passportOnFile;
   showModal();
 }
 
@@ -2940,6 +2976,7 @@ function clearModal() {
     el.value = '';
     el.classList.remove('error');
   });
+  const pf = document.getElementById('fPassportOnFile'); if (pf) pf.checked = false;
   document.getElementById('fCountryCode').value = '+44';
   ['errFirstName','errLastName','errPhone'].forEach(id => document.getElementById(id).classList.remove('visible'));
   ['warnPhone','warnEmail','warnName'].forEach(id => document.getElementById(id).classList.remove('visible'));
@@ -3035,7 +3072,8 @@ async function saveCustomer() {
     if (!proceed) return;
   }
 
-  const payload = { firstName, lastName, phone: fullPhone, email, address };
+  const payload = { firstName, lastName, phone: fullPhone, email, address,
+    passportOnFile: document.getElementById('fPassportOnFile').checked };
 
   if (editId) {
     payload.id = editId;
