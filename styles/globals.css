@@ -253,6 +253,8 @@ tbody tr.selected td { background: rgba(83, 58, 253, 0.05); }
 .badge-rental { background: rgba(185,185,249,0.45); color: var(--primary-deep); }
 .badge-sim { background: var(--canvas-cream); color: var(--gold); }
 .badge-vn { background: rgba(249,107,238,0.14); color: #c026d3; }
+.badge-booking { background: rgba(83,58,253,0.10); color: var(--accent); }
+.badge-repair { background: rgba(234,88,12,0.12); color: #c2410c; }
 
 /* ─── ROW ACTIONS ─── */
 .row-actions { display: flex; gap: 8px; }

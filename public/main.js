@@ -145,6 +145,7 @@ let selectedId = null;
 let currentTab = 'customers';
 let searchTerm = '';
 let customerSort = 'name'; // name | name_desc | owed | recent | services
+let customerFilter = 'all'; // all | rental | flight | sim | vn | repair | arrears | passport
 
 // ─────────────────────────────────────────────
 //  INIT — called directly since script loads after DOM is ready
@@ -2258,6 +2259,17 @@ function renderCustomersTab() {
     <div class="section-header">
       <div class="section-title">Customer List</div>
       <div style="display:flex;gap:8px;align-items:center;">
+        <select class="form-input" style="width:180px;padding:6px 10px;font-size:13px;min-height:0;"
+          onchange="customerFilter=this.value; renderTableRows()">
+          <option value="all" ${customerFilter==='all'?'selected':''}>Filter: everyone</option>
+          <option value="rental" ${customerFilter==='rental'?'selected':''}>📱 Active rental</option>
+          <option value="flight" ${customerFilter==='flight'?'selected':''}>✈️ Upcoming flight</option>
+          <option value="sim" ${customerFilter==='sim'?'selected':''}>💳 SIM plan</option>
+          <option value="vn" ${customerFilter==='vn'?'selected':''}>🔢 Virtual number</option>
+          <option value="repair" ${customerFilter==='repair'?'selected':''}>🔧 Open repair</option>
+          <option value="arrears" ${customerFilter==='arrears'?'selected':''}>💰 In arrears</option>
+          <option value="passport" ${customerFilter==='passport'?'selected':''}>🛂 Passport on file</option>
+        </select>
         <select class="form-input" style="width:170px;padding:6px 10px;font-size:13px;min-height:0;"
           onchange="customerSort=this.value; renderTableRows()">
           <option value="name" ${customerSort==='name'?'selected':''}>Sort: Name A–Z</option>
@@ -2299,8 +2311,17 @@ function renderCustomersTab() {
 function customerOwed(c) {
   return rentals.filter(r => r.customerId === c.id).reduce((s, r) => s + rentalDebt(r), 0);
 }
+// Bookings that are still upcoming — booked/ticketed and NOT flown yet
+// (travel date today or later, or no date set). Cancelled/Completed excluded.
+function customerUpcomingBookings(c) {
+  const today = localISO();
+  return bookings.filter(b => b.customerId === c.id
+    && b.status !== 'Cancelled' && b.status !== 'Completed'
+    && (!b.travelDate || b.travelDate >= today));
+}
 function customerServiceCount(c) {
   return rentals.filter(r => r.customerId === c.id && (r.status === 'active' || r.status === 'overdue')).length
+    + customerUpcomingBookings(c).length
     + sims.filter(s => s.customerId === c.id && s.status === 'active').length
     + virtualNumbers.filter(v => v.customerId === c.id && v.status === 'Active').length
     + repairs.filter(r => r.customerId === c.id && r.status !== 'Collected' && r.status !== 'Cancelled').length;
@@ -2318,10 +2339,23 @@ function sortCustomers(list) {
   return arr;
 }
 
+function customerMatchesFilter(c) {
+  switch (customerFilter) {
+    case 'rental':   return rentals.some(r => r.customerId === c.id && (r.status === 'active' || r.status === 'overdue'));
+    case 'flight':   return customerUpcomingBookings(c).length > 0;
+    case 'sim':      return sims.some(s => s.customerId === c.id && s.status === 'active');
+    case 'vn':       return virtualNumbers.some(v => v.customerId === c.id && v.status === 'Active');
+    case 'repair':   return repairs.some(r => r.customerId === c.id && r.status !== 'Collected' && r.status !== 'Cancelled');
+    case 'arrears':  return customerOwed(c) > 0;
+    case 'passport': return !!c.passportOnFile;
+    default:         return true;
+  }
+}
+
 function renderTableRows() {
   const tbody = document.getElementById('customersTableBody');
   if (!tbody) return;
-  filteredCustomers = sortCustomers(filteredCustomers);
+  filteredCustomers = sortCustomers(filteredCustomers.filter(customerMatchesFilter));
 
   if (filteredCustomers.length === 0) {
     tbody.innerHTML = `
@@ -2343,9 +2377,11 @@ function renderTableRows() {
     const cSimCount = sims.filter(s => s.customerId === c.id && s.status === 'active').length;
     const cVnCount = virtualNumbers.filter(v => v.customerId === c.id && v.status === 'Active').length;
     const cOpenRepairs = repairs.filter(r => r.customerId === c.id && r.status !== 'Collected' && r.status !== 'Cancelled').length;
+    const cUpcomingFlights = customerUpcomingBookings(c).length;
     const otherServices = (c.services || []).filter(s => s.type !== 'rental' && s.type !== 'sim' && s.type !== 'vn');
     const services = [
       ...activeCustomerRentals.map(r => `<span class="badge badge-rental">Rental ${r.country === 'USA' ? '🇺🇸' : r.country === 'UK' ? '🇬🇧' : r.country === 'Israel' ? '🇮🇱' : '🌍'}</span>`),
+      ...(cUpcomingFlights ? [`<span class="badge badge-booking">✈️ Flight${cUpcomingFlights > 1 ? ' ×' + cUpcomingFlights : ''}</span>`] : []),
       ...(cSimCount ? [`<span class="badge badge-sim">💳 SIM${cSimCount > 1 ? ' ×' + cSimCount : ''}</span>`] : []),
       ...(cVnCount ? [`<span class="badge badge-vn">🔢 VN${cVnCount > 1 ? ' ×' + cVnCount : ''}</span>`] : []),
       ...(cOpenRepairs ? [`<span class="badge badge-repair">🔧 Repair${cOpenRepairs > 1 ? ' ×' + cOpenRepairs : ''}</span>`] : []),
@@ -2458,8 +2494,10 @@ function renderDetailPanel(id) {
           <div class="history-amount">£${h.amount}</div>
         </div>`).join('');
 
+  const cUpcoming = customerUpcomingBookings(c);
   const allActiveServices = [
     ...cActiveRentals.map(r => ({ type: 'rental', label: `Rental ${r.country === 'USA' ? '🇺🇸' : r.country === 'UK' ? '🇬🇧' : r.country === 'Israel' ? '🇮🇱' : '🌍'}` })),
+    ...cUpcoming.map(b => ({ type: 'booking', label: `✈️ ${b.route}${b.travelDate ? ' · ' + fmtDate(b.travelDate) : ''}` })),
     ...cSims.map(s => ({ type: 'sim', label: `SIM · ${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}` })),
     ...cVNs.map(v => ({ type: 'vn', label: `VN ${v.number || ''}` })),
     ...cOpenRepairs.map(r => ({ type: 'repair', label: `🔧 Repair — ${r.status}` })),
