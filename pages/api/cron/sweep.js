@@ -155,6 +155,38 @@ async function handler(req, res) {
     }
     counts.passportTasks = passportTasks
 
+    // ── 1b. Reservation pickups due (booked, start date arrived) ──
+    const pickups = await db.select(
+      'rentals',
+      `select=id,legacy_id,start_date,customer_id,customers(first_name,last_name)` +
+      `&status=eq.booked&start_date=lte.${today}&is_void=is.false`
+    )
+    let pickupTasks = 0
+    for (const r of pickups) {
+      const name = r.customers ? `${r.customers.first_name || ''} ${r.customers.last_name || ''}`.trim() : '?'
+      await upsertOpenTask({
+        reference: `PICKUP-${r.id}`,
+        title: `Reservation pickup — ${name} (from ${r.start_date})`,
+        customerUuid: r.customer_id,
+        notes: 'Press ▶ Start on the rental when the phone is handed over.',
+        dueDate: r.start_date,
+      })
+      pickupTasks++
+    }
+    counts.pickupTasks = pickupTasks
+
+    // Close PICKUP tasks once the rental started (or was removed).
+    const openPickups = await db.select('tasks', 'select=id,reference&done=is.false&reference=like.PICKUP-*')
+    let pickupsClosed = 0
+    for (const t of openPickups) {
+      const rentalId = t.reference.slice('PICKUP-'.length)
+      const row = await db.select('rentals', `select=status&id=eq.${enc(rentalId)}`)
+      if (!row.length || row[0].status !== 'booked') {
+        pickupsClosed += await closeOpenTask(t.reference)
+      }
+    }
+    counts.pickupsClosed = pickupsClosed
+
     // ── 3b. Flight-day reminders (flies today or tomorrow) ──
     const flying = await db.select(
       'bookings',

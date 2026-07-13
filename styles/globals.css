@@ -670,6 +670,25 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .feed-item:last-child { border-bottom: none; }
 .feed-item .feed-icon { flex-shrink: 0; }
 
+/* Availability calendar */
+.cal-table { border-collapse: collapse; width: 100%; }
+.cal-table th { font-size: 10px; color: var(--muted); font-weight: 400; padding: 4px 0; text-align: center; }
+.cal-phone { text-align: left !important; white-space: nowrap; padding: 4px 10px 4px 0 !important; font-size: 12px; position: sticky; left: 0; background: var(--surface); }
+.cal-cell { width: 22px; height: 24px; border: 1px solid var(--border); padding: 0 !important; }
+.cal-free { background: var(--surface); cursor: pointer; }
+.cal-free:hover { background: rgba(83, 58, 253, 0.12); }
+.cal-active  { background: var(--accent); cursor: pointer; }
+.cal-booked  { background: #e8b93c; cursor: pointer; }
+.cal-overdue { background: var(--danger); cursor: pointer; }
+td.cal-shabbat, th.cal-shabbat { background: var(--bg-secondary); }
+td.cal-active.cal-shabbat { background: var(--accent); }
+.cal-today { outline: 2px solid var(--ink, #0d253d); outline-offset: -2px; }
+.cal-key { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin: 0 3px 0 8px; vertical-align: middle; }
+.cal-key.cal-active { background: var(--accent); }
+.cal-key.cal-booked { background: #e8b93c; }
+.cal-key.cal-overdue { background: var(--danger); }
+.cal-key.cal-shabbat { background: var(--bg-secondary); border: 1px solid var(--border); }
+
 /* Command palette (Ctrl/Cmd+K) */
 .palette-overlay {
   position: fixed; inset: 0; z-index: 2000;

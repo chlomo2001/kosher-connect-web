@@ -901,13 +901,17 @@ function renderRentalsTab() {
     <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
       <button class="btn btn-primary" onclick="openNewRentalModal()">📱 New Rental</button>
       <button class="btn btn-outline" onclick="openManagePhonesModal()">⚙️ Manage Phones</button>
+      <button class="btn ${rentalView === 'calendar' ? 'btn-primary' : 'btn-outline'}"
+        onclick="rentalView = rentalView === 'calendar' ? 'list' : 'calendar'; renderRentalsTab();">📅 Availability</button>
       <input class="search-box" style="width:240px;" type="text" id="rentalSearch"
         placeholder="🔍 Search customer or phone..."
         value="${rentalSearchTerm}"
         oninput="rentalSearchTerm=this.value; renderRentalRows()">
     </div>
 
-    <div class="rentals-split">
+    ${rentalView === 'calendar' ? availabilityCalendarHtml() : ''}
+
+    <div class="rentals-split" style="${rentalView === 'calendar' ? 'display:none;' : ''}">
       <div class="rentals-split-col">
         <div class="section-header">
           <div class="section-title">Active & Recent Rentals</div>
@@ -974,6 +978,99 @@ function renderRentalsTab() {
   renderPhoneRows();
 }
 
+// ── Availability calendar (rental-industry pattern) ─────────────────────
+// Month grid: one row per phone, one narrow cell per day. Colours: indigo =
+// out (active), gold = reserved, red = overdue, grey = Shabbat/YT, white =
+// free. Click a free cell to reserve that phone from that day; click an
+// occupied one to manage the rental.
+
+let rentalView = 'list';
+let calMonth = null; // 'YYYY-MM'; defaults to the current month
+
+function calShift(delta) {
+  const [y, m] = (calMonth || localISO().slice(0, 7)).split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  calMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  renderRentalsTab();
+}
+
+function calQuickReserve(phoneId, iso) {
+  openNewRentalModal();
+  setTimeout(() => {
+    const fromEl = document.getElementById('rFrom');
+    if (fromEl) { fromEl.value = iso; showHebrewDate('rFrom', 'rFromHeb'); }
+    refreshRentalPhoneOptions();
+    const sel = document.getElementById('rPhone');
+    if (sel && [...sel.options].some(o => o.value === phoneId)) {
+      sel.value = phoneId;
+      updateRentalPhoneInfo();
+    }
+  }, 60);
+}
+
+function availabilityCalendarHtml() {
+  const today = localISO();
+  if (!calMonth) calMonth = today.slice(0, 7);
+  const [y, m] = calMonth.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const monthName = new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  const iso = (d) => `${calMonth}-${String(d).padStart(2, '0')}`;
+
+  // Precompute each phone's blocking intervals once.
+  const blocks = new Map(phones.map(p => [p.id,
+    rentals.filter(r => r.phoneId === p.id && r.status !== 'returned' && r.fromDate && r.toDate)
+      .map(r => ({ r, end: (r.status !== 'booked' && r.toDate < today) ? today : r.toDate }))]));
+
+  const dayHead = Array.from({ length: daysInMonth }, (_, i) => {
+    const d = i + 1;
+    const dow = new Date(y, m - 1, d).getDay();
+    return `<th class="cal-day${dow === 6 ? ' cal-shabbat' : ''}${iso(d) === today ? ' cal-today' : ''}">${d}</th>`;
+  }).join('');
+
+  const rows = phones.map(p => {
+    const cells = Array.from({ length: daysInMonth }, (_, i) => {
+      const dIso = iso(i + 1);
+      const hit = (blocks.get(p.id) || []).find(b => b.r.fromDate <= dIso && b.end >= dIso);
+      const dow = new Date(y, m - 1, i + 1).getDay();
+      if (!hit) {
+        return `<td class="cal-cell cal-free${dow === 6 ? ' cal-shabbat' : ''}${dIso === today ? ' cal-today' : ''}"
+          title="Free — click to reserve ${escHtml(p.number)} from ${fmtDate(dIso)}"
+          onclick="calQuickReserve('${p.id}','${dIso}')"></td>`;
+      }
+      const cls = hit.r.status === 'booked' ? 'cal-booked'
+        : (hit.r.status !== 'returned' && hit.r.toDate < today) ? 'cal-overdue' : 'cal-active';
+      return `<td class="cal-cell ${cls}${dIso === today ? ' cal-today' : ''}"
+        title="${escHtml(hit.r.customerName || '')} · ${fmtDate(hit.r.fromDate)} → ${fmtDate(hit.r.toDate)}${hit.r.status === 'booked' ? ' (reserved)' : ''}"
+        onclick="openManageRentalModal('${hit.r.id}')"></td>`;
+    }).join('');
+    return `<tr>
+      <td class="cal-phone"><strong>${escHtml(p.number)}</strong><div class="customer-email">${escHtml(p.country)}${p.ukPlan === 'unlimited' ? ' intl' : ''}</div></td>
+      ${cells}
+    </tr>`;
+  }).join('');
+
+  return `
+    <div class="table-card" style="margin-bottom:20px;padding-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px 4px;">
+        <button class="btn btn-outline btn-sm" onclick="calShift(-1)">←</button>
+        <strong style="min-width:150px;text-align:center;">${monthName}</strong>
+        <button class="btn btn-outline btn-sm" onclick="calShift(1)">→</button>
+        <span style="margin-left:auto;font-size:11px;color:var(--muted);">
+          <span class="cal-key cal-active"></span> out
+          <span class="cal-key cal-booked"></span> reserved
+          <span class="cal-key cal-overdue"></span> overdue
+          <span class="cal-key cal-shabbat"></span> Shabbat
+          · click a free day to reserve</span>
+      </div>
+      <div style="overflow-x:auto;padding:0 14px 6px;">
+        <table class="cal-table">
+          <thead><tr><th class="cal-phone">Phone</th>${dayHead}</tr></thead>
+          <tbody>${rows.length ? rows : `<tr><td colspan="${daysInMonth + 1}" style="color:var(--muted);padding:14px;">No phones in the fleet yet.</td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
 // Returns per-item status ('undecided' | 'returned' | 'lost'), with backwards-compat for old returnedItems boolean shape
 function getItemStatus(r, item) {
   if (r.itemStatus?.[item] !== undefined) return r.itemStatus[item];
@@ -982,10 +1079,22 @@ function getItemStatus(r, item) {
 }
 
 function getComputedStatus(r, today) {
+  if (r.status === 'booked') return 'booked'; // reservation — not picked up yet
   if (r.status !== 'returned') return r.toDate < today ? 'overdue' : 'active';
   const eq = r.equipmentGiven || { phone: true, sim: true, plug: true, cable: true };
   const incomplete = ['phone', 'sim', 'plug', 'cable'].some(k => (eq[k] ?? true) && getItemStatus(r, k) === 'undecided');
   return incomplete ? 'returned_incomplete' : 'returned';
+}
+
+// All rentals blocking a phone over [from,to]. Overdue rentals keep blocking
+// until today (the handset is still out); returned ones never block.
+function phoneConflicts(allRentals, phoneId, from, to, todayISO, excludeId = null) {
+  return allRentals.filter(r => {
+    if (r.phoneId !== phoneId || r.id === excludeId || r.status === 'returned') return false;
+    if (!r.fromDate || !r.toDate) return false;
+    const blockEnd = (r.status !== 'booked' && r.toDate < todayISO) ? todayISO : r.toDate;
+    return r.fromDate <= to && blockEnd >= from;
+  });
 }
 
 function renderRentalRows() {
@@ -1023,7 +1132,8 @@ function renderRentalRows() {
   tbody.innerHTML = filtered.map(r => {
     const computedStatus = getComputedStatus(r, today);
     let statusBadge;
-    if      (computedStatus === 'active' && r.toDate === today) statusBadge = `<span class="badge badge-sim">Due Today</span>`;
+    if      (computedStatus === 'booked')               statusBadge = `<span class="badge" style="background:#f5e9d4;color:#9b6829;">📅 Reserved${r.fromDate <= today ? ' — pickup due' : ''}</span>`;
+    else if (computedStatus === 'active' && r.toDate === today) statusBadge = `<span class="badge badge-sim">Due Today</span>`;
     else if (computedStatus === 'active')               statusBadge = `<span class="badge badge-rental">Active</span>`;
     else if (computedStatus === 'overdue')              statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--danger);">Overdue ⚠️</span>`;
     else if (computedStatus === 'returned')             statusBadge = `<span class="badge badge-active">Returned</span>`;
@@ -1045,6 +1155,7 @@ function renderRentalRows() {
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
+          ${computedStatus === 'booked' ? `<button class="action-btn" style="color:var(--success);font-weight:600;" onclick="startReservation('${r.id}')">▶ Start</button>` : ''}
           <button class="action-btn" onclick="openRemindModal('rental','${r.id}')" title="Remind me">⏰</button>
           <button class="action-btn" onclick="openManageRentalModal('${r.id}')">⚙ Manage</button>
           <button class="action-btn danger" onclick="deleteRental('${r.id}')">Delete</button>
@@ -1093,15 +1204,41 @@ function renderPhoneRows() {
 }
 
 // ══ NEW RENTAL MODAL ══
+// Phones offerable for a date range — DATE-aware, not status-aware, so a
+// phone that's out today can still be reserved for future dates.
+function phoneOptionsFor(from, to) {
+  const today = localISO();
+  const list = (from && to && to >= from)
+    ? phones.filter(p => phoneConflicts(rentals, p.id, from, to, today).length === 0)
+    : phones.filter(p => p.status !== 'rented');
+  return list
+    .map(p => `<option value="${p.id}">${escHtml(p.number)} · ${escHtml(p.country)} · ${escHtml(p.company||'')} ${p.pool ? '(Pool: '+escHtml(p.pool)+')' : ''}</option>`)
+    .join('');
+}
+
+// Dates changed → rebuild the phone list for that window, keeping the
+// current pick if it's still free.
+function refreshRentalPhoneOptions() {
+  const sel = document.getElementById('rPhone');
+  if (!sel) return;
+  const from = document.getElementById('rFrom')?.value;
+  const to = document.getElementById('rTo')?.value;
+  const prev = sel.value;
+  sel.innerHTML = `<option value="">— Select phone —</option>` + phoneOptionsFor(from, to);
+  if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+  else if (prev) { sel.value = ''; toast('That phone is not free for these dates — pick another.', 'warning'); }
+  const hint = document.getElementById('rPhoneHint');
+  if (hint && from && to && to >= from) {
+    hint.textContent = `(${sel.options.length - 1} free ${fmtDate(from)} → ${fmtDate(to)})`;
+  }
+}
+
 function openNewRentalModal() {
   const customerOptions = customers.map(c =>
     `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone||'')}</option>`
   ).join('');
 
-  const availablePhoneOptions = phones
-    .filter(p => p.status !== 'rented')
-    .map(p => `<option value="${p.id}">${escHtml(p.number)} · ${escHtml(p.country)} · ${escHtml(p.company||'')} ${p.pool ? '(Pool: '+escHtml(p.pool)+')' : ''}</option>`)
-    .join('');
+  const availablePhoneOptions = phoneOptionsFor(null, null);
 
   showDynamicModal(`
     <div class="modal-title">📱 New Rental</div>
@@ -1122,7 +1259,7 @@ function openNewRentalModal() {
       </div>
 
       <div class="form-group form-full">
-        <label class="form-label">Phone *</label>
+        <label class="form-label">Phone * <span style="color:var(--muted);font-weight:400;" id="rPhoneHint">(pick dates to see availability)</span></label>
         <select class="form-input" id="rPhone" onchange="updateRentalPhoneInfo(); updateRentalCalc();">
           <option value="">— Select phone —</option>
           ${availablePhoneOptions}
@@ -1132,12 +1269,12 @@ function openNewRentalModal() {
 
       <div class="form-group">
         <label class="form-label">From Date *</label>
-        <input class="form-input" type="date" id="rFrom" onchange="updateRentalCalc(); showHebrewDate('rFrom','rFromHeb')">
+        <input class="form-input" type="date" id="rFrom" onchange="refreshRentalPhoneOptions(); updateRentalCalc(); showHebrewDate('rFrom','rFromHeb')">
         <div class="hebrew-date-label" id="rFromHeb"></div>
       </div>
       <div class="form-group">
         <label class="form-label">To Date * (inclusive)</label>
-        <input class="form-input" type="date" id="rTo" onchange="updateRentalCalc(); showHebrewDate('rTo','rToHeb')">
+        <input class="form-input" type="date" id="rTo" onchange="refreshRentalPhoneOptions(); updateRentalCalc(); showHebrewDate('rTo','rToHeb')">
         <div class="hebrew-date-label" id="rToHeb"></div>
       </div>
 
@@ -1329,6 +1466,15 @@ async function saveNewRental() {
   if (!phoneId)    { toast('Please select a phone.', 'error'); return; }
   if (!from || !to || to <= from) { toast('Please enter valid dates.', 'error'); return; }
 
+  // Hard double-booking guard — a phone can hold one rental per date window.
+  const clash = phoneConflicts(rentals, phoneId, from, to, localISO())[0];
+  if (clash) {
+    toast(`That phone is taken ${fmtDate(clash.fromDate)} → ${fmtDate(clash.toDate)} (${clash.customerName}${clash.status === 'booked' ? ', reserved' : ''}).`, 'error');
+    return;
+  }
+  // Future start = a reservation: the phone stays free until pickup.
+  const isReservation = from > localISO();
+
   const customer = customers.find(c => c.id === customerId);
   const phone    = phones.find(p => p.id === phoneId);
   const equipmentGiven = {
@@ -1382,7 +1528,7 @@ async function saveNewRental() {
     vnSub,
     vnPrice,
     notes,
-    status:       'active',
+    status:       isReservation ? 'booked' : 'active',
     createdAt:    new Date().toISOString(),
     equipmentGiven,
   };
@@ -1390,9 +1536,11 @@ async function saveNewRental() {
   rentals.push(rental);
   saveRentals(rentals);
 
-  phone.status        = 'rented';
-  phone.currentRental = rental.id;
-  savePhones(phones);
+  if (!isReservation) {
+    phone.status        = 'rented';
+    phone.currentRental = rental.id;
+    savePhones(phones);
+  }
 
   const c = customers.find(x => x.id === customerId);
   if (c) {
@@ -1412,7 +1560,29 @@ async function saveNewRental() {
   }
 
   closeDynamicModal();
-  toast(`Rental saved! £${totalPrice} charged to ${customer.firstName}.`, 'success');
+  toast(isReservation
+    ? `Reserved for ${customer.firstName} — pickup ${fmtDate(from)}. Press ▶ Start at handover.`
+    : `Rental saved! £${totalPrice} charged to ${customer.firstName}.`, 'success');
+  renderRentalsTab();
+}
+
+// Reservation pickup: the customer is here, the phone goes out.
+function startReservation(rentalId) {
+  const r = rentals.find(x => x.id === rentalId);
+  if (!r || r.status !== 'booked') return;
+  const phone = phones.find(p => p.id === r.phoneId);
+  if (phone && phone.status === 'rented') {
+    toast(`${phone.number} is still out on another rental — return it first.`, 'error');
+    return;
+  }
+  r.status = 'active';
+  saveRentals(rentals);
+  if (phone) {
+    phone.status = 'rented';
+    phone.currentRental = r.id;
+    savePhones(phones);
+  }
+  toast(`Rental started — ${r.customerName} has ${r.phoneNumber} until ${fmtDate(r.toDate)}.`, 'success');
   renderRentalsTab();
 }
 
@@ -5016,6 +5186,7 @@ saveVNBilling    = guardReentry(saveVNBilling);
 saveNewServiceOrder = guardReentry(saveNewServiceOrder);
 saveReminder     = guardReentry(saveReminder);
 saveCashup       = guardReentry(saveCashup);
+startReservation = guardReentry(startReservation);
 deleteVN         = guardReentry(deleteVN);
 saveNewTeamMember = guardReentry(saveNewTeamMember);
 removeTeamMember  = guardReentry(removeTeamMember);
