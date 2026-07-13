@@ -731,6 +731,50 @@ function multiSimDiscountPct(allSims, customerId) {
   return active >= 3 ? settingNum('multi_sim_discount_pct', 10) : 0;
 }
 
+// ── USA pool optimiser (ported from legacy PoolOptimiser.gs) ────────────
+// When choosing a USA phone for a rental returning on `to`, rank the pooled
+// phones by how well the pool's expiry lines up with the return: expiring
+// 0–3 days after return is ideal (minimal idle pool time); expiring BEFORE
+// return risks the customer losing service mid-trip; expiring long after
+// wastes pool life. Already-live pool lines get a bonus (saves the
+// activation fee). Pure (takes phones/rentals) so it's unit-testable.
+const POOL_KEEP_DAYS = 7;      // >7 days of expiry left ⇒ worth keeping pooled
+const POOL_ACTIVATION_FEE = 8; // £ saved by reusing an already-active line
+
+function poolScore(overlap, alreadyActive) {
+  let s;
+  if (overlap < 0) s = -1000 + overlap * 10;      // expires before return — bad
+  else if (overlap <= 3) s = 100 - overlap;        // 97–100, minimal waste
+  else s = 90 - (overlap - 3) * 1.5;               // idle pool time, light penalty
+  if (alreadyActive) s += POOL_ACTIVATION_FEE;
+  return s;
+}
+
+function poolReason(overlap, alreadyActive) {
+  let p1;
+  if (overlap < 0) p1 = `Pool expires ${Math.abs(overlap)} day(s) BEFORE return — risky, service may cut out mid-trip.`;
+  else if (overlap <= 3) p1 = `Pool expires ${overlap} day(s) after return — minimal waste.`;
+  else p1 = `Pool expires ${overlap} days after return — some idle pool time.`;
+  return `${p1} ${alreadyActive ? 'Line already active (saves the activation fee).' : 'Needs activating first.'}`;
+}
+
+// Rank USA pooled phones that are free for [from,to]; best first.
+function poolPhoneSuggestions(phones, rentals, from, to, todayISO) {
+  const today = todayISO || localISO();
+  return phones
+    .filter(p => (p.country || '').toUpperCase() === 'USA' && p.pool &&
+      phoneConflicts(rentals, p.id, from, to, today).length === 0)
+    .map(p => {
+      const alreadyActive = !!(p.poolExpiry && p.poolExpiry >= today);
+      const overlap = p.poolExpiry
+        ? Math.round((parseLocalDate(p.poolExpiry) - parseLocalDate(to)) / 86400000)
+        : 999; // no expiry known → treat as lots of idle time
+      return { phone: p, overlap, alreadyActive, score: poolScore(overlap, alreadyActive),
+        reason: p.poolExpiry ? poolReason(overlap, alreadyActive) : 'No pool expiry on record.' };
+    })
+    .sort((a, b) => b.score - a.score || a.overlap - b.overlap);
+}
+
 function countChargeableDays(fromDate, toDate, country = 'USA') {
   let days = 0;
   const cur = parseLocalDate(fromDate);
@@ -1487,6 +1531,20 @@ function updateRentalCalc() {
   if (rate.cap != null && price >= capTotal)
     steps.push(`capped at £${rate.cap}${capPeriods > 1 ? ` × ${capPeriods} periods (${rate.capPeriodDays || 30}d each) = £${capTotal}` : ''}`);
   if (country === 'USA' && !simGiven) steps.push('no-SIM rate applied');
+  // USA pool suggestion: recommend the phone whose pool expiry best fits the
+  // return date, unless the chosen phone is already the top pick.
+  let poolLine = '';
+  if (country === 'USA') {
+    const ranked = poolPhoneSuggestions(phones, rentals, from, to, localISO());
+    const best = ranked[0];
+    if (best && best.phone.id !== (phone && phone.id)) {
+      poolLine = `<div style="margin-top:6px;font-size:11px;line-height:1.5;">
+        💡 <span style="color:var(--accent);font-weight:600;">Best pool match: ${escHtml(best.phone.number)}</span>
+        <button type="button" class="btn btn-outline" style="padding:1px 8px;font-size:11px;margin-left:4px;"
+          onclick="document.getElementById('rPhone').value='${best.phone.id}';updateRentalPhoneInfo();updateRentalCalc();">Use</button>
+        <br><span style="color:var(--muted);">${escHtml(best.reason)}</span></div>`;
+    }
+  }
   txt.innerHTML = `
     <span style="color:var(--muted);">Total days:</span> ${totalDays} &nbsp;|&nbsp;
     <span style="color:var(--muted);">Shabbat/Yom Tov excluded:</span> <span style="color:var(--gold);">${excluded}</span> &nbsp;|&nbsp;
@@ -1495,7 +1553,7 @@ function updateRentalCalc() {
     <div style="margin-top:6px;font-size:11px;color:var(--muted);line-height:1.6;">
       🧮 ${steps.join(' → ')}
       ${excluded > 0 ? `<br>📅 <span style="cursor:help;" title="Every Shabbos and full Yom Tov in the rental window is free — guests keep the phone over those days at no charge.">${excluded} free day${excluded === 1 ? '' : 's'} (Shabbos / Yom Tov) — hover for why</span>` : ''}
-    </div>
+    </div>${poolLine}
   `;
 }
 
@@ -3065,6 +3123,8 @@ function saveSims(data) {
 }
 
 let simSearchTerm = '';
+let simFilterPay = 'all';     // all | through-me | direct
+let simFilterStatus = 'all';  // all | active | renewing
 
 function renderSimsTab() {
   const content  = document.getElementById('mainContent');
@@ -3109,10 +3169,21 @@ function renderSimsTab() {
 
     <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:center;">
       <button class="btn btn-primary" onclick="openAddSimModal()">+ New SIM Plan</button>
-      <input class="search-box" style="width:260px;" type="text" id="simSearch"
+      <input class="search-box" style="width:220px;" type="text" id="simSearch"
         placeholder="🔍 Search customer, number, provider..."
         value="${escHtml(simSearchTerm)}"
         oninput="simSearchTerm=this.value; renderSimRows()">
+      <select class="form-input" style="width:160px;" onchange="simFilterPay=this.value; renderSimRows()">
+        <option value="all" ${simFilterPay==='all'?'selected':''}>Who pays: all</option>
+        <option value="through-me" ${simFilterPay==='through-me'?'selected':''}>🔄 I pay / through me</option>
+        <option value="direct" ${simFilterPay==='direct'?'selected':''}>👤 Customer pays direct</option>
+      </select>
+      <select class="form-input" style="width:150px;" onchange="simFilterStatus=this.value; renderSimRows()">
+        <option value="all" ${simFilterStatus==='all'?'selected':''}>Status: all</option>
+        <option value="active" ${simFilterStatus==='active'?'selected':''}>Active only</option>
+        <option value="renewing" ${simFilterStatus==='renewing'?'selected':''}>Renewing soon</option>
+      </select>
+      <span id="simCount" style="font-size:12px;color:var(--muted);"></span>
     </div>
 
     <div class="table-wrap">
@@ -3137,13 +3208,21 @@ function renderSimRows() {
   const tomorrow = localISO(new Date(Date.now() + 86400000));
   const term     = simSearchTerm.toLowerCase();
 
-  const filtered = sims.filter(s =>
-    !term ||
-    (s.customerName || '').toLowerCase().includes(term) ||
-    (s.simNumber    || '').toLowerCase().includes(term) ||
-    (s.provider     || '').toLowerCase().includes(term) ||
-    (s.iccid        || '').toLowerCase().includes(term)
-  );
+  const filtered = sims.filter(s => {
+    if (term &&
+      !(s.customerName || '').toLowerCase().includes(term) &&
+      !(s.simNumber    || '').toLowerCase().includes(term) &&
+      !(s.provider     || '').toLowerCase().includes(term) &&
+      !(s.iccid        || '').toLowerCase().includes(term)) return false;
+    if (simFilterPay === 'direct' && s.paymentType !== 'direct') return false;
+    if (simFilterPay === 'through-me' && s.paymentType === 'direct') return false;
+    if (simFilterStatus === 'active' && s.status !== 'active') return false;
+    if (simFilterStatus === 'renewing' && !(s.renewalDate === today || s.renewalDate === tomorrow)) return false;
+    return true;
+  });
+
+  const countEl = document.getElementById('simCount');
+  if (countEl) countEl.textContent = `${filtered.length} of ${sims.length}`;
 
   if (filtered.length === 0) {
     tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="emoji">💳</div><p>No SIM plans yet.</p><small>Click "+ New SIM Plan" to add one.</small></div></td></tr>`;

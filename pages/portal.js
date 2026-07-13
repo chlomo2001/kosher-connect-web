@@ -6,10 +6,21 @@
 import { useState } from 'react'
 import Head from 'next/head'
 
-export default function Portal() {
+export default function Portal({ supabaseUrl, googleEnabled }) {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)
+
+  // "Continue with Google" → Supabase OAuth. Dormant until the Google
+  // provider is turned on in Supabase (googleEnabled), at which point this
+  // button just works — Supabase creates the auth user and the portal
+  // session handler links it to customers.auth_user_id.
+  function google() {
+    if (!supabaseUrl) return
+    const redirect = `${window.location.origin}/portal`
+    window.location.href =
+      `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirect)}`
+  }
 
   // Personal touch: time-of-day greeting. Once portal sessions exist the
   // customer's first name joins it ("Good afternoon, Rivka").
@@ -57,6 +68,17 @@ export default function Portal() {
               <button className="btn btn-primary" type="submit" disabled={busy} style={{ width: '100%', padding: '10px 16px' }}>
                 {busy ? 'Sending…' : 'Email me a sign-in link'}
               </button>
+              {googleEnabled && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0', color: 'var(--muted)', fontSize: 12 }}>
+                    <div style={{ flex: 1, height: 1, background: 'var(--border)' }} /> or <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                  </div>
+                  <button type="button" className="btn btn-outline" onClick={google}
+                    style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 700 }}>G</span> Continue with Google
+                  </button>
+                </>
+              )}
             </>
           )}
         </form>
@@ -67,5 +89,12 @@ export default function Portal() {
 
 export async function getServerSideProps() {
   if (process.env.PORTAL_ENABLED !== '1') return { notFound: true }
-  return { props: {} }
+  return {
+    props: {
+      supabaseUrl: (process.env.SUPABASE_URL || '').replace(/\/$/, ''),
+      // Show the Google button only once you flip PORTAL_GOOGLE=1 (after
+      // enabling the Google provider in Supabase).
+      googleEnabled: process.env.PORTAL_GOOGLE === '1',
+    },
+  }
 }
