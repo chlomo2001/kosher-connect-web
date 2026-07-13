@@ -1216,7 +1216,7 @@ function renderPhoneRows() {
     const poolDisplay   = isUSA ? (p.pool || '—') : 'N/A';
     const expiryDisplay = isUSA ? (p.poolExpiry || '—') : 'N/A';
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('.action-btn'))openEditPhoneModal('${p.id}')">
-      <td style="font-weight:600;font-size:12px;">${escHtml(p.number)}</td>
+      <td style="font-weight:600;font-size:12px;">${escHtml(p.number)}${p.model ? `<div class="customer-email">${escHtml(p.model)}</div>` : ''}</td>
       <td>${p.country === 'USA' ? '🇺🇸' : p.country === 'Israel' ? '🇮🇱' : p.country === 'UK' ? '🇬🇧' : p.country === 'Canada' ? '🇨🇦' : '🇪🇺'} ${escHtml(p.country)}</td>
       <td style="font-size:12px;color:${isUSA?'':'var(--muted)'};">${isUSA ? escHtml(poolDisplay) : poolDisplay}</td>
       <td style="font-size:11px;color:${poolExpired?'var(--danger)':isUSA?'var(--muted)':'var(--muted)'};">${isUSA ? expiryDisplay : '<span style="color:var(--muted);">N/A</span>'}</td>
@@ -1645,6 +1645,10 @@ function openManagePhonesModal() {
         <label class="form-label">Company</label>
         <input class="form-input" id="pCompany" type="text" placeholder="USMobile, Lebara...">
       </div>
+      <div class="form-group">
+        <label class="form-label">Phone Model <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+        <input class="form-input" id="pModel" type="text" placeholder="e.g. Nokia 105, FIG Core">
+      </div>
       <div id="pPoolGroup" style="display:contents;">
       <div class="form-group">
         <label class="form-label">Pool Name (USA)</label>
@@ -1697,6 +1701,7 @@ function saveNewPhone() {
     country:    pCountryVal,
     ukPlan:     pCountryVal === 'UK' ? document.getElementById('pUKPlan').value : undefined,
     company:    document.getElementById('pCompany').value.trim(),
+    model:      document.getElementById('pModel').value.trim(),
     pool:       document.getElementById('pPool').value.trim(),
     poolExpiry: document.getElementById('pPoolExpiry').value || null,
     simId:      document.getElementById('pSIMID').value.trim(),
@@ -1738,6 +1743,10 @@ function openEditPhoneModal(phoneId) {
         <input class="form-input" id="epCompany" type="text" value="${escHtml(p.company||'')}">
       </div>
       <div class="form-group">
+        <label class="form-label">Phone Model <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+        <input class="form-input" id="epModel" type="text" value="${escHtml(p.model||'')}" placeholder="e.g. Nokia 105">
+      </div>
+      <div class="form-group">
         <label class="form-label">IMEI <span style="color:var(--muted);font-weight:400;">(scan)</span></label>
         <input class="form-input" id="epIMEI" type="text" inputmode="numeric" value="${escHtml(p.imei||'')}" placeholder="Scan or type">
       </div>
@@ -1770,6 +1779,8 @@ function saveEditPhone(phoneId) {
     p.poolExpiry = document.getElementById('epExpiry')?.value || null;
   }
   p.company = document.getElementById('epCompany').value.trim();
+  const epModel = document.getElementById('epModel');
+  if (epModel) p.model = epModel.value.trim();
   const epIMEI = document.getElementById('epIMEI');
   if (epIMEI) p.imei = epIMEI.value.trim();
   const epUKPlan = document.getElementById('epUKPlan');
@@ -5312,12 +5323,14 @@ async function renderDashboardTab() {
       <div class="dash-hero-value" style="font-size:26px;letter-spacing:-0.26px;">£${arrearsTotal.toFixed(2)}</div>
       <div class="dash-hero-sub">${arrears.length ? arrears.length + ' customer' + (arrears.length === 1 ? '' : 's') + ' in arrears' : 'nobody owes money 🎉'}</div>
       ${arrears.length ? `<div class="dash-hero-divider"></div>` +
-        arrears.slice(0, 4).map(a => `
+        arrears.slice(0, 8).map(a => `
           <div class="dash-hero-row${a.customerId ? ' dash-link' : ''}"${a.customerId
-            ? ` onclick="goToTab('customers',{customerId:'${escHtml(String(a.customerId))}'})" title="Open customer"` : ''}>
-            <span>${escHtml(a.customerName)}</span>
-            <span class="amt">£${Math.abs(a.balance).toFixed(2)}</span>
-          </div>`).join('') : ''}
+            ? ` onclick="goToTab('customers',{customerId:'${escHtml(String(a.customerId))}'})" title="Open ${escHtml(a.customerName)}"` : ''}>
+            <span>${escHtml(a.customerName)}${a.customerId ? '' : ' <span style="color:var(--muted);font-size:11px;">(walk-in)</span>'}</span>
+            <span class="amt">£${Math.abs(a.balance).toFixed(2)}${a.customerId ? ' <span class="feed-go" style="opacity:1;">›</span>' : ''}</span>
+          </div>`).join('') +
+        (arrears.length > 8 ? `<div class="dash-hero-row dash-link" onclick="goToTab('wallet')" title="Open the wallet"
+            style="color:var(--muted);"><span>+ ${arrears.length - 8} more in arrears</span><span class="amt">see all ›</span></div>` : '') : ''}
     </div>`;
 
   // ── Metric cards (each links to its tab) ──

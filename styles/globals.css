@@ -212,6 +212,10 @@ body {
   overflow: hidden;
   box-shadow: var(--shadow-1);
 }
+/* Wide tables scroll inside their card instead of being clipped, so no
+   screen ever overflows horizontally. */
+.table-wrap { overflow-x: auto; }
+.table-wrap table { min-width: 560px; }
 table { width: 100%; border-collapse: collapse; }
 thead { background: var(--surface2); }
 th {
@@ -812,4 +816,7 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 @media (max-width: 1150px) {
   .dash-grid { grid-template-columns: 1fr; }
   .dash-cols { grid-template-columns: 1fr; }
+  /* Rentals: stack the two tables so each gets full width instead of
+     squeezing side-by-side and clipping columns. */
+  .rentals-split { grid-template-columns: 1fr; }
 }
