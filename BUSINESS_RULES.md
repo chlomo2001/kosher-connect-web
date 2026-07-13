@@ -121,13 +121,17 @@ UK SIM Only Local £15/mo, UK SIM Only International £25/mo, TomTom Update
 £25 (after-sale service £10). SIMs are purchase-only — no return needed;
 reactivation on request.
 
-### 2.3 Not yet modeled in the app (from the customer price list)
+### 2.3 Online services & standalone VN billing
 
-- An online-services charging flow (the second-application prices are
-  seeded on the menu — `repeat_price` — ready for when the flow exists)
-- Standalone virtual-number bundle **billing** (the full price matrix is
-  in `vn_bundle_prices` and shown on the Virtual Numbers tab as reference;
-  recurring VN billing is a future flow)
+- **Online services** are charged from the Services tab: pick service +
+  quantity; the first application charges the single price, applications
+  2+ the "two or more" price. The charge posts to the wallet
+  (`SVC-<id>`); "paid now" records the payment alongside (`PAY-SVC-<id>`).
+- **Standalone virtual numbers** bill monthly: set bundle/plan/price
+  (from the price matrix, editable) + next billing date on the number.
+  The daily sweep posts one wallet charge per elapsed month
+  (`VN-<id>-<YYYY-MM>`, idempotent, catches up missed months) and
+  advances the date. Arrears are chased by the normal BALANCE sweep.
 
 ### 2.1 Virtual Number clarification
 

@@ -9,6 +9,8 @@
 //   2. Collections       → BALANCE-<customer> task while balance < 0
 //   3. Passport expiry   → PASSPORT-<booking> task when expiring within 90 days
 //   4. SIM renewals due  → SIMDUE-<sim> task when renewing within 3 days
+//   5. VN monthly billing → one ledger charge per billing period
+//      (VN-<id>-<YYYY-MM>, idempotent), next_billing_date advances +1 month
 //
 // Callers: Vercel Cron (Authorization: Bearer CRON_SECRET — note crons fire
 // only on PRODUCTION deployments), or a signed-in staff member (the "Run
@@ -185,6 +187,37 @@ async function handler(req, res) {
       if (stale) simClosed += await closeOpenTask(t.reference)
     }
     counts.simClosed = simClosed
+
+    // ── 5. Standalone-VN monthly billing ──
+    // Post one charge per elapsed billing period. Refs carry the period
+    // (VN-<id>-<YYYY-MM of the billing date>), so re-runs and catch-up after
+    // missed days are safe; the date pointer only advances after posting.
+    const billableVNs = await db.select(
+      'virtual_numbers',
+      `select=id,number,monthly_price,next_billing_date,customer_id,bundle_label,plan` +
+      `&billing_enabled=is.true&status=eq.Active&customer_id=not.is.null` +
+      `&monthly_price=gt.0&next_billing_date=lte.${today}`
+    )
+    let vnCharges = 0
+    for (const vn of billableVNs) {
+      let bill = vn.next_billing_date
+      // Catch up every period due to date (guard: max 24 to bound a bad date).
+      for (let i = 0; i < 24 && bill <= today; i++) {
+        await db.insertIgnoreDup('ledger', [{
+          customer_id: vn.customer_id,
+          charge_reference: `VN-${vn.id}-${bill.slice(0, 7)}`,
+          entry_type: 'virtual_number',
+          amount: -Number(vn.monthly_price),
+          description: `Virtual number ${vn.number}${vn.bundle_label ? ` (${vn.bundle_label}${vn.plan ? ', ' + vn.plan.replace(/_/g, ' ') : ''})` : ''} — month from ${bill}`,
+        }], 'charge_reference')
+        vnCharges++
+        const d = new Date(bill + 'T00:00:00Z')
+        d.setUTCMonth(d.getUTCMonth() + 1)
+        bill = d.toISOString().slice(0, 10)
+        await db.update('virtual_numbers', `id=eq.${vn.id}`, { next_billing_date: bill })
+      }
+    }
+    counts.vnChargesPosted = vnCharges
 
     console.log('[cron/sweep]', JSON.stringify(counts))
     return res.json({ success: true, ranAt: new Date().toISOString(), by: isCron ? 'cron' : staff.email, counts })

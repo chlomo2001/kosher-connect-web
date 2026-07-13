@@ -30,6 +30,7 @@ export default function Home() {
         <div className="nav-item" data-tab="bookings"><span className="nav-icon">✈️</span> Tickets &amp; Flights</div>
         <div className="nav-item" data-tab="wallet"><span className="nav-icon">💰</span> Wallet</div>
         <div className="nav-item" data-tab="repairs"><span className="nav-icon">🔧</span> Repairs</div>
+        <div className="nav-item" data-tab="services"><span className="nav-icon">🖨️</span> Services</div>
         <div className="nav-item" data-tab="virtual"><span className="nav-icon">🔢</span> Virtual Numbers</div>
         <div className="nav-item" data-tab="tasks"><span className="nav-icon">✅</span> Tasks</div>
         <div className="nav-item" data-tab="settings"><span className="nav-icon">⚙️</span> Settings</div>

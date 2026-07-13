@@ -89,6 +89,12 @@ window.api = {
     body: JSON.stringify(r),
   }).then(r => r.json()),
   getServiceMenu: (category) => kcFetch('/api/services' + (category ? '?category=' + category : '')).then(r => r.ok ? r.json() : []),
+  getServiceOrders: () => kcFetch('/api/service-orders').then(r => r.ok ? r.json() : []),
+  addServiceOrder: (o) => kcFetch('/api/service-orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(o),
+  }).then(r => r.json()),
 
   getTasks: () => kcFetch('/api/tasks').then(r => r.ok ? r.json() : []),
   addTask: (t) => kcFetch('/api/tasks', {
@@ -241,6 +247,11 @@ function renderTab(tab) {
     searchBox.style.display = 'none';
     btnNew.style.display = 'none';
     renderRepairsTab();
+  } else if (tab === 'services') {
+    document.getElementById('pageTitle').innerHTML = 'Online <span>Services</span>';
+    searchBox.style.display = 'none';
+    btnNew.style.display = 'none';
+    renderServicesTab();
   } else if (tab === 'tasks') {
     document.getElementById('pageTitle').innerHTML = 'Task <span>List</span>';
     searchBox.style.display = 'none';
@@ -2181,6 +2192,7 @@ const LEDGER_TYPE_LABELS = {
   repair: '🔧 Repair', online_service: '🖨️ Service', sim_annual: '💳 SIM annual',
   sim_additional: '💳 SIM extra', sim_replacement: '💳 SIM replacement',
   sim_service: '💳 SIM service', phone_sale: '📦 Phone sale', stock_sale: '📦 Sale',
+  virtual_number: '🔢 Virtual number',
 };
 
 async function loadWalletSection(customerId) {
@@ -3591,6 +3603,174 @@ async function changeRepairStatus(id, status) {
 }
 
 // ─────────────────────────────────────────────
+//  ONLINE SERVICES (charging screen)
+// ─────────────────────────────────────────────
+// One order = one wallet charge (SVC-<uuid>), optionally paid on the spot
+// (PAY-SVC-<uuid>). Repeat-application pricing per the customer price list.
+
+let serviceOrders = [];
+let onlineMenu = [];
+
+// First unit at the single price, units 2+ at repeatPrice ("two or more");
+// services without a repeat price charge every unit at the single price.
+function onlineServiceTotal(svc, qty) {
+  const n = Math.max(1, Math.floor(Number(qty)) || 1);
+  const single = Number(svc.price) || 0;
+  const rep = svc.repeatPrice === null || svc.repeatPrice === undefined
+    ? single : Number(svc.repeatPrice);
+  return single + (n - 1) * rep;
+}
+
+async function renderServicesTab() {
+  const content = document.getElementById('mainContent');
+  content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading services…</div>`;
+  [serviceOrders, onlineMenu] = await Promise.all([
+    window.api.getServiceOrders(),
+    window.api.getServiceMenu('online'),
+  ]);
+  if (!Array.isArray(serviceOrders)) serviceOrders = [];
+  if (!Array.isArray(onlineMenu)) onlineMenu = [];
+
+  const today = localISO();
+  const todays = serviceOrders.filter(o => (o.createdAt || '').slice(0, 10) === today);
+  const revenue = serviceOrders.reduce((s, o) => s + (o.total || 0), 0);
+
+  const orderRows = serviceOrders.length === 0
+    ? `<tr><td colspan="5"><div class="empty-state"><div class="emoji">🖨️</div><p>No services charged yet.</p></div></td></tr>`
+    : serviceOrders.map(o => `
+      <tr>
+        <td><div class="customer-name">${escHtml(o.customerName || '—')}</div></td>
+        <td>${escHtml(o.serviceName)}${o.qty > 1 ? ` <span style="color:var(--muted);">× ${o.qty}</span>` : ''}</td>
+        <td><strong>£${(o.total || 0).toFixed(2)}</strong></td>
+        <td>${o.createdAt ? fmtDate(o.createdAt) : '—'}</td>
+        <td style="font-size:12px;color:var(--muted);">${escHtml(o.notes || '')}</td>
+      </tr>`).join('');
+
+  const menuRows = onlineMenu.map(m => `
+    <tr>
+      <td>${escHtml(m.name)}</td>
+      <td>£${m.price.toFixed(2)}</td>
+      <td>${m.repeatPrice === null ? '—' : '£' + m.repeatPrice.toFixed(2)}</td>
+    </tr>`).join('');
+
+  content.innerHTML = `
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Charged Today</div>
+        <div class="stat-value">£${todays.reduce((s, o) => s + (o.total || 0), 0).toFixed(2)}</div>
+        <div class="stat-sub">${todays.length} service${todays.length === 1 ? '' : 's'}</div></div>
+      <div class="stat-card"><div class="stat-label">All-Time Revenue</div>
+        <div class="stat-value">£${revenue.toFixed(2)}</div></div>
+      <div class="stat-card"><div class="stat-label">Orders</div><div class="stat-value">${serviceOrders.length}</div></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <button class="btn btn-primary" onclick="openNewServiceModal()">+ Charge a Service</button>
+    </div>
+    <div class="dash-cols">
+      <div class="table-card">
+        <div class="section-divider" style="margin:12px 14px 4px;">Recent orders</div>
+        <table>
+          <thead><tr><th>Customer</th><th>Service</th><th>Total</th><th>Date</th><th>Notes</th></tr></thead>
+          <tbody>${orderRows}</tbody>
+        </table>
+      </div>
+      <div class="table-card">
+        <div class="section-divider" style="margin:12px 14px 4px;">Price list <span style="color:var(--muted);font-weight:400;">· first / two or more</span></div>
+        <table>
+          <thead><tr><th>Service</th><th>First</th><th>2nd+</th></tr></thead>
+          <tbody>${menuRows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function openNewServiceModal() {
+  const customerOptions = customers.map(c =>
+    `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone || '')}</option>`).join('');
+  const svcOptions = onlineMenu.map(m =>
+    `<option value="${escHtml(String(m.id))}">${escHtml(m.name)} — £${m.price.toFixed(2)}${m.repeatPrice !== null ? ` (2nd+ £${m.repeatPrice.toFixed(2)})` : ''}</option>`).join('');
+  showDynamicModal(`
+    <div class="modal-title">🖨️ Charge a Service</div>
+    <div class="form-grid">
+      <div class="form-group form-full">
+        <label class="form-label">Customer *</label>
+        <select class="form-input" id="svCustomer"><option value="">Select customer…</option>${customerOptions}</select>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Service *</label>
+        <select class="form-input" id="svService" onchange="svUpdateTotal()">
+          <option value="">Select service…</option>${svcOptions}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Quantity / applications</label>
+        <input class="form-input" type="number" id="svQty" value="1" min="1" step="1" oninput="svUpdateTotal()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Total (£)</label>
+        <input class="form-input" type="number" id="svTotal" min="0" step="0.01" value="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Paid now?</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="checkbox" id="svPaid" checked
+            onchange="document.getElementById('svMethod').style.display=this.checked?'':'none'"
+            style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+          <select class="form-input" id="svMethod" style="flex:1;">
+            <option value="cash">💵 Cash</option>
+            <option value="card">💳 Card</option>
+            <option value="bank_transfer">🏦 Bank transfer</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="svNotes" placeholder="e.g. passport ref, printout pages">
+      </div>
+    </div>
+    <div style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);" id="svBreakdown">
+      The charge posts to the customer's wallet (reference <code>SVC-…</code>); ticking "paid now" records the payment alongside.
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNewServiceOrder()">🖨️ Charge</button>
+    </div>
+  `);
+}
+
+function svUpdateTotal() {
+  const svc = onlineMenu.find(m => String(m.id) === document.getElementById('svService')?.value);
+  if (!svc) return;
+  const qty = Math.max(1, parseInt(document.getElementById('svQty')?.value, 10) || 1);
+  const total = onlineServiceTotal(svc, qty);
+  document.getElementById('svTotal').value = total.toFixed(2);
+  const bd = document.getElementById('svBreakdown');
+  if (bd) bd.innerHTML = qty > 1 && svc.repeatPrice !== null
+    ? `${qty} applications: 1 × £${svc.price.toFixed(2)} + ${qty - 1} × £${Number(svc.repeatPrice).toFixed(2)} = <strong>£${total.toFixed(2)}</strong>`
+    : `1 × £${svc.price.toFixed(2)} = <strong>£${total.toFixed(2)}</strong>`;
+}
+
+async function saveNewServiceOrder() {
+  const customerId = document.getElementById('svCustomer').value;
+  const serviceId = document.getElementById('svService').value;
+  if (!customerId) { toast('Select a customer.', 'error'); return; }
+  if (!serviceId) { toast('Select a service.', 'error'); return; }
+  const res = await window.api.addServiceOrder({
+    customerId,
+    serviceId,
+    qty: Math.max(1, parseInt(document.getElementById('svQty').value, 10) || 1),
+    total: parseFloat(document.getElementById('svTotal').value),
+    paidNow: document.getElementById('svPaid').checked,
+    method: document.getElementById('svMethod').value,
+    notes: document.getElementById('svNotes').value.trim(),
+  });
+  if (!res.success) { toast(res.error || 'Could not charge the service.', 'error'); return; }
+  closeDynamicModal();
+  toast(`Charged £${res.order.total.toFixed(2)} — wallet balance £${res.balance.toFixed(2)}.`, 'success');
+  renderServicesTab();
+}
+
+// ─────────────────────────────────────────────
 //  TASKS
 // ─────────────────────────────────────────────
 // Tables-native to-do list. Also displays the keyed auto-tasks the system
@@ -3873,11 +4053,11 @@ async function renderDashboardTab() {
 // ─────────────────────────────────────────────
 
 let virtualNumbers = [];
+let vnPriceMatrix = []; // bundle price matrix (also drives the billing modal)
 
 async function renderVirtualTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading virtual numbers…</div>`;
-  let vnPriceMatrix = [];
   [virtualNumbers, vnPriceMatrix] = await Promise.all([
     window.api.getVirtualNumbers(),
     kcFetch('/api/vn-prices').then(r => r.ok ? r.json() : []).catch(() => []),
@@ -3887,17 +4067,22 @@ async function renderVirtualTab() {
 
   const active = virtualNumbers.filter(v => v.status === 'Active');
   const rows = virtualNumbers.length === 0
-    ? `<tr><td colspan="6"><div class="empty-state"><div class="emoji">🔢</div><p>No virtual numbers yet.</p></div></td></tr>`
+    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔢</div><p>No virtual numbers yet.</p></div></td></tr>`
     : virtualNumbers.map(v => `
       <tr>
         <td><strong>${escHtml(v.number)}</strong></td>
         <td>${escHtml(v.customerName || '—')}</td>
         <td>${escHtml(v.platform || '—')}</td>
+        <td>${v.billingEnabled && v.monthlyPrice
+          ? `<strong>£${v.monthlyPrice.toFixed(2)}</strong><div class="customer-email">next ${fmtDate(v.nextBillingDate) || '—'}</div>`
+          : '<span style="color:var(--muted);">—</span>'}</td>
         <td><span class="badge" style="${v.status === 'Active'
           ? 'background:rgba(34,197,94,0.15);color:var(--success);'
           : 'background:rgba(148,163,184,0.15);color:var(--muted);'}">${escHtml(v.status)}</span></td>
         <td>${v.shortcutUrl ? `<a href="${escHtml(v.shortcutUrl)}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;">open ↗</a>` : '—'}</td>
         <td style="white-space:nowrap;">
+          <button class="action-btn" style="font-size:11px;padding:4px 10px;"
+            onclick="openVNBillingModal('${escHtml(v.id)}')">💷 Billing</button>
           <button class="action-btn" style="font-size:11px;padding:4px 10px;"
             onclick="toggleVNStatus('${escHtml(v.id)}', '${v.status === 'Active' ? 'Inactive' : 'Active'}')">
             ${v.status === 'Active' ? '⏸ Deactivate' : '▶ Activate'}</button>
@@ -3916,7 +4101,7 @@ async function renderVirtualTab() {
     </div>
     <div class="table-card">
       <table>
-        <thead><tr><th>Number</th><th>Customer</th><th>Platform</th><th>Status</th><th>Shortcut</th><th></th></tr></thead>
+        <thead><tr><th>Number</th><th>Customer</th><th>Platform</th><th>Monthly</th><th>Status</th><th>Shortcut</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -3991,6 +4176,94 @@ async function saveNewVN() {
   if (!res.success) { toast(res.error || 'Could not save.', 'error'); return; }
   closeDynamicModal();
   toast(`Virtual number ${number} saved ✔`, 'success');
+  renderVirtualTab();
+}
+
+// ── VN monthly billing (price list bundle matrix drives the price) ──
+
+const VN_PLAN_LABELS = {
+  incoming_only: 'Incoming only', outgoing_100: '+100 outgoing',
+  unlimited: 'Unlimited', payg: 'PAYG (base + rates)',
+};
+
+function vnBundlePriceFor(bundleLabel, plan) {
+  const b = vnPriceMatrix.find(x => x.label === bundleLabel);
+  if (!b) return null;
+  return { incoming_only: b.incomingOnly, outgoing_100: b.outgoing100,
+           unlimited: b.unlimited, payg: b.paygBase }[plan] ?? null;
+}
+
+function vnBillingPricePrefill() {
+  const bundle = document.getElementById('vbBundle')?.value;
+  const plan = document.getElementById('vbPlan')?.value;
+  const price = vnBundlePriceFor(bundle, plan);
+  if (price !== null && price !== undefined) {
+    document.getElementById('vbPrice').value = price.toFixed(2);
+  }
+}
+
+function openVNBillingModal(id) {
+  const v = virtualNumbers.find(x => x.id === id);
+  if (!v) return;
+  const bundleOptions = ['<option value="">— custom / none —</option>']
+    .concat(vnPriceMatrix.map(p =>
+      `<option value="${escHtml(p.label)}" ${v.bundleLabel === p.label ? 'selected' : ''}>${escHtml(p.label)}</option>`))
+    .join('');
+  const planOptions = Object.entries(VN_PLAN_LABELS).map(([k, label]) =>
+    `<option value="${k}" ${v.plan === k ? 'selected' : ''}>${label}</option>`).join('');
+  showDynamicModal(`
+    <div class="modal-title">💷 Monthly Billing — ${escHtml(v.number)}</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:14px;">
+      ${v.customerName ? `Customer: <strong style="color:var(--text);">${escHtml(v.customerName)}</strong>` :
+        '<span style="color:var(--danger);">⚠ No customer assigned — billing needs one.</span>'}
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Bundle</label>
+        <select class="form-input" id="vbBundle" onchange="vnBillingPricePrefill()">${bundleOptions}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Plan</label>
+        <select class="form-input" id="vbPlan" onchange="vnBillingPricePrefill()">${planOptions}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Monthly price (£)</label>
+        <input class="form-input" type="number" id="vbPrice" min="0" step="0.01" value="${v.monthlyPrice ?? ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Next billing date</label>
+        <input class="form-input" type="date" id="vbDate" value="${escHtml(v.nextBillingDate || localISO())}">
+      </div>
+      <div class="form-group form-full" style="flex-direction:row;align-items:center;gap:10px;">
+        <input type="checkbox" id="vbEnabled" ${v.billingEnabled ? 'checked' : ''}
+          style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+        <label for="vbEnabled" style="font-size:13px;cursor:pointer;">Billing enabled — the daily sweep posts one wallet charge per month</label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveVNBilling('${escHtml(v.id)}')">💷 Save</button>
+    </div>
+  `);
+}
+
+async function saveVNBilling(id) {
+  const enabled = document.getElementById('vbEnabled').checked;
+  const price = parseFloat(document.getElementById('vbPrice').value);
+  if (enabled && (!Number.isFinite(price) || price <= 0)) {
+    toast('Enter a monthly price greater than £0.', 'error'); return;
+  }
+  const res = await window.api.updateVirtualNumber({
+    id,
+    bundleLabel: document.getElementById('vbBundle').value,
+    plan: document.getElementById('vbPlan').value,
+    monthlyPrice: Number.isFinite(price) ? price : null,
+    billingEnabled: enabled,
+    nextBillingDate: document.getElementById('vbDate').value,
+  });
+  if (!res.success) { toast(res.error || 'Could not save billing.', 'error'); return; }
+  closeDynamicModal();
+  toast(enabled ? 'Monthly billing on — charges post via the daily sweep.' : 'Billing saved.', 'success');
   renderVirtualTab();
 }
 
@@ -4250,6 +4523,8 @@ saveRentalRate   = guardReentry(saveRentalRate);
 saveDamageRate   = guardReentry(saveDamageRate);
 saveSettingKey   = guardReentry(saveSettingKey);
 saveNewVN        = guardReentry(saveNewVN);
+saveVNBilling    = guardReentry(saveVNBilling);
+saveNewServiceOrder = guardReentry(saveNewServiceOrder);
 deleteVN         = guardReentry(deleteVN);
 saveNewTeamMember = guardReentry(saveNewTeamMember);
 removeTeamMember  = guardReentry(removeTeamMember);
