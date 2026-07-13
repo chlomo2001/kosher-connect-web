@@ -2389,8 +2389,12 @@ function renderDetailPanel(id) {
     .filter(r => r.customerId === c.id)
     .reduce((sum, r) => sum + (r.amountPaid || 0), 0);
   const cActiveRentals = rentals.filter(r => r.customerId === c.id && (r.status === 'active' || r.status === 'overdue'));
-  const otherServices = (c.services || []).filter(s => s.type !== 'rental');
-  const activeVNs = otherServices.filter(s => s.type === 'vn').length;
+  // Real linked SIMs and virtual numbers (the global lists), not the legacy
+  // embedded c.services — those seeded plans were being missed entirely.
+  const cSims = sims.filter(s => s.customerId === c.id && s.status === 'active');
+  const cVNs = virtualNumbers.filter(v => v.customerId === c.id && v.status === 'Active');
+  const otherServices = (c.services || []).filter(s => s.type !== 'rental' && s.type !== 'sim' && s.type !== 'vn');
+  const activeVNs = cVNs.length;
 
   const dotColor = { rental: 'dot-blue', vn: 'dot-purple', sim: 'dot-gold', payment: 'dot-green' };
 
@@ -2408,6 +2412,8 @@ function renderDetailPanel(id) {
 
   const allActiveServices = [
     ...cActiveRentals.map(r => ({ type: 'rental', label: `Rental ${r.country === 'USA' ? '🇺🇸' : r.country === 'UK' ? '🇬🇧' : r.country === 'Israel' ? '🇮🇱' : '🌍'}` })),
+    ...cSims.map(s => ({ type: 'sim', label: `SIM · ${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}` })),
+    ...cVNs.map(v => ({ type: 'vn', label: `VN ${v.number || ''}` })),
     ...otherServices,
   ];
   const servicesHTML = allActiveServices.length === 0
@@ -2492,27 +2498,12 @@ function renderDetailPanel(id) {
         <div style="color:var(--muted);font-size:13px;padding:6px 0;">Loading wallet…</div>
       </div>
 
-      <div class="section-divider">Add Manual Payment</div>
-      <div class="add-payment-row" id="paymentRow-${c.id}">
-        <select id="payType-${c.id}">
-          <option value="rental">📱 Rental</option>
-          <option value="vn">🔢 Virtual Number</option>
-          <option value="sim">💳 SIM Plan</option>
-          <option value="payment">💰 Payment</option>
-        </select>
-        <input type="text" id="payDesc-${c.id}" placeholder="Description..." />
-        <input type="number" id="payAmt-${c.id}" placeholder="£0" min="0" step="0.5" />
-        <button class="btn btn-primary" style="font-size:12px;padding:7px 14px;" onclick="addPayment('${c.id}')">+ Add</button>
-      </div>
-
-      <div class="section-divider" style="margin-top:18px;">History</div>
-      <div class="history-list" id="historyList-${c.id}">${historyHTML}</div>
-
       <div class="section-divider" style="margin-top:18px;">New Service</div>
       <div class="service-actions">
         <button class="btn btn-rental" style="font-size:13px;padding:7px 16px;" onclick="openNewRentalModal()">📱 New Rental</button>
+        <button class="btn btn-primary" style="font-size:13px;padding:7px 16px;" onclick="openNewBookingModal('${c.id}')">✈️ New Flight Booking</button>
         <button class="btn btn-vn" style="font-size:13px;padding:7px 16px;" onclick="openNewVNModal('${c.id}')">🔢 New Virtual Number</button>
-        <button class="btn btn-sim" style="font-size:13px;padding:7px 16px;" onclick="toast('SIM Plans — coming soon!','warning')">💳 New SIM Plan</button>
+        <button class="btn btn-sim" style="font-size:13px;padding:7px 16px;" onclick="openAddSimModal('${c.id}')">💳 New SIM Plan</button>
       </div>
     </div>`;
 
@@ -3260,15 +3251,16 @@ function renderSimRows() {
   }).join('');
 }
 
-function openAddSimModal() { openSimFormModal(null); }
+function openAddSimModal(preselectCustomerId = null) { openSimFormModal(null, preselectCustomerId); }
 function openEditSimModal(id) { openSimFormModal(id); }
 
-function openSimFormModal(id) {
+function openSimFormModal(id, preselectCustomerId = null) {
   const s = id ? sims.find(x => x.id === id) : null;
   const isEdit = !!s;
+  const preselect = s ? s.customerId : preselectCustomerId;
 
   const customerOptions = customers.map(c =>
-    `<option value="${c.id}" ${s && s.customerId === c.id ? 'selected' : ''}>${escHtml(c.firstName + ' ' + c.lastName)}</option>`
+    `<option value="${c.id}" ${preselect === c.id ? 'selected' : ''}>${escHtml(c.firstName + ' ' + c.lastName)}</option>`
   ).join('');
 
   showDynamicModal(`
@@ -3784,14 +3776,14 @@ async function savePassengers(bookingId) {
   renderBookingsTab();
 }
 
-async function openNewBookingModal() {
+async function openNewBookingModal(preselectCustomerId = null) {
   bkPassengers = [{}];
   if (!ticketsMenu.length) {
     ticketsMenu = await window.api.getServiceMenu('tickets').catch(() => []);
     if (!Array.isArray(ticketsMenu)) ticketsMenu = [];
   }
   const customerOptions = customers.map(c =>
-    `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone || '')}</option>`
+    `<option value="${c.id}" ${c.id === preselectCustomerId ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone || '')}</option>`
   ).join('');
   const startFee = ticketsMenu.find(s => /start fee/i.test(s.name));
   const svcOptions = ticketsMenu
@@ -4914,6 +4906,8 @@ function remindContextFor(kind, id) {
       return s && { label: `SIM — ${s.customerName} (${s.provider || 'plan'})`, customerId: s.customerId }; }
     case 'vn': { const v = virtualNumbers.find(x => x.id === id);
       return v && { label: `Virtual number ${v.number}${v.customerName ? ' — ' + v.customerName : ''}`, customerId: v.customerId }; }
+    case 'note': // free-standing reminder not tied to a record
+      return { label: 'Reminder', customerId: null };
   }
   return null;
 }
@@ -4970,11 +4964,15 @@ function openRemindModal(kind, id) {
       <button type="button" class="btn btn-outline btn-sm" onclick="saveQuickReminder('${escHtml(kind)}','${escHtml(String(id))}',60)">1 hour</button>
       <button type="button" class="btn btn-outline btn-sm" onclick="saveQuickReminder('${escHtml(kind)}','${escHtml(String(id))}',180)">3 hours</button>
     </div>
-    <div class="section-divider" style="margin:0 0 10px;">or on a date</div>
+    <div class="section-divider" style="margin:0 0 10px;">or at a date &amp; time</div>
     <div class="form-grid">
       <div class="form-group">
-        <label class="form-label">When</label>
+        <label class="form-label">Date</label>
         <input class="form-input" type="date" id="rmDate" value="${localISO(tomorrow)}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Time <span style="color:var(--muted);font-weight:400;">(optional — pops up at this exact time)</span></label>
+        <input class="form-input" type="time" id="rmTime">
       </div>
       <div class="form-group">
         <label class="form-label">Priority</label>
@@ -5001,17 +4999,36 @@ async function saveReminder(kind, id) {
   if (!ctx) return;
   const date = document.getElementById('rmDate').value;
   if (!date) { toast('Pick a date.', 'error'); return; }
+  const time = document.getElementById('rmTime').value; // HH:MM or ''
+  const note = document.getElementById('rmNote').value.trim();
+  // A free-standing 'note' reminder uses the note itself as its label.
+  if (kind === 'note' && !note) { toast('Type what to remind you about.', 'error'); return; }
+  const baseLabel = (kind === 'note') ? note : ctx.label;
+
+  // With a time, schedule an exact-moment popup (fires while the app is
+  // open) on top of the backup task; without one it's a plain day reminder.
+  if (time) {
+    const [hh, mm] = time.split(':').map(Number);
+    const target = parseLocalDate(date);
+    target.setHours(hh || 0, mm || 0, 0, 0);
+    if (target.getTime() <= Date.now()) { toast('That time is in the past.', 'error'); return; }
+    const list = localReminders();
+    list.push({ at: target.getTime(), label: (kind !== 'note' && note) ? `${baseLabel} — ${note}` : baseLabel });
+    localStorage.setItem('kcLocalReminders', JSON.stringify(list));
+    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+  }
+
   const res = await window.api.addTask({
-    title: `⏰ ${ctx.label}`,
+    title: `⏰ ${baseLabel}${time ? ' @ ' + time : ''}`,
     dueDate: date,
     priority: document.getElementById('rmPriority').value,
-    notes: document.getElementById('rmNote').value.trim(),
+    notes: note,
     customerId: ctx.customerId || null,
     snoozedUntil: date, // sleeps until its day, then lands in the Now lane
   });
   if (!res.success) { toast(res.error || 'Could not set the reminder.', 'error'); return; }
   closeDynamicModal();
-  toast(`Reminder set for ${fmtDate(date)}.`, 'success');
+  toast(time ? `⏰ Will pop up ${fmtDate(date)} at ${time}.` : `Reminder set for ${fmtDate(date)}.`, 'success');
 }
 
 // ── Command palette (Ctrl/Cmd+K) ─────────────────────────────────────────
@@ -5028,6 +5045,7 @@ const PALETTE_COMMANDS = [
   { icon: '🔧', label: 'New Repair', sub: 'command', run: async () => { repairMenu = await window.api.getServiceMenu('repair'); openNewRepairModal(); } },
   { icon: '👤', label: 'New Customer', sub: 'command', run: () => goToTab('customers', {}) || setTimeout(() => document.getElementById('btnNewCustomer')?.click(), 120) },
   { icon: '🖨️', label: 'Charge a Service', sub: 'command', run: async () => { goToTab('services'); } },
+  { icon: '⏰', label: 'New reminder', sub: 'command', run: () => openRemindModal('note', '') },
   { icon: '🧾', label: 'Cash-up', sub: 'command', run: () => openCashupModal() },
   { icon: '⏰', label: 'Run sweeps now', sub: 'command', run: () => runSweepsNow() },
   ...['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'shop', 'virtual', 'tasks', 'settings']
