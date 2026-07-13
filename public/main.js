@@ -2682,6 +2682,11 @@ function openWalletModal(customerId) {
         <label class="form-label">Note</label>
         <input class="form-input" id="wlNote" placeholder="What is this for?">
       </div>
+      ${c && c.email ? `<div class="form-group form-full">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+          <input type="checkbox" id="wlEmail"> ✉️ Email a receipt to ${escHtml(c.email)}
+        </label>
+      </div>` : ''}
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
@@ -2694,16 +2699,30 @@ async function saveWalletEntry(customerId) {
   const kind = document.getElementById('wlKind').value;
   const amount = parseFloat(document.getElementById('wlAmount').value);
   if (!Number.isFinite(amount) || amount === 0) { toast('Enter a non-zero amount.', 'error'); return; }
-  const res = await window.api.addLedgerEntry({
-    customerId,
-    kind,
-    amount,
-    method: document.getElementById('wlMethod').value,
-    note: document.getElementById('wlNote').value.trim(),
-  });
+  const method = document.getElementById('wlMethod').value;
+  const note = document.getElementById('wlNote').value.trim();
+  const wantEmail = !!document.getElementById('wlEmail')?.checked;
+  const res = await window.api.addLedgerEntry({ customerId, kind, amount, method, note });
   if (!res.success) { toast(res.error || 'Could not record it.', 'error'); return; }
   closeDynamicModal();
   toast(`Recorded — wallet balance now £${res.balance.toFixed(2)}.`, 'success');
+  if (wantEmail && amount > 0) {
+    kcFetch('/api/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind: 'payment',
+        customerId,
+        amount,
+        method: (kind === 'payment' || kind === 'top_up') ? method : null,
+        note,
+        balance: res.balance,
+      }),
+    }).then(r => r.json()).then(er => {
+      if (er && er.success) toast(`Receipt emailed to ${er.sentTo}.`, 'success');
+      else toast(er?.error || 'Payment saved, but the receipt email failed.', 'error');
+    }).catch(() => toast('Payment saved, but the receipt email failed.', 'error'));
+  }
   loadWalletSection(customerId); // no-ops unless the detail panel is open
   if (currentTab === 'wallet') renderWalletTab();
 }
@@ -5194,11 +5213,40 @@ function posRenderBasket() {
 function posShowLastSale() {
   const el = document.getElementById('posLastSale');
   if (!el) return;
-  el.innerHTML = posLastSale ? `
+  if (!posLastSale) { el.innerHTML = ''; return; }
+  const canEmail = !!posLastSale.customerId;
+  el.innerHTML = `
     <div class="pos-done">
       ✅ £${posLastSale.total.toFixed(2)} taken${posLastSale.change !== null
         ? ` — <strong>change £${posLastSale.change.toFixed(2)}</strong>` : ''}
-    </div>` : '';
+      ${canEmail ? `<button class="btn btn-secondary" style="margin-top:8px;width:100%;"
+        onclick="emailSaleReceipt(this)" ${posLastSale.emailed ? 'disabled' : ''}>
+        ${posLastSale.emailed ? '✉️ Receipt sent' : '✉️ Email receipt'}</button>` : ''}
+    </div>`;
+}
+
+async function emailSaleReceipt(btn) {
+  if (!posLastSale || !posLastSale.customerId) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+  const res = await kcFetch('/api/email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      kind: 'sale',
+      customerId: posLastSale.customerId,
+      lines: posLastSale.lines,
+      total: posLastSale.total,
+      method: posLastSale.method,
+      paidNow: posLastSale.paidNow,
+    }),
+  }).then(r => r.json()).catch(() => null);
+  if (res && res.success) {
+    posLastSale.emailed = true;
+    toast(`Receipt emailed to ${res.sentTo}.`, 'success');
+  } else {
+    toast(res?.error || 'Could not send the receipt.', 'error');
+  }
+  posShowLastSale();
 }
 
 async function saveSale() {
@@ -5229,9 +5277,23 @@ async function saveSale() {
     const i = shopItems.find(x => x.id === l.itemId);
     if (i) i.quantity = Math.max(0, i.quantity - l.qty);
   });
+  const custId = document.getElementById('posCustomer').value;
+  const receiptLines = posBasket.map(l => {
+    const i = shopItems.find(x => x.id === l.itemId);
+    return {
+      name: i ? [i.company, i.model].filter(Boolean).join(' ') : 'Item',
+      qty: l.qty,
+      total: Number.isFinite(Number(l.total)) ? Number(l.total) : (i ? (i.sellingPrice || 0) * l.qty : 0),
+    };
+  });
   posLastSale = {
     total: res.total,
     change: paidNow && posMethod === 'cash' && Number.isFinite(given) ? Math.max(0, given - res.total) : null,
+    customerId: custId && custId !== 'walkin' ? custId : null,
+    lines: receiptLines,
+    method: posMethod,
+    paidNow,
+    emailed: false,
   };
   posBasket = [];
   toast(`Sold ${res.lines} item${res.lines === 1 ? '' : 's'} — £${res.total.toFixed(2)}.`, 'success');
