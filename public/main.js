@@ -2362,7 +2362,7 @@ function renderTableRows() {
     return `
     <tr class="${selected}" data-id="${c.id}">
       <td>
-        <div class="customer-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}${c.passportOnFile ? ' <span title="Passport on file" style="cursor:help;">🛂</span>' : ''}</div>
+        <div class="customer-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}${c.passportOnFile ? ' <span title="Passport on file">🛂</span>' : ''}</div>
         <div class="customer-email">${escHtml(c.email || '')}</div>
       </td>
       <td>${escHtml(c.phone || '—')}</td>
@@ -2512,7 +2512,7 @@ function renderDetailPanel(id) {
       <div class="detail-header">
         <div class="avatar">${initials}</div>
         <div style="flex:1;">
-          <div class="detail-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}${c.passportOnFile ? ' <span title="Passport on file" style="cursor:help;font-size:16px;">🛂</span>' : ''}</div>
+          <div class="detail-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}${c.passportOnFile ? ' <span title="Passport on file" style="font-size:16px;">🛂</span>' : ''}</div>
           <div class="detail-meta">${escHtml(c.phone || '—')} · ${escHtml(c.email || 'No email')} ${addr} · Since ${since}</div>
         </div>
         <div style="display:flex;gap:8px;">
@@ -3676,6 +3676,23 @@ function escHtml(str) {
     .replace(/"/g,'&quot;');
 }
 
+// Copy text to the clipboard with a confirmation toast. Used by the
+// check-in passport details (airline forms need each value pasted).
+function copyText(text, label) {
+  const t = String(text == null ? '' : text);
+  const done = () => toast(`Copied ${label || ''}`.trim() + (t.length < 30 ? ` — ${t}` : ''), 'success');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t).then(done).catch(() => fallbackCopy(t, done));
+  } else fallbackCopy(t, done);
+}
+function fallbackCopy(t, done) {
+  const ta = document.createElement('textarea');
+  ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); } catch { toast('Copy failed', 'error'); }
+  ta.remove();
+}
+
 function toast(msg, type = 'success') {
   const container = document.getElementById('toast-container');
   const el = document.createElement('div');
@@ -4063,24 +4080,43 @@ async function openCheckinModal(bookingId) {
   const detail = await kcFetch('/api/bookings?checkin=' + encodeURIComponent(bookingId))
     .then(r => r.json()).catch(() => null);
   const pax = detail?.success ? (detail.booking.passengers || []) : (b.passengers || []);
-  const row = (lbl, val) => val ? `<div><span style="color:var(--muted);">${lbl}:</span> <strong>${escHtml(val)}</strong></div>` : '';
+  // Each value is a click-to-copy chip (airline forms need them pasted one
+  // by one), plus a "Copy all" that grabs the whole passenger block.
+  const cell = (lbl, val, raw) => val ? `
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span style="color:var(--muted);">${lbl}:</span>
+      <strong style="cursor:pointer;border-bottom:1px dashed var(--border);" title="Click to copy"
+        onclick="copyText('${escHtml(String(raw != null ? raw : val)).replace(/'/g, "\\'")}','${lbl}')">${escHtml(val)}</strong>
+    </div>` : '';
+  const paxAll = (p) => [
+    p.fullName && `Name: ${p.fullName}`, p.dob && `DOB: ${p.dob}`, p.nationality && `Nationality: ${p.nationality}`,
+    p.passportNumber && `Passport: ${p.passportNumber}`, p.passportExpiry && `Expiry: ${p.passportExpiry}`,
+    p.passportIssueDate && `Issued: ${p.passportIssueDate}`, p.issuingCountry && `Issuing country: ${p.issuingCountry}`,
+  ].filter(Boolean).join('\n');
   const paxHtml = pax.length ? `
-    <div class="section-divider" style="margin:4px 0 8px;">Passenger details (for the airline check-in)</div>
-    <div style="max-height:240px;overflow-y:auto;margin-bottom:12px;">
-      ${pax.map(p => `
+    <div class="section-divider" style="margin:4px 0 8px;">Passenger details <span style="color:var(--muted);font-weight:400;font-size:11px;">— click any value to copy</span></div>
+    <div style="max-height:260px;overflow-y:auto;margin-bottom:12px;">
+      ${pax.map((p, i) => `
         <div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12px;line-height:1.7;">
-          <strong style="font-size:13px;">${escHtml(p.fullName || '(no name)')}</strong>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <strong style="font-size:13px;cursor:pointer;" title="Click to copy" onclick="copyText('${escHtml(String(p.fullName||'')).replace(/'/g, "\\'")}','name')">${escHtml(p.fullName || '(no name)')}</strong>
+            <button type="button" class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;"
+              onclick="copyText(paxCopyBlocks[${i}],'all details')">📋 Copy all</button>
+          </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;margin-top:4px;">
-            ${row('DOB', p.dob && fmtDate(p.dob))}
-            ${row('Nationality', p.nationality)}
-            ${row('Passport №', p.passportNumber)}
-            ${row('Expiry', p.passportExpiry && fmtDate(p.passportExpiry))}
-            ${row('Issued', p.passportIssueDate && fmtDate(p.passportIssueDate))}
-            ${row('Issuing country', p.issuingCountry)}
+            ${cell('DOB', p.dob && fmtDate(p.dob), p.dob)}
+            ${cell('Nationality', p.nationality)}
+            ${cell('Passport №', p.passportNumber)}
+            ${cell('Expiry', p.passportExpiry && fmtDate(p.passportExpiry), p.passportExpiry)}
+            ${cell('Issued', p.passportIssueDate && fmtDate(p.passportIssueDate), p.passportIssueDate)}
+            ${cell('Issuing country', p.issuingCountry)}
           </div>
           ${(!p.passportNumber && !p.dob) ? '<div style="color:var(--warning);margin-top:4px;">⚠️ Missing details — open 👥 Passengers to fill them in.</div>' : ''}
         </div>`).join('')}
     </div>` : `<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">No passenger details yet — add them via the 👥 button.</div>`;
+  // Stash the copy-all text keyed by index (avoids quoting a multi-line
+  // string into an inline handler).
+  window.paxCopyBlocks = pax.map(paxAll);
   showDynamicModal(`
     <div class="modal-title">🛫 Check-in — ${escHtml(b.route)} ${b.travelDate ? fmtDate(b.travelDate) : ''}</div>
     ${paxHtml}

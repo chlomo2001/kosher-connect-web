@@ -289,14 +289,26 @@ async function handler(req, res) {
     }
     counts.flightTasks = flightTasks
 
-    // Auto-complete flown bookings: once the travel date is in the past, a
-    // Booked/Ticketed flight becomes Completed on its own.
-    const flown = await db.update(
+    // Auto-complete flown bookings. Time-aware: a flight completes once its
+    // departure time has passed on the travel day (not just at midnight).
+    //   (a) travel date already in the past, or
+    //   (b) travel date is today AND departure_time <= now (or no time set).
+    const nowTime = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(new Date()) + ':00'
+    const flownPast = await db.update(
       'bookings',
       `status=in.(Booked,Ticketed)&travel_date=lt.${today}`,
       { status: 'Completed' }
     )
-    counts.bookingsFlown = flown.length
+    const flownTodayTimed = await db.update(
+      'bookings',
+      `status=in.(Booked,Ticketed)&travel_date=eq.${today}&departure_time=lte.${nowTime}`,
+      { status: 'Completed' }
+    )
+    // Today with no departure time recorded: leave until midnight (avoids
+    // completing a flight that may still be later today).
+    counts.bookingsFlown = flownPast.length + flownTodayTimed.length
 
     // Close FLIGHT tasks once the travel date has passed.
     const openFlights = await db.select('tasks', 'select=id,reference&done=is.false&reference=like.FLIGHT-*')
