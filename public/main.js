@@ -149,6 +149,8 @@ async function initApp() {
   sims     = await window.api.getAllSims();
   bookings = await window.api.getAllBookings().catch(() => []);
   pricingConfig = await window.api.getSettings().catch(() => null);
+  simMenu = await window.api.getServiceMenu('sim').catch(() => []);
+  if (!Array.isArray(simMenu)) simMenu = [];
   reconcilePhoneStatuses();
   renderTab('dashboard');
   setupNav();
@@ -597,6 +599,7 @@ let pricingConfig = null;
 // £7/£15 Israel+UK).
 const FALLBACK_RATES = {
   'USA':       { ratePerDay: 3, minCharge: 20, cap: 50, capPeriodDays: 30, vnWeekly: 5, vnPer30Days: 10 },
+  'USA-NoSIM': { ratePerDay: 2, minCharge: 15, cap: 30, capPeriodDays: 30, vnWeekly: 5, vnPer30Days: 10 },
   'UK-UKmins': { ratePerDay: 2, minCharge: 20, cap: 35, capPeriodDays: 30, vnWeekly: 7, vnPer30Days: 15 },
   'UK-Intl':   { ratePerDay: 2, minCharge: 25, cap: 40, capPeriodDays: 30, vnWeekly: 7, vnPer30Days: 15 },
   'Israel':    { ratePerDay: 3, minCharge: 20, cap: 50, capPeriodDays: 30, vnWeekly: 7, vnPer30Days: 15 },
@@ -605,15 +608,18 @@ const FALLBACK_RATES = {
 };
 
 // App country + phone plan → priced country code (same mapping as the
-// server-side lib/mappers.js rentalCountryCode).
-function pricedCountryCode(country, ukPlan) {
+// server-side lib/mappers.js rentalCountryCode). A USA phone rented WITHOUT
+// a SIM prices on the cheaper no-SIM row (price list: £2/day, min £15,
+// monthly £30) — driven by the SIM toggle in the equipment-given row.
+function pricedCountryCode(country, ukPlan, simGiven = true) {
   if (country === 'UK') return ukPlan === 'unlimited' ? 'UK-Intl' : 'UK-UKmins';
+  if (country === 'USA' && !simGiven) return 'USA-NoSIM';
   if (FALLBACK_RATES[country]) return country;
   return 'USA';
 }
 
-function rateFor(country, ukPlan) {
-  const code = pricedCountryCode(country, ukPlan);
+function rateFor(country, ukPlan, simGiven = true) {
+  const code = pricedCountryCode(country, ukPlan, simGiven);
   const dbRate = pricingConfig?.rentalRates?.find(r => r.countryCode === code && r.active !== false);
   return dbRate || FALLBACK_RATES[code];
 }
@@ -623,7 +629,7 @@ function settingNum(key, fallback) {
   return (s && Number.isFinite(s.numValue)) ? s.numValue : fallback;
 }
 
-function calcRentalPrice(fromDate, toDate, country = 'USA', ukPlan = 'standard') {
+function calcRentalPrice(fromDate, toDate, country = 'USA', ukPlan = 'standard', simGiven = true) {
   let chargeableDays = 0;
   let totalDays = 0;
   const cur = parseLocalDate(fromDate);
@@ -633,7 +639,7 @@ function calcRentalPrice(fromDate, toDate, country = 'USA', ukPlan = 'standard')
     if (!isShabbatOrHoliday(cur, country)) chargeableDays++;
     cur.setDate(cur.getDate() + 1);
   }
-  const { ratePerDay, minCharge, cap, capPeriodDays } = rateFor(country, ukPlan);
+  const { ratePerDay, minCharge, cap, capPeriodDays } = rateFor(country, ukPlan, simGiven);
   let price = chargeableDays * ratePerDay;
   if (chargeableDays > 0 && price < minCharge) price = minCharge;
   // Cap scales per calendar window (default 30 days): chargeable days set the
@@ -727,6 +733,7 @@ let rentals  = [];
 let phones   = [];
 let sims     = [];
 let bookings = [];
+let simMenu  = []; // 'sim'-category service menu (SIM-only monthlies, TomTom)
 let rentalSearchTerm = '';
 let filterCustomer = '', filterStatus = 'all', filterPaid = 'all';
 
@@ -793,6 +800,8 @@ function mgToggleGiven(item) {
   el.dataset.given = isNowGiven ? '1' : '0';
   const eqRow = document.getElementById('mgEqRow_' + item);
   if (eqRow) eqRow.style.display = isNowGiven ? 'flex' : 'none';
+  // A USA phone without a SIM prices on the cheaper no-SIM row.
+  if (item === 'sim') mgUpdateCalc();
 }
 
 // Toggle item status. Clicking the active side again → undecided (pending).
@@ -837,6 +846,8 @@ function nrToggleGiven(item) {
   const el = document.getElementById('nrGiven_' + item);
   if (!el) return;
   el.dataset.given = el.dataset.given === '1' ? '0' : '1';
+  // A USA phone without a SIM prices on the cheaper no-SIM row.
+  if (item === 'sim') updateRentalCalc();
 }
 
 function renderRentalsTab() {
@@ -1258,9 +1269,10 @@ function updateRentalCalc() {
   const phone    = selPhone ? phones.find(p => p.id === selPhone.value) : null;
   const country  = phone?.country || 'USA';
   const ukPlan   = phone?.ukPlan  || 'standard';
-  const { chargeableDays, totalDays, price } = calcRentalPrice(from, to, country, ukPlan);
+  const simGiven = document.getElementById('nrGiven_sim')?.dataset.given !== '0';
+  const { chargeableDays, totalDays, price } = calcRentalPrice(from, to, country, ukPlan, simGiven);
   const excluded = totalDays - chargeableDays;
-  const rate = rateFor(country, ukPlan);
+  const rate = rateFor(country, ukPlan, simGiven);
   const capTotal = rate.cap == null ? Infinity
     : rate.cap * Math.max(1, Math.ceil(totalDays / (rate.capPeriodDays || 30)));
   let finalPrice = price;
@@ -1286,6 +1298,7 @@ function updateRentalCalc() {
     <span style="color:var(--muted);">Shabbat/Yom Tov excluded:</span> <span style="color:var(--gold);">${excluded}</span> &nbsp;|&nbsp;
     <span style="color:var(--muted);">Chargeable days:</span> ${chargeableDays} &nbsp;|&nbsp;
     <strong style="color:var(--success);font-size:15px;">£${price}</strong>
+    ${country === 'USA' && !simGiven ? ' <span style="color:var(--gold);font-size:11px;">(no-SIM rate)</span>' : ''}
     ${price >= capTotal ? ' <span style="color:var(--muted);font-size:11px;">(price cap)</span>' : ''}${discountLine}
   `;
 }
@@ -1304,7 +1317,14 @@ async function saveNewRental() {
 
   const customer = customers.find(c => c.id === customerId);
   const phone    = phones.find(p => p.id === phoneId);
-  const { chargeableDays, totalDays, price } = calcRentalPrice(from, to, phone.country, phone.ukPlan || 'standard');
+  const equipmentGiven = {
+    phone: document.getElementById('nrGiven_phone')?.dataset.given === '1',
+    sim:   document.getElementById('nrGiven_sim')?.dataset.given   === '1',
+    plug:  document.getElementById('nrGiven_plug')?.dataset.given  === '1',
+    cable: document.getElementById('nrGiven_cable')?.dataset.given === '1',
+  };
+  const { chargeableDays, totalDays, price } =
+    calcRentalPrice(from, to, phone.country, phone.ukPlan || 'standard', equipmentGiven.sim);
 
   let vnPrice = 0, vnPrefix = '', vnSub = '';
   if (addVN) {
@@ -1350,12 +1370,7 @@ async function saveNewRental() {
     notes,
     status:       'active',
     createdAt:    new Date().toISOString(),
-    equipmentGiven: {
-      phone: document.getElementById('nrGiven_phone')?.dataset.given === '1',
-      sim:   document.getElementById('nrGiven_sim')?.dataset.given   === '1',
-      plug:  document.getElementById('nrGiven_plug')?.dataset.given  === '1',
-      cable: document.getElementById('nrGiven_cable')?.dataset.given === '1',
-    },
+    equipmentGiven,
   };
 
   rentals.push(rental);
@@ -1700,7 +1715,8 @@ function mgUpdateCalc() {
   if (!from || !to || to < from) return;
   const country = document.getElementById('mgCountry')?.value || 'USA';
   const ukPlan  = document.getElementById('mgUKPlan')?.value  || 'standard';
-  const { chargeableDays, totalDays, price } = calcRentalPrice(from, to, country, ukPlan);
+  const simGiven = document.getElementById('mgGivenSim')?.dataset.given !== '0';
+  const { chargeableDays, totalDays, price } = calcRentalPrice(from, to, country, ukPlan, simGiven);
   const excl = totalDays - chargeableDays;
 
   let finalPrice = price;
@@ -2988,6 +3004,7 @@ function openManageSimModal(id) {
             <option value="sim-replacement">📦 SIM Replacement — £${simChargePrice('sim-replacement')}</option>
             <option value="monthly">${s.paymentType !== 'direct' && s.simMonthlyCost ? `📅 Monthly DD — £${ddMonthlyAmount(s.simMonthlyCost).toFixed(2)}` : '📅 Monthly Subscription'}</option>
             <option value="annual">📅 Annual Subscription — £${simChargePrice('annual')}</option>
+            ${simMenu.map(m => `<option value="menu:${escHtml(String(m.id))}">🛒 ${escHtml(m.name)} — £${m.price.toFixed(2)}</option>`).join('')}
             <option value="custom">✏️ Custom</option>
           </select>
         </div>
@@ -3044,6 +3061,12 @@ function onSimChargeTypeChange(simId) {
   const type  = document.getElementById('simChargeType').value;
   const amtEl = document.getElementById('simChargeAmount');
   const s = simId ? sims.find(x => x.id === simId) : null;
+  // Menu products (SIM-only monthlies, TomTom): prefill the menu price.
+  if (type.startsWith('menu:')) {
+    const m = simMenu.find(x => String(x.id) === type.slice(5));
+    amtEl.value = m ? m.price : 0;
+    return;
+  }
   // 3+ active plans → 10% off the recurring (monthly/annual) prefills.
   const multiOff = s && (type === 'monthly' || type === 'annual')
     ? 1 - multiSimDiscountPct(sims, s.customerId) / 100 : 1;
@@ -3079,7 +3102,9 @@ function addSimCharge(simId) {
   const amount = parseFloat(document.getElementById('simChargeAmount').value) || 0;
   if (amount <= 0) { toast('Amount must be greater than £0', 'error'); return; }
   const note   = document.getElementById('simChargeNote').value.trim();
-  const desc   = note ? `${SIM_CHARGE_DESCS[type] || 'Custom'} — ${note}` : (SIM_CHARGE_DESCS[type] || 'Custom charge');
+  const menuItem = type.startsWith('menu:') ? simMenu.find(x => String(x.id) === type.slice(5)) : null;
+  const baseDesc = menuItem?.name || SIM_CHARGE_DESCS[type] || 'Custom charge';
+  const desc   = note ? `${baseDesc} — ${note}` : baseDesc;
   if (!s.history) s.history = [];
   s.history.push({
     id:     Date.now().toString(),
@@ -3852,8 +3877,13 @@ let virtualNumbers = [];
 async function renderVirtualTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading virtual numbers…</div>`;
-  virtualNumbers = await window.api.getVirtualNumbers();
+  let vnPriceMatrix = [];
+  [virtualNumbers, vnPriceMatrix] = await Promise.all([
+    window.api.getVirtualNumbers(),
+    kcFetch('/api/vn-prices').then(r => r.ok ? r.json() : []).catch(() => []),
+  ]);
   if (!Array.isArray(virtualNumbers)) virtualNumbers = [];
+  if (!Array.isArray(vnPriceMatrix)) vnPriceMatrix = [];
 
   const active = virtualNumbers.filter(v => v.status === 'Active');
   const rows = virtualNumbers.length === 0
@@ -3889,7 +3919,22 @@ async function renderVirtualTab() {
         <thead><tr><th>Number</th><th>Customer</th><th>Platform</th><th>Status</th><th>Shortcut</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
-    </div>`;
+    </div>
+    ${vnPriceMatrix.length ? `
+    <div class="table-card" style="margin-top:16px;">
+      <div class="section-divider" style="margin:12px 14px 4px;">💷 Bundle price reference <span style="color:var(--muted);font-weight:400;">· per month · customer price list</span></div>
+      <table>
+        <thead><tr><th>Bundle</th><th>Incoming only</th><th>+100 outgoing</th><th>Unlimited</th><th>PAYG</th></tr></thead>
+        <tbody>${vnPriceMatrix.map(p => `
+          <tr>
+            <td><strong>${escHtml(p.label)}</strong></td>
+            <td>${p.incomingOnly === null ? '—' : '£' + p.incomingOnly.toFixed(2)}</td>
+            <td>${p.outgoing100 === null ? '—' : '£' + p.outgoing100.toFixed(2)}</td>
+            <td>${p.unlimited === null ? '—' : '£' + p.unlimited.toFixed(2)}</td>
+            <td>${p.paygBase === null ? '—' : '£' + p.paygBase.toFixed(2) + ' + rates'}</td>
+          </tr>`).join('')}</tbody>
+      </table>
+    </div>` : ''}`;
 }
 
 function openNewVNModal(preselectCustomerId) {

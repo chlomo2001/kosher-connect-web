@@ -15,12 +15,17 @@ Source of truth: the customer price list (30 Jun 2026), confirmed 12 Jul 2026.
 
 | Phone Type | Rate/Day | Min Charge | Max Charge (30 days) |
 |---|---|---|---|
-| USA | £3 | £20 | £50 |
+| USA (with SIM) | £3 | £20 | £50 |
+| USA **without SIM** (SIM toggle off) | £2 | £15 | £30 |
 | UK Standard (UK minutes only) | £2 | £20 | £35 |
 | UK Unlimited (international minutes) | £2 | £25 | £40 |
 | Israel | £3 | £20 | £50 |
 | Canada | £3 | £25 | £50 |
 | EU (internal grouping, not on the list) | £3 | £20 | £45 |
+
+All rentals include local calls and calls to the UK. The USA no-SIM rate
+applies automatically when the SIM is toggled off in the equipment-given
+row (new rental or Manage Rental).
 
 ### 1.2 Chargeable Days
 
@@ -109,13 +114,20 @@ zero the amount in the charge modal for those. UK SIMs pay the £5.
 monthly/annual amounts and shows a banner; one-off fees (activation,
 service, replacement) are not discounted.
 
-### 2.2 Not yet modeled in the app (from the customer price list)
+### 2.2 SIM-only products & TomTom (customer price list)
+
+Chargeable from the SIM charge modal (🛒 menu items): USA SIM Only £35/mo,
+UK SIM Only Local £15/mo, UK SIM Only International £25/mo, TomTom Update
+£25 (after-sale service £10). SIMs are purchase-only — no return needed;
+reactivation on request.
+
+### 2.3 Not yet modeled in the app (from the customer price list)
 
 - An online-services charging flow (the second-application prices are
   seeded on the menu — `repeat_price` — ready for when the flow exists)
-- Products: USA phone without SIM (£2/day, min £15, £30/mo), SIM-only
-  monthlies (USA £35, UK local £15, UK intl £25), TomTom update (£25, £10
-  after-sale), standalone virtual-number bundle matrix
+- Standalone virtual-number bundle **billing** (the full price matrix is
+  in `vn_bundle_prices` and shown on the Virtual Numbers tab as reference;
+  recurring VN billing is a future flow)
 
 ### 2.1 Virtual Number clarification
 
