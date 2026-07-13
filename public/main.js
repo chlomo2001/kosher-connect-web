@@ -353,6 +353,7 @@ function selectRentalCustomer(id) {
   document.getElementById('rCustomerSelected').textContent = `✓ ${c.phone || ''}`;
   document.getElementById('rCustomerDropdown').classList.remove('open');
   selectedRentalCustomerId = id;
+  updateRentalCalc(); // customer drives the multi-phone (3rd+) auto-discount
 }
 
 function onCustomerSelectChange() {
@@ -643,6 +644,28 @@ function calcRentalPrice(fromDate, toDate, country = 'USA', ukPlan = 'standard')
     if (price > capTotal) price = capTotal;
   }
   return { chargeableDays, totalDays, price };
+}
+
+// Price list: "Third phone and more — 15% Off". A rental counts as a 3rd+
+// phone when the customer already has 2+ other non-returned rentals whose
+// dates overlap the new one. Pure (rentals passed in) so it's unit-testable.
+function multiPhoneDiscountPct(allRentals, customerId, from, to, excludeId = null) {
+  if (!customerId || !from || !to) return 0;
+  const concurrent = allRentals.filter(r =>
+    r.customerId === customerId &&
+    r.id !== excludeId &&
+    r.status !== 'returned' &&
+    r.fromDate && r.toDate &&
+    r.fromDate <= to && r.toDate >= from
+  ).length;
+  return concurrent >= 2 ? settingNum('multi_phone_discount_pct', 15) : 0;
+}
+
+// Price list: "3 or more plans — 10% Off" (SIM setup). Applies to the
+// monthly/annual prefills in the charge modal.
+function multiSimDiscountPct(allSims, customerId) {
+  const active = allSims.filter(s => s.customerId === customerId && s.status === 'active').length;
+  return active >= 3 ? settingNum('multi_sim_discount_pct', 10) : 0;
 }
 
 function countChargeableDays(fromDate, toDate, country = 'USA') {
@@ -1235,6 +1258,14 @@ function updateRentalCalc() {
     const dval  = parseFloat(document.getElementById('rDiscountValue')?.value) || 0;
     finalPrice  = dtype === 'percent' ? Math.max(0, price * (1 - dval / 100)) : Math.max(0, price - dval);
     if (dval > 0) discountLine = ` &nbsp;|&nbsp; <span style="color:var(--gold);font-size:12px;">-${dtype==='percent'?dval+'%':'£'+dval} discount → <strong>£${finalPrice.toFixed(2)}</strong></span>`;
+  } else {
+    // Auto multi-phone discount (3rd+ concurrent phone); a manual discount
+    // replaces it — staff choice wins.
+    const autoPct = multiPhoneDiscountPct(rentals, document.getElementById('rCustomer')?.value, from, to);
+    if (autoPct > 0) {
+      finalPrice = Math.max(0, price * (1 - autoPct / 100));
+      discountLine = ` &nbsp;|&nbsp; <span style="color:var(--gold);font-size:12px;">3rd phone+ −${autoPct}% → <strong>£${finalPrice.toFixed(2)}</strong></span>`;
+    }
   }
   box.style.display = 'block';
   txt.innerHTML = `
@@ -1269,12 +1300,16 @@ async function saveNewRental() {
     vnPrice  = parseFloat(document.getElementById('rVNPrice').value) || 0;
   }
 
-  const addDiscount   = document.getElementById('rAddDiscount').checked;
+  const addDiscount = document.getElementById('rAddDiscount').checked;
+  // Manual discount wins; otherwise the multi-phone rule applies itself
+  // (price list: 3rd concurrent phone and more, 15% off).
+  const autoPct       = addDiscount ? 0 : multiPhoneDiscountPct(rentals, customerId, from, to);
   const discountType  = addDiscount ? document.getElementById('rDiscountType').value : 'percent';
-  const discountValue = addDiscount ? (parseFloat(document.getElementById('rDiscountValue').value) || 0) : 0;
-  const discountedRental = addDiscount
+  const discountValue = addDiscount ? (parseFloat(document.getElementById('rDiscountValue').value) || 0) : autoPct;
+  const discountedRental = discountValue > 0
     ? (discountType === 'percent' ? Math.max(0, price * (1 - discountValue / 100)) : Math.max(0, price - discountValue))
     : price;
+  if (autoPct > 0) toast(`Multi-phone discount applied — 3rd phone and more, ${autoPct}% off.`, 'success');
 
   const totalPrice = discountedRental + vnPrice;
   const rental = {
@@ -1467,7 +1502,7 @@ function openEditPhoneModal(phoneId) {
         <label class="form-label">UK Plan Type</label>
         <select class="form-input" id="epUKPlan">
           <option value="standard" ${(p.ukPlan||'standard')==='standard'?'selected':''}>Standard (UK minutes) – £2/day</option>
-          <option value="unlimited" ${p.ukPlan==='unlimited'?'selected':''}>Unlimited International – £2.50/day</option>
+          <option value="unlimited" ${p.ukPlan==='unlimited'?'selected':''}>Unlimited International – £2/day</option>
         </select>
       </div>` : ''}
     </div>
@@ -2929,6 +2964,8 @@ function openManageSimModal(id) {
 
     <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;">
       <div class="section-divider" style="margin-top:0;">Add Charge</div>
+      ${multiSimDiscountPct(sims, s.customerId) > 0
+        ? `<div style="font-size:12px;color:var(--gold);margin-bottom:8px;">🏷️ 3+ active plans — ${multiSimDiscountPct(sims, s.customerId)}% off applied to monthly/annual prefills.</div>` : ''}
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
         <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;">
           <label style="font-size:11px;color:var(--muted);font-weight:600;">Type</label>
@@ -2993,15 +3030,20 @@ const SIM_CHARGE_DESCS  = {
 function onSimChargeTypeChange(simId) {
   const type  = document.getElementById('simChargeType').value;
   const amtEl = document.getElementById('simChargeAmount');
+  const s = simId ? sims.find(x => x.id === simId) : null;
+  // 3+ active plans → 10% off the recurring (monthly/annual) prefills.
+  const multiOff = s && (type === 'monthly' || type === 'annual')
+    ? 1 - multiSimDiscountPct(sims, s.customerId) / 100 : 1;
   if (type === 'monthly') {
-    const s = simId ? sims.find(x => x.id === simId) : null;
     if (s && s.paymentType !== 'direct' && s.simMonthlyCost) {
-      amtEl.value = ddMonthlyAmount(s.simMonthlyCost).toFixed(2);
+      amtEl.value = (ddMonthlyAmount(s.simMonthlyCost) * multiOff).toFixed(2);
     } else {
       amtEl.value = 0;
     }
   } else if (simChargePrice(type) !== undefined) {
-    amtEl.value = simChargePrice(type);
+    amtEl.value = type === 'annual'
+      ? +(simChargePrice(type) * multiOff).toFixed(2)
+      : simChargePrice(type);
   } else {
     amtEl.value = 0;
   }

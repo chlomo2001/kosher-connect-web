@@ -74,6 +74,10 @@ Per-country (customer price list, 30 Jun 2026), minimum 1 week:
 
 - Can be applied as a percentage (%) or fixed amount (£)
 - Applied to the total rental charge, not per-day rate
+- **Multi-phone (price list): 3rd phone and more — 15% off**
+  (`multi_phone_discount_pct`). Auto-applies when the customer already has
+  2+ other non-returned rentals overlapping the new rental's dates. A manual
+  discount entered by staff replaces the automatic one.
 
 ### 1.6 Damage / Loss Charges
 
@@ -100,9 +104,13 @@ All SIM fees are driven by Settings keys (editable in the Settings tab):
 After-sale service is **free for USA and Canada SIMs** (customer price list) —
 zero the amount in the charge modal for those. UK SIMs pay the £5.
 
+**3 or more active plans: 10% off** recurring charges
+(`multi_sim_discount_pct`) — the charge modal prefills discounted
+monthly/annual amounts and shows a banner; one-off fees (activation,
+service, replacement) are not discounted.
+
 ### 2.2 Not yet modeled in the app (from the customer price list)
 
-- Multi-item discounts: 3rd rental phone onwards 15% off; 3+ SIM plans 10% off
 - Repair "Purchased at KC" price tier (~£5–15 less per job) + 30-day warranty
   terms (charging port excluded for QIN/FIG); 24-working-hour turnaround
 - Ticket per-passenger tiers (each passenger up to 5 / 6+ rates)

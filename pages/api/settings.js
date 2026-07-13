@@ -26,6 +26,8 @@ const SETTING_RULES = {
   online_hourly_rate:     { type: 'money',   unit: '£/hr' },
   collect_later_late_pct: { type: 'percent', unit: '%' },
   collect_later_late_min: { type: 'money',   unit: '£' },
+  multi_phone_discount_pct: { type: 'percent', unit: '%' },
+  multi_sim_discount_pct:   { type: 'percent', unit: '%' },
 }
 
 function validateTyped(type, raw) {
