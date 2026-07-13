@@ -92,7 +92,7 @@ async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
-      const { id, status, notes } = req.body || {}
+      const { id, status, notes, payment } = req.body || {}
       if (!id) return res.status(400).json({ success: false, error: 'Repair id is required.' })
       const patch = {}
       if (status !== undefined) {
@@ -109,25 +109,43 @@ async function handler(req, res) {
       if (!updated.length) return res.status(404).json({ success: false, error: 'Repair not found.' })
       const repair = updated[0]
 
-      // Charge on collection — once, idempotently, never for £0.
+      // Charge on collection — once, idempotently, never for £0. If paid on
+      // collection (cash/card/…), post an equal payment so the wallet nets
+      // to zero — a repair paid at the counter never leaves a debt.
+      const PAY_METHODS = { cash: 'cash', card: 'card', card_on_file: 'card', bank_transfer: 'bank_transfer' }
+      const payMethod = PAY_METHODS[payment] || null
       let chargePosted = false
+      let paidNow = false
       let balance = null
       if (patch.status === 'Collected' && Number(repair.total) > 0) {
+        const memo = `Repair — ${repair.device_description || 'device'}`
         await db.insertIgnoreDup('ledger', [{
           customer_id: repair.customer_id,
           charge_reference: `REPAIR-${repair.id}`,
           entry_type: 'repair',
           amount: -Number(repair.total),
-          description: `Repair — ${repair.device_description || 'device'}`,
+          description: memo,
           related_repair_id: repair.id,
         }], 'charge_reference')
         chargePosted = true
+        if (payMethod) {
+          await db.insertIgnoreDup('ledger', [{
+            customer_id: repair.customer_id,
+            charge_reference: `PAY-REPAIR-${repair.id}`,
+            entry_type: 'payment',
+            amount: Number(repair.total),
+            method: payMethod,
+            description: `Paid (${payment === 'card_on_file' ? 'card on file' : payMethod}) — ${memo}`,
+            related_repair_id: repair.id,
+          }], 'charge_reference')
+          paidNow = true
+        }
         const balRows = await db.select('customer_balances', `customer_id=eq.${repair.customer_id}`)
         balance = balRows.length ? Number(balRows[0].balance) : 0
       }
 
       const [full] = await db.select('repairs', `select=*,${EMBED}&id=eq.${repair.id}`)
-      return res.json({ success: true, repair: toApp(full), chargePosted, balance })
+      return res.json({ success: true, repair: toApp(full), chargePosted, paidNow, balance })
     }
 
     return res.status(405).end()

@@ -4252,18 +4252,52 @@ async function saveNewRepair() {
 }
 
 async function changeRepairStatus(id, status) {
+  // Collecting = charging: ask how it's paid so a repair settled at the
+  // counter doesn't sit as wallet debt (same pattern as tickets).
   if (status === 'Collected') {
     const r = repairs.find(x => x.id === id);
-    const ok = await window.api.confirmDelete(
-      `Mark this repair as Collected?\n\nThis charges £${(r?.total || 0).toFixed(2)} to the customer's wallet.`);
-    if (!ok) { renderRepairsTab(); return; }
+    if ((r?.total || 0) > 0) { openCollectRepairModal(id); renderRepairsTab(); return; }
   }
   const res = await window.api.updateRepair({ id, status });
   if (!res.success) { toast(res.error || 'Could not update status.', 'error'); renderRepairsTab(); return; }
+  toast(`Repair marked ${status}.`, 'success');
+  renderRepairsTab();
+}
+
+function openCollectRepairModal(id) {
+  const r = repairs.find(x => x.id === id);
+  if (!r) return;
+  showDynamicModal(`
+    <div class="modal-title">🔧 Collect repair — ${escHtml(r.customerName || '')}</div>
+    <div style="font-size:14px;margin-bottom:12px;">${escHtml(r.device || 'device')} · total <strong>£${(r.total || 0).toFixed(2)}</strong></div>
+    <div class="form-group">
+      <label class="form-label">Payment</label>
+      <select class="form-input" id="rcPay">
+        <option value="account">Put on account (wallet)</option>
+        <option value="cash">Paid now — 💵 Cash</option>
+        <option value="card">Paid now — 💳 Card</option>
+        <option value="card_on_file">Paid now — card on file (Stripe)</option>
+        <option value="bank_transfer">Paid now — 🏦 Transfer</option>
+      </select>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">"Paid now" settles it immediately — no wallet debt.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmCollectRepair('${escHtml(id)}')">✅ Collect</button>
+    </div>
+  `);
+}
+
+async function confirmCollectRepair(id) {
+  const res = await window.api.updateRepair({ id, status: 'Collected', payment: document.getElementById('rcPay').value });
+  if (!res.success) { toast(res.error || 'Could not collect.', 'error'); return; }
+  closeDynamicModal();
   if (res.chargePosted) {
-    toast(`Collected — £${res.repair.total.toFixed(2)} charged. Wallet balance £${res.balance.toFixed(2)}.`, 'success');
+    toast(res.paidNow
+      ? `Collected — £${res.repair.total.toFixed(2)} paid in full.`
+      : `Collected — £${res.repair.total.toFixed(2)} on account. Balance £${res.balance.toFixed(2)}.`, 'success');
   } else {
-    toast(`Repair marked ${status}.`, 'success');
+    toast('Repair collected.', 'success');
   }
   renderRepairsTab();
 }
@@ -6256,6 +6290,7 @@ savePassengers   = guardReentry(savePassengers);
 saveCheckin      = guardReentry(saveCheckin);
 saveNewRepair    = guardReentry(saveNewRepair);
 changeRepairStatus = guardReentry(changeRepairStatus);
+confirmCollectRepair = guardReentry(confirmCollectRepair);
 saveNewTask      = guardReentry(saveNewTask);
 saveRentalRate   = guardReentry(saveRentalRate);
 saveDamageRate   = guardReentry(saveDamageRate);
