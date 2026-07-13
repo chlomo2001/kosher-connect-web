@@ -117,66 +117,88 @@ async function handler(req, res) {
     }
 
     if (req.method === 'POST' && b.op === 'sale') {
-      if (!b.itemId) return res.status(400).json({ success: false, error: 'Pick an item.' })
-      const qty = Math.max(1, parseInt(b.qty, 10) || 1)
-
-      const itemRows = await db.select('stock_items', `id=eq.${encodeURIComponent(String(b.itemId))}&active=is.true`)
-      if (!itemRows.length) return res.status(400).json({ success: false, error: 'Item is unknown or retired.' })
-      const item = itemRows[0]
-      if ((item.quantity ?? 0) < qty) {
-        return res.status(400).json({ success: false, error: `Only ${item.quantity ?? 0} in stock.` })
-      }
+      // Single line ({itemId, qty}) or a POS basket ({lines: [{itemId, qty, imei}]}).
+      const lines = Array.isArray(b.lines) && b.lines.length
+        ? b.lines
+        : (b.itemId ? [{ itemId: b.itemId, qty: b.qty, imei: b.imei, total: b.total }] : [])
+      if (!lines.length) return res.status(400).json({ success: false, error: 'Pick at least one item.' })
 
       const customerUuid = !b.customerId || b.customerId === 'walkin'
         ? await walkInCustomer()
         : (await db.select('customers', `select=id&legacy_id=eq.${encodeURIComponent(String(b.customerId))}`))[0]?.id
       if (!customerUuid) return res.status(400).json({ success: false, error: `Customer ${b.customerId} not found.` })
 
-      const unit = Number(item.selling_price) || 0
-      const overridden = Number(b.total)
-      const total = Number.isFinite(overridden) && overridden >= 0 ? money(overridden) : money(unit * qty)
-      if (total <= 0) return res.status(400).json({ success: false, error: 'Total must be greater than £0.' })
+      // Validate ALL stock before selling anything (a basket is one handover).
+      const wanted = new Map()
+      for (const l of lines) {
+        const q = Math.max(1, parseInt(l.qty, 10) || 1)
+        wanted.set(String(l.itemId), (wanted.get(String(l.itemId)) || 0) + q)
+      }
+      const itemRows = await db.select(
+        'stock_items',
+        `id=in.(${[...wanted.keys()].map(encodeURIComponent).join(',')})&active=is.true`
+      )
+      const byId = new Map(itemRows.map(i => [String(i.id), i]))
+      for (const [id, q] of wanted) {
+        const item = byId.get(id)
+        if (!item) return res.status(400).json({ success: false, error: 'An item is unknown or retired.' })
+        if ((item.quantity ?? 0) < q) {
+          return res.status(400).json({ success: false, error: `Only ${item.quantity ?? 0} × ${item.model} in stock.` })
+        }
+      }
 
-      const [sale] = await db.insert('stock_sales', [{
-        customer_id: customerUuid,
-        stock_item_id: item.id,
-        qty,
-        unit_price: unit,
-        total,
-        imei: b.imei || null,
-        notes: b.notes || null,
-        created_by: req.staff?.id || null,
-      }])
-      await db.update('stock_items', `id=eq.${item.id}`, {
-        quantity: (item.quantity ?? 0) - qty,
-        updated_at: new Date().toISOString(),
-      })
+      const method = METHODS.includes(b.method) ? b.method : 'cash'
+      let grandTotal = 0
+      for (const l of lines) {
+        const item = byId.get(String(l.itemId))
+        const qty = Math.max(1, parseInt(l.qty, 10) || 1)
+        const unit = Number(item.selling_price) || 0
+        const overridden = lines.length === 1 ? Number(l.total) : NaN
+        const total = Number.isFinite(overridden) && overridden >= 0 ? money(overridden) : money(unit * qty)
+        if (total <= 0) return res.status(400).json({ success: false, error: 'Total must be greater than £0.' })
 
-      const label = `${item.company || ''} ${item.model || ''}`.trim()
-      await db.insertIgnoreDup('ledger', [{
-        customer_id: customerUuid,
-        charge_reference: `SALE-${sale.id}`,
-        entry_type: item.category === 'phone' ? 'phone_sale' : 'stock_sale',
-        amount: -total,
-        description: `${label}${qty > 1 ? ` × ${qty}` : ''}${b.imei ? ` — IMEI ${b.imei}` : ''}`,
-      }], 'charge_reference')
+        const [sale] = await db.insert('stock_sales', [{
+          customer_id: customerUuid,
+          stock_item_id: item.id,
+          qty,
+          unit_price: unit,
+          total,
+          imei: l.imei || null,
+          notes: b.notes || null,
+          created_by: req.staff?.id || null,
+        }])
+        item.quantity = (item.quantity ?? 0) - qty
+        await db.update('stock_items', `id=eq.${item.id}`, {
+          quantity: item.quantity,
+          updated_at: new Date().toISOString(),
+        })
 
-      if (b.paidNow) {
+        const label = `${item.company || ''} ${item.model || ''}`.trim()
         await db.insertIgnoreDup('ledger', [{
           customer_id: customerUuid,
-          charge_reference: `PAY-SALE-${sale.id}`,
-          entry_type: 'payment',
-          amount: total,
-          method: METHODS.includes(b.method) ? b.method : 'cash',
-          description: `Paid — ${label}`,
+          charge_reference: `SALE-${sale.id}`,
+          entry_type: item.category === 'phone' ? 'phone_sale' : 'stock_sale',
+          amount: -total,
+          description: `${label}${qty > 1 ? ` × ${qty}` : ''}${l.imei ? ` — IMEI ${l.imei}` : ''}`,
         }], 'charge_reference')
+        if (b.paidNow) {
+          await db.insertIgnoreDup('ledger', [{
+            customer_id: customerUuid,
+            charge_reference: `PAY-SALE-${sale.id}`,
+            entry_type: 'payment',
+            amount: total,
+            method,
+            description: `Paid — ${label}`,
+          }], 'charge_reference')
+        }
+        grandTotal = money(grandTotal + total)
       }
 
       const balRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
       return res.json({
         success: true,
-        total,
-        remaining: (item.quantity ?? 0) - qty,
+        total: grandTotal,
+        lines: lines.length,
         balance: balRows.length ? Number(balRows[0].balance) : 0,
       })
     }

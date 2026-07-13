@@ -3968,9 +3968,54 @@ function onlineServiceTotal(svc, qty) {
   return single + (n - 1) * rep;
 }
 
+// ── Help timer (Regular online service is billed per hour, min 10 min) ──
+let svcTimerInterval = null;
+const svcTimerState = () => { try { return JSON.parse(localStorage.getItem('kcSvcTimer')); } catch { return null; } };
+const svcTimerSet = (s) => s ? localStorage.setItem('kcSvcTimer', JSON.stringify(s)) : localStorage.removeItem('kcSvcTimer');
+
+function svcTimerCharge(startedAt) {
+  const minutes = Math.max(10, Math.ceil((Date.now() - startedAt) / 60000)); // 10-minute minimum
+  const rate = settingNum('online_hourly_rate', 45);
+  return { minutes, amount: Math.round((minutes / 60) * rate * 100) / 100 };
+}
+
+function svcTimerStart() {
+  const sel = document.getElementById('svcTimerCustomer');
+  if (!sel?.value) { toast('Pick who you are helping.', 'error'); return; }
+  const c = customers.find(x => x.id === sel.value);
+  svcTimerSet({ customerId: sel.value, customerName: c ? `${c.firstName} ${c.lastName}` : '', startedAt: Date.now() });
+  renderServicesTab();
+}
+
+function svcTimerDiscard() {
+  svcTimerSet(null);
+  toast('Timer discarded — nothing charged.', 'warning');
+  renderServicesTab();
+}
+
+function svcTimerStop() {
+  const t = svcTimerState();
+  if (!t) return;
+  const { minutes, amount } = svcTimerCharge(t.startedAt);
+  svcTimerSet(null);
+  openNewServiceModal();
+  setTimeout(() => {
+    const cust = document.getElementById('svCustomer');
+    if (cust && [...cust.options].some(o => o.value === t.customerId)) cust.value = t.customerId;
+    const svcSel = document.getElementById('svService');
+    const hourly = onlineMenu.find(m => /per hour|hourly|regular online/i.test(m.name));
+    if (svcSel && hourly) svcSel.value = String(hourly.id);
+    document.getElementById('svTotal').value = amount.toFixed(2);
+    document.getElementById('svNotes').value = `Timed help — ${minutes} min`;
+    const bd = document.getElementById('svBreakdown');
+    if (bd) bd.innerHTML = `⏱ ${minutes} min at £${settingNum('online_hourly_rate', 45)}/hr (10-min minimum) = <strong>£${amount.toFixed(2)}</strong> — editable.`;
+  }, 60);
+}
+
 async function renderServicesTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading services…</div>`;
+  if (svcTimerInterval) { clearInterval(svcTimerInterval); svcTimerInterval = null; }
   [serviceOrders, onlineMenu] = await Promise.all([
     window.api.getServiceOrders(),
     window.api.getServiceMenu('online'),
@@ -4009,6 +4054,33 @@ async function renderServicesTab() {
         <div class="stat-value">£${revenue.toFixed(2)}</div></div>
       <div class="stat-card"><div class="stat-label">Orders</div><div class="stat-value">${serviceOrders.length}</div></div>
     </div>
+    ${(() => {
+      const t = svcTimerState();
+      if (t) {
+        return `
+        <div class="table-card" style="margin-bottom:14px;padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <span style="font-size:20px;">⏱</span>
+          <div style="flex:1;min-width:180px;">
+            <div style="font-weight:600;">Helping ${escHtml(t.customerName || 'customer')}</div>
+            <div style="font-size:12px;color:var(--muted);">started ${new Date(t.startedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+          <strong id="svcTimerElapsed" style="font-size:22px;font-feature-settings:'tnum';">0:00</strong>
+          <span id="svcTimerProj" style="font-size:13px;color:var(--muted);"></span>
+          <button class="btn btn-primary" onclick="svcTimerStop()">⏹ Stop &amp; charge</button>
+          <button class="btn btn-outline btn-sm" onclick="svcTimerDiscard()">✕ Discard</button>
+        </div>`;
+      }
+      const opts = customers.map(c => `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)}</option>`).join('');
+      return `
+        <div class="table-card" style="margin-bottom:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <span style="font-size:20px;">⏱</span>
+          <span style="font-size:13px;color:var(--muted);">Hourly help timer (£${settingNum('online_hourly_rate', 45)}/hr, 10-min minimum)</span>
+          <select class="form-input" id="svcTimerCustomer" style="flex:1;min-width:180px;min-height:0;padding:8px 12px;">
+            <option value="">Who are you helping?</option>${opts}
+          </select>
+          <button class="btn btn-primary" onclick="svcTimerStart()">▶ Start timer</button>
+        </div>`;
+    })()}
     <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
       <button class="btn btn-primary" onclick="openNewServiceModal()">+ Charge a Service</button>
     </div>
@@ -4028,6 +4100,22 @@ async function renderServicesTab() {
         </table>
       </div>
     </div>`;
+
+  // Live tick for the help timer (cleared on every tab re-render).
+  const running = svcTimerState();
+  if (running) {
+    const tick = () => {
+      const el = document.getElementById('svcTimerElapsed');
+      if (!el) { clearInterval(svcTimerInterval); svcTimerInterval = null; return; }
+      const secs = Math.floor((Date.now() - running.startedAt) / 1000);
+      el.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+      const { minutes, amount } = svcTimerCharge(running.startedAt);
+      const p = document.getElementById('svcTimerProj');
+      if (p) p.textContent = `≈ £${amount.toFixed(2)} (${minutes} min, 10-min minimum)`;
+    };
+    tick();
+    svcTimerInterval = setInterval(tick, 1000);
+  }
 }
 
 function openNewServiceModal() {
@@ -4298,90 +4386,159 @@ async function retireStockItem(itemId) {
   renderShopTab();
 }
 
+// ── POS (shopfloor till): tap tiles → basket → one charge ──
+let posBasket = []; // [{itemId, qty, imei}]
+
 function openSaleModal(preselectItemId = null) {
   const sellable = shopItems.filter(i => i.active && i.quantity > 0);
   if (!sellable.length) { toast('Nothing in stock to sell — add quantities first.', 'warning'); return; }
-  const itemOptions = sellable.map(i =>
-    `<option value="${i.id}" ${preselectItemId === i.id ? 'selected' : ''}>${escHtml([i.company, i.model].filter(Boolean).join(' '))} — £${(i.sellingPrice || 0).toFixed(2)} (${i.quantity} left)</option>`).join('');
+  posBasket = preselectItemId ? [{ itemId: preselectItemId, qty: 1, imei: '' }] : [];
   const customerOptions = customers.map(c =>
-    `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone || '')}</option>`).join('');
+    `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)}</option>`).join('');
   showDynamicModal(`
-    <div class="modal-title">💷 Sell</div>
-    <div class="form-grid">
-      <div class="form-group form-full">
-        <label class="form-label">Item *</label>
-        <select class="form-input" id="slItem" onchange="slUpdateTotal()">${itemOptions}</select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Quantity</label>
-        <input class="form-input" type="number" min="1" step="1" id="slQty" value="1" oninput="slUpdateTotal()">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Total (£)</label>
-        <input class="form-input" type="number" min="0" step="0.01" id="slTotal">
-      </div>
-      <div class="form-group form-full">
-        <label class="form-label">Customer</label>
-        <select class="form-input" id="slCustomer">
-          <option value="walkin">🚶 Walk-in (over the counter)</option>
-          ${customerOptions}
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">IMEI <span style="color:var(--muted);font-weight:400;">(phones — scan)</span></label>
-        <input class="form-input" id="slIMEI" inputmode="numeric" placeholder="Scan or type">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Paid now?</label>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <input type="checkbox" id="slPaid" checked style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
-          <select class="form-input" id="slMethod" style="flex:1;">
-            <option value="cash">💵 Cash</option>
-            <option value="card">💳 Card</option>
-            <option value="bank_transfer">🏦 Bank transfer</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-group form-full">
-        <label class="form-label">Notes</label>
-        <input class="form-input" id="slNotes">
-      </div>
+    <div class="modal-title">🧾 Till</div>
+    <input class="form-input" id="posScan" placeholder="🔍 Scan a barcode or type to find an item…"
+      autocomplete="off" style="margin-bottom:10px;" oninput="posRenderTiles()"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();posScanEnter();}">
+    <div id="posTiles" class="pos-tiles"></div>
+    <div class="section-divider" style="margin:12px 0 6px;">Basket</div>
+    <div id="posBasket"></div>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;">
+      <select class="form-input" id="posCustomer" style="flex:1;min-width:170px;min-height:0;padding:8px 12px;">
+        <option value="walkin">🚶 Walk-in</option>
+        ${customerOptions}
+      </select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="posPaid" checked style="width:15px;height:15px;accent-color:var(--accent);"> Paid</label>
+      <select class="form-input" id="posMethod" style="width:110px;min-height:0;padding:8px 10px;">
+        <option value="cash">💵 Cash</option>
+        <option value="card">💳 Card</option>
+        <option value="bank_transfer">🏦 Transfer</option>
+      </select>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveSale()">💷 Sell</button>
+    <div class="modal-actions" style="justify-content:space-between;align-items:center;">
+      <strong id="posTotal" style="font-size:19px;">£0.00</strong>
+      <span style="display:flex;gap:8px;">
+        <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+        <button class="btn btn-primary" style="padding:10px 22px;" onclick="saveSale()">💷 Charge</button>
+      </span>
     </div>
   `);
-  slUpdateTotal();
+  posRenderTiles();
+  posRenderBasket();
+  document.getElementById('posScan').focus();
 }
 
-function slUpdateTotal() {
-  const item = shopItems.find(i => i.id === document.getElementById('slItem')?.value);
+function posFindItem(q) {
+  const digits = q.replace(/\D/g, '');
+  return shopItems.find(i => i.active && i.quantity > 0 && (
+    (i.code && i.code.toLowerCase() === q.toLowerCase()) ||
+    (digits.length >= 5 && (i.code || '').replace(/\D/g, '') === digits) ||
+    [i.company, i.model].filter(Boolean).join(' ').toLowerCase() === q.toLowerCase()
+  ));
+}
+
+function posScanEnter() {
+  const el = document.getElementById('posScan');
+  const q = el.value.trim();
+  if (!q) return;
+  // Exact code/name hit (barcode) or the single visible tile.
+  const shown = shopItems.filter(i => i.active && i.quantity > 0 && posTileMatch(i, q));
+  const item = posFindItem(q) || (shown.length === 1 ? shown[0] : null);
+  if (item) { posAdd(item.id); el.value = ''; posRenderTiles(); }
+  else toast('No matching item.', 'warning');
+}
+
+function posTileMatch(i, q) {
+  if (!q) return true;
+  const hay = `${i.code || ''} ${i.company || ''} ${i.model || ''}`.toLowerCase();
+  return hay.includes(q.toLowerCase());
+}
+
+function posRenderTiles() {
+  const q = document.getElementById('posScan')?.value.trim() || '';
+  const el = document.getElementById('posTiles');
+  if (!el) return;
+  const list = shopItems.filter(i => i.active && i.quantity > 0 && posTileMatch(i, q)).slice(0, 24);
+  el.innerHTML = list.map(i => `
+    <div class="pos-tile" onclick="posAdd('${i.id}')">
+      <div style="font-weight:600;font-size:12px;">${escHtml([i.company, i.model].filter(Boolean).join(' '))}</div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:3px;">
+        <span style="color:var(--muted);">${i.quantity} left</span>
+        <strong>£${(i.sellingPrice || 0).toFixed(2)}</strong>
+      </div>
+    </div>`).join('') || '<div style="color:var(--muted);font-size:13px;padding:6px;">No matching items.</div>';
+}
+
+function posAdd(itemId) {
+  const item = shopItems.find(i => i.id === itemId);
   if (!item) return;
-  const qty = Math.max(1, parseInt(document.getElementById('slQty')?.value, 10) || 1);
-  document.getElementById('slTotal').value = ((item.sellingPrice || 0) * qty).toFixed(2);
+  const line = posBasket.find(l => l.itemId === itemId);
+  const inBasket = line ? line.qty : 0;
+  if (inBasket + 1 > item.quantity) { toast(`Only ${item.quantity} in stock.`, 'warning'); return; }
+  if (line) line.qty++;
+  else posBasket.push({ itemId, qty: 1, imei: '' });
+  posRenderBasket();
+}
+
+function posQty(itemId, delta) {
+  const line = posBasket.find(l => l.itemId === itemId);
+  if (!line) return;
+  const item = shopItems.find(i => i.id === itemId);
+  line.qty += delta;
+  if (line.qty <= 0) posBasket = posBasket.filter(l => l !== line);
+  else if (item && line.qty > item.quantity) { line.qty = item.quantity; toast(`Only ${item.quantity} in stock.`, 'warning'); }
+  posRenderBasket();
+}
+
+function posImei(itemId, v) {
+  const line = posBasket.find(l => l.itemId === itemId);
+  if (line) line.imei = v.trim();
+}
+
+function posRenderBasket() {
+  const el = document.getElementById('posBasket');
+  if (!el) return;
+  let total = 0;
+  el.innerHTML = posBasket.length === 0
+    ? '<div style="color:var(--muted);font-size:13px;">Tap items above (or scan) to add them.</div>'
+    : posBasket.map(l => {
+        const i = shopItems.find(x => x.id === l.itemId);
+        if (!i) return '';
+        const lineTotal = (i.sellingPrice || 0) * l.qty;
+        total += lineTotal;
+        return `
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
+          <span style="flex:1;min-width:0;">${escHtml([i.company, i.model].filter(Boolean).join(' '))}</span>
+          ${i.category === 'phone' ? `<input class="form-input" placeholder="IMEI (scan)" value="${escHtml(l.imei)}"
+            oninput="posImei('${i.id}', this.value)" style="width:130px;min-height:0;padding:4px 8px;font-size:11px;">` : ''}
+          <button class="action-btn" style="padding:2px 9px;" onclick="posQty('${i.id}',-1)">−</button>
+          <strong style="min-width:18px;text-align:center;">${l.qty}</strong>
+          <button class="action-btn" style="padding:2px 9px;" onclick="posQty('${i.id}',1)">+</button>
+          <strong style="min-width:64px;text-align:right;font-feature-settings:'tnum';">£${lineTotal.toFixed(2)}</strong>
+        </div>`;
+      }).join('');
+  const totalEl = document.getElementById('posTotal');
+  if (totalEl) totalEl.textContent = `£${total.toFixed(2)}`;
 }
 
 async function saveSale() {
+  if (!posBasket.length) { toast('The basket is empty.', 'error'); return; }
   const res = await kcFetch('/api/shop', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       op: 'sale',
-      itemId: document.getElementById('slItem').value,
-      qty: parseInt(document.getElementById('slQty').value, 10) || 1,
-      total: parseFloat(document.getElementById('slTotal').value),
-      customerId: document.getElementById('slCustomer').value,
-      imei: document.getElementById('slIMEI').value.trim(),
-      paidNow: document.getElementById('slPaid').checked,
-      method: document.getElementById('slMethod').value,
-      notes: document.getElementById('slNotes').value.trim(),
+      lines: posBasket,
+      customerId: document.getElementById('posCustomer').value,
+      paidNow: document.getElementById('posPaid').checked,
+      method: document.getElementById('posMethod').value,
     }),
   }).then(r => r.json()).catch(() => null);
   if (!res || !res.success) { toast(res?.error || 'Could not record the sale.', 'error'); return; }
   closeDynamicModal();
-  toast(`Sold — £${res.total.toFixed(2)}. ${res.remaining} left in stock.`, 'success');
+  posBasket = [];
+  toast(`Sold ${res.lines} item${res.lines === 1 ? '' : 's'} — £${res.total.toFixed(2)}.`, 'success');
   renderShopTab();
 }
 
