@@ -111,8 +111,8 @@ service, replacement) are not discounted.
 
 ### 2.2 Not yet modeled in the app (from the customer price list)
 
-- Ticket per-passenger tiers (each passenger up to 5 / 6+ rates)
-- Online-service second-application discounts (e.g. ESTA £45, passport £20)
+- An online-services charging flow (the second-application prices are
+  seeded on the menu — `repeat_price` — ready for when the flow exists)
 - Products: USA phone without SIM (£2/day, min £15, £30/mo), SIM-only
   monthlies (USA £35, UK local £15, UK intl £25), TomTom update (£25, £10
   after-sale), standalone virtual-number bundle matrix
@@ -125,7 +125,26 @@ The 30-day option stays £10 flat.
 
 ---
 
-## 3. Repairs
+## 3. Tickets (flight bookings)
+
+Per-passenger fee tiers (customer price list): passenger 1 pays the single
+price, passengers 2–5 pay the "each passenger" rate, passengers 6+ pay the
+6+ rate. The start fee is flat, charged once per booking.
+
+| Service | Single | Each passenger up to 5 | 6+ |
+|---|---|---|---|
+| Start fee | £10 | — | — |
+| Ready planned journey | £20 | £10 | £5 |
+| Plan standard journey | £25 | £10 | £5 |
+| Plan self-transfer journey | £30 | £15 | £10 |
+| Check-in | £10 | £5 | £5 |
+
+The New Booking form's fee calculator applies these tiers (e.g. ready
+planned journey × 7 passengers = £20 + 4×£10 + 2×£5 = £70); the fee stays
+editable. Online-service repeat applications ("two or more") are priced the
+same way with `repeat_price` only.
+
+## 4. Repairs
 
 - **Two price tiers** (customer price list): regular, and **"Purchased at
   Kosher Connect"** (~£5–15 less per job — tick the checkbox on the New
@@ -137,7 +156,7 @@ The 30-day option stays £10 flat.
 - Turnaround: up to **24 working hours**.
 - The wallet charge posts once, at collection.
 
-## 4. Wallet rules (append-only ledger)
+## 5. Wallet rules (append-only ledger)
 
 Every pound the business is owed or holds lives in ONE place: the ledger.
 Balances are always computed (never stored); the database enforces the sign

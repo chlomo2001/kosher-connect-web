@@ -23,6 +23,10 @@ async function handler(req, res) {
       price: Number(r.price),
       // "Purchased at KC" tier; null = no KC price for this job
       kcPrice: r.kc_price === null || r.kc_price === undefined ? null : Number(r.kc_price),
+      // Quantity tiers: repeat = per unit from the 2nd (to 5th for tickets;
+      // "two or more" for online); bulk = per unit from the 6th (tickets).
+      repeatPrice: r.repeat_price === null || r.repeat_price === undefined ? null : Number(r.repeat_price),
+      bulkPrice: r.bulk_price === null || r.bulk_price === undefined ? null : Number(r.bulk_price),
     })))
   } catch (e) {
     console.error('[api/services]', e)

@@ -661,6 +661,19 @@ function multiPhoneDiscountPct(allRentals, customerId, from, to, excludeId = nul
   return concurrent >= 2 ? settingNum('multi_phone_discount_pct', 15) : 0;
 }
 
+// Ticket-service fee for N passengers (price list tiers):
+//   passenger 1 → single price; passengers 2–5 → repeatPrice each;
+//   passengers 6+ → bulkPrice each. Flat services (repeatPrice null, e.g.
+//   the start fee) charge the single price once regardless of N.
+function ticketFeeFor(svc, passengers) {
+  const n = Math.max(1, Math.floor(Number(passengers)) || 1);
+  const single = Number(svc.price) || 0;
+  if (svc.repeatPrice === null || svc.repeatPrice === undefined) return single;
+  const upTo5 = Math.min(n - 1, 4) * Number(svc.repeatPrice);
+  const from6 = Math.max(n - 5, 0) * Number(svc.bulkPrice ?? svc.repeatPrice);
+  return single + upTo5 + from6;
+}
+
 // Price list: "3 or more plans — 10% Off" (SIM setup). Applies to the
 // monthly/annual prefills in the charge modal.
 function multiSimDiscountPct(allSims, customerId) {
@@ -3204,10 +3217,21 @@ function renderBookingsTab() {
     </div>`;
 }
 
-function openNewBookingModal() {
+let ticketsMenu = [];
+
+async function openNewBookingModal() {
+  if (!ticketsMenu.length) {
+    ticketsMenu = await window.api.getServiceMenu('tickets').catch(() => []);
+    if (!Array.isArray(ticketsMenu)) ticketsMenu = [];
+  }
   const customerOptions = customers.map(c =>
     `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone || '')}</option>`
   ).join('');
+  const startFee = ticketsMenu.find(s => /start fee/i.test(s.name));
+  const svcOptions = ticketsMenu
+    .filter(s => !/start fee/i.test(s.name))
+    .map(s => `<option value="${escHtml(s.id)}">${escHtml(s.name)} — £${s.price.toFixed(2)}</option>`)
+    .join('');
   showDynamicModal(`
     <div class="modal-title">✈️ New Booking</div>
     <div class="form-grid">
@@ -3253,6 +3277,22 @@ function openNewBookingModal() {
         <label class="form-label">Booking Fee (£)</label>
         <input class="form-input" type="number" min="0" step="0.01" id="bkFee" value="10">
       </div>
+      ${svcOptions ? `
+      <div class="form-group form-full">
+        <label class="form-label">Fee calculator <span style="color:var(--muted);font-weight:400;">(passenger tiers — fills Booking Fee)</span></label>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select class="form-input" id="bkSvc" onchange="bkCalcFee()" style="flex:2;min-width:200px;">
+            <option value="">Choose service…</option>${svcOptions}
+          </select>
+          <input class="form-input" type="number" id="bkPax" value="1" min="1" step="1"
+            oninput="bkCalcFee()" title="Passengers" style="width:80px;">
+          ${startFee ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+            <input type="checkbox" id="bkStartFee" onchange="bkCalcFee()"
+              style="width:14px;height:14px;accent-color:var(--accent);"> + start fee £${startFee.price.toFixed(2)}
+          </label>` : ''}
+        </div>
+        <div id="bkFeeBreakdown" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+      </div>` : ''}
       <div class="form-group">
         <label class="form-label">Passport on file?</label>
         <div style="display:flex;gap:8px;align-items:center;">
@@ -3275,6 +3315,26 @@ function openNewBookingModal() {
       <button class="btn btn-primary" onclick="saveNewBooking()">✈️ Save Booking</button>
     </div>
   `);
+}
+
+// Fee calculator: tiered service fee × passengers (+ optional start fee)
+// → fills the Booking Fee field (still editable afterwards).
+function bkCalcFee() {
+  const svcId = document.getElementById('bkSvc')?.value;
+  if (!svcId) { const bd = document.getElementById('bkFeeBreakdown'); if (bd) bd.textContent = ''; return; }
+  const svc = ticketsMenu.find(s => String(s.id) === String(svcId));
+  if (!svc) return;
+  const n = Math.max(1, parseInt(document.getElementById('bkPax')?.value, 10) || 1);
+  const startFee = document.getElementById('bkStartFee')?.checked
+    ? (ticketsMenu.find(s => /start fee/i.test(s.name))?.price || 0) : 0;
+  const fee = ticketFeeFor(svc, n) + startFee;
+  document.getElementById('bkFee').value = fee.toFixed(2);
+  const parts = [`1 × £${svc.price.toFixed(2)}`];
+  if (n > 1 && svc.repeatPrice !== null) parts.push(`${Math.min(n - 1, 4)} × £${Number(svc.repeatPrice).toFixed(2)}`);
+  if (n > 5 && svc.repeatPrice !== null) parts.push(`${n - 5} × £${Number(svc.bulkPrice ?? svc.repeatPrice).toFixed(2)}`);
+  if (startFee) parts.push(`start £${startFee.toFixed(2)}`);
+  document.getElementById('bkFeeBreakdown').textContent =
+    `${n} passenger${n === 1 ? '' : 's'}: ${parts.join(' + ')} = £${fee.toFixed(2)}`;
 }
 
 async function saveNewBooking() {
