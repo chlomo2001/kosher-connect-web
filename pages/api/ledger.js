@@ -10,7 +10,7 @@
 // Charges are posted only by their owning features (bookings, repairs, …),
 // each with a stable reference — never from this endpoint.
 
-import { withStaff } from '../../lib/auth.js'
+import { withStaff, tabAllowedFor } from '../../lib/auth.js'
 import crypto from 'node:crypto'
 import { db, tablesMode } from '../../lib/db.js'
 
@@ -57,10 +57,13 @@ async function handler(req, res) {
     if (req.method === 'GET') {
       const { customerId } = req.query
 
-      // No customerId → business-wide summary for the dashboard.
-      // `since` is the shop's local date (client-computed) so "today's money"
-      // matches what the operator means by today.
+      // No customerId → business-wide summary for the dashboard/Wallet tab.
+      // Tab-gated for helpers (per-customer wallets stay available so the
+      // customer panel keeps working).
       if (!customerId) {
+        if (!(await tabAllowedFor(req.staff, 'wallet'))) {
+          return res.status(403).json({ success: false, error: 'The wallet is not enabled for your account.' })
+        }
         const since = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.since || ''))
           ? req.query.since : new Date().toISOString().slice(0, 10)
         // recent=N lets the Wallet tab pull a longer feed than the dashboard.

@@ -159,8 +159,14 @@ async function initApp() {
   pricingConfig = await window.api.getSettings().catch(() => null);
   simMenu = await window.api.getServiceMenu('sim').catch(() => []);
   if (!Array.isArray(simMenu)) simMenu = [];
+  const me = await kcFetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  if (me?.success && me.authEnabled) {
+    currentStaff = me.staff || null;
+    allowedTabs = Array.isArray(me.allowedTabs) ? me.allowedTabs : null;
+  }
+  applyTabVisibility();
   reconcilePhoneStatuses();
-  renderTab('dashboard');
+  renderTab(allowedTabs && !allowedTabs.includes('dashboard') ? allowedTabs[0] : 'dashboard');
   setupNav();
   setupSearch();
   setupModal();
@@ -209,7 +215,21 @@ function setupNav() {
   });
 }
 
+// ── Helper visibility ─────────────────────────────────────────────────────
+let currentStaff = null;   // { id, role, full_name, email }
+let allowedTabs = null;    // null = everything (owner / auth off)
+
+function applyTabVisibility() {
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.style.display = (allowedTabs && !allowedTabs.includes(item.dataset.tab)) ? 'none' : '';
+  });
+}
+
 function renderTab(tab) {
+  if (allowedTabs && !allowedTabs.includes(tab)) {
+    toast('That area is not enabled for your account.', 'warning');
+    return;
+  }
   const content = document.getElementById('mainContent');
   const searchBox = document.getElementById('searchBox');
   const btnNew = document.getElementById('btnNewCustomer');
@@ -5270,6 +5290,16 @@ async function renderSettingsTab() {
           <td><button class="btn btn-primary btn-sm" onclick="saveNewTeamMember()">+ Add</button></td>
         </tr>
       </tbody></table>
+      <div class="section-divider" style="margin:14px 14px 4px;">🔓 What helpers can see</div>
+      <div style="padding:4px 14px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+        ${['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'shop', 'virtual', 'tasks', 'settings'].map(t => `
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;">
+            <input type="checkbox" class="htTab" value="${t}" style="accent-color:var(--accent);cursor:pointer;"
+              ${(cfg.settings.find(s => s.key === 'helper_tabs')?.textValue || '').split(',').includes(t) ? 'checked' : ''}>
+            ${t}</label>`).join('')}
+        <button class="btn btn-outline btn-sm" style="font-size:11px;" onclick="saveHelperTabs()">💾 Save access</button>
+        <span style="font-size:11px;color:var(--muted);">Wallet, shop &amp; settings are also blocked server-side when unticked.</span>
+      </div>
     </div>` : '';
 
   const num = (id, val, step = '0.01') =>
@@ -5456,6 +5486,16 @@ async function saveResetPassword(id) {
   if (!res || !res.success) { toast(res?.error || 'Could not reset the password.', 'error'); return; }
   closeDynamicModal();
   toast('Password reset — it takes effect on their next sign-in.', 'success');
+}
+
+async function saveHelperTabs() {
+  const list = [...document.querySelectorAll('.htTab:checked')].map(el => el.value);
+  if (!list.length) { toast('Helpers need at least one tab.', 'error'); return; }
+  const ok = await applySettingUpdate({
+    table: 'settings', key: 'helper_tabs',
+    values: { textValue: list.join(',') },
+  });
+  if (ok) toast('Helper access updated — applies on their next page load.', 'success');
 }
 
 // ── Team management (owner-only; server enforces) ──

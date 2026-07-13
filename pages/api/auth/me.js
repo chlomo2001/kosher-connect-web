@@ -1,4 +1,4 @@
-import { authEnabled, resolveStaff } from '../../../lib/auth.js'
+import { authEnabled, resolveStaff, helperTabs, ALL_TABS } from '../../../lib/auth.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
@@ -6,5 +6,6 @@ export default async function handler(req, res) {
   const resolved = await resolveStaff(req)
   if (!resolved) return res.status(401).json({ success: false, error: 'Not signed in.' })
   if (resolved.setCookie) res.setHeader('Set-Cookie', resolved.setCookie)
-  return res.json({ success: true, authEnabled: true, staff: resolved.staff })
+  const allowedTabs = resolved.staff.role === 'owner' ? ALL_TABS : await helperTabs()
+  return res.json({ success: true, authEnabled: true, staff: resolved.staff, allowedTabs })
 }

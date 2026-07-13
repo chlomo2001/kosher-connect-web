@@ -4,7 +4,7 @@
 // POST { date, counted, notes } → save the count; EXPECTED is computed
 //                         server-side from the ledger (cash payments only)
 
-import { withStaff } from '../../lib/auth.js'
+import { withStaff, tabAllowedFor } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -42,6 +42,9 @@ function summarize(rows) {
 async function handler(req, res) {
   if (!tablesMode) {
     return res.status(503).json({ success: false, error: 'Cash-up needs the relational data layer.' })
+  }
+  if (!(await tabAllowedFor(req.staff, 'wallet'))) {
+    return res.status(403).json({ success: false, error: 'The wallet is not enabled for your account.' })
   }
 
   try {

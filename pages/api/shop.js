@@ -11,7 +11,7 @@
 //                       "Shop Walk-in" customer so cash sales still hit the
 //                       ledger (and the cash-up).
 
-import { withStaff } from '../../lib/auth.js'
+import { withStaff, tabAllowedFor } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 
 const CATEGORIES = ['phone', 'accessory', 'sim', 'other']
@@ -61,6 +61,9 @@ async function walkInCustomer() {
 async function handler(req, res) {
   if (!tablesMode) {
     return res.status(503).json({ success: false, error: 'The shop needs the relational data layer.' })
+  }
+  if (!(await tabAllowedFor(req.staff, 'shop'))) {
+    return res.status(403).json({ success: false, error: 'The shop is not enabled for your account.' })
   }
 
   try {

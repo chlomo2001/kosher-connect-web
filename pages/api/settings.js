@@ -83,8 +83,25 @@ async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
+      // Pricing-config writes are OWNER-ONLY (schema §9); helpers read only.
+      if (req.staff && req.staff.role !== 'owner') {
+        return res.status(403).json({ success: false, error: 'Changing settings is owner-only.' })
+      }
       const { table, key, values } = req.body || {}
       const warnings = []
+
+      // Helper-visibility list (text CSV, validated against known tabs).
+      if (table === 'settings' && key === 'helper_tabs') {
+        const ALL = ['dashboard', 'customers', 'rentals', 'sim', 'wallet',
+          'bookings', 'repairs', 'services', 'shop', 'virtual', 'tasks', 'settings']
+        const list = String(values?.textValue || '').split(',').map(s => s.trim()).filter(t => ALL.includes(t))
+        if (!list.length) return res.status(400).json({ success: false, error: 'Helpers need at least one tab.' })
+        await db.update('settings', `key=eq.helper_tabs`, {
+          text_value: list.join(','),
+          updated_at: new Date().toISOString(),
+        })
+        return res.json({ success: true, warnings })
+      }
 
       if (table === 'rental_rates') {
         const patch = {}
