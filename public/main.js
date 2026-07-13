@@ -3728,29 +3728,28 @@ let ticketsMenu = [];
 // existing values come back blank for them (blank = unchanged on save).
 let bkPassengers = [];
 
+// One card per passenger — everything the airline check-in form asks for.
+// Passport № is hidden from helpers in this editor (they can still see it on
+// the check-in screen); the merge-on-save keeps a blank from erasing it.
 function paxEditorHtml() {
-  const head = `
-    <div style="display:flex;gap:6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">
-      <span style="flex:2;min-width:140px;">Name (as on passport)</span>
-      <span style="width:138px;">Date of birth</span>
-      <span style="flex:1;min-width:110px;">Passport №</span>
-      <span style="width:138px;">Passport expiry</span>
-      <span style="width:30px;"></span>
-    </div>`;
-  const rows = bkPassengers.map((p, i) => `
-    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
-      <input class="form-input" placeholder="Full name" value="${escHtml(p.fullName || '')}"
-        oninput="bkPassengers[${i}].fullName=this.value" style="flex:2;min-width:140px;">
-      <input class="form-input" type="date" title="Date of birth" value="${escHtml(p.dob || '')}"
-        onchange="bkPassengers[${i}].dob=this.value" style="width:138px;">
-      <input class="form-input" placeholder="${currentStaff && currentStaff.role !== 'owner' ? 'hidden (owner-only)' : 'Passport №'}"
-        value="${escHtml(p.passportNumber || '')}"
-        oninput="bkPassengers[${i}].passportNumber=this.value" style="flex:1;min-width:110px;">
-      <input class="form-input" type="date" title="Passport expiry" value="${escHtml(p.passportExpiry || '')}"
-        onchange="bkPassengers[${i}].passportExpiry=this.value" style="width:138px;">
-      <button type="button" class="action-btn" onclick="bkRemovePax(${i})" title="Remove passenger" style="width:30px;">✕</button>
+  const helperMasked = currentStaff && currentStaff.role !== 'owner';
+  const fld = (label, inner) => `<label style="display:flex;flex-direction:column;gap:2px;font-size:10px;color:var(--muted);">${label}${inner}</label>`;
+  return bkPassengers.map((p, i) => `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <strong style="font-size:12px;">Passenger ${i + 1}</strong>
+        <button type="button" class="action-btn" onclick="bkRemovePax(${i})" title="Remove">✕</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${fld('Full name (as on passport)', `<input class="form-input" value="${escHtml(p.fullName || '')}" oninput="bkPassengers[${i}].fullName=this.value" style="width:200px;">`)}
+        ${fld('Date of birth', `<input class="form-input" type="date" value="${escHtml(p.dob || '')}" onchange="bkPassengers[${i}].dob=this.value" style="width:150px;">`)}
+        ${fld('Nationality', `<input class="form-input" value="${escHtml(p.nationality || '')}" oninput="bkPassengers[${i}].nationality=this.value" placeholder="e.g. British" style="width:140px;">`)}
+        ${fld('Passport №', `<input class="form-input" value="${escHtml(p.passportNumber || '')}" oninput="bkPassengers[${i}].passportNumber=this.value" placeholder="${helperMasked ? 'hidden — check-in screen' : ''}" style="width:150px;">`)}
+        ${fld('Passport expiry', `<input class="form-input" type="date" value="${escHtml(p.passportExpiry || '')}" onchange="bkPassengers[${i}].passportExpiry=this.value" style="width:150px;">`)}
+        ${fld('Issue date', `<input class="form-input" type="date" value="${escHtml(p.passportIssueDate || '')}" onchange="bkPassengers[${i}].passportIssueDate=this.value" style="width:150px;">`)}
+        ${fld('Issuing country', `<input class="form-input" value="${escHtml(p.issuingCountry || '')}" oninput="bkPassengers[${i}].issuingCountry=this.value" placeholder="e.g. UK" style="width:140px;">`)}
+      </div>
     </div>`).join('');
-  return head + rows;
 }
 
 function bkRenderPax() {
@@ -4017,11 +4016,34 @@ async function maybeCheckinTask(b) {
   }).catch(() => null);
 }
 
-function openCheckinModal(bookingId) {
+async function openCheckinModal(bookingId) {
   const b = bookings.find(x => x.id === bookingId);
   if (!b) return;
+  // Pull the full, unmasked passenger details for the check-in itself.
+  const detail = await kcFetch('/api/bookings?checkin=' + encodeURIComponent(bookingId))
+    .then(r => r.json()).catch(() => null);
+  const pax = detail?.success ? (detail.booking.passengers || []) : (b.passengers || []);
+  const row = (lbl, val) => val ? `<div><span style="color:var(--muted);">${lbl}:</span> <strong>${escHtml(val)}</strong></div>` : '';
+  const paxHtml = pax.length ? `
+    <div class="section-divider" style="margin:4px 0 8px;">Passenger details (for the airline check-in)</div>
+    <div style="max-height:240px;overflow-y:auto;margin-bottom:12px;">
+      ${pax.map(p => `
+        <div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12px;line-height:1.7;">
+          <strong style="font-size:13px;">${escHtml(p.fullName || '(no name)')}</strong>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;margin-top:4px;">
+            ${row('DOB', p.dob && fmtDate(p.dob))}
+            ${row('Nationality', p.nationality)}
+            ${row('Passport №', p.passportNumber)}
+            ${row('Expiry', p.passportExpiry && fmtDate(p.passportExpiry))}
+            ${row('Issued', p.passportIssueDate && fmtDate(p.passportIssueDate))}
+            ${row('Issuing country', p.issuingCountry)}
+          </div>
+          ${(!p.passportNumber && !p.dob) ? '<div style="color:var(--warning);margin-top:4px;">⚠️ Missing details — open 👥 Passengers to fill them in.</div>' : ''}
+        </div>`).join('')}
+    </div>` : `<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">No passenger details yet — add them via the 👥 button.</div>`;
   showDynamicModal(`
     <div class="modal-title">🛫 Check-in — ${escHtml(b.route)} ${b.travelDate ? fmtDate(b.travelDate) : ''}</div>
+    ${paxHtml}
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">Who checks in?</label>

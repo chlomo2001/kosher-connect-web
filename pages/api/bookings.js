@@ -60,12 +60,15 @@ function toAppFull(row) {
         dob: p.dob || '',
         passportNumber: p.passport_number || '',
         passportExpiry: p.passport_expiry || '',
+        nationality: p.nationality || '',
+        passportIssueDate: p.passport_issue_date || '',
+        issuingCountry: p.issuing_country || '',
       })),
   }
 }
 
 const CUSTOMER_EMBED = 'customers(legacy_id,first_name,last_name)'
-const PASSENGER_EMBED = 'booking_passengers(id,position,full_name,dob,passport_number,passport_expiry)'
+const PASSENGER_EMBED = 'booking_passengers(id,position,full_name,dob,passport_number,passport_expiry,nationality,passport_issue_date,issuing_country)'
 
 // Normalise a client passengers array into insertable rows. Rows with no
 // name are dropped (blank editor lines), everything else is trimmed.
@@ -80,6 +83,9 @@ function passengerRows(bookingId, passengers) {
       dob: p.dob || null,
       passport_number: String(p.passportNumber || '').trim() || null,
       passport_expiry: p.passportExpiry || null,
+      nationality: String(p.nationality || '').trim() || null,
+      passport_issue_date: p.passportIssueDate || null,
+      issuing_country: String(p.issuingCountry || '').trim() || null,
     }))
 }
 
@@ -98,6 +104,17 @@ async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
+      // Check-in view: full, UNMASKED passenger passport details for one
+      // booking — any staff doing the check-in may see them (owner decision
+      // 2026-07-13). The general list below stays masked for helpers.
+      if (req.query.checkin) {
+        const [full] = await db.select(
+          'bookings',
+          `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&id=eq.${encodeURIComponent(String(req.query.checkin))}`
+        )
+        if (!full) return res.status(404).json({ success: false, error: 'Booking not found.' })
+        return res.json({ success: true, booking: toAppFull(full) }) // toAppFull = no masking
+      }
       const rows = await db.select(
         'bookings',
         `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&order=created_at.desc`
