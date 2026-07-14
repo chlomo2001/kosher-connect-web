@@ -177,6 +177,12 @@ body {
 /* ─── CONTENT ─── */
 .content { flex: 1; overflow-y: auto; padding: 24px 28px; }
 
+/* POS takeover — the till owns the whole screen (sidebar + topbar hidden),
+   like a real shopfloor POS. body.pos-mode is set/cleared by the till. */
+body.pos-mode .sidebar,
+body.pos-mode .topbar { display: none; }
+body.pos-mode .content { padding: 14px 18px; }
+
 /* ─── STATS ─── */
 .stats-row {
   display: grid;
@@ -637,33 +643,35 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   display: grid; grid-template-columns: 360px 1fr;
   gap: 16px; margin-bottom: 16px; align-items: stretch;
 }
-/* Featured money card — softened brand-navy treatment (gentler than the
-   flat near-black; subtle gradient + lighter shadow ease the contrast). */
+/* Featured money card — same light surface as its stat-card neighbours;
+   the money figure carries the emphasis, not a dark background. */
 .dash-hero {
-  background: linear-gradient(160deg, #34376f 0%, #262a5e 100%);
-  color: #fff;
-  border-radius: 16px;
-  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 20px 22px;
   box-shadow: var(--shadow-1);
   display: flex; flex-direction: column;
 }
 .dash-hero-label {
   font-size: 10px; font-weight: 400; letter-spacing: 0.1px; text-transform: uppercase;
-  color: rgba(255,255,255,0.5); margin-bottom: 6px;
+  color: var(--muted); margin-bottom: 6px;
 }
 .dash-hero-value {
   font-size: 40px; font-weight: 300; letter-spacing: -0.96px; line-height: 1.05;
   font-feature-settings: "ss01", "tnum";
+  color: var(--accent);
 }
-.dash-hero-sub { font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 4px; font-feature-settings: "tnum"; }
-.dash-hero-divider { height: 1px; background: rgba(255,255,255,0.14); margin: 18px 0 14px; }
+.dash-hero-sub { font-size: 12px; color: var(--muted); margin-top: 4px; font-feature-settings: "tnum"; }
+.dash-hero-divider { height: 1px; background: var(--border); margin: 18px 0 14px; }
 .dash-hero-row {
   display: flex; justify-content: space-between; align-items: baseline;
   font-size: 13px; padding: 4px 0;
-  color: rgba(255,255,255,0.75);
+  color: var(--ink-secondary);
   font-feature-settings: "tnum";
 }
-.dash-hero-row .amt { color: #ffb3c1; font-weight: 400; letter-spacing: -0.39px; }
+.dash-hero-row .amt { color: var(--danger); font-weight: 500; letter-spacing: -0.39px; }
 
 .dash-metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .dash-metrics .stat-card { display: flex; flex-direction: column; justify-content: center; }
@@ -814,7 +822,7 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .stat-card.dash-link { transition: box-shadow 0.12s, transform 0.12s; }
 .stat-card.dash-link:hover { box-shadow: var(--shadow-2); transform: translateY(-1px); }
 .dash-hero-row.dash-link { border-radius: 6px; margin: 0 -6px; padding-left: 6px; padding-right: 6px; transition: background 0.12s; }
-.dash-hero-row.dash-link:hover { background: rgba(255,255,255,0.08); }
+.dash-hero-row.dash-link:hover { background: var(--bg-secondary); }
 
 @media (max-width: 1150px) {
   .dash-grid { grid-template-columns: 1fr; }

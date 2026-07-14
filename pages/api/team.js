@@ -20,7 +20,7 @@ async function ownerCount() {
 
 async function handler(req, res) {
   if (req.staff?.role !== 'owner') {
-    return res.status(403).json({ success: false, error: 'Team management is owner-only.' })
+    return res.status(403).json({ success: false, error: 'Team management is admin-only.' })
   }
 
   try {

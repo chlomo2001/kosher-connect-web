@@ -57,7 +57,7 @@ const cleanRecipients = (v) =>
 
 async function handler(req, res) {
   if (req.staff && req.staff.role !== 'owner') {
-    return res.status(403).json({ success: false, error: 'Email addresses are owner-only.' })
+    return res.status(403).json({ success: false, error: 'Email addresses are admin-only.' })
   }
   if (!KEY) {
     return res.status(503).json({

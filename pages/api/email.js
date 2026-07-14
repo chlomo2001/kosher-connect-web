@@ -39,13 +39,18 @@ async function customerEmail(customerId) {
   if (!customerId || customerId === 'walkin') return null
   const rows = await db.select(
     'customers',
-    `select=first_name,last_name,email_raw,email_normalized&legacy_id=eq.${encodeURIComponent(String(customerId))}`
+    `select=first_name,last_name,email_raw,email_normalized,legacy_extras&legacy_id=eq.${encodeURIComponent(String(customerId))}`
   )
   const c = rows[0]
   if (!c) return null
   const email = (c.email_raw || c.email_normalized || '').trim()
+  // "Account" emails are the business's own carrier-login aliases (Lebara
+  // etc.), not the customer's inbox — never send receipts to those.
+  const kind = c.legacy_extras?.emailKind
+    || (/\+[^@]*@/.test(email) ? 'account' : 'contact')
   return {
     email: email || null,
+    isAccountEmail: kind === 'account',
     name: `${c.first_name || ''} ${c.last_name || ''}`.trim(),
   }
 }
@@ -71,6 +76,12 @@ async function handler(req, res) {
     if (!who) return res.status(400).json({ success: false, error: 'Customer not found.' })
     if (!who.email) {
       return res.status(400).json({ success: false, error: `No email on file for ${who.name || 'this customer'}.` })
+    }
+    if (who.isAccountEmail) {
+      return res.status(400).json({
+        success: false,
+        error: `${who.name || 'This customer'}'s email on file is an account/login address, not a real contact email — receipt not sent.`,
+      })
     }
 
     let subject, html

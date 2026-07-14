@@ -155,16 +155,17 @@ async function initApp() {
   // of ten. Each fetch is independent; a failure in one falls back to [] and
   // never blocks the rest of the app from painting.
   const arr = v => (Array.isArray(v) ? v : []);
-  const [cust, rent, ph, sm, bk, vn, rp, cfg, menu, me] = await Promise.all([
+  const [cust, rent, ph, sm, bk, vn, rp, so, cfg, menu, me] = await Promise.all([
     window.api.getAllCustomers().catch(() => []),
     window.api.getAllRentals().catch(() => []),
     window.api.getAllPhones().catch(() => []),
     window.api.getAllSims().catch(() => []),
     window.api.getAllBookings().catch(() => []),
     window.api.getVirtualNumbers().catch(() => []),
-    // Repairs load up-front too, so customer badges/services reflect them
-    // before the Repairs tab is ever opened (same as bookings/SIMs/VNs).
+    // Repairs + service orders load up-front too, so customer badges/services
+    // reflect them before their tabs are ever opened (same as bookings/SIMs).
     window.api.getRepairs().catch(() => []),
+    window.api.getServiceOrders().catch(() => []),
     window.api.getSettings().catch(() => null),
     window.api.getServiceMenu('sim').catch(() => []),
     kcFetch('/api/auth/me').then(r => r.json()).catch(() => null),
@@ -177,6 +178,7 @@ async function initApp() {
   bookings = arr(bk);
   virtualNumbers = arr(vn);
   repairs = arr(rp);
+  serviceOrders = arr(so);
   pricingConfig = cfg;
   simMenu = arr(menu);
   if (me?.success && me.authEnabled) {
@@ -247,6 +249,7 @@ function renderTab(tab) {
     toast('That area is not enabled for your account.', 'warning');
     return;
   }
+  document.body.classList.remove('pos-mode'); // leaving the till via any nav
   const content = document.getElementById('mainContent');
   const searchBox = document.getElementById('searchBox');
   const btnNew = document.getElementById('btnNewCustomer');
@@ -287,7 +290,7 @@ function renderTab(tab) {
     btnNew.style.display = 'none';
     renderRepairsTab();
   } else if (tab === 'services') {
-    document.getElementById('pageTitle').innerHTML = 'Online <span>Services</span>';
+    document.getElementById('pageTitle').innerHTML = 'Online <span>&amp; Print</span>';
     searchBox.style.display = 'none';
     btnNew.style.display = 'none';
     renderServicesTab();
@@ -2463,7 +2466,7 @@ function renderTableRows() {
     <tr class="${selected}" data-id="${c.id}">
       <td>
         <div class="customer-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}${c.passportOnFile ? ' <span title="Passport on file">🛂</span>' : ''}</div>
-        <div class="customer-email">${escHtml(c.email || '')}</div>
+        <div class="customer-email">${escHtml(c.email || '')}${c.email && (c.emailKind || guessEmailKind(c.email)) === 'account' ? ' <span title="Account/login email (Lebara etc.) — not for contacting the customer" style="color:var(--muted);">⚙️</span>' : ''}</div>
       </td>
       <td>${escHtml(c.phone || '—')}</td>
       <td>${services || '<span style="color:var(--muted);font-size:12px;">None</span>'}</td>
@@ -2565,6 +2568,12 @@ function renderDetailPanel(id) {
     ...cSims.map(s => ({ type: 'sim', label: `SIM · ${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}` })),
     ...cVNs.map(v => ({ type: 'vn', label: `VN ${v.number || ''}` })),
     ...cOpenRepairs.map(r => ({ type: 'repair', label: `🔧 Repair — ${r.status}` })),
+    // Recent one-off online/print services (last 90 days, newest first).
+    ...serviceOrders
+      .filter(o => o.customerId === c.id && o.createdAt
+        && (Date.now() - new Date(o.createdAt).getTime()) < 90 * 86400000)
+      .slice(0, 3)
+      .map(o => ({ type: 'sim', label: `🖨️ ${o.serviceName || 'Service'} · ${fmtDate(o.createdAt)}` })),
     ...otherServices,
   ];
   const servicesHTML = allActiveServices.length === 0
@@ -2615,7 +2624,7 @@ function renderDetailPanel(id) {
         <div class="avatar">${initials}</div>
         <div style="flex:1;">
           <div class="detail-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}${c.passportOnFile ? ' <span title="Passport on file" style="font-size:16px;">🛂</span>' : ''}</div>
-          <div class="detail-meta">${escHtml(c.phone || '—')} · ${escHtml(c.email || 'No email')} ${addr} · Since ${since}</div>
+          <div class="detail-meta">${escHtml(c.phone || '—')} · ${escHtml(c.email || 'No email')}${c.email && (c.emailKind || guessEmailKind(c.email)) === 'account' ? ' <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ account email</span>' : ''} ${addr} · Since ${since}</div>
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer">⏰</button>
@@ -2655,11 +2664,15 @@ function renderDetailPanel(id) {
         <button class="btn btn-primary" style="font-size:13px;padding:7px 16px;" onclick="openNewBookingModal('${c.id}')">✈️ New Flight Booking</button>
         <button class="btn btn-vn" style="font-size:13px;padding:7px 16px;" onclick="openNewVNModal('${c.id}')">🔢 New Virtual Number</button>
         <button class="btn btn-sim" style="font-size:13px;padding:7px 16px;" onclick="openAddSimModal('${c.id}')">💳 New SIM Plan</button>
+        <button class="btn btn-outline" style="font-size:13px;padding:7px 16px;" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal('${c.id}')})()">🔧 New Repair</button>
+        <button class="btn btn-outline" style="font-size:13px;padding:7px 16px;" onclick="openNewServiceModal('${c.id}')">🖨️ Online / Print Service</button>
       </div>
     </div>`;
 
   loadWalletSection(c.id);
-  setTimeout(() => container.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+  // 'start' (not 'nearest') — the panel renders below the table, so opening
+  // a customer must actually travel down to it.
+  setTimeout(() => container.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 }
 
 // ─────────────────────────────────────────────
@@ -2746,7 +2759,7 @@ function openWalletModal(customerId) {
         <label class="form-label">Note</label>
         <input class="form-input" id="wlNote" placeholder="What is this for?">
       </div>
-      ${c && c.email ? `<div class="form-group form-full">
+      ${c && c.email && (c.emailKind || guessEmailKind(c.email)) === 'contact' ? `<div class="form-group form-full">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
           <input type="checkbox" id="wlEmail"> ✉️ Email a receipt to ${escHtml(c.email)}
         </label>
@@ -3096,9 +3109,17 @@ function openEditModal(id) {
   document.getElementById('fCountryCode').value = code;
   document.getElementById('fPhoneNumber').value = phoneNum;
   document.getElementById('fEmail').value   = c.email   || '';
+  const ekEl = document.getElementById('fEmailKind');
+  if (ekEl) ekEl.value = c.emailKind || guessEmailKind(c.email);
   document.getElementById('fAddress').value = c.address || '';
   document.getElementById('fPassportOnFile').checked = !!c.passportOnFile;
   showModal();
+}
+
+// Plus-addressed emails (moshe+lebara2@…) are almost always the business's
+// own login trick for opening carrier accounts — default those to "account".
+function guessEmailKind(email) {
+  return /\+[^@]*@/.test(String(email || '')) ? 'account' : 'contact';
 }
 
 function clearModal() {
@@ -3108,6 +3129,7 @@ function clearModal() {
     el.classList.remove('error');
   });
   const pf = document.getElementById('fPassportOnFile'); if (pf) pf.checked = false;
+  const ek = document.getElementById('fEmailKind'); if (ek) ek.value = 'contact';
   document.getElementById('fCountryCode').value = '+44';
   ['errFirstName','errLastName','errPhone'].forEach(id => document.getElementById(id).classList.remove('visible'));
   ['warnPhone','warnEmail','warnName'].forEach(id => document.getElementById(id).classList.remove('visible'));
@@ -3204,6 +3226,7 @@ async function saveCustomer() {
   }
 
   const payload = { firstName, lastName, phone: fullPhone, email, address,
+    emailKind: email ? (document.getElementById('fEmailKind')?.value || guessEmailKind(email)) : null,
     passportOnFile: document.getElementById('fPassportOnFile').checked };
 
   if (editId) {
@@ -3569,11 +3592,12 @@ async function saveSimForm(editId) {
     const idx = sims.findIndex(s => s.id === editId);
     if (idx !== -1) sims[idx] = { ...sims[idx], ...fields };
   } else {
+    const setupFee = simChargePrice('activation'); // settings-driven, £20 fallback
     if (!(await kcConfirm({
       title: 'Confirm SIM setup charge',
       body: `<strong>${customer ? escHtml(customer.firstName) + ' ' + escHtml(customer.lastName) : 'Customer'}</strong><br>
         ${escHtml(provider)} SIM — initial setup`,
-      amount: 20,
+      amount: setupFee,
       okLabel: 'Charge setup',
     }))) return;
     const setupDate = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
@@ -3584,7 +3608,7 @@ async function saveSimForm(editId) {
         id: (Date.now() + 1).toString(),
         type: 'activation',
         desc: 'Initial SIM Setup',
-        amount: 20,
+        amount: setupFee,
         date: setupDate,
       }],
       createdAt: new Date().toISOString(),
@@ -4486,9 +4510,9 @@ async function renderRepairsTab() {
     </div>`;
 }
 
-function openNewRepairModal() {
+function openNewRepairModal(preselectCustomerId = null) {
   const customerOptions = customers.map(c =>
-    `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone || '')}</option>`
+    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone || '')}</option>`
   ).join('');
   const serviceChecks = repairMenu.map(m => `
     <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer;">
@@ -4812,9 +4836,14 @@ async function renderServicesTab() {
   }
 }
 
-function openNewServiceModal() {
+async function openNewServiceModal(preselectCustomerId = null) {
+  // Callable from the customer card too — make sure the menu is loaded.
+  if (!onlineMenu.length) {
+    onlineMenu = await window.api.getServiceMenu('online').catch(() => []);
+    if (!Array.isArray(onlineMenu)) onlineMenu = [];
+  }
   const customerOptions = customers.map(c =>
-    `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone || '')}</option>`).join('');
+    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone || '')}</option>`).join('');
   const svcOptions = onlineMenu.map(m =>
     `<option value="${escHtml(String(m.id))}">${escHtml(m.name)} — £${m.price.toFixed(2)}${m.repeatPrice !== null ? ` (2nd+ £${m.repeatPrice.toFixed(2)})` : ''}</option>`).join('');
   showDynamicModal(`
@@ -5115,8 +5144,16 @@ function openSaleModal(preselectItemId = null) { // name kept: every Sell button
 
 const POS_CAT_ICONS = { phone: '📱', accessory: '🔌', sim: '📶', other: '📦' };
 
+function closePosView() {
+  document.body.classList.remove('pos-mode');
+  renderShopTab();
+}
+
 function renderPosView() {
   const content = document.getElementById('mainContent');
+  // Full-screen takeover: hide the sidebar/topbar so the till fills the
+  // display like a real POS. Any tab switch clears it (renderTab guard).
+  document.body.classList.add('pos-mode');
   const customerOptions = customers.map(c =>
     `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)}</option>`).join('');
   const cats = [...new Set(shopItems.filter(i => i.active && i.quantity > 0).map(i => i.category))];
@@ -5124,7 +5161,7 @@ function renderPosView() {
     <div class="pos-shell">
       <div class="pos-main">
         <div style="display:flex;gap:8px;align-items:center;">
-          <button class="btn btn-outline" onclick="renderShopTab()" style="white-space:nowrap;">← Shop</button>
+          <button class="btn btn-outline" onclick="closePosView()" style="white-space:nowrap;">← Exit till</button>
           <input class="form-input pos-scan" id="posScan" placeholder="🔍 Scan a barcode, or type to search…"
             autocomplete="off" oninput="posRenderTiles()"
             onkeydown="if(event.key==='Enter'){event.preventDefault();posScanEnter();}">
@@ -5939,7 +5976,12 @@ function goToTab(tab, opts = {}) {
   }
   document.querySelector(`.nav-item[data-tab="${tab}"]`)?.click();
   // Customers tab renders synchronously from memory; open the detail after it.
-  if (opts.customerId) setTimeout(() => renderDetailPanel(opts.customerId), 120);
+  if (opts.customerId) setTimeout(() => {
+    selectedId = opts.customerId;
+    renderDetailPanel(opts.customerId);
+    document.querySelectorAll('tr[data-id]').forEach(r =>
+      r.classList.toggle('selected', r.dataset.id === String(opts.customerId)));
+  }, 120);
 }
 
 // Hebrew calendar string for a Date (gematria day + month + gematria year).
@@ -5955,22 +5997,33 @@ function hebrewDateString(d) {
   } catch (e) { return ''; }
 }
 
-async function renderDashboardTab() {
-  const content = document.getElementById('mainContent');
-  content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading dashboard…</div>`;
+// The dashboard paints INSTANTLY from what's already in memory (rentals,
+// phones, sims, bookings, repairs) plus the last-known money/tasks, then
+// repaints once the fresh ledger + tasks arrive. No blank "Loading…" wait.
+let dashCache = { money: null, tasks: null };
 
+async function renderDashboardTab() {
+  dashPaint(dashCache.money, dashCache.tasks, dashCache.money === null);
+
+  const today = localISO();
+  const [ledgerSummary, tasksData] = await Promise.all([
+    kcFetch('/api/ledger?since=' + today).then(r => r.ok ? r.json() : null).catch(() => null),
+    window.api.getTasks().catch(() => []),
+  ]);
+  dashCache = {
+    money: ledgerSummary?.success ? ledgerSummary : dashCache.money,
+    tasks: Array.isArray(tasksData) ? tasksData : (dashCache.tasks || []),
+  };
+  if (currentTab === 'dashboard') dashPaint(dashCache.money, dashCache.tasks, false);
+}
+
+function dashPaint(money, tasksList2, stillLoading) {
+  const content = document.getElementById('mainContent');
   const now = new Date();
   const today = localISO(now);
   const in7 = localISO(new Date(Date.now() + 7 * 86400000));
-
-  // Rentals/phones/sims/bookings are already in memory; fetch the rest.
-  const [ledgerSummary, repairsData, tasksData] = await Promise.all([
-    kcFetch('/api/ledger?since=' + today).then(r => r.ok ? r.json() : null).catch(() => null),
-    window.api.getRepairs().catch(() => []),
-    window.api.getTasks().catch(() => []),
-  ]);
-  const reps = Array.isArray(repairsData) ? repairsData : [];
-  const tks = Array.isArray(tasksData) ? tasksData : [];
+  const reps = repairs;
+  const tks = tasksList2 || [];
 
   const activeRentals = rentals.filter(r => r.status !== 'returned');
   const overdue = activeRentals.filter(r => r.toDate && r.toDate < today);
@@ -5983,7 +6036,6 @@ async function renderDashboardTab() {
   const openTasks = tks.filter(t => !t.done && !(t.snoozedUntil && t.snoozedUntil > today));
   const highTasks = openTasks.filter(t => t.priority === 'High');
 
-  const money = ledgerSummary?.success ? ledgerSummary : null;
   const arrears = money ? money.arrears : [];
   const arrearsTotal = money ? Math.abs(money.arrearsTotal) : 0;
 
@@ -5999,12 +6051,12 @@ async function renderDashboardTab() {
   const heroHtml = `
     <div class="dash-hero">
       <div class="dash-hero-label">Money in today</div>
-      <div class="dash-hero-value">£${money ? money.todayIn.toFixed(2) : '0.00'}</div>
-      <div class="dash-hero-sub">${money && money.todayOut ? '£' + Math.abs(money.todayOut).toFixed(2) + ' charged out today' : 'no charges yet today'}</div>
+      <div class="dash-hero-value">${stillLoading ? '…' : '£' + (money ? money.todayIn.toFixed(2) : '0.00')}</div>
+      <div class="dash-hero-sub">${money && money.todayOut ? '£' + Math.abs(money.todayOut).toFixed(2) + ' charged out today' : (stillLoading ? '&nbsp;' : 'no charges yet today')}</div>
       <div class="dash-hero-divider"></div>
       <div class="dash-hero-label">Outstanding</div>
-      <div class="dash-hero-value" style="font-size:26px;letter-spacing:-0.26px;">£${arrearsTotal.toFixed(2)}</div>
-      <div class="dash-hero-sub">${arrears.length ? arrears.length + ' customer' + (arrears.length === 1 ? '' : 's') + ' in arrears' : 'nobody owes money 🎉'}</div>
+      <div class="dash-hero-value" style="font-size:26px;letter-spacing:-0.26px;">${stillLoading ? '…' : '£' + arrearsTotal.toFixed(2)}</div>
+      <div class="dash-hero-sub">${arrears.length ? arrears.length + ' customer' + (arrears.length === 1 ? '' : 's') + ' in arrears' : (stillLoading ? '&nbsp;' : 'nobody owes money 🎉')}</div>
       ${arrears.length ? `<div class="dash-hero-divider"></div>` +
         arrears.slice(0, 8).map(a => `
           <div class="dash-hero-row${a.customerId ? ' dash-link' : ''}"${a.customerId
@@ -6066,10 +6118,13 @@ async function renderDashboardTab() {
           <span class="feed-go">›</span>
         </div>`).join('');
 
+  // Each row deep-links to its customer (same as the wallet tab's feed).
   const activityHtml = !money || money.recent.length === 0
     ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No wallet activity yet.</div>`
-    : money.recent.map(e => `
-        <div class="history-item" style="background:transparent;border-bottom:1px solid var(--border);border-radius:0;padding:9px 2px;">
+    : money.recent.slice(0, 8).map(e => `
+        <div class="history-item${e.customerId ? ' dash-link' : ''}"
+          style="background:transparent;border-bottom:1px solid var(--border);border-radius:0;padding:9px 2px;"
+          ${e.customerId ? `onclick="goToTab('customers',{customerId:'${escHtml(String(e.customerId))}'})" title="Open customer"` : ''}>
           <div style="display:flex;align-items:center;flex:1;min-width:0;">
             <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>
             <div class="history-desc" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
@@ -6078,7 +6133,11 @@ async function renderDashboardTab() {
           <div class="history-date" style="margin:0 12px;">${fmtDate(e.at)}</div>
           <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--text)'};">
             ${e.amount >= 0 ? '+' : '−'}£${Math.abs(e.amount).toFixed(2)}</div>
-        </div>`).join('');
+          ${e.customerId ? '<span class="feed-go">›</span>' : ''}
+        </div>`).join('') + `
+        <div class="feed-item dash-link" onclick="goToTab('wallet')" style="color:var(--muted);font-size:12px;">
+          <span style="flex:1;">Full ledger &amp; today's money</span><span class="feed-go">›</span>
+        </div>`;
 
   content.innerHTML = `
     <div class="dash-head">
@@ -6087,7 +6146,7 @@ async function renderDashboardTab() {
         <div class="dash-greeting">${greeting}${staffFirstName ? ', ' + escHtml(staffFirstName) : ''}.</div>
       </div>
       <div class="dash-actions">
-        <button class="btn btn-primary" onclick="openNewRentalModal()">📱 New Rental</button>
+        <button class="btn btn-outline" onclick="openNewRentalModal()">📱 New Rental</button>
         <button class="btn btn-outline" onclick="openNewBookingModal()">✈️ New Booking</button>
         <button class="btn btn-outline" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal()})()">🔧 New Repair</button>
         <button class="btn btn-outline" onclick="document.querySelector('[data-tab=customers]').click();setTimeout(()=>document.getElementById('btnNewCustomer')?.click(),100)">👤 New Customer</button>
@@ -6362,11 +6421,12 @@ async function deleteVN(id, number) {
 async function renderSettingsTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading settings…</div>`;
-  const [cfg, team, autos, aliases] = await Promise.all([
+  const [cfg, team, autos, aliases, menu] = await Promise.all([
     window.api.getSettings(),
     kcFetch('/api/team').then(r => r.status === 403 ? null : r.json()).catch(() => null),
     kcFetch('/api/automations').then(r => r.status === 403 ? null : r.json()).catch(() => null),
     kcFetch('/api/email-aliases').then(r => r.status === 403 ? null : r.json()).catch(() => null),
+    kcFetch('/api/services?all=1').then(r => r.ok ? r.json() : null).catch(() => null),
   ]);
   if (!cfg || !cfg.success) {
     content.innerHTML = `<div class="tab-placeholder"><div class="big">⚙️</div>
@@ -6388,7 +6448,7 @@ async function renderSettingsTab() {
             <td>
               <select class="form-input" style="width:110px;padding:5px 8px;font-size:13px;min-height:0;"
                 onchange="changeTeamRole('${escHtml(m.id)}', this.value)" ${m.isYou ? 'disabled' : ''}>
-                <option value="owner" ${m.role === 'owner' ? 'selected' : ''}>Owner</option>
+                <option value="owner" ${m.role === 'owner' ? 'selected' : ''}>Admin</option>
                 <option value="helper" ${m.role === 'helper' ? 'selected' : ''}>Helper</option>
               </select>
             </td>
@@ -6407,7 +6467,7 @@ async function renderSettingsTab() {
           <td>
             <select class="form-input" id="tmRole" style="width:110px;padding:5px 8px;font-size:13px;min-height:0;">
               <option value="helper">Helper</option>
-              <option value="owner">Owner</option>
+              <option value="owner">Admin</option>
             </select>
           </td>
           <td><button class="btn btn-primary btn-sm" onclick="saveNewTeamMember()">+ Add</button></td>
@@ -6522,10 +6582,54 @@ async function renderSettingsTab() {
     </tr>`).join('');
 
   emailAliasCache = aliases?.success ? aliases.aliases : [];
+
+  // ── Service price menu card (admin-editable price list) ──
+  menuItemsCache = menu?.success ? menu.items : [];
+  const isAdmin = !currentStaff || currentStaff.role === 'owner';
+  const catLabel = { repair: '🔧 Repairs', online: '🖨️ Online & print', ticket: '✈️ Tickets',
+    phone: '📱 Phones', sim: '💳 SIM', other: '📦 Other' };
+  const menuNum = (id, val) =>
+    `<input class="form-input" type="number" step="0.01" id="${id}" value="${val ?? ''}" placeholder="—" style="width:76px;padding:5px 7px;font-size:12px;min-height:0;">`;
+  const menuHtml = !isAdmin || !menu?.success ? '' : `
+    <div class="table-card" style="margin-bottom:16px;">
+      <div class="section-divider" style="margin:12px 14px 4px;">🧾 Service price menu <span style="color:var(--muted);font-weight:400;font-size:12px;">— what the charging screens offer</span></div>
+      <div class="table-wrap"><table><thead><tr><th>Service</th><th>Price</th><th>KC price</th><th>2nd+</th><th>6th+</th><th>On</th><th></th></tr></thead>
+      <tbody>
+        ${['repair','online','ticket','phone','sim','other'].map(cat => {
+          const items = menuItemsCache.filter(m => m.category === cat);
+          if (!items.length) return '';
+          return `<tr><td colspan="7" style="background:var(--bg-secondary);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);padding:6px 16px;">${catLabel[cat] || cat}</td></tr>` +
+            items.map(m => `
+            <tr style="${m.active ? '' : 'opacity:0.45;'}">
+              <td><input class="form-input" id="mi_name_${m.id}" value="${escHtml(m.name)}" style="min-height:0;padding:5px 8px;font-size:12px;min-width:170px;"></td>
+              <td>${menuNum(`mi_price_${m.id}`, m.price)}</td>
+              <td>${menuNum(`mi_kc_${m.id}`, m.kcPrice)}</td>
+              <td>${menuNum(`mi_rep_${m.id}`, m.repeatPrice)}</td>
+              <td>${menuNum(`mi_bulk_${m.id}`, m.bulkPrice)}</td>
+              <td><input type="checkbox" id="mi_active_${m.id}" ${m.active ? 'checked' : ''} style="accent-color:var(--accent);cursor:pointer;"></td>
+              <td><button class="btn btn-outline" style="font-size:12px;padding:5px 12px;" onclick="saveMenuItem('${escHtml(String(m.id))}')">💾 Save</button></td>
+            </tr>`).join('');
+        }).join('')}
+        <tr>
+          <td><input class="form-input" id="miNewName" placeholder="New service name" style="min-height:0;padding:5px 8px;font-size:12px;min-width:170px;"></td>
+          <td>${menuNum('miNewPrice', '')}</td>
+          <td colspan="3">
+            <select class="form-input" id="miNewCat" style="min-height:0;padding:5px 8px;font-size:12px;width:130px;">
+              ${Object.entries(catLabel).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}
+            </select>
+          </td>
+          <td></td>
+          <td><button class="btn btn-primary btn-sm" onclick="addMenuItem()">+ Add</button></td>
+        </tr>
+      </tbody></table></div>
+      <div style="padding:6px 14px 12px;font-size:11px;color:var(--muted);">Prices apply to new charges only. Untick "On" to retire a service — old charges keep their label.</div>
+    </div>`;
+
   content.innerHTML = `
     ${teamHtml}
     ${automationsHtml}
     ${aliasesHtml}
+    ${menuHtml}
     <div style="margin-bottom:10px;padding:10px 14px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:12px;">
       <span style="flex:1;">These values drive live pricing (rental calculator, VN add-on, late fees, repair/SIM charges).
       Edits apply to <strong>new</strong> calculations only — existing tickets and frozen prices never reprice.
@@ -6601,6 +6705,48 @@ async function runSweepsNow() {
   if (!res?.success) { toast(res?.error || 'Sweeps failed — check logs.', 'error'); return; }
   const c = res.counts;
   toast(`Sweeps done: ${c.rentalsFlippedOverdue} flipped overdue · ${c.overdueTasks + c.balanceTasks + c.passportTasks + c.simRenewalTasks} tasks raised · ${c.overdueClosed + c.balanceClosed + c.simClosed} closed.`, 'success');
+}
+
+// ── Service price menu (admin-editable price list) ──────────────────────
+
+let menuItemsCache = [];
+
+async function saveMenuItem(id) {
+  const val = (fid) => {
+    const v = document.getElementById(fid)?.value;
+    return v === '' || v === undefined ? null : parseFloat(v);
+  };
+  const res = await kcFetch('/api/services', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id,
+      name: document.getElementById(`mi_name_${id}`)?.value || '',
+      price: val(`mi_price_${id}`) ?? 0,
+      kcPrice: val(`mi_kc_${id}`),
+      repeatPrice: val(`mi_rep_${id}`),
+      bulkPrice: val(`mi_bulk_${id}`),
+      active: !!document.getElementById(`mi_active_${id}`)?.checked,
+    }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not save.', 'error'); return; }
+  // Charging screens re-fetch their menus when opened, so no cache to fix.
+  toast(`${res.item.name} saved.`, 'success');
+}
+
+async function addMenuItem() {
+  const name = document.getElementById('miNewName')?.value.trim();
+  const price = parseFloat(document.getElementById('miNewPrice')?.value);
+  if (!name) { toast('Enter a service name.', 'error'); return; }
+  if (!Number.isFinite(price) || price < 0) { toast('Enter a price (£0 or more).', 'error'); return; }
+  const res = await kcFetch('/api/services', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, price, category: document.getElementById('miNewCat')?.value }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not add it.', 'error'); return; }
+  toast(`${res.item.name} added to the menu.`, 'success');
+  renderSettingsTab();
 }
 
 // ── Email addresses (owner-only, Forward Email aliases) ─────────────────
@@ -6752,7 +6898,7 @@ function openResetPasswordModal(id, label) {
   showDynamicModal(`
     <div class="modal-title">🔑 Reset password — ${escHtml(label)}</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">
-      Owner reset: no current password needed. Tell them the new one in person.</div>
+      Admin reset: no current password needed. Tell them the new one in person.</div>
     <div class="form-group">
       <label class="form-label">New password (8+)</label>
       <input class="form-input" type="password" id="rpNewPw" autocomplete="new-password">
@@ -6820,7 +6966,7 @@ async function changeTeamRole(id, role) {
 
 async function removeTeamMember(id, label, isSelf = false) {
   const ok = await window.api.confirmDelete(isSelf
-    ? `Remove YOURSELF from the team?\n\nYou will be signed out immediately and lose all access. Only possible while another owner remains.`
+    ? `Remove YOURSELF from the team?\n\nYou will be signed out immediately and lose all access. Only possible while another admin remains.`
     : `Remove "${label}" from the team?\n\nTheir access stops immediately. The login account is kept but no longer works for this app.`);
   if (!ok) return;
   const res = await kcFetch('/api/team?id=' + encodeURIComponent(id), { method: 'DELETE' }).then(r => r.json());
@@ -6960,6 +7106,8 @@ confirmCollectRepair = guardReentry(confirmCollectRepair);
 saveAutomation   = guardReentry(saveAutomation);
 deleteAutomation = guardReentry(deleteAutomation);
 saveEmailAlias   = guardReentry(saveEmailAlias);
+saveMenuItem     = guardReentry(saveMenuItem);
+addMenuItem      = guardReentry(addMenuItem);
 deleteEmailAlias = guardReentry(deleteEmailAlias);
 generateAliasPassword = guardReentry(generateAliasPassword);
 saveNewTask      = guardReentry(saveNewTask);

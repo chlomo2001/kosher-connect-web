@@ -29,7 +29,7 @@ const toApp = (r) => ({
 async function handler(req, res) {
   if (!tablesMode) return res.status(503).json({ success: false, error: 'Automations need the relational data layer.' })
   if (req.staff?.role !== 'owner') {
-    return res.status(403).json({ success: false, error: 'Automations are owner-only.' })
+    return res.status(403).json({ success: false, error: 'Automations are admin-only.' })
   }
 
   try {

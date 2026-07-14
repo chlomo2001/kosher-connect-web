@@ -30,7 +30,7 @@ export default function Home() {
         <div className="nav-item" data-tab="bookings"><span className="nav-icon">✈️</span> Tickets &amp; Flights</div>
         <div className="nav-item" data-tab="wallet"><span className="nav-icon">💰</span> Wallet</div>
         <div className="nav-item" data-tab="repairs"><span className="nav-icon">🔧</span> Repairs</div>
-        <div className="nav-item" data-tab="services"><span className="nav-icon">🖨️</span> Services</div>
+        <div className="nav-item" data-tab="services"><span className="nav-icon">🖨️</span> Online &amp; Print</div>
         <div className="nav-item" data-tab="shop"><span className="nav-icon">🛍️</span> Shop</div>
         <div className="nav-item" data-tab="virtual"><span className="nav-icon">🔢</span> Virtual Numbers</div>
         <div className="nav-item" data-tab="tasks"><span className="nav-icon">✅</span> Tasks</div>
@@ -107,10 +107,18 @@ export default function Home() {
               <div className="form-warning" id="warnPhone">⚠️ This phone number already exists for another customer.</div>
             </div>
 
-            <div className="form-group form-full">
+            <div className="form-group">
               <label className="form-label">Email</label>
               <input className="form-input" id="fEmail" type="email" placeholder="example@gmail.com" autoComplete="off" />
               <div className="form-warning" id="warnEmail">⚠️ This email already exists for another customer.</div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Email type</label>
+              <select className="form-input" id="fEmailKind" defaultValue="contact">
+                <option value="contact">✉️ Real contact email</option>
+                <option value="account">⚙️ Account email (Lebara logins etc.)</option>
+              </select>
             </div>
 
             <div className="form-group form-full">

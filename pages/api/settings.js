@@ -85,7 +85,7 @@ async function handler(req, res) {
     if (req.method === 'PUT') {
       // Pricing-config writes are OWNER-ONLY (schema §9); helpers read only.
       if (req.staff && req.staff.role !== 'owner') {
-        return res.status(403).json({ success: false, error: 'Changing settings is owner-only.' })
+        return res.status(403).json({ success: false, error: 'Changing settings is admin-only.' })
       }
       const { table, key, values } = req.body || {}
       const warnings = []
