@@ -108,17 +108,14 @@ export default function Home() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Email</label>
-              <input className="form-input" id="fEmail" type="email" placeholder="example@gmail.com" autoComplete="off" />
+              <label className="form-label">✉️ Contact email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(the customer&apos;s own)</span></label>
+              <input className="form-input" id="fEmail" type="email" placeholder="customer@gmail.com" autoComplete="off" />
               <div className="form-warning" id="warnEmail">⚠️ This email already exists for another customer.</div>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Email type</label>
-              <select className="form-input" id="fEmailKind" defaultValue="contact">
-                <option value="contact">✉️ Real contact email</option>
-                <option value="account">⚙️ Account email (Lebara logins etc.)</option>
-              </select>
+              <label className="form-label">⚙️ Account email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(our login for Lebara etc.)</span></label>
+              <input className="form-input" id="fAccountEmail" type="email" placeholder="kosherconnect+levi@gmail.com" autoComplete="off" />
             </div>
 
             <div className="form-group form-full">

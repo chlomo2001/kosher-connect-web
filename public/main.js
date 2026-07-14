@@ -2466,7 +2466,7 @@ function renderTableRows() {
     <tr class="${selected}" data-id="${c.id}">
       <td>
         <div class="customer-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}${c.passportOnFile ? ' <span title="Passport on file">🛂</span>' : ''}</div>
-        <div class="customer-email">${escHtml(c.email || '')}${c.email && (c.emailKind || guessEmailKind(c.email)) === 'account' ? ' <span title="Account/login email (Lebara etc.) — not for contacting the customer" style="color:var(--muted);">⚙️</span>' : ''}</div>
+        <div class="customer-email">${escHtml(c.email || '')}${c.accountEmail ? `${c.email ? '<br>' : ''}<span title="Account/login email (Lebara etc.) — not for contacting the customer" style="color:var(--muted);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''}</div>
       </td>
       <td>${escHtml(c.phone || '—')}</td>
       <td>${services || '<span style="color:var(--muted);font-size:12px;">None</span>'}</td>
@@ -2624,7 +2624,7 @@ function renderDetailPanel(id) {
         <div class="avatar">${initials}</div>
         <div style="flex:1;">
           <div class="detail-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}${c.passportOnFile ? ' <span title="Passport on file" style="font-size:16px;">🛂</span>' : ''}</div>
-          <div class="detail-meta">${escHtml(c.phone || '—')} · ${escHtml(c.email || 'No email')}${c.email && (c.emailKind || guessEmailKind(c.email)) === 'account' ? ' <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ account email</span>' : ''} ${addr} · Since ${since}</div>
+          <div class="detail-meta">${escHtml(c.phone || '—')} · ✉️ ${escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer">⏰</button>
@@ -2759,7 +2759,7 @@ function openWalletModal(customerId) {
         <label class="form-label">Note</label>
         <input class="form-input" id="wlNote" placeholder="What is this for?">
       </div>
-      ${c && c.email && (c.emailKind || guessEmailKind(c.email)) === 'contact' ? `<div class="form-group form-full">
+      ${c && c.email && !isOwnAccountEmail(c.email) ? `<div class="form-group form-full">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
           <input type="checkbox" id="wlEmail"> ✉️ Email a receipt to ${escHtml(c.email)}
         </label>
@@ -3109,17 +3109,23 @@ function openEditModal(id) {
   document.getElementById('fCountryCode').value = code;
   document.getElementById('fPhoneNumber').value = phoneNum;
   document.getElementById('fEmail').value   = c.email   || '';
-  const ekEl = document.getElementById('fEmailKind');
-  if (ekEl) ekEl.value = c.emailKind || guessEmailKind(c.email);
+  const aeEl = document.getElementById('fAccountEmail');
+  if (aeEl) aeEl.value = c.accountEmail || '';
   document.getElementById('fAddress').value = c.address || '';
   document.getElementById('fPassportOnFile').checked = !!c.passportOnFile;
   showModal();
 }
 
-// Plus-addressed emails (moshe+lebara2@…) are almost always the business's
-// own login trick for opening carrier accounts — default those to "account".
-function guessEmailKind(email) {
-  return /\+[^@]*@/.test(String(email || '')) ? 'account' : 'contact';
+// The business's OWN Gmail bases. Any dot/plus variant of these (including
+// the bare address) is one of Shloime's carrier-login addresses — an
+// "account email", never the customer's contact address. No guessing beyond
+// this exact list.
+const OWN_EMAIL_BASES = ['gittbilig', 'kosherconnect', 'ch7023518'];
+function isOwnAccountEmail(email) {
+  const m = String(email || '').toLowerCase().trim().match(/^([^@]+)@(gmail|googlemail)\.com$/);
+  if (!m) return false;
+  const local = m[1].split('+')[0].replace(/\./g, '');
+  return OWN_EMAIL_BASES.includes(local);
 }
 
 function clearModal() {
@@ -3129,7 +3135,7 @@ function clearModal() {
     el.classList.remove('error');
   });
   const pf = document.getElementById('fPassportOnFile'); if (pf) pf.checked = false;
-  const ek = document.getElementById('fEmailKind'); if (ek) ek.value = 'contact';
+  const ae = document.getElementById('fAccountEmail'); if (ae) ae.value = '';
   document.getElementById('fCountryCode').value = '+44';
   ['errFirstName','errLastName','errPhone'].forEach(id => document.getElementById(id).classList.remove('visible'));
   ['warnPhone','warnEmail','warnName'].forEach(id => document.getElementById(id).classList.remove('visible'));
@@ -3225,8 +3231,18 @@ async function saveCustomer() {
     if (!proceed) return;
   }
 
-  const payload = { firstName, lastName, phone: fullPhone, email, address,
-    emailKind: email ? (document.getElementById('fEmailKind')?.value || guessEmailKind(email)) : null,
+  let accountEmail = document.getElementById('fAccountEmail')?.value.trim() || '';
+  // Known own-address typed into the CONTACT field → offer to file it right.
+  let contactEmail = email;
+  if (contactEmail && isOwnAccountEmail(contactEmail)) {
+    const move = await window.api.confirmDelete(
+      `"${contactEmail}" is one of the business's own Gmail addresses (dot/plus variant).\n\nSave it as the ACCOUNT email instead of the customer's contact email?`
+    );
+    if (move) { if (!accountEmail) accountEmail = contactEmail; contactEmail = ''; }
+  }
+
+  const payload = { firstName, lastName, phone: fullPhone, email: contactEmail, address,
+    accountEmail,
     passportOnFile: document.getElementById('fPassportOnFile').checked };
 
   if (editId) {

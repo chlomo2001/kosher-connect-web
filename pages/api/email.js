@@ -35,22 +35,28 @@ function shell(title, bodyRows, footNote) {
   </td></tr></table></body></html>`
 }
 
+// The business's OWN Gmail bases: any dot/plus variant of these (including
+// the bare address) is a carrier-login "account email" — Shloime's inbox,
+// not the customer's. Deterministic list, no guessing.
+const OWN_EMAIL_BASES = ['gittbilig', 'kosherconnect', 'ch7023518']
+function isOwnAccountEmail(email) {
+  const m = String(email || '').toLowerCase().trim().match(/^([^@]+)@(gmail|googlemail)\.com$/)
+  if (!m) return false
+  return OWN_EMAIL_BASES.includes(m[1].split('+')[0].replace(/\./g, ''))
+}
+
 async function customerEmail(customerId) {
   if (!customerId || customerId === 'walkin') return null
   const rows = await db.select(
     'customers',
-    `select=first_name,last_name,email_raw,email_normalized,legacy_extras&legacy_id=eq.${encodeURIComponent(String(customerId))}`
+    `select=first_name,last_name,email_raw,email_normalized&legacy_id=eq.${encodeURIComponent(String(customerId))}`
   )
   const c = rows[0]
   if (!c) return null
   const email = (c.email_raw || c.email_normalized || '').trim()
-  // "Account" emails are the business's own carrier-login aliases (Lebara
-  // etc.), not the customer's inbox — never send receipts to those.
-  const kind = c.legacy_extras?.emailKind
-    || (/\+[^@]*@/.test(email) ? 'account' : 'contact')
   return {
     email: email || null,
-    isAccountEmail: kind === 'account',
+    isAccountEmail: isOwnAccountEmail(email),
     name: `${c.first_name || ''} ${c.last_name || ''}`.trim(),
   }
 }
