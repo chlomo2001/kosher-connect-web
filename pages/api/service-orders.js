@@ -10,6 +10,7 @@
 
 import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
+import { postAutoCharges } from '../../lib/customCharges.js'
 
 const EMBED = 'customers(legacy_id,first_name,last_name),service_prices(name,category)'
 const METHODS = ['cash', 'card', 'bank_transfer', 'voucher', 'other']
@@ -93,9 +94,8 @@ async function handler(req, res) {
       }], 'charge_reference')
 
       // Optional immediate payment (most services are paid on the spot).
-      let balance = null
+      const method = METHODS.includes(b.method) ? b.method : 'cash'
       if (b.paidNow) {
-        const method = METHODS.includes(b.method) ? b.method : 'cash'
         await db.insertIgnoreDup('ledger', [{
           customer_id: customerUuid,
           charge_reference: `PAY-SVC-${order.id}`,
@@ -105,11 +105,18 @@ async function handler(req, res) {
           description: `Paid — ${svc.name}`,
         }], 'charge_reference')
       }
+
+      // Owner-defined auto extras for services.
+      const extras = await postAutoCharges({
+        customerUuid, appliesTo: 'service', refBase: order.id,
+        paidNow: !!b.paidNow, method,
+      })
+
       const balRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
-      balance = balRows.length ? Number(balRows[0].balance) : 0
+      const balance = balRows.length ? Number(balRows[0].balance) : 0
 
       const [full] = await db.select('service_orders', `select=*,${EMBED}&id=eq.${order.id}`)
-      return res.json({ success: true, order: toApp(full), balance })
+      return res.json({ success: true, order: toApp(full), extras: extras.lines, balance })
     }
 
     return res.status(405).end()

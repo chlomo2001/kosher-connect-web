@@ -10,6 +10,7 @@
 
 import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
+import { postAutoCharges } from '../../lib/customCharges.js'
 
 const BOOKING_STATUSES = ['Booked', 'Ticketed', 'Completed', 'Cancelled']
 
@@ -210,12 +211,22 @@ async function handler(req, res) {
         }
       }
 
+      // Owner-defined auto extras for bookings (e.g. a service/handling fee).
+      const extras = await postAutoCharges({
+        customerUuid, appliesTo: 'booking', refBase: booking.id,
+        paidNow: !!payMethod, method: payMethod,
+      })
+      if (extras.total > 0) chargePosted = true
+
       const balance = await walletBalance(customerUuid)
       const [full] = await db.select(
         'bookings',
         `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&id=eq.${booking.id}`
       )
-      return res.json({ success: true, booking: toApp(full, req.staff), chargePosted, charged: total, balance, paidNow: !!payMethod })
+      return res.json({
+        success: true, booking: toApp(full, req.staff), chargePosted,
+        charged: total + extras.total, extras: extras.lines, balance, paidNow: !!payMethod,
+      })
     }
 
     if (req.method === 'PUT') {

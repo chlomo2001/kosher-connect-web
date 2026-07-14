@@ -2711,7 +2711,7 @@ const LEDGER_TYPE_LABELS = {
   repair: '🔧 Repair', online_service: '🖨️ Service', sim_annual: '💳 SIM annual',
   sim_additional: '💳 SIM extra', sim_replacement: '💳 SIM replacement',
   sim_service: '💳 SIM service', phone_sale: '📦 Phone sale', stock_sale: '📦 Sale',
-  virtual_number: '🔢 Virtual number',
+  virtual_number: '🔢 Virtual number', extra_charge: '➕ Extra charge',
 };
 
 async function loadWalletSection(customerId) {
@@ -4282,6 +4282,7 @@ async function saveNewBooking() {
       ? ` £${res.charged.toFixed(2)} paid in full.`
       : ` £${res.charged.toFixed(2)} on account — wallet balance £${res.balance.toFixed(2)}.`;
   }
+  if (res.extras?.length) chargeMsg += ` Incl. ${res.extras.map(e => `${e.label} £${e.amount.toFixed(2)}`).join(', ')}.`;
   toast(`Booking saved!${chargeMsg}`, 'success');
   renderBookingsTab();
 }
@@ -4995,7 +4996,8 @@ async function saveNewServiceOrder() {
   });
   if (!res.success) { toast(res.error || 'Could not charge the service.', 'error'); return; }
   closeDynamicModal();
-  toast(`Charged £${res.order.total.toFixed(2)} — wallet balance £${res.balance.toFixed(2)}.`, 'success');
+  const extraMsg = res.extras?.length ? ` Incl. ${res.extras.map(e => `${e.label} £${e.amount.toFixed(2)}`).join(', ')}.` : '';
+  toast(`Charged £${res.order.total.toFixed(2)} — wallet balance £${res.balance.toFixed(2)}.${extraMsg}`, 'success');
   renderServicesTab();
 }
 
@@ -6481,12 +6483,13 @@ async function deleteVN(id, number) {
 async function renderSettingsTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading settings…</div>`;
-  const [cfg, team, autos, aliases, menu] = await Promise.all([
+  const [cfg, team, autos, aliases, menu, extra] = await Promise.all([
     window.api.getSettings(),
     kcFetch('/api/team').then(r => r.status === 403 ? null : r.json()).catch(() => null),
     kcFetch('/api/automations').then(r => r.status === 403 ? null : r.json()).catch(() => null),
     kcFetch('/api/email-aliases').then(r => r.status === 403 ? null : r.json()).catch(() => null),
     kcFetch('/api/services?all=1').then(r => r.ok ? r.json() : null).catch(() => null),
+    kcFetch('/api/custom-charges').then(r => r.ok ? r.json() : null).catch(() => null),
   ]);
   if (!cfg || !cfg.success) {
     content.innerHTML = `<div class="tab-placeholder"><div class="big">⚙️</div>
@@ -6636,22 +6639,41 @@ async function renderSettingsTab() {
       <td><button class="btn btn-primary btn-sm" onclick="addDamageRate()">+ Add</button></td>
     </tr>`;
 
-  const settingRows = cfg.settings.filter(s => s.numValue !== null).map(s => `
+  // Plain-language names, sentences and clear units for each fee, grouped so
+  // a non-technical owner reads what it means, not the raw database key.
+  const FEE_META = {
+    late_fee_per_day:          { group: '📱 Rentals', label: 'Late return fee', help: 'Charged for each day a phone is returned past its due date (Shabbos & Yom Tov not counted).', unit: '£ / day' },
+    multi_phone_discount_pct:  { group: '📱 Rentals', label: 'Multi-phone discount', help: 'Discount from the 3rd phone a customer rents at once.', unit: '% off' },
+    collect_later_late_pct:    { group: '📱 Rentals', label: '"Pay later" surcharge', help: 'Extra added when a customer takes the phone but pays afterwards.', unit: '% extra' },
+    collect_later_late_min:    { group: '📱 Rentals', label: '"Pay later" minimum', help: 'The smallest "pay later" surcharge, even on cheap rentals.', unit: '£ minimum' },
+    sim_activation_fee:        { group: '💳 SIM plans', label: 'SIM setup fee', help: 'One-off charge to set up a new SIM.', unit: '£' },
+    sim_annual_fee:            { group: '💳 SIM plans', label: 'SIM yearly fee', help: 'Charged once a year per active SIM.', unit: '£' },
+    sim_additional_fee:        { group: '💳 SIM plans', label: 'Extra SIM fee', help: 'For an additional SIM on the same customer.', unit: '£' },
+    sim_service_fee:           { group: '💳 SIM plans', label: 'SIM service fee', help: 'General servicing / support charge.', unit: '£' },
+    sim_replacement_fee:       { group: '💳 SIM plans', label: 'SIM replacement fee', help: 'For a replacement SIM after the free allowance is used.', unit: '£' },
+    free_replacements_default: { group: '💳 SIM plans', label: 'Free SIM replacements', help: 'How many replacements a customer gets before being charged.', unit: 'free' },
+    multi_sim_discount_pct:    { group: '💳 SIM plans', label: 'Multi-SIM discount', help: 'Discount when a customer has 3 or more SIM plans.', unit: '% off' },
+    vn_weekly:                 { group: '🔢 Virtual numbers', label: 'Virtual number — weekly', help: 'Price per week (minimum one week).', unit: '£ / week' },
+    vn_per_30_days:            { group: '🔢 Virtual numbers', label: 'Virtual number — monthly', help: 'Flat price for a 30-day rental.', unit: '£ / 30 days' },
+    online_hourly_rate:        { group: '🖨️ Online & print', label: 'Help / online rate', help: 'Charged per hour for hands-on help (10-minute minimum).', unit: '£ / hour' },
+    online_min_charge:         { group: '🖨️ Online & print', label: 'Minimum online charge', help: 'The smallest charge for any online service.', unit: '£' },
+    online_repeat_from:        { group: '🖨️ Online & print', label: 'Bulk discount starts at', help: 'From this many applications, the cheaper "repeat" price applies (your price list says 4).', unit: 'th one' },
+  };
+  const editable = cfg.settings.filter(s => s.numValue !== null && s.editable && !s.custom);
+  const feeGroups = {};
+  editable.forEach(s => {
+    const m = FEE_META[s.key] || { group: '⚙️ Other', label: s.description || s.key, help: '', unit: s.unit };
+    (feeGroups[m.group] = feeGroups[m.group] || []).push({ s, m });
+  });
+  const feeRow = ({ s, m }) => `
     <tr>
-      <td>${escHtml(s.description || s.key)}<div class="customer-email">${escHtml(s.key)}${s.custom ? ' · custom' : ''}</div></td>
-      <td>${s.editable
-        ? num(`st_${s.key}`, s.numValue)
-        : `<span style="color:var(--muted);">${s.numValue}</span>`} <span style="color:var(--muted);font-size:11px;">${escHtml(s.unit)}</span></td>
-      <td style="white-space:nowrap;">${s.editable
-        ? `<button class="btn btn-outline" style="font-size:12px;padding:5px 12px;" onclick="saveSettingKey('${escHtml(s.key)}')">💾</button>`
-        : `<span style="color:var(--muted);font-size:11px;">read-only</span>`}${s.custom
-        ? ` <button class="action-btn danger" style="font-size:11px;" title="Remove custom value" onclick="deleteSettingKey('${escHtml(s.key)}')">✕</button>` : ''}</td>
-    </tr>`).join('') + `
-    <tr style="background:var(--bg-secondary);">
-      <td><input class="form-input" id="stNew_name" placeholder="New fee name" style="width:160px;padding:5px 7px;font-size:12px;min-height:0;"></td>
-      <td>${num('stNew_val', '')} <span style="color:var(--muted);font-size:11px;">£</span></td>
-      <td><button class="btn btn-primary btn-sm" onclick="addSettingKey()">+ Add</button></td>
+      <td style="max-width:340px;"><strong>${escHtml(m.label)}</strong>${m.help ? `<div style="color:var(--muted);font-size:11px;line-height:1.4;margin-top:2px;">${escHtml(m.help)}</div>` : ''}</td>
+      <td style="white-space:nowrap;">${num(`st_${s.key}`, s.numValue)} <span style="color:var(--muted);font-size:11px;">${escHtml(m.unit || '')}</span></td>
+      <td><button class="btn btn-outline" style="font-size:12px;padding:5px 12px;" onclick="saveSettingKey('${escHtml(s.key)}')">💾 Save</button></td>
     </tr>`;
+  const settingRows = Object.entries(feeGroups).map(([group, items]) =>
+    `<tr><td colspan="3" style="background:var(--bg-secondary);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);padding:6px 16px;">${group}</td></tr>` +
+    items.map(feeRow).join('')).join('');
 
   emailAliasCache = aliases?.success ? aliases.aliases : [];
 
@@ -6695,15 +6717,59 @@ async function renderSettingsTab() {
       </tbody></table></div>
       <div style="padding:6px 14px 12px;font-size:11px;color:var(--muted);">Prices apply to new charges only. Untick "On" to retire a service — old charges keep their label.</div>`);
 
+  // ── Extra charges card (owner-defined fees the engine applies for you) ──
+  extraChargeCache = extra?.success ? extra.charges : [];
+  const TARGET_LABEL = { booking: '✈️ Every flight booking', service: '🖨️ Every online/print service',
+    sim: '💳 Every SIM setup', repair: '🔧 Every repair', rental: '📱 Every rental', any: '⭐ All of the above' };
+  const extraHtml = !isAdmin || !extra?.success ? '' : settingsCard('extras', '➕ Extra charges',
+    `${extraChargeCache.length} auto-applied — the app bills these for you`, `
+      <div style="padding:8px 16px 4px;font-size:12px;color:var(--muted);line-height:1.5;">
+        Define a fee once and the app adds it <strong>automatically</strong> every time you make that kind of charge —
+        e.g. a £5 handling fee on every flight booking. "Automatic" always applies; "optional" you tick per charge.
+        Wired for flight bookings and online/print services today.</div>
+      <div class="table-wrap"><table><thead><tr><th>Charge name</th><th>Amount</th><th>Added to</th><th>How</th><th>On</th><th></th></tr></thead>
+      <tbody>
+        ${extraChargeCache.length === 0 ? `<tr><td colspan="6" style="color:var(--muted);font-size:13px;padding:12px 16px;">None yet. Add one below — e.g. "Handling fee £5 → every flight booking → automatic".</td></tr>` : ''}
+        ${extraChargeCache.map(c => `
+          <tr style="${c.active ? '' : 'opacity:0.5;'}">
+            <td><input class="form-input" id="ec_label_${c.id}" value="${escHtml(c.label)}" style="min-height:0;padding:5px 8px;font-size:12px;min-width:150px;"></td>
+            <td>${num(`ec_amount_${c.id}`, c.amount)}</td>
+            <td><select class="form-input" id="ec_target_${c.id}" style="min-height:0;padding:5px 8px;font-size:12px;">
+              ${Object.entries(TARGET_LABEL).map(([k, l]) => `<option value="${k}" ${c.appliesTo === k ? 'selected' : ''}>${l}</option>`).join('')}
+            </select></td>
+            <td><select class="form-input" id="ec_mode_${c.id}" style="min-height:0;padding:5px 8px;font-size:12px;width:110px;">
+              <option value="auto" ${c.mode === 'auto' ? 'selected' : ''}>Automatic</option>
+              <option value="optional" ${c.mode === 'optional' ? 'selected' : ''}>Optional</option>
+            </select></td>
+            <td><input type="checkbox" id="ec_active_${c.id}" ${c.active ? 'checked' : ''} style="accent-color:var(--accent);cursor:pointer;"></td>
+            <td style="white-space:nowrap;">
+              <button class="btn btn-outline" style="font-size:12px;padding:5px 10px;" onclick="saveExtraCharge('${escHtml(c.id)}')">💾</button>
+              <button class="action-btn danger" style="font-size:11px;" onclick="deleteExtraCharge('${escHtml(c.id)}')">✕</button>
+            </td>
+          </tr>`).join('')}
+        <tr style="background:var(--bg-secondary);">
+          <td><input class="form-input" id="ecNew_label" placeholder="e.g. Handling fee" style="min-height:0;padding:5px 8px;font-size:12px;min-width:150px;"></td>
+          <td>${num('ecNew_amount', '')}</td>
+          <td><select class="form-input" id="ecNew_target" style="min-height:0;padding:5px 8px;font-size:12px;">
+            ${Object.entries(TARGET_LABEL).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}
+          </select></td>
+          <td><select class="form-input" id="ecNew_mode" style="min-height:0;padding:5px 8px;font-size:12px;width:110px;">
+            <option value="auto">Automatic</option><option value="optional">Optional</option>
+          </select></td>
+          <td></td>
+          <td><button class="btn btn-primary btn-sm" onclick="addExtraCharge()">+ Add</button></td>
+        </tr>
+      </tbody></table></div>`);
+
   content.innerHTML = `
     ${teamHtml}
     ${automationsHtml}
     ${aliasesHtml}
     ${menuHtml}
+    ${extraHtml}
     <div style="margin-bottom:10px;padding:10px 14px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:12px;">
       <span style="flex:1;">These values drive live pricing (rental calculator, VN add-on, late fees, repair/SIM charges).
-      Edits apply to <strong>new</strong> calculations only — existing tickets and frozen prices never reprice.
-      Keys can be edited, never added or removed.</span>
+      Edits apply to <strong>new</strong> calculations only — existing tickets and frozen prices never reprice.</span>
       <button class="btn btn-outline btn-sm" onclick="openChangePasswordModal()" title="Change your own login password">🔑 My password</button>
       <button class="btn btn-outline btn-sm" onclick="runSweepsNow()" title="Overdue rentals, arrears, passport expiry, SIM renewals">⏰ Run sweeps now</button>
     </div>
@@ -6828,14 +6894,47 @@ async function addDamageRate() {
   });
 }
 
-async function addSettingKey() {
-  const name = document.getElementById('stNew_name').value.trim();
-  if (!name) { toast('Give the setting a name.', 'error'); return; }
-  await applySettingAdd({
-    table: 'settings', key: name,
-    description: name,
-    numValue: document.getElementById('stNew_val').value,
-  });
+// ── Extra charges (owner-defined auto fees) ──────────────────────────────
+let extraChargeCache = [];
+
+async function addExtraCharge() {
+  const label = document.getElementById('ecNew_label').value.trim();
+  const amount = parseFloat(document.getElementById('ecNew_amount').value);
+  if (!label) { toast('Give the charge a name.', 'error'); return; }
+  if (!Number.isFinite(amount) || amount <= 0) { toast('Enter an amount greater than £0.', 'error'); return; }
+  const res = await kcFetch('/api/custom-charges', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ label, amount,
+      appliesTo: document.getElementById('ecNew_target').value,
+      mode: document.getElementById('ecNew_mode').value }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not add.', 'error'); return; }
+  toast(`"${res.charge.label}" added — the app will bill it automatically.`, 'success');
+  renderSettingsTab();
+}
+
+async function saveExtraCharge(id) {
+  const res = await kcFetch('/api/custom-charges', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id,
+      label: document.getElementById(`ec_label_${id}`).value,
+      amount: document.getElementById(`ec_amount_${id}`).value,
+      appliesTo: document.getElementById(`ec_target_${id}`).value,
+      mode: document.getElementById(`ec_mode_${id}`).value,
+      active: !!document.getElementById(`ec_active_${id}`).checked }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not save.', 'error'); return; }
+  toast(`${res.charge.label} saved.`, 'success');
+}
+
+async function deleteExtraCharge(id) {
+  const ok = await window.api.confirmDelete('Remove this extra charge?\n\nIt stops applying to new charges; past ones are unaffected.');
+  if (!ok) return;
+  const res = await kcFetch('/api/custom-charges?id=' + encodeURIComponent(id), { method: 'DELETE' })
+    .then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not remove.', 'error'); return; }
+  toast('Removed.', 'warning');
+  renderSettingsTab();
 }
 
 async function deleteRateRow(table, code) {
@@ -7279,7 +7378,9 @@ saveDamageRate   = guardReentry(saveDamageRate);
 saveSettingKey   = guardReentry(saveSettingKey);
 addRentalRate    = guardReentry(addRentalRate);
 addDamageRate    = guardReentry(addDamageRate);
-addSettingKey    = guardReentry(addSettingKey);
+addExtraCharge   = guardReentry(addExtraCharge);
+saveExtraCharge  = guardReentry(saveExtraCharge);
+deleteExtraCharge = guardReentry(deleteExtraCharge);
 saveNewVN        = guardReentry(saveNewVN);
 saveVNBilling    = guardReentry(saveVNBilling);
 saveNewServiceOrder = guardReentry(saveNewServiceOrder);
