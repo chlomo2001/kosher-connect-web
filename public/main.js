@@ -127,6 +127,13 @@ window.api = {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(p),
   }).then(r => r.json()),
+  addSetting: (p) => kcFetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(p),
+  }).then(r => r.json()),
+  deleteSetting: (table, key) => kcFetch(`/api/settings?table=${encodeURIComponent(table)}&key=${encodeURIComponent(key)}`,
+    { method: 'DELETE' }).then(r => r.json()),
 
   getLedger: (customerId) => kcFetch('/api/ledger?customerId=' + encodeURIComponent(customerId)).then(r => r.json()),
   addLedgerEntry: (e) => kcFetch('/api/ledger', {
@@ -6599,9 +6606,18 @@ async function renderSettingsTab() {
       <td>${num(`rr_period_${r.countryCode}`, r.capPeriodDays, '1')}</td>
       <td>${num(`rr_vnw_${r.countryCode}`, r.vnWeekly ?? '')}</td>
       <td>${num(`rr_vnm_${r.countryCode}`, r.vnPer30Days ?? '')}</td>
-      <td><button class="btn btn-outline" style="font-size:12px;padding:5px 12px;"
-        onclick="saveRentalRate('${escHtml(r.countryCode)}')">💾 Save</button></td>
-    </tr>`).join('');
+      <td style="white-space:nowrap;"><button class="btn btn-outline" style="font-size:12px;padding:5px 12px;"
+        onclick="saveRentalRate('${escHtml(r.countryCode)}')">💾</button>
+        <button class="action-btn danger" style="font-size:11px;" title="Remove country"
+        onclick="deleteRateRow('rental_rates','${escHtml(r.countryCode)}')">✕</button></td>
+    </tr>`).join('') + `
+    <tr style="background:var(--bg-secondary);">
+      <td><input class="form-input" id="rrNew_code" placeholder="FR" style="width:70px;padding:5px 7px;font-size:12px;min-height:0;text-transform:uppercase;">
+        <input class="form-input" id="rrNew_name" placeholder="France" style="width:100px;padding:5px 7px;font-size:12px;min-height:0;margin-top:3px;"></td>
+      <td>${num('rrNew_rate', '')}</td><td>${num('rrNew_min', '')}</td><td>${num('rrNew_cap', '')}</td>
+      <td>${num('rrNew_period', '30', '1')}</td><td>${num('rrNew_vnw', '')}</td><td>${num('rrNew_vnm', '')}</td>
+      <td><button class="btn btn-primary btn-sm" onclick="addRentalRate()">+ Add</button></td>
+    </tr>`;
 
   const damageRows = cfg.damageRates.map(d => `
     <tr>
@@ -6609,20 +6625,33 @@ async function renderSettingsTab() {
       <td>${num(`dr_phone_${d.countryCode}`, d.phoneDamageLoss)}</td>
       <td>${num(`dr_charger_${d.countryCode}`, d.chargerMissing)}</td>
       <td>${num(`dr_sim_${d.countryCode}`, d.simMissing)}</td>
-      <td><button class="btn btn-outline" style="font-size:12px;padding:5px 12px;"
-        onclick="saveDamageRate('${escHtml(d.countryCode)}')">💾 Save</button></td>
-    </tr>`).join('');
+      <td style="white-space:nowrap;"><button class="btn btn-outline" style="font-size:12px;padding:5px 12px;"
+        onclick="saveDamageRate('${escHtml(d.countryCode)}')">💾</button>
+        <button class="action-btn danger" style="font-size:11px;" title="Remove country"
+        onclick="deleteRateRow('damage_rates','${escHtml(d.countryCode)}')">✕</button></td>
+    </tr>`).join('') + `
+    <tr style="background:var(--bg-secondary);">
+      <td><input class="form-input" id="drNew_code" placeholder="FR" style="width:70px;padding:5px 7px;font-size:12px;min-height:0;text-transform:uppercase;"></td>
+      <td>${num('drNew_phone', '')}</td><td>${num('drNew_charger', '')}</td><td>${num('drNew_sim', '')}</td>
+      <td><button class="btn btn-primary btn-sm" onclick="addDamageRate()">+ Add</button></td>
+    </tr>`;
 
   const settingRows = cfg.settings.filter(s => s.numValue !== null).map(s => `
     <tr>
-      <td>${escHtml(s.description || s.key)}<div class="customer-email">${escHtml(s.key)}</div></td>
+      <td>${escHtml(s.description || s.key)}<div class="customer-email">${escHtml(s.key)}${s.custom ? ' · custom' : ''}</div></td>
       <td>${s.editable
         ? num(`st_${s.key}`, s.numValue)
         : `<span style="color:var(--muted);">${s.numValue}</span>`} <span style="color:var(--muted);font-size:11px;">${escHtml(s.unit)}</span></td>
-      <td>${s.editable
-        ? `<button class="btn btn-outline" style="font-size:12px;padding:5px 12px;" onclick="saveSettingKey('${escHtml(s.key)}')">💾 Save</button>`
-        : `<span style="color:var(--muted);font-size:11px;">read-only</span>`}</td>
-    </tr>`).join('');
+      <td style="white-space:nowrap;">${s.editable
+        ? `<button class="btn btn-outline" style="font-size:12px;padding:5px 12px;" onclick="saveSettingKey('${escHtml(s.key)}')">💾</button>`
+        : `<span style="color:var(--muted);font-size:11px;">read-only</span>`}${s.custom
+        ? ` <button class="action-btn danger" style="font-size:11px;" title="Remove custom value" onclick="deleteSettingKey('${escHtml(s.key)}')">✕</button>` : ''}</td>
+    </tr>`).join('') + `
+    <tr style="background:var(--bg-secondary);">
+      <td><input class="form-input" id="stNew_name" placeholder="New fee name" style="width:160px;padding:5px 7px;font-size:12px;min-height:0;"></td>
+      <td>${num('stNew_val', '')} <span style="color:var(--muted);font-size:11px;">£</span></td>
+      <td><button class="btn btn-primary btn-sm" onclick="addSettingKey()">+ Add</button></td>
+    </tr>`;
 
   emailAliasCache = aliases?.success ? aliases.aliases : [];
 
@@ -6762,6 +6791,73 @@ async function saveSettingKey(key) {
     table: 'settings', key,
     values: { numValue: document.getElementById(`st_${key}`).value },
   });
+}
+
+// ── Adding rows to the rate / fee cards ──────────────────────────────────
+async function applySettingAdd(payload) {
+  const res = await window.api.addSetting(payload);
+  if (!res.success) { toast(res.error || 'Could not add.', 'error'); return; }
+  toast('Added ✔', 'success');
+  pricingConfig = await window.api.getSettings().catch(() => pricingConfig);
+  renderSettingsTab();
+}
+
+async function addRentalRate() {
+  const code = document.getElementById('rrNew_code').value.trim().toUpperCase();
+  if (!code) { toast('Enter a country code (e.g. FR).', 'error'); return; }
+  await applySettingAdd({
+    table: 'rental_rates', countryCode: code,
+    displayName: document.getElementById('rrNew_name').value.trim() || code,
+    ratePerDay: document.getElementById('rrNew_rate').value,
+    minCharge: document.getElementById('rrNew_min').value,
+    cap: document.getElementById('rrNew_cap').value,
+    capPeriodDays: document.getElementById('rrNew_period').value,
+    vnWeekly: document.getElementById('rrNew_vnw').value,
+    vnPer30Days: document.getElementById('rrNew_vnm').value,
+  });
+}
+
+async function addDamageRate() {
+  const code = document.getElementById('drNew_code').value.trim().toUpperCase();
+  if (!code) { toast('Enter a country code.', 'error'); return; }
+  await applySettingAdd({
+    table: 'damage_rates', countryCode: code,
+    phoneDamageLoss: document.getElementById('drNew_phone').value,
+    chargerMissing: document.getElementById('drNew_charger').value,
+    simMissing: document.getElementById('drNew_sim').value,
+  });
+}
+
+async function addSettingKey() {
+  const name = document.getElementById('stNew_name').value.trim();
+  if (!name) { toast('Give the setting a name.', 'error'); return; }
+  await applySettingAdd({
+    table: 'settings', key: name,
+    description: name,
+    numValue: document.getElementById('stNew_val').value,
+  });
+}
+
+async function deleteRateRow(table, code) {
+  const ok = await window.api.confirmDelete(
+    `Remove ${code} from ${table === 'rental_rates' ? 'rental rates' : 'damage charges'}?\n\nExisting rentals keep their frozen prices; only new calculations are affected.`
+  );
+  if (!ok) return;
+  const res = await window.api.deleteSetting(table, code);
+  if (!res.success) { toast(res.error || 'Could not remove.', 'error'); return; }
+  toast(`${code} removed.`, 'warning');
+  pricingConfig = await window.api.getSettings().catch(() => pricingConfig);
+  renderSettingsTab();
+}
+
+async function deleteSettingKey(key) {
+  const ok = await window.api.confirmDelete(`Remove the custom value "${key}"?`);
+  if (!ok) return;
+  const res = await window.api.deleteSetting('settings', key);
+  if (!res.success) { toast(res.error || 'Could not remove.', 'error'); return; }
+  toast('Removed.', 'warning');
+  pricingConfig = await window.api.getSettings().catch(() => pricingConfig);
+  renderSettingsTab();
 }
 
 // The daily 06:00 cron runs these on production; this button runs them on
@@ -7181,6 +7277,9 @@ saveNewTask      = guardReentry(saveNewTask);
 saveRentalRate   = guardReentry(saveRentalRate);
 saveDamageRate   = guardReentry(saveDamageRate);
 saveSettingKey   = guardReentry(saveSettingKey);
+addRentalRate    = guardReentry(addRentalRate);
+addDamageRate    = guardReentry(addDamageRate);
+addSettingKey    = guardReentry(addSettingKey);
 saveNewVN        = guardReentry(saveNewVN);
 saveVNBilling    = guardReentry(saveVNBilling);
 saveNewServiceOrder = guardReentry(saveNewServiceOrder);

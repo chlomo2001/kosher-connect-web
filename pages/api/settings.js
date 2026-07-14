@@ -31,6 +31,11 @@ const SETTING_RULES = {
   multi_sim_discount_pct:   { type: 'percent', unit: '%' },
 }
 
+// A key is editable if it's in the known-rules whitelist OR it's a custom_
+// key the owner added from the app. Custom keys validate/display as money.
+const settingEditable = (key) => !!SETTING_RULES[key] || String(key).startsWith('custom_')
+const settingType = (key) => SETTING_RULES[key]?.type || 'money'
+
 function validateTyped(type, raw) {
   const n = Number(raw)
   if (!Number.isFinite(n)) return { ok: false, error: 'Value must be a number.' }
@@ -77,10 +82,77 @@ async function handler(req, res) {
           numValue: s.num_value === null ? null : Number(s.num_value),
           textValue: s.text_value,
           description: s.description || '',
-          editable: !!SETTING_RULES[s.key],
-          unit: SETTING_RULES[s.key]?.unit || '',
+          editable: settingEditable(s.key),
+          custom: s.key.startsWith('custom_'),
+          unit: SETTING_RULES[s.key]?.unit || (s.key.startsWith('custom_') ? '£' : ''),
         })),
       })
+    }
+
+    // ── Add a new row to any of the three cards (admin-only) ──
+    if (req.method === 'POST') {
+      if (req.staff && req.staff.role !== 'owner') {
+        return res.status(403).json({ success: false, error: 'Adding settings is admin-only.' })
+      }
+      const b = req.body || {}
+      const t = b.table
+
+      if (t === 'rental_rates') {
+        const code = String(b.countryCode || '').trim()
+        if (!code) return res.status(400).json({ success: false, error: 'Country code is required (e.g. FR).' })
+        const exists = await db.select('rental_rates', `select=country_code&country_code=eq.${encodeURIComponent(code)}`)
+        if (exists.length) return res.status(400).json({ success: false, error: `Country "${code}" already exists — edit it instead.` })
+        const nums = {}
+        for (const [f, col, type] of [['ratePerDay', 'rate_per_day', 'money'], ['minCharge', 'min_charge', 'money'],
+          ['cap', 'cap', 'money'], ['capPeriodDays', 'cap_period_days', 'days'],
+          ['vnWeekly', 'vn_weekly', 'money'], ['vnPer30Days', 'vn_per_30_days', 'money']]) {
+          if (b[f] === undefined || b[f] === '') { nums[col] = col === 'cap_period_days' ? 30 : (col.startsWith('vn_') ? null : 0); continue }
+          const v = validateTyped(type, b[f])
+          if (!v.ok) return res.status(400).json({ success: false, error: `${f}: ${v.error}` })
+          nums[col] = v.value
+        }
+        await db.insert('rental_rates', [{
+          country_code: code,
+          display_name: String(b.displayName || code).trim(),
+          ...nums,
+          active: true,
+        }])
+        return res.json({ success: true })
+      }
+
+      if (t === 'damage_rates') {
+        const code = String(b.countryCode || '').trim()
+        if (!code) return res.status(400).json({ success: false, error: 'Country code is required.' })
+        const exists = await db.select('damage_rates', `select=country_code&country_code=eq.${encodeURIComponent(code)}`)
+        if (exists.length) return res.status(400).json({ success: false, error: `Country "${code}" already exists — edit it instead.` })
+        const cols = {}
+        for (const [f, col] of [['phoneDamageLoss', 'phone_damage_loss'], ['chargerMissing', 'charger_missing'], ['simMissing', 'sim_missing']]) {
+          const v = validateTyped('money', b[f] === undefined || b[f] === '' ? 0 : b[f])
+          if (!v.ok) return res.status(400).json({ success: false, error: `${f}: ${v.error}` })
+          cols[col] = v.value
+        }
+        await db.insert('damage_rates', [{ country_code: code, ...cols }])
+        return res.json({ success: true })
+      }
+
+      if (t === 'settings') {
+        // Custom owner-defined value. Prefixed 'custom_' so it's clearly not a
+        // code-consumed key and stays editable/removable from the app.
+        const raw = String(b.key || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+        if (!raw) return res.status(400).json({ success: false, error: 'Give the setting a name.' })
+        const key = raw.startsWith('custom_') ? raw : `custom_${raw}`
+        const exists = await db.select('settings', `select=key&key=eq.${encodeURIComponent(key)}`)
+        if (exists.length) return res.status(400).json({ success: false, error: `"${key}" already exists.` })
+        const v = validateTyped('money', b.numValue === undefined || b.numValue === '' ? 0 : b.numValue)
+        if (!v.ok) return res.status(400).json({ success: false, error: v.error })
+        await db.insert('settings', [{
+          key, num_value: v.value,
+          description: String(b.description || '').trim() || 'Custom value',
+        }])
+        return res.json({ success: true })
+      }
+
+      return res.status(400).json({ success: false, error: 'table must be rental_rates, damage_rates, or settings.' })
     }
 
     if (req.method === 'PUT') {
@@ -143,9 +215,8 @@ async function handler(req, res) {
       }
 
       if (table === 'settings') {
-        const rule = SETTING_RULES[key]
-        if (!rule) return res.status(400).json({ success: false, error: `"${key}" is not editable from the app.` })
-        const v = validateTyped(rule.type, values?.numValue)
+        if (!settingEditable(key)) return res.status(400).json({ success: false, error: `"${key}" is not editable from the app.` })
+        const v = validateTyped(settingType(key), values?.numValue)
         if (!v.ok) return res.status(400).json({ success: false, error: v.error })
         if (v.value === 0) warnings.push('Set to 0 — this zeroes/disables this charge.')
         const updated = await db.update('settings', `key=eq.${encodeURIComponent(String(key))}`, {
@@ -157,6 +228,34 @@ async function handler(req, res) {
       }
 
       return res.status(400).json({ success: false, error: 'table must be rental_rates, damage_rates, or settings.' })
+    }
+
+    // ── Remove a row (admin-only). Custom settings + country rate rows only;
+    // built-in setting keys are never deletable (code reads them by name). ──
+    if (req.method === 'DELETE') {
+      if (req.staff && req.staff.role !== 'owner') {
+        return res.status(403).json({ success: false, error: 'Removing settings is admin-only.' })
+      }
+      const table = String(req.query.table || '')
+      const key = String(req.query.key || '')
+      if (!key) return res.status(400).json({ success: false, error: 'Nothing to remove.' })
+      if (table === 'rental_rates') {
+        await db.delete('rental_rates', `country_code=eq.${encodeURIComponent(key)}`)
+        await db.delete('damage_rates', `country_code=eq.${encodeURIComponent(key)}`).catch(() => {})
+        return res.json({ success: true })
+      }
+      if (table === 'damage_rates') {
+        await db.delete('damage_rates', `country_code=eq.${encodeURIComponent(key)}`)
+        return res.json({ success: true })
+      }
+      if (table === 'settings') {
+        if (!key.startsWith('custom_')) {
+          return res.status(400).json({ success: false, error: 'Only custom values can be removed; built-in fees are edit-only.' })
+        }
+        await db.delete('settings', `key=eq.${encodeURIComponent(key)}`)
+        return res.json({ success: true })
+      }
+      return res.status(400).json({ success: false, error: 'Unknown table.' })
     }
 
     return res.status(405).end()
