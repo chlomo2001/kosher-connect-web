@@ -4720,14 +4720,20 @@ async function confirmCollectRepair(id) {
 let serviceOrders = [];
 let onlineMenu = [];
 
-// First unit at the single price, units 2+ at repeatPrice ("two or more");
-// services without a repeat price charge every unit at the single price.
+// Price list rule (updated list: "First Application / 4 or more"): units
+// below the threshold at the single price, units from the Nth at
+// repeatPrice. The threshold lives in Settings (online_repeat_from, now 4 —
+// it was 2 on the old list). Services without a repeat price charge every
+// unit at the single price.
+const onlineRepeatFrom = () => Math.max(2, settingNum('online_repeat_from', 4));
 function onlineServiceTotal(svc, qty) {
   const n = Math.max(1, Math.floor(Number(qty)) || 1);
   const single = Number(svc.price) || 0;
   const rep = svc.repeatPrice === null || svc.repeatPrice === undefined
     ? single : Number(svc.repeatPrice);
-  return single + (n - 1) * rep;
+  const from = onlineRepeatFrom();
+  const atSingle = Math.min(n, from - 1);
+  return atSingle * single + (n - atSingle) * rep;
 }
 
 // ── Help timer (Regular online service is billed per hour, min 10 min) ──
@@ -4855,9 +4861,9 @@ async function renderServicesTab() {
         </table>
       </div>
       <div class="table-card">
-        <div class="section-divider" style="margin:12px 14px 4px;">Price list <span style="color:var(--muted);font-weight:400;">· first / two or more</span></div>
+        <div class="section-divider" style="margin:12px 14px 4px;">Price list <span style="color:var(--muted);font-weight:400;">· first / ${onlineRepeatFrom()} or more</span></div>
         <table>
-          <thead><tr><th>Service</th><th>First</th><th>2nd+</th></tr></thead>
+          <thead><tr><th>Service</th><th>First</th><th>${onlineRepeatFrom()}+</th></tr></thead>
           <tbody>${menuRows}</tbody>
         </table>
       </div>
@@ -4889,7 +4895,7 @@ async function openNewServiceModal(preselectCustomerId = null) {
   const customerOptions = customers.map(c =>
     `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone || '')}</option>`).join('');
   const svcOptions = onlineMenu.map(m =>
-    `<option value="${escHtml(String(m.id))}">${escHtml(m.name)} — £${m.price.toFixed(2)}${m.repeatPrice !== null ? ` (2nd+ £${m.repeatPrice.toFixed(2)})` : ''}</option>`).join('');
+    `<option value="${escHtml(String(m.id))}">${escHtml(m.name)} — £${m.price.toFixed(2)}${m.repeatPrice !== null ? ` (${onlineRepeatFrom()}+ £${m.repeatPrice.toFixed(2)})` : ''}</option>`).join('');
   showDynamicModal(`
     <div class="modal-title">🖨️ Charge a Service</div>
     <div class="form-grid">
@@ -4947,9 +4953,12 @@ function svUpdateTotal() {
   const total = onlineServiceTotal(svc, qty);
   document.getElementById('svTotal').value = total.toFixed(2);
   const bd = document.getElementById('svBreakdown');
-  if (bd) bd.innerHTML = qty > 1 && svc.repeatPrice !== null
-    ? `${qty} applications: 1 × £${svc.price.toFixed(2)} + ${qty - 1} × £${Number(svc.repeatPrice).toFixed(2)} = <strong>£${total.toFixed(2)}</strong>`
-    : `1 × £${svc.price.toFixed(2)} = <strong>£${total.toFixed(2)}</strong>`;
+  if (!bd) return;
+  const atSingle = Math.min(qty, onlineRepeatFrom() - 1);
+  const atRepeat = qty - atSingle;
+  bd.innerHTML = atRepeat > 0 && svc.repeatPrice !== null
+    ? `${qty} applications: ${atSingle} × £${svc.price.toFixed(2)} + ${atRepeat} × £${Number(svc.repeatPrice).toFixed(2)} = <strong>£${total.toFixed(2)}</strong>`
+    : `${qty} × £${svc.price.toFixed(2)} = <strong>£${total.toFixed(2)}</strong>`;
 }
 
 async function saveNewServiceOrder() {
@@ -6637,7 +6646,7 @@ async function renderSettingsTab() {
   const menuHtml = !isAdmin || !menu?.success ? '' : `
     <div class="table-card" style="margin-bottom:16px;">
       <div class="section-divider" style="margin:12px 14px 4px;">🧾 Service price menu <span style="color:var(--muted);font-weight:400;font-size:12px;">— what the charging screens offer</span></div>
-      <div class="table-wrap"><table><thead><tr><th>Service</th><th>Price</th><th>KC price</th><th>2nd+</th><th>6th+</th><th>On</th><th></th></tr></thead>
+      <div class="table-wrap"><table><thead><tr><th>Service</th><th>Price</th><th>KC price</th><th>Repeat</th><th>Bulk (tickets 6th+)</th><th>On</th><th></th></tr></thead>
       <tbody>
         ${['repair','online','tickets','phone','sim','other'].map(cat => {
           const items = menuItemsCache.filter(m => m.category === cat);

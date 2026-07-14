@@ -24,6 +24,7 @@ const SETTING_RULES = {
   free_replacements_default: { type: 'count', unit: 'free' },
   online_min_charge:      { type: 'money',   unit: '£' },
   online_hourly_rate:     { type: 'money',   unit: '£/hr' },
+  online_repeat_from:     { type: 'count',   unit: 'th unit +' },
   collect_later_late_pct: { type: 'percent', unit: '%' },
   collect_later_late_min: { type: 'money',   unit: '£' },
   multi_phone_discount_pct: { type: 'percent', unit: '%' },

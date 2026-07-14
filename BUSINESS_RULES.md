@@ -124,9 +124,12 @@ reactivation on request.
 ### 2.3 Online services & standalone VN billing
 
 - **Online services** are charged from the Services tab: pick service +
-  quantity; the first application charges the single price, applications
-  2+ the "two or more" price. The charge posts to the wallet
-  (`SVC-<id>`); "paid now" records the payment alongside (`PAY-SVC-<id>`).
+  quantity; applications below the threshold charge the single price, and
+  from the Nth application the repeat price applies. The threshold is the
+  `online_repeat_from` setting — the July 2026 price list says "4 or more"
+  (the older list said 2), so units 1–3 are full price and 4+ discounted.
+  The charge posts to the wallet (`SVC-<id>`); "paid now" records the
+  payment alongside (`PAY-SVC-<id>`).
 - **Standalone virtual numbers** bill monthly: set bundle/plan/price
   (from the price matrix, editable) + next billing date on the number.
   The daily sweep posts one wallet charge per elapsed month
@@ -157,8 +160,8 @@ price, passengers 2–5 pay the "each passenger" rate, passengers 6+ pay the
 
 The New Booking form's fee calculator applies these tiers (e.g. ready
 planned journey × 7 passengers = £20 + 4×£10 + 2×£5 = £70); the fee stays
-editable. Online-service repeat applications ("two or more") are priced the
-same way with `repeat_price` only.
+editable. Online-service repeat applications are priced with `repeat_price`
+only, from the `online_repeat_from`-th unit (currently 4 — "4 or more").
 
 ## 4. Repairs
 

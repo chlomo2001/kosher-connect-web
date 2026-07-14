@@ -3,9 +3,10 @@
 //   - creation posts ONE charge: entry_type 'online_service',
 //     charge_reference 'SVC-<uuid>' (idempotent), amount -(total)
 //   - optional immediate payment posts alongside: 'PAY-SVC-<uuid>'
-//   - repeat-application pricing (price list): first unit at price,
-//     units 2+ at repeat_price (services without a repeat price charge
-//     every unit at the single price)
+//   - repeat-application pricing (price list): units below the threshold at
+//     price, units from the Nth at repeat_price. The threshold is the
+//     online_repeat_from setting (current list: "4 or more"; the old list
+//     said 2). Services without a repeat price charge every unit at price.
 
 import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
@@ -14,12 +15,14 @@ const EMBED = 'customers(legacy_id,first_name,last_name),service_prices(name,cat
 const METHODS = ['cash', 'card', 'bank_transfer', 'voucher', 'other']
 
 // Same tier maths as public/main.js onlineServiceTotal — keep in sync.
-function orderTotal(svc, qty) {
+function orderTotal(svc, qty, repeatFrom) {
   const n = Math.max(1, Math.floor(Number(qty)) || 1)
   const single = Number(svc.price) || 0
   const rep = svc.repeat_price === null || svc.repeat_price === undefined
     ? single : Number(svc.repeat_price)
-  return { qty: n, total: single + (n - 1) * rep }
+  const from = Math.max(2, Number(repeatFrom) || 4)
+  const atSingle = Math.min(n, from - 1)
+  return { qty: n, total: atSingle * single + (n - atSingle) * rep }
 }
 
 function toApp(row) {
@@ -54,16 +57,17 @@ async function handler(req, res) {
       if (!b.customerId) return res.status(400).json({ success: false, error: 'Customer is required.' })
       if (!b.serviceId) return res.status(400).json({ success: false, error: 'Service is required.' })
 
-      const [custRows, svcRows] = await Promise.all([
+      const [custRows, svcRows, setRows] = await Promise.all([
         db.select('customers', `select=id&legacy_id=eq.${encodeURIComponent(String(b.customerId))}`),
         db.select('service_prices', `id=eq.${encodeURIComponent(String(b.serviceId))}&active=is.true`),
+        db.select('settings', 'select=num_value&key=eq.online_repeat_from'),
       ])
       if (!custRows.length) return res.status(400).json({ success: false, error: `Customer ${b.customerId} not found.` })
       if (!svcRows.length) return res.status(400).json({ success: false, error: 'Service is unknown or retired.' })
       const customerUuid = custRows[0].id
       const svc = svcRows[0]
 
-      const { qty, total: tierTotal } = orderTotal(svc, b.qty)
+      const { qty, total: tierTotal } = orderTotal(svc, b.qty, setRows[0]?.num_value)
       // Staff may override the computed total (e.g. hourly work, goodwill).
       const overridden = Number(b.total)
       const total = Number.isFinite(overridden) && overridden >= 0 ? overridden : tierTotal
