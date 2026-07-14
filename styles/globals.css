@@ -241,6 +241,8 @@ td {
 }
 tbody tr { cursor: pointer; transition: background 0.1s; }
 tbody tr:hover td { background: var(--bg); }
+/* Inline customer card row — not a data row, no hover/stripe treatment. */
+#detailRow > td, #detailRow:hover > td { background: transparent; padding: 8px 0 14px; cursor: default; }
 tbody tr.selected td { background: rgba(83, 58, 253, 0.05); }
 
 .customer-name { font-weight: 500; letter-spacing: 0; }

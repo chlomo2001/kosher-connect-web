@@ -2509,6 +2509,7 @@ function renderTableRows() {
 function toggleDetail(id) {
   if (selectedId === id) {
     selectedId = null;
+    document.getElementById('detailRow')?.remove();
     document.getElementById('detailPanelContainer').innerHTML = '';
     document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
   } else {
@@ -2618,7 +2619,7 @@ function renderDetailPanel(id) {
       </div>`;
   }
 
-  container.innerHTML = `
+  const panelHtml = `
     <div class="detail-panel" id="detailPanel">
       <div class="detail-header">
         <div class="avatar">${initials}</div>
@@ -2669,10 +2670,27 @@ function renderDetailPanel(id) {
       </div>
     </div>`;
 
+  // The card opens INLINE, directly under the customer's row — no traveling
+  // to the bottom of the page. Falls back to the old bottom container only
+  // if the row isn't in the current table (e.g. filtered out).
+  document.getElementById('detailRow')?.remove();
+  const row = document.querySelector(`tr[data-id="${String(id).replace(/"/g, '\\"')}"]`);
+  if (row) {
+    container.innerHTML = '';
+    const tr = document.createElement('tr');
+    tr.id = 'detailRow';
+    const td = document.createElement('td');
+    td.colSpan = row.cells.length;
+    td.style.padding = '0';
+    td.innerHTML = panelHtml;
+    tr.appendChild(td);
+    row.after(tr);
+    setTimeout(() => tr.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+  } else {
+    container.innerHTML = panelHtml;
+    setTimeout(() => container.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
   loadWalletSection(c.id);
-  // 'start' (not 'nearest') — the panel renders below the table, so opening
-  // a customer must actually travel down to it.
-  setTimeout(() => container.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 }
 
 // ─────────────────────────────────────────────
@@ -3120,6 +3138,13 @@ function openEditModal(id) {
 // the bare address) is one of Shloime's carrier-login addresses — an
 // "account email", never the customer's contact address. No guessing beyond
 // this exact list.
+// Every word in a name gets a capital first letter ("moshe chaim" →
+// "Moshe Chaim", "cohen-levi" → "Cohen-Levi"). Only lowercase first letters
+// are touched, so "McDonald" and all-caps entries stay as typed.
+function capName(s) {
+  return String(s || '').trim().replace(/(^|[\s\-'’])([a-zà-ÿ])/g, (m, sep, ch) => sep + ch.toUpperCase());
+}
+
 const OWN_EMAIL_BASES = ['gittbilig', 'kosherconnect', 'ch7023518'];
 function isOwnAccountEmail(email) {
   const m = String(email || '').toLowerCase().trim().match(/^([^@]+)@(gmail|googlemail)\.com$/);
@@ -3191,8 +3216,8 @@ function checkNameDuplicate() {
 
 async function saveCustomer() {
   let valid = true;
-  const firstName = document.getElementById('fFirstName').value.trim();
-  const lastName  = document.getElementById('fLastName').value.trim();
+  const firstName = capName(document.getElementById('fFirstName').value);
+  const lastName  = capName(document.getElementById('fLastName').value);
   const phoneNum  = document.getElementById('fPhoneNumber').value.trim();
   const code      = document.getElementById('fCountryCode').value.replace('-CA', '');
   const email     = document.getElementById('fEmail').value.trim();
@@ -3316,6 +3341,7 @@ async function deleteCustomer(id) {
   customers = customers.filter(x => x.id !== id);
   if (selectedId === id) {
     selectedId = null;
+    document.getElementById('detailRow')?.remove();
     const container = document.getElementById('detailPanelContainer');
     if (container) container.innerHTML = '';
   }
@@ -4023,6 +4049,7 @@ function openPassengersModal(bookingId) {
 }
 
 async function savePassengers(bookingId) {
+  bkPassengers.forEach(p => { if (p.fullName) p.fullName = capName(p.fullName); });
   const res = await window.api.updateBooking({ id: bookingId, passengers: bkPassengers });
   if (!res.success) { toast(res.error || 'Could not save passengers.', 'error'); return; }
   const idx = bookings.findIndex(x => x.id === bookingId);
@@ -4198,9 +4225,10 @@ function bkCheckinToggle() {
 
 async function saveNewBooking() {
   const paxList = bkPassengers.filter(p => (p.fullName || '').trim());
+  paxList.forEach(p => { p.fullName = capName(p.fullName); });
   const payload = {
     customerId:       document.getElementById('bkCustomer').value,
-    passenger:        paxList.map(p => p.fullName.trim()).join(', '),
+    passenger:        paxList.map(p => p.fullName).join(', '),
     passengers:       paxList,
     route:            document.getElementById('bkRoute').value.trim(),
     airline:          document.getElementById('bkAirline').value.trim(),
