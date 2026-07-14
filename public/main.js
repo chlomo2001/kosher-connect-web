@@ -732,7 +732,10 @@ function multiPhoneDiscountPct(allRentals, customerId, from, to, excludeId = nul
     r.fromDate && r.toDate &&
     r.fromDate <= to && r.toDate >= from
   ).length;
-  return concurrent >= 2 ? settingNum('multi_phone_discount_pct', 15) : 0;
+  // Discount applies from the Nth concurrent phone (settings-driven; the
+  // price list says the 3rd, so the customer needs N-1 others already).
+  const from_ = Math.max(2, settingNum('multi_phone_discount_from', 3));
+  return (concurrent + 1) >= from_ ? settingNum('multi_phone_discount_pct', 15) : 0;
 }
 
 // Ticket-service fee for N passengers (price list tiers):
@@ -752,7 +755,8 @@ function ticketFeeFor(svc, passengers) {
 // monthly/annual prefills in the charge modal.
 function multiSimDiscountPct(allSims, customerId) {
   const active = allSims.filter(s => s.customerId === customerId && s.status === 'active').length;
-  return active >= 3 ? settingNum('multi_sim_discount_pct', 10) : 0;
+  const from_ = Math.max(2, settingNum('multi_sim_discount_from', 3));
+  return active >= from_ ? settingNum('multi_sim_discount_pct', 10) : 0;
 }
 
 // ── USA pool optimiser (ported from legacy PoolOptimiser.gs) ────────────
@@ -2429,6 +2433,16 @@ function sortCustomers(list) {
   return arr;
 }
 
+// Passport-on-file is DERIVED, not just the manual flag: a customer counts as
+// having a passport on file if any of their bookings is marked passport-on-file
+// or carries a passenger with a passport number. The manual checkbox is only a
+// fallback for customers with no booking yet.
+function customerHasPassport(c) {
+  if (c.passportOnFile) return true;
+  return bookings.some(b => b.customerId === c.id &&
+    (b.passportOnFile || (b.passengers || []).some(p => p.passportNumber)));
+}
+
 function customerMatchesFilter(c) {
   switch (customerFilter) {
     case 'rental':   return rentals.some(r => r.customerId === c.id && (r.status === 'active' || r.status === 'overdue'));
@@ -2437,7 +2451,7 @@ function customerMatchesFilter(c) {
     case 'vn':       return virtualNumbers.some(v => v.customerId === c.id && v.status === 'Active');
     case 'repair':   return repairs.some(r => r.customerId === c.id && r.status !== 'Collected' && r.status !== 'Cancelled');
     case 'arrears':  return customerOwed(c) > 0;
-    case 'passport': return !!c.passportOnFile;
+    case 'passport': return customerHasPassport(c);
     default:         return true;
   }
 }
@@ -2488,7 +2502,7 @@ function renderTableRows() {
     return `
     <tr class="${selected}" data-id="${c.id}">
       <td>
-        <div class="customer-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}${c.passportOnFile ? ' <span title="Passport on file">🛂</span>' : ''}</div>
+        <div class="customer-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}${customerHasPassport(c) ? ' <span title="Passport on file">🛂</span>' : ''}</div>
         <div class="customer-email">${escHtml(c.email || '')}${c.accountEmail ? `${c.email ? '<br>' : ''}<span title="Account/login email (Lebara etc.) — not for contacting the customer" style="color:var(--muted);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''}</div>
       </td>
       <td>${escHtml(c.phone || '—')}</td>
@@ -2629,7 +2643,7 @@ function renderDetailPanel(id) {
         ${item(!!phoneCover,
           `Phone covered — ${escHtml(phoneCover?.phoneNumber || '')} until ${fmtDate(phoneCover?.toDate)}`,
           'No rental phone covering the travel date',
-          `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openNewRentalModal()">📱 Book one</button>`)}
+          `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openNewRentalModal()">📱 Book a phone</button>`)}
         ${item(!!simCover,
           `SIM plan active — ${escHtml(simCover?.provider || '')}`,
           'No active SIM plan',
@@ -2637,7 +2651,7 @@ function renderDetailPanel(id) {
         ${item(!!vnCover,
           `Virtual number — ${escHtml(vnCover?.number || '')}`,
           'No virtual number (family cannot call locally)',
-          `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openNewVNModal('${c.id}')">🔢 Add one</button>`)}
+          `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openNewVNModal('${c.id}')">🔢 Add a number</button>`)}
         ${!nextTrip.passportOnFile ? item(false, '', 'Passport not on file', `<span style="color:var(--muted);font-size:11px;">check at counter</span>`) : ''}
       </div>`;
   }
@@ -2647,7 +2661,7 @@ function renderDetailPanel(id) {
       <div class="detail-header">
         <div class="avatar">${initials}</div>
         <div style="flex:1;">
-          <div class="detail-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}${c.passportOnFile ? ' <span title="Passport on file" style="font-size:16px;">🛂</span>' : ''}</div>
+          <div class="detail-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:16px;">🛂</span>' : ''}</div>
           <div class="detail-meta">${escHtml(c.phone || '—')} · ✉️ ${escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
         </div>
         <div style="display:flex;gap:8px;">
@@ -4765,12 +4779,21 @@ function onlineServiceTotal(svc, qty) {
 }
 
 // ── Help timer (Regular online service is billed per hour, min 10 min) ──
+// Pausable: `elapsedMs` banks time already counted; `runningSince` is when
+// the current run started (null while paused). Total = elapsedMs + (now −
+// runningSince). Backwards-compatible with the old {startedAt} shape.
 let svcTimerInterval = null;
 const svcTimerState = () => { try { return JSON.parse(localStorage.getItem('kcSvcTimer')); } catch { return null; } };
 const svcTimerSet = (s) => s ? localStorage.setItem('kcSvcTimer', JSON.stringify(s)) : localStorage.removeItem('kcSvcTimer');
 
-function svcTimerCharge(startedAt) {
-  const minutes = Math.max(10, Math.ceil((Date.now() - startedAt) / 60000)); // 10-minute minimum
+function svcTimerElapsedMs(t) {
+  if (!t) return 0;
+  if (t.startedAt && t.elapsedMs === undefined) return Date.now() - t.startedAt; // legacy
+  return (t.elapsedMs || 0) + (t.runningSince ? Date.now() - t.runningSince : 0);
+}
+
+function svcTimerCharge(t) {
+  const minutes = Math.max(10, Math.ceil(svcTimerElapsedMs(t) / 60000)); // 10-minute minimum
   const rate = settingNum('online_hourly_rate', 45);
   return { minutes, amount: Math.round((minutes / 60) * rate * 100) / 100 };
 }
@@ -4779,7 +4802,25 @@ function svcTimerStart() {
   const sel = document.getElementById('svcTimerCustomer');
   if (!sel?.value) { toast('Pick who you are helping.', 'error'); return; }
   const c = customers.find(x => x.id === sel.value);
-  svcTimerSet({ customerId: sel.value, customerName: c ? `${c.firstName} ${c.lastName}` : '', startedAt: Date.now() });
+  svcTimerSet({ customerId: sel.value, customerName: c ? `${c.firstName} ${c.lastName}` : '',
+    elapsedMs: 0, runningSince: Date.now() });
+  renderServicesTab();
+}
+
+function svcTimerPause() {
+  const t = svcTimerState();
+  if (!t || !t.runningSince) return;
+  t.elapsedMs = (t.elapsedMs || 0) + (Date.now() - t.runningSince);
+  t.runningSince = null;
+  svcTimerSet(t);
+  renderServicesTab();
+}
+
+function svcTimerResume() {
+  const t = svcTimerState();
+  if (!t || t.runningSince) return;
+  t.runningSince = Date.now();
+  svcTimerSet(t);
   renderServicesTab();
 }
 
@@ -4792,7 +4833,7 @@ function svcTimerDiscard() {
 function svcTimerStop() {
   const t = svcTimerState();
   if (!t) return;
-  const { minutes, amount } = svcTimerCharge(t.startedAt);
+  const { minutes, amount } = svcTimerCharge(t);
   svcTimerSet(null);
   openNewServiceModal();
   setTimeout(() => {
@@ -4853,15 +4894,19 @@ async function renderServicesTab() {
     ${(() => {
       const t = svcTimerState();
       if (t) {
+        const paused = !t.runningSince;
         return `
-        <div class="table-card" style="margin-bottom:14px;padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-          <span style="font-size:20px;">⏱</span>
+        <div class="table-card" style="margin-bottom:14px;padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;${paused ? 'border-color:var(--gold);' : ''}">
+          <span style="font-size:20px;">${paused ? '⏸' : '⏱'}</span>
           <div style="flex:1;min-width:180px;">
             <div style="font-weight:600;">Helping ${escHtml(t.customerName || 'customer')}</div>
-            <div style="font-size:12px;color:var(--muted);">started ${new Date(t.startedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+            <div style="font-size:12px;color:${paused ? 'var(--gold)' : 'var(--muted)'};">${paused ? 'paused — resume to keep counting' : 'running'}</div>
           </div>
           <strong id="svcTimerElapsed" style="font-size:22px;font-feature-settings:'tnum';">0:00</strong>
           <span id="svcTimerProj" style="font-size:13px;color:var(--muted);"></span>
+          ${paused
+            ? `<button class="btn btn-outline" onclick="svcTimerResume()">▶ Resume</button>`
+            : `<button class="btn btn-outline" onclick="svcTimerPause()">⏸ Pause</button>`}
           <button class="btn btn-primary" onclick="svcTimerStop()">⏹ Stop &amp; charge</button>
           <button class="btn btn-outline btn-sm" onclick="svcTimerDiscard()">✕ Discard</button>
         </div>`;
@@ -4897,20 +4942,21 @@ async function renderServicesTab() {
       </div>
     </div>`;
 
-  // Live tick for the help timer (cleared on every tab re-render).
+  // Live tick for the help timer (cleared on every tab re-render). Shows the
+  // banked time even while paused; only advances when running.
   const running = svcTimerState();
   if (running) {
     const tick = () => {
       const el = document.getElementById('svcTimerElapsed');
       if (!el) { clearInterval(svcTimerInterval); svcTimerInterval = null; return; }
-      const secs = Math.floor((Date.now() - running.startedAt) / 1000);
+      const secs = Math.floor(svcTimerElapsedMs(running) / 1000);
       el.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
-      const { minutes, amount } = svcTimerCharge(running.startedAt);
+      const { minutes, amount } = svcTimerCharge(running);
       const p = document.getElementById('svcTimerProj');
       if (p) p.textContent = `≈ £${amount.toFixed(2)} (${minutes} min, 10-min minimum)`;
     };
     tick();
-    svcTimerInterval = setInterval(tick, 1000);
+    if (running.runningSince) svcTimerInterval = setInterval(tick, 1000); // frozen while paused
   }
 }
 
@@ -6165,8 +6211,10 @@ function dashPaint(money, tasksList2, stillLoading) {
          dueToday.length ? `${dueToday.length} due today` : ''].filter(Boolean).join(' · ') || 'all on schedule', 'rentals')}
       ${metric('Open Repairs', openRepairs.length,
         readyRepairs.length ? `<span style="color:var(--accent);">${readyRepairs.length} ready to collect</span>` : 'nothing waiting', 'repairs')}
-      ${metric('Travel · Next 7 Days', travel7.length,
-        renewals7.length ? `${renewals7.length} SIM renewal${renewals7.length === 1 ? '' : 's'} too` : 'plus SIM renewals', 'bookings')}
+      ${metric('Flights · Next 7 Days', travel7.length,
+        `${travel7.length === 1 ? '1 flight' : travel7.length + ' flights'} this week${renewals7.length
+          ? ` · <span class="dash-link" style="color:var(--gold);" onclick="event.stopPropagation();goToTab('sim')">${renewals7.length} SIM renewal${renewals7.length === 1 ? '' : 's'} ›</span>` : ''}`,
+        'bookings')}
       ${metric('Open Tasks', openTasks.length,
         highTasks.length ? `<span style="color:var(--danger);">${highTasks.length} high priority</span>` : 'none urgent', 'tasks',
         highTasks.length ? 'color:var(--danger);' : '')}
@@ -6665,7 +6713,9 @@ async function renderSettingsTab() {
   // a non-technical owner reads what it means, not the raw database key.
   const FEE_META = {
     late_fee_per_day:          { group: '📱 Rentals', label: 'Late return fee', help: 'Charged for each day a phone is returned past its due date (Shabbos & Yom Tov not counted).', unit: '£ / day' },
-    multi_phone_discount_pct:  { group: '📱 Rentals', label: 'Multi-phone discount', help: 'Discount from the 3rd phone a customer rents at once.', unit: '% off' },
+    multi_phone_discount_pct:  { group: '📱 Rentals', label: 'Multi-phone discount', help: 'The discount when a customer rents several phones at once.', unit: '% off' },
+    multi_phone_discount_from: { group: '📱 Rentals', label: 'Multi-phone discount starts at', help: 'Which phone the discount kicks in on — 3 means the 3rd phone and up. Change to 4 to start at the 4th.', unit: 'th phone' },
+    multi_sim_discount_from:   { group: '💳 SIM plans', label: 'Multi-SIM discount starts at', help: 'Which plan the discount kicks in on — 3 means 3 or more plans.', unit: 'th plan' },
     collect_later_late_pct:    { group: '📱 Rentals', label: '"Pay later" surcharge', help: 'Extra added when a customer takes the phone but pays afterwards.', unit: '% extra' },
     collect_later_late_min:    { group: '📱 Rentals', label: '"Pay later" minimum', help: 'The smallest "pay later" surcharge, even on cheap rentals.', unit: '£ minimum' },
     sim_activation_fee:        { group: '💳 SIM plans', label: 'SIM setup fee', help: 'One-off charge to set up a new SIM.', unit: '£' },

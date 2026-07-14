@@ -29,6 +29,8 @@ const SETTING_RULES = {
   collect_later_late_min: { type: 'money',   unit: '£' },
   multi_phone_discount_pct: { type: 'percent', unit: '%' },
   multi_sim_discount_pct:   { type: 'percent', unit: '%' },
+  multi_phone_discount_from: { type: 'count', unit: 'th phone' },
+  multi_sim_discount_from:   { type: 'count', unit: 'th plan' },
 }
 
 // A key is editable if it's in the known-rules whitelist OR it's a custom_
