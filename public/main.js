@@ -2546,8 +2546,7 @@ function renderTableRows() {
 function toggleDetail(id) {
   if (selectedId === id) {
     selectedId = null;
-    document.getElementById('detailRow')?.remove();
-    document.getElementById('detailPanelContainer').innerHTML = '';
+    closeCustomerCard();
     document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
   } else {
     selectedId = id;
@@ -2667,7 +2666,7 @@ function renderDetailPanel(id) {
         <div style="display:flex;gap:8px;">
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer">⏰</button>
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openEditModal('${c.id}')">✏️ Edit</button>
-          <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="toggleDetail('${c.id}')">✕</button>
+          <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="dismissCustomerCard()">✕</button>
         </div>
       </div>
 
@@ -2707,27 +2706,35 @@ function renderDetailPanel(id) {
       </div>
     </div>`;
 
-  // The card opens INLINE, directly under the customer's row — no traveling
-  // to the bottom of the page. Falls back to the old bottom container only
-  // if the row isn't in the current table (e.g. filtered out).
-  document.getElementById('detailRow')?.remove();
-  const row = document.querySelector(`tr[data-id="${String(id).replace(/"/g, '\\"')}"]`);
-  if (row) {
-    container.innerHTML = '';
-    const tr = document.createElement('tr');
-    tr.id = 'detailRow';
-    const td = document.createElement('td');
-    td.colSpan = row.cells.length;
-    td.style.padding = '0';
-    td.innerHTML = panelHtml;
-    tr.appendChild(td);
-    row.after(tr);
-    setTimeout(() => tr.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
-  } else {
-    container.innerHTML = panelHtml;
-    setTimeout(() => container.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  // The card opens as a POP-UP over the page — a real "separate card", no
+  // page scrolling. Its own overlay sits BELOW the action modals (New Rental,
+  // Edit, …) so those stack on top of it. z-index 90 < the 100 of #dynamicModal
+  // and #customerModal.
+  let overlay = document.getElementById('customerCard');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'customerCard';
+    overlay.className = 'modal-overlay';
+    overlay.style.zIndex = '90';
+    overlay.addEventListener('click', e => { if (e.target === overlay) dismissCustomerCard(); });
+    document.body.appendChild(overlay);
   }
+  overlay.innerHTML = `<div class="modal" style="width:720px;max-width:94vw;max-height:90vh;overflow-y:auto;">${panelHtml}</div>`;
+  overlay.classList.remove('hidden');
+  if (container) container.innerHTML = ''; // legacy inline container stays empty
   loadWalletSection(c.id);
+}
+
+function closeCustomerCard() {
+  const overlay = document.getElementById('customerCard');
+  if (overlay) overlay.classList.add('hidden');
+}
+
+// Always closes, whatever the selection state (✕ button + backdrop click).
+function dismissCustomerCard() {
+  selectedId = null;
+  closeCustomerCard();
+  document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
 }
 
 // ─────────────────────────────────────────────
@@ -3378,9 +3385,7 @@ async function deleteCustomer(id) {
   customers = customers.filter(x => x.id !== id);
   if (selectedId === id) {
     selectedId = null;
-    document.getElementById('detailRow')?.remove();
-    const container = document.getElementById('detailPanelContainer');
-    if (container) container.innerHTML = '';
+    closeCustomerCard();
   }
   applySearch();
   renderTableRows();
@@ -3517,7 +3522,7 @@ function renderSimRows() {
                          isRenewingTomorrow ? 'color:var(--warning);font-weight:700;' : '';
     const renewalLabel = isRenewingToday ? ' ⚠️ Today!' : isRenewingTomorrow ? ' ⚠️ Tomorrow' : '';
 
-    return `<tr>
+    return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a'))openManageSimModal('${s.id}')" title="Open SIM">
       <td><div class="customer-name">${escHtml(s.customerName || '—')}</div></td>
       <td>${escHtml(s.provider || '—')}</td>
       <td style="font-weight:600;font-size:12px;">${escHtml(s.simNumber || '—')}</td>
