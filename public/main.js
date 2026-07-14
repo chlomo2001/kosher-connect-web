@@ -6489,9 +6489,7 @@ async function renderSettingsTab() {
   pricingConfig = cfg; // keep live pricing in sync with what's displayed
 
   // Team card — rendered only for the owner (helpers get a 403 from /api/team).
-  const teamHtml = team?.success ? `
-    <div class="table-card" style="margin-bottom:16px;">
-      <div class="section-divider" style="margin:12px 14px 4px;">👥 Team</div>
+  const teamHtml = team?.success ? settingsCard('team', '👥 Team', `${team.members.length} member${team.members.length === 1 ? '' : 's'} + helper access`, `
       <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
       <tbody>
         ${team.members.map(m => `
@@ -6535,15 +6533,13 @@ async function renderSettingsTab() {
             ${t}</label>`).join('')}
         <button class="btn btn-outline btn-sm" style="font-size:11px;" onclick="saveHelperTabs()">💾 Save access</button>
         <span style="font-size:11px;color:var(--muted);">Wallet, shop &amp; settings are also blocked server-side when unticked.</span>
-      </div>
-    </div>` : '';
+      </div>`) : '';
 
   // ── Automations card (owner-only) — custom "when X, do Y" rules ──
   autoTriggers = autos?.triggers || autoTriggers;
   autoRulesCache = autos?.rules || [];
-  const automationsHtml = autos?.success ? `
-    <div class="table-card" style="margin-bottom:16px;">
-      <div class="section-divider" style="margin:12px 14px 4px;">🤖 Automations <span style="color:var(--muted);font-weight:400;font-size:12px;">— run in the daily sweep</span></div>
+  const automationsHtml = autos?.success ? settingsCard('automations', '🤖 Automations',
+    `${autos.rules.length} rule${autos.rules.length === 1 ? '' : 's'} — run in the daily sweep`, `
       <table><thead><tr><th>Rule</th><th>When</th><th>Raises</th><th>On</th><th></th></tr></thead>
       <tbody>
         ${autos.rules.length === 0 ? `<tr><td colspan="5" style="color:var(--muted);font-size:13px;padding:12px 16px;">No custom rules yet. The built-in sweeps (overdue, arrears, flights, passports, SIM renewals, VN billing) always run.</td></tr>` : ''}
@@ -6562,13 +6558,11 @@ async function renderSettingsTab() {
       <div style="padding:8px 14px 14px;">
         <button class="btn btn-outline btn-sm" onclick="openAutomationModal()">+ New automation rule</button>
         <span style="font-size:11px;color:var(--muted);margin-left:8px;">e.g. "owes £100+ → urgent task", "flight in 7 days → task".</span>
-      </div>
-    </div>` : '';
+      </div>`) : '';
 
   // ── Email addresses card (owner-only) — Forward Email aliases ──
-  const aliasesHtml = aliases === null ? '' : (aliases.success ? `
-    <div class="table-card" style="margin-bottom:16px;">
-      <div class="section-divider" style="margin:12px 14px 4px;">📧 Email addresses <span style="color:var(--muted);font-weight:400;font-size:12px;">— @${escHtml(aliases.domain)} via Forward Email</span></div>
+  const aliasesHtml = aliases === null ? '' : (aliases.success ? settingsCard('emails', '📧 Email addresses',
+    `${aliases.aliases.length} @${escHtml(aliases.domain)} via Forward Email`, `
       <table><thead><tr><th>Address</th><th>Forwards to</th><th>Purpose</th><th>On</th><th></th></tr></thead>
       <tbody>
         ${aliases.aliases.length === 0 ? `<tr><td colspan="5" style="color:var(--muted);font-size:13px;padding:12px 16px;">No addresses yet — add the first one below (e.g. reminder@, admin@, receipts@).</td></tr>` : ''}
@@ -6590,12 +6584,8 @@ async function renderSettingsTab() {
       <div style="padding:8px 14px 14px;">
         <button class="btn btn-outline btn-sm" onclick="openEmailAliasModal()">+ New address</button>
         <span style="font-size:11px;color:var(--muted);margin-left:8px;">🔑 makes an SMTP password so the app (or Gmail send-as) can send from that address.</span>
-      </div>
-    </div>` : `
-    <div class="table-card" style="margin-bottom:16px;">
-      <div class="section-divider" style="margin:12px 14px 4px;">📧 Email addresses</div>
-      <div style="padding:8px 14px 14px;font-size:13px;color:var(--muted);">${escHtml(aliases.error || 'Unavailable.')}</div>
-    </div>`);
+      </div>`) : settingsCard('emails', '📧 Email addresses', 'not connected yet',
+    `<div style="padding:8px 16px 14px;font-size:13px;color:var(--muted);">${escHtml(aliases.error || 'Unavailable.')}</div>`));
 
   const num = (id, val, step = '0.01') =>
     `<input class="form-input" type="number" step="${step}" id="${id}" value="${val}" style="width:90px;padding:6px 8px;font-size:13px;">`;
@@ -6643,9 +6633,8 @@ async function renderSettingsTab() {
     phone: '📱 Phones', sim: '💳 SIM', other: '📦 Other' };
   const menuNum = (id, val) =>
     `<input class="form-input" type="number" step="0.01" id="${id}" value="${val ?? ''}" placeholder="—" style="width:76px;padding:5px 7px;font-size:12px;min-height:0;">`;
-  const menuHtml = !isAdmin || !menu?.success ? '' : `
-    <div class="table-card" style="margin-bottom:16px;">
-      <div class="section-divider" style="margin:12px 14px 4px;">🧾 Service price menu <span style="color:var(--muted);font-weight:400;font-size:12px;">— what the charging screens offer</span></div>
+  const menuHtml = !isAdmin || !menu?.success ? '' : settingsCard('pricemenu', '🧾 Service price menu',
+    `${menuItemsCache.length} services — what the charging screens offer`, `
       <div class="table-wrap"><table><thead><tr><th>Service</th><th>Price</th><th>KC price</th><th>Repeat</th><th>Bulk (tickets 6th+)</th><th>On</th><th></th></tr></thead>
       <tbody>
         ${['repair','online','tickets','phone','sim','other'].map(cat => {
@@ -6675,8 +6664,7 @@ async function renderSettingsTab() {
           <td><button class="btn btn-primary btn-sm" onclick="addMenuItem()">+ Add</button></td>
         </tr>
       </tbody></table></div>
-      <div style="padding:6px 14px 12px;font-size:11px;color:var(--muted);">Prices apply to new charges only. Untick "On" to retire a service — old charges keep their label.</div>
-    </div>`;
+      <div style="padding:6px 14px 12px;font-size:11px;color:var(--muted);">Prices apply to new charges only. Untick "On" to retire a service — old charges keep their label.</div>`);
 
   content.innerHTML = `
     ${teamHtml}
@@ -6690,21 +6678,47 @@ async function renderSettingsTab() {
       <button class="btn btn-outline btn-sm" onclick="openChangePasswordModal()" title="Change your own login password">🔑 My password</button>
       <button class="btn btn-outline btn-sm" onclick="runSweepsNow()" title="Overdue rentals, arrears, passport expiry, SIM renewals">⏰ Run sweeps now</button>
     </div>
-    <div class="table-card" style="margin-bottom:16px;">
-      <div class="section-divider" style="margin:12px 14px 4px;">📱 Rental Rates</div>
-      <table><thead><tr><th>Country</th><th>£/day</th><th>Min £</th><th>Cap £</th><th>Cap period (days)</th><th>VN £/wk</th><th>VN £/30d</th><th></th></tr></thead>
-      <tbody>${rateRows}</tbody></table>
-    </div>
-    <div class="table-card" style="margin-bottom:16px;">
-      <div class="section-divider" style="margin:12px 14px 4px;">💥 Damage / Loss Charges</div>
-      <table><thead><tr><th>Country</th><th>Phone £</th><th>Charger £</th><th>SIM £</th><th></th></tr></thead>
-      <tbody>${damageRows}</tbody></table>
-    </div>
-    <div class="table-card">
-      <div class="section-divider" style="margin:12px 14px 4px;">⚙️ Fees & Rules</div>
-      <table><thead><tr><th>Setting</th><th>Value</th><th></th></tr></thead>
-      <tbody>${settingRows}</tbody></table>
+    ${settingsCard('rates', '📱 Rental Rates', `${cfg.rentalRates.length} countries`, `
+      <div class="table-wrap"><table><thead><tr><th>Country</th><th>£/day</th><th>Min £</th><th>Cap £</th><th>Cap period (days)</th><th>VN £/wk</th><th>VN £/30d</th><th></th></tr></thead>
+      <tbody>${rateRows}</tbody></table></div>`)}
+    ${settingsCard('damage', '💥 Damage / Loss Charges', '', `
+      <div class="table-wrap"><table><thead><tr><th>Country</th><th>Phone £</th><th>Charger £</th><th>SIM £</th><th></th></tr></thead>
+      <tbody>${damageRows}</tbody></table></div>`)}
+    ${settingsCard('fees', '⚙️ Fees & Rules', 'late fees, SIM fees, discounts, tiers', `
+      <div class="table-wrap"><table><thead><tr><th>Setting</th><th>Value</th><th></th></tr></thead>
+      <tbody>${settingRows}</tbody></table></div>`)}`;
+}
+
+// ── Collapsible settings cards ───────────────────────────────────────────
+// Open/closed state lives in localStorage so it survives the re-render that
+// follows every save. Everything starts collapsed — the page is a directory,
+// you open what you're working on.
+function settingsOpenState() {
+  try { return JSON.parse(localStorage.getItem('kcSettingsOpen')) || {}; } catch { return {}; }
+}
+function settingsCard(key, title, subtitle, bodyHtml) {
+  const open = !!settingsOpenState()[key];
+  return `
+    <div class="table-card" style="margin-bottom:12px;">
+      <div onclick="toggleSettingsCard('${key}')"
+        style="display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;user-select:none;">
+        <span id="scChev_${key}" style="font-size:11px;color:var(--muted);transition:transform 0.15s;display:inline-block;${open ? 'transform:rotate(90deg);' : ''}">▶</span>
+        <strong style="font-size:14px;">${title}</strong>
+        ${subtitle ? `<span style="color:var(--muted);font-size:12px;font-weight:400;">${subtitle}</span>` : ''}
+      </div>
+      <div id="scBody_${key}" style="${open ? '' : 'display:none;'}">${bodyHtml}</div>
     </div>`;
+}
+function toggleSettingsCard(key) {
+  const body = document.getElementById(`scBody_${key}`);
+  const chev = document.getElementById(`scChev_${key}`);
+  if (!body) return;
+  const nowOpen = body.style.display === 'none';
+  body.style.display = nowOpen ? '' : 'none';
+  if (chev) chev.style.transform = nowOpen ? 'rotate(90deg)' : '';
+  const state = settingsOpenState();
+  state[key] = nowOpen;
+  localStorage.setItem('kcSettingsOpen', JSON.stringify(state));
 }
 
 async function applySettingUpdate(payload) {
