@@ -151,21 +151,34 @@ let customerFilter = 'all'; // all | rental | flight | sim | vn | repair | arrea
 //  INIT — called directly since script loads after DOM is ready
 // ─────────────────────────────────────────────
 async function initApp() {
-  await loadCustomers();
-  rentals  = await window.api.getAllRentals();
-  phones   = await window.api.getAllPhones();
-  sims     = await window.api.getAllSims();
-  bookings = await window.api.getAllBookings().catch(() => []);
-  virtualNumbers = await window.api.getVirtualNumbers().catch(() => []);
-  if (!Array.isArray(virtualNumbers)) virtualNumbers = [];
-  // Load repairs up-front too, so customer badges/services reflect them
-  // before the Repairs tab is ever opened (same as bookings/SIMs/VNs).
-  repairs = await window.api.getRepairs().catch(() => []);
-  if (!Array.isArray(repairs)) repairs = [];
-  pricingConfig = await window.api.getSettings().catch(() => null);
-  simMenu = await window.api.getServiceMenu('sim').catch(() => []);
-  if (!Array.isArray(simMenu)) simMenu = [];
-  const me = await kcFetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  // Everything loads in PARALLEL — one round-trip of wall-clock time instead
+  // of ten. Each fetch is independent; a failure in one falls back to [] and
+  // never blocks the rest of the app from painting.
+  const arr = v => (Array.isArray(v) ? v : []);
+  const [cust, rent, ph, sm, bk, vn, rp, cfg, menu, me] = await Promise.all([
+    window.api.getAllCustomers().catch(() => []),
+    window.api.getAllRentals().catch(() => []),
+    window.api.getAllPhones().catch(() => []),
+    window.api.getAllSims().catch(() => []),
+    window.api.getAllBookings().catch(() => []),
+    window.api.getVirtualNumbers().catch(() => []),
+    // Repairs load up-front too, so customer badges/services reflect them
+    // before the Repairs tab is ever opened (same as bookings/SIMs/VNs).
+    window.api.getRepairs().catch(() => []),
+    window.api.getSettings().catch(() => null),
+    window.api.getServiceMenu('sim').catch(() => []),
+    kcFetch('/api/auth/me').then(r => r.json()).catch(() => null),
+  ]);
+  customers = arr(cust);
+  filteredCustomers = [...customers];
+  rentals = arr(rent);
+  phones = arr(ph);
+  sims = arr(sm);
+  bookings = arr(bk);
+  virtualNumbers = arr(vn);
+  repairs = arr(rp);
+  pricingConfig = cfg;
+  simMenu = arr(menu);
   if (me?.success && me.authEnabled) {
     currentStaff = me.staff || null;
     allowedTabs = Array.isArray(me.allowedTabs) ? me.allowedTabs : null;
@@ -203,11 +216,6 @@ function reconcilePhoneStatuses() {
     }
   });
   if (changed) window.api.saveAllPhones(phones);
-}
-
-async function loadCustomers() {
-  customers = await window.api.getAllCustomers();
-  filteredCustomers = [...customers];
 }
 
 // ─────────────────────────────────────────────
@@ -1614,6 +1622,13 @@ async function saveNewRental() {
   if (autoPct > 0) toast(`Multi-phone discount applied — 3rd phone and more, ${autoPct}% off.`, 'success');
 
   const totalPrice = discountedRental + vnPrice;
+  if (!(await kcConfirm({
+    title: isReservation ? 'Confirm reservation' : 'Confirm rental charge',
+    body: `<strong>${escHtml(customer.firstName)} ${escHtml(customer.lastName)}</strong><br>
+      ${escHtml(phone.number)} (${escHtml(phone.country)}) · ${fmtDate(from)} → ${fmtDate(to)} · ${chargeableDays} chargeable days${addVN ? '<br>+ virtual number' : ''}${discountValue > 0 ? '<br>discount applied' : ''}`,
+    amount: totalPrice,
+    okLabel: isReservation ? 'Reserve & charge' : 'Charge rental',
+  }))) return;
   const rental = {
     id:           Date.now().toString(),
     customerId,
@@ -2129,6 +2144,17 @@ async function saveManageRental(rentalId) {
   const lostInfo        = mgComputeLostCharges();
   const grandTotal      = newPrice + savedLateFee + lostInfo.total;
 
+  // Money changed → confirm before it lands on the customer.
+  const oldGrand = (r.price || 0) + (r.lateFee || 0) + (r.lostChargesTotal || 0);
+  if (grandTotal !== oldGrand && !(await kcConfirm({
+    title: 'Confirm rental charge change',
+    body: `<strong>${escHtml(r.customerName || 'Customer')}</strong><br>
+      Rental £${newPrice.toFixed(2)}${savedLateFee > 0 ? ` + late fee £${savedLateFee.toFixed(2)}` : ''}${lostInfo.total > 0 ? ` + lost items £${lostInfo.total.toFixed(2)}` : ''}<br>
+      <span style="color:var(--muted);font-size:12px;">was £${oldGrand.toFixed(2)}</span>`,
+    amount: grandTotal,
+    okLabel: 'Apply charges',
+  }))) return;
+
   const oldPrice   = r.price;
   r.fromDate       = newFrom;
   r.toDate         = newTo;
@@ -2222,6 +2248,44 @@ function showDynamicModal(html) {
 function closeDynamicModal() {
   const overlay = document.getElementById('dynamicModal');
   if (overlay) overlay.classList.add('hidden');
+}
+
+// ── Charge confirmation ──────────────────────────────────────────────────
+// Promise-based "are you sure?" that stacks ON TOP of any open modal (own
+// overlay, higher z-index). Runs before anything that posts a charge to a
+// customer's wallet. The POS till is deliberately exempt — its 💷 Charge
+// button IS the confirmation on the shopfloor.
+let kcConfirmResolve = null;
+function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm charge', amount = null }) {
+  return new Promise(resolve => {
+    kcConfirmResolve = resolve;
+    let el = document.getElementById('kcConfirm');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'kcConfirm';
+      el.className = 'modal-overlay';
+      el.style.zIndex = '3000';
+      el.addEventListener('click', e => { if (e.target === el) kcConfirmDone(false); });
+      document.body.appendChild(el);
+    }
+    el.innerHTML = `
+      <div class="modal" style="width:430px;">
+        <div class="modal-title">${escHtml(title)}</div>
+        <div style="font-size:14px;line-height:1.65;margin:4px 0 10px;color:var(--text);">${body}</div>
+        ${amount !== null ? `<div style="font-size:24px;font-weight:700;margin:0 0 16px;font-feature-settings:'tnum';">£${Number(amount).toFixed(2)}</div>` : ''}
+        <div class="modal-actions">
+          <button class="btn btn-outline" onclick="kcConfirmDone(false)">Cancel</button>
+          <button class="btn btn-primary" onclick="kcConfirmDone(true)">✓ ${escHtml(okLabel)}</button>
+        </div>
+      </div>`;
+    el.classList.remove('hidden');
+  });
+}
+function kcConfirmDone(ok) {
+  const el = document.getElementById('kcConfirm');
+  if (el) el.classList.add('hidden');
+  const r = kcConfirmResolve; kcConfirmResolve = null;
+  if (r) r(ok);
 }
 
 // ─────────────────────────────────────────────
@@ -2702,6 +2766,16 @@ async function saveWalletEntry(customerId) {
   const method = document.getElementById('wlMethod').value;
   const note = document.getElementById('wlNote').value.trim();
   const wantEmail = !!document.getElementById('wlEmail')?.checked;
+  // A negative adjustment is a charge in disguise — confirm it like one.
+  if (kind === 'adjustment' && amount < 0) {
+    const wlCust = customers.find(x => x.id === customerId);
+    if (!(await kcConfirm({
+      title: 'Confirm adjustment (charge)',
+      body: `<strong>${wlCust ? escHtml(wlCust.firstName) + ' ' + escHtml(wlCust.lastName) : 'Customer'}</strong><br>${note ? escHtml(note) : 'Manual adjustment — reduces their balance'}`,
+      amount: Math.abs(amount),
+      okLabel: 'Apply adjustment',
+    }))) return;
+  }
   const res = await window.api.addLedgerEntry({ customerId, kind, amount, method, note });
   if (!res.success) { toast(res.error || 'Could not record it.', 'error'); return; }
   closeDynamicModal();
@@ -3495,6 +3569,13 @@ async function saveSimForm(editId) {
     const idx = sims.findIndex(s => s.id === editId);
     if (idx !== -1) sims[idx] = { ...sims[idx], ...fields };
   } else {
+    if (!(await kcConfirm({
+      title: 'Confirm SIM setup charge',
+      body: `<strong>${customer ? escHtml(customer.firstName) + ' ' + escHtml(customer.lastName) : 'Customer'}</strong><br>
+        ${escHtml(provider)} SIM — initial setup`,
+      amount: 20,
+      okLabel: 'Charge setup',
+    }))) return;
     const setupDate = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
     sims.push({
       id: Date.now().toString(),
@@ -3663,7 +3744,7 @@ function toggleMgSimPw(simId) {
   el.textContent = el.textContent === '••••••••' ? (s.password || '') : '••••••••';
 }
 
-function addSimCharge(simId) {
+async function addSimCharge(simId) {
   const s = sims.find(x => x.id === simId);
   if (!s) return;
   const type   = document.getElementById('simChargeType').value;
@@ -3673,6 +3754,12 @@ function addSimCharge(simId) {
   const menuItem = type.startsWith('menu:') ? simMenu.find(x => String(x.id) === type.slice(5)) : null;
   const baseDesc = menuItem?.name || SIM_CHARGE_DESCS[type] || 'Custom charge';
   const desc   = note ? `${baseDesc} — ${note}` : baseDesc;
+  if (!(await kcConfirm({
+    title: 'Confirm SIM charge',
+    body: `<strong>${escHtml(s.customerName || 'Customer')}</strong><br>${escHtml(desc)}`,
+    amount,
+    okLabel: 'Add charge',
+  }))) return;
   if (!s.history) s.history = [];
   s.history.push({
     id:     Date.now().toString(),
@@ -4098,6 +4185,16 @@ async function saveNewBooking() {
   if (!payload.travelDate) { toast('Travel date is required.', 'error'); return; }
   if (!Number.isFinite(payload.price) || payload.price < 0) { toast('Enter a valid ticket price.', 'error'); return; }
 
+  const bkCust = customers.find(c => c.id === payload.customerId);
+  if (!(await kcConfirm({
+    title: 'Confirm booking charge',
+    body: `<strong>${bkCust ? escHtml(bkCust.firstName) + ' ' + escHtml(bkCust.lastName) : 'Customer'}</strong><br>
+      ${escHtml(payload.route)}${payload.airline ? ' · ' + escHtml(payload.airline) : ''} · ${fmtDate(payload.travelDate)}<br>
+      Ticket £${payload.price.toFixed(2)}${payload.bookingFee ? ` + fee £${payload.bookingFee.toFixed(2)}` : ''}${payload.payment === 'paid' ? ' · paid now' : ' · on account'}`,
+    amount: payload.price + (payload.bookingFee || 0),
+    okLabel: 'Charge booking',
+  }))) return;
+
   const res = await window.api.addBooking(payload);
   if (!res.success) { toast(res.error || 'Could not save the booking.', 'error'); return; }
 
@@ -4472,6 +4569,16 @@ async function saveNewRepair() {
   const serviceIds = [...document.querySelectorAll('.rpService:checked')].map(el => el.value);
   if (!customerId) { toast('Select a customer.', 'error'); return; }
   if (!serviceIds.length) { toast('Pick at least one service.', 'error'); return; }
+  const rpCust = customers.find(c => c.id === customerId);
+  const rpTotal = [...document.querySelectorAll('.rpService:checked')]
+    .reduce((s, el) => s + (parseFloat(el.dataset.price) || 0), 0);
+  if (!(await kcConfirm({
+    title: 'Confirm repair charge',
+    body: `<strong>${rpCust ? escHtml(rpCust.firstName) + ' ' + escHtml(rpCust.lastName) : 'Customer'}</strong><br>
+      ${serviceIds.length} service${serviceIds.length === 1 ? '' : 's'} · payable on collection`,
+    amount: rpTotal,
+    okLabel: 'Open ticket & charge',
+  }))) return;
   const res = await window.api.addRepair({
     customerId,
     device: document.getElementById('rpDevice').value.trim(),
@@ -4777,6 +4884,17 @@ async function saveNewServiceOrder() {
   const serviceId = document.getElementById('svService').value;
   if (!customerId) { toast('Select a customer.', 'error'); return; }
   if (!serviceId) { toast('Select a service.', 'error'); return; }
+  const svCust = customers.find(c => c.id === customerId);
+  const svTotal = parseFloat(document.getElementById('svTotal').value);
+  const svPaid = document.getElementById('svPaid').checked;
+  const svLabel = document.getElementById('svService').selectedOptions[0]?.textContent || 'Service';
+  if (!(await kcConfirm({
+    title: 'Confirm service charge',
+    body: `<strong>${svCust ? escHtml(svCust.firstName) + ' ' + escHtml(svCust.lastName) : 'Customer'}</strong><br>
+      ${escHtml(svLabel.trim())}${svPaid ? ' · paid now' : ' · on account'}`,
+    amount: Number.isFinite(svTotal) ? svTotal : 0,
+    okLabel: 'Charge service',
+  }))) return;
   const res = await window.api.addServiceOrder({
     customerId,
     serviceId,
@@ -6200,6 +6318,14 @@ async function saveVNBilling(id) {
   if (enabled && (!Number.isFinite(price) || price <= 0)) {
     toast('Enter a monthly price greater than £0.', 'error'); return;
   }
+  const vnRec = virtualNumbers.find(x => x.id === id);
+  if (enabled && !(await kcConfirm({
+    title: 'Confirm recurring VN charge',
+    body: `<strong>${vnRec?.customerName ? escHtml(vnRec.customerName) : 'Customer'}</strong><br>
+      ${vnRec ? escHtml(vnRec.number) : ''} — billed monthly from ${fmtDate(document.getElementById('vbDate').value)} (posted by the daily sweep)`,
+    amount: price,
+    okLabel: 'Enable monthly billing',
+  }))) return;
   const res = await window.api.updateVirtualNumber({
     id,
     bundleLabel: document.getElementById('vbBundle').value,
@@ -6236,10 +6362,11 @@ async function deleteVN(id, number) {
 async function renderSettingsTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading settings…</div>`;
-  const [cfg, team, autos] = await Promise.all([
+  const [cfg, team, autos, aliases] = await Promise.all([
     window.api.getSettings(),
     kcFetch('/api/team').then(r => r.status === 403 ? null : r.json()).catch(() => null),
     kcFetch('/api/automations').then(r => r.status === 403 ? null : r.json()).catch(() => null),
+    kcFetch('/api/email-aliases').then(r => r.status === 403 ? null : r.json()).catch(() => null),
   ]);
   if (!cfg || !cfg.success) {
     content.innerHTML = `<div class="tab-placeholder"><div class="big">⚙️</div>
@@ -6325,6 +6452,38 @@ async function renderSettingsTab() {
       </div>
     </div>` : '';
 
+  // ── Email addresses card (owner-only) — Forward Email aliases ──
+  const aliasesHtml = aliases === null ? '' : (aliases.success ? `
+    <div class="table-card" style="margin-bottom:16px;">
+      <div class="section-divider" style="margin:12px 14px 4px;">📧 Email addresses <span style="color:var(--muted);font-weight:400;font-size:12px;">— @${escHtml(aliases.domain)} via Forward Email</span></div>
+      <table><thead><tr><th>Address</th><th>Forwards to</th><th>Purpose</th><th>On</th><th></th></tr></thead>
+      <tbody>
+        ${aliases.aliases.length === 0 ? `<tr><td colspan="5" style="color:var(--muted);font-size:13px;padding:12px 16px;">No addresses yet — add the first one below (e.g. reminder@, admin@, receipts@).</td></tr>` : ''}
+        ${aliases.aliases.map(a => `
+          <tr style="${a.enabled ? '' : 'opacity:0.5;'}">
+            <td><strong>${escHtml(a.address)}</strong></td>
+            <td style="font-size:12px;">${a.recipients.map(escHtml).join('<br>') || '—'}</td>
+            <td style="font-size:12px;color:var(--muted);">${escHtml(a.description || '—')}</td>
+            <td><label style="font-size:12px;cursor:pointer;"><input type="checkbox" ${a.enabled ? 'checked' : ''}
+              onchange="toggleEmailAlias('${escHtml(a.id)}', this.checked)" style="accent-color:var(--accent);"> on</label></td>
+            <td style="white-space:nowrap;">
+              <button class="action-btn" title="Edit forwarding / purpose" onclick="openEmailAliasModal('${escHtml(a.id)}')">✏️</button>
+              <button class="action-btn" title="Generate SMTP password (for sending as this address)"
+                onclick="generateAliasPassword('${escHtml(a.id)}', '${escHtml(a.address)}')">🔑</button>
+              <button class="action-btn danger" onclick="deleteEmailAlias('${escHtml(a.id)}', '${escHtml(a.address)}')">✕</button>
+            </td>
+          </tr>`).join('')}
+      </tbody></table>
+      <div style="padding:8px 14px 14px;">
+        <button class="btn btn-outline btn-sm" onclick="openEmailAliasModal()">+ New address</button>
+        <span style="font-size:11px;color:var(--muted);margin-left:8px;">🔑 makes an SMTP password so the app (or Gmail send-as) can send from that address.</span>
+      </div>
+    </div>` : `
+    <div class="table-card" style="margin-bottom:16px;">
+      <div class="section-divider" style="margin:12px 14px 4px;">📧 Email addresses</div>
+      <div style="padding:8px 14px 14px;font-size:13px;color:var(--muted);">${escHtml(aliases.error || 'Unavailable.')}</div>
+    </div>`);
+
   const num = (id, val, step = '0.01') =>
     `<input class="form-input" type="number" step="${step}" id="${id}" value="${val}" style="width:90px;padding:6px 8px;font-size:13px;">`;
 
@@ -6362,9 +6521,11 @@ async function renderSettingsTab() {
         : `<span style="color:var(--muted);font-size:11px;">read-only</span>`}</td>
     </tr>`).join('');
 
+  emailAliasCache = aliases?.success ? aliases.aliases : [];
   content.innerHTML = `
     ${teamHtml}
     ${automationsHtml}
+    ${aliasesHtml}
     <div style="margin-bottom:10px;padding:10px 14px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:12px;">
       <span style="flex:1;">These values drive live pricing (rental calculator, VN add-on, late fees, repair/SIM charges).
       Edits apply to <strong>new</strong> calculations only — existing tickets and frozen prices never reprice.
@@ -6440,6 +6601,110 @@ async function runSweepsNow() {
   if (!res?.success) { toast(res?.error || 'Sweeps failed — check logs.', 'error'); return; }
   const c = res.counts;
   toast(`Sweeps done: ${c.rentalsFlippedOverdue} flipped overdue · ${c.overdueTasks + c.balanceTasks + c.passportTasks + c.simRenewalTasks} tasks raised · ${c.overdueClosed + c.balanceClosed + c.simClosed} closed.`, 'success');
+}
+
+// ── Email addresses (owner-only, Forward Email aliases) ─────────────────
+
+let emailAliasCache = [];
+
+function openEmailAliasModal(id = null) {
+  const a = id ? emailAliasCache.find(x => x.id === id) : null;
+  showDynamicModal(`
+    <div class="modal-title">📧 ${a ? 'Edit ' + escHtml(a.address) : 'New email address'}</div>
+    <div class="form-grid">
+      ${a ? '' : `<div class="form-group">
+        <label class="form-label">Address</label>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input class="form-input" id="eaName" placeholder="reminder" style="flex:1;">
+          <span style="font-size:13px;color:var(--muted);white-space:nowrap;">@kosher-connect.com</span>
+        </div>
+      </div>`}
+      <div class="form-group ${a ? 'form-full' : ''}">
+        <label class="form-label">Forwards to (comma-separated)</label>
+        <input class="form-input" id="eaRecipients" placeholder="yourinbox@gmail.com"
+          value="${a ? escHtml(a.recipients.join(', ')) : ''}">
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Purpose (optional)</label>
+        <input class="form-input" id="eaDesc" placeholder="e.g. customer reminders" value="${a ? escHtml(a.description) : ''}">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEmailAlias(${a ? `'${escHtml(a.id)}'` : 'null'})">💾 Save</button>
+    </div>
+  `);
+}
+
+async function saveEmailAlias(id) {
+  const body = {
+    recipients: document.getElementById('eaRecipients').value,
+    description: document.getElementById('eaDesc').value.trim(),
+  };
+  if (!id) body.name = document.getElementById('eaName').value.trim();
+  else body.id = id;
+  const res = await kcFetch('/api/email-aliases', {
+    method: id ? 'PUT' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not save the address.', 'error'); return; }
+  closeDynamicModal();
+  toast(id ? 'Address updated.' : `${res.alias.address} created ✔`, 'success');
+  renderSettingsTab();
+}
+
+async function toggleEmailAlias(id, enabled) {
+  const res = await kcFetch('/api/email-aliases', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, enabled }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not update.', 'error'); renderSettingsTab(); return; }
+  toast(enabled ? 'Address enabled.' : 'Address disabled — mail to it now bounces.', enabled ? 'success' : 'warning');
+}
+
+async function deleteEmailAlias(id, address) {
+  const ok = await window.api.confirmDelete(`Delete ${address}?\n\nMail sent to it will bounce, and any SMTP password for it stops working.`);
+  if (!ok) return;
+  const res = await kcFetch('/api/email-aliases?id=' + encodeURIComponent(id), { method: 'DELETE' })
+    .then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not delete.', 'error'); return; }
+  toast(`${address} deleted.`, 'warning');
+  renderSettingsTab();
+}
+
+async function generateAliasPassword(id, address) {
+  const ok = await kcConfirm({
+    title: 'Generate SMTP password',
+    body: `New sending password for <strong>${escHtml(address)}</strong>.<br>
+      <span style="color:var(--danger);">Any previous password for this address stops working immediately</span> — you'll need to update it wherever it's used (Vercel SMTP_PASS, Gmail send-as).`,
+    okLabel: 'Generate password',
+  });
+  if (!ok) return;
+  const res = await kcFetch('/api/email-aliases', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: 'password', id }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not generate a password.', 'error'); return; }
+  // Shown ONCE — Forward Email never reveals it again, and we don't store it.
+  showDynamicModal(`
+    <div class="modal-title">🔑 SMTP password — shown once</div>
+    <div style="font-size:13px;line-height:1.7;">
+      <div style="margin-bottom:10px;color:var(--muted);">Copy these now — this password can't be viewed again (only regenerated).</div>
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px;">
+        <span style="color:var(--muted);">Server</span><strong>smtp.forwardemail.net : 465 (SSL)</strong>
+        <span style="color:var(--muted);">Username</span>
+        <strong style="cursor:pointer;" onclick="copyText('${escHtml(res.username)}')" title="Click to copy">${escHtml(res.username)} 📋</strong>
+        <span style="color:var(--muted);">Password</span>
+        <strong style="cursor:pointer;font-family:monospace;" onclick="copyText('${escHtml(res.password)}')" title="Click to copy">${escHtml(res.password)} 📋</strong>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="closeDynamicModal()">Done — I've copied it</button>
+    </div>
+  `);
 }
 
 // ── Login credentials ────────────────────────────────────────────────────
@@ -6694,6 +6959,9 @@ changeRepairStatus = guardReentry(changeRepairStatus);
 confirmCollectRepair = guardReentry(confirmCollectRepair);
 saveAutomation   = guardReentry(saveAutomation);
 deleteAutomation = guardReentry(deleteAutomation);
+saveEmailAlias   = guardReentry(saveEmailAlias);
+deleteEmailAlias = guardReentry(deleteEmailAlias);
+generateAliasPassword = guardReentry(generateAliasPassword);
 saveNewTask      = guardReentry(saveNewTask);
 saveRentalRate   = guardReentry(saveRentalRate);
 saveDamageRate   = guardReentry(saveDamageRate);
@@ -6714,6 +6982,7 @@ removeTeamMember  = guardReentry(removeTeamMember);
 saveNewRental    = guardReentry(saveNewRental);
 saveManageRental = guardReentry(saveManageRental);
 saveSimForm      = guardReentry(saveSimForm);
+addSimCharge     = guardReentry(addSimCharge);
 addPayment       = guardReentry(addPayment);
 deleteCustomer   = guardReentry(deleteCustomer);
 deleteRental     = guardReentry(deleteRental);
