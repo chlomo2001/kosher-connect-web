@@ -312,7 +312,7 @@ function renderTab(tab) {
     btnNew.style.display = 'none';
     renderTasksTab();
   } else if (tab === 'settings') {
-    document.getElementById('pageTitle').innerHTML = 'Pricing <span>Settings</span>';
+    document.getElementById('pageTitle').innerHTML = 'System <span>Settings</span>';
     searchBox.style.display = 'none';
     btnNew.style.display = 'none';
     renderSettingsTab();
@@ -1694,10 +1694,26 @@ async function saveNewRental() {
   }
 
   closeDynamicModal();
+  // Owner-defined auto extras for rentals (posted once, keyed on the rental).
+  const extraMsg = await applyExtraCharges('rental', rental.id, customerId, false);
   toast(isReservation
     ? `Reserved for ${customer.firstName} — pickup ${fmtDate(from)}. Press ▶ Start at handover.`
-    : `Rental saved! £${totalPrice} charged to ${customer.firstName}.`, 'success');
+    : `Rental saved! £${totalPrice} charged to ${customer.firstName}.${extraMsg}`, 'success');
   renderRentalsTab();
+}
+
+// Post any auto "extra charges" for a freshly-created rental/SIM (their money
+// doesn't go through a single server charge, so the client triggers it).
+// Returns a short message fragment for the success toast.
+async function applyExtraCharges(appliesTo, refBase, customerId, paidNow) {
+  const res = await kcFetch('/api/custom-charges', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: 'apply', appliesTo, refBase, customerId, paidNow }),
+  }).then(r => r.json()).catch(() => null);
+  if (res?.success && res.extras?.length) {
+    return ` Incl. ${res.extras.map(e => `${e.label} £${e.amount.toFixed(2)}`).join(', ')}.`;
+  }
+  return '';
 }
 
 // Reservation pickup: the customer is here, the phone goes out.
@@ -3637,6 +3653,7 @@ async function saveSimForm(editId) {
     simMonthlyCost: paymentType !== 'direct' ? (parseFloat(document.getElementById('simMonthlyCost')?.value) || 0) : 0,
   };
 
+  let newSimId = null;
   if (editId) {
     const idx = sims.findIndex(s => s.id === editId);
     if (idx !== -1) sims[idx] = { ...sims[idx], ...fields };
@@ -3650,8 +3667,9 @@ async function saveSimForm(editId) {
       okLabel: 'Charge setup',
     }))) return;
     const setupDate = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+    newSimId = Date.now().toString();
     sims.push({
-      id: Date.now().toString(),
+      id: newSimId,
       ...fields,
       history: [{
         id: (Date.now() + 1).toString(),
@@ -3666,7 +3684,9 @@ async function saveSimForm(editId) {
 
   saveSims(sims);
   closeDynamicModal();
-  toast(editId ? 'SIM plan updated ✅' : 'SIM plan added ✅', 'success');
+  let extraMsg = '';
+  if (newSimId) extraMsg = await applyExtraCharges('sim', newSimId, customerId, false);
+  toast(`${editId ? 'SIM plan updated ✅' : 'SIM plan added ✅'}${extraMsg}`, 'success');
   renderSimsTab();
 }
 
@@ -5360,10 +5380,10 @@ function posRenderTiles() {
   const list = shopItems.filter(i => i.active && i.quantity > 0 && posTileMatch(i, q)).slice(0, 60);
   el.innerHTML = list.map(i => `
     <div class="pos-tile" onclick="posAdd('${i.id}')">
-      <div style="font-weight:600;font-size:12px;">${escHtml([i.company, i.model].filter(Boolean).join(' '))}</div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:3px;">
-        <span style="color:var(--muted);">${i.quantity} left</span>
-        <strong>£${(i.sellingPrice || 0).toFixed(2)}</strong>
+      <div class="pos-tile-name">${escHtml([i.company, i.model].filter(Boolean).join(' '))}</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:6px;">
+        <span style="color:var(--muted);font-size:12px;">${i.quantity} left</span>
+        <span class="pos-tile-price">£${(i.sellingPrice || 0).toFixed(2)}</span>
       </div>
     </div>`).join('') || '<div style="color:var(--muted);font-size:13px;padding:6px;">No matching items.</div>';
 }
@@ -6493,7 +6513,7 @@ async function renderSettingsTab() {
   ]);
   if (!cfg || !cfg.success) {
     content.innerHTML = `<div class="tab-placeholder"><div class="big">⚙️</div>
-      <h2>Pricing Settings</h2><p style="color:var(--muted)">${escHtml(cfg?.error || 'Settings unavailable.')}</p></div>`;
+      <h2>Settings</h2><p style="color:var(--muted)">${escHtml(cfg?.error || 'Settings unavailable.')}</p></div>`;
     return;
   }
   pricingConfig = cfg; // keep live pricing in sync with what's displayed
@@ -6615,7 +6635,8 @@ async function renderSettingsTab() {
         onclick="deleteRateRow('rental_rates','${escHtml(r.countryCode)}')">✕</button></td>
     </tr>`).join('') + `
     <tr style="background:var(--bg-secondary);">
-      <td><input class="form-input" id="rrNew_code" placeholder="FR" style="width:70px;padding:5px 7px;font-size:12px;min-height:0;text-transform:uppercase;">
+      <td><div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a country</div>
+        <input class="form-input" id="rrNew_code" placeholder="FR" style="width:70px;padding:5px 7px;font-size:12px;min-height:0;text-transform:uppercase;">
         <input class="form-input" id="rrNew_name" placeholder="France" style="width:100px;padding:5px 7px;font-size:12px;min-height:0;margin-top:3px;"></td>
       <td>${num('rrNew_rate', '')}</td><td>${num('rrNew_min', '')}</td><td>${num('rrNew_cap', '')}</td>
       <td>${num('rrNew_period', '30', '1')}</td><td>${num('rrNew_vnw', '')}</td><td>${num('rrNew_vnm', '')}</td>
@@ -6634,7 +6655,8 @@ async function renderSettingsTab() {
         onclick="deleteRateRow('damage_rates','${escHtml(d.countryCode)}')">✕</button></td>
     </tr>`).join('') + `
     <tr style="background:var(--bg-secondary);">
-      <td><input class="form-input" id="drNew_code" placeholder="FR" style="width:70px;padding:5px 7px;font-size:12px;min-height:0;text-transform:uppercase;"></td>
+      <td><div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a country</div>
+        <input class="form-input" id="drNew_code" placeholder="FR" style="width:70px;padding:5px 7px;font-size:12px;min-height:0;text-transform:uppercase;"></td>
       <td>${num('drNew_phone', '')}</td><td>${num('drNew_charger', '')}</td><td>${num('drNew_sim', '')}</td>
       <td><button class="btn btn-primary btn-sm" onclick="addDamageRate()">+ Add</button></td>
     </tr>`;
@@ -6703,8 +6725,9 @@ async function renderSettingsTab() {
               <td><button class="btn btn-outline" style="font-size:12px;padding:5px 12px;" onclick="saveMenuItem('${escHtml(String(m.id))}')">💾 Save</button></td>
             </tr>`).join('');
         }).join('')}
-        <tr>
-          <td><input class="form-input" id="miNewName" placeholder="New service name" style="min-height:0;padding:5px 8px;font-size:12px;min-width:170px;"></td>
+        <tr style="background:var(--bg-secondary);">
+          <td><div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a service</div>
+            <input class="form-input" id="miNewName" placeholder="New service name" style="min-height:0;padding:5px 8px;font-size:12px;min-width:170px;"></td>
           <td>${menuNum('miNewPrice', '')}</td>
           <td colspan="3">
             <select class="form-input" id="miNewCat" style="min-height:0;padding:5px 8px;font-size:12px;width:130px;">
@@ -6726,7 +6749,7 @@ async function renderSettingsTab() {
       <div style="padding:8px 16px 4px;font-size:12px;color:var(--muted);line-height:1.5;">
         Define a fee once and the app adds it <strong>automatically</strong> every time you make that kind of charge —
         e.g. a £5 handling fee on every flight booking. "Automatic" always applies; "optional" you tick per charge.
-        Wired for flight bookings and online/print services today.</div>
+        Wired for flight bookings, online/print services, SIM setups, repairs and rentals.</div>
       <div class="table-wrap"><table><thead><tr><th>Charge name</th><th>Amount</th><th>Added to</th><th>How</th><th>On</th><th></th></tr></thead>
       <tbody>
         ${extraChargeCache.length === 0 ? `<tr><td colspan="6" style="color:var(--muted);font-size:13px;padding:12px 16px;">None yet. Add one below — e.g. "Handling fee £5 → every flight booking → automatic".</td></tr>` : ''}
@@ -6748,7 +6771,8 @@ async function renderSettingsTab() {
             </td>
           </tr>`).join('')}
         <tr style="background:var(--bg-secondary);">
-          <td><input class="form-input" id="ecNew_label" placeholder="e.g. Handling fee" style="min-height:0;padding:5px 8px;font-size:12px;min-width:150px;"></td>
+          <td><div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a charge</div>
+            <input class="form-input" id="ecNew_label" placeholder="e.g. Handling fee" style="min-height:0;padding:5px 8px;font-size:12px;min-width:150px;"></td>
           <td>${num('ecNew_amount', '')}</td>
           <td><select class="form-input" id="ecNew_target" style="min-height:0;padding:5px 8px;font-size:12px;">
             ${Object.entries(TARGET_LABEL).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}
@@ -6761,27 +6785,39 @@ async function renderSettingsTab() {
         </tr>
       </tbody></table></div>`);
 
+  const sectionHead = (t, sub) => `
+    <div style="margin:22px 2px 10px;display:flex;align-items:baseline;gap:10px;">
+      <h3 style="font-size:15px;font-weight:700;letter-spacing:-0.2px;margin:0;">${t}</h3>
+      ${sub ? `<span style="color:var(--muted);font-size:12px;">${sub}</span>` : ''}
+    </div>`;
+  const pricingCards = [
+    menuHtml, extraHtml,
+    settingsCard('rates', '📱 Rental Rates', `${cfg.rentalRates.length} countries`, `
+      <div class="table-wrap"><table><thead><tr><th>Country</th><th>£/day</th><th>Min £</th><th>Cap £</th><th>Cap period (days)</th><th>VN £/wk</th><th>VN £/30d</th><th></th></tr></thead>
+      <tbody>${rateRows}</tbody></table></div>`),
+    settingsCard('damage', '💥 Damage / Loss Charges', 'what a lost/broken item costs', `
+      <div class="table-wrap"><table><thead><tr><th>Country</th><th>Phone £</th><th>Charger £</th><th>SIM £</th><th></th></tr></thead>
+      <tbody>${damageRows}</tbody></table></div>`),
+    settingsCard('fees', '⚙️ Fees & Rules', 'late fees, SIM fees, discounts', `
+      <div class="table-wrap"><table><thead><tr><th>What it is</th><th>Value</th><th></th></tr></thead>
+      <tbody>${settingRows}</tbody></table></div>`),
+  ].filter(Boolean).join('');
+
   content.innerHTML = `
-    ${teamHtml}
-    ${automationsHtml}
-    ${aliasesHtml}
-    ${menuHtml}
-    ${extraHtml}
-    <div style="margin-bottom:10px;padding:10px 14px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:12px;">
-      <span style="flex:1;">These values drive live pricing (rental calculator, VN add-on, late fees, repair/SIM charges).
-      Edits apply to <strong>new</strong> calculations only — existing tickets and frozen prices never reprice.</span>
+    <div style="margin-bottom:8px;padding:10px 14px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:12px;">
+      <span style="flex:1;">Everything that runs the business — people, prices, messages and automation — lives here. Price edits apply to <strong>new</strong> charges only; existing tickets never reprice.</span>
       <button class="btn btn-outline btn-sm" onclick="openChangePasswordModal()" title="Change your own login password">🔑 My password</button>
       <button class="btn btn-outline btn-sm" onclick="runSweepsNow()" title="Overdue rentals, arrears, passport expiry, SIM renewals">⏰ Run sweeps now</button>
     </div>
-    ${settingsCard('rates', '📱 Rental Rates', `${cfg.rentalRates.length} countries`, `
-      <div class="table-wrap"><table><thead><tr><th>Country</th><th>£/day</th><th>Min £</th><th>Cap £</th><th>Cap period (days)</th><th>VN £/wk</th><th>VN £/30d</th><th></th></tr></thead>
-      <tbody>${rateRows}</tbody></table></div>`)}
-    ${settingsCard('damage', '💥 Damage / Loss Charges', '', `
-      <div class="table-wrap"><table><thead><tr><th>Country</th><th>Phone £</th><th>Charger £</th><th>SIM £</th><th></th></tr></thead>
-      <tbody>${damageRows}</tbody></table></div>`)}
-    ${settingsCard('fees', '⚙️ Fees & Rules', 'late fees, SIM fees, discounts, tiers', `
-      <div class="table-wrap"><table><thead><tr><th>Setting</th><th>Value</th><th></th></tr></thead>
-      <tbody>${settingRows}</tbody></table></div>`)}`;
+
+    ${team?.success ? sectionHead('👥 People &amp; access', 'who works here and what they can see') + teamHtml : ''}
+
+    ${sectionHead('💷 Prices &amp; charges', 'what you charge and any automatic extras')}
+    ${pricingCards}
+
+    ${aliasesHtml ? sectionHead('📧 Communications', 'email addresses for the business') + aliasesHtml : ''}
+
+    ${automationsHtml ? sectionHead('🤖 Automation', 'jobs the daily sweep runs for you') + automationsHtml : ''}`;
 }
 
 // ── Collapsible settings cards ───────────────────────────────────────────

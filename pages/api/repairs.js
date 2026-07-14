@@ -10,6 +10,7 @@
 
 import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
+import { postAutoCharges } from '../../lib/customCharges.js'
 
 const REPAIR_STATUSES = ['Open', 'In Progress', 'Ready', 'Collected', 'Cancelled']
 const EMBED = 'customers(legacy_id,first_name,last_name),repair_services(id,price,service_prices(name))'
@@ -140,6 +141,11 @@ async function handler(req, res) {
           }], 'charge_reference')
           paidNow = true
         }
+        // Owner-defined auto extras for repairs.
+        await postAutoCharges({
+          customerUuid: repair.customer_id, appliesTo: 'repair', refBase: repair.id,
+          paidNow: !!payMethod, method: payMethod,
+        })
         const balRows = await db.select('customer_balances', `customer_id=eq.${repair.customer_id}`)
         balance = balRows.length ? Number(balRows[0].balance) : 0
       }

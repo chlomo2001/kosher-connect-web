@@ -8,6 +8,7 @@
 
 import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
+import { postAutoCharges } from '../../lib/customCharges.js'
 
 const TARGETS = ['booking', 'service', 'sim', 'repair', 'rental', 'any']
 const MODES = ['auto', 'optional']
@@ -32,10 +33,28 @@ async function handler(req, res) {
       return res.json({ success: true, charges: rows.map(toApp) })
     }
 
+    const b = req.body || {}
+
+    // Apply auto-extras for a just-created record whose money doesn't flow
+    // through a single server charge (rentals, SIMs). Any signed-in staff may
+    // trigger this — it's the charging action, not an admin config change.
+    if (req.method === 'POST' && b.op === 'apply') {
+      if (!['rental', 'sim'].includes(b.appliesTo)) {
+        return res.status(400).json({ success: false, error: 'apply supports rental and sim.' })
+      }
+      if (!b.customerId || !b.refBase) return res.status(400).json({ success: false, error: 'customerId and refBase are required.' })
+      const custRows = await db.select('customers', `select=id&legacy_id=eq.${encodeURIComponent(String(b.customerId))}`)
+      if (!custRows.length) return res.status(400).json({ success: false, error: 'Customer not found.' })
+      const extras = await postAutoCharges({
+        customerUuid: custRows[0].id, appliesTo: b.appliesTo, refBase: String(b.refBase),
+        paidNow: !!b.paidNow, method: b.method,
+      })
+      return res.json({ success: true, extras: extras.lines, total: extras.total })
+    }
+
     if (req.staff && req.staff.role !== 'owner') {
       return res.status(403).json({ success: false, error: 'Extra charges are admin-only.' })
     }
-    const b = req.body || {}
 
     if (req.method === 'POST') {
       const label = String(b.label || '').trim()
