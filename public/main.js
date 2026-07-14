@@ -6630,7 +6630,7 @@ async function renderSettingsTab() {
   // ── Service price menu card (admin-editable price list) ──
   menuItemsCache = menu?.success ? menu.items : [];
   const isAdmin = !currentStaff || currentStaff.role === 'owner';
-  const catLabel = { repair: '🔧 Repairs', online: '🖨️ Online & print', ticket: '✈️ Tickets',
+  const catLabel = { repair: '🔧 Repairs', online: '🖨️ Online & print', tickets: '✈️ Tickets',
     phone: '📱 Phones', sim: '💳 SIM', other: '📦 Other' };
   const menuNum = (id, val) =>
     `<input class="form-input" type="number" step="0.01" id="${id}" value="${val ?? ''}" placeholder="—" style="width:76px;padding:5px 7px;font-size:12px;min-height:0;">`;
@@ -6639,7 +6639,7 @@ async function renderSettingsTab() {
       <div class="section-divider" style="margin:12px 14px 4px;">🧾 Service price menu <span style="color:var(--muted);font-weight:400;font-size:12px;">— what the charging screens offer</span></div>
       <div class="table-wrap"><table><thead><tr><th>Service</th><th>Price</th><th>KC price</th><th>2nd+</th><th>6th+</th><th>On</th><th></th></tr></thead>
       <tbody>
-        ${['repair','online','ticket','phone','sim','other'].map(cat => {
+        ${['repair','online','tickets','phone','sim','other'].map(cat => {
           const items = menuItemsCache.filter(m => m.category === cat);
           if (!items.length) return '';
           return `<tr><td colspan="7" style="background:var(--bg-secondary);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);padding:6px 16px;">${catLabel[cat] || cat}</td></tr>` +

@@ -11,7 +11,7 @@
 import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 
-const CATEGORIES = ['repair', 'online', 'ticket', 'phone', 'sim', 'other']
+const CATEGORIES = ['repair', 'online', 'tickets', 'phone', 'sim', 'other']
 const money = (v) => Math.round((Number(v) || 0) * 100) / 100
 const opt = (v) => (v === undefined || v === null || v === '' ? null : money(v))
 
