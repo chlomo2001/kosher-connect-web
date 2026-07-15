@@ -321,6 +321,26 @@ function applyTabVisibility() {
   });
 }
 
+// #49 / #58 — ONE source of truth per destination: its human label, its page
+// title, its render fn, whether the search box shows, and (optionally) its
+// create action. The sidebar, the <title>, the palette navigate list and the
+// topbar's context primary button all read this map, so a rename happens once.
+const TAB_META = {
+  dashboard: { label: 'Dashboard',         title: 'Business <span>Dashboard</span>',    render: () => renderDashboardTab(), search: false },
+  customers: { label: 'Customers',         title: 'Customer <span>Management</span>',   render: () => renderCustomersTab(), search: true,  primary: { label: '+ New Customer', run: () => openAddModal() } },
+  rentals:   { label: 'Phone Rentals',     title: 'Phone <span>Rentals</span>',         render: () => renderRentalsTab(),   search: false, primary: { label: '+ New Rental',   run: () => openNewRentalModal() } },
+  sim:       { label: 'SIM Plans',         title: 'SIM <span>Plans</span>',             render: () => renderSimsTab(),      search: false, primary: { label: '+ New SIM Plan', run: () => openAddSimModal() } },
+  bookings:  { label: 'Tickets & Flights', title: 'Tickets <span>&amp; Flights</span>', render: () => renderBookingsTab(),  search: false, primary: { label: '+ New Booking',  run: () => openNewBookingModal() } },
+  wallet:    { label: 'Wallet',            title: 'Wallet <span>&amp; Ledger</span>',   render: () => renderWalletTab(),    search: false },
+  repairs:   { label: 'Repairs',           title: 'Phone <span>Repairs</span>',         render: () => renderRepairsTab(),   search: false, primary: { label: '+ New Repair',   run: () => openNewRepairModal() } },
+  services:  { label: 'Online & Print',    title: 'Online <span>&amp; Print</span>',    render: () => renderServicesTab(),  search: false, primary: { label: '+ New Service',  run: () => openNewServiceModal() } },
+  shop:      { label: 'Shop',              title: 'Shop <span>&amp; Stock</span>',      render: () => renderShopTab(),      search: false },
+  tasks:     { label: 'Tasks',             title: 'Task <span>List</span>',             render: () => renderTasksTab(),     search: false },
+  virtual:   { label: 'Virtual Numbers',   title: 'Virtual <span>Numbers</span>',       render: () => renderVirtualTab(),   search: false, primary: { label: '+ New Number',   run: () => openNewVNModal() } },
+  settings:  { label: 'Settings',          title: 'System <span>Settings</span>',       render: () => renderSettingsTab(),  search: false },
+};
+let tabPrimaryAction = null; // #58 — what the topbar primary button does on this tab
+
 function renderTab(tab) {
   if (allowedTabs && !allowedTabs.includes(tab)) {
     toast('That area is not enabled for your account.', 'warning');
@@ -331,77 +351,25 @@ function renderTab(tab) {
   // fresh-money pass) don't skip because currentTab still said 'customers'.
   currentTab = tab;
   document.body.classList.remove('pos-mode'); // leaving the till via any nav
-  const content = document.getElementById('mainContent');
   const searchBox = document.getElementById('searchBox');
   const btnNew = document.getElementById('btnNewCustomer');
+  const meta = TAB_META[tab] || TAB_META.customers; // unknown ids fall back to Customers
 
-  if (tab === 'dashboard') {
-    document.getElementById('pageTitle').innerHTML = 'Business <span>Dashboard</span>';
-    searchBox.style.display = 'none';
-    btnNew.style.display = 'none';
-    renderDashboardTab();
-  } else if (tab === 'customers') {
-    document.getElementById('pageTitle').innerHTML = 'Customer <span>Management</span>';
-    searchBox.style.display = '';
-    btnNew.style.display = '';
-    renderCustomersTab();
-  } else if (tab === 'rentals') {
-    document.getElementById('pageTitle').innerHTML = 'Phone <span>Rentals</span>';
-    searchBox.style.display = 'none';
-    btnNew.style.display = 'none';
-    renderRentalsTab();
-  } else if (tab === 'sim') {
-    document.getElementById('pageTitle').innerHTML = 'SIM <span>Plans</span>';
-    searchBox.style.display = 'none';
-    btnNew.style.display = 'none';
-    renderSimsTab();
-  } else if (tab === 'bookings') {
-    document.getElementById('pageTitle').innerHTML = 'Tickets <span>& Flights</span>';
-    searchBox.style.display = 'none';
-    btnNew.style.display = 'none';
-    renderBookingsTab();
-  } else if (tab === 'wallet') {
-    document.getElementById('pageTitle').innerHTML = 'Wallet <span>& Ledger</span>';
-    searchBox.style.display = 'none';
-    btnNew.style.display = 'none';
-    renderWalletTab();
-  } else if (tab === 'repairs') {
-    document.getElementById('pageTitle').innerHTML = 'Phone <span>Repairs</span>';
-    searchBox.style.display = 'none';
-    btnNew.style.display = 'none';
-    renderRepairsTab();
-  } else if (tab === 'services') {
-    document.getElementById('pageTitle').innerHTML = 'Online <span>&amp; Print</span>';
-    searchBox.style.display = 'none';
-    btnNew.style.display = 'none';
-    renderServicesTab();
-  } else if (tab === 'shop') {
-    document.getElementById('pageTitle').innerHTML = 'Shop <span>& Stock</span>';
-    searchBox.style.display = 'none';
-    btnNew.style.display = 'none';
-    renderShopTab();
-  } else if (tab === 'tasks') {
-    document.getElementById('pageTitle').innerHTML = 'Task <span>List</span>';
-    searchBox.style.display = 'none';
-    btnNew.style.display = 'none';
-    renderTasksTab();
-  } else if (tab === 'settings') {
-    document.getElementById('pageTitle').innerHTML = 'System <span>Settings</span>';
-    searchBox.style.display = 'none';
-    btnNew.style.display = 'none';
-    renderSettingsTab();
-  } else if (tab === 'virtual') {
-    document.getElementById('pageTitle').innerHTML = 'Virtual <span>Numbers</span>';
-    searchBox.style.display = 'none';
-    btnNew.style.display = 'none';
-    renderVirtualTab();
-  } else {
-    // No stub tabs remain; unknown tab ids fall back to Customers.
-    document.getElementById('pageTitle').innerHTML = 'Customer <span>Management</span>';
-    searchBox.style.display = '';
-    btnNew.style.display = '';
-    renderCustomersTab();
+  document.getElementById('pageTitle').innerHTML = meta.title;
+  if (searchBox) searchBox.style.display = meta.search ? '' : 'none';
+  // #58 — the one topbar primary button becomes this tab's create action
+  // instead of hiding on every tab but Customers.
+  if (btnNew) {
+    if (meta.primary) {
+      btnNew.style.display = '';
+      btnNew.textContent = meta.primary.label;
+      tabPrimaryAction = meta.primary.run;
+    } else {
+      btnNew.style.display = 'none';
+      tabPrimaryAction = null;
+    }
   }
+  meta.render();
 }
 
 // ─────────────────────────────────────────────
@@ -3215,7 +3183,7 @@ async function renderWalletTab() {
       <span style="font-feature-settings:'tnum';color:${negative ? 'var(--danger)' : 'var(--success)'};font-weight:600;">
         ${negative ? '−' : '+'}£${Math.abs(b.balance).toFixed(2)}</span>
       ${b.customerId ? `<button class="btn btn-outline btn-sm" style="margin-left:10px;font-size:11px;padding:4px 10px;"
-        onclick="event.stopPropagation();openWalletModal('${escHtml(String(b.customerId))}')">💰 Record</button>` : ''}
+        onclick="event.stopPropagation();openWalletModal('${escHtml(String(b.customerId))}', ${Number(b.balance) || 0})">💰 ${negative ? 'Take payment' : 'Record'}</button>` : ''}
       <span class="feed-go">›</span>
     </div>`;
 
@@ -3418,7 +3386,9 @@ function applySearch() {
 //  TOPBAR BUTTONS
 // ─────────────────────────────────────────────
 function setupTopbarButtons() {
-  document.getElementById('btnNewCustomer').addEventListener('click', openAddModal);
+  // #58 — dispatches to the current tab's create action (set by renderTab),
+  // falling back to New Customer before any tab has rendered.
+  document.getElementById('btnNewCustomer').addEventListener('click', () => (tabPrimaryAction || openAddModal)());
   // Discoverable entry to the command palette (Ctrl/Cmd+K also opens it).
   const btnNew = document.getElementById('btnNewCustomer');
   if (btnNew && !document.getElementById('btnPalette')) {
@@ -6241,8 +6211,10 @@ const PALETTE_COMMANDS = [
   { icon: '✉️', label: 'Add email address', sub: 'admin', admin: true, run: () => openOnTab('settings', openEmailAliasModal) },
   { icon: '🤖', label: 'New automation rule', sub: 'admin', admin: true, run: () => openOnTab('settings', openAutomationModal) },
   // ── Navigate ──
+  // #49 — palette navigate entries read the same label map, so "Go to SIM
+  // Plans" matches the sidebar and page title exactly (no more "Go to sim").
   ...['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'shop', 'virtual', 'tasks', 'settings']
-    .map(t => ({ icon: '↪', label: `Go to ${t}`, sub: 'navigate', tab: t, run: () => goToTab(t) })),
+    .map(t => ({ icon: '↪', label: `Go to ${TAB_META[t]?.label || t}`, sub: 'navigate', tab: t, run: () => goToTab(t) })),
 ];
 
 // Commands the current user may run — admin-only entries are hidden for
