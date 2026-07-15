@@ -4812,7 +4812,7 @@ async function renderRepairsTab() {
     : shown.map(r => `
       <tr>
         <td><div class="customer-name">${escHtml(r.customerName || '—')}</div></td>
-        <td>${escHtml(r.device || '—')}${r.kcPurchase ? ' <span class="badge" style="background:rgba(83,58,253,0.1);color:var(--accent);font-size:10px;">KC phone</span>' : ''}</td>
+        <td>${escHtml(r.device || '—')}${r.kcPurchase ? ' <span class="badge" style="background:rgba(99, 91, 255,0.1);color:var(--accent);font-size:10px;">KC phone</span>' : ''}</td>
         <td style="font-size:12px;">${r.services.map(s => escHtml(s.name)).join('<br>') || '—'}</td>
         <td><strong>£${(r.total || 0).toFixed(2)}</strong></td>
         <td>${r.openedAt ? fmtDate(r.openedAt) : '—'}</td>
