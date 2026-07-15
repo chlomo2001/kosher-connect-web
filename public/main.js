@@ -2803,7 +2803,7 @@ function renderDetailPanel(id) {
     ...otherServices,
   ];
   const servicesHTML = allActiveServices.length === 0
-    ? `<span style="color:var(--muted);font-size:13px;">No active services.</span>`
+    ? `<span style="color:var(--muted);font-size:13px;">No active services yet — add one from “New Service” below.</span>`
     : allActiveServices.map(s => `<span class="badge badge-${s.type}" style="font-size:12px;padding:5px 12px;">${escHtml(s.label)}</span>`).join('');
 
   // ── Trip bundle: the next flight as a unit — flight + phone + SIM + VN,
@@ -2889,10 +2889,10 @@ function renderDetailPanel(id) {
           <div class="detail-name">${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:16px;">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
           <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(c.phone)}</a>` : '—'} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
         </div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;align-items:center;">
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer">⏰</button>
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openEditModal('${c.id}')">✏️ Edit</button>
-          <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="dismissCustomerCard()">✕</button>
+          <button class="card-close" onclick="dismissCustomerCard()" title="Close" aria-label="Close">✕</button>
         </div>
       </div>
 
@@ -2933,13 +2933,13 @@ function renderDetailPanel(id) {
       </details>
 
       <div class="section-divider" style="margin-top:18px;">New Service</div>
-      <div class="service-actions">
-        <button class="btn btn-rental" style="font-size:13px;padding:7px 16px;" onclick="openNewRentalModal('${c.id}')">📱 New Rental</button>
-        <button class="btn btn-primary" style="font-size:13px;padding:7px 16px;" onclick="openNewBookingModal('${c.id}')">✈️ New Flight Booking</button>
-        <button class="btn btn-vn" style="font-size:13px;padding:7px 16px;" onclick="openNewVNModal('${c.id}')">🔢 New Virtual Number</button>
-        <button class="btn btn-sim" style="font-size:13px;padding:7px 16px;" onclick="openAddSimModal('${c.id}')">💳 New SIM Plan</button>
-        <button class="btn btn-outline" style="font-size:13px;padding:7px 16px;" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal('${c.id}')})()">🔧 New Repair</button>
-        <button class="btn btn-outline" style="font-size:13px;padding:7px 16px;" onclick="openNewServiceModal('${c.id}')">🖨️ Online / Print Service</button>
+      <div class="card-action-grid">
+        <button class="card-action" onclick="openNewRentalModal('${c.id}')"><span class="ca-icon">📱</span> Rental</button>
+        <button class="card-action" onclick="openAddSimModal('${c.id}')"><span class="ca-icon">💳</span> SIM Plan</button>
+        <button class="card-action" onclick="openNewBookingModal('${c.id}')"><span class="ca-icon">✈️</span> Flight</button>
+        <button class="card-action" onclick="openNewVNModal('${c.id}')"><span class="ca-icon">🔢</span> Virtual Number</button>
+        <button class="card-action" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal('${c.id}')})()"><span class="ca-icon">🔧</span> Repair</button>
+        <button class="card-action" onclick="openNewServiceModal('${c.id}')"><span class="ca-icon">🖨️</span> Print / Online</button>
       </div>
     </div>`;
 
@@ -3012,7 +3012,7 @@ async function loadWalletSection(customerId) {
   }
   if (statLbl) statLbl.textContent = bal < 0 ? 'Owes (wallet)' : bal > 0 ? 'In credit' : 'Wallet balance';
   const entriesHtml = data.entries.length === 0
-    ? `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No wallet activity yet.</div>`
+    ? `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No wallet activity yet — record a payment or charge to start the ledger.</div>`
     : data.entries.slice(0, 8).map(e => `
         <div class="history-item">
           <div style="display:flex;align-items:center;flex:1;">
@@ -6488,6 +6488,14 @@ async function renderTasksTab() {
   const card = (t) => {
     const s = suggestTaskPriority(t, today);
     const overdueDue = t.dueDate && t.dueDate < today;
+    // #62 — a chase task you can act on in place: deep-link the customer and,
+    // for money tasks, drop the payment modal right onto the card.
+    const isMoneyTask = t.customerId && /£|owes|balance|arrears|\bpay\b/i.test(t.title || '');
+    const custLabel = t.customerName
+      ? (t.customerId
+          ? `<span class="dash-link" style="color:var(--accent);cursor:pointer;" onclick="goToTab('customers',{customerId:'${escHtml(String(t.customerId))}'})">👤 ${escHtml(t.customerName)}</span> · `
+          : '👤 ' + escHtml(t.customerName) + ' · ')
+      : '';
     return `
     <div class="task-card${t.done ? ' task-done' : ''}">
       <div style="display:flex;align-items:flex-start;gap:10px;">
@@ -6496,13 +6504,14 @@ async function renderTasksTab() {
         <div style="flex:1;min-width:0;">
           <div class="history-desc" style="${t.done ? 'text-decoration:line-through;' : ''}">${escHtml(t.title)}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px;">
-            ${t.customerName ? '👤 ' + escHtml(t.customerName) + ' · ' : ''}${t.source !== 'manual' ? '🤖 auto · ' : ''}${t.dueDate ? `<span style="${overdueDue && !t.done ? 'color:var(--danger);font-weight:600;' : ''}">due ${fmtDate(t.dueDate)}</span> · ` : ''}${t.notes ? escHtml(t.notes) : ''}
+            ${custLabel}${t.source !== 'manual' ? '🤖 auto · ' : ''}${t.dueDate ? `<span style="${overdueDue && !t.done ? 'color:var(--danger);font-weight:600;' : ''}">due ${fmtDate(t.dueDate)}</span> · ` : ''}${t.notes ? escHtml(t.notes) : ''}
           </div>
         </div>
         ${taskPriorityBadge(t.priority)}
       </div>
       ${!t.done ? `
       <div class="task-actions">
+        ${isMoneyTask ? `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openWalletModal('${escHtml(String(t.customerId))}')">💰 Record</button>` : ''}
         <select class="task-mini" onchange="setTaskPriority('${escHtml(t.id)}', this.value)" title="Priority">
           ${['High', 'Normal', 'Low'].map(p => `<option value="${p}" ${t.priority === p ? 'selected' : ''}>${p === 'High' ? '🔥 Now' : p === 'Normal' ? '📋 Next' : '🌙 Later'}</option>`).join('')}
         </select>
