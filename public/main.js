@@ -741,6 +741,23 @@ function settingNum(key, fallback) {
   return (s && Number.isFinite(s.numValue)) ? s.numValue : fallback;
 }
 
+// #47 — the pricing FORMULA, isolated as its own pure function. This mirrors
+// lib/rentalMath.mjs::priceFromDays exactly (that module is the canonical,
+// unit-tested statement of the maths — see test/rentalMath.test.mjs). Kept as
+// a mirror here only because the browser has no bundler to import the module.
+function priceFromDays(chargeableDays, totalDays, rate) {
+  let price = chargeableDays * rate.ratePerDay;
+  if (chargeableDays > 0 && price < rate.minCharge) price = rate.minCharge;
+  // Cap scales per calendar window (default 30 days): chargeable days set the
+  // £, calendar days set how many cap periods the rental spans — so a 60-day
+  // rental caps at 2× cap, not 1×.
+  if (rate.cap != null) {
+    const capTotal = rate.cap * Math.max(1, Math.ceil(totalDays / (rate.capPeriodDays || 30)));
+    if (price > capTotal) price = capTotal;
+  }
+  return price;
+}
+
 function calcRentalPrice(fromDate, toDate, country = 'USA', ukPlan = 'standard', simGiven = true) {
   let chargeableDays = 0;
   let totalDays = 0;
@@ -751,16 +768,7 @@ function calcRentalPrice(fromDate, toDate, country = 'USA', ukPlan = 'standard',
     if (!isShabbatOrHoliday(cur, country)) chargeableDays++;
     cur.setDate(cur.getDate() + 1);
   }
-  const { ratePerDay, minCharge, cap, capPeriodDays } = rateFor(country, ukPlan, simGiven);
-  let price = chargeableDays * ratePerDay;
-  if (chargeableDays > 0 && price < minCharge) price = minCharge;
-  // Cap scales per calendar window (default 30 days): chargeable days set the
-  // £, calendar days set how many cap periods the rental spans — so a 60-day
-  // rental caps at 2× cap, not 1×.
-  if (cap != null) {
-    const capTotal = cap * Math.max(1, Math.ceil(totalDays / (capPeriodDays || 30)));
-    if (price > capTotal) price = capTotal;
-  }
+  const price = priceFromDays(chargeableDays, totalDays, rateFor(country, ukPlan, simGiven));
   return { chargeableDays, totalDays, price };
 }
 
