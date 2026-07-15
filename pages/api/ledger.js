@@ -70,6 +70,24 @@ async function handler(req, res) {
         if (!(await tabAllowedFor(req.staff, 'wallet'))) {
           return res.status(403).json({ success: false, error: 'The wallet is not enabled for your account.' })
         }
+        // Revenue report: charges (debits) grouped by entry_type + money
+        // actually received (payments/top-ups), for entries since `from`.
+        if (req.query.report) {
+          const from = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.from || ''))
+            ? req.query.from : new Date().toISOString().slice(0, 10)
+          const rows = await db.select('ledger', `select=entry_type,amount&created_at=gte.${from}`)
+          const round = (v) => Math.round(v * 100) / 100
+          const byType = {}
+          let charged = 0, received = 0, refunded = 0
+          for (const r of rows) {
+            const amt = Number(r.amount)
+            if (amt < 0) { byType[r.entry_type] = (byType[r.entry_type] || 0) - amt; charged -= amt }
+            else if (r.entry_type === 'payment' || r.entry_type === 'top_up') received += amt
+            else if (r.entry_type === 'refund') refunded += amt
+          }
+          for (const k of Object.keys(byType)) byType[k] = round(byType[k])
+          return res.json({ success: true, from, byType, charged: round(charged), received: round(received), refunded: round(refunded) })
+        }
         const since = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.since || ''))
           ? req.query.since : new Date().toISOString().slice(0, 10)
         // recent=N lets the Wallet tab pull a longer feed than the dashboard.

@@ -5918,6 +5918,64 @@ async function saveReminder(kind, id) {
   toast(time ? `⏰ Will pop up ${fmtDate(date)} at ${time}.` : `Reminder set for ${fmtDate(date)}.`, 'success');
 }
 
+// ── Business summary (revenue by service type) ───────────────────────────
+// Ledger entry_types collapsed into the services the owner thinks in.
+const REVENUE_CATS = {
+  rental: '📱 Rentals', rental_loss: '📱 Rentals',
+  sim_charge: '📶 SIM', sim_annual: '📶 SIM', sim_additional: '📶 SIM',
+  sim_replacement: '📶 SIM', sim_service: '📶 SIM',
+  repair: '🔧 Repairs',
+  booking: '✈️ Flights & tickets',
+  online_service: '🖨️ Print / online',
+  phone_sale: '🛒 Shop', stock_sale: '🛒 Shop',
+  virtual_number: '🔢 Virtual numbers',
+  extra_charge: '➕ Extra charges',
+};
+function groupRevenue(byType) {
+  const groups = {};
+  for (const [type, amt] of Object.entries(byType || {})) {
+    const label = REVENUE_CATS[type] || '• Other';
+    groups[label] = (groups[label] || 0) + amt;
+  }
+  return Object.entries(groups).sort((a, b) => b[1] - a[1]);
+}
+async function openBusinessSummary() {
+  const now = new Date();
+  const weekFrom = localISO(new Date(Date.now() - 6 * 86400000));
+  const monthFrom = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  showDynamicModal(`
+    <div class="modal-title">📊 Business summary</div>
+    <div id="bizSummaryBody" style="color:var(--muted);padding:20px 4px;">Loading…</div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>`);
+  const [wk, mo] = await Promise.all([
+    kcFetch('/api/ledger?report=1&from=' + weekFrom).then(r => r.json()).catch(() => null),
+    kcFetch('/api/ledger?report=1&from=' + monthFrom).then(r => r.json()).catch(() => null),
+  ]);
+  const body = document.getElementById('bizSummaryBody');
+  if (!body) return;
+  if (!wk?.success || !mo?.success) {
+    body.innerHTML = `<div style="color:var(--danger);padding:6px 0;">${(wk && wk.error) || (mo && mo.error) || 'Could not load the summary.'}</div>`;
+    return;
+  }
+  const col = (title, rep) => {
+    const rows = groupRevenue(rep.byType).map(([label, amt]) =>
+      `<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);"><span>${label}</span><strong style="font-feature-settings:'tnum';">£${amt.toFixed(2)}</strong></div>`).join('')
+      || '<div style="color:var(--muted);font-size:13px;padding:6px 0;">No charges yet.</div>';
+    return `<div style="flex:1;min-width:220px;">
+      <div style="font-weight:600;margin-bottom:8px;">${title}</div>
+      ${rows}
+      <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;padding-top:10px;"><span>Billed</span><span>£${rep.charged.toFixed(2)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--success);padding-top:2px;"><span>Received</span><span>£${rep.received.toFixed(2)}</span></div>
+      ${rep.refunded ? `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding-top:2px;"><span>Refunded</span><span>−£${rep.refunded.toFixed(2)}</span></div>` : ''}
+    </div>`;
+  };
+  body.style.color = 'var(--text)';
+  body.style.padding = '0';
+  body.innerHTML = `
+    <div style="display:flex;gap:28px;flex-wrap:wrap;">${col('This week (7 days)', wk)}${col('This month', mo)}</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:14px;">“Billed” is revenue charged; “Received” is money actually taken in (payments + top-ups).</div>`;
+}
+
 // ── Command palette (Ctrl/Cmd+K) ─────────────────────────────────────────
 // One box that finds anything: customers, phones (by number / IMEI / ICCID —
 // the barcode scanner types straight into it), rentals, bookings, and quick
@@ -5961,6 +6019,7 @@ const PALETTE_COMMANDS = [
   { icon: '🔧', label: 'Repairs waiting for collection', sub: 'view', run: () => filterView('repairs', () => { repairFilter = 'ready'; }) },
   { icon: '💳', label: 'Payment / top-up for open customer', sub: 'context', run: () => selectedId ? openWalletModal(selectedId) : toast('Open a customer first, then run this.', 'warning') },
   // ── Admin (hidden for helpers) ──
+  { icon: '📊', label: 'Business summary (revenue)', sub: 'admin', admin: true, run: () => openBusinessSummary() },
   { icon: '⚙️', label: 'Run automations now', sub: 'admin', admin: true, run: () => runSweepsNow() },
   { icon: '📤', label: 'Export CSV', sub: 'admin', admin: true, run: async () => { const r = await window.api.exportCSV(); toast(r?.success ? 'CSV exported.' : (r?.error || 'Export failed.'), r?.success ? 'success' : 'error'); } },
   { icon: '✉️', label: 'Add email address', sub: 'admin', admin: true, run: () => openOnTab('settings', openEmailAliasModal) },
@@ -6485,6 +6544,7 @@ function dashPaint(money, tasksList2, stillLoading) {
       </div>
       <div class="dash-actions">
         <button class="btn btn-outline" onclick="renderDashboardTab()" title="Reload today's money & tasks">↻ Refresh</button>
+        ${(!currentStaff || currentStaff.role === 'owner') ? `<button class="btn btn-outline" onclick="openBusinessSummary()" title="Revenue by service — this week & month">📊 Summary</button>` : ''}
         <button class="btn btn-outline" onclick="openNewRentalModal()">📱 New Rental</button>
         <button class="btn btn-outline" onclick="openNewBookingModal()">✈️ New Booking</button>
         <button class="btn btn-outline" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal()})()">🔧 New Repair</button>
