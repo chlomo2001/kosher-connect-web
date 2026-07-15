@@ -568,6 +568,20 @@ tbody tr.selected td { background: rgba(83, 58, 253, 0.05); }
   border: 2.5px solid transparent; border-top-color: var(--accent); border-right-color: var(--gold);
   animation: kcSpin 0.9s linear infinite;
 }
+/* Full-page boot loader */
+.kc-boot {
+  position: fixed; inset: 0; z-index: 9000;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  background: var(--bg); color: var(--text);
+  transition: opacity 0.4s ease;
+}
+.kc-boot.kc-boot-hide { opacity: 0; pointer-events: none; }
+.kc-boot-mark { width: 84px; height: 84px; }
+.kc-boot-mark img { width: 56px; height: 56px; }
+.kc-boot-mark::before { border-width: 3px; }
+.kc-boot-title { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+.kc-boot-sub { font-size: 13px; color: var(--muted); }
+
 /* legacy inline spinner kept for any older markup */
 .kc-spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: kcSpin 0.7s linear infinite; flex-shrink: 0; }
 @keyframes kcSpin { to { transform: rotate(360deg); } }

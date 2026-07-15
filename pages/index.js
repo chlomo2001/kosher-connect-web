@@ -15,6 +15,14 @@ export default function Home() {
         />
       </Head>
 
+      {/* Full-page boot loader — shows from first paint until the first tab
+          renders, then fades out (removed by initApp / the safety timeout). */}
+      <div id="kcBoot" className="kc-boot">
+        <span className="kc-logo-loader kc-boot-mark"><img src="/logo.png" alt="" width="56" height="56" /></span>
+        <div className="kc-boot-title">KosherConnect</div>
+        <div className="kc-boot-sub">Loading your business…</div>
+      </div>
+
       {/* SIDEBAR */}
       <div className="sidebar">
         <div className="logo">
@@ -153,6 +161,11 @@ export default function Home() {
       <div id="toast-container" />
 
       <Script src="/main.js" strategy="afterInteractive" />
+      {/* Safety net: if main.js never loads (bad network), don't trap the user
+          behind the splash — fade it out after 12s regardless. */}
+      <Script id="kc-boot-safety" strategy="afterInteractive">
+        {`setTimeout(function(){var b=document.getElementById('kcBoot');if(b&&!b.classList.contains('kc-boot-hide')){b.classList.add('kc-boot-hide');setTimeout(function(){b&&b.remove()},450);}},12000);`}
+      </Script>
     </>
   )
 }

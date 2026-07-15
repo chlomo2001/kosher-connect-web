@@ -239,6 +239,8 @@ async function initApp() {
   applyTabVisibility();
   reconcilePhoneStatuses();
   renderTab(allowedTabs && !allowedTabs.includes('dashboard') ? allowedTabs[0] : 'dashboard');
+  hideBootLoader(); // first tab painted — reveal the app
+
   setupNav();
   setupSearch();
   setupModal();
@@ -8265,7 +8267,18 @@ addPayment       = guardReentry(addPayment);
 deleteCustomer   = guardReentry(deleteCustomer);
 deleteRental     = guardReentry(deleteRental);
 
+// Fade out and remove the full-page boot loader. Safe to call more than once.
+function hideBootLoader() {
+  const boot = document.getElementById('kcBoot');
+  if (!boot || boot.classList.contains('kc-boot-hide')) return;
+  boot.classList.add('kc-boot-hide');
+  setTimeout(() => boot.remove(), 450);
+}
+
 // ─────────────────────────────────────────────
 //  START
 // ─────────────────────────────────────────────
-initApp();
+// Never let a boot error trap the operator behind the splash — reveal the
+// shell even if the initial load throws (per-call catches already default to
+// empty data, but this guards a truly fatal path).
+initApp().catch(err => { console.error('[init] fatal', err); hideBootLoader(); });
