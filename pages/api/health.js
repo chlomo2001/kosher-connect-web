@@ -3,18 +3,12 @@
 // layer. Returns 200 when healthy, 503 when the DB is unreachable.
 import { db, tablesMode } from '../../lib/db.js'
 import { emailStatus } from '../../lib/email.js'
-import { secretsEnabled } from '../../lib/secretbox.js'
 
 export default async function handler(req, res) {
   // `email` reports whether receipts are configured and the send mode
-  // (hold / test / live); `simCreds` reports whether the SIM-password
-  // encryption key is set — never any secret — so the owner can confirm the
-  // wiring without opening Vercel.
-  const base = {
-    email: emailStatus(),
-    simCreds: secretsEnabled ? 'on' : 'off',
-    time: new Date().toISOString(),
-  }
+  // (hold / test / live) — never any secret — so the owner can confirm the
+  // SMTP wiring AND the safety gate without opening Vercel.
+  const base = { email: emailStatus(), time: new Date().toISOString() }
   // No-DB mode is a valid, healthy configuration (the app runs on file storage).
   if (!tablesMode) {
     return res.status(200).json({ ok: true, mode: 'file', ...base })

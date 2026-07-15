@@ -3678,12 +3678,10 @@ function openSimFormModal(id, preselectCustomerId = null) {
       <div class="form-group">
         <label class="form-label">Password at Provider</label>
         <div class="password-wrap">
-          <input class="form-input" id="simPassword" type="password"
-            placeholder="${s?.hasPassword ? 'Leave blank to keep current password' : 'Password'}"
-            value="" autocomplete="off">
+          <input class="form-input" id="simPassword" type="password" placeholder="Password"
+            value="${escHtml(s?.password || '')}" autocomplete="off">
           <button class="pw-toggle" type="button" id="simPwBtn" onclick="toggleSimPassword()">👁</button>
         </div>
-        <div class="form-hint" style="font-size:12px;color:var(--muted);margin-top:4px;">🔒 Stored encrypted. ${s?.hasPassword ? 'A password is on file — leave blank to keep it.' : ''}</div>
       </div>
       <div class="form-group form-full">
         <label class="form-label">Active Plan (description)</label>
@@ -3755,6 +3753,7 @@ async function saveSimForm(editId) {
     simNumber:      document.getElementById('simNumber').value.trim(),
     iccid:          document.getElementById('simIccid').value.trim(),
     email:          document.getElementById('simEmail').value.trim(),
+    password:       document.getElementById('simPassword').value,
     plan:           document.getElementById('simPlan').value.trim(),
     renewalDate:    document.getElementById('simRenewal').value,
     paymentType,
@@ -3762,11 +3761,6 @@ async function saveSimForm(editId) {
     ddDate:         paymentType !== 'direct' ? Math.min(31, Math.max(1, parseInt(document.getElementById('simDdDate')?.value) || 1)) : null,
     simMonthlyCost: paymentType !== 'direct' ? (parseFloat(document.getElementById('simMonthlyCost')?.value) || 0) : 0,
   };
-  // Only send the password when the operator actually typed one. Blank means
-  // "keep the encrypted password already on file" — the server preserves it,
-  // so editing other fields never wipes the stored secret.
-  const pwTyped = document.getElementById('simPassword').value;
-  if (pwTyped) fields.password = pwTyped;
 
   let newSimId = null;
   let setupHistoryId = null;
@@ -3821,7 +3815,7 @@ function openManageSimModal(id) {
   if (!s) return;
   const history = s.history || [];
   const totalCharged = history.reduce((sum, h) => sum + (h.amount || 0), 0);
-  const pwMasked = s.hasPassword ? '••••••••' : '—';
+  const pwMasked = s.password ? '••••••••' : '—';
 
   const historyHtml = history.length === 0
     ? `<div style="color:var(--muted);font-size:13px;padding:10px 0;">No history yet.</div>`
@@ -3844,7 +3838,7 @@ function openManageSimModal(id) {
       <div style="color:var(--muted);">Password</div>
       <div style="display:flex;align-items:center;gap:6px;">
         <span id="mgSimPwText" style="font-size:13px;">${pwMasked}</span>
-        ${s.hasPassword ? `<button class="pw-toggle" id="mgSimPwBtn" style="position:static;" onclick="toggleMgSimPw('${escHtml(s.id)}')">👁</button>` : ''}
+        ${s.password ? `<button class="pw-toggle" style="position:static;" onclick="toggleMgSimPw('${escHtml(s.id)}')">👁</button>` : ''}
       </div>
       <div style="color:var(--muted);">Plan</div><div>${escHtml(s.plan||'—')}</div>
       <div style="color:var(--muted);">Renewal</div><div>${fmtDate(s.renewalDate)}</div>
@@ -3956,20 +3950,11 @@ function onSimChargeTypeChange(simId) {
 // Reveal/mask the SIM password. Takes the SIM id and looks the password up
 // from state at click time — the password itself must never be embedded in
 // the DOM/HTML attributes.
-// Reveal fetches the decrypted password on demand — it never lives in the
-// page data. Hidden again on a second click.
-async function toggleMgSimPw(simId) {
+function toggleMgSimPw(simId) {
   const el = document.getElementById('mgSimPwText');
-  const btn = document.getElementById('mgSimPwBtn');
-  if (!el) return;
-  if (el.textContent !== '••••••••') { el.textContent = '••••••••'; if (btn) btn.textContent = '👁'; return; }
-  if (btn) { btn.disabled = true; btn.textContent = '…'; }
-  try {
-    const res = await kcFetch('/api/sims?reveal=' + encodeURIComponent(simId)).then(r => r.json());
-    if (res && res.success) { el.textContent = res.password || '(empty)'; if (btn) btn.textContent = '🙈'; }
-    else { toast(res?.error || 'Could not reveal the password.', 'error'); }
-  } catch { toast('Could not reveal the password.', 'error'); }
-  finally { if (btn) btn.disabled = false; }
+  const s = sims.find(x => x.id === simId);
+  if (!el || !s) return;
+  el.textContent = el.textContent === '••••••••' ? (s.password || '') : '••••••••';
 }
 
 async function addSimCharge(simId) {
