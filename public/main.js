@@ -2641,6 +2641,47 @@ function toggleDetail(id) {
   }
 }
 
+// Customer 360 — one chronological timeline of EVERYTHING this customer has
+// done (every rental, flight, SIM, virtual number, repair and service),
+// newest first, built from the in-memory records the card already loaded.
+function buildCustomerTimeline(c) {
+  const cid = c.id;
+  const ev = [];
+  for (const r of rentals.filter(x => x.customerId === cid)) {
+    ev.push({ date: r.fromDate || r.createdAt, icon: '📱', cat: 'Rental',
+      title: `Rental${r.phoneNumber ? ' — ' + r.phoneNumber : r.country ? ' — ' + r.country : ''}`,
+      sub: `${r.status}${r.fromDate ? ' · ' + fmtDate(r.fromDate) + (r.toDate ? ' → ' + fmtDate(r.toDate) : '') : ''}`,
+      amount: rentalGrandTotal(r) });
+  }
+  for (const b of bookings.filter(x => x.customerId === cid)) {
+    ev.push({ date: b.travelDate || b.createdAt, icon: '✈️', cat: 'Flight',
+      title: `${b.route || 'Flight'}${b.passenger ? ' — ' + b.passenger : ''}`,
+      sub: `${b.status || ''}${b.travelDate ? ' · ' + fmtDate(b.travelDate) : ''}`,
+      amount: Number(b.price || b.total || 0) });
+  }
+  for (const s of sims.filter(x => x.customerId === cid)) {
+    ev.push({ date: s.createdAt || s.renewalDate, icon: '📶', cat: 'SIM',
+      title: `SIM — ${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}`,
+      sub: `${s.status || ''}${s.renewalDate ? ' · renews ' + fmtDate(s.renewalDate) : ''}` });
+  }
+  for (const v of virtualNumbers.filter(x => x.customerId === cid)) {
+    ev.push({ date: v.createdAt, icon: '🔢', cat: 'Virtual number',
+      title: `VN ${v.number || ''}`.trim(), sub: v.status || '' });
+  }
+  for (const r of repairs.filter(x => x.customerId === cid)) {
+    ev.push({ date: r.openedAt || r.createdAt, icon: '🔧', cat: 'Repair',
+      title: `Repair${r.device ? ' — ' + r.device : ''}`, sub: r.status || '',
+      amount: Number(r.total || 0) });
+  }
+  for (const o of serviceOrders.filter(x => x.customerId === cid)) {
+    ev.push({ date: o.createdAt, icon: '🖨️', cat: 'Service',
+      title: o.serviceName || 'Service', sub: o.createdAt ? fmtDate(o.createdAt) : '',
+      amount: Number(o.total || 0) });
+  }
+  ev.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  return ev;
+}
+
 function renderDetailPanel(id) {
   const c = customers.find(x => x.id === id);
   if (!c) return;
@@ -2739,6 +2780,23 @@ function renderDetailPanel(id) {
       </div>`;
   }
 
+  // Full activity timeline (Customer 360).
+  const timeline = buildCustomerTimeline(c);
+  const catCounts = timeline.reduce((m, e) => (m[e.cat] = (m[e.cat] || 0) + 1, m), {});
+  const timelineSummary = Object.entries(catCounts).map(([k, n]) => `${n} ${k.toLowerCase()}${n === 1 ? '' : 's'}`).join(' · ');
+  const lifetimeSpend = timeline.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const timelineHtml = timeline.length === 0
+    ? `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No activity yet.</div>`
+    : timeline.map(e => `
+        <div class="history-item" style="align-items:flex-start;gap:8px;">
+          <span style="width:20px;flex-shrink:0;text-align:center;">${e.icon}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;color:var(--text);">${escHtml(e.title)}</div>
+            <div style="font-size:11px;color:var(--muted);">${escHtml(e.cat)}${e.sub ? ' · ' + escHtml(e.sub) : ''}</div>
+          </div>
+          ${e.amount ? `<span style="font-size:12px;color:var(--muted);white-space:nowrap;">£${Number(e.amount).toFixed(2)}</span>` : ''}
+        </div>`).join('');
+
   const panelHtml = `
     <div class="detail-panel" id="detailPanel">
       <div class="detail-header">
@@ -2778,6 +2836,14 @@ function renderDetailPanel(id) {
       <div id="walletSection-${c.id}" style="margin-bottom:18px;">
         <div style="color:var(--muted);font-size:13px;padding:6px 0;">Loading wallet…</div>
       </div>
+
+      <details style="margin-top:18px;margin-bottom:6px;">
+        <summary style="cursor:pointer;font-weight:600;color:var(--text);font-size:13px;padding:6px 0;border-top:1px solid var(--border);">
+          📋 Full history — ${timeline.length} record${timeline.length === 1 ? '' : 's'}${lifetimeSpend > 0 ? ` · £${lifetimeSpend.toFixed(2)} lifetime` : ''}
+          ${timelineSummary ? `<div style="font-weight:400;color:var(--muted);font-size:11px;margin-top:2px;">${escHtml(timelineSummary)}</div>` : ''}
+        </summary>
+        <div style="max-height:300px;overflow-y:auto;margin-top:8px;">${timelineHtml}</div>
+      </details>
 
       <div class="section-divider" style="margin-top:18px;">New Service</div>
       <div class="service-actions">
