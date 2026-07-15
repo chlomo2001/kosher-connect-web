@@ -558,10 +558,24 @@ tbody tr.selected td { background: rgba(83, 58, 253, 0.05); }
 .tab-placeholder p { font-size: 14px; }
 
 /* ─── SCROLLBAR ─── */
-/* Consistent loading indicator (replaces bare "Loading…" text) */
-.kc-loading { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); padding: 40px 30px; font-size: 14px; }
+/* Branded loading indicator — the KC mark, still and readable, with a
+   brand-coloured arc sweeping around it. */
+.kc-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--muted); padding: 48px 30px; font-size: 14px; }
+.kc-logo-loader { position: relative; width: 54px; height: 54px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.kc-logo-loader img { width: 34px; height: 34px; object-fit: contain; animation: kcLogoPulse 1.6s ease-in-out infinite; }
+.kc-logo-loader::before {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  border: 2.5px solid transparent; border-top-color: var(--accent); border-right-color: var(--gold);
+  animation: kcSpin 0.9s linear infinite;
+}
+/* legacy inline spinner kept for any older markup */
 .kc-spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: kcSpin 0.7s linear infinite; flex-shrink: 0; }
 @keyframes kcSpin { to { transform: rotate(360deg); } }
+@keyframes kcLogoPulse { 0%, 100% { opacity: 0.7; transform: scale(0.92); } 50% { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .kc-logo-loader::before { animation-duration: 2.4s; }
+  .kc-logo-loader img { animation: none; }
+}
 
 ::-webkit-scrollbar { width: 12px; height: 12px; }
 ::-webkit-scrollbar-track { background: transparent; }
