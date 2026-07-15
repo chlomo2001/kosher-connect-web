@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Head from 'next/head'
+import ThemeToggle from '../components/ThemeToggle'
 
 export default function Login({ supabaseUrl, googleEnabled }) {
   const [email, setEmail] = useState('')
@@ -71,6 +72,7 @@ export default function Login({ supabaseUrl, googleEnabled }) {
       <Head><title>Sign in · KosherConnect</title></Head>
       <div className="login-shell">
         <div className="login-mesh" aria-hidden="true" />
+        <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         <form className="login-card" onSubmit={ticket ? submitCode : submit}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <img src="/logo-full.png" alt="KosherConnect" style={{ height: 72, marginBottom: 10 }} />

@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
+import ThemeToggle from '../components/ThemeToggle'
 
 export default function Portal({ supabaseUrl, googleEnabled }) {
   const [email, setEmail] = useState('')
@@ -81,6 +82,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       <>
         <Head><title>My KosherConnect</title></Head>
         <div className="login-shell"><div className="login-mesh" aria-hidden="true" />
+          <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
           <div className="login-card" style={{ textAlign: 'center' }}>Loading your account…</div>
         </div>
       </>
@@ -95,6 +97,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
         <Head><title>My KosherConnect</title></Head>
         <div className="login-shell">
           <div className="login-mesh" aria-hidden="true" />
+          <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
           <div className="login-card" style={{ maxWidth: 520, width: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
               <div>
@@ -157,6 +160,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       <Head><title>My KosherConnect</title></Head>
       <div className="login-shell">
         <div className="login-mesh" aria-hidden="true" />
+        <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         <form className="login-card" onSubmit={submit}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <img src="/logo-full.png" alt="KosherConnect" style={{ height: 72, marginBottom: 10 }} />

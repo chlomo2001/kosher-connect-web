@@ -245,6 +245,7 @@ async function initApp() {
   setupSearch();
   setupModal();
   setupTopbarButtons();
+  updateThemeBtns(); // sync the persistent topbar toggle's icon to the saved theme
   document.addEventListener('click', e => {
     if (!e.target.closest('.cs-wrap')) {
       document.querySelectorAll('.cs-list.open').forEach(el => el.classList.remove('open'));
@@ -5931,6 +5932,8 @@ function renderPosView() {
           <input class="form-input pos-scan" id="posScan" placeholder="🔍 Scan a barcode, or type to search…"
             autocomplete="off" oninput="posRenderTiles()"
             onkeydown="if(event.key==='Enter'){event.preventDefault();posScanEnter();}">
+          <button class="theme-toggle" data-theme-btn onclick="toggleTheme()" title="Light / dark mode"
+            aria-label="Toggle light or dark mode">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙'}</button>
         </div>
         <div class="pos-cats">
           <button class="pos-cat${posCat === 'all' ? ' on' : ''}" onclick="posSetCat('all')">All</button>
@@ -7087,7 +7090,6 @@ function dashPaint(money, tasksList2, stillLoading) {
         <div class="dash-greeting">${greeting}${staffFirstName ? ', ' + nameHtml(staffFirstName) : ''}.</div>
       </div>
       <div class="dash-actions">
-        <button class="btn btn-outline" data-theme-btn onclick="toggleTheme()" title="Light / dark mode">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙'}</button>
         <button class="btn btn-outline" onclick="renderDashboardTab()" title="Reload today's money & tasks">↻ Refresh</button>
         ${(!currentStaff || currentStaff.role === 'owner') ? `<button class="btn btn-outline" onclick="openBusinessSummary()" title="Revenue by service — this week & month">📊 Summary</button>` : ''}
         <button class="btn btn-outline" onclick="openNewRentalModal()">📱 New Rental</button>

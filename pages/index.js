@@ -71,6 +71,14 @@ export default function Home() {
           <div className="topbar-actions">
             <input className="search-box" id="searchBox" type="text" placeholder="🔍  Search by name, phone, email..." />
             <button className="btn btn-primary" id="btnNewCustomer">+ New Customer</button>
+            {/* Persistent theme toggle — uses the app's toggleTheme() so it and
+                every other [data-theme-btn] (palette, settings, till) stay in
+                sync. updateThemeBtns() sets the right icon once main.js loads. */}
+            <button
+              className="theme-toggle" data-theme-btn suppressHydrationWarning
+              onClick={() => window.toggleTheme && window.toggleTheme()}
+              title="Light / dark mode" aria-label="Toggle light or dark mode"
+            >🌙</button>
           </div>
         </div>
 
