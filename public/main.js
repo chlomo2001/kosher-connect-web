@@ -2757,6 +2757,11 @@ function buildCustomerTimeline(c) {
       title: o.serviceName || 'Service', sub: o.createdAt ? fmtDate(o.createdAt) : '',
       amount: Number(o.total || 0) });
   }
+  // #60 — logged calls/notes and auto-logged sent emails share the timeline.
+  for (const m of (c.commLog || [])) {
+    ev.push({ date: m.at, icon: m.icon || '💬', cat: 'Contact',
+      title: m.text || m.type || 'Note', sub: m.by ? 'by ' + m.by : '' });
+  }
   ev.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
   return ev;
 }
@@ -2961,6 +2966,7 @@ function renderDetailPanel(id) {
           <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(c.phone)}</a>` : '—'} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openLogCommModal('${c.id}')" title="Log a call or note">📞</button>
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer">⏰</button>
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openEditModal('${c.id}')">✏️ Edit</button>
           <button class="card-close" onclick="dismissCustomerCard()" title="Close" aria-label="Close">✕</button>
@@ -3123,6 +3129,61 @@ function renderNextBestAction(customerId, balance) {
     </div>`;
 }
 
+// #60 — communication log. A shared writer appends to c.commLog so both the
+// manual "log a call/note" button and auto events (a sent receipt) land on the
+// same customer timeline.
+const COMM_ICONS = { call_in: '📞', call_out: '📲', message: '💬', note: '📝', email: '✉️' };
+function logComm(c, { type, text, icon }) {
+  if (!c.commLog) c.commLog = [];
+  c.commLog.push({
+    at: new Date().toISOString(), type: type || 'note', text: text || '',
+    icon: icon || COMM_ICONS[type] || '💬',
+    by: (currentStaff && (currentStaff.full_name || currentStaff.email)) || 'staff',
+  });
+}
+async function recordComm(customerId, entry) {
+  const c = customers.find(x => x.id === customerId);
+  if (!c) return;
+  logComm(c, entry);
+  await window.api.updateCustomer(c).catch(() => null);
+  const idx = customers.findIndex(x => x.id === customerId);
+  if (idx !== -1) customers[idx] = c;
+  if (selectedId === customerId) renderDetailPanel(customerId);
+}
+function openLogCommModal(customerId) {
+  const c = customers.find(x => x.id === customerId);
+  showDynamicModal(`
+    <div class="modal-title">📞 Log a call / note${c ? ' — ' + escHtml(c.firstName) + ' ' + escHtml(c.lastName) : ''}</div>
+    <div class="form-grid">
+      <div class="form-group form-full">
+        <label class="form-label">Type</label>
+        <select class="form-input" id="clType">
+          <option value="call_in">📞 Call — incoming</option>
+          <option value="call_out">📲 Call — outgoing</option>
+          <option value="message">💬 Message (WhatsApp / SMS)</option>
+          <option value="note">📝 Note</option>
+        </select>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">What happened</label>
+        <textarea class="form-input" id="clText" rows="3" placeholder="e.g. Called about the overdue phone — will return Sunday"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCommLog('${escHtml(String(customerId))}')">Save to timeline</button>
+    </div>
+  `);
+}
+async function saveCommLog(customerId) {
+  const text = document.getElementById('clText')?.value.trim();
+  if (!text) { toast('Add a short note first.', 'error'); return; }
+  const type = document.getElementById('clType')?.value || 'note';
+  await recordComm(customerId, { type, text });
+  closeDynamicModal();
+  toast('Logged to the customer timeline.', 'success');
+}
+
 function openWalletModal(customerId, balance = null) {
   const c = customers.find(x => x.id === customerId);
   // #61 — if they owe, offer "Pay full £X" so nobody reads the balance and
@@ -3213,7 +3274,11 @@ async function saveWalletEntry(customerId) {
     }).then(r => r.json()).then(er => {
       if (er && er.success && er.held) toast(er.note || 'Email is on hold — receipt not sent.', 'warning');
       else if (er && er.success && er.redirected) toast(er.note || `Test mode — sent to ${er.sentTo}.`, 'warning');
-      else if (er && er.success) toast(`Receipt emailed to ${er.sentTo}.`, 'success');
+      else if (er && er.success) {
+        toast(`Receipt emailed to ${er.sentTo}.`, 'success');
+        // #60 — a genuinely-sent receipt is logged on the customer timeline.
+        recordComm(customerId, { type: 'email', text: `Receipt emailed — £${Math.abs(amount).toFixed(2)} ${kind}` });
+      }
       else toast(er?.error || 'Payment saved, but the receipt email failed.', 'error');
     }).catch(() => toast('Payment saved, but the receipt email failed.', 'error'));
   }
