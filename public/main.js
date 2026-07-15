@@ -157,16 +157,42 @@ let customerFilter = 'all'; // all | rental | flight | sim | vn | repair | arrea
 // ─────────────────────────────────────────────
 //  INIT — called directly since script loads after DOM is ready
 // ─────────────────────────────────────────────
+// Which whole-array-saved collections failed to load. CRITICAL: rentals,
+// phones and sims persist by POSTing the ENTIRE in-memory array — the server
+// deletes any row not present. So if a load fails and we silently treat it as
+// an empty list, the next whole-array save would DELETE every real row. We
+// track the failure and hard-block those saves until a clean reload.
+let loadFailed = {};
+
+// Load an array endpoint safely: a rejected fetch, a non-OK status, or a body
+// that isn't an array all count as FAILURE (not "empty") — recorded so saves
+// are blocked. Returns [] for rendering either way.
+async function safeLoadArray(key, url) {
+  try {
+    const r = await kcFetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    if (!Array.isArray(j)) throw new Error('not an array');
+    loadFailed[key] = false;
+    return j;
+  } catch (e) {
+    loadFailed[key] = true;
+    return [];
+  }
+}
+
 async function initApp() {
   // Everything loads in PARALLEL — one round-trip of wall-clock time instead
-  // of ten. Each fetch is independent; a failure in one falls back to [] and
-  // never blocks the rest of the app from painting.
+  // of ten. The three whole-array-saved collections (rentals/phones/sims) go
+  // through safeLoadArray so a failed load can't masquerade as "empty" and
+  // trigger a fleet-wide delete on the next save.
   const arr = v => (Array.isArray(v) ? v : []);
+  loadFailed = {};
   const [cust, rent, ph, sm, bk, vn, rp, so, cfg, menu, me] = await Promise.all([
     window.api.getAllCustomers().catch(() => []),
-    window.api.getAllRentals().catch(() => []),
-    window.api.getAllPhones().catch(() => []),
-    window.api.getAllSims().catch(() => []),
+    safeLoadArray('rentals', '/api/rentals'),
+    safeLoadArray('phones', '/api/phones'),
+    safeLoadArray('sims', '/api/sims'),
     window.api.getAllBookings().catch(() => []),
     window.api.getVirtualNumbers().catch(() => []),
     // Repairs + service orders load up-front too, so customer badges/services
@@ -192,6 +218,9 @@ async function initApp() {
     currentStaff = me.staff || null;
     allowedTabs = Array.isArray(me.allowedTabs) ? me.allowedTabs : null;
   }
+  // A failed load of a whole-array collection: warn, block saves, offer reload.
+  const failedKeys = Object.keys(loadFailed).filter(k => loadFailed[k]);
+  if (failedKeys.length) showReloadBanner(`Couldn’t load ${failedKeys.join(', ')} — some data is missing. Saving is paused to protect your records.`);
   applyTabVisibility();
   reconcilePhoneStatuses();
   renderTab(allowedTabs && !allowedTabs.includes('dashboard') ? allowedTabs[0] : 'dashboard');
@@ -210,6 +239,10 @@ async function initApp() {
 }
 
 function reconcilePhoneStatuses() {
+  // NEVER reconcile on incomplete data: if rentals or phones failed to load,
+  // the derived statuses would be wrong and a save would persist a fleet-wide
+  // wipe. This read used to trigger a destructive whole-fleet write on init.
+  if (loadFailed.rentals || loadFailed.phones) return;
   const activePhoneIds = new Set(
     rentals.filter(r => r.status === 'active' || r.status === 'overdue').map(r => r.phoneId)
   );
@@ -225,6 +258,28 @@ function reconcilePhoneStatuses() {
     }
   });
   if (changed) window.api.saveAllPhones(phones);
+}
+
+// Prominent, dismiss-proof banner when critical data failed to load. Saving
+// stays blocked until the operator reloads and everything loads cleanly.
+function showReloadBanner(msg) {
+  if (document.getElementById('kcReloadBanner')) return;
+  const b = document.createElement('div');
+  b.id = 'kcReloadBanner';
+  b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:6000;background:var(--danger);color:#fff;padding:11px 18px;text-align:center;font-size:14px;font-weight:500;box-shadow:0 2px 8px rgba(0,0,0,.2);';
+  b.innerHTML = `⚠️ ${escHtml(msg)} <button onclick="location.reload()" style="margin-left:12px;background:#fff;color:var(--danger);border:none;border-radius:7px;padding:5px 14px;cursor:pointer;font-weight:700;">↻ Reload</button>`;
+  document.body.appendChild(b);
+}
+
+// The three whole-array savers refuse to write while that collection's load
+// failed — the save would delete every row the server still holds.
+function saveBlocked(key) {
+  if (loadFailed[key]) {
+    toast(`${key} didn’t load fully — reload before saving so nothing is lost.`, 'error');
+    showReloadBanner(`Couldn’t load ${key} — saving is paused to protect your records.`);
+    return true;
+  }
+  return false;
 }
 
 // ─────────────────────────────────────────────
@@ -837,10 +892,12 @@ function rentalDebt(r) {
 }
 
 function saveRentals(data) {
+  if (saveBlocked('rentals')) return;
   rentals = data;
   window.api.saveAllRentals(data);
 }
 function savePhones(data) {
+  if (saveBlocked('phones')) return;
   phones = data;
   window.api.saveAllPhones(data);
 }
@@ -3399,6 +3456,7 @@ async function deleteCustomer(id) {
 // ═══════════════════════════════════════════════════════
 
 function saveSims(data) {
+  if (saveBlocked('sims')) return;
   sims = data;
   window.api.saveAllSims(data);
 }
