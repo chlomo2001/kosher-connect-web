@@ -2870,7 +2870,7 @@ function renderDetailPanel(id) {
         </div>
         <div class="detail-stat">
           <div class="detail-stat-label">Virtual Numbers</div>
-          <div class="detail-stat-value" style="color:#c026d3;">${activeVNs}</div>
+          <div class="detail-stat-value" style="color:var(--vn);">${activeVNs}</div>
         </div>
       </div>
 
@@ -4208,7 +4208,7 @@ const BOOKING_STATUSES = ['Booked', 'Ticketed', 'Completed', 'Cancelled'];
 function bookingStatusBadge(status) {
   const styles = {
     Booked:    'background:rgba(185,185,249,0.45);color:#4434d4;',
-    Ticketed:  'background:rgba(249,107,238,0.14);color:#c026d3;',
+    Ticketed:  'background:rgba(124,58,237,0.13);color:var(--vn);',
     Completed: 'background:rgba(34,197,94,0.15);color:var(--success);',
     Cancelled: 'background:rgba(239,68,68,0.15);color:var(--danger);',
   };
@@ -4782,7 +4782,7 @@ function repairStatusBadge(status) {
   const styles = {
     'Open':        'background:rgba(185,185,249,0.45);color:#4434d4;',
     'In Progress': 'background:#f5e9d4;color:#9b6829;',
-    'Ready':       'background:rgba(249,107,238,0.14);color:#c026d3;',
+    'Ready':       'background:rgba(124,58,237,0.13);color:var(--vn);',
     'Collected':   'background:rgba(34,197,94,0.15);color:var(--success);',
     'Cancelled':   'background:rgba(239,68,68,0.15);color:var(--danger);',
   };
