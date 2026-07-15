@@ -33,8 +33,12 @@
   /* Accents / semantic (ruby is the doc's red; success stays product-UI green) */
   --gold: #9b6829;              /* warm accent — RESERVED for warnings / hebrew dates */
   --sim: #0e7490;               /* #53 — SIM gets its own teal so "SIM" ≠ "warning" */
+  --vn: #c026d3;                /* #77 — the VN purple, was pasted as a literal 5× */
   --danger: #ea2261;            /* ruby */
   --magenta: #f96bee;
+
+  /* #77 — a 4/8/12/16/24 spacing scale so paddings/gaps stop being re-typed */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px;  --space-4: 16px;  --space-6: 24px;
   --success: #16a34a;
   --warning: #b45309;
 
@@ -66,6 +70,7 @@
 
   --gold: #e0a94a;
   --sim: #38bdf8;
+  --vn: #e879f9;
   --danger: #ff5c88;
   --success: #34d399;
   --warning: #f0a04b;
@@ -304,7 +309,7 @@ tbody tr.selected td { background: rgba(83, 58, 253, 0.05); }
 .badge-active { background: rgba(22,163,74,0.12); color: var(--success); }
 .badge-rental { background: rgba(185,185,249,0.45); color: var(--primary-deep); }
 .badge-sim { background: rgba(14,116,144,0.10); color: var(--sim); }
-.badge-vn { background: rgba(249,107,238,0.14); color: #c026d3; }
+.badge-vn { background: rgba(249,107,238,0.14); color: var(--vn); }
 .badge-booking { background: rgba(83,58,253,0.10); color: var(--accent); }
 .badge-repair { background: rgba(234,88,12,0.12); color: #c2410c; }
 
@@ -498,7 +503,7 @@ tbody tr.selected td { background: rgba(83, 58, 253, 0.05); }
 .btn-rental:hover { background: rgba(185,185,249,0.7); }
 .btn-sim { background: rgba(14,116,144,0.08); color: var(--sim); border: 1px solid rgba(14,116,144,0.30); }
 .btn-sim:hover { filter: brightness(0.97); }
-.btn-vn { background: rgba(249,107,238,0.12); color: #c026d3; border: 1px solid rgba(249,107,238,0.35); }
+.btn-vn { background: rgba(249,107,238,0.12); color: var(--vn); border: 1px solid rgba(249,107,238,0.35); }
 .btn-vn:hover { background: rgba(249,107,238,0.22); }
 
 .add-payment-row {
