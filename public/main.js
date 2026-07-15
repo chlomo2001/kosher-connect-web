@@ -4140,6 +4140,18 @@ function loadingHtml(label = 'Loading…') {
   return `<div class="kc-loading"><span class="kc-spinner"></span><span>${escHtml(label)}</span></div>`;
 }
 
+// An error state with a Retry — never a dead-end, and never a reassuring
+// empty shell when the backend is actually unreachable. Retry re-renders the
+// current tab.
+function errorHtml(label = 'Couldn’t load this') {
+  return `<div style="text-align:center;padding:48px 30px;color:var(--muted);">
+    <div style="font-size:30px;margin-bottom:8px;">⚠️</div>
+    <div style="font-size:15px;color:var(--text);margin-bottom:4px;">${escHtml(label)}</div>
+    <div style="font-size:13px;margin-bottom:16px;">Couldn’t reach the server. Your data is safe — this is just the view.</div>
+    <button class="btn btn-primary" onclick="renderTab(currentTab)">↻ Try again</button>
+  </div>`;
+}
+
 // Money with thousands separators — "£13,135.00", not "£13135.00".
 function fmtGbp(v) {
   return '£' + (Number(v) || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -4780,10 +4792,12 @@ function repairStatusBadge(status) {
 async function renderRepairsTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = loadingHtml('Loading repairs…');
-  [repairs, repairMenu] = await Promise.all([
-    window.api.getRepairs(),
-    window.api.getServiceMenu('repair'),
-  ]);
+  try {
+    [repairs, repairMenu] = await Promise.all([
+      window.api.getRepairs(),
+      window.api.getServiceMenu('repair'),
+    ]);
+  } catch { content.innerHTML = errorHtml('Couldn’t load repairs'); return; }
   if (!Array.isArray(repairs)) repairs = [];
 
   const open = repairs.filter(r => r.status === 'Open' || r.status === 'In Progress');
@@ -5094,10 +5108,12 @@ async function renderServicesTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = loadingHtml('Loading services…');
   if (svcTimerInterval) { clearInterval(svcTimerInterval); svcTimerInterval = null; }
-  [serviceOrders, onlineMenu] = await Promise.all([
-    window.api.getServiceOrders(),
-    window.api.getServiceMenu('online'),
-  ]);
+  try {
+    [serviceOrders, onlineMenu] = await Promise.all([
+      window.api.getServiceOrders(),
+      window.api.getServiceMenu('online'),
+    ]);
+  } catch { content.innerHTML = errorHtml('Couldn’t load services'); return; }
   if (!Array.isArray(serviceOrders)) serviceOrders = [];
   if (!Array.isArray(onlineMenu)) onlineMenu = [];
 
@@ -5322,7 +5338,7 @@ async function renderShopTab() {
   content.innerHTML = loadingHtml('Loading shop…');
   const data = await kcFetch('/api/shop').then(r => r.json()).catch(() => null);
   if (!data || !data.success) {
-    content.innerHTML = `<div class="empty-state"><div class="emoji">🛍️</div><p>Shop unavailable${data?.error ? ' — ' + escHtml(data.error) : ''}.</p></div>`;
+    content.innerHTML = errorHtml(data?.error || 'Couldn’t load the shop');
     return;
   }
   shopItems = data.items; shopSales = data.sales;
@@ -6670,10 +6686,12 @@ let vnPriceMatrix = []; // bundle price matrix (also drives the billing modal)
 async function renderVirtualTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = loadingHtml('Loading virtual numbers…');
-  [virtualNumbers, vnPriceMatrix] = await Promise.all([
-    window.api.getVirtualNumbers(),
-    kcFetch('/api/vn-prices').then(r => r.ok ? r.json() : []).catch(() => []),
-  ]);
+  try {
+    [virtualNumbers, vnPriceMatrix] = await Promise.all([
+      window.api.getVirtualNumbers(),
+      kcFetch('/api/vn-prices').then(r => r.ok ? r.json() : []).catch(() => []),
+    ]);
+  } catch { content.innerHTML = errorHtml('Couldn’t load virtual numbers'); return; }
   if (!Array.isArray(virtualNumbers)) virtualNumbers = [];
   if (!Array.isArray(vnPriceMatrix)) vnPriceMatrix = [];
 
