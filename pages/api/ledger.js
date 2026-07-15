@@ -175,6 +175,7 @@ async function handler(req, res) {
         amount,
         method,
         description: b.note || null,
+        created_by: req.staff?.id || null, // #46 — who moved the money
       }])
 
       return res.json({

@@ -31,6 +31,7 @@ async function chargeSim(req, res, b) {
     amount: -amt,
     description: String(b.description || 'SIM charge').slice(0, 200),
     related_sim_id: simRows[0]?.id || null, // best-effort FK; the reference carries the link
+    created_by: req.staff?.id || null, // #46
   }], 'charge_reference')
   const balRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
   return res.json({ success: true, balance: balRows.length ? Number(balRows[0].balance) : 0 })

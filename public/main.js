@@ -221,6 +221,13 @@ async function initApp() {
   repairs = arr(rp);
   serviceOrders = arr(so);
   pricingConfig = cfg;
+  // #42 — if the pricing settings didn't load, every price silently uses a
+  // built-in fallback. Never silent: warn prominently so nobody charges at
+  // the wrong rate.
+  if (!cfg) {
+    console.warn('[settings] pricing config failed to load — using built-in fallback rates');
+    showReloadBanner('Couldn’t load your pricing settings — prices may be using built-in defaults. Reload before charging.');
+  }
   simMenu = arr(menu);
   if (me?.success && me.authEnabled) {
     currentStaff = me.staff || null;
@@ -1731,7 +1738,7 @@ async function saveNewRental() {
     okLabel: isReservation ? 'Reserve & charge' : 'Charge rental',
   }))) return;
   const rental = {
-    id:           Date.now().toString(),
+    id:           uid(),
     customerId,
     customerName: `${customer.firstName} ${customer.lastName}`,
     customerPhone: customer.phone || '',
@@ -1909,7 +1916,7 @@ function saveNewPhone() {
   if (!number) { toast('Phone number is required.', 'error'); return; }
   const pCountryVal = document.getElementById('pCountry').value;
   const phone = {
-    id:         Date.now().toString(),
+    id:         uid(),
     number,
     country:    pCountryVal,
     ukPlan:     pCountryVal === 'UK' ? document.getElementById('pUKPlan').value : undefined,
@@ -3541,6 +3548,14 @@ async function saveCustomer() {
           }
         });
         if (changed) saveRentals(rentals);
+        // #44/#71 — SIM rows carry a denormalized customerName too; keep it
+        // fresh on rename (previously only rentals were patched, so SIM rows
+        // kept the stale name forever).
+        let simChanged = false;
+        sims.forEach(s => {
+          if (s.customerId === editId) { s.customerName = newName; simChanged = true; }
+        });
+        if (simChanged) saveSims(sims);
       }
     }
   } else {
@@ -3882,8 +3897,8 @@ async function saveSimForm(editId) {
       okLabel: 'Charge setup',
     }))) return;
     const setupDate = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
-    newSimId = Date.now().toString();
-    setupHistoryId = (Date.now() + 1).toString();
+    newSimId = uid();
+    setupHistoryId = uid();
     sims.push({
       id: newSimId,
       ...fields,
@@ -4062,7 +4077,7 @@ async function addSimCharge(simId) {
     okLabel: 'Add charge',
   }))) return;
   if (!s.history) s.history = [];
-  const historyId = Date.now().toString();
+  const historyId = uid();
   s.history.push({
     id:     historyId,
     type, desc, amount,
@@ -4150,6 +4165,13 @@ function errorHtml(label = 'Couldn’t load this') {
     <div style="font-size:13px;margin-bottom:16px;">Couldn’t reach the server. Your data is safe — this is just the view.</div>
     <button class="btn btn-primary" onclick="renderTab(currentTab)">↻ Try again</button>
   </div>`;
+}
+
+// Collision-safe client id (#45): Date.now() alone collides when two records
+// are minted in the same millisecond (unique legacy_id then rejects one).
+// Timestamp + 3 random digits keeps it numeric-ish and effectively unique.
+function uid() {
+  return Date.now().toString() + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
 }
 
 // Money with thousands separators — "£13,135.00", not "£13135.00".
