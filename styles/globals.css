@@ -347,6 +347,9 @@ tbody tr.selected td { background: rgba(83, 58, 253, 0.05); }
   backdrop-filter: blur(3px);
 }
 .modal-overlay.hidden { display: none; }
+/* #56 — the customer card drops its own scrim while an action modal is open,
+   so the screen dims once, not two/three layers deep. */
+.modal-overlay.scrim-off { background: transparent; backdrop-filter: none; }
 
 .modal {
   background: var(--surface);

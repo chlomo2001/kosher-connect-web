@@ -2351,7 +2351,17 @@ function showDynamicModal(html) {
   }
   overlay.innerHTML = `<div class="modal" style="width:560px;">${html}</div>`;
   overlay.classList.remove('hidden');
+  suppressCardScrim(true);
   autofocusFirstField(overlay);
+}
+
+// #56 — when an action modal opens from the customer card, drop the card's own
+// backdrop so the screen isn't dimmed twice (three scrim layers deep). The
+// card box stays put behind the action modal; only one scrim shows. Restored
+// when the action modal closes.
+function suppressCardScrim(on) {
+  const card = document.getElementById('customerCard');
+  if (card && !card.classList.contains('hidden')) card.classList.toggle('scrim-off', on);
 }
 
 // Put the cursor in the first real field so a form is ready to type — the
@@ -2368,6 +2378,7 @@ function autofocusFirstField(overlay) {
 function closeDynamicModal() {
   const overlay = document.getElementById('dynamicModal');
   if (overlay) overlay.classList.add('hidden');
+  suppressCardScrim(false);
 }
 
 // ── Charge confirmation ──────────────────────────────────────────────────
@@ -3491,8 +3502,8 @@ function clearModal() {
   ['warnPhone','warnEmail','warnName'].forEach(id => document.getElementById(id).classList.remove('visible'));
 }
 
-function showModal() { const m = document.getElementById('customerModal'); m.classList.remove('hidden'); autofocusFirstField(m); }
-function closeModal() { document.getElementById('customerModal').classList.add('hidden'); }
+function showModal() { const m = document.getElementById('customerModal'); m.classList.remove('hidden'); suppressCardScrim(true); autofocusFirstField(m); }
+function closeModal() { document.getElementById('customerModal').classList.add('hidden'); suppressCardScrim(false); }
 
 function normalizeEmail(email) {
   if (!email) return '';
