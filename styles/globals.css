@@ -42,6 +42,39 @@
   --shadow-2: rgba(0, 55, 112, 0.08) 0 8px 24px, rgba(0, 55, 112, 0.04) 0 2px 6px;
 }
 
+/* Dark theme — the shop stays open into the evening. Overrides the same
+   tokens the UI is built on; hard-coded inline colours (a few dots/badges)
+   won't flip, but every surface, text and border does. */
+:root[data-theme="dark"] {
+  --bg: #0f1620;
+  --surface: #18212e;
+  --surface2: #141c27;
+  --bg-secondary: #141c27;
+  --canvas-cream: #2a2418;
+  --border: #2a3644;
+  --border-input: #3b4b5e;
+
+  --accent: #8b7cff;
+  --accent2: #9a8dff;
+  --primary-subdued: #3a3670;
+  --brand-dark: #0b1220;
+
+  --text: #e8eef5;
+  --ink-secondary: #c2ceda;
+  --muted: #8ea0b5;
+
+  --gold: #e0a94a;
+  --danger: #ff5c88;
+  --success: #34d399;
+  --warning: #f0a04b;
+
+  --shadow-1: rgba(0, 0, 0, 0.4) 0 1px 3px;
+  --shadow-2: rgba(0, 0, 0, 0.45) 0 8px 24px, rgba(0, 0, 0, 0.3) 0 2px 6px;
+}
+:root[data-theme="dark"] body { background: var(--bg); color: var(--text); }
+html { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
 html, body { height: 100%; }
 
 body {

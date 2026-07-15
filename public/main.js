@@ -4145,6 +4145,20 @@ function fmtGbp(v) {
   return '£' + (Number(v) || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// Light/dark theme. Applied pre-paint by an inline script in _document.js;
+// this just flips + persists. Any toggle button re-labels via updateThemeBtns.
+function toggleTheme() {
+  const el = document.documentElement;
+  const dark = el.getAttribute('data-theme') === 'dark';
+  if (dark) { el.removeAttribute('data-theme'); try { localStorage.setItem('kcTheme', 'light'); } catch {} }
+  else { el.setAttribute('data-theme', 'dark'); try { localStorage.setItem('kcTheme', 'dark'); } catch {} }
+  updateThemeBtns();
+}
+function updateThemeBtns() {
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.querySelectorAll('[data-theme-btn]').forEach(b => { b.textContent = dark ? '☀️' : '🌙'; });
+}
+
 // Copy text to the clipboard with a confirmation toast. Used by the
 // check-in passport details (airline forms need each value pasted).
 function copyText(text, label) {
@@ -6071,6 +6085,7 @@ const PALETTE_COMMANDS = [
   { icon: '🧾', label: 'Cash-up (Z-report)', sub: 'tool', run: () => openCashupModal() },
   { icon: '⏰', label: 'New reminder', sub: 'tool', run: () => openRemindModal('note', '') },
   { icon: '🔑', label: 'Change my password', sub: 'tool', run: () => openChangePasswordModal() },
+  { icon: '🌓', label: 'Toggle dark mode', sub: 'tool', run: () => toggleTheme() },
   // ── Find (saved-filter views) ──
   { icon: '⏰', label: 'Show overdue rentals', sub: 'view', run: () => filterView('rentals', () => { filterStatus = 'overdue'; filterPaid = 'all'; }, renderRentalRows) },
   { icon: '💷', label: 'Rentals with a balance owing', sub: 'view', run: () => filterView('rentals', () => { filterPaid = 'debt'; filterStatus = 'all'; }, renderRentalRows) },
@@ -6618,6 +6633,7 @@ function dashPaint(money, tasksList2, stillLoading) {
         <div class="dash-greeting">${greeting}${staffFirstName ? ', ' + nameHtml(staffFirstName) : ''}.</div>
       </div>
       <div class="dash-actions">
+        <button class="btn btn-outline" data-theme-btn onclick="toggleTheme()" title="Light / dark mode">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙'}</button>
         <button class="btn btn-outline" onclick="renderDashboardTab()" title="Reload today's money & tasks">↻ Refresh</button>
         ${(!currentStaff || currentStaff.role === 'owner') ? `<button class="btn btn-outline" onclick="openBusinessSummary()" title="Revenue by service — this week & month">📊 Summary</button>` : ''}
         <button class="btn btn-outline" onclick="openNewRentalModal()">📱 New Rental</button>

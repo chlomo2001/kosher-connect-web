@@ -7,6 +7,12 @@ export default function Document() {
         <link rel="icon" type="image/png" href="/logo.png" />
         <link rel="apple-touch-icon" href="/logo.png" />
         <meta name="theme-color" content="#1c1e54" />
+        {/* Apply the saved theme before first paint — no flash of light. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem('kcTheme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}`,
+          }}
+        />
       </Head>
       <body>
         <Main />
