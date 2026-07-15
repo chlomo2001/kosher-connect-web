@@ -64,6 +64,12 @@ window.api = {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   }).then(r => r.json()),
+  // Post one SIM charge to the wallet ledger (debit). Idempotent server-side.
+  chargeSim: (p) => kcFetch('/api/sims', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: 'charge', ...p }),
+  }).then(r => r.json()),
 
   getAllBookings: () => kcFetch('/api/bookings').then(r => r.ok ? r.json() : []),
   addBooking: (b) => kcFetch('/api/bookings', {
@@ -3731,11 +3737,13 @@ async function saveSimForm(editId) {
   };
 
   let newSimId = null;
+  let setupHistoryId = null;
+  let setupFee = 0;
   if (editId) {
     const idx = sims.findIndex(s => s.id === editId);
     if (idx !== -1) sims[idx] = { ...sims[idx], ...fields };
   } else {
-    const setupFee = simChargePrice('activation'); // settings-driven, £20 fallback
+    setupFee = simChargePrice('activation'); // settings-driven, £20 fallback
     if (!(await kcConfirm({
       title: 'Confirm SIM setup charge',
       body: `<strong>${customer ? escHtml(customer.firstName) + ' ' + escHtml(customer.lastName) : 'Customer'}</strong><br>
@@ -3745,11 +3753,12 @@ async function saveSimForm(editId) {
     }))) return;
     const setupDate = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
     newSimId = Date.now().toString();
+    setupHistoryId = (Date.now() + 1).toString();
     sims.push({
       id: newSimId,
       ...fields,
       history: [{
-        id: (Date.now() + 1).toString(),
+        id: setupHistoryId,
         type: 'activation',
         desc: 'Initial SIM Setup',
         amount: setupFee,
@@ -3760,6 +3769,14 @@ async function saveSimForm(editId) {
   }
 
   saveSims(sims);
+  // Bill the setup fee to the wallet ledger (same append-only path as every
+  // other charge). Idempotent via SIM-<simId>-<historyId>; a soft failure only
+  // warns — the SIM record and its history blob are already saved.
+  if (newSimId && setupFee > 0) {
+    window.api.chargeSim({ simId: newSimId, customerId, historyId: setupHistoryId, amount: setupFee, description: 'Initial SIM Setup' })
+      .then(res => { if (!res?.success) toast(res?.error || 'SIM saved, but the setup fee was not billed to the wallet.', 'error'); })
+      .catch(() => toast('SIM saved, but the setup fee was not billed to the wallet.', 'error'));
+  }
   closeDynamicModal();
   let extraMsg = '';
   if (newSimId) extraMsg = await applyExtraCharges('sim', newSimId, customerId, false);
@@ -3931,8 +3948,9 @@ async function addSimCharge(simId) {
     okLabel: 'Add charge',
   }))) return;
   if (!s.history) s.history = [];
+  const historyId = Date.now().toString();
   s.history.push({
-    id:     Date.now().toString(),
+    id:     historyId,
     type, desc, amount,
     date: new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }),
   });
@@ -3942,6 +3960,11 @@ async function addSimCharge(simId) {
     s.renewalDate = localISO(d);
   }
   saveSims(sims);
+  // Post the charge to the wallet ledger (SIM money now shows in the balance
+  // and arrears). Debit only — settled later by a wallet payment.
+  window.api.chargeSim({ simId: s.id, customerId: s.customerId, historyId, amount, description: desc })
+    .then(res => { if (!res?.success) toast(res?.error || 'Charge saved, but not billed to the wallet.', 'error'); })
+    .catch(() => toast('Charge saved, but not billed to the wallet.', 'error'));
   toast(`Charge of £${amount} added ✅`, 'success');
   openManageSimModal(simId);
 }

@@ -60,10 +60,11 @@ test('ledgerSignFor — mirrors the DB sign CHECK', () => {
   assert.equal(ledgerSignFor('booking'), 'debit')
   assert.equal(ledgerSignFor('sim_service'), 'debit')
   assert.equal(ledgerSignFor('virtual_number'), 'debit')
+  assert.equal(ledgerSignFor('sim_charge'), 'debit')
   assert.equal(ledgerSignFor('payment'), 'credit')
   assert.equal(ledgerSignFor('refund'), 'credit')
+  assert.equal(ledgerSignFor('extra_charge'), 'debit')  // DB CHECK: auto extras are always charges
   assert.equal(ledgerSignFor('manual_adjustment'), 'either')
-  assert.equal(ledgerSignFor('extra_charge'), 'either')
 })
 
 test('money — rounds to pennies', () => {
