@@ -6,3 +6,6 @@ data/
 *.docx
 *.doc
 *.xlsx
+
+# Personal Claude Code overrides (permissions etc.) — never commit
+.claude/settings.local.json
