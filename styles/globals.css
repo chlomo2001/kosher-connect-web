@@ -469,10 +469,14 @@ tbody tr.selected td { background: rgba(83, 58, 253, 0.05); }
 .tab-placeholder p { font-size: 14px; }
 
 /* ─── SCROLLBAR ─── */
-::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar { width: 12px; height: 12px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+/* Mid-grey thumb (was the near-invisible --border hairline) with a small
+   inset against the canvas, so the scroll position is clearly visible. */
+::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 7px; border: 3px solid var(--bg); background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--text); background-clip: padding-box; }
+/* Firefox */
+* { scrollbar-width: thin; scrollbar-color: var(--muted) transparent; }
 
 /* DATE INPUT */
 input[type="date"] { color-scheme: light; font-feature-settings: "tnum"; }
