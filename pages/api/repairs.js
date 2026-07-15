@@ -8,7 +8,7 @@
 //     amount -(total)
 //   - Cancelled tickets never charge
 
-import { withStaff } from '../../lib/auth.js'
+import { withStaff, withTab } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 import { postAutoCharges } from '../../lib/customCharges.js'
 
@@ -161,4 +161,4 @@ async function handler(req, res) {
   }
 }
 
-export default withStaff(handler)
+export default withTab('repairs', handler)

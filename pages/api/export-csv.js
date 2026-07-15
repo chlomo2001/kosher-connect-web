@@ -1,10 +1,13 @@
 import { loadData } from '../../lib/data'
-import { withStaff } from '../../lib/auth.js'
+import { withStaff, requireOwner } from '../../lib/auth.js'
 import { tablesMode } from '../../lib/db'
 import { listCustomers } from '../../lib/tableStore'
 
 async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
+  // Bulk PII export is an admin action — previously any signed-in helper
+  // could download the entire customer base.
+  if (requireOwner(req, res)) return
 
   // Same data source as /api/customers — the old blob-store read returned []
   // in tables mode, which exported a headers-only file.

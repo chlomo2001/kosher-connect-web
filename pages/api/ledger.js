@@ -10,9 +10,15 @@
 // Charges are posted only by their owning features (bookings, repairs, …),
 // each with a stable reference — never from this endpoint.
 
-import { withStaff, tabAllowedFor } from '../../lib/auth.js'
+import { withStaff, tabAllowedFor, requireOwner } from '../../lib/auth.js'
 import crypto from 'node:crypto'
 import { db, tablesMode } from '../../lib/db.js'
+
+// Wallet actions are reachable from the Wallet tab AND the customer card,
+// so either tab permits them (owners always pass).
+async function canTouchWallet(staff) {
+  return (await tabAllowedFor(staff, 'wallet')) || (await tabAllowedFor(staff, 'customers'))
+}
 
 const KINDS = {
   payment:    { entry_type: 'payment',           prefix: 'PAY' },
@@ -100,6 +106,10 @@ async function handler(req, res) {
           todayOut: todays.filter(r => Number(r.amount) < 0).reduce((s, r) => s + Number(r.amount), 0),
         })
       }
+      // A customer's statement is money data — gate it to wallet/customers.
+      if (!(await canTouchWallet(req.staff))) {
+        return res.status(403).json({ success: false, error: 'Not permitted to view wallets.' })
+      }
       const uuid = await resolveCustomer(customerId)
       if (!uuid) return res.json({ success: true, entries: [], balance: 0, known: false })
       const rows = await db.select(
@@ -118,6 +128,14 @@ async function handler(req, res) {
       const b = req.body || {}
       const kind = KINDS[b.kind]
       if (!kind) return res.status(400).json({ success: false, error: `kind must be one of: ${Object.keys(KINDS).join(', ')}.` })
+      // Authorization: manual adjustments (arbitrary sign — the debt-wipe /
+      // self-credit vector) are ADMIN-ONLY; payments/top-ups/refunds need the
+      // wallet or customers tab. Previously the POST had no gate at all.
+      if (b.kind === 'adjustment') {
+        if (requireOwner(req, res)) return
+      } else if (!(await canTouchWallet(req.staff))) {
+        return res.status(403).json({ success: false, error: 'Not permitted to record wallet money.' })
+      }
       const amount = Number(b.amount)
       if (!Number.isFinite(amount) || amount === 0) {
         return res.status(400).json({ success: false, error: 'Amount must be a non-zero number.' })

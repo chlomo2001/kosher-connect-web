@@ -8,7 +8,7 @@
 //     online_repeat_from setting (current list: "4 or more"; the old list
 //     said 2). Services without a repeat price charge every unit at price.
 
-import { withStaff } from '../../lib/auth.js'
+import { withStaff, withTab } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 import { postAutoCharges } from '../../lib/customCharges.js'
 
@@ -126,4 +126,4 @@ async function handler(req, res) {
   }
 }
 
-export default withStaff(handler)
+export default withTab('services', handler)

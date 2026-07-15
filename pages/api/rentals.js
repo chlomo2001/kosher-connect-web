@@ -1,5 +1,5 @@
 import { loadData, saveData } from '../../lib/data'
-import { withStaff } from '../../lib/auth.js'
+import { withStaff, withTab } from '../../lib/auth.js'
 import { tablesMode } from '../../lib/db'
 import { listRentals, syncRentals } from '../../lib/tableStore'
 
@@ -23,4 +23,4 @@ async function handler(req, res) {
   }
 }
 
-export default withStaff(handler)
+export default withTab('rentals', handler)

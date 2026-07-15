@@ -1,5 +1,5 @@
 import { loadData, saveData } from '../../lib/data'
-import { withStaff } from '../../lib/auth.js'
+import { withStaff, withTab } from '../../lib/auth.js'
 import { tablesMode } from '../../lib/db'
 import { listCustomers, upsertCustomer, deleteCustomer } from '../../lib/tableStore'
 
@@ -90,4 +90,4 @@ async function legacyHandler(req, res) {
   res.status(405).end()
 }
 
-export default withStaff(handler)
+export default withTab('customers', handler)

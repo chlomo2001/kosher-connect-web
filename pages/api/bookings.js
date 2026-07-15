@@ -8,7 +8,7 @@
 //     (charge_reference unique); the ledger is append-only
 //   - balance is never stored: read from the customer_balances view
 
-import { withStaff } from '../../lib/auth.js'
+import { withTab, tabAllowedFor } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 import { postAutoCharges } from '../../lib/customCharges.js'
 
@@ -106,9 +106,14 @@ async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       // Check-in view: full, UNMASKED passenger passport details for one
-      // booking — any staff doing the check-in may see them (owner decision
-      // 2026-07-13). The general list below stays masked for helpers.
+      // booking — staff DOING the check-in may see them (owner decision
+      // 2026-07-13), i.e. anyone with the bookings tab; the general list
+      // below stays masked. Gating this closes the IDOR where a helper
+      // without the bookings tab could harvest every passport via this path.
       if (req.query.checkin) {
+        if (!(await tabAllowedFor(req.staff, 'bookings'))) {
+          return res.status(403).json({ success: false, error: 'Not permitted to view check-in details.' })
+        }
         const [full] = await db.select(
           'bookings',
           `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&id=eq.${encodeURIComponent(String(req.query.checkin))}`
@@ -306,4 +311,4 @@ async function handler(req, res) {
   }
 }
 
-export default withStaff(handler)
+export default withTab('bookings', handler)
