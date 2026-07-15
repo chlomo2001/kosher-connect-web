@@ -1805,28 +1805,19 @@ async function saveNewRental() {
   rentals.push(rental);
   saveRentals(rentals);
 
+  // #73 — persist the phone status ONLY when it actually changed. A future-
+  // dated reservation leaves the phone free, so it needs no phones write.
   if (!isReservation) {
     phone.status        = 'rented';
     phone.currentRental = rental.id;
     savePhones(phones);
   }
 
-  const c = customers.find(x => x.id === customerId);
-  if (c) {
-    if (!c.history) c.history = [];
-    c.history.push({
-      type:   'rental',
-      desc:   `Phone Rental · ${phone.number} · ${phone.country} · ${chargeableDays} days${addVN ? ` + VN +${vnPrefix}` : ''}`,
-      amount: totalPrice,
-      date:   new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }),
-    });
-    c.totalPaid = (c.totalPaid || 0) + totalPrice;
-    if (!c.services) c.services = [];
-    c.services.push({ type: 'rental', label: `Rental 🇺🇸`, rentalId: rental.id });
-    await window.api.updateCustomer(c);
-    const idx = customers.findIndex(x => x.id === customerId);
-    if (idx !== -1) customers[idx] = c;
-  }
+  // #73 — no more c.history / c.totalPaid / c.services write for a rental. The
+  // append-only ledger and the rental record are the single source of truth
+  // (the card's balance is ledger-derived, its timeline is built from the
+  // rentals array, and c.services rental entries were filtered out anyway), so
+  // that third network round-trip and its parallel money mirror are dropped.
 
   // #25/#33/#38 — the counter payment is recorded through ONE channel: the
   // rental's amountPaid, which trueUpRentalLedger posts as PAY-RENTAL-<uuid>
