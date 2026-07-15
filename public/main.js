@@ -2722,11 +2722,67 @@ function buildCustomerTimeline(c) {
   return ev;
 }
 
+// #81 — a derived lifecycle stage. No schema change: it reads the customer's
+// own in-memory activity so the operator sees at a glance who is new, a
+// regular, active right now, or gone quiet. Purely a display signal.
+function customerLifecycle(c) {
+  const cid = c.id;
+  const timeline = buildCustomerTimeline(c);
+  const spend = timeline.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const hasLive =
+    rentals.some(r => r.customerId === cid && (r.status === 'active' || r.status === 'overdue')) ||
+    sims.some(s => s.customerId === cid && s.status === 'active') ||
+    virtualNumbers.some(v => v.customerId === cid && v.status === 'Active') ||
+    repairs.some(r => r.customerId === cid && r.status !== 'Collected' && r.status !== 'Cancelled') ||
+    customerUpcomingBookings(c).length > 0;
+  const lastMs = timeline.length ? new Date(timeline[0].date || 0).getTime()
+    : (c.createdAt ? new Date(c.createdAt).getTime() : 0);
+  const daysSince = lastMs ? Math.floor((Date.now() - lastMs) / 86400000) : Infinity;
+  if (spend >= 500 || timeline.length >= 12) return { key: 'regular', label: 'Regular', emoji: '⭐', color: 'var(--accent2)' };
+  if (hasLive) return { key: 'active', label: 'Active', emoji: '🟢', color: 'var(--success)' };
+  if (timeline.length <= 1 && daysSince < 60) return { key: 'new', label: 'New', emoji: '✨', color: 'var(--accent)' };
+  if (daysSince > 180) return { key: 'dormant', label: 'Dormant', emoji: '💤', color: 'var(--muted)' };
+  return { key: 'past', label: 'Past', emoji: '·', color: 'var(--muted)' };
+}
+
+// #82 — Next best action, generalized past flights. The single most pressing
+// thing to do for this customer right now, or null. Ordered by urgency; the
+// wallet balance is passed in once it has loaded so the arrears case is exact.
+function customerNextBestAction(c, balance) {
+  const cid = c.id;
+  const today = localISO();
+  if (typeof balance === 'number' && balance < -0.005) {
+    return { icon: '💰', text: `Owes ${fmtGbp(Math.abs(balance))}`,
+      btn: `<button class="btn btn-primary btn-sm" onclick="openWalletModal('${cid}', ${balance})">Take payment</button>` };
+  }
+  const ready = repairs.find(r => r.customerId === cid && r.status === 'Ready');
+  if (ready) {
+    return { icon: '🔧', text: `Repair ready — ${escHtml(ready.device || 'device')} waiting for collection`,
+      btn: `<button class="btn btn-outline btn-sm" onclick="openCollectRepairModal('${ready.id}')">Collect</button>` };
+  }
+  const trip = bookings.filter(b => b.customerId === cid && b.status !== 'Cancelled' && b.travelDate && b.travelDate >= today)
+    .sort((a, b) => a.travelDate.localeCompare(b.travelDate))[0];
+  if (trip) {
+    const phoneCover = rentals.find(r => r.customerId === cid && r.status !== 'returned'
+      && r.fromDate && r.toDate && r.fromDate <= trip.travelDate && r.toDate >= trip.travelDate);
+    if (!phoneCover) {
+      return { icon: '✈️', text: `Flies ${fmtDate(trip.travelDate)} — no phone booked yet`,
+        btn: `<button class="btn btn-rental btn-sm" onclick="openNewRentalModal('${cid}')">Book a phone</button>` };
+    }
+  }
+  const overdue = rentals.find(r => r.customerId === cid && r.status === 'overdue');
+  if (overdue) {
+    return { icon: '⏰', text: `Rental overdue since ${fmtDate(overdue.toDate)}`, btn: '' };
+  }
+  return null;
+}
+
 function renderDetailPanel(id) {
   const c = customers.find(x => x.id === id);
   if (!c) return;
   const container = document.getElementById('detailPanelContainer');
   if (!container) return;
+  const lifecycle = customerLifecycle(c);
 
   const initials = ((c.firstName || '?')[0] + (c.lastName || '?')[0]).toUpperCase();
   const since = c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '—';
@@ -2862,7 +2918,7 @@ function renderDetailPanel(id) {
       <div class="detail-header">
         <div class="avatar">${initials}</div>
         <div style="flex:1;">
-          <div class="detail-name">${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:16px;">🛂</span>' : ''}</div>
+          <div class="detail-name">${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:16px;">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
           <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(c.phone)}</a>` : '—'} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
         </div>
         <div style="display:flex;gap:8px;">
@@ -2887,6 +2943,7 @@ function renderDetailPanel(id) {
         </div>
       </div>
 
+      <div id="nbaStrip-${c.id}"></div>
       ${tripHtml}
       ${notesHtml}
       ${tasksHtml}
@@ -3008,6 +3065,23 @@ async function loadWalletSection(customerId) {
       ${data.entries.length > 8 ? `<span style="color:var(--muted);font-size:11px;">showing 8 of ${data.entries.length}</span>` : ''}
     </div>
     <div class="history-list">${entriesHtml}</div>`;
+  renderNextBestAction(customerId, bal);
+}
+
+// #82 — paint the "next best action" strip once the true balance is known.
+function renderNextBestAction(customerId, balance) {
+  const strip = document.getElementById(`nbaStrip-${customerId}`);
+  if (!strip) return;
+  const c = customers.find(x => x.id === customerId);
+  if (!c) { strip.innerHTML = ''; return; }
+  const nba = customerNextBestAction(c, balance);
+  if (!nba) { strip.innerHTML = ''; return; }
+  strip.innerHTML = `
+    <div class="nba-strip">
+      <span class="nba-icon">${nba.icon}</span>
+      <span class="nba-text">${nba.text}</span>
+      ${nba.btn || ''}
+    </div>`;
 }
 
 function openWalletModal(customerId, balance = null) {
