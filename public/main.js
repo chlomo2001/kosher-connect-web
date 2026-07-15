@@ -2358,6 +2358,19 @@ function showDynamicModal(html) {
   }
   overlay.innerHTML = `<div class="modal" style="width:560px;">${html}</div>`;
   overlay.classList.remove('hidden');
+  autofocusFirstField(overlay);
+}
+
+// Put the cursor in the first real field so a form is ready to type — the
+// counter's biggest per-action time saver. Skipped on touch devices (so it
+// doesn't pop the on-screen keyboard on display/manage modals) and any modal
+// can opt out with a data-autofocus="off" element.
+function autofocusFirstField(overlay) {
+  if ('ontouchstart' in window) return;
+  const modal = overlay.querySelector('.modal') || overlay;
+  if (modal.querySelector('[data-autofocus="off"]')) return;
+  const first = modal.querySelector('input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([readonly]):not([disabled]), textarea, select');
+  if (first) { try { first.focus({ preventScroll: true }); } catch { first.focus(); } }
 }
 function closeDynamicModal() {
   const overlay = document.getElementById('dynamicModal');
@@ -3365,7 +3378,7 @@ function clearModal() {
   ['warnPhone','warnEmail','warnName'].forEach(id => document.getElementById(id).classList.remove('visible'));
 }
 
-function showModal() { document.getElementById('customerModal').classList.remove('hidden'); }
+function showModal() { const m = document.getElementById('customerModal'); m.classList.remove('hidden'); autofocusFirstField(m); }
 function closeModal() { document.getElementById('customerModal').classList.add('hidden'); }
 
 function normalizeEmail(email) {
