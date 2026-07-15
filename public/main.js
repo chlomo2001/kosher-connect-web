@@ -2581,9 +2581,11 @@ function customerMatchesFilter(c) {
 function renderTableRows() {
   const tbody = document.getElementById('customersTableBody');
   if (!tbody) return;
-  filteredCustomers = sortCustomers(filteredCustomers.filter(customerMatchesFilter));
+  // #51 — derive the shown list; never re-filter filteredCustomers in place
+  // (that narrowed the search result cumulatively on every render/filter change).
+  const shown = sortCustomers(filteredCustomers.filter(customerMatchesFilter));
 
-  if (filteredCustomers.length === 0) {
+  if (shown.length === 0) {
     tbody.innerHTML = `
       <tr><td colspan="5">
         <div class="empty-state">
@@ -2595,7 +2597,7 @@ function renderTableRows() {
     return;
   }
 
-  tbody.innerHTML = filteredCustomers.map(c => {
+  tbody.innerHTML = shown.map(c => {
     const selected = c.id === selectedId ? 'selected' : '';
     const activeCustomerRentals = rentals.filter(r => r.customerId === c.id && (r.status === 'active' || r.status === 'overdue'));
     // Real linked services (not just legacy embedded ones) — same fix as the
@@ -2861,7 +2863,7 @@ function renderDetailPanel(id) {
         <div class="avatar">${initials}</div>
         <div style="flex:1;">
           <div class="detail-name">${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:16px;">🛂</span>' : ''}</div>
-          <div class="detail-meta">${escHtml(c.phone || '—')} · ✉️ ${escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
+          <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(c.phone)}</a>` : '—'} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer">⏰</button>
