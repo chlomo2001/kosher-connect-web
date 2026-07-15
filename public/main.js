@@ -961,6 +961,11 @@ function clearRentalFilters() {
   renderRentalRows();
 }
 function mgComputeLateFee() {
+  // Already-returned rental: the late fee was frozen at the return date — keep
+  // it, don't re-accrue to today (re-opening/re-saving would inflate it).
+  if (document.getElementById('mgWasReturned')?.value === '1') {
+    return Number(document.getElementById('mgFrozenLateFee')?.value) || 0;
+  }
   const to = document.getElementById('mgTo')?.value;
   if (!to) return 0;
   const today = localISO();
@@ -2139,6 +2144,8 @@ function openManageRentalModal(rentalId) {
     <input type="hidden" id="mgUKPlan" value="${r.ukPlan || 'standard'}">
     <input type="hidden" id="mgBasePrice" value="${r.basePrice || r.price}">
     <input type="hidden" id="mgVnPrice" value="${r.vnPrice || 0}">
+    <input type="hidden" id="mgWasReturned" value="${r.status === 'returned' ? '1' : '0'}">
+    <input type="hidden" id="mgFrozenLateFee" value="${r.lateFee || 0}">
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveManageRental('${rentalId}')">💾 Save Changes</button>
