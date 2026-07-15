@@ -2852,7 +2852,7 @@ function renderDetailPanel(id) {
 
       <details style="margin-top:18px;margin-bottom:6px;">
         <summary style="cursor:pointer;font-weight:600;color:var(--text);font-size:13px;padding:6px 0;border-top:1px solid var(--border);">
-          📋 Full history — ${timeline.length} record${timeline.length === 1 ? '' : 's'}${lifetimeSpend > 0 ? ` · £${lifetimeSpend.toFixed(2)} lifetime` : ''}
+          📋 Full history — ${timeline.length} record${timeline.length === 1 ? '' : 's'}${lifetimeSpend > 0 ? ` · ${fmtGbp(lifetimeSpend)} lifetime` : ''}
           ${timelineSummary ? `<div style="font-weight:400;color:var(--muted);font-size:11px;margin-top:2px;">${escHtml(timelineSummary)}</div>` : ''}
         </summary>
         <div style="max-height:300px;overflow-y:auto;margin-top:8px;">${timelineHtml}</div>
@@ -4099,6 +4099,11 @@ function nameHtml(str) { return `<bdi>${escHtml(str)}</bdi>`; }
 // A consistent spinner + label for tab/section loading states.
 function loadingHtml(label = 'Loading…') {
   return `<div class="kc-loading"><span class="kc-spinner"></span><span>${escHtml(label)}</span></div>`;
+}
+
+// Money with thousands separators — "£13,135.00", not "£13135.00".
+function fmtGbp(v) {
+  return '£' + (Number(v) || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // Copy text to the clipboard with a confirmation toast. Used by the
@@ -5977,14 +5982,14 @@ async function openBusinessSummary() {
   }
   const col = (title, rep) => {
     const rows = groupRevenue(rep.byType).map(([label, amt]) =>
-      `<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);"><span>${label}</span><strong style="font-feature-settings:'tnum';">£${amt.toFixed(2)}</strong></div>`).join('')
+      `<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);"><span>${label}</span><strong style="font-feature-settings:'tnum';">${fmtGbp(amt)}</strong></div>`).join('')
       || '<div style="color:var(--muted);font-size:13px;padding:6px 0;">No charges yet.</div>';
     return `<div style="flex:1;min-width:220px;">
       <div style="font-weight:600;margin-bottom:8px;">${title}</div>
       ${rows}
-      <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;padding-top:10px;"><span>Billed</span><span>£${rep.charged.toFixed(2)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--success);padding-top:2px;"><span>Received</span><span>£${rep.received.toFixed(2)}</span></div>
-      ${rep.refunded ? `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding-top:2px;"><span>Refunded</span><span>−£${rep.refunded.toFixed(2)}</span></div>` : ''}
+      <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;padding-top:10px;"><span>Billed</span><span>${fmtGbp(rep.charged)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--success);padding-top:2px;"><span>Received</span><span>${fmtGbp(rep.received)}</span></div>
+      ${rep.refunded ? `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding-top:2px;"><span>Refunded</span><span>−${fmtGbp(rep.refunded)}</span></div>` : ''}
     </div>`;
   };
   body.style.color = 'var(--text)';
