@@ -57,6 +57,14 @@
   --shadow-1: 0 1px 1px rgba(10, 37, 64, 0.04), 0 1px 2px rgba(10, 37, 64, 0.06);
   --shadow-2: 0 1px 3px rgba(10, 37, 64, 0.10), 0 12px 30px rgba(10, 37, 64, 0.14);
   --ring: 0 0 0 3px rgba(99, 91, 255, 0.20);   /* focus ring */
+
+  /* ── Motion scale — named durations + easing so transitions stop being
+     magic numbers and read as one designed system. Consumed by buttons,
+     rows, toasts. The reduced-motion umbrella (end of file) zeroes them. ── */
+  --dur-1: 120ms; --dur-2: 180ms; --dur-3: 260ms; --dur-4: 400ms;
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-emphasis: cubic-bezier(.32, .72, 0, 1);
+  --ease-in-out: cubic-bezier(.77, 0, .175, 1);
 }
 
 /* Dark theme — the shop stays open into the evening. Overrides the same
@@ -272,7 +280,11 @@ body {
   border-radius: var(--radius);
   font-family: inherit; font-size: 14px; font-weight: 400; line-height: 1;
   cursor: pointer; border: none;
-  transition: all 0.15s; white-space: nowrap;
+  transition: background var(--dur-2) var(--ease-out),
+              border-color var(--dur-2) var(--ease-out),
+              color var(--dur-2) var(--ease-out),
+              transform var(--dur-1) var(--ease-out);
+  white-space: nowrap;
 }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover { background: var(--primary-deep); }
@@ -1079,4 +1091,50 @@ td.cal-active.cal-shabbat { background: var(--accent); }
   /* Rentals: stack the two tables so each gets full width instead of
      squeezing side-by-side and clipping columns. */
   .rentals-split { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   Interaction polish (design-research batch 1)
+   #6 press feedback + keyboard focus rings · #3 iOS input zoom ·
+   #1 reduced-motion umbrella. Pure CSS, class names unchanged.
+   ============================================================ */
+
+/* Press feedback — a subtle scale on :active gives every control a
+   physical "click" without touching the JS. */
+.btn:active { transform: scale(0.97); }
+.pos-tile:active, .pos-cat:active, .pos-method:active,
+.card-action:active, .action-btn:active, .eq-btn:active,
+.cs-btn:active, .nav-item:active { transform: scale(0.96); }
+
+/* Keyboard focus — a crisp indigo ring on EVERY interactive element
+   (previously only .theme-toggle had one). :where() keeps specificity at
+   zero so component rules always win; :focus-visible = keyboard only, so
+   mouse clicks stay ring-free. */
+:where(a, button, [role="button"], .btn, .nav-item, .action-btn,
+  .card-action, .eq-btn, .cs-btn, .pos-tile, .pos-cat, .pos-method,
+  .pos-charge, .copy-val, tbody tr, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: var(--radius);
+  position: relative; z-index: 1;
+}
+
+/* Mobile: iOS Safari zoom-crops the page whenever a focused input is
+   under 16px and never zooms back — jarring dozens of times a day on a
+   handset at the counter. Bump sub-16px controls to 16px on phones only;
+   the POS scan box (17px) is already safe. */
+@media (max-width: 768px) {
+  .form-input, .search-box, .palette-input,
+  .add-payment-row input, .add-payment-row select { font-size: 16px; }
+}
+
+/* One place to honour "reduce motion": collapse every transition,
+   animation and the login-gradient drift for users who ask for calm. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
