@@ -1828,15 +1828,10 @@ async function saveNewRental() {
     if (idx !== -1) customers[idx] = c;
   }
 
-  // #25 — record the counter payment against the wallet ledger (the rental
-  // charge itself is posted server-side by saveRentals).
-  if (paidNow && payAmt > 0) {
-    await window.api.addLedgerEntry({
-      customerId, kind: 'payment', amount: payAmt, method: payMethod,
-      note: `Rental ${phone.number} — paid at counter`,
-    }).catch(() => null);
-  }
-
+  // #25/#33/#38 — the counter payment is recorded through ONE channel: the
+  // rental's amountPaid, which trueUpRentalLedger posts as PAY-RENTAL-<uuid>
+  // (a 'payment' on the wallet ledger). We deliberately do NOT also post a
+  // separate wallet payment here — that would double-count the same money.
   closeDynamicModal();
   // Owner-defined auto extras for rentals (posted once, keyed on the rental).
   const extraMsg = await applyExtraCharges('rental', rental.id, customerId, false);
