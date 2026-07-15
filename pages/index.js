@@ -1,5 +1,43 @@
 import Head from 'next/head'
 import Script from 'next/script'
+import { Fragment } from 'react'
+
+/* Monochrome line icons (Feather-style, 20px, 1.6 stroke, currentColor) —
+   they inherit the nav item's colour, so they light up on hover/active
+   like real product chrome. No emoji. */
+function I({ children }) {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {children}
+    </svg>
+  )
+}
+const ICONS = {
+  dashboard: <I><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></I>,
+  customers: <I><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></I>,
+  rentals: <I><rect x="5" y="2" width="14" height="20" rx="2.5" /><line x1="11" y1="18" x2="13" y2="18" /></I>,
+  sim: <I><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></I>,
+  bookings: <I><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></I>,
+  wallet: <I><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" /><path d="M3 5v14a2 2 0 0 0 2 2h16v-5" /><path d="M18 12a2 2 0 0 0 0 4h4v-4z" /></I>,
+  repairs: <I><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></I>,
+  services: <I><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></I>,
+  shop: <I><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></I>,
+  virtual: <I><line x1="4" y1="9" x2="20" y2="9" /><line x1="4" y1="15" x2="20" y2="15" /><line x1="10" y1="3" x2="8" y2="21" /><line x1="16" y1="3" x2="14" y2="21" /></I>,
+  tasks: <I><polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></I>,
+  settings: <I><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></I>,
+  signout: <I><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></I>,
+}
+// #20 — grouped sections (People / Counter / Connectivity / Travel / Manage),
+// not a flat list of 12 peers; Dashboard + Manage stay pinned at the ends.
+const NAV = [
+  { items: [['dashboard', 'Dashboard']] },
+  { label: 'People', items: [['customers', 'Customers'], ['wallet', 'Wallet']] },
+  { label: 'Counter', items: [['rentals', 'Phone Rentals'], ['repairs', 'Repairs'], ['services', 'Online & Print'], ['shop', 'Shop']] },
+  { label: 'Connectivity', items: [['sim', 'SIM Plans'], ['virtual', 'Virtual Numbers']] },
+  { label: 'Travel', items: [['bookings', 'Tickets & Flights']] },
+  { label: 'Manage', items: [['tasks', 'Tasks'], ['settings', 'Settings']] },
+]
 
 export default function Home() {
   return (
@@ -31,35 +69,22 @@ export default function Home() {
           <div className="logo-sub">Business Management System</div>
         </div>
 
-        {/* #20 — grouped, not a flat list of 12 peers. The sections mirror how
-            the shop actually works: people first, then the walk-in counter,
-            connectivity, travel; Dashboard/Tasks/Settings stay pinned. */}
-        <div className="nav-item active" data-tab="dashboard"><span className="nav-icon">🏠</span> Dashboard</div>
-
-        <div className="nav-group-label">People</div>
-        <div className="nav-item" data-tab="customers"><span className="nav-icon">👥</span> Customers</div>
-        <div className="nav-item" data-tab="wallet"><span className="nav-icon">💰</span> Wallet</div>
-
-        <div className="nav-group-label">Counter</div>
-        <div className="nav-item" data-tab="rentals"><span className="nav-icon">📱</span> Phone Rentals</div>
-        <div className="nav-item" data-tab="repairs"><span className="nav-icon">🔧</span> Repairs</div>
-        <div className="nav-item" data-tab="services"><span className="nav-icon">🖨️</span> Online &amp; Print</div>
-        <div className="nav-item" data-tab="shop"><span className="nav-icon">🛍️</span> Shop</div>
-
-        <div className="nav-group-label">Connectivity</div>
-        <div className="nav-item" data-tab="sim"><span className="nav-icon">💳</span> SIM Plans</div>
-        <div className="nav-item" data-tab="virtual"><span className="nav-icon">🔢</span> Virtual Numbers</div>
-
-        <div className="nav-group-label">Travel</div>
-        <div className="nav-item" data-tab="bookings"><span className="nav-icon">✈️</span> Tickets &amp; Flights</div>
-
-        <div className="nav-group-label">Manage</div>
-        <div className="nav-item" data-tab="tasks"><span className="nav-icon">✅</span> Tasks</div>
-        <div className="nav-item" data-tab="settings"><span className="nav-icon">⚙️</span> Settings</div>
+        {/* #20 grouped sections, with monochrome SVG line icons (no emoji). */}
+        {NAV.map((section, si) => (
+          <Fragment key={si}>
+            {section.label && <div className="nav-group-label">{section.label}</div>}
+            {section.items.map(([tab, label]) => (
+              <div key={tab} className={'nav-item' + (tab === 'dashboard' ? ' active' : '')} data-tab={tab}>
+                <span className="nav-icon">{ICONS[tab]}</span> {label}
+              </div>
+            ))}
+          </Fragment>
+        ))}
 
         <div className="sidebar-bottom">
           <a href="#" onClick={(e) => { e.preventDefault(); fetch('/api/auth/logout', { method: 'POST' }).then(() => { window.location.href = '/login' }) }}
-             style={{ color: 'inherit', textDecoration: 'none' }}>🚪 Sign out</a>
+             style={{ color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="nav-icon">{ICONS.signout}</span> Sign out</a>
           <div>Version 1.0 · KosherConnect</div>
         </div>
       </div>
@@ -69,7 +94,7 @@ export default function Home() {
         <div className="topbar">
           <div className="page-title" id="pageTitle">Customer <span>Management</span></div>
           <div className="topbar-actions">
-            <input className="search-box" id="searchBox" type="text" placeholder="🔍  Search by name, phone, email..." />
+            <input className="search-box" id="searchBox" type="text" placeholder="Search by name, phone, email…" />
             <button className="btn btn-primary" id="btnNewCustomer">+ New Customer</button>
             {/* Persistent theme toggle — uses the app's toggleTheme() so it and
                 every other [data-theme-btn] (palette, settings, till) stay in
@@ -160,7 +185,7 @@ export default function Home() {
             <div className="form-group form-full">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                 <input type="checkbox" id="fPassportOnFile" style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
-                🛂 Passport on file
+                🛂 Passport photocopy held
               </label>
             </div>
 

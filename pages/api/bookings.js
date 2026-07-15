@@ -46,6 +46,12 @@ function toAppFull(row) {
     bookingFee: row.booking_fee === null ? 0 : Number(row.booking_fee),
     status: row.status || 'Booked',
     passportOnFile: !!row.passport_on_file,
+    // Role-safe honest signal: are real passport details actually stored?
+    // Computed here from the unmasked row, so it's accurate for EVERY staff
+    // role (passenger passport numbers themselves are owner-only on reads).
+    // It's just a yes/no — no number is leaked.
+    hasPassportDetails: (row.booking_passengers || [])
+      .some(p => p.passport_number && String(p.passport_number).trim()),
     passportExpiry: row.passport_expiry || '',
     checkinDone: !!row.checkin_done,
     checkinBy: row.checkin_by || '',
