@@ -76,8 +76,8 @@ export default function Login({ supabaseUrl, googleEnabled }) {
         <form className="login-card" onSubmit={ticket ? submitCode : submit}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <img src="/logo-full.png" alt="KosherConnect" style={{ height: 72, marginBottom: 10 }} />
-            <div className="login-title">KosherConnect</div>
-            <div className="login-sub">{ticket ? 'Check your email' : 'Staff sign in'}</div>
+            <div className="login-title">Welcome back</div>
+            <div className="login-sub">{ticket ? 'Check your email for your code' : 'Sign in to KosherConnect'}</div>
           </div>
           {ticket ? (
             <>
