@@ -1,0 +1,30 @@
+name: CI
+
+# Runs on every push and PR. Money tests + a production build must pass
+# before code is trusted. To make this a hard deploy gate, enable branch
+# protection on `main` requiring the "verify" check (Settings → Branches).
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Money regression tests
+        run: npm test
+      - name: Production build
+        run: npm run build
+        env:
+          # Build must succeed without secrets — the app runs in its safe
+          # non-tables mode when these are absent, which is correct for CI.
+          NEXT_TELEMETRY_DISABLED: '1'

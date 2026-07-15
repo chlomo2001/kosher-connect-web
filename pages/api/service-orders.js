@@ -8,23 +8,17 @@
 //     online_repeat_from setting (current list: "4 or more"; the old list
 //     said 2). Services without a repeat price charge every unit at price.
 
-import { withStaff, withTab } from '../../lib/auth.js'
+import { withTab } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 import { postAutoCharges } from '../../lib/customCharges.js'
+import { serviceOrderTotal } from '../../lib/money.mjs'
 
 const EMBED = 'customers(legacy_id,first_name,last_name),service_prices(name,category)'
 const METHODS = ['cash', 'card', 'bank_transfer', 'voucher', 'other']
 
-// Same tier maths as public/main.js onlineServiceTotal — keep in sync.
-function orderTotal(svc, qty, repeatFrom) {
-  const n = Math.max(1, Math.floor(Number(qty)) || 1)
-  const single = Number(svc.price) || 0
-  const rep = svc.repeat_price === null || svc.repeat_price === undefined
-    ? single : Number(svc.repeat_price)
-  const from = Math.max(2, Number(repeatFrom) || 4)
-  const atSingle = Math.min(n, from - 1)
-  return { qty: n, total: atSingle * single + (n - atSingle) * rep }
-}
+// Tier maths lives in lib/money.js (tested; keep public/main.js in sync).
+const orderTotal = (svc, qty, repeatFrom) =>
+  serviceOrderTotal(svc.price, svc.repeat_price, qty, repeatFrom)
 
 function toApp(row) {
   return {
