@@ -3675,14 +3675,6 @@ function openSimFormModal(id, preselectCustomerId = null) {
         <input class="form-input" id="simEmail" type="email" placeholder="kosherconnect+name@gmail.com"
           value="${escHtml(s?.email || '')}" autocomplete="off">
       </div>
-      <div class="form-group">
-        <label class="form-label">Password at Provider</label>
-        <div class="password-wrap">
-          <input class="form-input" id="simPassword" type="password" placeholder="Password"
-            value="${escHtml(s?.password || '')}" autocomplete="off">
-          <button class="pw-toggle" type="button" id="simPwBtn" onclick="toggleSimPassword()">👁</button>
-        </div>
-      </div>
       <div class="form-group form-full">
         <label class="form-label">Active Plan (description)</label>
         <input class="form-input" id="simPlan" type="text" placeholder="Unlimited calls + data, EU roaming"
@@ -3725,14 +3717,6 @@ function openSimFormModal(id, preselectCustomerId = null) {
   `);
 }
 
-function toggleSimPassword() {
-  const inp = document.getElementById('simPassword');
-  const btn = document.getElementById('simPwBtn');
-  if (!inp) return;
-  inp.type = inp.type === 'password' ? 'text' : 'password';
-  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
-}
-
 async function saveSimForm(editId) {
   const customerId = document.getElementById('simCustomer').value;
   const provider   = document.getElementById('simProvider').value.trim();
@@ -3753,7 +3737,6 @@ async function saveSimForm(editId) {
     simNumber:      document.getElementById('simNumber').value.trim(),
     iccid:          document.getElementById('simIccid').value.trim(),
     email:          document.getElementById('simEmail').value.trim(),
-    password:       document.getElementById('simPassword').value,
     plan:           document.getElementById('simPlan').value.trim(),
     renewalDate:    document.getElementById('simRenewal').value,
     paymentType,
@@ -3815,7 +3798,6 @@ function openManageSimModal(id) {
   if (!s) return;
   const history = s.history || [];
   const totalCharged = history.reduce((sum, h) => sum + (h.amount || 0), 0);
-  const pwMasked = s.password ? '••••••••' : '—';
 
   const historyHtml = history.length === 0
     ? `<div style="color:var(--muted);font-size:13px;padding:10px 0;">No history yet.</div>`
@@ -3835,11 +3817,6 @@ function openManageSimModal(id) {
       <div style="color:var(--muted);">SIM Number</div><div style="font-weight:600;">${escHtml(s.simNumber||'—')}</div>
       <div style="color:var(--muted);">ICCID</div><div style="font-size:11px;">${escHtml(s.iccid||'—')}</div>
       <div style="color:var(--muted);">Email</div><div style="font-size:11px;">${escHtml(s.email||'—')}</div>
-      <div style="color:var(--muted);">Password</div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <span id="mgSimPwText" style="font-size:13px;">${pwMasked}</span>
-        ${s.password ? `<button class="pw-toggle" style="position:static;" onclick="toggleMgSimPw('${escHtml(s.id)}')">👁</button>` : ''}
-      </div>
       <div style="color:var(--muted);">Plan</div><div>${escHtml(s.plan||'—')}</div>
       <div style="color:var(--muted);">Renewal</div><div>${fmtDate(s.renewalDate)}</div>
       <div style="color:var(--muted);">Payment</div><div>${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}</div>
@@ -3945,16 +3922,6 @@ function onSimChargeTypeChange(simId) {
   } else {
     amtEl.value = 0;
   }
-}
-
-// Reveal/mask the SIM password. Takes the SIM id and looks the password up
-// from state at click time — the password itself must never be embedded in
-// the DOM/HTML attributes.
-function toggleMgSimPw(simId) {
-  const el = document.getElementById('mgSimPwText');
-  const s = sims.find(x => x.id === simId);
-  if (!el || !s) return;
-  el.textContent = el.textContent === '••••••••' ? (s.password || '') : '••••••••';
 }
 
 async function addSimCharge(simId) {
