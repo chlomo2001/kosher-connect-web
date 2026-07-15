@@ -1682,7 +1682,11 @@ function updateRentalCalc() {
     </div>${poolLine}
   `;
   // #25 — keep the payment row's default in step with the live total.
-  const vnAmt = document.getElementById('rAddVN')?.checked ? (parseFloat(document.getElementById('rVNPrice')?.value) || 0) : 0;
+  // #29 — a monthly add-on VN bills on the VN path, so it isn't part of the
+  // rental total the payment row defaults to (only a weekly one-off is).
+  const vnMonthly = document.getElementById('rVNSub')?.value === 'monthly';
+  const vnAmt = (document.getElementById('rAddVN')?.checked && !vnMonthly)
+    ? (parseFloat(document.getElementById('rVNPrice')?.value) || 0) : 0;
   rLastTotal = Math.round((finalPrice + vnAmt) * 100) / 100;
   const payAmt = document.getElementById('rPayAmount');
   if (payAmt && document.getElementById('rPay')?.value !== 'account' && payAmt.dataset.touched !== '1') {
@@ -1755,7 +1759,14 @@ async function saveNewRental() {
     : price;
   if (autoPct > 0) toast(`Multi-phone discount applied — 3rd phone and more, ${autoPct}% off.`, 'success');
 
-  const totalPrice = discountedRental + vnPrice;
+  // #29 — one money model for virtual numbers. A MONTHLY add-on VN is now
+  // provisioned as a real standalone virtual_numbers record and billed on the
+  // recurring VN path (VN-<id>-<month>), so it is NOT baked into the rental
+  // charge. A WEEKLY add-on has no monthly-sweep equivalent, so it stays a
+  // one-off line inside the rental exactly as before.
+  const vnRecurs = addVN && vnSub === 'monthly';
+  const vnOnRental = addVN && !vnRecurs ? vnPrice : 0;
+  const totalPrice = discountedRental + vnOnRental;
   // #25 — capture payment at rental time. "On account" = wallet debt (the old
   // behaviour); a "paid now" method settles some/all of it immediately.
   const payMethod = document.getElementById('rPay')?.value || 'account';
@@ -1818,6 +1829,25 @@ async function saveNewRental() {
   // (the card's balance is ledger-derived, its timeline is built from the
   // rentals array, and c.services rental entries were filtered out anyway), so
   // that third network round-trip and its parallel money mirror are dropped.
+
+  // #29 — provision the add-on VN as a real virtual_numbers record. A monthly
+  // one recurs on the VN path (billing enabled, first bill on the rental start
+  // date); a weekly one is tracked but its single period was charged on the
+  // rental above. Either way the number now exists as a proper VN record.
+  if (addVN) {
+    await window.api.addVirtualNumber({
+      number: `${vnPrefix} — pending`,
+      customerId,
+      platform: 'Other',
+      notes: `Auto-created with rental ${phone.number} · ${vnSub} · from ${fmtDate(from)}`,
+      ...(vnRecurs ? {
+        billingEnabled: true,
+        monthlyPrice: vnPrice,
+        nextBillingDate: from,
+        bundleLabel: `Rental add-on +${vnPrefix}`,
+      } : {}),
+    }).catch(() => null);
+  }
 
   // #25/#33/#38 — the counter payment is recorded through ONE channel: the
   // rental's amountPaid, which trueUpRentalLedger posts as PAY-RENTAL-<uuid>
