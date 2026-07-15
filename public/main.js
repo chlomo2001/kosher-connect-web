@@ -1083,7 +1083,7 @@ function renderRentalsTab() {
       </div>
       <div class="stat-card">
         <div class="stat-label">Outstanding Debt</div>
-        <div class="stat-value" style="color:${outstandingDebt>0?'var(--danger)':'var(--success)'};">£${outstandingDebt}</div>
+        <div class="stat-value" style="color:${outstandingDebt>0?'var(--danger)':'var(--success)'};">${fmtGbp(outstandingDebt)}</div>
         <div class="stat-sub">Unpaid balances</div>
       </div>
     </div>
@@ -1340,7 +1340,7 @@ function renderRentalRows() {
       <td style="font-weight:600;font-size:12px;">${escHtml(r.phoneNumber || '—')}</td>
       <td style="font-size:11px;">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}</td>
       <td style="text-align:center;">${r.chargeableDays}d</td>
-      <td style="color:var(--success);font-weight:700;">£${r.price}</td>
+      <td style="color:var(--success);font-weight:700;">${fmtGbp(r.price)}</td>
       <td style="font-weight:700;${debtColor}">${totalOwed > 0 ? '£'+totalOwed+' owed' : '✓ Paid'}</td>
       <td>${statusBadge}</td>
       <td>
@@ -1623,14 +1623,14 @@ function updateRentalCalc() {
     const dtype = document.getElementById('rDiscountType')?.value || 'percent';
     const dval  = parseFloat(document.getElementById('rDiscountValue')?.value) || 0;
     finalPrice  = dtype === 'percent' ? Math.max(0, price * (1 - dval / 100)) : Math.max(0, price - dval);
-    if (dval > 0) discountLine = ` &nbsp;|&nbsp; <span style="color:var(--gold);font-size:12px;">-${dtype==='percent'?dval+'%':'£'+dval} discount → <strong>£${finalPrice.toFixed(2)}</strong></span>`;
+    if (dval > 0) discountLine = ` &nbsp;|&nbsp; <span style="color:var(--gold);font-size:12px;">-${dtype==='percent'?dval+'%':'£'+dval} discount → <strong>${fmtGbp(finalPrice)}</strong></span>`;
   } else {
     // Auto multi-phone discount (3rd+ concurrent phone); a manual discount
     // replaces it — staff choice wins.
     const autoPct = multiPhoneDiscountPct(rentals, document.getElementById('rCustomer')?.value, from, to);
     if (autoPct > 0) {
       finalPrice = Math.max(0, price * (1 - autoPct / 100));
-      discountLine = ` &nbsp;|&nbsp; <span style="color:var(--gold);font-size:12px;">3rd phone+ −${autoPct}% → <strong>£${finalPrice.toFixed(2)}</strong></span>`;
+      discountLine = ` &nbsp;|&nbsp; <span style="color:var(--gold);font-size:12px;">3rd phone+ −${autoPct}% → <strong>${fmtGbp(finalPrice)}</strong></span>`;
     }
   }
   box.style.display = 'block';
@@ -1639,7 +1639,7 @@ function updateRentalCalc() {
   const raw = chargeableDays * rate.ratePerDay;
   const capPeriods = rate.cap == null ? 0 : Math.max(1, Math.ceil(totalDays / (rate.capPeriodDays || 30)));
   const steps = [
-    `${chargeableDays} chargeable day${chargeableDays === 1 ? '' : 's'} × £${rate.ratePerDay}/day = £${raw.toFixed(2)}`,
+    `${chargeableDays} chargeable day${chargeableDays === 1 ? '' : 's'} × £${rate.ratePerDay}/day = ${fmtGbp(raw)}`,
   ];
   if (rate.minCharge && chargeableDays > 0 && raw < rate.minCharge)
     steps.push(`below the £${rate.minCharge} minimum → £${rate.minCharge}`);
@@ -1664,7 +1664,7 @@ function updateRentalCalc() {
     <span style="color:var(--muted);">Total days:</span> ${totalDays} &nbsp;|&nbsp;
     <span style="color:var(--muted);">Shabbat/Yom Tov excluded:</span> <span style="color:var(--gold);">${excluded}</span> &nbsp;|&nbsp;
     <span style="color:var(--muted);">Chargeable days:</span> ${chargeableDays} &nbsp;|&nbsp;
-    <strong style="color:var(--success);font-size:15px;">£${price}</strong>${discountLine}
+    <strong style="color:var(--success);font-size:15px;">${fmtGbp(price)}</strong>${discountLine}
     <div style="margin-top:6px;font-size:11px;color:var(--muted);line-height:1.6;">
       🧮 ${steps.join(' → ')}
       ${excluded > 0 ? `<br>📅 <span style="cursor:help;" title="Every Shabbos and full Yom Tov in the rental window is free — guests keep the phone over those days at no charge.">${excluded} free day${excluded === 1 ? '' : 's'} (Shabbos / Yom Tov) — hover for why</span>` : ''}
@@ -1789,7 +1789,7 @@ async function saveNewRental() {
   const extraMsg = await applyExtraCharges('rental', rental.id, customerId, false);
   toast(isReservation
     ? `Reserved for ${customer.firstName} — pickup ${fmtDate(from)}. Press ▶ Start at handover.`
-    : `Rental saved! £${totalPrice} charged to ${customer.firstName}.${extraMsg}`, 'success');
+    : `Rental saved! ${fmtGbp(totalPrice)} charged to ${customer.firstName}.${extraMsg}`, 'success');
   renderRentalsTab();
 }
 
@@ -1802,7 +1802,7 @@ async function applyExtraCharges(appliesTo, refBase, customerId, paidNow) {
     body: JSON.stringify({ op: 'apply', appliesTo, refBase, customerId, paidNow }),
   }).then(r => r.json()).catch(() => null);
   if (res?.success && res.extras?.length) {
-    return ` Incl. ${res.extras.map(e => `${e.label} £${e.amount.toFixed(2)}`).join(', ')}.`;
+    return ` Incl. ${res.extras.map(e => `${e.label} ${fmtGbp(e.amount)}`).join(', ')}.`;
   }
   return '';
 }
@@ -2176,7 +2176,7 @@ function mgUpdateCalc() {
     const dtype = document.getElementById('mgDiscountType')?.value || 'percent';
     const dval  = parseFloat(document.getElementById('mgDiscountValue')?.value) || 0;
     discountedBase = dtype === 'percent' ? Math.max(0, price * (1 - dval / 100)) : Math.max(0, price - dval);
-    if (dval > 0) discountLine = ` &nbsp;|&nbsp; -${dtype==='percent'?dval+'%':'£'+dval} → <strong style="color:var(--accent);">£${discountedBase.toFixed(2)}</strong>`;
+    if (dval > 0) discountLine = ` &nbsp;|&nbsp; -${dtype==='percent'?dval+'%':'£'+dval} → <strong style="color:var(--accent);">${fmtGbp(discountedBase)}</strong>`;
   }
   // Fold the add-on virtual number back in — it's part of r.price (and the
   // rental's ledger charge). The base-only recompute must not drop it, or
@@ -2186,7 +2186,7 @@ function mgUpdateCalc() {
 
   const lateFee  = mgComputeLateFee();
   document.getElementById('mgCalcText').innerHTML =
-    `Total: ${totalDays}d &nbsp;|&nbsp; Shabbat/YT excluded: <span style="color:var(--gold);">${excl}</span> &nbsp;|&nbsp; Chargeable: ${chargeableDays}d &nbsp;|&nbsp; <strong style="color:var(--success);">£${price}</strong>${discountLine}${vnPrice > 0 ? ` &nbsp;+&nbsp; VN £${vnPrice.toFixed(2)}` : ''}`;
+    `Total: ${totalDays}d &nbsp;|&nbsp; Shabbat/YT excluded: <span style="color:var(--gold);">${excl}</span> &nbsp;|&nbsp; Chargeable: ${chargeableDays}d &nbsp;|&nbsp; <strong style="color:var(--success);">${fmtGbp(price)}</strong>${discountLine}${vnPrice > 0 ? ` &nbsp;+&nbsp; VN ${fmtGbp(vnPrice)}` : ''}`;
   document.getElementById('mgPrice').value    = finalPrice.toFixed(2);
   document.getElementById('mgBasePrice').value = price;
 
@@ -2196,7 +2196,7 @@ function mgUpdateCalc() {
   const row = (label, amount, colour) =>
     `<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px;">
       <span style="color:${colour||'var(--muted)'};">${label}</span>
-      <span style="color:${colour||'var(--text)'};">£${amount.toFixed(2)}</span>
+      <span style="color:${colour||'var(--text)'};">${fmtGbp(amount)}</span>
     </div>`;
   let html = row('Rental', discountedBase);
   if (vnPrice > 0)     html += row('Virtual number', vnPrice, 'var(--accent)');
@@ -2207,7 +2207,7 @@ function mgUpdateCalc() {
   html += `<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;
               margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">
              <span>Total</span>
-             <span id="mgTotalChargeValue">£${grandTotal.toFixed(2)}</span>
+             <span id="mgTotalChargeValue">${fmtGbp(grandTotal)}</span>
            </div>`;
   const breakdown = document.getElementById('mgChargeBreakdown');
   if (breakdown) breakdown.innerHTML = html;
@@ -2275,8 +2275,8 @@ async function saveManageRental(rentalId) {
   if (grandTotal !== oldGrand && !(await kcConfirm({
     title: 'Confirm rental charge change',
     body: `<strong>${escHtml(r.customerName || 'Customer')}</strong><br>
-      Rental £${newPrice.toFixed(2)}${savedLateFee > 0 ? ` + late fee £${savedLateFee.toFixed(2)}` : ''}${lostInfo.total > 0 ? ` + lost items £${lostInfo.total.toFixed(2)}` : ''}<br>
-      <span style="color:var(--muted);font-size:12px;">was £${oldGrand.toFixed(2)}</span>`,
+      Rental ${fmtGbp(newPrice)}${savedLateFee > 0 ? ` + late fee ${fmtGbp(savedLateFee)}` : ''}${lostInfo.total > 0 ? ` + lost items ${fmtGbp(lostInfo.total)}` : ''}<br>
+      <span style="color:var(--muted);font-size:12px;">was ${fmtGbp(oldGrand)}</span>`,
     amount: grandTotal,
     okLabel: 'Apply charges',
   }))) return;
@@ -2413,7 +2413,7 @@ function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm cha
       <div class="modal" style="width:430px;">
         <div class="modal-title">${escHtml(title)}</div>
         <div style="font-size:14px;line-height:1.65;margin:4px 0 10px;color:var(--text);">${body}</div>
-        ${amount !== null ? `<div style="font-size:24px;font-weight:700;margin:0 0 16px;font-feature-settings:'tnum';">£${Number(amount).toFixed(2)}</div>` : ''}
+        ${amount !== null ? `<div style="font-size:24px;font-weight:700;margin:0 0 16px;font-feature-settings:'tnum';">${fmtGbp(Number(amount))}</div>` : ''}
         <div class="modal-actions">
           <button class="btn btn-outline" onclick="kcConfirmDone(false)">Cancel</button>
           <button class="btn btn-primary" onclick="kcConfirmDone(true)">✓ ${escHtml(okLabel)}</button>
@@ -2456,7 +2456,7 @@ function renderCustomersTab() {
       </div>
       <div class="stat-card">
         <div class="stat-label">Total Revenue</div>
-        <div class="stat-value purple">£${totalPaid}</div>
+        <div class="stat-value purple">${fmtGbp(totalPaid)}</div>
         <div class="stat-sub">All time</div>
       </div>
     </div>
@@ -2618,7 +2618,7 @@ function renderTableRows() {
       </td>
       <td>${escHtml(c.phone || '—')}</td>
       <td>${services || '<span style="color:var(--muted);font-size:12px;">None</span>'}</td>
-      <td style="color: ${customerDebt > 0 ? 'var(--danger)' : 'var(--success)'}; font-weight: 700;">${customerDebt > 0 ? `£${customerDebt} debt` : `£${customerPaid}`}</td>
+      <td style="color: ${customerDebt > 0 ? 'var(--danger)' : 'var(--success)'}; font-weight: 700;">${customerDebt > 0 ? `${fmtGbp(customerDebt)} debt` : `${fmtGbp(customerPaid)}`}</td>
       <td>
         <div class="row-actions">
           <button class="action-btn" data-action="edit" data-id="${c.id}">Edit</button>
@@ -2747,7 +2747,7 @@ function renderDetailPanel(id) {
             <div class="history-desc">${escHtml(h.desc)}</div>
           </div>
           <div class="history-date" style="margin:0 16px;">${escHtml(h.date || '')}</div>
-          <div class="history-amount">£${h.amount}</div>
+          <div class="history-amount">${fmtGbp(h.amount)}</div>
         </div>`).join('');
 
   const cUpcoming = customerUpcomingBookings(c);
@@ -2841,7 +2841,7 @@ function renderDetailPanel(id) {
             <div style="font-size:13px;color:var(--text);">${escHtml(e.title)}</div>
             <div style="font-size:11px;color:var(--muted);">${escHtml(e.cat)}${e.sub ? ' · ' + escHtml(e.sub) : ''}</div>
           </div>
-          ${e.amount ? `<span style="font-size:12px;color:var(--muted);white-space:nowrap;">£${Number(e.amount).toFixed(2)}</span>` : ''}
+          ${e.amount ? `<span style="font-size:12px;color:var(--muted);white-space:nowrap;">${fmtGbp(Number(e.amount))}</span>` : ''}
         </div>`).join('');
 
   const panelHtml = `
@@ -2962,7 +2962,7 @@ async function loadWalletSection(customerId) {
   }
   const bal = data.balance || 0;
   const balColor = bal < 0 ? 'var(--danger)' : 'var(--success)';
-  const balLabel = bal < 0 ? `owes £${Math.abs(bal).toFixed(2)}` : `£${bal.toFixed(2)} in credit`;
+  const balLabel = bal < 0 ? `owes ${fmtGbp(Math.abs(bal))}` : `${fmtGbp(bal)} in credit`;
   const entriesHtml = data.entries.length === 0
     ? `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No wallet activity yet.</div>`
     : data.entries.slice(0, 8).map(e => `
@@ -2973,7 +2973,7 @@ async function loadWalletSection(customerId) {
           </div>
           <div class="history-date" style="margin:0 16px;">${fmtDate(e.at)}</div>
           <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--danger)'};">
-            ${e.amount >= 0 ? '+' : '−'}£${Math.abs(e.amount).toFixed(2)}</div>
+            ${e.amount >= 0 ? '+' : '−'}${fmtGbp(Math.abs(e.amount))}</div>
         </div>`).join('');
 
   el.innerHTML = `
@@ -3053,7 +3053,7 @@ async function saveWalletEntry(customerId) {
   const res = await window.api.addLedgerEntry({ customerId, kind, amount, method, note });
   if (!res.success) { toast(res.error || 'Could not record it.', 'error'); return; }
   closeDynamicModal();
-  toast(`Recorded — wallet balance now £${res.balance.toFixed(2)}.`, 'success');
+  toast(`Recorded — wallet balance now ${fmtGbp(res.balance)}.`, 'success');
   if (wantEmail && amount > 0) {
     kcFetch('/api/email', {
       method: 'POST',
@@ -3108,7 +3108,7 @@ async function renderWalletTab() {
       <span class="feed-icon">${negative ? '🔴' : '🟢'}</span>
       <span style="flex:1;"><strong>${escHtml(b.customerName)}</strong></span>
       <span style="font-feature-settings:'tnum';color:${negative ? 'var(--danger)' : 'var(--success)'};font-weight:600;">
-        ${negative ? '−' : '+'}£${Math.abs(b.balance).toFixed(2)}</span>
+        ${negative ? '−' : '+'}${fmtGbp(Math.abs(b.balance))}</span>
       ${b.customerId ? `<button class="btn btn-outline btn-sm" style="margin-left:10px;font-size:11px;padding:4px 10px;"
         onclick="event.stopPropagation();openWalletModal('${escHtml(String(b.customerId))}')">💰 Record</button>` : ''}
       <span class="feed-go">›</span>
@@ -3134,7 +3134,7 @@ async function renderWalletTab() {
           </div>
           <div class="history-date" style="margin:0 12px;">${fmtDate(e.at)}</div>
           <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--text)'};font-feature-settings:'tnum';">
-            ${e.amount >= 0 ? '+' : '−'}£${Math.abs(e.amount).toFixed(2)}</div>
+            ${e.amount >= 0 ? '+' : '−'}${fmtGbp(Math.abs(e.amount))}</div>
         </div>`).join('');
 
   const customerOptions = [...customers]
@@ -3145,14 +3145,14 @@ async function renderWalletTab() {
   content.innerHTML = `
     <div class="stats-row">
       <div class="stat-card"><div class="stat-label">Money In Today</div>
-        <div class="stat-value" style="color:var(--success);">£${(data.todayIn || 0).toFixed(2)}</div></div>
+        <div class="stat-value" style="color:var(--success);">${fmtGbp((data.todayIn || 0))}</div></div>
       <div class="stat-card"><div class="stat-label">Charged Out Today</div>
-        <div class="stat-value">£${Math.abs(data.todayOut || 0).toFixed(2)}</div></div>
+        <div class="stat-value">${fmtGbp(Math.abs(data.todayOut || 0))}</div></div>
       <div class="stat-card"><div class="stat-label">Outstanding</div>
-        <div class="stat-value" style="color:${arrearsTotal > 0 ? 'var(--danger)' : 'var(--success)'};">£${arrearsTotal.toFixed(2)}</div>
+        <div class="stat-value" style="color:${arrearsTotal > 0 ? 'var(--danger)' : 'var(--success)'};">${fmtGbp(arrearsTotal)}</div>
         <div class="stat-sub">${arrears.length} customer${arrears.length === 1 ? '' : 's'} in arrears</div></div>
       <div class="stat-card"><div class="stat-label">Credit Held</div>
-        <div class="stat-value">£${creditsTotal.toFixed(2)}</div>
+        <div class="stat-value">${fmtGbp(creditsTotal)}</div>
         <div class="stat-sub">${credits.length} customer${credits.length === 1 ? '' : 's'} in credit</div></div>
     </div>
 
@@ -3196,7 +3196,7 @@ async function openCashupModal() {
     .map(([m, amt]) => `
       <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);">
         <span>${METHOD_LABELS[m] || escHtml(m)}</span>
-        <strong style="font-feature-settings:'tnum';">£${amt.toFixed(2)}</strong>
+        <strong style="font-feature-settings:'tnum';">${fmtGbp(amt)}</strong>
       </div>`).join('') ||
     `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No money in yet today.</div>`;
 
@@ -3204,15 +3204,15 @@ async function openCashupModal() {
     <div class="modal-title">🧾 Cash-up — ${fmtDate(today)}</div>
     <div style="margin-bottom:14px;">${methodRows}
       <div style="display:flex;justify-content:space-between;font-size:13px;padding:7px 0;color:var(--muted);">
-        <span>Charged out today</span><span style="font-feature-settings:'tnum';">−£${Math.abs(data.totalOut).toFixed(2)}</span>
+        <span>Charged out today</span><span style="font-feature-settings:'tnum';">−${fmtGbp(Math.abs(data.totalOut))}</span>
       </div>
     </div>
     <div style="background:var(--bg-secondary);border-radius:10px;padding:12px 14px;margin-bottom:14px;">
       ${data.openingFloat ? `<div style="display:flex;justify-content:space-between;font-size:13px;padding-bottom:6px;color:var(--muted);">
-        <span>Opening float</span><span style="font-feature-settings:'tnum';">£${Number(data.openingFloat).toFixed(2)}</span>
+        <span>Opening float</span><span style="font-feature-settings:'tnum';">${fmtGbp(Number(data.openingFloat))}</span>
       </div>` : ''}
       <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;">
-        <span>Expected cash in till</span><span>£${data.expectedCash.toFixed(2)}</span>
+        <span>Expected cash in till</span><span>${fmtGbp(data.expectedCash)}</span>
       </div>
     </div>
     <div class="form-grid">
@@ -3222,7 +3222,7 @@ async function openCashupModal() {
           value="${data.count ? data.count.counted.toFixed(2) : ''}" placeholder="0.00"
           oninput="cuUpdateVariance(this, ${data.expectedCash})">
         <div id="cuVariance" style="font-size:12px;margin-top:4px;font-weight:600;">
-          ${data.count ? (data.count.variance === 0 ? '✓ Till balances' : `${data.count.variance > 0 ? '+' : '−'}£${Math.abs(data.count.variance).toFixed(2)} ${data.count.variance > 0 ? 'over' : 'short'}`) : ''}</div>
+          ${data.count ? (data.count.variance === 0 ? '✓ Till balances' : `${data.count.variance > 0 ? '+' : '−'}${fmtGbp(Math.abs(data.count.variance))} ${data.count.variance > 0 ? 'over' : 'short'}`) : ''}</div>
       </div>
       <div class="form-group">
         <label class="form-label">Notes</label>
@@ -3243,7 +3243,7 @@ function cuUpdateVariance(inputEl, expected) {
   if (!Number.isFinite(v)) { el.textContent = ''; return; }
   const d = +(v - expected).toFixed(2);
   el.textContent = d === 0 ? '✓ Till balances'
-    : `${d > 0 ? '+' : '−'}£${Math.abs(d).toFixed(2)} ${d > 0 ? 'over' : 'short'}`;
+    : `${d > 0 ? '+' : '−'}${fmtGbp(Math.abs(d))} ${d > 0 ? 'over' : 'short'}`;
   el.style.color = d === 0 ? 'var(--success)' : 'var(--danger)';
 }
 
@@ -3259,7 +3259,7 @@ async function saveCashup(date) {
   closeDynamicModal();
   const v = res.variance;
   toast(v === 0 ? 'Till counted — balances exactly. ✓'
-    : `Till counted — ${v > 0 ? '+' : '−'}£${Math.abs(v).toFixed(2)} ${v > 0 ? 'over' : 'short'}.`,
+    : `Till counted — ${v > 0 ? '+' : '−'}${fmtGbp(Math.abs(v))} ${v > 0 ? 'over' : 'short'}.`,
     v === 0 ? 'success' : 'warning');
 }
 
@@ -3280,7 +3280,7 @@ async function addPayment(id) {
   await window.api.updateCustomer(c);
   const idx = customers.findIndex(x => x.id === id);
   if (idx !== -1) customers[idx] = c;
-  toast(`£${amt} added to ${c.firstName}'s history!`, 'success');
+  toast(`${fmtGbp(amt)} added to ${c.firstName}'s history!`, 'success');
   renderDetailPanel(id);
   renderTableRows();
 }
@@ -3651,7 +3651,7 @@ function renderSimsTab() {
       </div>
       <div class="stat-card">
         <div class="stat-label">Total Revenue</div>
-        <div class="stat-value purple">£${totalRev}</div>
+        <div class="stat-value purple">${fmtGbp(totalRev)}</div>
         <div class="stat-sub">All charges</div>
       </div>
     </div>
@@ -3943,7 +3943,7 @@ function openManageSimModal(id) {
       <div style="color:var(--muted);">Payment</div><div>${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}</div>
       ${s.paymentType !== 'direct' ? `
       <div style="color:var(--muted);">DD Day</div><div style="font-weight:600;">${s.ddDate ? `${s.ddDate}${s.ddDate===1?'st':s.ddDate===2?'nd':s.ddDate===3?'rd':'th'} of each month` : '—'}</div>
-      <div style="color:var(--muted);">Next DD Amount</div><div style="font-weight:700;color:var(--success);">${s.simMonthlyCost ? '£'+ddMonthlyAmount(s.simMonthlyCost).toFixed(2) : '—'}</div>
+      <div style="color:var(--muted);">Next DD Amount</div><div style="font-weight:700;color:var(--success);">${s.simMonthlyCost ? fmtGbp(ddMonthlyAmount(s.simMonthlyCost)) : '—'}</div>
       ` : ''}
       <div style="color:var(--muted);">Status</div><div>${s.status}</div>
     </div>
@@ -3962,9 +3962,9 @@ function openManageSimModal(id) {
             <option value="activation">🟢 Initial Setup — £${simChargePrice('activation')}</option>
             <option value="service">🔧 Service (roaming/swap/reactivation) — £${simChargePrice('service')}</option>
             <option value="sim-replacement">📦 SIM Replacement — £${simChargePrice('sim-replacement')}</option>
-            <option value="monthly">${s.paymentType !== 'direct' && s.simMonthlyCost ? `📅 Monthly DD — £${ddMonthlyAmount(s.simMonthlyCost).toFixed(2)}` : '📅 Monthly Subscription'}</option>
+            <option value="monthly">${s.paymentType !== 'direct' && s.simMonthlyCost ? `📅 Monthly DD — ${fmtGbp(ddMonthlyAmount(s.simMonthlyCost))}` : '📅 Monthly Subscription'}</option>
             <option value="annual">📅 Annual Subscription — £${simChargePrice('annual')}</option>
-            ${simMenu.map(m => `<option value="menu:${escHtml(String(m.id))}">🛒 ${escHtml(m.name)} — £${m.price.toFixed(2)}</option>`).join('')}
+            ${simMenu.map(m => `<option value="menu:${escHtml(String(m.id))}">🛒 ${escHtml(m.name)} — ${fmtGbp(m.price)}</option>`).join('')}
             <option value="custom">✏️ Custom</option>
           </select>
         </div>
@@ -3981,7 +3981,7 @@ function openManageSimModal(id) {
     </div>
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
-      <span style="font-size:13px;color:var(--muted);">Total charged: <strong style="color:var(--success);">£${totalCharged}</strong></span>
+      <span style="font-size:13px;color:var(--muted);">Total charged: <strong style="color:var(--success);">${fmtGbp(totalCharged)}</strong></span>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-outline btn-sm" onclick="openEditSimModal('${id}');void(0)">✏️ Edit Details</button>
         <button class="btn btn-outline btn-sm" onclick="closeDynamicModal()">Close</button>
@@ -4079,7 +4079,7 @@ async function addSimCharge(simId) {
   window.api.chargeSim({ simId: s.id, customerId: s.customerId, historyId, amount, description: desc })
     .then(res => { if (!res?.success) toast(res?.error || 'Charge saved, but not billed to the wallet.', 'error'); })
     .catch(() => toast('Charge saved, but not billed to the wallet.', 'error'));
-  toast(`Charge of £${amount} added ✅`, 'success');
+  toast(`Charge of ${fmtGbp(amount)} added ✅`, 'success');
   openManageSimModal(simId);
 }
 
@@ -4235,8 +4235,8 @@ function renderBookingsTab() {
         <td>${escHtml(b.airline || '—')}<div class="customer-email">${escHtml(b.bookingReference || '')}</div></td>
         <td>${b.travelDate ? fmtDate(b.travelDate) : '—'}
             <div class="customer-email">${escHtml(b.departureTime || '')}${b.arrivalTime ? ' → ' + escHtml(b.arrivalTime) : ''}</div></td>
-        <td>£${(b.price || 0).toFixed(2)}</td>
-        <td>£${(b.bookingFee || 0).toFixed(2)}</td>
+        <td>${fmtGbp((b.price || 0))}</td>
+        <td>${fmtGbp((b.bookingFee || 0))}</td>
         <td>${bookingStatusBadge(b.status)}</td>
         <td style="cursor:pointer;" onclick="openCheckinModal('${escHtml(b.id)}')" title="Set check-in">${checkinChip(b)}</td>
         <td style="white-space:nowrap;">
@@ -4254,8 +4254,8 @@ function renderBookingsTab() {
     <div class="stats-row">
       <div class="stat-card"><div class="stat-label">Total Bookings</div><div class="stat-value">${bookings.length}</div></div>
       <div class="stat-card"><div class="stat-label">Upcoming Travel</div><div class="stat-value">${upcoming}</div></div>
-      <div class="stat-card"><div class="stat-label">Booking Fees</div><div class="stat-value">£${feesEarned.toFixed(2)}</div></div>
-      <div class="stat-card"><div class="stat-label">Total Charged</div><div class="stat-value">£${totalCharged.toFixed(2)}</div></div>
+      <div class="stat-card"><div class="stat-label">Booking Fees</div><div class="stat-value">${fmtGbp(feesEarned)}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Charged</div><div class="stat-value">${fmtGbp(totalCharged)}</div></div>
     </div>
     <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
       <button class="btn btn-primary" onclick="openNewBookingModal()">+ New Booking</button>
@@ -4356,7 +4356,7 @@ async function openNewBookingModal(preselectCustomerId = null) {
   const startFee = ticketsMenu.find(s => /start fee/i.test(s.name));
   const svcOptions = ticketsMenu
     .filter(s => !/start fee/i.test(s.name))
-    .map(s => `<option value="${escHtml(s.id)}">${escHtml(s.name)} — £${s.price.toFixed(2)}</option>`)
+    .map(s => `<option value="${escHtml(s.id)}">${escHtml(s.name)} — ${fmtGbp(s.price)}</option>`)
     .join('');
   showDynamicModal(`
     <div class="modal-title">✈️ New Booking</div>
@@ -4429,7 +4429,7 @@ async function openNewBookingModal(preselectCustomerId = null) {
             oninput="bkCalcFee()" title="Passengers" style="width:80px;">
           ${startFee ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
             <input type="checkbox" id="bkStartFee" onchange="bkCalcFee()"
-              style="width:14px;height:14px;accent-color:var(--accent);"> + start fee £${startFee.price.toFixed(2)}
+              style="width:14px;height:14px;accent-color:var(--accent);"> + start fee ${fmtGbp(startFee.price)}
           </label>` : ''}
         </div>
         <div id="bkFeeBreakdown" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
@@ -4487,12 +4487,12 @@ function bkCalcFee() {
     ? (ticketsMenu.find(s => /start fee/i.test(s.name))?.price || 0) : 0;
   const fee = ticketFeeFor(svc, n) + startFee;
   document.getElementById('bkFee').value = fee.toFixed(2);
-  const parts = [`1 × £${svc.price.toFixed(2)}`];
-  if (n > 1 && svc.repeatPrice !== null) parts.push(`${Math.min(n - 1, 4)} × £${Number(svc.repeatPrice).toFixed(2)}`);
-  if (n > 5 && svc.repeatPrice !== null) parts.push(`${n - 5} × £${Number(svc.bulkPrice ?? svc.repeatPrice).toFixed(2)}`);
-  if (startFee) parts.push(`start £${startFee.toFixed(2)}`);
+  const parts = [`1 × ${fmtGbp(svc.price)}`];
+  if (n > 1 && svc.repeatPrice !== null) parts.push(`${Math.min(n - 1, 4)} × ${fmtGbp(Number(svc.repeatPrice))}`);
+  if (n > 5 && svc.repeatPrice !== null) parts.push(`${n - 5} × ${fmtGbp(Number(svc.bulkPrice ?? svc.repeatPrice))}`);
+  if (startFee) parts.push(`start ${fmtGbp(startFee)}`);
   document.getElementById('bkFeeBreakdown').textContent =
-    `${n} passenger${n === 1 ? '' : 's'}: ${parts.join(' + ')} = £${fee.toFixed(2)}`;
+    `${n} passenger${n === 1 ? '' : 's'}: ${parts.join(' + ')} = ${fmtGbp(fee)}`;
 }
 
 // Show the check-in date only when WE do the check-in; default it to the day
@@ -4543,7 +4543,7 @@ async function saveNewBooking() {
     title: 'Confirm booking charge',
     body: `<strong>${bkCust ? escHtml(bkCust.firstName) + ' ' + escHtml(bkCust.lastName) : 'Customer'}</strong><br>
       ${escHtml(payload.route)}${payload.airline ? ' · ' + escHtml(payload.airline) : ''} · ${fmtDate(payload.travelDate)}<br>
-      Ticket £${payload.price.toFixed(2)}${payload.bookingFee ? ` + fee £${payload.bookingFee.toFixed(2)}` : ''}${payload.payment === 'paid' ? ' · paid now' : ' · on account'}`,
+      Ticket ${fmtGbp(payload.price)}${payload.bookingFee ? ` + fee ${fmtGbp(payload.bookingFee)}` : ''}${payload.payment === 'paid' ? ' · paid now' : ' · on account'}`,
     amount: payload.price + (payload.bookingFee || 0),
     okLabel: 'Charge booking',
   }))) return;
@@ -4557,10 +4557,10 @@ async function saveNewBooking() {
   let chargeMsg = '';
   if (res.chargePosted) {
     chargeMsg = res.paidNow
-      ? ` £${res.charged.toFixed(2)} paid in full.`
-      : ` £${res.charged.toFixed(2)} on account — wallet balance £${res.balance.toFixed(2)}.`;
+      ? ` ${fmtGbp(res.charged)} paid in full.`
+      : ` ${fmtGbp(res.charged)} on account — wallet balance ${fmtGbp(res.balance)}.`;
   }
-  if (res.extras?.length) chargeMsg += ` Incl. ${res.extras.map(e => `${e.label} £${e.amount.toFixed(2)}`).join(', ')}.`;
+  if (res.extras?.length) chargeMsg += ` Incl. ${res.extras.map(e => `${e.label} ${fmtGbp(e.amount)}`).join(', ')}.`;
   toast(`Booking saved!${chargeMsg}`, 'success');
   renderBookingsTab();
 }
@@ -4733,7 +4733,7 @@ function openEditBookingModal(id) {
         <input class="form-input" id="ebNotes" value="${escHtml(b.notes || '')}"></div>
     </div>
     <div style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);">
-      💷 Price <strong>£${(b.price || 0).toFixed(2)}</strong> + fee <strong>£${(b.bookingFee || 0).toFixed(2)}</strong> (read-only — adjust money via the customer's wallet).
+      💷 Price <strong>${fmtGbp((b.price || 0))}</strong> + fee <strong>${fmtGbp((b.bookingFee || 0))}</strong> (read-only — adjust money via the customer's wallet).
       &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openPassengersModal('${escHtml(b.id)}');return false;">👥 Passengers</a>
       &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openCheckinModal('${escHtml(b.id)}');return false;">🛫 Check-in</a>
     </div>
@@ -4817,7 +4817,7 @@ async function renderRepairsTab() {
         <td><div class="customer-name">${escHtml(r.customerName || '—')}</div></td>
         <td>${escHtml(r.device || '—')}${r.kcPurchase ? ' <span class="badge" style="background:rgba(99, 91, 255,0.1);color:var(--accent);font-size:10px;">KC phone</span>' : ''}</td>
         <td style="font-size:12px;">${r.services.map(s => escHtml(s.name)).join('<br>') || '—'}</td>
-        <td><strong>£${(r.total || 0).toFixed(2)}</strong></td>
+        <td><strong>${fmtGbp((r.total || 0))}</strong></td>
         <td>${r.openedAt ? fmtDate(r.openedAt) : '—'}</td>
         <td>${repairStatusBadge(r.status)}</td>
         <td style="white-space:nowrap;">
@@ -4833,7 +4833,7 @@ async function renderRepairsTab() {
     <div class="stats-row">
       <div class="stat-card"><div class="stat-label">Open Tickets</div><div class="stat-value">${open.length}</div></div>
       <div class="stat-card"><div class="stat-label">Ready to Collect</div><div class="stat-value">${ready.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Repairs Revenue</div><div class="stat-value">£${revenue.toFixed(2)}</div></div>
+      <div class="stat-card"><div class="stat-label">Repairs Revenue</div><div class="stat-value">${fmtGbp(revenue)}</div></div>
       <div class="stat-card"><div class="stat-label">Total Tickets</div><div class="stat-value">${repairs.length}</div></div>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;">
@@ -4864,7 +4864,7 @@ function openNewRepairModal(preselectCustomerId = null) {
         data-price="${m.price}" data-reg="${m.price}" data-kc="${m.kcPrice ?? ''}"
         onchange="updateRepairTotal()">
       <span style="flex:1;">${escHtml(m.name)}</span>
-      <strong class="rpPriceLbl">£${m.price.toFixed(2)}</strong>
+      <strong class="rpPriceLbl">${fmtGbp(m.price)}</strong>
     </label>`).join('');
   showDynamicModal(`
     <div class="modal-title">🔧 New Repair</div>
@@ -4910,7 +4910,7 @@ function openNewRepairModal(preselectCustomerId = null) {
 function updateRepairTotal() {
   const total = [...document.querySelectorAll('.rpService:checked')]
     .reduce((s, el) => s + (parseFloat(el.dataset.price) || 0), 0);
-  document.getElementById('rpTotal').textContent = `£${total.toFixed(2)}`;
+  document.getElementById('rpTotal').textContent = `${fmtGbp(total)}`;
 }
 
 // Swap the whole menu between regular and "Purchased at KC" prices. Jobs
@@ -4925,8 +4925,8 @@ function rpKCToggle() {
       const eff = parseFloat(el.dataset.price) || 0;
       const reg = parseFloat(el.dataset.reg) || 0;
       lbl.innerHTML = useKc
-        ? `<span style="color:var(--muted);text-decoration:line-through;font-weight:400;">£${reg.toFixed(2)}</span> £${eff.toFixed(2)}`
-        : `£${reg.toFixed(2)}`;
+        ? `<span style="color:var(--muted);text-decoration:line-through;font-weight:400;">${fmtGbp(reg)}</span> ${fmtGbp(eff)}`
+        : `${fmtGbp(reg)}`;
     }
   });
   updateRepairTotal();
@@ -4956,7 +4956,7 @@ async function saveNewRepair() {
   });
   if (!res.success) { toast(res.error || 'Could not open the ticket.', 'error'); return; }
   closeDynamicModal();
-  toast(`Repair ticket opened — £${res.repair.total.toFixed(2)} on collection.`, 'success');
+  toast(`Repair ticket opened — ${fmtGbp(res.repair.total)} on collection.`, 'success');
   renderRepairsTab();
 }
 
@@ -4978,7 +4978,7 @@ function openCollectRepairModal(id) {
   if (!r) return;
   showDynamicModal(`
     <div class="modal-title">🔧 Collect repair — ${escHtml(r.customerName || '')}</div>
-    <div style="font-size:14px;margin-bottom:12px;">${escHtml(r.device || 'device')} · total <strong>£${(r.total || 0).toFixed(2)}</strong></div>
+    <div style="font-size:14px;margin-bottom:12px;">${escHtml(r.device || 'device')} · total <strong>${fmtGbp((r.total || 0))}</strong></div>
     <div class="form-group">
       <label class="form-label">Payment</label>
       <select class="form-input" id="rcPay">
@@ -5003,8 +5003,8 @@ async function confirmCollectRepair(id) {
   closeDynamicModal();
   if (res.chargePosted) {
     toast(res.paidNow
-      ? `Collected — £${res.repair.total.toFixed(2)} paid in full.`
-      : `Collected — £${res.repair.total.toFixed(2)} on account. Balance £${res.balance.toFixed(2)}.`, 'success');
+      ? `Collected — ${fmtGbp(res.repair.total)} paid in full.`
+      : `Collected — ${fmtGbp(res.repair.total)} on account. Balance ${fmtGbp(res.balance)}.`, 'success');
   } else {
     toast('Repair collected.', 'success');
   }
@@ -5103,7 +5103,7 @@ function svcTimerStop() {
     document.getElementById('svTotal').value = amount.toFixed(2);
     document.getElementById('svNotes').value = `Timed help — ${minutes} min`;
     const bd = document.getElementById('svBreakdown');
-    if (bd) bd.innerHTML = `⏱ ${minutes} min at £${settingNum('online_hourly_rate', 45)}/hr (10-min minimum) = <strong>£${amount.toFixed(2)}</strong> — editable.`;
+    if (bd) bd.innerHTML = `⏱ ${minutes} min at £${settingNum('online_hourly_rate', 45)}/hr (10-min minimum) = <strong>${fmtGbp(amount)}</strong> — editable.`;
   }, 60);
 }
 
@@ -5130,7 +5130,7 @@ async function renderServicesTab() {
       <tr>
         <td><div class="customer-name">${escHtml(o.customerName || '—')}</div></td>
         <td>${escHtml(o.serviceName)}${o.qty > 1 ? ` <span style="color:var(--muted);">× ${o.qty}</span>` : ''}</td>
-        <td><strong>£${(o.total || 0).toFixed(2)}</strong></td>
+        <td><strong>${fmtGbp((o.total || 0))}</strong></td>
         <td>${o.createdAt ? fmtDate(o.createdAt) : '—'}</td>
         <td style="font-size:12px;color:var(--muted);">${escHtml(o.notes || '')}</td>
       </tr>`).join('');
@@ -5138,17 +5138,17 @@ async function renderServicesTab() {
   const menuRows = onlineMenu.map(m => `
     <tr>
       <td>${escHtml(m.name)}</td>
-      <td>£${m.price.toFixed(2)}</td>
-      <td>${m.repeatPrice === null ? '—' : '£' + m.repeatPrice.toFixed(2)}</td>
+      <td>${fmtGbp(m.price)}</td>
+      <td>${m.repeatPrice === null ? '—' : fmtGbp(m.repeatPrice)}</td>
     </tr>`).join('');
 
   content.innerHTML = `
     <div class="stats-row">
       <div class="stat-card"><div class="stat-label">Charged Today</div>
-        <div class="stat-value">£${todays.reduce((s, o) => s + (o.total || 0), 0).toFixed(2)}</div>
+        <div class="stat-value">${fmtGbp(todays.reduce((s, o) => s + (o.total || 0), 0))}</div>
         <div class="stat-sub">${todays.length} service${todays.length === 1 ? '' : 's'}</div></div>
       <div class="stat-card"><div class="stat-label">All-Time Revenue</div>
-        <div class="stat-value">£${revenue.toFixed(2)}</div></div>
+        <div class="stat-value">${fmtGbp(revenue)}</div></div>
       <div class="stat-card"><div class="stat-label">Orders</div><div class="stat-value">${serviceOrders.length}</div></div>
     </div>
     ${(() => {
@@ -5213,7 +5213,7 @@ async function renderServicesTab() {
       el.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
       const { minutes, amount } = svcTimerCharge(running);
       const p = document.getElementById('svcTimerProj');
-      if (p) p.textContent = `≈ £${amount.toFixed(2)} (${minutes} min, 10-min minimum)`;
+      if (p) p.textContent = `≈ ${fmtGbp(amount)} (${minutes} min, 10-min minimum)`;
     };
     tick();
     if (running.runningSince) svcTimerInterval = setInterval(tick, 1000); // frozen while paused
@@ -5229,7 +5229,7 @@ async function openNewServiceModal(preselectCustomerId = null) {
   const customerOptions = customers.map(c =>
     `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone || '')}</option>`).join('');
   const svcOptions = onlineMenu.map(m =>
-    `<option value="${escHtml(String(m.id))}">${escHtml(m.name)} — £${m.price.toFixed(2)}${m.repeatPrice !== null ? ` (${onlineRepeatFrom()}+ £${m.repeatPrice.toFixed(2)})` : ''}</option>`).join('');
+    `<option value="${escHtml(String(m.id))}">${escHtml(m.name)} — ${fmtGbp(m.price)}${m.repeatPrice !== null ? ` (${onlineRepeatFrom()}+ ${fmtGbp(m.repeatPrice)})` : ''}</option>`).join('');
   showDynamicModal(`
     <div class="modal-title">🖨️ Charge a Service</div>
     <div class="form-grid">
@@ -5291,8 +5291,8 @@ function svUpdateTotal() {
   const atSingle = Math.min(qty, onlineRepeatFrom() - 1);
   const atRepeat = qty - atSingle;
   bd.innerHTML = atRepeat > 0 && svc.repeatPrice !== null
-    ? `${qty} applications: ${atSingle} × £${svc.price.toFixed(2)} + ${atRepeat} × £${Number(svc.repeatPrice).toFixed(2)} = <strong>£${total.toFixed(2)}</strong>`
-    : `${qty} × £${svc.price.toFixed(2)} = <strong>£${total.toFixed(2)}</strong>`;
+    ? `${qty} applications: ${atSingle} × ${fmtGbp(svc.price)} + ${atRepeat} × ${fmtGbp(Number(svc.repeatPrice))} = <strong>${fmtGbp(total)}</strong>`
+    : `${qty} × ${fmtGbp(svc.price)} = <strong>${fmtGbp(total)}</strong>`;
 }
 
 async function saveNewServiceOrder() {
@@ -5322,8 +5322,8 @@ async function saveNewServiceOrder() {
   });
   if (!res.success) { toast(res.error || 'Could not charge the service.', 'error'); return; }
   closeDynamicModal();
-  const extraMsg = res.extras?.length ? ` Incl. ${res.extras.map(e => `${e.label} £${e.amount.toFixed(2)}`).join(', ')}.` : '';
-  toast(`Charged £${res.order.total.toFixed(2)} — wallet balance £${res.balance.toFixed(2)}.${extraMsg}`, 'success');
+  const extraMsg = res.extras?.length ? ` Incl. ${res.extras.map(e => `${e.label} ${fmtGbp(e.amount)}`).join(', ')}.` : '';
+  toast(`Charged ${fmtGbp(res.order.total)} — wallet balance ${fmtGbp(res.balance)}.${extraMsg}`, 'success');
   renderServicesTab();
 }
 
@@ -5365,10 +5365,10 @@ async function renderShopTab() {
         <td><strong>${escHtml([i.company, i.model].filter(Boolean).join(' '))}</strong>
           <div class="customer-email">${escHtml(i.code || '')}</div></td>
         <td>${STOCK_CATEGORY_LABELS[i.category] || escHtml(i.category)}</td>
-        <td style="color:var(--muted);">${i.netPrice === null ? '—' : '£' + i.netPrice.toFixed(2)}</td>
-        <td><strong>£${(i.sellingPrice || 0).toFixed(2)}</strong></td>
+        <td style="color:var(--muted);">${i.netPrice === null ? '—' : fmtGbp(i.netPrice)}</td>
+        <td><strong>${fmtGbp((i.sellingPrice || 0))}</strong></td>
         <td style="color:${i.profit === null ? 'var(--muted)' : i.profit >= 0 ? 'var(--success)' : 'var(--danger)'};">
-          ${i.profit === null ? '—' : '£' + i.profit.toFixed(2)}</td>
+          ${i.profit === null ? '—' : fmtGbp(i.profit)}</td>
         <td style="font-weight:700;${i.quantity <= i.lowStockAt ? 'color:var(--danger);' : ''}">${i.quantity}</td>
         <td style="white-space:nowrap;">
           <button class="action-btn" onclick="openSaleModal('${i.id}')">💷 Sell</button>
@@ -5385,7 +5385,7 @@ async function renderShopTab() {
           <div style="font-size:11px;color:var(--muted);">${s.imei ? 'IMEI ' + escHtml(s.imei) + ' · ' : ''}${escHtml(s.notes || '')}</div>
         </div>
         <div class="history-date" style="margin:0 12px;">${fmtDate(s.createdAt)}</div>
-        <div class="history-amount">£${s.total.toFixed(2)}</div>
+        <div class="history-amount">${fmtGbp(s.total)}</div>
       </div>`).join('');
 
   content.innerHTML = `
@@ -5394,9 +5394,9 @@ async function renderShopTab() {
       <div class="stat-card"><div class="stat-label">Low Stock</div>
         <div class="stat-value" style="color:${low.length ? 'var(--danger)' : 'var(--success)'};">${low.length}</div></div>
       <div class="stat-card"><div class="stat-label">Sold Today</div>
-        <div class="stat-value">£${todaySales.reduce((s, x) => s + x.total, 0).toFixed(2)}</div>
+        <div class="stat-value">${fmtGbp(todaySales.reduce((s, x) => s + x.total, 0))}</div>
         <div class="stat-sub">${todaySales.length} sale${todaySales.length === 1 ? '' : 's'}</div></div>
-      <div class="stat-card"><div class="stat-label">All-Time Sales</div><div class="stat-value">£${revenue.toFixed(2)}</div></div>
+      <div class="stat-card"><div class="stat-label">All-Time Sales</div><div class="stat-value">${fmtGbp(revenue)}</div></div>
     </div>
     ${lowBanner}
     <div style="display:flex;gap:10px;margin-bottom:14px;">
@@ -5647,7 +5647,7 @@ function posChangeCalc() {
   if (!Number.isFinite(given)) { out.textContent = ''; return; }
   const change = given - posTotalNow();
   out.style.color = change < 0 ? 'var(--danger)' : 'var(--success)';
-  out.textContent = change < 0 ? `£${Math.abs(change).toFixed(2)} short` : `Change £${change.toFixed(2)}`;
+  out.textContent = change < 0 ? `${fmtGbp(Math.abs(change))} short` : `Change ${fmtGbp(change)}`;
 }
 
 function posFindItem(q) {
@@ -5689,7 +5689,7 @@ function posRenderTiles() {
       <div class="pos-tile-name">${escHtml([i.company, i.model].filter(Boolean).join(' '))}</div>
       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:6px;">
         <span style="color:var(--muted);font-size:12px;">${i.quantity} left</span>
-        <span class="pos-tile-price">£${(i.sellingPrice || 0).toFixed(2)}</span>
+        <span class="pos-tile-price">${fmtGbp((i.sellingPrice || 0))}</span>
       </div>
     </div>`).join('') || '<div style="color:var(--muted);font-size:13px;padding:6px;">No matching items.</div>';
 }
@@ -5736,20 +5736,20 @@ function posRenderBasket() {
         <div class="pos-line">
           <div style="flex:1;min-width:0;">
             <div style="font-size:13px;">${escHtml([i.company, i.model].filter(Boolean).join(' '))}</div>
-            <div style="font-size:11px;color:var(--muted);">£${(i.sellingPrice || 0).toFixed(2)} each</div>
+            <div style="font-size:11px;color:var(--muted);">${fmtGbp((i.sellingPrice || 0))} each</div>
             ${i.category === 'phone' ? `<input class="form-input" placeholder="IMEI (scan)" value="${escHtml(l.imei)}"
               oninput="posImei('${i.id}', this.value)" style="width:100%;min-height:0;padding:4px 8px;font-size:11px;margin-top:3px;">` : ''}
           </div>
           <button class="action-btn" style="padding:2px 9px;" onclick="posQty('${i.id}',-1)">−</button>
           <strong style="min-width:18px;text-align:center;">${l.qty}</strong>
           <button class="action-btn" style="padding:2px 9px;" onclick="posQty('${i.id}',1)">+</button>
-          <strong style="min-width:58px;text-align:right;font-feature-settings:'tnum';">£${lineTotal.toFixed(2)}</strong>
+          <strong style="min-width:58px;text-align:right;font-feature-settings:'tnum';">${fmtGbp(lineTotal)}</strong>
           <button class="action-btn" style="padding:2px 8px;color:var(--danger);" title="Void line"
             onclick="posQty('${i.id}',-999)">✕</button>
         </div>`;
       }).join('');
   const totalEl = document.getElementById('posTotal');
-  if (totalEl) totalEl.textContent = `£${total.toFixed(2)}`;
+  if (totalEl) totalEl.textContent = `${fmtGbp(total)}`;
   posChangeCalc();
 }
 
@@ -5760,8 +5760,8 @@ function posShowLastSale() {
   const canEmail = !!posLastSale.customerId;
   el.innerHTML = `
     <div class="pos-done">
-      ✅ £${posLastSale.total.toFixed(2)} taken${posLastSale.change !== null
-        ? ` — <strong>change £${posLastSale.change.toFixed(2)}</strong>` : ''}
+      ✅ ${fmtGbp(posLastSale.total)} taken${posLastSale.change !== null
+        ? ` — <strong>change ${fmtGbp(posLastSale.change)}</strong>` : ''}
       ${canEmail ? `<button class="btn btn-secondary" style="margin-top:8px;width:100%;"
         onclick="emailSaleReceipt(this)" ${posLastSale.emailed ? 'disabled' : ''}>
         ${posLastSale.emailed ? '✉️ Receipt sent' : '✉️ Email receipt'}</button>` : ''}
@@ -5803,7 +5803,7 @@ async function saveSale() {
   const given = parseFloat(document.getElementById('posTenderIn')?.value);
   const totalBefore = posTotalNow();
   if (paidNow && posMethod === 'cash' && Number.isFinite(given) && given < totalBefore) {
-    toast(`Cash given (£${given.toFixed(2)}) is less than the total.`, 'error');
+    toast(`Cash given (${fmtGbp(given)}) is less than the total.`, 'error');
     return;
   }
   const res = await kcFetch('/api/shop', {
@@ -5844,7 +5844,7 @@ async function saveSale() {
     emailed: false,
   };
   posBasket = [];
-  toast(`Sold ${res.lines} item${res.lines === 1 ? '' : 's'} — £${res.total.toFixed(2)}.`, 'success');
+  toast(`Sold ${res.lines} item${res.lines === 1 ? '' : 's'} — ${fmtGbp(res.total)}.`, 'success');
   posRenderTiles();
   posRenderBasket();
   posRenderTender();
@@ -6266,7 +6266,7 @@ function suggestTaskPriority(t, todayISO) {
   } else if (ref.startsWith('BALANCE-')) {
     const amt = parseFloat((t.title.match(/£(\d+(?:\.\d+)?)/) || [])[1]);
     s = Number.isFinite(amt) && amt >= 50
-      ? { priority: 'High', reason: `£${amt.toFixed(2)} outstanding — chase before it grows.` }
+      ? { priority: 'High', reason: `${fmtGbp(amt)} outstanding — chase before it grows.` }
       : { priority: 'Normal', reason: 'Money owed — collect at the next visit.' };
   } else if (ref.startsWith('SIMDUE-')) {
     s = /KC pays/i.test(t.title)
@@ -6555,18 +6555,18 @@ function dashPaint(money, tasksList2, stillLoading) {
   const heroHtml = `
     <div class="dash-hero">
       <div class="dash-hero-label">Money in today</div>
-      <div class="dash-hero-value">${stillLoading ? '…' : '£' + (money ? money.todayIn.toFixed(2) : '0.00')}</div>
-      <div class="dash-hero-sub">${money && money.todayOut ? '£' + Math.abs(money.todayOut).toFixed(2) + ' charged out today' : (stillLoading ? '&nbsp;' : 'no charges yet today')}</div>
+      <div class="dash-hero-value">${stillLoading ? '…' : (money ? fmtGbp(money.todayIn) : '£0.00')}</div>
+      <div class="dash-hero-sub">${money && money.todayOut ? fmtGbp(Math.abs(money.todayOut)) + ' charged out today' : (stillLoading ? '&nbsp;' : 'no charges yet today')}</div>
       <div class="dash-hero-divider"></div>
       <div class="dash-hero-label">Outstanding</div>
-      <div class="dash-hero-value" style="font-size:26px;letter-spacing:-0.26px;">${stillLoading ? '…' : '£' + arrearsTotal.toFixed(2)}</div>
+      <div class="dash-hero-value" style="font-size:26px;letter-spacing:-0.26px;">${stillLoading ? '…' : fmtGbp(arrearsTotal)}</div>
       <div class="dash-hero-sub">${arrears.length ? arrears.length + ' customer' + (arrears.length === 1 ? '' : 's') + ' in arrears' : (stillLoading ? '&nbsp;' : 'nobody owes money 🎉')}</div>
       ${arrears.length ? `<div class="dash-hero-divider"></div>` +
         arrears.slice(0, 8).map(a => `
           <div class="dash-hero-row${a.customerId ? ' dash-link' : ''}"${a.customerId
             ? ` onclick="goToTab('customers',{customerId:'${escHtml(String(a.customerId))}'})" title="Open ${escHtml(a.customerName)}"` : ''}>
             <span>${escHtml(a.customerName)}${a.customerId ? '' : ' <span style="color:var(--muted);font-size:11px;">(walk-in)</span>'}</span>
-            <span class="amt">£${Math.abs(a.balance).toFixed(2)}${a.customerId ? ' <span class="feed-go" style="opacity:1;">›</span>' : ''}</span>
+            <span class="amt">${fmtGbp(Math.abs(a.balance))}${a.customerId ? ' <span class="feed-go" style="opacity:1;">›</span>' : ''}</span>
           </div>`).join('') +
         (arrears.length > 8 ? `<div class="dash-hero-row dash-link" onclick="goToTab('wallet')" title="Open the wallet"
             style="color:var(--muted);"><span>+ ${arrears.length - 8} more in arrears</span><span class="amt">see all ›</span></div>` : '') : ''}
@@ -6604,7 +6604,7 @@ function dashPaint(money, tasksList2, stillLoading) {
     `<strong>${escHtml(r.customerName || '?')}</strong> — rental overdue since ${fmtDate(r.toDate)}`,
     () => goToTab('rentals', { rentalSearch: r.customerName || '' })]));
   readyRepairs.forEach(r => attention.push(['🔧',
-    `<strong>${escHtml(r.customerName || '?')}</strong> — repair ready to collect (£${(r.total || 0).toFixed(2)})`,
+    `<strong>${escHtml(r.customerName || '?')}</strong> — repair ready to collect (${fmtGbp((r.total || 0))})`,
     () => goToTab('repairs')]));
   travel7.forEach(b => attention.push(['✈️',
     `<strong>${escHtml(b.customerName || '?')}</strong> — flies ${fmtDate(b.travelDate)} (${escHtml(b.route)})`,
@@ -6638,7 +6638,7 @@ function dashPaint(money, tasksList2, stillLoading) {
           </div>
           <div class="history-date" style="margin:0 12px;">${fmtDate(e.at)}</div>
           <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--text)'};">
-            ${e.amount >= 0 ? '+' : '−'}£${Math.abs(e.amount).toFixed(2)}</div>
+            ${e.amount >= 0 ? '+' : '−'}${fmtGbp(Math.abs(e.amount))}</div>
           ${e.customerId ? '<span class="feed-go">›</span>' : ''}
         </div>`).join('') + `
         <div class="feed-item dash-link" onclick="goToTab('wallet')" style="color:var(--muted);font-size:12px;">
@@ -6707,7 +6707,7 @@ async function renderVirtualTab() {
         <td>${escHtml(v.customerName || '—')}</td>
         <td>${escHtml(v.platform || '—')}</td>
         <td>${v.billingEnabled && v.monthlyPrice
-          ? `<strong>£${v.monthlyPrice.toFixed(2)}</strong><div class="customer-email">next ${fmtDate(v.nextBillingDate) || '—'}</div>`
+          ? `<strong>${fmtGbp(v.monthlyPrice)}</strong><div class="customer-email">next ${fmtDate(v.nextBillingDate) || '—'}</div>`
           : '<span style="color:var(--muted);">—</span>'}</td>
         <td><span class="badge" style="${v.status === 'Active'
           ? 'background:rgba(34,197,94,0.15);color:var(--success);'
@@ -6748,10 +6748,10 @@ async function renderVirtualTab() {
         <tbody>${vnPriceMatrix.map(p => `
           <tr>
             <td><strong>${escHtml(p.label)}</strong></td>
-            <td>${p.incomingOnly === null ? '—' : '£' + p.incomingOnly.toFixed(2)}</td>
-            <td>${p.outgoing100 === null ? '—' : '£' + p.outgoing100.toFixed(2)}</td>
-            <td>${p.unlimited === null ? '—' : '£' + p.unlimited.toFixed(2)}</td>
-            <td>${p.paygBase === null ? '—' : '£' + p.paygBase.toFixed(2) + ' + rates'}</td>
+            <td>${p.incomingOnly === null ? '—' : fmtGbp(p.incomingOnly)}</td>
+            <td>${p.outgoing100 === null ? '—' : fmtGbp(p.outgoing100)}</td>
+            <td>${p.unlimited === null ? '—' : fmtGbp(p.unlimited)}</td>
+            <td>${p.paygBase === null ? '—' : fmtGbp(p.paygBase) + ' + rates'}</td>
           </tr>`).join('')}</tbody>
       </table>
     </div>` : ''}`;
