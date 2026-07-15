@@ -1403,10 +1403,6 @@ function refreshRentalPhoneOptions() {
 }
 
 function openNewRentalModal(preselectCustomerId = null) {
-  const customerOptions = customers.map(c =>
-    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone||'')}</option>`
-  ).join('');
-
   const availablePhoneOptions = phoneOptionsFor(null, null);
 
   showDynamicModal(`
@@ -1415,13 +1411,11 @@ function openNewRentalModal(preselectCustomerId = null) {
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
         <div class="customer-search-wrap">
-          <select class="form-input" id="rCustomer" onchange="onCustomerSelectChange()">
-            <option value="">— Select customer —</option>
-            ${customerOptions}
-          </select>
+          <!-- #79 — ONE type-ahead control; rCustomer is now the hidden value it fills -->
+          <input type="hidden" id="rCustomer">
           <input class="form-input" type="text" id="rCustomerSearch"
-            placeholder="Or type to filter..." autocomplete="off"
-            oninput="filterCustomerDropdown()" style="margin-top:6px;">
+            placeholder="Type a name or number…" autocomplete="off"
+            oninput="filterCustomerDropdown()" onfocus="filterCustomerDropdown()">
           <div class="customer-dropdown" id="rCustomerDropdown"></div>
         </div>
         <div id="rCustomerSelected" style="font-size:12px;color:var(--success);margin-top:4px;"></div>
@@ -1522,6 +1516,23 @@ function openNewRentalModal(preselectCustomerId = null) {
         <label class="form-label">Notes</label>
         <input class="form-input" type="text" id="rNotes" placeholder="Any notes...">
       </div>
+
+      <div class="form-group form-full">
+        <div class="section-divider" style="margin-bottom:8px;">Payment</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select class="form-input" id="rPay" style="width:210px;" onchange="rPayMethodChange()">
+            <option value="account">Put on account (wallet)</option>
+            <option value="cash">Paid now — 💵 Cash</option>
+            <option value="card">Paid now — 💳 Card</option>
+            <option value="bank_transfer">Paid now — 🏦 Transfer</option>
+          </select>
+          <span id="rPayAmountWrap" style="display:none;align-items:center;gap:6px;font-size:13px;">
+            £<input class="form-input" type="number" id="rPayAmount" step="0.01" min="0" style="width:100px;" oninput="this.dataset.touched='1'">
+            <button type="button" class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 10px;" onclick="rPayFull()">Full total</button>
+          </span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">"Paid now" settles the rental immediately — leave on account to bill it to the wallet.</div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
@@ -1529,6 +1540,7 @@ function openNewRentalModal(preselectCustomerId = null) {
     </div>
   `);
 
+  if (preselectCustomerId) selectRentalCustomer(preselectCustomerId); // #79 fills the one picker
   const today = localISO();
   const next7 = localISO(new Date(Date.now() + 7*86400000));
   document.getElementById('rFrom').value = today;
@@ -1577,6 +1589,8 @@ function updateVNPrice() {
   const phone = selPhone ? phones.find(p => p.id === selPhone.value) : null;
   priceEl.value = calcVNPrice(vnSub, from, to, phone?.country || 'USA', phone?.ukPlan || 'standard');
 }
+
+let rLastTotal = 0; // #25 — the live rental total, so the payment row can pre-fill it
 
 function updateRentalCalc() {
   updateVNPrice(); // rental dates drive the weekly VN price
@@ -1649,6 +1663,28 @@ function updateRentalCalc() {
       ${excluded > 0 ? `<br>📅 <span style="cursor:help;" title="Every Shabbos and full Yom Tov in the rental window is free — guests keep the phone over those days at no charge.">${excluded} free day${excluded === 1 ? '' : 's'} (Shabbos / Yom Tov) — hover for why</span>` : ''}
     </div>${poolLine}
   `;
+  // #25 — keep the payment row's default in step with the live total.
+  const vnAmt = document.getElementById('rAddVN')?.checked ? (parseFloat(document.getElementById('rVNPrice')?.value) || 0) : 0;
+  rLastTotal = Math.round((finalPrice + vnAmt) * 100) / 100;
+  const payAmt = document.getElementById('rPayAmount');
+  if (payAmt && document.getElementById('rPay')?.value !== 'account' && payAmt.dataset.touched !== '1') {
+    payAmt.value = rLastTotal.toFixed(2);
+  }
+}
+
+// #25 — the New-Rental payment row: choosing a "paid now" method reveals the
+// amount (defaulted to the full total); "Full total" re-fills it.
+function rPayMethodChange() {
+  const method = document.getElementById('rPay')?.value;
+  const wrap = document.getElementById('rPayAmountWrap');
+  const amt = document.getElementById('rPayAmount');
+  if (!wrap) return;
+  if (method === 'account') { wrap.style.display = 'none'; }
+  else { wrap.style.display = 'inline-flex'; if (amt && !amt.value) amt.value = (rLastTotal || 0).toFixed(2); }
+}
+function rPayFull() {
+  const amt = document.getElementById('rPayAmount');
+  if (amt) { amt.value = (rLastTotal || 0).toFixed(2); amt.dataset.touched = '1'; }
 }
 
 async function saveNewRental() {
@@ -1702,6 +1738,13 @@ async function saveNewRental() {
   if (autoPct > 0) toast(`Multi-phone discount applied — 3rd phone and more, ${autoPct}% off.`, 'success');
 
   const totalPrice = discountedRental + vnPrice;
+  // #25 — capture payment at rental time. "On account" = wallet debt (the old
+  // behaviour); a "paid now" method settles some/all of it immediately.
+  const payMethod = document.getElementById('rPay')?.value || 'account';
+  const paidNow = payMethod !== 'account';
+  let payAmt = paidNow ? (parseFloat(document.getElementById('rPayAmount')?.value) || 0) : 0;
+  if (payAmt < 0) payAmt = 0;
+  if (payAmt > totalPrice) payAmt = totalPrice; // never overpay the rental here
   if (!(await kcConfirm({
     title: isReservation ? 'Confirm reservation' : 'Confirm rental charge',
     body: `<strong>${escHtml(customer.firstName)} ${escHtml(customer.lastName)}</strong><br>
@@ -1732,6 +1775,7 @@ async function saveNewRental() {
     vnSub,
     vnPrice,
     notes,
+    amountPaid:   payAmt, // #25
     status:       isReservation ? 'booked' : 'active',
     createdAt:    new Date().toISOString(),
     equipmentGiven,
@@ -1763,12 +1807,24 @@ async function saveNewRental() {
     if (idx !== -1) customers[idx] = c;
   }
 
+  // #25 — record the counter payment against the wallet ledger (the rental
+  // charge itself is posted server-side by saveRentals).
+  if (paidNow && payAmt > 0) {
+    await window.api.addLedgerEntry({
+      customerId, kind: 'payment', amount: payAmt, method: payMethod,
+      note: `Rental ${phone.number} — paid at counter`,
+    }).catch(() => null);
+  }
+
   closeDynamicModal();
   // Owner-defined auto extras for rentals (posted once, keyed on the rental).
   const extraMsg = await applyExtraCharges('rental', rental.id, customerId, false);
+  const payLine = paidNow && payAmt > 0
+    ? (payAmt >= totalPrice ? ' Paid in full.' : ` £${payAmt.toFixed(2)} paid, £${(totalPrice - payAmt).toFixed(2)} on account.`)
+    : '';
   toast(isReservation
     ? `Reserved for ${customer.firstName} — pickup ${fmtDate(from)}. Press ▶ Start at handover.`
-    : `Rental saved! £${totalPrice} charged to ${customer.firstName}.${extraMsg}`, 'success');
+    : `Rental saved! £${totalPrice} charged to ${customer.firstName}.${payLine}${extraMsg}`, 'success');
   renderRentalsTab();
 }
 
