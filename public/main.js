@@ -4043,8 +4043,11 @@ function simChargePrice(type) {
 
 // Monthly DD through-me price: provider cost + max(pct%, £min).
 function ddMonthlyAmount(cost) {
-  const pct = settingNum('collect_later_late_pct', 10) / 100;
-  const min = settingNum('collect_later_late_min', 2);
+  // #30 — SIM DD surcharge has its OWN keys now; editing the rental "Pay
+  // later" surcharge must not silently reprice every through-me SIM DD.
+  // Falls back to the old shared keys until the new ones are seeded.
+  const pct = settingNum('sim_dd_surcharge_pct', settingNum('collect_later_late_pct', 10)) / 100;
+  const min = settingNum('sim_dd_surcharge_min', settingNum('collect_later_late_min', 2));
   return cost + Math.max(cost * pct, min);
 }
 
@@ -7186,6 +7189,8 @@ async function renderSettingsTab() {
     multi_phone_discount_pct:  { group: '📱 Rentals', label: 'Multi-phone discount', help: 'The discount when a customer rents several phones at once.', unit: '% off' },
     multi_phone_discount_from: { group: '📱 Rentals', label: 'Multi-phone discount starts at', help: 'Which phone the discount kicks in on — 3 means the 3rd phone and up. Change to 4 to start at the 4th.', unit: 'th phone' },
     multi_sim_discount_from:   { group: '💳 SIM plans', label: 'Multi-SIM discount starts at', help: 'Which plan the discount kicks in on — 3 means 3 or more plans.', unit: 'th plan' },
+    sim_dd_surcharge_pct:      { group: '💳 SIM plans', label: 'SIM monthly surcharge', help: 'Extra added to a through-me SIM’s monthly direct-debit amount. Separate from the rental "Pay later" surcharge.', unit: '% extra' },
+    sim_dd_surcharge_min:      { group: '💳 SIM plans', label: 'SIM monthly surcharge minimum', help: 'The smallest SIM monthly surcharge, even on cheap plans.', unit: '£ minimum' },
     collect_later_late_pct:    { group: '📱 Rentals', label: '"Pay later" surcharge', help: 'Extra added when a customer takes the phone but pays afterwards.', unit: '% extra' },
     collect_later_late_min:    { group: '📱 Rentals', label: '"Pay later" minimum', help: 'The smallest "pay later" surcharge, even on cheap rentals.', unit: '£ minimum' },
     sim_activation_fee:        { group: '💳 SIM plans', label: 'SIM setup fee', help: 'One-off charge to set up a new SIM.', unit: '£' },
