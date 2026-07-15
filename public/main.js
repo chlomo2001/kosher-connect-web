@@ -6136,6 +6136,19 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();
     openPalette();
+    return;
+  }
+  // Escape closes the top-most open overlay (a universal expectation). Order
+  // matches the visual stack: charge-confirm > palette > action modals >
+  // customer card. The palette input has its own Esc too; this covers the
+  // rest and the case where focus isn't in the palette.
+  if (e.key === 'Escape') {
+    const open = (id) => { const el = document.getElementById(id); return el && !el.classList.contains('hidden') ? el : null; };
+    if (open('kcConfirm')) { kcConfirmDone(false); return; }
+    if (open('paletteOverlay')) { closePalette(); return; }
+    if (open('dynamicModal')) { closeDynamicModal(); return; }
+    if (open('customerModal')) { closeModal(); return; }
+    if (open('customerCard')) { dismissCustomerCard(); return; }
   }
 });
 
