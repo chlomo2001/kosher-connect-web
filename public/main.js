@@ -897,6 +897,10 @@ function reportSave(label, promise) {
     .then(res => {
       if (!res || res.success === false) {
         toast(`Couldn’t save ${label} — reload to check nothing was lost.`, 'error');
+      } else if (res.conflicts && res.conflicts.length) {
+        // #8 — the server caught a double-booking a racing tab slipped past.
+        const c = res.conflicts[0];
+        toast(`⚠️ Double-booking: ${c.a?.customer || 'a rental'} and ${c.b?.customer || 'another'} overlap on the same phone. Check the rentals list.`, 'error');
       }
       return res || { success: false };
     })
