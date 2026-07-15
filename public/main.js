@@ -1537,6 +1537,18 @@ function openNewRentalModal(preselectCustomerId = null) {
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:4px;">"Paid now" settles the rental immediately — leave on account to bill it to the wallet.</div>
       </div>
+
+      <div class="form-group form-full">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+          <input type="checkbox" id="rDeposit" style="accent-color:var(--accent);"
+            onchange="document.getElementById('rDepositBox').style.display=this.checked?'flex':'none'">
+          🔒 Hold a refundable deposit
+        </label>
+        <div id="rDepositBox" style="display:none;gap:8px;align-items:center;margin-top:8px;">
+          £<input class="form-input" type="number" id="rDepositAmount" min="0" step="1" style="width:100px;" placeholder="e.g. 50">
+          <span style="font-size:11px;color:var(--muted);">Recorded as held; refunded on a clean return. Not billed to the wallet.</span>
+        </div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
@@ -1780,6 +1792,9 @@ async function saveNewRental() {
     vnPrice,
     notes,
     amountPaid:   payAmt, // #25
+    // #26 — optional refundable deposit, tracked as held (not a wallet charge).
+    depositHeld:  document.getElementById('rDeposit')?.checked
+                    ? (parseFloat(document.getElementById('rDepositAmount')?.value) || 0) : 0,
     status:       isReservation ? 'booked' : 'active',
     createdAt:    new Date().toISOString(),
     equipmentGiven,
@@ -2865,7 +2880,7 @@ function renderDetailPanel(id) {
 
   const cUpcoming = customerUpcomingBookings(c);
   const allActiveServices = [
-    ...cActiveRentals.map(r => ({ type: 'rental', label: `Rental ${r.country === 'USA' ? '🇺🇸' : r.country === 'UK' ? '🇬🇧' : r.country === 'Israel' ? '🇮🇱' : '🌍'}` })),
+    ...cActiveRentals.map(r => ({ type: 'rental', label: `Rental ${r.country === 'USA' ? '🇺🇸' : r.country === 'UK' ? '🇬🇧' : r.country === 'Israel' ? '🇮🇱' : '🌍'}${r.depositHeld > 0 ? ' · 🔒£' + Number(r.depositHeld).toFixed(0) : ''}` })),
     ...cUpcoming.map(b => ({ type: 'booking', label: `✈️ ${b.route}${b.travelDate ? ' · ' + fmtDate(b.travelDate) : ''}` })),
     ...cSims.map(s => ({ type: 'sim', label: `SIM · ${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}` })),
     ...cVNs.map(v => ({ type: 'vn', label: `VN ${v.number || ''}` })),
@@ -2966,6 +2981,7 @@ function renderDetailPanel(id) {
           <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(c.phone)}</a>` : '—'} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openDraftReminderModal('${c.id}')" title="Draft a reminder message (does not send)">✉️</button>
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openLogCommModal('${c.id}')" title="Log a call or note">📞</button>
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer">⏰</button>
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openEditModal('${c.id}')">✏️ Edit</button>
@@ -3182,6 +3198,53 @@ async function saveCommLog(customerId) {
   await recordComm(customerId, { type, text });
   closeDynamicModal();
   toast('Logged to the customer timeline.', 'success');
+}
+
+// #27 — customer-facing reminders, drafted not sent. The daily sweep already
+// knows who to chase; this composes the actual message (balance due, phone
+// overdue, SIM renewing, flight soon) so staff can copy it into whatever
+// channel they use. It deliberately never emails — real addresses stay
+// untouched until the owner turns sending on.
+function buildReminderDraft(c) {
+  const today = localISO();
+  const lines = [`Hi ${c.firstName || 'there'},`, ''];
+  let any = false;
+  const owed = customerOwed(c);
+  if (owed > 0) { lines.push(`You have an outstanding balance of £${owed.toFixed(2)} on your account. We'd appreciate settling it when you can.`); any = true; }
+  const overdue = rentals.filter(r => r.customerId === c.id && r.status === 'overdue');
+  for (const r of overdue) { lines.push(`Your rental phone ${r.phoneNumber || ''} was due back on ${fmtDate(r.toDate)} — please return it to avoid extra charges.`); any = true; }
+  const soon = localISO(new Date(Date.now() + 7 * 86400000));
+  for (const s of sims.filter(s => s.customerId === c.id && s.status === 'active' && s.renewalDate && s.renewalDate >= today && s.renewalDate <= soon)) {
+    lines.push(`Your SIM plan${s.provider ? ' (' + s.provider + ')' : ''} renews on ${fmtDate(s.renewalDate)}.`); any = true;
+  }
+  for (const b of customerUpcomingBookings(c).filter(b => b.travelDate && b.travelDate >= today && b.travelDate <= soon)) {
+    lines.push(`Reminder: your flight ${b.route || ''} is on ${fmtDate(b.travelDate)}.`); any = true;
+  }
+  if (!any) lines.push(`Just checking in — let us know if you need anything.`);
+  lines.push('', 'Thank you,', 'KosherConnect');
+  return lines.join('\n');
+}
+function openDraftReminderModal(customerId) {
+  const c = customers.find(x => x.id === customerId);
+  if (!c) return;
+  const draft = buildReminderDraft(c);
+  showDynamicModal(`
+    <div class="modal-title">✉️ Draft reminder — ${escHtml(c.firstName)} ${escHtml(c.lastName)}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Built from what this customer currently owes / has coming up. Edit it, then copy — <strong>nothing is sent</strong>.</div>
+    <textarea class="form-input" id="drText" rows="9" style="font-family:inherit;">${escHtml(draft)}</textarea>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
+      <button class="btn btn-primary" onclick="copyReminderDraft('${escHtml(String(customerId))}')">📋 Copy message</button>
+    </div>
+  `);
+}
+async function copyReminderDraft(customerId) {
+  const text = document.getElementById('drText')?.value || '';
+  try { await navigator.clipboard.writeText(text); toast('Message copied — paste it wherever you message this customer.', 'success'); }
+  catch { toast('Select the text and copy it manually.', 'warning'); return; }
+  // Log that a reminder was drafted/copied, so the timeline shows the contact.
+  recordComm(customerId, { type: 'message', text: 'Reminder drafted & copied' });
+  closeDynamicModal();
 }
 
 function openWalletModal(customerId, balance = null) {
