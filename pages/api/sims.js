@@ -1,7 +1,7 @@
 import { loadData, saveData } from '../../lib/data'
-import { withTab } from '../../lib/auth.js'
+import { withTab, tabAllowedFor } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db'
-import { listSims, syncSims } from '../../lib/tableStore'
+import { listSims, syncSims, readSimPassword } from '../../lib/tableStore'
 import { parseSyncBody } from '../../lib/syncBody'
 
 const money = (v) => Math.round((Number(v) || 0) * 100) / 100
@@ -39,6 +39,19 @@ async function chargeSim(req, res, b) {
 async function handler(req, res) {
   try {
     if (req.method === 'GET') {
+      // On-demand reveal of one SIM's decrypted password. Gated on the SIM
+      // tab specifically (a plain list read is open to any signed-in staff,
+      // but the secret is not). Audit-logged.
+      if (req.query.reveal) {
+        if (!tablesMode) return res.status(503).json({ success: false, error: 'Not available.' })
+        if (!(await tabAllowedFor(req.staff, 'sim'))) {
+          return res.status(403).json({ success: false, error: 'You’re not allowed to view SIM passwords.' })
+        }
+        const password = await readSimPassword(String(req.query.reveal))
+        console.log(`[api/sims] password reveal sim=${req.query.reveal} by=${req.staff?.email || 'unknown'}`)
+        if (password == null) return res.status(404).json({ success: false, error: 'No stored password for this SIM (or encryption isn’t configured).' })
+        return res.json({ success: true, password })
+      }
       return res.json(tablesMode ? await listSims() : await loadData('sims'))
     }
     if (req.method === 'POST') {
