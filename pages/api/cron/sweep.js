@@ -18,6 +18,7 @@
 
 import { db, tablesMode } from '../../../lib/db.js'
 import { resolveStaff } from '../../../lib/auth.js'
+import { advanceOneMonth } from '../../../lib/money.mjs'
 
 const enc = encodeURIComponent
 const localDate = (offsetDays = 0) => {
@@ -378,9 +379,10 @@ async function handler(req, res) {
           description: `Virtual number ${vn.number}${vn.bundle_label ? ` (${vn.bundle_label}${vn.plan ? ', ' + vn.plan.replace(/_/g, ' ') : ''})` : ''} — month from ${bill}`,
         }], 'charge_reference')
         vnCharges++
-        const d = new Date(bill + 'T00:00:00Z')
-        d.setUTCMonth(d.getUTCMonth() + 1)
-        bill = d.toISOString().slice(0, 10)
+        // advanceOneMonth clamps to the month end instead of overflowing:
+        // 31 Jan -> 28 Feb, never rolling to March and skipping February's
+        // charge (the setUTCMonth bug this replaces).
+        bill = advanceOneMonth(bill)
         await db.update('virtual_numbers', `id=eq.${vn.id}`, { next_billing_date: bill })
       }
     }

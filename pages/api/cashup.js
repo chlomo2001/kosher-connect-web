@@ -6,6 +6,7 @@
 
 import { withStaff, tabAllowedFor } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
+import { cashExpected } from '../../lib/money.mjs'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -22,7 +23,18 @@ async function dayLedger(date) {
   )
 }
 
-function summarize(rows) {
+// Cash the till started the day with (owner-set in Settings, defaults to 0).
+async function openingFloat() {
+  try {
+    const rows = await db.select('settings', 'select=num_value&key=eq.till_opening_float')
+    const v = rows.length ? Number(rows[0].num_value) : 0
+    return Number.isFinite(v) && v >= 0 ? v : 0
+  } catch {
+    return 0
+  }
+}
+
+function summarize(rows, float = 0) {
   const methods = {}
   let totalIn = 0
   let totalOut = 0
@@ -36,7 +48,10 @@ function summarize(rows) {
       totalOut += amt
     }
   }
-  return { methods, totalIn, totalOut, expectedCash: methods.cash || 0 }
+  // Expected cash NETS by sign (a cash refund/payout lowers it) and adds the
+  // opening float — the old "positive cash only, no float" total could never
+  // reconcile against a physical count.
+  return { methods, totalIn, totalOut, openingFloat: float, expectedCash: cashExpected(rows, float) }
 }
 
 async function handler(req, res) {
@@ -50,11 +65,12 @@ async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const date = DATE_RE.test(String(req.query.date || '')) ? req.query.date : new Date().toISOString().slice(0, 10)
-      const [rows, counts] = await Promise.all([
+      const [rows, counts, float] = await Promise.all([
         dayLedger(date),
         db.select('till_counts', `count_date=eq.${date}`),
+        openingFloat(),
       ])
-      const s = summarize(rows)
+      const s = summarize(rows, float)
       return res.json({
         success: true,
         date,
@@ -74,7 +90,8 @@ async function handler(req, res) {
       const n = Number(counted)
       if (!Number.isFinite(n) || n < 0) return res.status(400).json({ success: false, error: 'Counted amount must be a number ≥ 0.' })
 
-      const s = summarize(await dayLedger(date))
+      const [rows, float] = await Promise.all([dayLedger(date), openingFloat()])
+      const s = summarize(rows, float)
       await db.upsert('till_counts', [{
         count_date: date,
         expected: s.expectedCash,

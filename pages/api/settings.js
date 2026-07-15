@@ -31,6 +31,7 @@ const SETTING_RULES = {
   multi_sim_discount_pct:   { type: 'percent', unit: '%' },
   multi_phone_discount_from: { type: 'count', unit: 'th phone' },
   multi_sim_discount_from:   { type: 'count', unit: 'th plan' },
+  till_opening_float:        { type: 'money',   unit: '£' },
 }
 
 // A key is editable if it's in the known-rules whitelist OR it's a custom_

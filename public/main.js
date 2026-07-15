@@ -3091,6 +3091,9 @@ async function openCashupModal() {
       </div>
     </div>
     <div style="background:var(--bg-secondary);border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+      ${data.openingFloat ? `<div style="display:flex;justify-content:space-between;font-size:13px;padding-bottom:6px;color:var(--muted);">
+        <span>Opening float</span><span style="font-feature-settings:'tnum';">£${Number(data.openingFloat).toFixed(2)}</span>
+      </div>` : ''}
       <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;">
         <span>Expected cash in till</span><span>£${data.expectedCash.toFixed(2)}</span>
       </div>
