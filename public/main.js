@@ -2992,14 +2992,21 @@ async function loadWalletSection(customerId) {
       <span class="badge" style="font-size:14px;padding:7px 16px;background:${bal < 0 ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)'};color:${balColor};">
         Balance: ${balLabel}</span>
       <button class="btn btn-primary" style="font-size:12px;padding:6px 14px;"
-        onclick="openWalletModal('${escHtml(customerId)}')">💰 Record payment / credit</button>
+        onclick="openWalletModal('${escHtml(customerId)}', ${Number(bal) || 0})">💰 Record payment / credit</button>
       ${data.entries.length > 8 ? `<span style="color:var(--muted);font-size:11px;">showing 8 of ${data.entries.length}</span>` : ''}
     </div>
     <div class="history-list">${entriesHtml}</div>`;
 }
 
-function openWalletModal(customerId) {
+function openWalletModal(customerId, balance = null) {
   const c = customers.find(x => x.id === customerId);
+  // #61 — if they owe, offer "Pay full £X" so nobody reads the balance and
+  // hand-types it. Owed = negative balance.
+  const owed = balance != null && balance < 0 ? Math.round(Math.abs(balance) * 100) / 100 : 0;
+  const payFullBtn = owed > 0
+    ? `<button type="button" class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 10px;margin-top:6px;"
+        onclick="document.getElementById('wlKind').value='payment';document.getElementById('wlMethodWrap').style.display='block';document.getElementById('wlAmount').value='${owed.toFixed(2)}'">Pay full £${owed.toFixed(2)}</button>`
+    : '';
   showDynamicModal(`
     <div class="modal-title">💰 Record payment / credit — ${c ? escHtml(c.firstName) + ' ' + escHtml(c.lastName) : ''}</div>
     <div class="form-grid">
@@ -3016,6 +3023,7 @@ function openWalletModal(customerId) {
       <div class="form-group">
         <label class="form-label">Amount (£)</label>
         <input class="form-input" type="number" step="0.01" id="wlAmount" placeholder="0.00">
+        ${payFullBtn}
       </div>
       <div class="form-group" id="wlMethodWrap">
         <label class="form-label">Method</label>
@@ -5763,11 +5771,11 @@ function posRenderBasket() {
             ${i.category === 'phone' ? `<input class="form-input" placeholder="IMEI (scan)" value="${escHtml(l.imei)}"
               oninput="posImei('${i.id}', this.value)" style="width:100%;min-height:0;padding:4px 8px;font-size:11px;margin-top:3px;">` : ''}
           </div>
-          <button class="action-btn" style="padding:2px 9px;" onclick="posQty('${i.id}',-1)">−</button>
-          <strong style="min-width:18px;text-align:center;">${l.qty}</strong>
-          <button class="action-btn" style="padding:2px 9px;" onclick="posQty('${i.id}',1)">+</button>
+          <button class="action-btn" style="min-width:40px;min-height:40px;font-size:18px;line-height:1;" onclick="posQty('${i.id}',-1)">−</button>
+          <strong style="min-width:26px;text-align:center;font-size:16px;">${l.qty}</strong>
+          <button class="action-btn" style="min-width:40px;min-height:40px;font-size:18px;line-height:1;" onclick="posQty('${i.id}',1)">+</button>
           <strong style="min-width:58px;text-align:right;font-feature-settings:'tnum';">£${lineTotal.toFixed(2)}</strong>
-          <button class="action-btn" style="padding:2px 8px;color:var(--danger);" title="Void line"
+          <button class="action-btn" style="min-width:40px;min-height:40px;color:var(--danger);font-size:16px;" title="Void line"
             onclick="posQty('${i.id}',-999)">✕</button>
         </div>`;
       }).join('');
