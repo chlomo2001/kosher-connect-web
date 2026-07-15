@@ -3,13 +3,46 @@
 // magic-link session handler + "my rentals / my balance" pages arrive with
 // the live-portal build.
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Head from 'next/head'
 
 export default function Portal({ supabaseUrl, googleEnabled }) {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)
+  // #66 — read-only "my account" slice. The magic-link / OAuth redirect lands
+  // back here with the access token in the URL hash; we verify it server-side
+  // and show the customer only their own balance, rentals and bookings.
+  const [account, setAccount] = useState(null)   // loaded data
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    const token = hash.get('access_token') || sessionStorage.getItem('kc_portal_token')
+    if (!token) return
+    sessionStorage.setItem('kc_portal_token', token)
+    // Clean the token out of the address bar.
+    if (window.location.hash) window.history.replaceState(null, '', window.location.pathname)
+    setLoading(true)
+    fetch('/api/portal/me', { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((d) => { if (d && d.success) setAccount(d); else signOut() })
+      .catch(() => signOut())
+      .finally(() => setLoading(false))
+  }, [])
+
+  function signOut() {
+    if (typeof window !== 'undefined') sessionStorage.removeItem('kc_portal_token')
+    setAccount(null)
+  }
+
+  const fmtGbp = (v) => `£${(Math.round((Number(v) || 0) * 100) / 100).toFixed(2)}`
+  const fmtDate = (d) => {
+    if (!d) return ''
+    const t = new Date(d)
+    return isNaN(t) ? d : t.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  }
 
   // "Continue with Google" → Supabase OAuth. Dormant until the Google
   // provider is turned on in Supabase (googleEnabled), at which point this
@@ -40,6 +73,83 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     } catch { /* the message below is identical either way */ }
     setSent(true)
     setBusy(false)
+  }
+
+  // ── Signed-in read-only account view ──────────────────────────────────────
+  if (loading) {
+    return (
+      <>
+        <Head><title>My KosherConnect</title></Head>
+        <div className="login-shell"><div className="login-mesh" aria-hidden="true" />
+          <div className="login-card" style={{ textAlign: 'center' }}>Loading your account…</div>
+        </div>
+      </>
+    )
+  }
+  if (account) {
+    const owes = account.balance < 0
+    const activeRentals = (account.rentals || []).filter((r) => r.status !== 'returned' && r.status !== 'cancelled')
+    const upcoming = (account.bookings || []).filter((b) => b.status !== 'Cancelled' && b.status !== 'Completed')
+    return (
+      <>
+        <Head><title>My KosherConnect</title></Head>
+        <div className="login-shell">
+          <div className="login-mesh" aria-hidden="true" />
+          <div className="login-card" style={{ maxWidth: 520, width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+              <div>
+                <div className="login-title" style={{ fontSize: 22 }}>
+                  {greeting}{account.customer?.firstName ? `, ${account.customer.firstName}` : ''}
+                </div>
+                <div className="login-sub">Your KosherConnect account</div>
+              </div>
+              <button className="btn btn-outline" onClick={signOut} style={{ fontSize: 12, padding: '6px 12px' }}>Sign out</button>
+            </div>
+
+            <div style={{
+              borderRadius: 12, padding: '16px 18px', marginBottom: 18,
+              background: owes ? 'rgba(239,68,68,0.10)' : 'rgba(34,197,94,0.10)',
+              border: `1px solid ${owes ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`,
+            }}>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Wallet balance</div>
+              <div style={{ fontSize: 26, fontWeight: 700, color: owes ? '#dc2626' : '#16a34a' }}>
+                {owes ? `You owe ${fmtGbp(Math.abs(account.balance))}` : account.balance > 0 ? `${fmtGbp(account.balance)} in credit` : fmtGbp(0)}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>📱 Rentals</div>
+              {activeRentals.length === 0
+                ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>No active rentals.</div>
+                : activeRentals.map((r, i) => (
+                  <div key={i} style={{ fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                    {r.phoneNumber || 'Phone'} · {r.country}
+                    <span style={{ color: 'var(--muted)' }}> · {fmtDate(r.fromDate)} → {fmtDate(r.toDate)}</span>
+                    <span style={{ float: 'right', color: 'var(--muted)' }}>{r.status}</span>
+                  </div>
+                ))}
+            </div>
+
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>✈️ Flights</div>
+              {upcoming.length === 0
+                ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>No upcoming flights.</div>
+                : upcoming.map((b, i) => (
+                  <div key={i} style={{ fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                    {b.route || 'Flight'}{b.airline ? ` · ${b.airline}` : ''}
+                    <span style={{ color: 'var(--muted)' }}>{b.travelDate ? ` · ${fmtDate(b.travelDate)}` : ''}</span>
+                    <span style={{ float: 'right', color: 'var(--muted)' }}>{b.status}</span>
+                  </div>
+                ))}
+            </div>
+
+            <div style={{ marginTop: 18, fontSize: 11, color: 'var(--muted)', textAlign: 'center' }}>
+              Questions? Reply to your usual KosherConnect contact.
+            </div>
+          </div>
+        </div>
+      </>
+    )
   }
 
   return (
