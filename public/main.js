@@ -6390,42 +6390,7 @@ function dashPaint(money, tasksList2, stillLoading) {
         <div class="section-divider" style="margin-top:12px;">Recent wallet activity</div>
         <div>${activityHtml}</div>
       </div>
-    </div>
-
-    ${(!currentStaff || currentStaff.role === 'owner') ? `
-    <div style="text-align:center;margin-top:22px;padding-top:16px;border-top:1px solid var(--border);">
-      <button class="btn btn-outline" id="btnRunSweeps" onclick="runSweepsNow()" style="font-size:13px;">⚙️ Run automations now</button>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;">Refreshes overdue flags, reminders and any due billing. Runs automatically each day — this just runs it early. Safe to repeat.</div>
-    </div>` : ''}`;
-}
-
-// Manually fire the daily automation sweep (admin only in the UI; the endpoint
-// also accepts a signed-in staff session). Idempotent — deterministic charge
-// refs + one-open-task-per-reference mean re-running never double-charges or
-// duplicates tasks, so it's safe to press anytime.
-async function runSweepsNow() {
-  const btn = document.getElementById('btnRunSweeps');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Running…'; }
-  try {
-    const res = await kcFetch('/api/cron/sweep', { method: 'POST' }).then(r => r.json());
-    if (res && res.success) {
-      const c = res.counts || {};
-      const bits = [];
-      if (c.rentalsFlippedOverdue) bits.push(`${c.rentalsFlippedOverdue} newly overdue`);
-      if (c.vnChargesPosted) bits.push(`${c.vnChargesPosted} VN charge${c.vnChargesPosted > 1 ? 's' : ''} posted`);
-      const raised = (c.overdueTasks || 0) + (c.flightTasks || 0) + (c.simRenewalTasks || 0) + (c.passportTasks || 0) + (c.pickupTasks || 0) + (c.balanceTasks || 0) + (c.ruleTasks || 0);
-      if (raised) bits.push(`${raised} task${raised > 1 ? 's' : ''} live`);
-      if (c.errors && Object.keys(c.errors).length) bits.push(`${Object.keys(c.errors).length} section error(s)`);
-      toast(`Automations ran ✅${bits.length ? ' — ' + bits.join(', ') : ' — nothing due'}`, c.errors && Object.keys(c.errors).length ? 'warning' : 'success');
-      if (currentTab === 'dashboard') renderDashboardTab();
-    } else {
-      toast(res?.error || 'Could not run automations.', 'error');
-    }
-  } catch {
-    toast('Could not run automations — check your connection.', 'error');
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '⚙️ Run automations now'; }
-  }
+    </div>`;
 }
 
 // ─────────────────────────────────────────────
