@@ -1418,9 +1418,9 @@ function refreshRentalPhoneOptions() {
   }
 }
 
-function openNewRentalModal() {
+function openNewRentalModal(preselectCustomerId = null) {
   const customerOptions = customers.map(c =>
-    `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone||'')}</option>`
+    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone||'')}</option>`
   ).join('');
 
   const availablePhoneOptions = phoneOptionsFor(null, null);
@@ -2780,7 +2780,7 @@ function renderDetailPanel(id) {
         ${item(!!phoneCover,
           `Phone covered — ${escHtml(phoneCover?.phoneNumber || '')} until ${fmtDate(phoneCover?.toDate)}`,
           'No rental phone covering the travel date',
-          `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openNewRentalModal()">📱 Book a phone</button>`)}
+          `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openNewRentalModal('${c.id}')">📱 Book a phone</button>`)}
         ${item(!!simCover,
           `SIM plan active — ${escHtml(simCover?.provider || '')}`,
           'No active SIM plan',
@@ -2792,6 +2792,26 @@ function renderDetailPanel(id) {
         ${!nextTrip.passportOnFile ? item(false, '', 'Passport not on file', `<span style="color:var(--muted);font-size:11px;">check at counter</span>`) : ''}
       </div>`;
   }
+
+  // Notes + this customer's open reminders/tasks (Force E — the record was a
+  // stub: notes weren't shown and reminders saved to the customer never
+  // surfaced on the card).
+  const notesHtml = c.notes ? `
+      <div style="background:var(--bg-secondary);border-left:3px solid var(--gold);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--text);white-space:pre-wrap;">
+        <span style="color:var(--muted);font-size:11px;display:block;margin-bottom:2px;">📝 Notes</span>${escHtml(c.notes)}
+      </div>` : '';
+  const custTasks = (tasksList || []).filter(t => t.customerId === c.id && !t.done)
+    .sort((a, b) => String(a.dueDate || '').localeCompare(String(b.dueDate || '')));
+  const tasksHtml = custTasks.length ? `
+      <div class="section-divider">⏰ Open reminders & tasks</div>
+      <div style="margin-bottom:16px;">
+        ${custTasks.slice(0, 6).map(t => `
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);">
+            <span>${t.priority === 'High' ? '🔴' : t.priority === 'Medium' ? '🟡' : '⚪'}</span>
+            <span style="flex:1;min-width:0;">${escHtml(t.title || '')}</span>
+            ${t.dueDate ? `<span style="color:var(--muted);font-size:11px;white-space:nowrap;">${fmtDate(t.dueDate)}</span>` : ''}
+          </div>`).join('')}
+      </div>` : '';
 
   // Full activity timeline (Customer 360).
   const timeline = buildCustomerTimeline(c);
@@ -2841,6 +2861,8 @@ function renderDetailPanel(id) {
       </div>
 
       ${tripHtml}
+      ${notesHtml}
+      ${tasksHtml}
 
       <div class="section-divider">Active Services</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">${servicesHTML}</div>
@@ -2860,7 +2882,7 @@ function renderDetailPanel(id) {
 
       <div class="section-divider" style="margin-top:18px;">New Service</div>
       <div class="service-actions">
-        <button class="btn btn-rental" style="font-size:13px;padding:7px 16px;" onclick="openNewRentalModal()">📱 New Rental</button>
+        <button class="btn btn-rental" style="font-size:13px;padding:7px 16px;" onclick="openNewRentalModal('${c.id}')">📱 New Rental</button>
         <button class="btn btn-primary" style="font-size:13px;padding:7px 16px;" onclick="openNewBookingModal('${c.id}')">✈️ New Flight Booking</button>
         <button class="btn btn-vn" style="font-size:13px;padding:7px 16px;" onclick="openNewVNModal('${c.id}')">🔢 New Virtual Number</button>
         <button class="btn btn-sim" style="font-size:13px;padding:7px 16px;" onclick="openAddSimModal('${c.id}')">💳 New SIM Plan</button>
@@ -3342,6 +3364,7 @@ function openEditModal(id) {
   const aeEl = document.getElementById('fAccountEmail');
   if (aeEl) aeEl.value = c.accountEmail || '';
   document.getElementById('fAddress').value = c.address || '';
+  { const n = document.getElementById('fNotes'); if (n) n.value = c.notes || ''; }
   document.getElementById('fPassportOnFile').checked = !!c.passportOnFile;
   showModal();
 }
@@ -3373,6 +3396,7 @@ function clearModal() {
   });
   const pf = document.getElementById('fPassportOnFile'); if (pf) pf.checked = false;
   const ae = document.getElementById('fAccountEmail'); if (ae) ae.value = '';
+  const nt = document.getElementById('fNotes'); if (nt) nt.value = '';
   document.getElementById('fCountryCode').value = '+44';
   ['errFirstName','errLastName','errPhone'].forEach(id => document.getElementById(id).classList.remove('visible'));
   ['warnPhone','warnEmail','warnName'].forEach(id => document.getElementById(id).classList.remove('visible'));
@@ -3434,6 +3458,7 @@ async function saveCustomer() {
   const code      = document.getElementById('fCountryCode').value.replace('-CA', '');
   const email     = document.getElementById('fEmail').value.trim();
   const address   = document.getElementById('fAddress').value.trim();
+  const notes     = document.getElementById('fNotes')?.value.trim() || '';
   const editId    = document.getElementById('editId').value;
 
   if (!firstName) { setErr('errFirstName', true); setInputErr('fFirstName', true); valid = false; }
@@ -3478,7 +3503,7 @@ async function saveCustomer() {
     if (move) { if (!accountEmail) accountEmail = contactEmail; contactEmail = ''; }
   }
 
-  const payload = { firstName, lastName, phone: fullPhone, email: contactEmail, address,
+  const payload = { firstName, lastName, phone: fullPhone, email: contactEmail, address, notes,
     accountEmail,
     passportOnFile: document.getElementById('fPassportOnFile').checked };
 

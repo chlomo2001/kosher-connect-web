@@ -124,6 +124,11 @@ export default function Home() {
             </div>
 
             <div className="form-group form-full">
+              <label className="form-label">📝 Notes <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(preferences, who they&apos;re related to, anything to remember)</span></label>
+              <textarea className="form-input" id="fNotes" rows={2} placeholder="e.g. prefers the £20 US plan · pays end of month · brother of Yossi Adler" style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4 }}></textarea>
+            </div>
+
+            <div className="form-group form-full">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                 <input type="checkbox" id="fPassportOnFile" style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
                 🛂 Passport on file
