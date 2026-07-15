@@ -471,7 +471,7 @@ function filterCustomerDropdown() {
   } else {
     dropdown.innerHTML = matches.map(c => `
       <div class="customer-dropdown-item" onclick="selectRentalCustomer('${c.id}')">
-        <strong>${escHtml(c.firstName)} ${escHtml(c.lastName)}</strong>
+        <strong>${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}</strong>
         <span style="color:var(--muted);font-size:11px;margin-left:8px;">${escHtml(c.phone||'')} ${c.email ? '· '+escHtml(c.email) : ''}</span>
       </div>`).join('');
   }
@@ -1329,7 +1329,7 @@ function renderRentalRows() {
     const debtColor = totalOwed > 0 ? 'color:var(--danger);' : 'color:var(--success);';
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('.action-btn'))openManageRentalModal('${r.id}')">
       <td>
-        <div class="customer-name">${escHtml(r.customerName || '—')}</div>
+        <div class="customer-name">${nameHtml(r.customerName || '—')}</div>
         <div class="customer-email" style="font-size:11px;">${r.vn ? '🔢 +'+escHtml(r.vnPrefix || '') : ''}</div>
       </td>
       <td style="font-weight:600;font-size:12px;">${escHtml(r.phoneNumber || '—')}</td>
@@ -2586,7 +2586,7 @@ function renderTableRows() {
     return `
     <tr class="${selected}" data-id="${c.id}">
       <td>
-        <div class="customer-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}${customerHasPassport(c) ? ' <span title="Passport on file">🛂</span>' : ''}</div>
+        <div class="customer-name">${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file">🛂</span>' : ''}</div>
         <div class="customer-email">${escHtml(c.email || '')}${c.accountEmail ? `${c.email ? '<br>' : ''}<span title="Account/login email (Lebara etc.) — not for contacting the customer" style="color:var(--muted);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''}</div>
       </td>
       <td>${escHtml(c.phone || '—')}</td>
@@ -2744,7 +2744,7 @@ function renderDetailPanel(id) {
       <div class="detail-header">
         <div class="avatar">${initials}</div>
         <div style="flex:1;">
-          <div class="detail-name">${escHtml(c.firstName)} ${escHtml(c.lastName)}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:16px;">🛂</span>' : ''}</div>
+          <div class="detail-name">${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:16px;">🛂</span>' : ''}</div>
           <div class="detail-meta">${escHtml(c.phone || '—')} · ✉️ ${escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
         </div>
         <div style="display:flex;gap:8px;">
@@ -4006,6 +4006,13 @@ function escHtml(str) {
     .replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;');
 }
+
+// Escape a name AND isolate its text direction. <bdi> stops a mixed
+// Hebrew/Latin name (RTL) from visually reordering against adjacent LTR
+// content — a badge, phone number, date or parenthetical. Inert for plain
+// Latin names (no visual change), so it's safe to use everywhere a person's
+// name is shown.
+function nameHtml(str) { return `<bdi>${escHtml(str)}</bdi>`; }
 
 // Copy text to the clipboard with a confirmation toast. Used by the
 // check-in passport details (airline forms need each value pasted).
@@ -6358,7 +6365,7 @@ function dashPaint(money, tasksList2, stillLoading) {
     <div class="dash-head">
       <div>
         <div class="dash-date">${enDate}${hebDate ? ` &nbsp;·&nbsp; <span class="heb">${hebDate}</span>` : ''}</div>
-        <div class="dash-greeting">${greeting}${staffFirstName ? ', ' + escHtml(staffFirstName) : ''}.</div>
+        <div class="dash-greeting">${greeting}${staffFirstName ? ', ' + nameHtml(staffFirstName) : ''}.</div>
       </div>
       <div class="dash-actions">
         <button class="btn btn-outline" onclick="openNewRentalModal()">📱 New Rental</button>
