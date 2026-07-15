@@ -29,6 +29,34 @@ Guiding rules that do not change in phase 2:
 
 ---
 
+## Already built — dormant until switched on
+
+The portal-facing half of Stripe self-pay, plus a full **customer Documents**
+feature, are now in the code. Both follow the email-HOLD discipline: present but
+inert until configured, so nothing goes live by accident.
+
+**Customer Documents (both directions).** Staff share files with a customer from
+the operator card (Documents section); the customer sees and downloads them in
+the portal and can upload files back, which arrive as **pending** for staff to
+approve or reject. Files live in a private `customer-docs` bucket; the browser
+only ever gets short-lived signed URLs. *To switch on:* apply migration
+`20260715160000` (creates the table + bucket), keep Supabase storage configured,
+and set `PORTAL_ENABLED=1` for the customer side.
+
+**Stripe self-pay (portal).** A customer who owes can pay by card via Stripe's
+hosted Payment Element; on success the **webhook** (`/api/stripe/webhook`) posts
+one ledger `payment` row keyed on the PaymentIntent id (idempotent, method
+`card`). Card data never touches our server or DB. *To switch on:* set
+`STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` (test
+keys first) and register the webhook endpoint in the Stripe dashboard. Until
+then the pay button simply says card payments aren't switched on yet.
+
+Still to come in the Stripe workstream below: **saving** a card (SetupIntent)
+and **off-session** charges (card-on-file for deposits / no-shows / SIM
+direct-debits). Self-pay is the customer-present slice, shipped first.
+
+---
+
 ## Workstream A — myPOS Nexgo K300 ↔ the till
 
 ### Where it is now
