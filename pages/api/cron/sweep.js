@@ -152,8 +152,26 @@ async function handler(req, res) {
 
   const today = localDate()
   const counts = {}
+  const errors = {}
+  // Shared across sections (built in §2, read in §6). Hoisted so a §2 failure
+  // leaves safe defaults instead of crashing later sections.
+  let names = new Map()
+  let custRows = []
+
+  // Run one sweep section in isolation: a thrown error is recorded and the
+  // remaining sections still run. The sweep is idempotent, so a section that
+  // fails today simply retries on the next run instead of blocking the rest
+  // of the automation heartbeat.
+  const section = async (label, fn) => {
+    try { await fn() }
+    catch (e) {
+      errors[label] = String((e && e.message) || e)
+      console.error(`[cron/sweep] section "${label}" failed:`, e)
+    }
+  }
 
   try {
+    await section('overdue', async () => {
     // ── 1. Overdue rentals ──
     const flipped = await db.update(
       'rentals',
@@ -190,13 +208,16 @@ async function handler(req, res) {
       }
     }
     counts.overdueClosed = overdueClosed
+    })
 
+    await section('collections', async () => {
     // ── 2. Collections (BALANCE-<customer>) ──
-    const [balances, custRows] = await Promise.all([
+    const [balances, freshCustRows] = await Promise.all([
       db.select('customer_balances', ''),
       db.select('customers', 'select=id,first_name,last_name'),
     ])
-    const names = new Map(custRows.map(c => [c.id, `${c.first_name || ''} ${c.last_name || ''}`.trim()]))
+    custRows = freshCustRows
+    names = new Map(custRows.map(c => [c.id, `${c.first_name || ''} ${c.last_name || ''}`.trim()]))
     let balCreated = 0, balClosed = 0
     for (const b of balances) {
       const bal = Number(b.balance)
@@ -215,7 +236,9 @@ async function handler(req, res) {
     }
     counts.balanceTasks = balCreated
     counts.balanceClosed = balClosed
+    })
 
+    await section('passport', async () => {
     // ── 3. Passport expiry (within 90 days, not already expired) ──
     const expiring = await db.select(
       'bookings',
@@ -235,7 +258,9 @@ async function handler(req, res) {
       passportTasks++
     }
     counts.passportTasks = passportTasks
+    })
 
+    await section('pickups', async () => {
     // ── 1b. Reservation pickups due (booked, start date arrived) ──
     const pickups = await db.select(
       'rentals',
@@ -267,7 +292,9 @@ async function handler(req, res) {
       }
     }
     counts.pickupsClosed = pickupsClosed
+    })
 
+    await section('flights', async () => {
     // ── 3b. Flight-day reminders (flies today or tomorrow) ──
     const flying = await db.select(
       'bookings',
@@ -322,7 +349,9 @@ async function handler(req, res) {
       }
     }
     counts.flightsClosed = flightsClosed
+    })
 
+    await section('sim-renewals', async () => {
     // ── 4. SIM renewals due within 3 days ──
     const renewing = await db.select(
       'sims',
@@ -355,7 +384,9 @@ async function handler(req, res) {
       if (stale) simClosed += await closeOpenTask(t.reference)
     }
     counts.simClosed = simClosed
+    })
 
+    await section('vn-billing', async () => {
     // ── 5. Standalone-VN monthly billing ──
     // Post one charge per elapsed billing period. Refs carry the period
     // (VN-<id>-<YYYY-MM of the billing date>), so re-runs and catch-up after
@@ -368,32 +399,43 @@ async function handler(req, res) {
     )
     let vnCharges = 0
     for (const vn of billableVNs) {
-      let bill = vn.next_billing_date
-      // Catch up every period due to date (guard: max 24 to bound a bad date).
-      for (let i = 0; i < 24 && bill <= today; i++) {
-        await db.insertIgnoreDup('ledger', [{
-          customer_id: vn.customer_id,
-          charge_reference: `VN-${vn.id}-${bill.slice(0, 7)}`,
-          entry_type: 'virtual_number',
-          amount: -Number(vn.monthly_price),
-          description: `Virtual number ${vn.number}${vn.bundle_label ? ` (${vn.bundle_label}${vn.plan ? ', ' + vn.plan.replace(/_/g, ' ') : ''})` : ''} — month from ${bill}`,
-        }], 'charge_reference')
-        vnCharges++
-        // advanceOneMonth clamps to the month end instead of overflowing:
-        // 31 Jan -> 28 Feb, never rolling to March and skipping February's
-        // charge (the setUTCMonth bug this replaces).
-        bill = advanceOneMonth(bill)
-        await db.update('virtual_numbers', `id=eq.${vn.id}`, { next_billing_date: bill })
+      // Isolate each VN: a bad row (missing customer, malformed date) is
+      // recorded but never stops billing the remaining virtual numbers.
+      try {
+        let bill = vn.next_billing_date
+        // Catch up every period due to date (guard: max 24 to bound a bad date).
+        for (let i = 0; i < 24 && bill <= today; i++) {
+          await db.insertIgnoreDup('ledger', [{
+            customer_id: vn.customer_id,
+            charge_reference: `VN-${vn.id}-${bill.slice(0, 7)}`,
+            entry_type: 'virtual_number',
+            amount: -Number(vn.monthly_price),
+            description: `Virtual number ${vn.number}${vn.bundle_label ? ` (${vn.bundle_label}${vn.plan ? ', ' + vn.plan.replace(/_/g, ' ') : ''})` : ''} — month from ${bill}`,
+          }], 'charge_reference')
+          vnCharges++
+          // advanceOneMonth clamps to the month end instead of overflowing:
+          // 31 Jan -> 28 Feb, never rolling to March and skipping February's
+          // charge (the setUTCMonth bug this replaces).
+          bill = advanceOneMonth(bill)
+          await db.update('virtual_numbers', `id=eq.${vn.id}`, { next_billing_date: bill })
+        }
+      } catch (e) {
+        errors[`vn-${vn.id}`] = String((e && e.message) || e)
+        console.error(`[cron/sweep] VN ${vn.id} billing failed:`, e)
       }
     }
     counts.vnChargesPosted = vnCharges
+    })
 
+    await section('custom-rules', async () => {
     // ── 6. Owner-defined automation rules (#20) ──
     // Each enabled rule raises RULE-<ruleId>-<entityId> tasks for matching
     // records; keys not re-raised this run are closed. Built on the same
     // idempotent upsert as the fixed sweeps above.
     counts.ruleTasks = await runCustomRules({ today, names, custRows })
+    })
 
+    if (Object.keys(errors).length) counts.errors = errors
     console.log('[cron/sweep]', JSON.stringify(counts))
     return res.json({ success: true, ranAt: new Date().toISOString(), by: isCron ? 'cron' : staff.email, counts })
   } catch (e) {
