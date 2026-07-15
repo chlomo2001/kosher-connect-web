@@ -326,6 +326,10 @@ function renderTab(tab) {
     toast('That area is not enabled for your account.', 'warning');
     return;
   }
+  // #6 — keep currentTab in sync no matter how we got here (nav click OR a
+  // direct renderTab() on first load), so async repaints (the dashboard's
+  // fresh-money pass) don't skip because currentTab still said 'customers'.
+  currentTab = tab;
   document.body.classList.remove('pos-mode'); // leaving the till via any nav
   const content = document.getElementById('mainContent');
   const searchBox = document.getElementById('searchBox');
@@ -6141,13 +6145,16 @@ const PALETTE_COMMANDS = [
   { icon: '🤖', label: 'New automation rule', sub: 'admin', admin: true, run: () => openOnTab('settings', openAutomationModal) },
   // ── Navigate ──
   ...['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'shop', 'virtual', 'tasks', 'settings']
-    .map(t => ({ icon: '↪', label: `Go to ${t}`, sub: 'navigate', run: () => goToTab(t) })),
+    .map(t => ({ icon: '↪', label: `Go to ${t}`, sub: 'navigate', tab: t, run: () => goToTab(t) })),
 ];
 
-// Commands the current user may run — admin-only entries are hidden for helpers.
+// Commands the current user may run — admin-only entries are hidden for
+// helpers (#78: navigation to a forbidden tab is hidden too).
 function visibleCommands() {
   const isAdmin = !currentStaff || currentStaff.role === 'owner';
-  return PALETTE_COMMANDS.filter(c => !c.admin || isAdmin);
+  return PALETTE_COMMANDS.filter(c =>
+    (!c.admin || isAdmin) &&
+    (!c.tab || !allowedTabs || allowedTabs.includes(c.tab)));
 }
 
 function paletteSearch(q) {
@@ -6187,6 +6194,49 @@ function paletteSearch(q) {
         (b.bookingReference || '').toLowerCase().includes(needle)) {
       out.push({ icon: '✈️', label: `${b.route} — ${b.customerName || b.passenger || ''}`,
         sub: `flies ${fmtDate(b.travelDate)}`, run: () => goToTab('bookings') });
+    }
+  }
+  // #50 — SIMs, virtual numbers, repairs and services were unsearchable.
+  for (const s of sims) {
+    if (out.length >= 12) break;
+    if ((s.customerName || '').toLowerCase().includes(needle) ||
+        (s.provider || '').toLowerCase().includes(needle) ||
+        (s.simNumber || '').toLowerCase().includes(needle) ||
+        (digits.length >= 4 && (s.simNumber || '').replace(/\D/g, '').includes(digits))) {
+      out.push({ icon: '📶', label: `SIM — ${s.customerName || ''}`, sub: `${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}`,
+        run: () => openManageSimModal(s.id) });
+    }
+  }
+  for (const v of virtualNumbers) {
+    if (out.length >= 12) break;
+    if ((v.number || '').toLowerCase().includes(needle) ||
+        (v.customerName || '').toLowerCase().includes(needle) ||
+        (digits.length >= 4 && (v.number || '').replace(/\D/g, '').includes(digits))) {
+      out.push({ icon: '🔢', label: `VN ${v.number || ''} — ${v.customerName || ''}`, sub: v.status || 'virtual number',
+        run: () => goToTab('virtual') });
+    }
+  }
+  for (const r of repairs) {
+    if (out.length >= 12) break;
+    if ((r.customerName || '').toLowerCase().includes(needle) ||
+        (r.device || '').toLowerCase().includes(needle)) {
+      out.push({ icon: '🔧', label: `Repair — ${r.customerName || ''}`, sub: `${r.device || ''} · ${r.status || ''}`,
+        run: () => goToTab('repairs') });
+    }
+  }
+  for (const o of serviceOrders) {
+    if (out.length >= 12) break;
+    if ((o.customerName || '').toLowerCase().includes(needle) ||
+        (o.serviceName || '').toLowerCase().includes(needle)) {
+      out.push({ icon: '🖨️', label: `${o.serviceName || 'Service'} — ${o.customerName || ''}`, sub: o.createdAt ? fmtDate(o.createdAt) : 'service',
+        run: () => goToTab('services') });
+    }
+  }
+  for (const t of (tasksList || [])) {
+    if (out.length >= 12) break;
+    if (!t.done && (t.title || '').toLowerCase().includes(needle)) {
+      out.push({ icon: '⏰', label: t.title || 'Task', sub: t.dueDate ? `due ${fmtDate(t.dueDate)}` : 'task',
+        run: () => goToTab('tasks') });
     }
   }
   return out.slice(0, 12);
