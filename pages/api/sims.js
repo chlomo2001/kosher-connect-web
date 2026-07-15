@@ -1,4 +1,3 @@
-import { loadData, saveData } from '../../lib/data'
 import { withTab } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db'
 import { listSims, syncSims } from '../../lib/tableStore'
@@ -37,25 +36,24 @@ async function chargeSim(req, res, b) {
   return res.json({ success: true, balance: balRows.length ? Number(balRows[0].balance) : 0 })
 }
 
+// #80 — relational layer only; the file-store fallback is gone.
 async function handler(req, res) {
+  if (!tablesMode) {
+    return res.status(503).json({ success: false, error: 'Server misconfigured: the relational data layer is required.' })
+  }
   try {
     if (req.method === 'GET') {
-      return res.json(tablesMode ? await listSims() : await loadData('sims'))
+      return res.json(await listSims())
     }
     if (req.method === 'POST') {
       const b = req.body
       // A single SIM charge (object with op:'charge') vs the whole-array sync.
       if (b && !Array.isArray(b) && b.op === 'charge') {
-        if (!tablesMode) return res.status(503).json({ success: false, error: 'SIM charges need the relational data layer.' })
         return chargeSim(req, res, b)
       }
       const { items, deletedIds } = parseSyncBody(b)
-      if (tablesMode) {
-        const result = await syncSims(items, deletedIds)
-        return res.json({ success: true, ...result })
-      }
-      await saveData('sims', items)
-      return res.json({ success: true })
+      const result = await syncSims(items, deletedIds)
+      return res.json({ success: true, ...result })
     }
     res.status(405).end()
   } catch (e) {

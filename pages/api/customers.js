@@ -1,16 +1,18 @@
-import { loadData, saveData } from '../../lib/data'
-import { withStaff, withTab } from '../../lib/auth.js'
+import { withTab } from '../../lib/auth.js'
 import { tablesMode } from '../../lib/db'
 import { listCustomers, upsertCustomer, deleteCustomer } from '../../lib/tableStore'
 
+// #80 — the relational tables are the ONLY data layer now. The old
+// loadData/saveData file-store fallback was a broken, never-exercised path
+// (bookings/repairs/etc. never had it), so it's gone. A missing service key
+// fails fast per request instead of silently degrading to a half-working app.
 async function handler(req, res) {
-  if (tablesMode) return tablesHandler(req, res)
-  return legacyHandler(req, res)
-}
-
-// ---------- relational tables (transitional data layer) ----------
-
-async function tablesHandler(req, res) {
+  if (!tablesMode) {
+    return res.status(503).json({
+      success: false,
+      error: 'Server misconfigured: the relational data layer (SUPABASE_SERVICE_ROLE_KEY) is required.',
+    })
+  }
   try {
     if (req.method === 'GET') {
       return res.json(await listCustomers())
@@ -49,45 +51,6 @@ async function tablesHandler(req, res) {
     console.error('[api/customers]', e)
     return res.status(500).json({ success: false, error: 'Storage error' })
   }
-}
-
-// ---------- previous behaviour (key-value store / local files) ----------
-
-async function legacyHandler(req, res) {
-  if (req.method === 'GET') {
-    return res.json(await loadData('customers'))
-  }
-
-  if (req.method === 'POST') {
-    const customers = await loadData('customers')
-    const customer = { ...req.body }
-    customer.id = Date.now().toString()
-    customer.createdAt = new Date().toISOString()
-    customer.totalPaid = 0
-    customer.services = []
-    customers.push(customer)
-    await saveData('customers', customers)
-    return res.json({ success: true, customer })
-  }
-
-  if (req.method === 'PUT') {
-    const customers = await loadData('customers')
-    const updated = req.body
-    const idx = customers.findIndex(c => c.id === updated.id)
-    if (idx === -1) return res.status(404).json({ success: false, error: 'Not found' })
-    customers[idx] = { ...customers[idx], ...updated }
-    await saveData('customers', customers)
-    return res.json({ success: true, customer: customers[idx] })
-  }
-
-  if (req.method === 'DELETE') {
-    const { id } = req.query
-    const customers = await loadData('customers')
-    await saveData('customers', customers.filter(c => c.id !== id))
-    return res.json({ success: true })
-  }
-
-  res.status(405).end()
 }
 
 export default withTab('customers', handler)

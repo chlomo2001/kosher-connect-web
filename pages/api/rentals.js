@@ -1,22 +1,21 @@
-import { loadData, saveData } from '../../lib/data'
 import { withTab } from '../../lib/auth.js'
 import { tablesMode } from '../../lib/db'
 import { listRentals, syncRentals } from '../../lib/tableStore'
 import { parseSyncBody } from '../../lib/syncBody'
 
+// #80 — relational layer only; the file-store fallback is gone.
 async function handler(req, res) {
+  if (!tablesMode) {
+    return res.status(503).json({ success: false, error: 'Server misconfigured: the relational data layer is required.' })
+  }
   try {
     if (req.method === 'GET') {
-      return res.json(tablesMode ? await listRentals() : await loadData('rentals'))
+      return res.json(await listRentals())
     }
     if (req.method === 'POST') {
       const { items, deletedIds } = parseSyncBody(req.body)
-      if (tablesMode) {
-        const result = await syncRentals(items, deletedIds)
-        return res.json({ success: true, ...result })
-      }
-      await saveData('rentals', items)
-      return res.json({ success: true })
+      const result = await syncRentals(items, deletedIds)
+      return res.json({ success: true, ...result })
     }
     res.status(405).end()
   } catch (e) {
