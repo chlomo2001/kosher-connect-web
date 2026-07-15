@@ -43,6 +43,13 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   const [paid, setPaid] = useState(false)
   const stripeRef = useRef(null)
 
+  // Save a card on file (SetupIntent — no charge now)
+  const [saveCard, setSaveCard] = useState(null)
+  const [saveBusy, setSaveBusy] = useState(false)
+  const [saveMsg, setSaveMsg] = useState('')
+  const [cardSaved, setCardSaved] = useState(false)
+  const setupRef = useRef(null)
+
   const token = () => (typeof window !== 'undefined' ? sessionStorage.getItem('kc_portal_token') : null)
 
   const loadAccount = useCallback((tok) => {
@@ -78,6 +85,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   function signOut() {
     if (typeof window !== 'undefined') sessionStorage.removeItem('kc_portal_token')
     setAccount(null); setDocs(null); setPay(null); setPaid(false)
+    setSaveCard(null); setCardSaved(false); setupRef.current = null
   }
 
   const fmtGbp = (v) => `£${(Math.round((Number(v) || 0) * 100) / 100).toFixed(2)}`
@@ -163,6 +171,48 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       // The webhook posts the ledger entry; give it a moment, then refresh.
       setTimeout(() => loadAccount(token()), 2500)
     } else { setPayMsg('Your payment is processing — we’ll update your balance shortly.'); setPayBusy(false) }
+  }
+
+  // ── Save a card on file ────────────────────────────────────────────────────
+  async function startSaveCard() {
+    setSaveMsg(''); setSaveBusy(true)
+    try {
+      const r = await fetch('/api/portal/save-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({}),
+      })
+      const d = await r.json()
+      if (!d.success) { setSaveMsg(d.error || 'Could not start.'); setSaveBusy(false); return }
+      setSaveCard({ clientSecret: d.clientSecret, publishableKey: d.publishableKey })
+    } catch { setSaveMsg('Could not start.'); setSaveBusy(false) }
+  }
+  useEffect(() => {
+    if (!saveCard?.clientSecret) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const Stripe = await loadStripeJs()
+        if (cancelled) return
+        const stripe = Stripe(saveCard.publishableKey)
+        const elements = stripe.elements({ clientSecret: saveCard.clientSecret })
+        const el = elements.create('payment')
+        el.mount('#kc-savecard-element')
+        setupRef.current = { stripe, elements }
+        setSaveBusy(false)
+      } catch (e) { setSaveMsg(e.message || 'Could not load the form.'); setSaveBusy(false) }
+    })()
+    return () => { cancelled = true }
+  }, [saveCard])
+  async function confirmSaveCard() {
+    if (!setupRef.current) return
+    setSaveBusy(true); setSaveMsg('')
+    const { stripe, elements } = setupRef.current
+    const { error, setupIntent } = await stripe.confirmSetup({ elements, redirect: 'if_required' })
+    if (error) { setSaveMsg(error.message || 'Could not save the card.'); setSaveBusy(false); return }
+    if (setupIntent && setupIntent.status === 'succeeded') {
+      setCardSaved(true); setSaveCard(null); setupRef.current = null
+    } else { setSaveMsg('Saving…'); setSaveBusy(false) }
   }
 
   function google() {
@@ -253,6 +303,26 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                     style={{ marginTop: 8, width: '100%', padding: '8px 16px', fontSize: 13 }}>Cancel</button>
                 </div>
               )}
+            </div>
+
+            {/* Payment method — save a card for future payments */}
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>💳 Payment method</div>
+              {(account.cardOnFile || cardSaved) ? (
+                <div style={{ fontSize: 13, color: 'var(--muted)' }}>✓ A card is saved on file.</div>
+              ) : saveCard ? (
+                <div>
+                  <div id="kc-savecard-element" />
+                  <button className="btn btn-primary" onClick={confirmSaveCard} disabled={saveBusy}
+                    style={{ marginTop: 12, width: '100%', padding: '10px 16px' }}>{saveBusy ? 'Saving…' : 'Save card'}</button>
+                  <button className="btn btn-outline" onClick={() => { setSaveCard(null); setupRef.current = null }}
+                    style={{ marginTop: 8, width: '100%', padding: '8px 16px', fontSize: 13 }}>Cancel</button>
+                </div>
+              ) : (
+                <button className="btn btn-outline" onClick={startSaveCard} disabled={saveBusy}
+                  style={{ fontSize: 13, padding: '8px 14px' }}>{saveBusy ? 'Starting…' : 'Save a card for future payments'}</button>
+              )}
+              {saveMsg && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>{saveMsg}</div>}
             </div>
 
             <div style={{ marginBottom: 16 }}>

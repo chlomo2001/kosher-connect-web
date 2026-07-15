@@ -3074,6 +3074,7 @@ function renderDetailPanel(id) {
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openDraftReminderModal('${c.id}')" title="Draft a reminder message (does not send)">✉️</button>
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openLogCommModal('${c.id}')" title="Log a call or note">📞</button>
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer">⏰</button>
+          <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="chargeCardOnFile('${c.id}')" title="Charge the customer's saved card on file (Stripe)">💳</button>
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openEditModal('${c.id}')">✏️ Edit</button>
           <button class="card-close" onclick="dismissCustomerCard()" title="Close" aria-label="Close">✕</button>
         </div>
@@ -3227,6 +3228,26 @@ async function reviewCustomerDoc(custId, id, action) {
     else toast(d.error || 'Failed.', 'error');
   } catch { toast('Failed.', 'error'); }
 }
+// Charge a customer's saved card-on-file off-session (owner action). The server
+// requires a stored card and reports clearly when there isn't one, or when the
+// bank needs the customer present to re-authorise (SCA).
+async function chargeCardOnFile(custId) {
+  const amtStr = prompt('Charge the card on file — amount in £:');
+  if (amtStr == null) return;
+  const amount = parseFloat(amtStr);
+  if (!(amount > 0)) { toast('Enter a valid amount.', 'warning'); return; }
+  try {
+    const r = await kcFetch('/api/charge-card', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customerId: custId, amount }),
+    });
+    const d = await r.json();
+    if (d.success && d.status === 'succeeded') { toast(`Charged £${amount.toFixed(2)} to card on file ✔`, 'success'); loadWalletSection(custId); }
+    else if (d.success) { toast(d.note || 'Payment processing…', 'info'); }
+    else toast(d.error || 'Charge failed.', 'error');
+  } catch { toast('Charge failed.', 'error'); }
+}
+
 async function deleteCustomerDoc(custId, id) {
   if (!confirm('Delete this document? This cannot be undone.')) return;
   try {

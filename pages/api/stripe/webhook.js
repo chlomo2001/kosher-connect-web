@@ -41,6 +41,20 @@ export default async function handler(req, res) {
         method: 'card',
         description: 'Online card payment (portal)',
       }], 'charge_reference')
+      // Card-on-file: a portal payment with setup_future_usage leaves a reusable
+      // payment method — remember it so the owner can charge it off-session later.
+      if (appCustomerId && pi.payment_method) {
+        await db.update('customers', `id=eq.${appCustomerId}`, { stripe_pm_id: pi.payment_method }).catch(() => {})
+      }
+    }
+  }
+
+  // Explicit "save a card" (no charge): store the payment method on file.
+  if (event.type === 'setup_intent.succeeded') {
+    const si = event.data?.object || {}
+    const appCustomerId = si.metadata?.app_customer_id
+    if (appCustomerId && si.payment_method) {
+      await db.update('customers', `id=eq.${appCustomerId}`, { stripe_pm_id: si.payment_method }).catch(() => {})
     }
   }
 

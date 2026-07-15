@@ -25,7 +25,7 @@ export default async function handler(req, res) {
 
   const norm = normalizeEmail(user.email)
   const custRows = norm
-    ? await db.select('customers', `select=id,legacy_extras&email_normalized=eq.${encodeURIComponent(norm)}`)
+    ? await db.select('customers', `select=id,legacy_extras,stripe_pm_id&email_normalized=eq.${encodeURIComponent(norm)}`)
     : []
   if (!custRows.length) {
     // A signed-in email we don't recognise: succeed, but show nothing.
@@ -64,5 +64,6 @@ export default async function handler(req, res) {
     balance,
     rentals,
     bookings,
+    cardOnFile: !!cust.stripe_pm_id,
   })
 }
