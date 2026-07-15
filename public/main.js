@@ -6368,6 +6368,7 @@ function dashPaint(money, tasksList2, stillLoading) {
         <div class="dash-greeting">${greeting}${staffFirstName ? ', ' + nameHtml(staffFirstName) : ''}.</div>
       </div>
       <div class="dash-actions">
+        <button class="btn btn-outline" onclick="renderDashboardTab()" title="Reload today's money & tasks">↻ Refresh</button>
         <button class="btn btn-outline" onclick="openNewRentalModal()">📱 New Rental</button>
         <button class="btn btn-outline" onclick="openNewBookingModal()">✈️ New Booking</button>
         <button class="btn btn-outline" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal()})()">🔧 New Repair</button>
