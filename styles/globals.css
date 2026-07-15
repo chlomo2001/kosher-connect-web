@@ -155,6 +155,15 @@ body {
 .nav-item.active { color: #ffffff; border-left-color: var(--accent2); background: rgba(102,94,253,0.16); }
 .nav-icon { font-size: 15px; width: 20px; text-align: center; }
 
+/* #74 — a quiet section label + slight indent groups SIM Plans & Virtual
+   Numbers as one "Connectivity" pair without changing where they navigate. */
+.nav-group-label {
+  padding: 12px 20px 4px; font-size: 10px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+}
+.nav-item.nav-nested { padding-left: 30px; }
+
 .sidebar-bottom {
   margin-top: auto; padding: 16px 20px;
   border-top: 1px solid rgba(255,255,255,0.12);

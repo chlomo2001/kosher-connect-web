@@ -26,13 +26,16 @@ export default function Home() {
         <div className="nav-item active" data-tab="dashboard"><span className="nav-icon">🏠</span> Dashboard</div>
         <div className="nav-item" data-tab="customers"><span className="nav-icon">👥</span> Customers</div>
         <div className="nav-item" data-tab="rentals"><span className="nav-icon">📱</span> Phone Rentals</div>
-        <div className="nav-item" data-tab="sim"><span className="nav-icon">💳</span> SIM Plans</div>
+        {/* #74 — SIM Plans + Virtual Numbers are one "connectivity" concept the
+            operator sells together; group them so they read as a pair. */}
+        <div className="nav-group-label">Connectivity</div>
+        <div className="nav-item nav-nested" data-tab="sim"><span className="nav-icon">💳</span> SIM Plans</div>
+        <div className="nav-item nav-nested" data-tab="virtual"><span className="nav-icon">🔢</span> Virtual Numbers</div>
         <div className="nav-item" data-tab="bookings"><span className="nav-icon">✈️</span> Tickets &amp; Flights</div>
         <div className="nav-item" data-tab="wallet"><span className="nav-icon">💰</span> Wallet</div>
         <div className="nav-item" data-tab="repairs"><span className="nav-icon">🔧</span> Repairs</div>
         <div className="nav-item" data-tab="services"><span className="nav-icon">🖨️</span> Online &amp; Print</div>
         <div className="nav-item" data-tab="shop"><span className="nav-icon">🛍️</span> Shop</div>
-        <div className="nav-item" data-tab="virtual"><span className="nav-icon">🔢</span> Virtual Numbers</div>
         <div className="nav-item" data-tab="tasks"><span className="nav-icon">✅</span> Tasks</div>
         <div className="nav-item" data-tab="settings"><span className="nav-icon">⚙️</span> Settings</div>
 
