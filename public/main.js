@@ -1551,6 +1551,16 @@ function openNewRentalModal(preselectCustomerId = null) {
           <span style="font-size:11px;color:var(--muted);">Recorded as held; refunded on a clean return. Not billed to the wallet.</span>
         </div>
       </div>
+
+      <div class="form-group form-full">
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13px;">
+          <input type="checkbox" id="rTerms" style="accent-color:var(--accent);margin-top:2px;"
+            onchange="document.getElementById('rTermsName').style.display=this.checked?'block':'none'">
+          <span>📝 Customer acknowledged the loss &amp; late-return terms at pickup</span>
+        </label>
+        <input class="form-input" id="rTermsName" style="display:none;margin-top:8px;width:260px;"
+          placeholder="Type the customer's name to sign">
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
@@ -1808,6 +1818,11 @@ async function saveNewRental() {
     // #26 — optional refundable deposit, tracked as held (not a wallet charge).
     depositHeld:  document.getElementById('rDeposit')?.checked
                     ? (parseFloat(document.getElementById('rDepositAmount')?.value) || 0) : 0,
+    // #84 — lightweight signed acknowledgment of the loss/late terms at pickup.
+    termsAck:     !!document.getElementById('rTerms')?.checked,
+    termsAckName: document.getElementById('rTerms')?.checked
+                    ? (document.getElementById('rTermsName')?.value.trim() || '') : '',
+    termsAckAt:   document.getElementById('rTerms')?.checked ? new Date().toISOString() : '',
     status:       isReservation ? 'booked' : 'active',
     createdAt:    new Date().toISOString(),
     equipmentGiven,
@@ -2905,7 +2920,7 @@ function renderDetailPanel(id) {
 
   const cUpcoming = customerUpcomingBookings(c);
   const allActiveServices = [
-    ...cActiveRentals.map(r => ({ type: 'rental', label: `Rental ${r.country === 'USA' ? '🇺🇸' : r.country === 'UK' ? '🇬🇧' : r.country === 'Israel' ? '🇮🇱' : '🌍'}${r.depositHeld > 0 ? ' · 🔒£' + Number(r.depositHeld).toFixed(0) : ''}` })),
+    ...cActiveRentals.map(r => ({ type: 'rental', label: `Rental ${r.country === 'USA' ? '🇺🇸' : r.country === 'UK' ? '🇬🇧' : r.country === 'Israel' ? '🇮🇱' : '🌍'}${r.depositHeld > 0 ? ' · 🔒£' + Number(r.depositHeld).toFixed(0) : ''}${r.termsAck ? ' · ✍️' : ''}` })),
     ...cUpcoming.map(b => ({ type: 'booking', label: `✈️ ${b.route}${b.travelDate ? ' · ' + fmtDate(b.travelDate) : ''}` })),
     ...cSims.map(s => ({ type: 'sim', label: `SIM · ${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}` })),
     ...cVNs.map(v => ({ type: 'vn', label: `VN ${v.number || ''}` })),
