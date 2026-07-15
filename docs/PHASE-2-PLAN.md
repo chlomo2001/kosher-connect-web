@@ -109,10 +109,12 @@ The SDK contract we build against (confirmed from the myPOS Smart SDK):
   reviewed and signed by myPOS, they aren't freely sideloaded. Time-to-live
   depends on that review, not on our code. Confirm access to the myPOS
   developer programme early.
-- **GBP + UK account.** Confirm the terminal's myPOS account is GBP so
-  `currency(GBP)` matches settlement.
-- **Refunds/voids** have their own SDK activity — scope whether phase 2
-  includes card refunds from the till or leaves them on the terminal's own menu.
+- **GBP account — confirmed.** The K300's myPOS account is GBP, so
+  `currency(GBP)` matches settlement. ✓
+- **Refunds — confirmed available on the machine.** The terminal already has a
+  refund option, so phase 2 can leave refunds **on the terminal menu** (staff
+  refund on the K300; the till records a matching refund line) and treat
+  SDK-driven one-tap refunds as an optional later add-on. ✓
 
 ### If a native wrapper isn't wanted
 
@@ -156,9 +158,12 @@ charges a card. `card_on_file` today just records a `card` row like any other.
 
 ### Steps
 
-1. **Stripe account + sandbox keys.** `STRIPE_SECRET_KEY=sk_test_…`,
-   `STRIPE_PUBLISHABLE_KEY=pk_test_…`, `STRIPE_WEBHOOK_SECRET=whsec_…`. **Test
-   keys only** until the whole path is proven.
+1. **Keys from the existing Stripe account.** The shop already has a Stripe
+   account and already takes money through it, so this is *wiring the account we
+   have*, not opening one. Pull **test-mode** keys first —
+   `STRIPE_SECRET_KEY=sk_test_…`, `STRIPE_PUBLISHABLE_KEY=pk_test_…`,
+   `STRIPE_WEBHOOK_SECRET=whsec_…` — and only swap to the live keys once the
+   whole path is proven in test mode.
 2. **`lib/stripe.js`** — server Stripe client, created only when the secret key
    is present (same "degrade gracefully when unconfigured" pattern as
    `lib/email.js`).
@@ -260,11 +265,12 @@ What's missing to call it "established":
 
 ## Open decisions (need Shloime)
 
-- **A — myPOS:** confirm access to the myPOS developer programme for a custom
-  Smart-terminal app, and confirm the K300's account currency is GBP. Are card
-  **refunds from the till** in scope, or left on the terminal menu?
-- **B — Stripe:** confirm we're opening a Stripe account (sandbox first). Which
-  cases go card-on-file first — deposits, no-shows, SIM direct-debits?
+- **A — myPOS:** GBP ✓ and on-machine refunds ✓ are confirmed. The one open
+  item is **access to the myPOS developer programme** to publish a custom app to
+  the K300 — that's the long pole for the one-tap link.
+- **B — Stripe:** account already exists ✓. The open items are just **which
+  cases go card-on-file first** (deposits, no-shows, SIM direct-debits) and who
+  pulls the **test-mode API keys** from the Stripe dashboard.
 - **C — email:** **SMTP (Forward Email)** or a **transactional provider**
   (Resend / Postmark / SES) with bounce webhooks? And the sending
   domain/subdomain to set up DNS for.
