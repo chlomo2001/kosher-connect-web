@@ -158,7 +158,7 @@ export default function Home() {
             <div className="form-group form-full">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                 <input type="checkbox" id="fPassportOnFile" style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
-                🛂 Passport on file
+                🛂 Passport photocopy held
               </label>
             </div>
 

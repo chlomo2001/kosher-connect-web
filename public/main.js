@@ -2544,14 +2544,15 @@ function sortCustomers(list) {
   return arr;
 }
 
-// Passport-on-file is DERIVED, not just the manual flag: a customer counts as
-// having a passport on file if any of their bookings is marked passport-on-file
-// or carries a passenger with a passport number. The manual checkbox is only a
-// fallback for customers with no booking yet.
+// Passport-on-file is AUTOMATIC and honest: a customer counts as having a
+// passport on file only when real passport details are actually stored for one
+// of their bookings. hasPassportDetails is computed server-side (a role-safe
+// yes/no — the passport number itself is owner-only on reads), so this is
+// accurate for every staff role. The old manual `passportOnFile` checkbox no
+// longer fakes a green tick; it now only surfaces as a "marked but no details
+// entered" note on the trip card.
 function customerHasPassport(c) {
-  if (c.passportOnFile) return true;
-  return bookings.some(b => b.customerId === c.id &&
-    (b.passportOnFile || (b.passengers || []).some(p => p.passportNumber)));
+  return bookings.some(b => b.customerId === c.id && b.hasPassportDetails);
 }
 
 function customerMatchesFilter(c) {
@@ -2803,7 +2804,10 @@ function renderDetailPanel(id) {
           `Virtual number — ${escHtml(vnCover?.number || '')}`,
           'No virtual number (family cannot call locally)',
           `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openNewVNModal('${c.id}')">🔢 Add a number</button>`)}
-        ${!nextTrip.passportOnFile ? item(false, '', 'Passport not on file', `<span style="color:var(--muted);font-size:11px;">check at counter</span>`) : ''}
+        ${item(nextTrip.hasPassportDetails,
+          'Passport details on file',
+          nextTrip.passportOnFile ? 'Passport marked on file — but no details entered' : 'Passport not on file',
+          `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openPassengersModal('${nextTrip.id}')">🛂 Add details</button>`)}
       </div>`;
   }
 
@@ -4435,7 +4439,7 @@ async function openNewBookingModal(preselectCustomerId = null) {
         <div id="bkFeeBreakdown" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
       </div>` : ''}
       <div class="form-group">
-        <label class="form-label">Passport on file?</label>
+        <label class="form-label">Passport photocopy held?</label>
         <div style="display:flex;gap:8px;align-items:center;">
           <input type="checkbox" id="bkPassport" onchange="document.getElementById('bkPassportExpiryWrap').style.display=this.checked?'block':'none'">
           <div id="bkPassportExpiryWrap" style="display:none;flex:1;">
@@ -4721,7 +4725,7 @@ function openEditBookingModal(id) {
         <select class="form-input" id="ebStatus">
           ${BOOKING_STATUSES.map(s => `<option value="${s}" ${b.status === s ? 'selected' : ''}>${s === 'Completed' ? 'Completed / Flown' : s}</option>`).join('')}
         </select></div>
-      <div class="form-group"><label class="form-label">Passport on file?</label>
+      <div class="form-group"><label class="form-label">Passport photocopy held?</label>
         <div style="display:flex;gap:8px;align-items:center;">
           <input type="checkbox" id="ebPassport" ${b.passportOnFile ? 'checked' : ''}
             onchange="document.getElementById('ebPExpWrap').style.display=this.checked?'block':'none'">
