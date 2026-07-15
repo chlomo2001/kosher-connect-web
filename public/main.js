@@ -2872,8 +2872,8 @@ function renderDetailPanel(id) {
 
       <div class="detail-stats">
         <div class="detail-stat">
-          <div class="detail-stat-label">${totalDebt > 0 ? 'Total Debt' : 'Total Paid'}</div>
-          <div class="detail-stat-value" style="color:${totalDebt > 0 ? 'var(--danger)' : 'var(--success)'};">£${totalDebt > 0 ? totalDebt : customerPaid}</div>
+          <div class="detail-stat-label" id="cardBalanceLabel">Wallet balance</div>
+          <div class="detail-stat-value" id="cardBalanceStat" style="color:var(--muted);">…</div>
         </div>
         <div class="detail-stat">
           <div class="detail-stat-label">Active Rentals</div>
@@ -2974,6 +2974,16 @@ async function loadWalletSection(customerId) {
   const bal = data.balance || 0;
   const balColor = bal < 0 ? 'var(--danger)' : 'var(--success)';
   const balLabel = bal < 0 ? `owes £${Math.abs(bal).toFixed(2)}` : `£${bal.toFixed(2)} in credit`;
+  // #7/#16/#70 — the card headline used to show a rental-only "Total Debt"
+  // that contradicted this true ledger balance. Fill the headline stat from
+  // the ledger (all services), so the two figures can't disagree.
+  const stat = document.getElementById('cardBalanceStat');
+  const statLbl = document.getElementById('cardBalanceLabel');
+  if (stat) {
+    stat.textContent = bal < 0 ? `−£${Math.abs(bal).toFixed(2)}` : `£${bal.toFixed(2)}`;
+    stat.style.color = bal < 0 ? 'var(--danger)' : bal > 0 ? 'var(--success)' : 'var(--muted)';
+  }
+  if (statLbl) statLbl.textContent = bal < 0 ? 'Owes (wallet)' : bal > 0 ? 'In credit' : 'Wallet balance';
   const entriesHtml = data.entries.length === 0
     ? `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No wallet activity yet.</div>`
     : data.entries.slice(0, 8).map(e => `
