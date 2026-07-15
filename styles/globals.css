@@ -201,6 +201,22 @@ body {
 }
 .nav-item.nav-nested { padding-left: 30px; }
 
+/* Settings body: a category eyebrow above its cards, mirroring .nav-group-label
+   above. The section header is a small uppercase indigo label with a hairline
+   rule; the cards beneath are the navy-ink rows. Making the header a different
+   KIND of element (a label, not a heading) is what gives the striking
+   header-vs-row separation the flat sizing lacked. */
+.settings-section {
+  margin: 34px 2px 12px; padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+}
+.settings-section .sh-label {
+  margin: 0; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+}
+.settings-section .sh-sub { color: var(--muted); font-size: 12px; }
+
 .sidebar-bottom {
   margin-top: auto; padding: 16px 20px;
   border-top: 1px solid rgba(255,255,255,0.12);
@@ -321,6 +337,16 @@ body.pos-mode .content { padding: 14px 18px; }
 .table-wrap table { min-width: 560px; }
 table { width: 100%; border-collapse: collapse; }
 thead { background: var(--surface2); }
+
+/* Settings menus: bound the table's height and freeze its column header row, so
+   Service / Price / KC price / Repeat stay visible as you scroll down a long
+   price list. .table-wrap already scrolls (overflow-x:auto → overflow-y:auto),
+   so a max-height turns it into the scroll container the sticky <th> pins to.
+   Each sticky <th> needs its own opaque background or rows show through it. */
+.settings-card .table-wrap { max-height: 70vh; }
+.settings-card .table-wrap thead th {
+  position: sticky; top: 0; z-index: 3; background: var(--surface2);
+}
 th {
   padding: 10px 16px;
   font-size: 11px; font-weight: 500; color: var(--muted);

@@ -238,7 +238,15 @@ async function initApp() {
   if (failedKeys.length) showReloadBanner(`Couldn’t load ${failedKeys.join(', ')} — some data is missing. Saving is paused to protect your records.`);
   applyTabVisibility();
   reconcilePhoneStatuses();
-  renderTab(allowedTabs && !allowedTabs.includes('dashboard') ? allowedTabs[0] : 'dashboard');
+  // Open the tab named in the URL (/rentals …), defaulting to the dashboard.
+  // A path a helper isn't allowed drops to their first permitted tab.
+  let startTab = tabFromPath();
+  if (allowedTabs && !allowedTabs.includes(startTab)) {
+    startTab = allowedTabs.includes('dashboard') ? 'dashboard' : allowedTabs[0];
+  }
+  syncNavActive(startTab);
+  pushTabUrl(startTab, true); // canonicalise the address bar without a history entry
+  renderTab(startTab);
   hideBootLoader(); // first tab painted — reveal the app
 
   setupNav();
@@ -303,14 +311,43 @@ function saveBlocked(key) {
 // ─────────────────────────────────────────────
 //  NAVIGATION
 // ─────────────────────────────────────────────
+// ── URL ⇄ tab (deep-linkable screens) ─────────────────────────────────────
+// Each tab has its own path: /rentals, /customers … and the dashboard at "/".
+// pages/[tab].js serves the same shell for those paths, so a refresh or a
+// shared link opens the right screen. Here we keep the address bar in step as
+// the operator navigates, and honour the browser Back / Forward buttons.
+function tabFromPath() {
+  const seg = (location.pathname || '/').replace(/^\/+|\/+$/g, '').split('/')[0].toLowerCase();
+  return TAB_META[seg] ? seg : 'dashboard';
+}
+function tabUrl(tab) { return tab === 'dashboard' ? '/' : '/' + tab; }
+function pushTabUrl(tab, replace) {
+  const url = tabUrl(tab);
+  if (location.pathname === url) return; // already there — no duplicate entry
+  try { history[replace ? 'replaceState' : 'pushState']({ kcTab: tab }, '', url); }
+  catch { /* history API blocked (e.g. sandboxed) — navigation still works */ }
+}
+function syncNavActive(tab) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.tab === tab));
+}
+
 function setupNav() {
   document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      item.classList.add('active');
-      currentTab = item.dataset.tab;
-      renderTab(currentTab);
+      const tab = item.dataset.tab;
+      syncNavActive(tab);
+      currentTab = tab;
+      renderTab(tab);
+      pushTabUrl(tab); // reflect the screen in the address bar (new history entry)
     });
+  });
+  // Back / Forward: re-open whatever tab the URL now points at.
+  window.addEventListener('popstate', () => {
+    const tab = tabFromPath();
+    if (allowedTabs && !allowedTabs.includes(tab)) return;
+    syncNavActive(tab);
+    currentTab = tab;
+    renderTab(tab);
   });
 }
 
@@ -7662,10 +7699,14 @@ async function renderSettingsTab() {
         </tr>
       </tbody></table></div>`);
 
+  // A category eyebrow above its cards — same idea as the sidebar's group
+  // labels, so a section header reads as a CATEGORY and the cards below read as
+  // its rows. The two levels are then unmistakably different (that's the "left
+  // panel is better" hierarchy, brought to the settings body).
   const sectionHead = (t, sub) => `
-    <div style="margin:22px 2px 10px;display:flex;align-items:baseline;gap:10px;">
-      <h3 style="font-size:15px;font-weight:700;letter-spacing:-0.2px;margin:0;">${t}</h3>
-      ${sub ? `<span style="color:var(--muted);font-size:12px;">${sub}</span>` : ''}
+    <div class="settings-section">
+      <h3 class="sh-label">${t}</h3>
+      ${sub ? `<span class="sh-sub">${sub}</span>` : ''}
     </div>`;
   const pricingCards = [
     menuHtml, extraHtml,
@@ -7687,14 +7728,14 @@ async function renderSettingsTab() {
       <button class="btn btn-outline btn-sm" onclick="runSweepsNow()" title="Overdue rentals, arrears, passport expiry, SIM renewals">⏰ Run sweeps now</button>
     </div>
 
-    ${team?.success ? sectionHead('👥 People &amp; access', 'who works here and what they can see') + teamHtml : ''}
+    ${team?.success ? sectionHead('People &amp; access', 'who works here and what they can see') + teamHtml : ''}
 
-    ${sectionHead('💷 Prices &amp; charges', 'what you charge and any automatic extras')}
+    ${sectionHead('Prices &amp; charges', 'what you charge and any automatic extras')}
     ${pricingCards}
 
-    ${aliasesHtml ? sectionHead('📧 Communications', 'email addresses for the business') + aliasesHtml : ''}
+    ${aliasesHtml ? sectionHead('Communications', 'email addresses for the business') + aliasesHtml : ''}
 
-    ${automationsHtml ? sectionHead('🤖 Automation', 'jobs the daily sweep runs for you') + automationsHtml : ''}`;
+    ${automationsHtml ? sectionHead('Automation', 'jobs the daily sweep runs for you') + automationsHtml : ''}`;
 }
 
 // ── Collapsible settings cards ───────────────────────────────────────────
@@ -7707,7 +7748,7 @@ function settingsOpenState() {
 function settingsCard(key, title, subtitle, bodyHtml) {
   const open = !!settingsOpenState()[key];
   return `
-    <div class="table-card" style="margin-bottom:12px;">
+    <div class="table-card settings-card" style="margin-bottom:12px;">
       <div onclick="toggleSettingsCard('${key}')"
         style="display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;user-select:none;">
         <span id="scChev_${key}" style="font-size:11px;color:var(--muted);transition:transform 0.15s;display:inline-block;${open ? 'transform:rotate(90deg);' : ''}">▶</span>
