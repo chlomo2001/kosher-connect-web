@@ -31,7 +31,8 @@
   --muted: #64748d;             /* ink-mute */
 
   /* Accents / semantic (ruby is the doc's red; success stays product-UI green) */
-  --gold: #9b6829;              /* lemon — warm accent (hebrew dates, SIM chips) */
+  --gold: #9b6829;              /* warm accent — RESERVED for warnings / hebrew dates */
+  --sim: #0e7490;               /* #53 — SIM gets its own teal so "SIM" ≠ "warning" */
   --danger: #ea2261;            /* ruby */
   --magenta: #f96bee;
   --success: #16a34a;
@@ -64,6 +65,7 @@
   --muted: #8ea0b5;
 
   --gold: #e0a94a;
+  --sim: #38bdf8;
   --danger: #ff5c88;
   --success: #34d399;
   --warning: #f0a04b;
@@ -238,6 +240,7 @@ body.pos-mode .content { padding: 14px 18px; }
 .stat-value.blue { color: var(--accent); }
 .stat-value.green { color: var(--success); }
 .stat-value.gold { color: var(--gold); }
+.stat-value.sim { color: var(--sim); }
 .stat-value.purple { color: var(--accent2); }
 
 /* ─── TABLE ─── */
@@ -291,7 +294,7 @@ tbody tr.selected td { background: rgba(83, 58, 253, 0.05); }
 }
 .badge-active { background: rgba(22,163,74,0.12); color: var(--success); }
 .badge-rental { background: rgba(185,185,249,0.45); color: var(--primary-deep); }
-.badge-sim { background: var(--canvas-cream); color: var(--gold); }
+.badge-sim { background: rgba(14,116,144,0.10); color: var(--sim); }
 .badge-vn { background: rgba(249,107,238,0.14); color: #c026d3; }
 .badge-booking { background: rgba(83,58,253,0.10); color: var(--accent); }
 .badge-repair { background: rgba(234,88,12,0.12); color: #c2410c; }
@@ -430,6 +433,7 @@ tbody tr.selected td { background: rgba(83, 58, 253, 0.05); }
 .history-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
 .dot-blue { background: var(--accent); }
 .dot-gold { background: var(--gold); }
+.dot-sim { background: var(--sim); }
 .dot-purple { background: var(--magenta); }
 .dot-green { background: var(--success); }
 .history-desc { color: var(--ink-secondary); }
@@ -439,7 +443,7 @@ tbody tr.selected td { background: rgba(83, 58, 253, 0.05); }
 .service-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .btn-rental { background: rgba(185,185,249,0.45); color: var(--primary-deep); border: 1px solid var(--primary-subdued); }
 .btn-rental:hover { background: rgba(185,185,249,0.7); }
-.btn-sim { background: var(--canvas-cream); color: var(--gold); border: 1px solid #e5d3b0; }
+.btn-sim { background: rgba(14,116,144,0.08); color: var(--sim); border: 1px solid rgba(14,116,144,0.30); }
 .btn-sim:hover { filter: brightness(0.97); }
 .btn-vn { background: rgba(249,107,238,0.12); color: #c026d3; border: 1px solid rgba(249,107,238,0.35); }
 .btn-vn:hover { background: rgba(249,107,238,0.22); }

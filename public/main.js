@@ -2462,7 +2462,7 @@ function renderCustomersTab() {
       </div>
       <div class="stat-card">
         <div class="stat-label">Active SIM Plans</div>
-        <div class="stat-value gold">${sims.filter(s => s.status === 'active').length}</div>
+        <div class="stat-value sim">${sims.filter(s => s.status === 'active').length}</div>
         <div class="stat-sub">Running now</div>
       </div>
       <div class="stat-card">
@@ -2749,7 +2749,7 @@ function renderDetailPanel(id) {
   const otherServices = (c.services || []).filter(s => s.type !== 'rental' && s.type !== 'sim' && s.type !== 'vn' && s.type !== 'repair');
   const activeVNs = cVNs.length;
 
-  const dotColor = { rental: 'dot-blue', vn: 'dot-purple', sim: 'dot-gold', payment: 'dot-green' };
+  const dotColor = { rental: 'dot-blue', vn: 'dot-purple', sim: 'dot-sim', payment: 'dot-green' };
 
   const historyHTML = history.length === 0
     ? `<div style="color:var(--muted);font-size:13px;padding:10px 0;">No history yet.</div>`
