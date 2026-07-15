@@ -4419,6 +4419,41 @@ function bkRenderPax() {
 function bkAddPax() { bkPassengers.push({}); bkRenderPax(); }
 function bkRemovePax(i) { bkPassengers.splice(i, 1); if (!bkPassengers.length) bkPassengers.push({}); bkRenderPax(); }
 
+// #48 — a family flies twice a year; don't retype six passports. When a
+// customer is chosen, offer to reuse the passenger list from their most recent
+// booking that had one. Only offered while the editor is still untouched
+// (single blank row), so it never clobbers data already entered.
+function bkLastTripPassengers(customerId) {
+  const prior = bookings
+    .filter(b => b.customerId === customerId && Array.isArray(b.passengers) && b.passengers.some(p => p && p.fullName))
+    .sort((a, b) => String(b.travelDate || b.createdAt || '').localeCompare(String(a.travelDate || a.createdAt || '')));
+  return prior.length ? prior[0] : null;
+}
+function bkOnCustomerChange() {
+  const wrap = document.getElementById('bkReuseWrap');
+  if (!wrap) return;
+  const cid = document.getElementById('bkCustomer')?.value;
+  const editorEmpty = bkPassengers.length <= 1 && !(bkPassengers[0] && bkPassengers[0].fullName);
+  const last = cid ? bkLastTripPassengers(cid) : null;
+  if (!last || !editorEmpty) { wrap.innerHTML = ''; return; }
+  const n = last.passengers.filter(p => p && p.fullName).length;
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;background:rgba(83,58,253,0.06);border:1px solid var(--primary-subdued);border-radius:8px;padding:7px 12px;font-size:12px;">
+      <span style="flex:1;">↻ Reuse ${n} passenger${n === 1 ? '' : 's'} from their last trip${last.route ? ' (' + escHtml(last.route) + ')' : ''}?</span>
+      <button type="button" class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 10px;" onclick="bkReuseLastTrip('${escHtml(String(cid))}')">Reuse passengers</button>
+    </div>`;
+}
+function bkReuseLastTrip(customerId) {
+  const last = bkLastTripPassengers(customerId);
+  if (!last) return;
+  // Deep copy so edits here never mutate the previous booking's records.
+  bkPassengers = last.passengers.filter(p => p && p.fullName).map(p => ({ ...p }));
+  if (!bkPassengers.length) bkPassengers = [{}];
+  bkRenderPax();
+  const wrap = document.getElementById('bkReuseWrap');
+  if (wrap) wrap.innerHTML = `<div style="font-size:11px;color:var(--success);padding:2px 0;">✓ Reused ${bkPassengers.length} passenger${bkPassengers.length === 1 ? '' : 's'} — check passport expiry dates.</div>`;
+}
+
 // Post-creation editor: the 👥 button on each booking row.
 function openPassengersModal(bookingId) {
   const b = bookings.find(x => x.id === bookingId);
@@ -4467,12 +4502,13 @@ async function openNewBookingModal(preselectCustomerId = null) {
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
-        <select class="form-input" id="bkCustomer">
+        <select class="form-input" id="bkCustomer" onchange="bkOnCustomerChange()">
           <option value="">Select customer…</option>${customerOptions}
         </select>
       </div>
       <div class="form-group form-full">
         <label class="form-label">Passengers <span style="color:var(--muted);font-weight:400;">(name · date of birth · passport)</span></label>
+        <div id="bkReuseWrap" style="margin-bottom:8px;"></div>
         <div id="bkPaxEditor">${paxEditorHtml()}</div>
         <button type="button" class="btn btn-outline" onclick="bkAddPax()"
           style="padding:5px 12px;font-size:12px;margin-top:2px;">+ Add passenger</button>
@@ -4577,6 +4613,7 @@ async function openNewBookingModal(preselectCustomerId = null) {
       <button class="btn btn-primary" onclick="saveNewBooking()">✈️ Save Booking</button>
     </div>
   `);
+  if (preselectCustomerId) bkOnCustomerChange(); // #48 — offer passenger reuse straight away
 }
 
 // Fee calculator: tiered service fee × passengers (+ optional start fee)
