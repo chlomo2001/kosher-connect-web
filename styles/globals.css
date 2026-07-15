@@ -308,7 +308,7 @@ body.pos-mode .content { padding: 14px 18px; }
 }
 .stat-label { font-size: 11px; font-weight: 400; letter-spacing: 0.1px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
 .stat-value {
-  font-size: 26px; font-weight: 300; letter-spacing: -0.26px; line-height: 1.12;
+  font-size: 30px; font-weight: 300; letter-spacing: -0.4px; line-height: 1.1;
   font-feature-settings: "ss01", "tnum";
 }
 .stat-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
@@ -864,14 +864,14 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 /* ─── DASHBOARD ─── */
 .dash-head {
   display: flex; align-items: flex-end; justify-content: space-between;
-  gap: 16px; flex-wrap: wrap; margin-bottom: 22px;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 34px;
 }
 .dash-date {
-  font-size: 10px; font-weight: 400; letter-spacing: 0.1px; text-transform: uppercase;
-  color: var(--muted); margin-bottom: 6px;
+  font-size: 11px; font-weight: 400; letter-spacing: 0.1px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 8px;
 }
-.dash-date .heb { color: var(--gold); text-transform: none; letter-spacing: 0; font-size: 11px; }
-.dash-greeting { font-size: 32px; font-weight: 300; letter-spacing: -0.64px; line-height: 1.1; }
+.dash-date .heb { color: var(--gold); text-transform: none; letter-spacing: 0; font-size: 12px; }
+.dash-greeting { font-size: 40px; font-weight: 300; letter-spacing: -1px; line-height: 1.08; }
 .dash-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .dash-grid {
@@ -894,7 +894,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   color: var(--muted); margin-bottom: 6px;
 }
 .dash-hero-value {
-  font-size: 40px; font-weight: 300; letter-spacing: -0.96px; line-height: 1.05;
+  font-size: 48px; font-weight: 300; letter-spacing: -1.3px; line-height: 1.02;
   font-feature-settings: "ss01", "tnum";
   color: var(--text);   /* navy ink — money reads neutral, not brand-indigo */
 }
