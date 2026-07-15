@@ -5848,30 +5848,55 @@ async function saveReminder(kind, id) {
 let paletteIndex = 0;
 let paletteResults = [];
 
+// A tab-scoped create: navigate to the tab first, then open its modal, so the
+// view underneath (and any post-save re-render) matches the record type — the
+// same pattern the "New Customer" command has always used.
+const openOnTab = (tab, fn) => { goToTab(tab); setTimeout(() => fn(), 130); };
+
 const PALETTE_COMMANDS = [
-  { icon: '📱', label: 'New Rental', sub: 'command', run: () => openNewRentalModal() },
-  { icon: '✈️', label: 'New Booking', sub: 'command', run: () => openNewBookingModal() },
-  { icon: '🔧', label: 'New Repair', sub: 'command', run: async () => { repairMenu = await window.api.getServiceMenu('repair'); openNewRepairModal(); } },
-  { icon: '👤', label: 'New Customer', sub: 'command', run: () => goToTab('customers', {}) || setTimeout(() => document.getElementById('btnNewCustomer')?.click(), 120) },
-  { icon: '🖨️', label: 'Charge a Service', sub: 'command', run: async () => { goToTab('services'); } },
-  { icon: '⏰', label: 'New reminder', sub: 'command', run: () => openRemindModal('note', '') },
-  { icon: '🧾', label: 'Cash-up', sub: 'command', run: () => openCashupModal() },
-  { icon: '⏰', label: 'Run sweeps now', sub: 'command', run: () => runSweepsNow() },
+  // ── Create ──
+  { icon: '📱', label: 'New Rental', sub: 'create', run: () => openNewRentalModal() },
+  { icon: '✈️', label: 'New Booking', sub: 'create', run: () => openNewBookingModal() },
+  { icon: '🔧', label: 'New Repair', sub: 'create', run: async () => { repairMenu = await window.api.getServiceMenu('repair'); openNewRepairModal(); } },
+  { icon: '👤', label: 'New Customer', sub: 'create', run: () => goToTab('customers', {}) || setTimeout(() => document.getElementById('btnNewCustomer')?.click(), 120) },
+  { icon: '📶', label: 'New SIM plan', sub: 'create', run: () => openOnTab('sim', openSimFormModal) },
+  { icon: '☎️', label: 'New Virtual Number', sub: 'create', run: () => openOnTab('virtual', openNewVNModal) },
+  { icon: '🖨️', label: 'Charge a Service', sub: 'create', run: () => openOnTab('services', openNewServiceModal) },
+  { icon: '📦', label: 'Add Stock Item', sub: 'create', run: () => openOnTab('shop', openStockItemModal) },
+  // ── Tools ──
+  { icon: '🛒', label: 'Point of Sale (Till)', sub: 'tool', run: () => goToTab('shop') },
+  { icon: '📇', label: 'Manage Phone Inventory', sub: 'tool', run: () => openOnTab('rentals', openManagePhonesModal) },
+  { icon: '🧾', label: 'Cash-up (Z-report)', sub: 'tool', run: () => openCashupModal() },
+  { icon: '⏰', label: 'New reminder', sub: 'tool', run: () => openRemindModal('note', '') },
+  { icon: '🔑', label: 'Change my password', sub: 'tool', run: () => openChangePasswordModal() },
+  // ── Admin (hidden for helpers) ──
+  { icon: '⚙️', label: 'Run automations now', sub: 'admin', admin: true, run: () => runSweepsNow() },
+  { icon: '📤', label: 'Export CSV', sub: 'admin', admin: true, run: async () => { const r = await window.api.exportCSV(); toast(r?.success ? 'CSV exported.' : (r?.error || 'Export failed.'), r?.success ? 'success' : 'error'); } },
+  { icon: '✉️', label: 'Add email address', sub: 'admin', admin: true, run: () => openOnTab('settings', openEmailAliasModal) },
+  { icon: '🤖', label: 'New automation rule', sub: 'admin', admin: true, run: () => openOnTab('settings', openAutomationModal) },
+  // ── Navigate ──
   ...['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'shop', 'virtual', 'tasks', 'settings']
     .map(t => ({ icon: '↪', label: `Go to ${t}`, sub: 'navigate', run: () => goToTab(t) })),
 ];
+
+// Commands the current user may run — admin-only entries are hidden for helpers.
+function visibleCommands() {
+  const isAdmin = !currentStaff || currentStaff.role === 'owner';
+  return PALETTE_COMMANDS.filter(c => !c.admin || isAdmin);
+}
 
 function paletteSearch(q) {
   const needle = q.trim().toLowerCase();
   const digits = needle.replace(/\D/g, '');
   const out = [];
-  if (!needle) return PALETTE_COMMANDS.slice(0, 7);
+  const commands = visibleCommands();
+  if (!needle) return commands.slice(0, 9);
 
-  for (const c of PALETTE_COMMANDS) {
-    if (c.label.toLowerCase().includes(needle)) out.push(c);
+  for (const c of commands) {
+    if (c.label.toLowerCase().includes(needle)) { out.push(c); if (out.length >= 6) break; }
   }
   for (const c of customers) {
-    if (out.length >= 9) break;
+    if (out.length >= 12) break;
     const name = `${c.firstName} ${c.lastName}`;
     if (name.toLowerCase().includes(needle) ||
         (digits.length >= 4 && (c.phone || '').replace(/\D/g, '').includes(digits)) ||
@@ -5881,7 +5906,7 @@ function paletteSearch(q) {
     }
   }
   for (const p of phones) {
-    if (out.length >= 9) break;
+    if (out.length >= 12) break;
     const hay = `${p.number || ''} ${p.imei || ''} ${p.simId || ''}`.replace(/\D/g, '');
     if ((p.number || '').toLowerCase().includes(needle) ||
         (digits.length >= 5 && hay.includes(digits))) {
@@ -5891,7 +5916,7 @@ function paletteSearch(q) {
     }
   }
   for (const b of bookings) {
-    if (out.length >= 9) break;
+    if (out.length >= 12) break;
     if ((b.route || '').toLowerCase().includes(needle) ||
         (b.passenger || '').toLowerCase().includes(needle) ||
         (b.bookingReference || '').toLowerCase().includes(needle)) {
@@ -5899,7 +5924,7 @@ function paletteSearch(q) {
         sub: `flies ${fmtDate(b.travelDate)}`, run: () => goToTab('bookings') });
     }
   }
-  return out.slice(0, 9);
+  return out.slice(0, 12);
 }
 
 function paletteRender() {
