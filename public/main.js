@@ -4590,16 +4590,19 @@ async function openCheckinModal(bookingId) {
   const pax = detail?.success ? (detail.booking.passengers || []) : (b.passengers || []);
   // Each value is a click-to-copy chip (airline forms need them pasted one
   // by one), plus a "Copy all" that grabs the whole passenger block.
+  // The copied value defaults to exactly what's shown (WYSIWYG) — pass `raw`
+  // only when the copy should differ from the label. Dates therefore copy as
+  // the displayed DD/MM/YYYY, never the raw ISO (YYYY-MM-DD).
   const cell = (lbl, val, raw) => val ? `
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="color:var(--muted);">${lbl}:</span>
-      <strong style="cursor:pointer;border-bottom:1px dashed var(--border);" title="Click to copy"
+      <strong class="copy-val" title="Click to copy ${lbl}"
         onclick="copyText('${escHtml(String(raw != null ? raw : val)).replace(/'/g, "\\'")}','${lbl}')">${escHtml(val)}</strong>
     </div>` : '';
   const paxAll = (p) => [
-    p.fullName && `Name: ${p.fullName}`, p.dob && `DOB: ${p.dob}`, p.nationality && `Nationality: ${p.nationality}`,
-    p.passportNumber && `Passport: ${p.passportNumber}`, p.passportExpiry && `Expiry: ${p.passportExpiry}`,
-    p.passportIssueDate && `Issued: ${p.passportIssueDate}`, p.issuingCountry && `Issuing country: ${p.issuingCountry}`,
+    p.fullName && `Name: ${p.fullName}`, p.dob && `DOB: ${fmtDate(p.dob)}`, p.nationality && `Nationality: ${p.nationality}`,
+    p.passportNumber && `Passport: ${p.passportNumber}`, p.passportExpiry && `Expiry: ${fmtDate(p.passportExpiry)}`,
+    p.passportIssueDate && `Issued: ${fmtDate(p.passportIssueDate)}`, p.issuingCountry && `Issuing country: ${p.issuingCountry}`,
   ].filter(Boolean).join('\n');
   const paxHtml = pax.length ? `
     <div class="section-divider" style="margin:4px 0 8px;">Passenger details <span style="color:var(--muted);font-weight:400;font-size:11px;">— click any value to copy</span></div>
@@ -4607,16 +4610,16 @@ async function openCheckinModal(bookingId) {
       ${pax.map((p, i) => `
         <div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12px;line-height:1.7;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <strong style="font-size:13px;cursor:pointer;" title="Click to copy" onclick="copyText('${escHtml(String(p.fullName||'')).replace(/'/g, "\\'")}','name')">${escHtml(p.fullName || '(no name)')}</strong>
+            <strong class="copy-val" style="font-size:13px;" title="Click to copy name" onclick="copyText('${escHtml(String(p.fullName||'')).replace(/'/g, "\\'")}','name')">${escHtml(p.fullName || '(no name)')}</strong>
             <button type="button" class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;"
               onclick="copyText(paxCopyBlocks[${i}],'all details')">📋 Copy all</button>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;margin-top:4px;">
-            ${cell('DOB', p.dob && fmtDate(p.dob), p.dob)}
+            ${cell('DOB', p.dob && fmtDate(p.dob))}
             ${cell('Nationality', p.nationality)}
             ${cell('Passport №', p.passportNumber)}
-            ${cell('Expiry', p.passportExpiry && fmtDate(p.passportExpiry), p.passportExpiry)}
-            ${cell('Issued', p.passportIssueDate && fmtDate(p.passportIssueDate), p.passportIssueDate)}
+            ${cell('Expiry', p.passportExpiry && fmtDate(p.passportExpiry))}
+            ${cell('Issued', p.passportIssueDate && fmtDate(p.passportIssueDate))}
             ${cell('Issuing country', p.issuingCountry)}
           </div>
           ${(!p.passportNumber && !p.dob) ? '<div style="color:var(--warning);margin-top:4px;">⚠️ Missing details — open 👥 Passengers to fill them in.</div>' : ''}

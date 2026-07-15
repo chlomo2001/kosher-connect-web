@@ -554,8 +554,27 @@ tbody tr.selected td { background: rgba(99, 91, 255, 0.05); }
 
 /* DATE INPUT */
 input[type="date"] { color-scheme: light; font-feature-settings: "tnum"; }
+:root[data-theme="dark"] input[type="date"] { color-scheme: dark; }
 input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; }
 input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+
+/* CLICK-TO-COPY VALUE — used by the check-in passport chips & credentials.
+   Reads as clearly interactive: indigo ink, a dashed underline, and a copy
+   glyph on the right; the underline solidifies + a wash fills on hover. */
+.copy-val {
+  cursor: pointer; color: var(--accent); font-weight: 500;
+  border-bottom: 1px dashed var(--accent);
+  border-radius: 4px; padding: 1px 19px 1px 5px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23635bff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 3px center; background-size: 11px;
+  transition: background-color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+.copy-val:hover { background-color: var(--accent-wash); border-bottom-style: solid; }
+.copy-val:active { background-color: var(--primary-subdued); }
+:root[data-theme="dark"] .copy-val {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238b84ff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
+}
 
 /* SPLIT LAYOUT for Rentals */
 .rentals-split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
