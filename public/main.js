@@ -2952,7 +2952,9 @@ async function saveWalletEntry(customerId) {
         balance: res.balance,
       }),
     }).then(r => r.json()).then(er => {
-      if (er && er.success) toast(`Receipt emailed to ${er.sentTo}.`, 'success');
+      if (er && er.success && er.held) toast(er.note || 'Email is on hold — receipt not sent.', 'warning');
+      else if (er && er.success && er.redirected) toast(er.note || `Test mode — sent to ${er.sentTo}.`, 'warning');
+      else if (er && er.success) toast(`Receipt emailed to ${er.sentTo}.`, 'success');
       else toast(er?.error || 'Payment saved, but the receipt email failed.', 'error');
     }).catch(() => toast('Payment saved, but the receipt email failed.', 'error'));
   }
@@ -5634,7 +5636,12 @@ async function emailSaleReceipt(btn) {
       paidNow: posLastSale.paidNow,
     }),
   }).then(r => r.json()).catch(() => null);
-  if (res && res.success) {
+  if (res && res.success && res.held) {
+    toast(res.note || 'Email is on hold — receipt not sent.', 'warning');
+  } else if (res && res.success && res.redirected) {
+    posLastSale.emailed = true;
+    toast(res.note || `Test mode — sent to ${res.sentTo}.`, 'warning');
+  } else if (res && res.success) {
     posLastSale.emailed = true;
     toast(`Receipt emailed to ${res.sentTo}.`, 'success');
   } else {

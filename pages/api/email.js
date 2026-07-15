@@ -129,8 +129,14 @@ async function handler(req, res) {
       return res.status(400).json({ success: false, error: 'Unknown receipt kind.' })
     }
 
-    await sendEmail({ to: who.email, subject, html })
-    return res.json({ success: true, sentTo: who.email })
+    const r = await sendEmail({ to: who.email, subject, html })
+    if (r.held) {
+      return res.json({ success: true, held: true, note: 'Email is on HOLD — the receipt was built but not sent. Set MAIL_LIVE=true when you’re ready to email real customers.' })
+    }
+    if (r.redirectedTo) {
+      return res.json({ success: true, redirected: true, sentTo: r.redirectedTo, note: `Test mode — sent to ${r.redirectedTo} instead of the customer.` })
+    }
+    return res.json({ success: true, sentTo: r.sentTo || who.email })
   } catch (e) {
     console.error('[api/email]', e)
     return res.status(502).json({ success: false, error: 'The email server rejected the message. Check the SMTP credentials.' })
