@@ -45,24 +45,26 @@ window.api = {
   }),
 
   getAllRentals: () => kcFetch('/api/rentals').then(r => r.json()),
-  saveAllRentals: (data) => kcFetch('/api/rentals', {
+  // Whole-array save. `deletedIds` names the ids the user actually removed;
+  // the server deletes ONLY those (nothing is wiped just for being absent).
+  saveAllRentals: (data, deletedIds = []) => kcFetch('/api/rentals', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ items: data, deletedIds }),
   }).then(r => r.json()),
 
   getAllPhones: () => kcFetch('/api/phones').then(r => r.json()),
-  saveAllPhones: (data) => kcFetch('/api/phones', {
+  saveAllPhones: (data, deletedIds = []) => kcFetch('/api/phones', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ items: data, deletedIds }),
   }).then(r => r.json()),
 
   getAllSims: () => kcFetch('/api/sims').then(r => r.json()),
-  saveAllSims: (data) => kcFetch('/api/sims', {
+  saveAllSims: (data, deletedIds = []) => kcFetch('/api/sims', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ items: data, deletedIds }),
   }).then(r => r.json()),
   // Post one SIM charge to the wallet ledger (debit). Idempotent server-side.
   chargeSim: (p) => kcFetch('/api/sims', {
@@ -897,15 +899,32 @@ function rentalDebt(r) {
   return Math.max(0, rentalGrandTotal(r) - (r.amountPaid || 0));
 }
 
-function saveRentals(data) {
-  if (saveBlocked('rentals')) return;
+function saveRentals(data, deletedIds = []) {
+  if (saveBlocked('rentals')) return Promise.resolve({ success: false, blocked: true });
   rentals = data;
-  window.api.saveAllRentals(data);
+  return reportSave('rentals', window.api.saveAllRentals(data, deletedIds));
 }
-function savePhones(data) {
-  if (saveBlocked('phones')) return;
+function savePhones(data, deletedIds = []) {
+  if (saveBlocked('phones')) return Promise.resolve({ success: false, blocked: true });
   phones = data;
-  window.api.saveAllPhones(data);
+  return reportSave('phones', window.api.saveAllPhones(data, deletedIds));
+}
+
+// Surface a failed background save instead of leaving the operator to believe
+// it worked (the toast at the call site fires optimistically). Returns the
+// server result so destructive callers can await it before saying "done".
+function reportSave(label, promise) {
+  return promise
+    .then(res => {
+      if (!res || res.success === false) {
+        toast(`Couldn’t save ${label} — reload to check nothing was lost.`, 'error');
+      }
+      return res || { success: false };
+    })
+    .catch(() => {
+      toast(`Couldn’t save ${label} — check your connection and reload.`, 'error');
+      return { success: false };
+    });
 }
 
 let rentals  = [];
@@ -2309,8 +2328,9 @@ async function deleteRental(id) {
     if (phone) { phone.status = 'available'; phone.currentRental = null; savePhones(phones); }
   }
   rentals = rentals.filter(r => r.id !== id);
-  saveRentals(rentals);
+  const res = await saveRentals(rentals, [id]);
   renderRentalsTab();
+  if (res && res.success === false) return; // reportSave already warned
   toast('Rental deleted.', 'warning');
 }
 
@@ -2320,8 +2340,9 @@ async function deletePhone(id) {
   const confirmed = await window.api.confirmDelete('Delete this phone from inventory?');
   if (!confirmed) return;
   phones = phones.filter(x => x.id !== id);
-  savePhones(phones);
+  const res = await savePhones(phones, [id]);
   renderRentalsTab();
+  if (res && res.success === false) return; // reportSave already warned
   toast('Phone removed.', 'warning');
 }
 
@@ -3461,10 +3482,10 @@ async function deleteCustomer(id) {
 //  SIM PLANS MODULE
 // ═══════════════════════════════════════════════════════
 
-function saveSims(data) {
-  if (saveBlocked('sims')) return;
+function saveSims(data, deletedIds = []) {
+  if (saveBlocked('sims')) return Promise.resolve({ success: false, blocked: true });
   sims = data;
-  window.api.saveAllSims(data);
+  return reportSave('sims', window.api.saveAllSims(data, deletedIds));
 }
 
 let simSearchTerm = '';
@@ -3984,9 +4005,10 @@ async function deleteSim(id) {
   const confirmed = await window.api.confirmDelete(`Delete SIM plan for "${s.customerName}"?\n\nThis cannot be undone.`);
   if (!confirmed) return;
   sims = sims.filter(x => x.id !== id);
-  saveSims(sims);
-  toast('SIM plan deleted.', 'warning');
+  const res = await saveSims(sims, [id]);
   renderSimsTab();
+  if (res && res.success === false) return; // reportSave already warned
+  toast('SIM plan deleted.', 'warning');
 }
 
 // ─────────────────────────────────────────────

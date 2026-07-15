@@ -2,6 +2,7 @@ import { loadData, saveData } from '../../lib/data'
 import { withTab } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db'
 import { listSims, syncSims } from '../../lib/tableStore'
+import { parseSyncBody } from '../../lib/syncBody'
 
 const money = (v) => Math.round((Number(v) || 0) * 100) / 100
 
@@ -47,11 +48,12 @@ async function handler(req, res) {
         if (!tablesMode) return res.status(503).json({ success: false, error: 'SIM charges need the relational data layer.' })
         return chargeSim(req, res, b)
       }
+      const { items, deletedIds } = parseSyncBody(b)
       if (tablesMode) {
-        const result = await syncSims(b || [])
+        const result = await syncSims(items, deletedIds)
         return res.json({ success: true, ...result })
       }
-      await saveData('sims', b)
+      await saveData('sims', items)
       return res.json({ success: true })
     }
     res.status(405).end()

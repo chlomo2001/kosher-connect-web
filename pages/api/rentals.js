@@ -1,7 +1,8 @@
 import { loadData, saveData } from '../../lib/data'
-import { withStaff, withTab } from '../../lib/auth.js'
+import { withTab } from '../../lib/auth.js'
 import { tablesMode } from '../../lib/db'
 import { listRentals, syncRentals } from '../../lib/tableStore'
+import { parseSyncBody } from '../../lib/syncBody'
 
 async function handler(req, res) {
   try {
@@ -9,11 +10,12 @@ async function handler(req, res) {
       return res.json(tablesMode ? await listRentals() : await loadData('rentals'))
     }
     if (req.method === 'POST') {
+      const { items, deletedIds } = parseSyncBody(req.body)
       if (tablesMode) {
-        const result = await syncRentals(req.body || [])
+        const result = await syncRentals(items, deletedIds)
         return res.json({ success: true, ...result })
       }
-      await saveData('rentals', req.body)
+      await saveData('rentals', items)
       return res.json({ success: true })
     }
     res.status(405).end()
