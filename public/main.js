@@ -5853,6 +5853,10 @@ let paletteResults = [];
 // same pattern the "New Customer" command has always used.
 const openOnTab = (tab, fn) => { goToTab(tab); setTimeout(() => fn(), 130); };
 
+// Apply a saved-filter view, then jump to its tab. Filters persist exactly
+// like the on-page dropdowns — the tab's own "Clear" button resets them.
+const filterView = (tab, apply, reRender) => { apply(); goToTab(tab); if (reRender) setTimeout(reRender, 60); };
+
 const PALETTE_COMMANDS = [
   // ── Create ──
   { icon: '📱', label: 'New Rental', sub: 'create', run: () => openNewRentalModal() },
@@ -5869,6 +5873,13 @@ const PALETTE_COMMANDS = [
   { icon: '🧾', label: 'Cash-up (Z-report)', sub: 'tool', run: () => openCashupModal() },
   { icon: '⏰', label: 'New reminder', sub: 'tool', run: () => openRemindModal('note', '') },
   { icon: '🔑', label: 'Change my password', sub: 'tool', run: () => openChangePasswordModal() },
+  // ── Find (saved-filter views) ──
+  { icon: '⏰', label: 'Show overdue rentals', sub: 'view', run: () => filterView('rentals', () => { filterStatus = 'overdue'; filterPaid = 'all'; }, renderRentalRows) },
+  { icon: '💷', label: 'Rentals with a balance owing', sub: 'view', run: () => filterView('rentals', () => { filterPaid = 'debt'; filterStatus = 'all'; }, renderRentalRows) },
+  { icon: '💰', label: 'Who owes money (arrears)', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'arrears'; }, renderTableRows) },
+  { icon: '✈️', label: 'Customers flying soon', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'flight'; }, renderTableRows) },
+  { icon: '🛂', label: 'Customers with passport on file', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'passport'; }, renderTableRows) },
+  { icon: '💳', label: 'Payment / top-up for open customer', sub: 'context', run: () => selectedId ? openWalletModal(selectedId) : toast('Open a customer first, then run this.', 'warning') },
   // ── Admin (hidden for helpers) ──
   { icon: '⚙️', label: 'Run automations now', sub: 'admin', admin: true, run: () => runSweepsNow() },
   { icon: '📤', label: 'Export CSV', sub: 'admin', admin: true, run: async () => { const r = await window.api.exportCSV(); toast(r?.success ? 'CSV exported.' : (r?.error || 'Export failed.'), r?.success ? 'success' : 'error'); } },
