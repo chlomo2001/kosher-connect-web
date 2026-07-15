@@ -469,6 +469,11 @@ tbody tr.selected td { background: rgba(83, 58, 253, 0.05); }
 .tab-placeholder p { font-size: 14px; }
 
 /* ─── SCROLLBAR ─── */
+/* Consistent loading indicator (replaces bare "Loading…" text) */
+.kc-loading { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); padding: 40px 30px; font-size: 14px; }
+.kc-spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: kcSpin 0.7s linear infinite; flex-shrink: 0; }
+@keyframes kcSpin { to { transform: rotate(360deg); } }
+
 ::-webkit-scrollbar { width: 12px; height: 12px; }
 ::-webkit-scrollbar-track { background: transparent; }
 /* Mid-grey thumb (was the near-invisible --border hairline) with a small

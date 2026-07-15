@@ -3050,7 +3050,7 @@ async function saveWalletEntry(customerId) {
 
 async function renderWalletTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading wallet…</div>`;
+  content.innerHTML = loadingHtml('Loading wallet…');
 
   const today = localISO();
   const data = await kcFetch(`/api/ledger?since=${today}&recent=50`)
@@ -4096,6 +4096,11 @@ function escHtml(str) {
 // name is shown.
 function nameHtml(str) { return `<bdi>${escHtml(str)}</bdi>`; }
 
+// A consistent spinner + label for tab/section loading states.
+function loadingHtml(label = 'Loading…') {
+  return `<div class="kc-loading"><span class="kc-spinner"></span><span>${escHtml(label)}</span></div>`;
+}
+
 // Copy text to the clipboard with a confirmation toast. Used by the
 // check-in passport details (airline forms need each value pasted).
 function copyText(text, label) {
@@ -4716,7 +4721,7 @@ function repairStatusBadge(status) {
 
 async function renderRepairsTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading repairs…</div>`;
+  content.innerHTML = loadingHtml('Loading repairs…');
   [repairs, repairMenu] = await Promise.all([
     window.api.getRepairs(),
     window.api.getServiceMenu('repair'),
@@ -5029,7 +5034,7 @@ function svcTimerStop() {
 
 async function renderServicesTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading services…</div>`;
+  content.innerHTML = loadingHtml('Loading services…');
   if (svcTimerInterval) { clearInterval(svcTimerInterval); svcTimerInterval = null; }
   [serviceOrders, onlineMenu] = await Promise.all([
     window.api.getServiceOrders(),
@@ -5256,7 +5261,7 @@ const STOCK_CATEGORY_LABELS = { phone: '📱 Phone', accessory: '🔌 Accessory'
 
 async function renderShopTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading shop…</div>`;
+  content.innerHTML = loadingHtml('Loading shop…');
   const data = await kcFetch('/api/shop').then(r => r.json()).catch(() => null);
   if (!data || !data.success) {
     content.innerHTML = `<div class="empty-state"><div class="emoji">🛍️</div><p>Shop unavailable${data?.error ? ' — ' + escHtml(data.error) : ''}.</p></div>`;
@@ -6252,7 +6257,7 @@ async function snoozeTask(id, choice) {
 
 async function renderTasksTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading tasks…</div>`;
+  content.innerHTML = loadingHtml('Loading tasks…');
   tasksList = await window.api.getTasks();
   if (!Array.isArray(tasksList)) tasksList = [];
 
@@ -6604,7 +6609,7 @@ let vnPriceMatrix = []; // bundle price matrix (also drives the billing modal)
 
 async function renderVirtualTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading virtual numbers…</div>`;
+  content.innerHTML = loadingHtml('Loading virtual numbers…');
   [virtualNumbers, vnPriceMatrix] = await Promise.all([
     window.api.getVirtualNumbers(),
     kcFetch('/api/vn-prices').then(r => r.ok ? r.json() : []).catch(() => []),
@@ -6845,7 +6850,7 @@ async function deleteVN(id, number) {
 
 async function renderSettingsTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = `<div style="color:var(--muted);padding:30px;">Loading settings…</div>`;
+  content.innerHTML = loadingHtml('Loading settings…');
   const [cfg, team, autos, aliases, menu, extra] = await Promise.all([
     window.api.getSettings(),
     kcFetch('/api/team').then(r => r.status === 403 ? null : r.json()).catch(() => null),
