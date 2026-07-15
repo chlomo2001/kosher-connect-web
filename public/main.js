@@ -2388,9 +2388,16 @@ async function saveManageRental(rentalId) {
 }
 
 async function deleteRental(id) {
-  const confirmed = await window.api.confirmDelete('Delete this rental record?');
-  if (!confirmed) return;
   const r = rentals.find(x => x.id === id);
+  // #64 — a money-affecting delete: show what its wallet charge reverses to,
+  // via the same amount-showing confirm used for adjustments (not a bare
+  // native confirm that hides the consequence).
+  if (!(await kcConfirm({
+    title: 'Delete rental?',
+    body: `<strong>${escHtml(r?.customerName || 'Rental')}</strong>${r?.phoneNumber ? ' · ' + escHtml(r.phoneNumber) : ''}<br>Its wallet charge is reversed to £0. This can’t be undone.`,
+    amount: r ? (Number(r.price) || 0) : 0,
+    okLabel: 'Delete rental',
+  }))) return;
   if (r && r.status === 'active') {
     const phone = phones.find(p => p.id === r.phoneId);
     if (phone) { phone.status = 'available'; phone.currentRental = null; savePhones(phones); }
@@ -4380,8 +4387,12 @@ function deleteSimCharge(simId, chargeId) {
 async function deleteSim(id) {
   const s = sims.find(x => x.id === id);
   if (!s) return;
-  const confirmed = await window.api.confirmDelete(`Delete SIM plan for "${s.customerName}"?\n\nThis cannot be undone.`);
-  if (!confirmed) return;
+  // #64 — money-affecting delete: confirm through the amount-aware modal.
+  if (!(await kcConfirm({
+    title: 'Delete SIM plan?',
+    body: `<strong>${escHtml(s.customerName || 'SIM plan')}</strong>${s.provider ? ' · ' + escHtml(s.provider) : ''}<br>Any SIM charges on the wallet are reversed. This can’t be undone.`,
+    okLabel: 'Delete SIM plan',
+  }))) return;
   sims = sims.filter(x => x.id !== id);
   const res = await saveSims(sims, [id]);
   renderSimsTab();
