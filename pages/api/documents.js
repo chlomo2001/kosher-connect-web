@@ -8,6 +8,13 @@ import { decodeUpload, docStoragePath } from '../../lib/documents.js'
 
 export const config = { api: { bodyParser: { sizeLimit: '12mb' } } }
 
+// The operator app keys customers by legacy id; customer_documents.customer_id
+// is the customers UUID. Resolve one to the other (same as pages/api/email.js).
+async function customerUuid(legacyId) {
+  const rows = await db.select('customers', `select=id&legacy_id=eq.${encodeURIComponent(String(legacyId))}`)
+  return rows[0]?.id || null
+}
+
 async function handler(req, res) {
   if (!tablesMode) return res.status(503).json({ success: false, error: 'Documents need the relational data layer.' })
   if (!(await tabAllowedFor(req.staff, 'customers'))) return res.status(403).json({ success: false, error: 'Not permitted.' })
@@ -15,8 +22,10 @@ async function handler(req, res) {
   if (req.method === 'GET') {
     const customerId = String(req.query.customerId || '')
     if (!customerId) return res.status(400).json({ success: false, error: 'customerId required.' })
+    const uuid = await customerUuid(customerId)
+    if (!uuid) return res.json({ success: true, documents: [] })
     const documents = await db.select('customer_documents',
-      `select=id,filename,content_type,size_bytes,source,status,note,created_at&customer_id=eq.${encodeURIComponent(customerId)}&order=created_at.desc`)
+      `select=id,filename,content_type,size_bytes,source,status,note,created_at&customer_id=eq.${uuid}&order=created_at.desc`)
     return res.json({ success: true, documents })
   }
 
@@ -24,13 +33,15 @@ async function handler(req, res) {
     if (!storageEnabled) return res.status(503).json({ success: false, error: 'File storage isn’t configured.' })
     const { customerId, filename, contentType, dataBase64 } = req.body || {}
     if (!customerId) return res.status(400).json({ success: false, error: 'customerId required.' })
+    const uuid = await customerUuid(customerId)
+    if (!uuid) return res.status(404).json({ success: false, error: 'Customer not found.' })
     let file
     try { file = decodeUpload({ filename, contentType, dataBase64 }) }
     catch (e) { return res.status(400).json({ success: false, error: e.message }) }
-    const path = docStoragePath(customerId, file.safeName)
+    const path = docStoragePath(uuid, file.safeName)
     await putObject(DOCS_BUCKET, path, file.bytes, file.contentType)
     const [document] = await db.insert('customer_documents', [{
-      customer_id: customerId, storage_path: path, filename: file.safeName,
+      customer_id: uuid, storage_path: path, filename: file.safeName,
       content_type: file.contentType, size_bytes: file.size,
       source: 'staff', status: 'published', uploaded_by: req.staff?.id || 'staff',
     }])

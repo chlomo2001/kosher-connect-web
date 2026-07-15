@@ -3107,6 +3107,11 @@ function renderDetailPanel(id) {
         <div style="color:var(--muted);font-size:13px;padding:6px 0;">Loading wallet…</div>
       </div>
 
+      <div class="section-divider">📄 Documents</div>
+      <div id="docsSection-${c.id}" style="margin-bottom:18px;">
+        <div style="color:var(--muted);font-size:13px;padding:6px 0;">Loading documents…</div>
+      </div>
+
       <details style="margin-top:18px;margin-bottom:6px;">
         <summary style="cursor:pointer;font-weight:600;color:var(--text);font-size:13px;padding:6px 0;border-top:1px solid var(--border);">
           📋 Full history — ${timeline.length} record${timeline.length === 1 ? '' : 's'}${lifetimeSpend > 0 ? ` · ${fmtGbp(lifetimeSpend)} lifetime` : ''}
@@ -3143,6 +3148,93 @@ function renderDetailPanel(id) {
   overlay.classList.remove('hidden');
   if (container) container.innerHTML = ''; // legacy inline container stays empty
   loadWalletSection(c.id);
+  loadDocsSection(c.id);
+}
+
+// ── Customer documents (operator side) ─────────────────────────────────────
+// Staff share files with a customer (visible in their portal) and review any
+// files the customer uploaded back (which arrive as "pending"). Loaded lazily
+// like the wallet section; degrades quietly if storage isn't configured.
+async function loadDocsSection(custId) {
+  const el = document.getElementById(`docsSection-${custId}`);
+  if (!el) return;
+  try {
+    const r = await kcFetch(`/api/documents?customerId=${encodeURIComponent(custId)}`);
+    const d = await r.json();
+    if (!d.success) { el.innerHTML = `<div style="color:var(--muted);font-size:13px;">${escHtml(d.error || 'Documents unavailable.')}</div>`; return; }
+    renderDocsSection(custId, d.documents || []);
+  } catch { el.innerHTML = `<div style="color:var(--muted);font-size:13px;">Couldn’t load documents.</div>`; }
+}
+function renderDocsSection(custId, docs) {
+  const el = document.getElementById(`docsSection-${custId}`);
+  if (!el) return;
+  const pending = docs.filter(d => d.source === 'customer' && d.status === 'pending');
+  const others = docs.filter(d => !(d.source === 'customer' && d.status === 'pending'));
+  const dl = (id) => `window.open('/api/documents/download?id=${encodeURIComponent(id)}','_blank')`;
+  const row = (d) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
+      <span style="flex:1;">${escHtml(d.filename)}
+        <span style="color:var(--muted);font-size:11px;"> · ${d.source === 'customer' ? 'from customer' : 'shared'}${d.status !== 'published' ? ` · ${escHtml(d.status)}` : ''}</span></span>
+      <button class="action-btn" title="Download" onclick="${dl(d.id)}">⬇︎</button>
+      <button class="action-btn danger" title="Delete" onclick="deleteCustomerDoc('${custId}','${d.id}')">✕</button>
+    </div>`;
+  const pendingHtml = pending.length ? `
+    <div style="background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:8px 10px;margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">⏳ Customer uploads — awaiting review</div>
+      ${pending.map(d => `
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;">
+          <span style="flex:1;">${escHtml(d.filename)}</span>
+          <button class="action-btn" title="View" onclick="${dl(d.id)}">👁</button>
+          <button class="btn btn-primary btn-sm" style="font-size:11px;padding:3px 10px;" onclick="reviewCustomerDoc('${custId}','${d.id}','approve')">✓ Approve</button>
+          <button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="reviewCustomerDoc('${custId}','${d.id}','reject')">Reject</button>
+        </div>`).join('')}
+    </div>` : '';
+  const listHtml = others.length ? others.map(row).join('')
+    : (pending.length ? '' : `<div style="color:var(--muted);font-size:13px;padding:4px 0;">No documents yet.</div>`);
+  el.innerHTML = pendingHtml + listHtml + `
+    <div style="margin-top:10px;">
+      <input type="file" id="docUpload-${custId}" accept="image/*,application/pdf" style="display:none;" onchange="uploadCustomerDoc('${custId}', this)">
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('docUpload-${custId}').click()">⬆︎ Upload &amp; share</button>
+      <span id="docMsg-${custId}" style="font-size:11px;color:var(--muted);margin-left:8px;"></span>
+    </div>`;
+}
+async function uploadCustomerDoc(custId, input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const msg = document.getElementById(`docMsg-${custId}`);
+  if (msg) msg.textContent = 'Uploading…';
+  try {
+    const dataBase64 = await new Promise((res, rej) => {
+      const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.onerror = rej; fr.readAsDataURL(file);
+    });
+    const r = await kcFetch('/api/documents', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customerId: custId, filename: file.name, contentType: file.type, dataBase64 }),
+    });
+    const d = await r.json();
+    if (!d.success) { if (msg) msg.textContent = d.error || 'Upload failed.'; toast(d.error || 'Upload failed.', 'error'); }
+    else { toast('Document shared ✔', 'success'); loadDocsSection(custId); }
+  } catch { if (msg) msg.textContent = 'Upload failed.'; }
+  finally { input.value = ''; }
+}
+async function reviewCustomerDoc(custId, id, action) {
+  try {
+    const r = await kcFetch('/api/documents/review', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action }),
+    });
+    const d = await r.json();
+    if (d.success) { toast(action === 'approve' ? 'Approved ✔' : 'Rejected', 'success'); loadDocsSection(custId); }
+    else toast(d.error || 'Failed.', 'error');
+  } catch { toast('Failed.', 'error'); }
+}
+async function deleteCustomerDoc(custId, id) {
+  if (!confirm('Delete this document? This cannot be undone.')) return;
+  try {
+    const r = await kcFetch(`/api/documents?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const d = await r.json();
+    if (d.success) { toast('Deleted.', 'success'); loadDocsSection(custId); }
+    else toast(d.error || 'Failed.', 'error');
+  } catch { toast('Failed.', 'error'); }
 }
 
 function closeCustomerCard() {
