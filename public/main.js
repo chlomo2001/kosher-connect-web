@@ -3552,7 +3552,8 @@ function renderSimsTab() {
       <select class="form-input" style="width:150px;" onchange="simFilterStatus=this.value; renderSimRows()">
         <option value="all" ${simFilterStatus==='all'?'selected':''}>Status: all</option>
         <option value="active" ${simFilterStatus==='active'?'selected':''}>Active only</option>
-        <option value="renewing" ${simFilterStatus==='renewing'?'selected':''}>Renewing soon</option>
+        <option value="renewing" ${simFilterStatus==='renewing'?'selected':''}>Renewing (today/tomorrow)</option>
+        <option value="week" ${simFilterStatus==='week'?'selected':''}>Renews this week</option>
       </select>
       <span id="simCount" style="font-size:12px;color:var(--muted);"></span>
     </div>
@@ -3577,6 +3578,7 @@ function renderSimRows() {
   if (!tbody) return;
   const today    = localISO();
   const tomorrow = localISO(new Date(Date.now() + 86400000));
+  const in7      = localISO(new Date(Date.now() + 7 * 86400000));
   const term     = simSearchTerm.toLowerCase();
 
   const filtered = sims.filter(s => {
@@ -3589,6 +3591,7 @@ function renderSimRows() {
     if (simFilterPay === 'through-me' && s.paymentType === 'direct') return false;
     if (simFilterStatus === 'active' && s.status !== 'active') return false;
     if (simFilterStatus === 'renewing' && !(s.renewalDate === today || s.renewalDate === tomorrow)) return false;
+    if (simFilterStatus === 'week' && !(s.status === 'active' && s.renewalDate && s.renewalDate >= today && s.renewalDate <= in7)) return false;
     return true;
   });
 
@@ -4619,6 +4622,7 @@ async function saveEditBooking(id) {
 let repairs = [];
 let repairMenu = [];
 const REPAIR_STATUSES = ['Open', 'In Progress', 'Ready', 'Collected', 'Cancelled'];
+let repairFilter = 'all'; // all | active (open/in-progress) | ready (waiting for collection)
 
 function repairStatusBadge(status) {
   const styles = {
@@ -4644,9 +4648,12 @@ async function renderRepairsTab() {
   const ready = repairs.filter(r => r.status === 'Ready');
   const revenue = repairs.filter(r => r.status === 'Collected').reduce((s, r) => s + (r.total || 0), 0);
 
-  const rows = repairs.length === 0
-    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔧</div><p>No repairs yet.</p><small>Click "New Repair" to open the first ticket.</small></div></td></tr>`
-    : repairs.map(r => `
+  const shown = repairFilter === 'ready' ? ready : repairFilter === 'active' ? open : repairs;
+  const emptyMsg = repairFilter === 'ready' ? 'No repairs waiting for collection.'
+    : repairFilter === 'active' ? 'No open repair tickets.' : 'No repairs yet.';
+  const rows = shown.length === 0
+    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔧</div><p>${emptyMsg}</p><small>${repairFilter === 'all' ? 'Click "New Repair" to open the first ticket.' : 'Change the filter to see other tickets.'}</small></div></td></tr>`
+    : shown.map(r => `
       <tr>
         <td><div class="customer-name">${escHtml(r.customerName || '—')}</div></td>
         <td>${escHtml(r.device || '—')}${r.kcPurchase ? ' <span class="badge" style="background:rgba(83,58,253,0.1);color:var(--accent);font-size:10px;">KC phone</span>' : ''}</td>
@@ -4670,7 +4677,12 @@ async function renderRepairsTab() {
       <div class="stat-card"><div class="stat-label">Repairs Revenue</div><div class="stat-value">£${revenue.toFixed(2)}</div></div>
       <div class="stat-card"><div class="stat-label">Total Tickets</div><div class="stat-value">${repairs.length}</div></div>
     </div>
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;">
+      <select class="form-input" style="width:200px;" onchange="repairFilter=this.value; renderRepairsTab()">
+        <option value="all" ${repairFilter==='all'?'selected':''}>Show: all tickets</option>
+        <option value="active" ${repairFilter==='active'?'selected':''}>Open / in progress</option>
+        <option value="ready" ${repairFilter==='ready'?'selected':''}>Waiting for collection</option>
+      </select>
       <button class="btn btn-primary" onclick="openNewRepairModal()">+ New Repair</button>
     </div>
     <div class="table-card">
@@ -5879,6 +5891,8 @@ const PALETTE_COMMANDS = [
   { icon: '💰', label: 'Who owes money (arrears)', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'arrears'; }, renderTableRows) },
   { icon: '✈️', label: 'Customers flying soon', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'flight'; }, renderTableRows) },
   { icon: '🛂', label: 'Customers with passport on file', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'passport'; }, renderTableRows) },
+  { icon: '📶', label: 'SIMs that renew this week', sub: 'view', run: () => filterView('sim', () => { simFilterStatus = 'week'; simFilterPay = 'all'; }, renderSimRows) },
+  { icon: '🔧', label: 'Repairs waiting for collection', sub: 'view', run: () => filterView('repairs', () => { repairFilter = 'ready'; }) },
   { icon: '💳', label: 'Payment / top-up for open customer', sub: 'context', run: () => selectedId ? openWalletModal(selectedId) : toast('Open a customer first, then run this.', 'warning') },
   // ── Admin (hidden for helpers) ──
   { icon: '⚙️', label: 'Run automations now', sub: 'admin', admin: true, run: () => runSweepsNow() },
