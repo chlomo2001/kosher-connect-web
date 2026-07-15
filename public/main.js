@@ -2138,6 +2138,7 @@ function openManageRentalModal(rentalId) {
     <input type="hidden" id="mgCountry" value="${r.country || 'USA'}">
     <input type="hidden" id="mgUKPlan" value="${r.ukPlan || 'standard'}">
     <input type="hidden" id="mgBasePrice" value="${r.basePrice || r.price}">
+    <input type="hidden" id="mgVnPrice" value="${r.vnPrice || 0}">
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveManageRental('${rentalId}')">💾 Save Changes</button>
@@ -2161,19 +2162,24 @@ function mgUpdateCalc() {
   const { chargeableDays, totalDays, price } = calcRentalPrice(from, to, country, ukPlan, simGiven);
   const excl = totalDays - chargeableDays;
 
-  let finalPrice = price;
+  let discountedBase = price;
   let discountLine = '';
   const addDiscount = document.getElementById('mgAddDiscount')?.checked;
   if (addDiscount) {
     const dtype = document.getElementById('mgDiscountType')?.value || 'percent';
     const dval  = parseFloat(document.getElementById('mgDiscountValue')?.value) || 0;
-    finalPrice  = dtype === 'percent' ? Math.max(0, price * (1 - dval / 100)) : Math.max(0, price - dval);
-    if (dval > 0) discountLine = ` &nbsp;|&nbsp; -${dtype==='percent'?dval+'%':'£'+dval} → <strong style="color:var(--accent);">£${finalPrice.toFixed(2)}</strong>`;
+    discountedBase = dtype === 'percent' ? Math.max(0, price * (1 - dval / 100)) : Math.max(0, price - dval);
+    if (dval > 0) discountLine = ` &nbsp;|&nbsp; -${dtype==='percent'?dval+'%':'£'+dval} → <strong style="color:var(--accent);">£${discountedBase.toFixed(2)}</strong>`;
   }
+  // Fold the add-on virtual number back in — it's part of r.price (and the
+  // rental's ledger charge). The base-only recompute must not drop it, or
+  // saving Manage silently refunds the VN.
+  const vnPrice = Number(document.getElementById('mgVnPrice')?.value) || 0;
+  const finalPrice = discountedBase + vnPrice;
 
   const lateFee  = mgComputeLateFee();
   document.getElementById('mgCalcText').innerHTML =
-    `Total: ${totalDays}d &nbsp;|&nbsp; Shabbat/YT excluded: <span style="color:var(--gold);">${excl}</span> &nbsp;|&nbsp; Chargeable: ${chargeableDays}d &nbsp;|&nbsp; <strong style="color:var(--success);">£${price}</strong>${discountLine}`;
+    `Total: ${totalDays}d &nbsp;|&nbsp; Shabbat/YT excluded: <span style="color:var(--gold);">${excl}</span> &nbsp;|&nbsp; Chargeable: ${chargeableDays}d &nbsp;|&nbsp; <strong style="color:var(--success);">£${price}</strong>${discountLine}${vnPrice > 0 ? ` &nbsp;+&nbsp; VN £${vnPrice.toFixed(2)}` : ''}`;
   document.getElementById('mgPrice').value    = finalPrice.toFixed(2);
   document.getElementById('mgBasePrice').value = price;
 
@@ -2185,7 +2191,8 @@ function mgUpdateCalc() {
       <span style="color:${colour||'var(--muted)'};">${label}</span>
       <span style="color:${colour||'var(--text)'};">£${amount.toFixed(2)}</span>
     </div>`;
-  let html = row('Rental', finalPrice);
+  let html = row('Rental', discountedBase);
+  if (vnPrice > 0)     html += row('Virtual number', vnPrice, 'var(--accent)');
   if (lateFee > 0)     html += row('Late fee', lateFee, 'var(--gold)');
   lostInfo.items.forEach(({ label, amount }) => {
     html += row(label + ' — lost', amount, 'var(--danger)');
