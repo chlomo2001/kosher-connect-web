@@ -23,7 +23,15 @@ async function handler(req, res) {
       c.createdAt || '',
     ]),
   ]
-  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+  // CSV formula-injection guard: a cell starting with = + - @ (or a control char)
+  // is executed by Excel/Sheets even inside quotes, and these cells carry customer-
+  // controlled data. Prefix a quote on those, but leave plain numbers alone. audit C14.
+  const csvCell = (v) => {
+    const s = String(v == null ? '' : v)
+    const safe = /^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s) ? `'${s}` : s
+    return `"${safe.replace(/"/g, '""')}"`
+  }
+  const csv = rows.map(r => r.map(csvCell).join(',')).join('\n')
 
   res.setHeader('Content-Type', 'text/csv')
   res.setHeader('Content-Disposition', 'attachment; filename="customers.csv"')

@@ -65,16 +65,15 @@ function fillTitle(tpl, fallback, name, n) {
 // Evaluate every enabled automation rule. Returns the number of tasks raised.
 async function runCustomRules({ today, names }) {
   const rules = await db.select('automation_rules', 'enabled=is.true')
-  if (!rules.length) return 0
   let raised = 0
+  const keep = new Set() // references that should stay open after this run
 
   for (const rule of rules) {
     const n = Number(rule.threshold) || 0
     const priority = rule.priority || 'high'
-    const seen = new Set() // entity keys re-raised this run
     const raise = async (entityId, title, customerUuid, dueDate) => {
       const reference = `RULE-${rule.id}-${entityId}`
-      seen.add(reference)
+      keep.add(reference)
       await upsertOpenTask({ reference, title, customerUuid, priority, dueDate,
         notes: `Automation: ${rule.name}` })
       raised++
@@ -128,11 +127,14 @@ async function runCustomRules({ today, names }) {
     } else {
       continue // unknown trigger — skip
     }
-
-    // Close this rule's tasks that no longer match.
-    const open = await db.select('tasks', `select=id,reference&done=is.false&reference=like.RULE-${enc(rule.id)}-*`)
-    for (const t of open) if (!seen.has(t.reference)) await closeOpenTask(t.reference)
   }
+
+  // Close EVERY open rule task that no rule re-raised this run — including tasks
+  // orphaned by a rule that was disabled, deleted, or given an unknown trigger.
+  // Those rules aren't iterated above, so the old per-rule close never reached
+  // them and their tasks stayed open forever. audit C11.
+  const open = await db.select('tasks', 'select=id,reference&done=is.false&reference=like.RULE-*')
+  for (const t of open) if (!keep.has(t.reference)) await closeOpenTask(t.reference)
   return raised
 }
 

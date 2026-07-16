@@ -6,7 +6,10 @@ import { db, tablesMode } from '../../lib/db.js'
 import { storageEnabled, DOCS_BUCKET, putObject, removeObject } from '../../lib/storage.js'
 import { decodeUpload, docStoragePath } from '../../lib/documents.js'
 
-export const config = { api: { bodyParser: { sizeLimit: '12mb' } } }
+// base64(10MB) ≈ 13.3MB, so a 12mb cap rejected legitimate ~9MB files before the
+// friendly 10MB decoded check could run. 15mb gives headroom so decodeUpload's
+// MAX_DOC_BYTES check is the authoritative limit. audit C12.
+export const config = { api: { bodyParser: { sizeLimit: '15mb' } } }
 
 // The operator app keys customers by legacy id; customer_documents.customer_id
 // is the customers UUID. Resolve one to the other (same as pages/api/email.js).

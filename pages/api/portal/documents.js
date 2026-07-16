@@ -6,7 +6,10 @@ import { resolvePortalCustomer } from '../../../lib/portal.js'
 import { storageEnabled, DOCS_BUCKET, putObject } from '../../../lib/storage.js'
 import { decodeUpload, docStoragePath } from '../../../lib/documents.js'
 
-export const config = { api: { bodyParser: { sizeLimit: '12mb' } } }
+// base64(10MB) ≈ 13.3MB, so a 12mb cap rejected legitimate ~9MB files before the
+// friendly 10MB decoded check could run. 15mb gives headroom so decodeUpload's
+// MAX_DOC_BYTES check is the authoritative limit. audit C12.
+export const config = { api: { bodyParser: { sizeLimit: '15mb' } } }
 
 export default async function handler(req, res) {
   if (process.env.PORTAL_ENABLED !== '1') return res.status(404).json({ success: false, error: 'Not found.' })

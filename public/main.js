@@ -357,7 +357,17 @@ function setupNav() {
   // Back / Forward: re-open whatever tab the URL now points at.
   window.addEventListener('popstate', () => {
     const tab = tabFromPath();
-    if (allowedTabs && !allowedTabs.includes(tab)) return;
+    if (allowedTabs && !allowedTabs.includes(tab)) {
+      // Back/Forward landed on a tab this helper can't see. Don't leave the URL
+      // pointing at forbidden content while the pane still shows the previous tab —
+      // re-render an allowed tab and replaceState the URL to match it. audit C22.
+      const safe = (allowedTabs.includes(currentTab) ? currentTab : allowedTabs[0]) || 'dashboard';
+      syncNavActive(safe);
+      currentTab = safe;
+      renderTab(safe);
+      pushTabUrl(safe, true); // replaceState — keep URL and content in step
+      return;
+    }
     syncNavActive(tab);
     currentTab = tab;
     renderTab(tab);
