@@ -77,17 +77,17 @@
    tokens the UI is built on; hard-coded inline colours (a few dots/badges)
    won't flip, but every surface, text and border does. */
 :root[data-theme="dark"] {
-  --bg: #0a0e16;                /* near-black canvas */
+  --bg: #0b0d11;                /* near-black canvas */
   --dot: rgba(255, 255, 255, 0.045);/* faint dot-grid texture on the dark canvas */
-  --surface: #151d29;          /* cards (clearer step above canvas) */
-  --surface2: #0e131c;
-  --panel: #0d121b;            /* recessed — sits below the card */
-  --panel-2: #171f2b;
-  --bg-secondary: #0e131c;
+  --surface: #1b2028;          /* cards (clearer step above canvas) */
+  --surface2: #101319;
+  --panel: #13161d;            /* recessed — sits below the card */
+  --panel-2: #1e232c;
+  --bg-secondary: #101319;
   --canvas-cream: #241f14;
-  --border: #2b3947;           /* hairline — visible against canvas & card */
-  --border-subtle: #1e2733;
-  --border-input: #3a4a5b;
+  --border: #2d343d;           /* hairline — visible against canvas & card */
+  --border-subtle: #20252d;
+  --border-input: #3b434e;
 
   --accent: #57a6e6;           /* lightened logo blue for dark */
   --accent2: #7dbdf0;
@@ -95,12 +95,12 @@
   --primary-press: #a0d2f6;
   --primary-subdued: #143247;
   --accent-wash: #10202e;
-  --brand-dark: #0d1420;       /* sidebar track */
+  --brand-dark: #101319;       /* sidebar track */
   --vn: #a78bfa;
 
-  --text: #f1f5f9;
-  --ink-secondary: #c3cfdb;
-  --muted: #94a3b8;            /* lifted for AA on dark cards */
+  --text: #f2f0ea;
+  --ink-secondary: #cacdc9;
+  --muted: #9aa1a9;            /* lifted for AA on dark cards */
 
   --gold: #e0a94a;
   --sim: #38bdf8;
@@ -993,8 +993,24 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   color: var(--muted); margin-bottom: 8px;
 }
 .dash-date .heb { color: var(--gold); text-transform: none; letter-spacing: 0; font-size: 12px; }
+/* Live clock — sits ahead of the date, seconds tick in the accent for life. */
+.dash-clock { text-transform: none; letter-spacing: 0; }
+.dash-clock b { font-size: 15px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: 0.4px; }
+.dash-clock i { font-size: 11px; font-style: normal; color: var(--accent); font-variant-numeric: tabular-nums; margin-left: 1px; vertical-align: super; }
 .dash-greeting { font-size: 40px; font-weight: 300; letter-spacing: -1px; line-height: 1.08; }
 .dash-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Business-summary bar charts — magnitude by service in a single hue, with a
+   light top-lit gradient + inset track for gentle depth (not heavy). */
+.bizcol { flex: 1; min-width: 250px; }
+.bizcol-title { font-weight: 600; margin-bottom: 12px; }
+.bizbar-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: 13px; }
+.bizbar-label { flex: 0 0 92px; color: var(--ink-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bizbar-track { flex: 1; height: 12px; background: var(--panel); border-radius: 6px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.10); }
+.bizbar-fill { height: 100%; border-radius: 6px; background: linear-gradient(180deg, var(--accent2), var(--accent)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.28); transition: width 0.5s cubic-bezier(0.22,1,0.36,1); }
+.bizbar-fill.received { background: linear-gradient(180deg, #2bb978, var(--success)); }
+.bizbar-val { flex: 0 0 auto; min-width: 74px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bizcol-tot { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
 
 .dash-grid {
   display: grid; grid-template-columns: 360px 1fr;

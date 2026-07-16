@@ -6897,23 +6897,43 @@ async function openBusinessSummary() {
     body.innerHTML = `<div style="color:var(--danger);padding:6px 0;">${(wk && wk.error) || (mo && mo.error) || 'Could not load the summary.'}</div>`;
     return;
   }
+  // Revenue by service is a magnitude-by-category read → horizontal bars in a
+  // single hue (values labelled directly, so identity is never colour-alone),
+  // plus a collection-rate bar. Soft top-light gradients give a light 3D feel.
   const col = (title, rep) => {
-    const rows = groupRevenue(rep.byType).map(([label, amt]) =>
-      `<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);"><span>${label}</span><strong style="font-feature-settings:'tnum';">${fmtGbp(amt)}</strong></div>`).join('')
-      || '<div style="color:var(--muted);font-size:13px;padding:6px 0;">No charges yet.</div>';
-    return `<div style="flex:1;min-width:220px;">
-      <div style="font-weight:600;margin-bottom:8px;">${title}</div>
-      ${rows}
-      <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;padding-top:10px;"><span>Billed</span><span>${fmtGbp(rep.charged)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--success);padding-top:2px;"><span>Received</span><span>${fmtGbp(rep.received)}</span></div>
-      ${rep.refunded ? `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding-top:2px;"><span>Refunded</span><span>−${fmtGbp(rep.refunded)}</span></div>` : ''}
+    const rows = groupRevenue(rep.byType);
+    const max = Math.max(1, ...rows.map(([, a]) => a));
+    const bars = rows.length ? rows.map(([label, amt]) => `
+      <div class="bizbar-row">
+        <span class="bizbar-label" title="${label}">${label}</span>
+        <div class="bizbar-track"><div class="bizbar-fill" style="width:${Math.max(3, (amt / max) * 100).toFixed(1)}%;"></div></div>
+        <span class="bizbar-val">${fmtGbp(amt)}</span>
+      </div>`).join('')
+      : '<div style="color:var(--muted);font-size:13px;padding:6px 0;">No charges yet.</div>';
+    const rate = rep.charged > 0 ? Math.min(100, Math.round((rep.received / rep.charged) * 100)) : 0;
+    return `<div class="bizcol">
+      <div class="bizcol-title">${title}</div>
+      <div class="bizbars">${bars}</div>
+      <div class="bizcol-tot">
+        <div class="bizbar-row">
+          <span class="bizbar-label" style="font-weight:700;color:var(--text);">Billed</span>
+          <div class="bizbar-track"><div class="bizbar-fill" style="width:100%;opacity:0.3;"></div></div>
+          <span class="bizbar-val">${fmtGbp(rep.charged)}</span>
+        </div>
+        <div class="bizbar-row">
+          <span class="bizbar-label" style="color:var(--success);">Received</span>
+          <div class="bizbar-track"><div class="bizbar-fill received" style="width:${rate}%;"></div></div>
+          <span class="bizbar-val">${fmtGbp(rep.received)} <span style="color:var(--muted);font-weight:400;">· ${rate}%</span></span>
+        </div>
+        ${rep.refunded ? `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding-top:4px;"><span>Refunded</span><span>−${fmtGbp(rep.refunded)}</span></div>` : ''}
+      </div>
     </div>`;
   };
   body.style.color = 'var(--text)';
   body.style.padding = '0';
   body.innerHTML = `
     <div style="display:flex;gap:28px;flex-wrap:wrap;">${col('This week (7 days)', wk)}${col('This month', mo)}</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:14px;">“Billed” is revenue charged; “Received” is money actually taken in (payments + top-ups).</div>`;
+    <div style="font-size:11px;color:var(--muted);margin-top:14px;">Bars show revenue by service. “Billed” is revenue charged; “Received” is money actually taken in (payments + top-ups); the green bar is the collection rate.</div>`;
 }
 
 // ── Command palette (Ctrl/Cmd+K) ─────────────────────────────────────────
@@ -7466,6 +7486,19 @@ function dashPaint(money, tasksList2, stillLoading) {
     || (currentStaff?.email || '').split('@')[0] || '';
   const enDate = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const hebDate = hebrewDateString(now);
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const clockHM = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`, clockS = pad2(now.getSeconds());
+  // One global 1s ticker keeps the dashboard clock live; it no-ops when the
+  // dashboard isn't mounted, so it's safe to leave running.
+  if (!window.__dashClockTimer) {
+    window.__dashClockTimer = setInterval(() => {
+      const el = document.getElementById('dashClock'); if (!el) return;
+      const d = new Date(), p = (n) => String(n).padStart(2, '0');
+      const b = el.querySelector('b'), i = el.querySelector('i');
+      if (b) b.textContent = `${p(d.getHours())}:${p(d.getMinutes())}`;
+      if (i) i.textContent = p(d.getSeconds());
+    }, 1000);
+  }
 
   // ── Featured money card (dark navy) ──
   const heroHtml = `
@@ -7564,7 +7597,7 @@ function dashPaint(money, tasksList2, stillLoading) {
   content.innerHTML = `
     <div class="dash-head">
       <div>
-        <div class="dash-date">${enDate}${hebDate ? ` &nbsp;·&nbsp; <span class="heb">${hebDate}</span>` : ''}</div>
+        <div class="dash-date"><span class="dash-clock" id="dashClock" title="Current time"><b>${clockHM}</b><i>${clockS}</i></span>&nbsp;·&nbsp;${enDate}${hebDate ? ` &nbsp;·&nbsp; <span class="heb">${hebDate}</span>` : ''}</div>
         <div class="dash-greeting">${greeting}${staffFirstName ? ', ' + nameHtml(staffFirstName) : ''}.</div>
       </div>
       <div class="dash-actions">
