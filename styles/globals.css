@@ -1200,6 +1200,38 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .pq-icon { font-size: 20px; line-height: 1; }
 .pq-label { font-size: 11px; color: var(--ink-secondary); text-align: center; }
 
+/* Floating help-timer chip — persists across tabs while a session runs */
+.svc-float {
+  position: fixed; right: 20px; bottom: 20px; z-index: 900;
+  display: flex; align-items: center; gap: 6px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 14px; padding: 8px 10px 8px 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  animation: svcFloatIn 0.25s ease;
+}
+.svc-float.paused { border-color: var(--gold); }
+.svc-float-main { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.svc-float-icon { font-size: 18px; line-height: 1; }
+.svc-float-info { line-height: 1.2; }
+.svc-float-name {
+  font-weight: 600; font-size: 13px; color: var(--text);
+  max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.svc-float-time { font-size: 13px; color: var(--ink-secondary); font-feature-settings: 'tnum'; }
+.svc-float-time b { color: var(--text); }
+.svc-float-proj { color: var(--muted); font-size: 11px; margin-left: 7px; }
+.svc-float-btns { display: flex; gap: 4px; margin-left: 4px; }
+.svc-float-btn {
+  border: 1px solid var(--border); background: var(--panel-2); color: var(--text);
+  border-radius: 9px; width: 30px; height: 30px; cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.12s, color 0.12s;
+}
+.svc-float-btn:hover { border-color: var(--accent); }
+.svc-float-stop:hover { border-color: var(--danger); color: var(--danger); }
+@keyframes svcFloatIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .svc-float { animation: none; } }
+
 /* Task triage cards */
 .task-card { padding: 10px 2px; border-bottom: 1px solid var(--border); }
 .task-card:last-child { border-bottom: none; }

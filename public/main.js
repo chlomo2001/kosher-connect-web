@@ -5893,6 +5893,55 @@ function svcTimerStop() {
   }, 60);
 }
 
+// ── Floating help-timer chip ──────────────────────────────────────────────
+// A running (or paused) session stays visible in the bottom-right corner on
+// EVERY tab, ticking once a second, so staff never lose a live timer behind
+// another screen. Hidden on the Services tab itself (the full controls live
+// there). Clicking the chip jumps to Services; the inline buttons pause/stop
+// without leaving the current screen.
+function svcTimerFloatFrame(t) {
+  const paused = !t.runningSince;
+  return `
+    <div class="svc-float-main" onclick="goToTab('services')" title="Open Services">
+      <span class="svc-float-icon">${paused ? '⏸' : '⏱'}</span>
+      <div class="svc-float-info">
+        <div class="svc-float-name">${escHtml(t.customerName || 'customer')}</div>
+        <div class="svc-float-time"><b id="svcFloatElapsed">0:00</b><span id="svcFloatProj" class="svc-float-proj"></span></div>
+      </div>
+    </div>
+    <div class="svc-float-btns">
+      ${paused
+        ? `<button class="svc-float-btn" title="Resume" onclick="event.stopPropagation();svcTimerResume()">▶</button>`
+        : `<button class="svc-float-btn" title="Pause" onclick="event.stopPropagation();svcTimerPause()">⏸</button>`}
+      <button class="svc-float-btn svc-float-stop" title="Stop &amp; charge" onclick="event.stopPropagation();svcTimerStop()">⏹</button>
+    </div>`;
+}
+
+function svcTimerFloatTick() {
+  const t = svcTimerState();
+  let el = document.getElementById('svcTimerFloat');
+  // Hidden with no session, outside the portal (login/portal-less), or on
+  // Services where the full timer card already shows.
+  if (!t || currentTab === 'services' || !document.getElementById('mainContent')) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'svcTimerFloat'; el.className = 'svc-float'; document.body.appendChild(el); }
+  const sig = `${t.customerId}|${t.runningSince ? 'run' : 'pause'}`;
+  if (el.dataset.sig !== sig) {            // only rebuild the frame on a state change
+    el.dataset.sig = sig;
+    el.classList.toggle('paused', !t.runningSince);
+    el.innerHTML = svcTimerFloatFrame(t);
+  }
+  const secs = Math.floor(svcTimerElapsedMs(t) / 1000);
+  const e = document.getElementById('svcFloatElapsed');
+  if (e) e.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+  const p = document.getElementById('svcFloatProj');
+  if (p) { const { minutes, amount } = svcTimerCharge(t); p.textContent = `~${fmtGbp(amount)} · ${minutes}m`; }
+}
+
+function startSvcTimerFloat() {
+  svcTimerFloatTick();
+  if (!window.__svcFloat) window.__svcFloat = setInterval(svcTimerFloatTick, 1000);
+}
+
 async function renderServicesTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = loadingHtml('Loading services…');
@@ -5970,7 +6019,10 @@ async function renderServicesTab() {
           <button class="btn btn-outline btn-sm" onclick="svcTimerDiscard()">✕ Discard</button>
         </div>`;
       }
-      const opts = customers.map(c => `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)}</option>`).join('');
+      const opts = [...customers]
+        .sort((a, b) => `${a.firstName || ''} ${a.lastName || ''}`.trim()
+          .localeCompare(`${b.firstName || ''} ${b.lastName || ''}`.trim(), undefined, { sensitivity: 'base' }))
+        .map(c => `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)}</option>`).join('');
       return `
         <div class="table-card" style="margin-bottom:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <span style="font-size:20px;">⏱</span>
@@ -6964,6 +7016,7 @@ const PALETTE_COMMANDS = [
   { icon: '🖨️', label: 'Charge a Service', sub: 'create', run: () => openOnTab('services', openNewServiceModal) },
   { icon: '📦', label: 'Add Stock Item', sub: 'create', run: () => openOnTab('shop', openStockItemModal) },
   // ── Tools ──
+  { icon: '⏱', label: 'Start help timer', sub: 'tool', run: () => openOnTab('services', () => document.getElementById('svcTimerCustomer')?.focus()) },
   { icon: '🛒', label: 'Point of Sale (Till)', sub: 'tool', run: () => goToTab('shop') },
   { icon: '📇', label: 'Manage Phone Inventory', sub: 'tool', run: () => openOnTab('rentals', openManagePhonesModal) },
   { icon: '🧾', label: 'Cash-up (Z-report)', sub: 'tool', run: () => openCashupModal() },
@@ -7178,6 +7231,10 @@ document.addEventListener('keydown', e => {
     if (open('customerCard')) { dismissCustomerCard(); return; }
   }
 });
+
+// Keep the floating help-timer chip alive across the whole session.
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startSvcTimerFloat);
+else startSvcTimerFloat();
 
 // ── Priority suggestion engine ───────────────────────────────────────────
 // Deterministic scoring over what the task IS (its reference) and its due
