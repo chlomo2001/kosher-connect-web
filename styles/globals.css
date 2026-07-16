@@ -881,6 +881,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .login-card { cursor: default; }
 .login-card input, .login-card textarea, .login-card select { cursor: text; }
 .login-shell button, .login-card a, .login-card [role="button"] { cursor: pointer; }
+/* Gold ring-of-light on the dark theme (blue on light). */
+:root[data-theme="dark"] .login-shell {
+  cursor: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='30'%20height='30'%3E%3Ccircle%20cx='15'%20cy='15'%20r='9'%20fill='none'%20stroke='%230a1220'%20stroke-width='3'%20opacity='.45'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='9'%20fill='none'%20stroke='%23d0a878'%20stroke-width='1.6'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.3'%20fill='%23d0a878'/%3E%3C/svg%3E") 15 15, crosshair;
+}
 @media (prefers-reduced-motion: reduce) { .login-shell { cursor: auto; } }
 /* Kept as a decorative hook, but the rainbow blur is gone. A single flat
    hairline band frames the top of the canvas — structure, not glow. */
