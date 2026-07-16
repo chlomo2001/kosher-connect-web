@@ -5,8 +5,21 @@ import { withStaff, withTab } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 
 const EMBED = 'customers(legacy_id,first_name,last_name)'
-const PLATFORMS = ['elid', 'FreePBX', 'Other']
+// IVR / VN providers are owner-managed (settings key ivr_platforms, feature
+// #10). These defaults only apply if that setting is missing.
+const DEFAULT_PLATFORMS = ['elid', 'FreePBX', 'Other']
 const STATUSES = ['Active', 'Inactive']
+
+// The current allowed provider list, read from settings with a safe fallback.
+async function allowedPlatforms() {
+  try {
+    const rows = await db.select('settings', `select=text_value&key=eq.ivr_platforms`)
+    const csv = rows?.[0]?.text_value
+    const list = String(csv || '').split(',').map(s => s.trim()).filter(Boolean)
+    if (list.length) return list
+  } catch { /* fall through to defaults */ }
+  return DEFAULT_PLATFORMS
+}
 
 const PLANS = ['incoming_only', 'outgoing_100', 'unlimited', 'payg']
 
@@ -78,10 +91,11 @@ async function handler(req, res) {
       if (billing.billing_enabled && (!customerUuid || !billing.monthly_price || !billing.next_billing_date)) {
         return res.status(400).json({ success: false, error: 'Monthly billing needs a customer, a monthly price and a first billing date.' })
       }
+      const platforms = await allowedPlatforms()
       const [row] = await db.insert('virtual_numbers', [{
         number: String(b.number).trim(),
         customer_id: customerUuid,
-        platform: PLATFORMS.includes(b.platform) ? b.platform : 'Other',
+        platform: platforms.includes(b.platform) ? b.platform : (platforms[0] || 'Other'),
         status: STATUSES.includes(b.status) ? b.status : 'Active',
         shortcut_url: b.shortcutUrl || null,
         notes: b.notes || null,
@@ -100,7 +114,8 @@ async function handler(req, res) {
         patch.status = status
       }
       if (platform !== undefined) {
-        if (!PLATFORMS.includes(platform)) return res.status(400).json({ success: false, error: `Platform must be one of: ${PLATFORMS.join(', ')}.` })
+        const platforms = await allowedPlatforms()
+        if (!platforms.includes(platform)) return res.status(400).json({ success: false, error: `Platform must be one of: ${platforms.join(', ')}.` })
         patch.platform = platform
       }
       if (notes !== undefined) patch.notes = notes || null

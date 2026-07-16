@@ -477,6 +477,9 @@ tbody tr.selected td { background: rgba(99, 91, 255, 0.05); }
   user-select: text;
   min-height: 38px;
 }
+/* Shared compact filter/sort selects (feature #4) — the two-dropdown control
+   every list tab carries, matching the Customers-tab styling. */
+.kc-fs-sel { width: auto; min-width: 150px; padding: 6px 10px; font-size: 13px; min-height: 0; }
 .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.12); }
 .form-input.error { border-color: var(--danger); }
 .form-input::placeholder { color: var(--muted); }

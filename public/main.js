@@ -816,6 +816,14 @@ function settingNum(key, fallback) {
   return (s && Number.isFinite(s.numValue)) ? s.numValue : fallback;
 }
 
+// The owner-managed IVR / VN provider list (settings key ivr_platforms,
+// feature #10). Falls back to the built-in defaults before settings load.
+function ivrPlatforms() {
+  const s = pricingConfig?.settings?.find(x => x.key === 'ivr_platforms');
+  const list = String(s?.textValue || '').split(',').map(x => x.trim()).filter(Boolean);
+  return list.length ? list : ['elid', 'FreePBX', 'Other'];
+}
+
 // #47 — the pricing FORMULA, isolated as its own pure function. This mirrors
 // lib/rentalMath.mjs::priceFromDays exactly (that module is the canonical,
 // unit-tested statement of the maths — see test/rentalMath.test.mjs). Kept as
@@ -1132,6 +1140,16 @@ function renderRentalsTab() {
   const balLabel     = filterPaid==='paid'?'Fully Paid':filterPaid==='debt'?'Has Debt':'Balance';
   const statusLabel  = filterStatus==='active'?'Active':filterStatus==='overdue'?'Overdue':filterStatus==='returned'?'Returned':filterStatus==='returned_incomplete'?'Returned ⚠️':'Status';
 
+  const rentalBar = kcFilterSort('rentals', [
+    { value: 'all', label: 'All' },
+  ], [
+    { value: 'default', label: 'Sort: Default' },
+    { value: 'name', label: 'Customer A–Z', cmp: kcCmpStr(r => r.customerName) },
+    { value: 'due', label: 'Due date (soonest)', cmp: (a, b) => String(a.toDate || '9999').localeCompare(String(b.toDate || '9999')) },
+    { value: 'owed', label: 'Most owed', cmp: kcCmpNum(r => rentalGrandTotal(r) - (r.amountPaid || 0)) },
+    { value: 'price', label: 'Price (high–low)', cmp: kcCmpNum(r => r.price || 0) },
+  ], renderRentalRows);
+
   content.innerHTML = `
     <div class="stats-row">
       <div class="stat-card">
@@ -1199,6 +1217,7 @@ function renderRentalsTab() {
             </div>
           </div>
 
+          ${rentalBar}
           <button class="btn btn-outline" style="font-size:12px;padding:5px 12px;" onclick="clearRentalFilters()">Clear</button>
         </div>
         <div class="table-wrap">
@@ -1381,6 +1400,8 @@ function renderRentalRows() {
       return filterPaid === 'paid' ? fullyPaid : !fullyPaid;
     });
   }
+
+  filtered = kcViewApply('rentals', filtered);
 
   if (filtered.length === 0) {
     tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="emoji">📱</div><p>No rentals yet.</p><small>Click "New Rental" to get started.</small></div></td></tr>`;
@@ -2624,6 +2645,64 @@ function kcConfirmDone(ok) {
   const r = kcConfirmResolve; kcConfirmResolve = null;
   if (r) r(ok);
 }
+
+// ─────────────────────────────────────────────
+//  SHARED FILTER + SORT  (feature #4)
+// ─────────────────────────────────────────────
+// A reusable version of the Customers-tab filter/sort control so every list
+// tab reads the same way. Each tab registers a config — an array of filter
+// predicates and an array of sort comparators. The chosen filter/sort persist
+// in-memory per tab, so they survive the re-render a selection triggers.
+const kcViewState = {};   // tabKey -> { filter, sort }
+const kcViewCfg = {};     // tabKey -> { filters, sorts, render }
+
+function kcView(key) {
+  return kcViewState[key] || (kcViewState[key] = { filter: '', sort: '' });
+}
+
+// filters/sorts: [{ value, label, test?(item), cmp?(a,b) }].
+//   filters[0] is the default ("everything"); sorts[0] is the default order.
+// render() repaints the tab after any change. Returns the two <select>
+// controls as HTML (the filter select is shown only when there's >1 option).
+function kcFilterSort(key, filters, sorts, render) {
+  kcViewCfg[key] = { filters, sorts, render };
+  const st = kcView(key);
+  if (!filters.some(f => f.value === st.filter)) st.filter = filters[0].value;
+  if (!sorts.some(s => s.value === st.sort)) st.sort = sorts[0].value;
+  const opts = (list, cur) => list.map(o =>
+    `<option value="${escHtml(o.value)}" ${o.value === cur ? 'selected' : ''}>${escHtml(o.label)}</option>`).join('');
+  return `
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      ${filters.length > 1 ? `<select class="form-input kc-fs-sel" title="Filter"
+        onchange="kcViewSet('${key}','filter',this.value)">${opts(filters, st.filter)}</select>` : ''}
+      <select class="form-input kc-fs-sel" title="Sort by"
+        onchange="kcViewSet('${key}','sort',this.value)">${opts(sorts, st.sort)}</select>
+    </div>`;
+}
+
+function kcViewSet(key, kind, value) {
+  kcView(key)[kind] = value;
+  const cfg = kcViewCfg[key];
+  if (cfg && cfg.render) cfg.render();
+}
+
+// Apply the active filter + sort for a tab to a list (returns a new array).
+function kcViewApply(key, list) {
+  const cfg = kcViewCfg[key];
+  const st = kcView(key);
+  let out = Array.isArray(list) ? list.slice() : [];
+  if (!cfg) return out;
+  const f = cfg.filters.find(x => x.value === st.filter);
+  if (f && f.test) out = out.filter(f.test);
+  const s = cfg.sorts.find(x => x.value === st.sort);
+  if (s && s.cmp) out.sort(s.cmp);
+  return out;
+}
+
+// Small shared comparators for the sort configs above.
+const kcCmpStr = (fn) => (a, b) => String(fn(a) || '').toLowerCase().localeCompare(String(fn(b) || '').toLowerCase());
+const kcCmpNum = (fn) => (a, b) => (Number(fn(b)) || 0) - (Number(fn(a)) || 0);       // high → low
+const kcCmpDate = (fn, dir = 1) => (a, b) => dir * String(fn(a) || '').localeCompare(String(fn(b) || ''));
 
 // ─────────────────────────────────────────────
 //  CUSTOMERS TAB
@@ -4207,6 +4286,16 @@ function renderSimsTab() {
       ${renewing.map(s => `<span style="margin-left:8px;">· ${escHtml(s.customerName)} (${escHtml(s.simNumber)})</span>`).join('')}</span>
     </div>` : '';
 
+  const simBar = kcFilterSort('sim', [
+    { value: 'all', label: 'All plans' },
+  ], [
+    { value: 'name', label: 'Sort: Customer A–Z', cmp: kcCmpStr(s => s.customerName) },
+    { value: 'renewal', label: 'Renewal (soonest)', cmp: (a, b) => String(a.renewalDate || '9999').localeCompare(String(b.renewalDate || '9999')) },
+    { value: 'renewal_desc', label: 'Renewal (latest)', cmp: (a, b) => String(b.renewalDate || '').localeCompare(String(a.renewalDate || '')) },
+    { value: 'provider', label: 'Provider A–Z', cmp: kcCmpStr(s => s.provider) },
+    { value: 'recent', label: 'Recently added', cmp: kcCmpDate(s => s.createdAt || '', -1) },
+  ], renderSimRows);
+
   content.innerHTML = `
     ${bannerHtml}
     <div class="stats-row">
@@ -4249,6 +4338,7 @@ function renderSimsTab() {
         <option value="renewing" ${simFilterStatus==='renewing'?'selected':''}>Renewing (today/tomorrow)</option>
         <option value="week" ${simFilterStatus==='week'?'selected':''}>Renews this week</option>
       </select>
+      ${simBar}
       <span id="simCount" style="font-size:12px;color:var(--muted);"></span>
     </div>
 
@@ -4289,15 +4379,17 @@ function renderSimRows() {
     return true;
   });
 
-  const countEl = document.getElementById('simCount');
-  if (countEl) countEl.textContent = `${filtered.length} of ${sims.length}`;
+  const sorted = kcViewApply('sim', filtered);
 
-  if (filtered.length === 0) {
+  const countEl = document.getElementById('simCount');
+  if (countEl) countEl.textContent = `${sorted.length} of ${sims.length}`;
+
+  if (sorted.length === 0) {
     tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="emoji">💳</div><p>No SIM plans yet.</p><small>Click "+ New SIM Plan" to add one.</small></div></td></tr>`;
     return;
   }
 
-  tbody.innerHTML = filtered.map(s => {
+  tbody.innerHTML = sorted.map(s => {
     const statusBadge =
       s.status === 'active'    ? `<span class="badge badge-active">Active</span>` :
       s.status === 'suspended' ? `<span class="badge badge-suspended">Suspended</span>` :
@@ -4824,9 +4916,22 @@ function renderBookingsTab() {
   const feesEarned = active.reduce((s, b) => s + (b.bookingFee || 0), 0);
   const totalCharged = active.reduce((s, b) => s + (b.price || 0) + (b.bookingFee || 0), 0);
 
-  const rows = bookings.length === 0
-    ? `<tr><td colspan="9"><div class="empty-state"><div class="emoji">✈️</div><p>No bookings yet.</p><small>Click "New Booking" to add the first one.</small></div></td></tr>`
-    : bookings.map(b => `
+  const bkBar = kcFilterSort('bookings', [
+    { value: 'all', label: 'Filter: all bookings' },
+    { value: 'upcoming', label: '✈️ Upcoming travel', test: b => b.status !== 'Cancelled' && b.status !== 'Completed' && (!b.travelDate || b.travelDate >= today) },
+    { value: 'completed', label: '✓ Completed', test: b => b.status === 'Completed' },
+    { value: 'cancelled', label: '✕ Cancelled', test: b => b.status === 'Cancelled' },
+  ], [
+    { value: 'travel', label: 'Sort: Travel (soonest)', cmp: (a, b) => String(a.travelDate || '9999').localeCompare(String(b.travelDate || '9999')) },
+    { value: 'travel_desc', label: 'Travel (latest)', cmp: (a, b) => String(b.travelDate || '').localeCompare(String(a.travelDate || '')) },
+    { value: 'name', label: 'Customer A–Z', cmp: kcCmpStr(b => b.customerName) },
+    { value: 'recent', label: 'Recently added', cmp: kcCmpDate(b => b.createdAt || '', -1) },
+    { value: 'price', label: 'Price (high–low)', cmp: kcCmpNum(b => (b.price || 0) + (b.bookingFee || 0)) },
+  ], renderBookingsTab);
+  const bkShown = kcViewApply('bookings', bookings);
+  const rows = bkShown.length === 0
+    ? `<tr><td colspan="9"><div class="empty-state"><div class="emoji">✈️</div><p>${bookings.length ? 'No bookings match this filter.' : 'No bookings yet.'}</p><small>${bookings.length ? 'Change the filter above.' : 'Click "New Booking" to add the first one.'}</small></div></td></tr>`
+    : bkShown.map(b => `
       <tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a'))openEditBookingModal('${escHtml(b.id)}')" title="Open booking">
         <td><div class="customer-name">${escHtml(b.customerName || '—')}</div>
             <div class="customer-email">${escHtml(b.passenger || '')}${(b.passengers || []).length ? ` · 👥 ${b.passengers.length}` : ''}</div></td>
@@ -4856,7 +4961,8 @@ function renderBookingsTab() {
       <div class="stat-card"><div class="stat-label">Booking Fees</div><div class="stat-value">${fmtGbp(feesEarned)}</div></div>
       <div class="stat-card"><div class="stat-label">Total Charged</div><div class="stat-value">${fmtGbp(totalCharged)}</div></div>
     </div>
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+      ${bkBar}
       <button class="btn btn-primary" onclick="openNewBookingModal()">+ New Booking</button>
     </div>
     <div class="table-card">
@@ -5431,7 +5537,6 @@ async function saveEditBooking(id) {
 let repairs = [];
 let repairMenu = [];
 const REPAIR_STATUSES = ['Open', 'In Progress', 'Ready', 'Collected', 'Cancelled'];
-let repairFilter = 'all'; // all | active (open/in-progress) | ready (waiting for collection)
 
 function repairStatusBadge(status) {
   const styles = {
@@ -5459,11 +5564,23 @@ async function renderRepairsTab() {
   const ready = repairs.filter(r => r.status === 'Ready');
   const revenue = repairs.filter(r => r.status === 'Collected').reduce((s, r) => s + (r.total || 0), 0);
 
-  const shown = repairFilter === 'ready' ? ready : repairFilter === 'active' ? open : repairs;
-  const emptyMsg = repairFilter === 'ready' ? 'No repairs waiting for collection.'
-    : repairFilter === 'active' ? 'No open repair tickets.' : 'No repairs yet.';
+  const repBar = kcFilterSort('repairs', [
+    { value: 'all', label: 'Filter: all tickets' },
+    { value: 'active', label: '🔧 Open / in progress', test: r => r.status === 'Open' || r.status === 'In Progress' },
+    { value: 'ready', label: '📦 Waiting for collection', test: r => r.status === 'Ready' },
+    { value: 'collected', label: '✓ Collected', test: r => r.status === 'Collected' },
+    { value: 'cancelled', label: '✕ Cancelled', test: r => r.status === 'Cancelled' },
+  ], [
+    { value: 'recent', label: 'Sort: Recently opened', cmp: kcCmpDate(r => r.openedAt || '', -1) },
+    { value: 'oldest', label: 'Oldest first', cmp: kcCmpDate(r => r.openedAt || '', 1) },
+    { value: 'name', label: 'Customer A–Z', cmp: kcCmpStr(r => r.customerName) },
+    { value: 'total', label: 'Total (high–low)', cmp: kcCmpNum(r => r.total || 0) },
+    { value: 'status', label: 'Status', cmp: kcCmpStr(r => r.status) },
+  ], renderRepairsTab);
+  const shown = kcViewApply('repairs', repairs);
+  const emptyMsg = repairs.length ? 'No repairs match this filter.' : 'No repairs yet.';
   const rows = shown.length === 0
-    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔧</div><p>${emptyMsg}</p><small>${repairFilter === 'all' ? 'Click "New Repair" to open the first ticket.' : 'Change the filter to see other tickets.'}</small></div></td></tr>`
+    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔧</div><p>${emptyMsg}</p><small>${repairs.length ? 'Change the filter above.' : 'Click "New Repair" to open the first ticket.'}</small></div></td></tr>`
     : shown.map(r => `
       <tr>
         <td><div class="customer-name">${escHtml(r.customerName || '—')}</div></td>
@@ -5488,12 +5605,8 @@ async function renderRepairsTab() {
       <div class="stat-card"><div class="stat-label">Repairs Revenue</div><div class="stat-value">${fmtGbp(revenue)}</div></div>
       <div class="stat-card"><div class="stat-label">Total Tickets</div><div class="stat-value">${repairs.length}</div></div>
     </div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;">
-      <select class="form-input" style="width:200px;" onchange="repairFilter=this.value; renderRepairsTab()">
-        <option value="all" ${repairFilter==='all'?'selected':''}>Show: all tickets</option>
-        <option value="active" ${repairFilter==='active'?'selected':''}>Open / in progress</option>
-        <option value="ready" ${repairFilter==='ready'?'selected':''}>Waiting for collection</option>
-      </select>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      ${repBar}
       <button class="btn btn-primary" onclick="openNewRepairModal()">+ New Repair</button>
     </div>
     <div class="table-card">
@@ -5776,9 +5889,22 @@ async function renderServicesTab() {
   const todays = serviceOrders.filter(o => (o.createdAt || '').slice(0, 10) === today);
   const revenue = serviceOrders.reduce((s, o) => s + (o.total || 0), 0);
 
-  const orderRows = serviceOrders.length === 0
-    ? `<tr><td colspan="5"><div class="empty-state"><div class="emoji">🖨️</div><p>No services charged yet.</p></div></td></tr>`
-    : serviceOrders.map(o => `
+  const svcWeekAgo = localISO(new Date(Date.now() - 7 * 86400000));
+  const svcBar = kcFilterSort('services', [
+    { value: 'all', label: 'Filter: all orders' },
+    { value: 'today', label: '📅 Today', test: o => (o.createdAt || '').slice(0, 10) === today },
+    { value: 'week', label: '🗓️ Last 7 days', test: o => (o.createdAt || '').slice(0, 10) >= svcWeekAgo },
+  ], [
+    { value: 'recent', label: 'Sort: Most recent', cmp: kcCmpDate(o => o.createdAt || '', -1) },
+    { value: 'oldest', label: 'Oldest first', cmp: kcCmpDate(o => o.createdAt || '', 1) },
+    { value: 'name', label: 'Customer A–Z', cmp: kcCmpStr(o => o.customerName) },
+    { value: 'total', label: 'Total (high–low)', cmp: kcCmpNum(o => o.total || 0) },
+    { value: 'service', label: 'Service A–Z', cmp: kcCmpStr(o => o.serviceName) },
+  ], renderServicesTab);
+  const svcShown = kcViewApply('services', serviceOrders);
+  const orderRows = svcShown.length === 0
+    ? `<tr><td colspan="5"><div class="empty-state"><div class="emoji">🖨️</div><p>${serviceOrders.length ? 'No orders match this filter.' : 'No services charged yet.'}</p></div></td></tr>`
+    : svcShown.map(o => `
       <tr>
         <td><div class="customer-name">${escHtml(o.customerName || '—')}</div></td>
         <td>${escHtml(o.serviceName)}${o.qty > 1 ? ` <span style="color:var(--muted);">× ${o.qty}</span>` : ''}</td>
@@ -5834,7 +5960,8 @@ async function renderServicesTab() {
           <button class="btn btn-primary" onclick="svcTimerStart()">▶ Start timer</button>
         </div>`;
     })()}
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+      ${svcBar}
       <button class="btn btn-primary" onclick="openNewServiceModal()">+ Charge a Service</button>
     </div>
     <div class="dash-cols">
@@ -6021,9 +6148,21 @@ async function renderShopTab() {
       ⚠️ <strong>Low stock:</strong> ${low.map(i => `${escHtml(i.model)} (${i.quantity} left)`).join(' · ')}
     </div>` : '';
 
-  const itemRows = active.length === 0
-    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🛍️</div><p>No stock yet — add your first item.</p></div></td></tr>`
-    : active.map(i => `
+  const shopBar = kcFilterSort('shop', [
+    { value: 'all', label: 'Filter: all stock' },
+    { value: 'low', label: '⚠️ Low / out of stock', test: i => i.quantity <= i.lowStockAt },
+    { value: 'instock', label: '📦 In stock', test: i => i.quantity > 0 },
+  ], [
+    { value: 'name', label: 'Sort: Name A–Z', cmp: kcCmpStr(i => [i.company, i.model].filter(Boolean).join(' ')) },
+    { value: 'qty_asc', label: 'Qty (low→high)', cmp: (a, b) => (a.quantity || 0) - (b.quantity || 0) },
+    { value: 'qty_desc', label: 'Qty (high→low)', cmp: kcCmpNum(i => i.quantity || 0) },
+    { value: 'price', label: 'Price (high–low)', cmp: kcCmpNum(i => i.sellingPrice || 0) },
+    { value: 'profit', label: 'Profit (high–low)', cmp: kcCmpNum(i => i.profit || 0) },
+  ], renderShopTab);
+  const shopShown = kcViewApply('shop', active);
+  const itemRows = shopShown.length === 0
+    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🛍️</div><p>${active.length ? 'No stock matches this filter.' : 'No stock yet — add your first item.'}</p></div></td></tr>`
+    : shopShown.map(i => `
       <tr style="${i.quantity <= i.lowStockAt ? 'background:rgba(234,34,97,0.04);' : ''}">
         <td><strong>${escHtml([i.company, i.model].filter(Boolean).join(' '))}</strong>
           <div class="customer-email">${escHtml(i.code || '')}</div></td>
@@ -6068,7 +6207,10 @@ async function renderShopTab() {
     </div>
     <div class="dash-cols">
       <div class="table-card">
-        <div class="section-divider" style="margin:12px 14px 4px;">Inventory</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:0 14px;">
+          <div class="section-divider" style="margin:12px 0 4px;">Inventory</div>
+          ${shopBar}
+        </div>
         <table>
           <thead><tr><th>Item</th><th>Category</th><th>Cost</th><th>Price</th><th>Profit</th><th>Qty</th><th></th></tr></thead>
           <tbody>${itemRows}</tbody>
@@ -6794,7 +6936,7 @@ const PALETTE_COMMANDS = [
   { icon: '✈️', label: 'Customers flying soon', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'flight'; }, renderTableRows) },
   { icon: '🛂', label: 'Customers with passport on file', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'passport'; }, renderTableRows) },
   { icon: '📶', label: 'SIMs that renew this week', sub: 'view', run: () => filterView('sim', () => { simFilterStatus = 'week'; simFilterPay = 'all'; }, renderSimRows) },
-  { icon: '🔧', label: 'Repairs waiting for collection', sub: 'view', run: () => filterView('repairs', () => { repairFilter = 'ready'; }) },
+  { icon: '🔧', label: 'Repairs waiting for collection', sub: 'view', run: () => filterView('repairs', () => { kcView('repairs').filter = 'ready'; }) },
   { icon: '💳', label: 'Payment / top-up for open customer', sub: 'context', run: () => selectedId ? openWalletModal(selectedId) : toast('Open a customer first, then run this.', 'warning') },
   // ── Admin (hidden for helpers) ──
   { icon: '📊', label: 'Business summary (revenue)', sub: 'admin', admin: true, run: () => openBusinessSummary() },
@@ -7070,9 +7212,22 @@ async function renderTasksTab() {
   if (!Array.isArray(tasksList)) tasksList = [];
 
   const today = localISO();
-  const doneTasks = tasksList.filter(t => t.done);
-  const snoozed = tasksList.filter(t => taskSnoozed(t, today));
-  const live = tasksList.filter(t => !t.done && !taskSnoozed(t, today));
+  const tkBar = kcFilterSort('tasks', [
+    { value: 'all', label: 'Filter: all tasks' },
+    { value: 'manual', label: '✍️ Manual only', test: t => t.source === 'manual' },
+    { value: 'auto', label: '🤖 Auto only', test: t => t.source !== 'manual' },
+    { value: 'customer', label: '👤 With customer', test: t => !!t.customerId },
+    { value: 'overdue', label: '⚠️ Overdue', test: t => t.dueDate && t.dueDate < today && !t.done },
+  ], [
+    { value: 'smart', label: 'Sort: Smart' },
+    { value: 'due', label: 'Due date (soonest)', cmp: (a, b) => String(a.dueDate || '9999').localeCompare(String(b.dueDate || '9999')) },
+    { value: 'recent', label: 'Recently added', cmp: kcCmpDate(t => t.createdAt || '', -1) },
+    { value: 'az', label: 'A–Z', cmp: kcCmpStr(t => t.title) },
+  ], renderTasksTab);
+  const tkTasks = kcViewApply('tasks', tasksList);
+  const doneTasks = tkTasks.filter(t => t.done);
+  const snoozed = tkTasks.filter(t => taskSnoozed(t, today));
+  const live = tkTasks.filter(t => !t.done && !taskSnoozed(t, today));
   const nowLane  = live.filter(t => t.priority === 'High' || (t.dueDate && t.dueDate <= today));
   const nextLane = live.filter(t => !nowLane.includes(t));
   const suggestions = live.map(t => [t, suggestTaskPriority(t, today)]).filter(([, s]) => s);
@@ -7168,6 +7323,7 @@ async function renderTasksTab() {
         <button class="btn btn-primary" onclick="saveNewTask()">+ Add</button>
       </div>
     </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">${tkBar}</div>
     <div class="dash-cols">
       ${lane('🔥 Now — do these first', nowLane, 'Nothing urgent. 🎉')}
       ${lane('📋 Next — when the counter is quiet', nextLane, 'Nothing queued.')}
@@ -7437,9 +7593,22 @@ async function renderVirtualTab() {
   if (!Array.isArray(vnPriceMatrix)) vnPriceMatrix = [];
 
   const active = virtualNumbers.filter(v => v.status === 'Active');
-  const rows = virtualNumbers.length === 0
-    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔢</div><p>No virtual numbers yet.</p></div></td></tr>`
-    : virtualNumbers.map(v => `
+  const vnBar = kcFilterSort('virtual', [
+    { value: 'all', label: 'Filter: all numbers' },
+    { value: 'active', label: '✅ Active', test: v => v.status === 'Active' },
+    { value: 'inactive', label: '⏸ Inactive', test: v => v.status !== 'Active' },
+    { value: 'billing', label: '💷 Billing on', test: v => v.billingEnabled && v.monthlyPrice },
+  ], [
+    { value: 'number', label: 'Sort: Number', cmp: kcCmpStr(v => v.number) },
+    { value: 'name', label: 'Customer A–Z', cmp: kcCmpStr(v => v.customerName) },
+    { value: 'monthly', label: 'Monthly (high–low)', cmp: kcCmpNum(v => v.monthlyPrice || 0) },
+    { value: 'platform', label: 'Platform', cmp: kcCmpStr(v => v.platform) },
+    { value: 'recent', label: 'Recently added', cmp: kcCmpDate(v => v.createdAt || '', -1) },
+  ], renderVirtualTab);
+  const vnShown = kcViewApply('virtual', virtualNumbers);
+  const rows = vnShown.length === 0
+    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔢</div><p>${virtualNumbers.length ? 'No numbers match this filter.' : 'No virtual numbers yet.'}</p></div></td></tr>`
+    : vnShown.map(v => `
       <tr>
         <td><strong>${escHtml(v.number)}</strong></td>
         <td>${escHtml(v.customerName || '—')}</td>
@@ -7469,7 +7638,8 @@ async function renderVirtualTab() {
       <div class="stat-card"><div class="stat-label">Total Numbers</div><div class="stat-value">${virtualNumbers.length}</div></div>
       <div class="stat-card"><div class="stat-label">Active</div><div class="stat-value" style="color:var(--success);">${active.length}</div></div>
     </div>
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+      ${vnBar}
       <button class="btn btn-primary" onclick="openNewVNModal()">+ New Virtual Number</button>
     </div>
     <div class="table-card">
@@ -7513,11 +7683,9 @@ function openNewVNModal(preselectCustomerId) {
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Platform</label>
+        <label class="form-label">Platform / IVR provider</label>
         <select class="form-input" id="vnPlatform">
-          <option value="elid">elid</option>
-          <option value="FreePBX">FreePBX</option>
-          <option value="Other">Other</option>
+          ${ivrPlatforms().map(p => `<option value="${escHtml(p)}">${escHtml(p)}</option>`).join('')}
         </select>
       </div>
       <div class="form-group">
@@ -7956,6 +8124,24 @@ async function renderSettingsTab() {
         </tr>
       </tbody></table></div>`);
 
+  // ── IVR / phone providers card (owner-only) — the editable provider list
+  // that populates the "Platform / IVR provider" dropdown on a virtual number
+  // (feature #10). ──
+  const ivrList = ivrPlatforms();
+  const ivrHtml = !isAdmin ? '' : settingsCard('ivr', '📞 IVR / phone providers',
+    `${ivrList.length} provider${ivrList.length === 1 ? '' : 's'} — options when adding a virtual number`, `
+      <div style="padding:10px 16px 2px;display:flex;flex-wrap:wrap;gap:6px;">
+        ${ivrList.map(p => `<span class="badge badge-vn">${escHtml(p)}</span>`).join('')}
+      </div>
+      <div style="padding:8px 16px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input class="form-input" id="ivrPlatformsInput" value="${escHtml(ivrList.join(', '))}"
+          placeholder="elid, FreePBX, OpenBPX, 3CX…" style="flex:1;min-width:240px;min-height:0;padding:8px 12px;font-size:13px;">
+        <button class="btn btn-outline btn-sm" onclick="saveIvrPlatforms()">💾 Save providers</button>
+      </div>
+      <div style="padding:0 16px 14px;font-size:11px;color:var(--muted);line-height:1.5;">
+        Comma-separated. These appear in the <strong>Platform / IVR provider</strong> dropdown when you add a virtual number.
+        Existing numbers keep their provider even if you remove it here.</div>`);
+
   // A category eyebrow above its cards — same idea as the sidebar's group
   // labels, so a section header reads as a CATEGORY and the cards below read as
   // its rows. The two levels are then unmistakably different (that's the "left
@@ -7991,6 +8177,8 @@ async function renderSettingsTab() {
     ${pricingCards}
 
     ${aliasesHtml ? sectionHead('Communications', 'email addresses for the business') + aliasesHtml : ''}
+
+    ${ivrHtml ? sectionHead('Connectivity', 'virtual-number &amp; IVR providers') + ivrHtml : ''}
 
     ${automationsHtml ? sectionHead('Automation', 'jobs the daily sweep runs for you') + automationsHtml : ''}`;
 }
@@ -8404,6 +8592,19 @@ async function saveHelperTabs() {
     values: { textValue: list.join(',') },
   });
   if (ok) toast('Helper access updated — applies on their next page load.', 'success');
+}
+
+// IVR / VN provider list (feature #10). Comma-separated; the server sanitises
+// and de-dups. Re-render so the chips + VN dropdown reflect the new list.
+async function saveIvrPlatforms() {
+  const raw = document.getElementById('ivrPlatformsInput')?.value || '';
+  const list = raw.split(',').map(s => s.trim()).filter(Boolean);
+  if (!list.length) { toast('Add at least one provider.', 'error'); return; }
+  const ok = await applySettingUpdate({
+    table: 'settings', key: 'ivr_platforms',
+    values: { textValue: list.join(',') },
+  });
+  if (ok) { toast('Providers updated.', 'success'); renderSettingsTab(); }
 }
 
 // ── Team management (owner-only; server enforces) ──

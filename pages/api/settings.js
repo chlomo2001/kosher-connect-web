@@ -181,6 +181,35 @@ async function handler(req, res) {
         return res.json({ success: true, warnings })
       }
 
+      // IVR / VN provider list (text CSV). Owner-managed so a new phone
+      // provider can be added without a code change (feature #10). Names are
+      // sanitised to a safe character set and de-duplicated case-insensitively.
+      if (table === 'settings' && key === 'ivr_platforms') {
+        const seen = new Set()
+        const list = []
+        for (const raw of String(values?.textValue || '').split(',')) {
+          const name = raw.replace(/[^\w .+\-\/&]/g, '').trim().slice(0, 40).trim()
+          if (!name) continue
+          const k = name.toLowerCase()
+          if (seen.has(k)) continue
+          seen.add(k); list.push(name)
+        }
+        if (!list.length) return res.status(400).json({ success: false, error: 'Add at least one provider.' })
+        if (list.length > 30) return res.status(400).json({ success: false, error: 'That is a lot of providers — keep it under 30.' })
+        const updated = await db.update('settings', `key=eq.ivr_platforms`, {
+          text_value: list.join(','),
+          updated_at: new Date().toISOString(),
+        })
+        if (!updated.length) {
+          await db.insert('settings', [{
+            key: 'ivr_platforms',
+            text_value: list.join(','),
+            description: 'IVR / phone providers a virtual number can use (owner-managed)',
+          }])
+        }
+        return res.json({ success: true, warnings, list })
+      }
+
       if (table === 'rental_rates') {
         const patch = {}
         for (const [field, type] of [['ratePerDay', 'money'], ['minCharge', 'money'], ['cap', 'money'], ['capPeriodDays', 'days'], ['vnWeekly', 'money'], ['vnPer30Days', 'money']]) {
