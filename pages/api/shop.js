@@ -125,6 +125,7 @@ async function handler(req, res) {
         ? b.lines
         : (b.itemId ? [{ itemId: b.itemId, qty: b.qty, imei: b.imei, total: b.total }] : [])
       if (!lines.length) return res.status(400).json({ success: false, error: 'Pick at least one item.' })
+      const clientRef = (typeof b.clientRef === 'string' && /^[\w-]{8,64}$/.test(b.clientRef)) ? b.clientRef : null
 
       const customerUuid = !b.customerId || b.customerId === 'walkin'
         ? await walkInCustomer()
@@ -151,15 +152,35 @@ async function handler(req, res) {
       }
 
       const method = METHODS.includes(b.method) ? b.method : 'cash'
-      let grandTotal = 0
-      for (const l of lines) {
+
+      // Compute + validate EVERY line's total before committing anything, so a bad
+      // (e.g. £0) line can't 400 mid-basket after earlier lines already posted to
+      // the ledger — the partial-commit bug. audit U3.
+      const computed = lines.map((l) => {
         const item = byId.get(String(l.itemId))
         const qty = Math.max(1, parseInt(l.qty, 10) || 1)
         const unit = Number(item.selling_price) || 0
         const overridden = lines.length === 1 ? Number(l.total) : NaN
         const total = Number.isFinite(overridden) && overridden >= 0 ? money(overridden) : money(unit * qty)
-        if (total <= 0) return res.status(400).json({ success: false, error: 'Total must be greater than £0.' })
+        return { l, item, qty, unit, total }
+      })
+      if (computed.some((c) => !(c.total > 0))) {
+        return res.status(400).json({ success: false, error: 'Every line total must be greater than £0.' })
+      }
 
+      // Idempotency: a full replay (retry / double-click) must not re-post. If the
+      // first line's ledger ref already exists, this basket already committed. audit U3.
+      if (clientRef) {
+        const dup = await db.select('ledger', `charge_reference=eq.${encodeURIComponent('SALE-' + clientRef + '-0')}&select=id&limit=1`)
+        if (dup.length) {
+          const balRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
+          return res.json({ success: true, duplicate: true, balance: balRows.length ? Number(balRows[0].balance) : 0 })
+        }
+      }
+
+      let grandTotal = 0
+      for (let i = 0; i < computed.length; i++) {
+        const { l, item, qty, unit, total } = computed[i]
         const [sale] = await db.insert('stock_sales', [{
           customer_id: customerUuid,
           stock_item_id: item.id,
@@ -176,10 +197,13 @@ async function handler(req, res) {
           updated_at: new Date().toISOString(),
         })
 
+        // Idempotent per-line reference (client token + index) so a retry can't
+        // double-charge the ledger; falls back to the sale id when no token is sent.
+        const saleRef = clientRef ? `${clientRef}-${i}` : sale.id
         const label = `${item.company || ''} ${item.model || ''}`.trim()
         await db.insertIgnoreDup('ledger', [{
           customer_id: customerUuid,
-          charge_reference: `SALE-${sale.id}`,
+          charge_reference: `SALE-${saleRef}`,
           entry_type: item.category === 'phone' ? 'phone_sale' : 'stock_sale',
           amount: -total,
           description: `${label}${qty > 1 ? ` × ${qty}` : ''}${l.imei ? ` — IMEI ${l.imei}` : ''}`,
@@ -187,7 +211,7 @@ async function handler(req, res) {
         if (b.paidNow) {
           await db.insertIgnoreDup('ledger', [{
             customer_id: customerUuid,
-            charge_reference: `PAY-SALE-${sale.id}`,
+            charge_reference: `PAY-SALE-${saleRef}`,
             entry_type: 'payment',
             amount: total,
             method,

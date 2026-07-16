@@ -4663,6 +4663,15 @@ function escHtml(str) {
 // name is shown.
 function nameHtml(str) { return `<bdi>${escHtml(str)}</bdi>`; }
 
+// Escape a value placed inside a single-quoted JS string in an inline handler
+// (onclick="fn('...')"). HTML-encoding ALONE is not enough there — the parser
+// decodes entities before the JS runs, so a ' in the value would still break out.
+// JS-escape backslash + quote first, then HTML-escape so it also survives the
+// attribute. Use for every user-controlled value passed to an inline handler. U8.
+function escJs(str) {
+  return escHtml(String(str == null ? '' : str).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+}
+
 // A consistent spinner + label for tab/section loading states.
 function loadingHtml(label = 'Loading…') {
   return `<div class="kc-loading"><span class="kc-logo-loader"><img src="/logo.png" alt="" width="34" height="34"></span><span>${escHtml(label)}</span></div>`;
@@ -5198,7 +5207,7 @@ async function openCheckinModal(bookingId) {
       ${pax.map((p, i) => `
         <div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12px;line-height:1.7;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <strong class="copy-val" style="font-size:13px;" title="Click to copy name" onclick="copyText('${escHtml(String(p.fullName||'')).replace(/'/g, "\\'")}','name')">${escHtml(p.fullName || '(no name)')}</strong>
+            <strong class="copy-val" style="font-size:13px;" title="Click to copy name" onclick="copyText('${escJs(p.fullName || '')}','name')">${escHtml(p.fullName || '(no name)')}</strong>
             <button type="button" class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;"
               onclick="copyText(paxCopyBlocks[${i}],'all details')">📋 Copy all</button>
           </div>
@@ -6407,18 +6416,35 @@ async function saveSale() {
     toast(`Cash given (${fmtGbp(given)}) is less than the total.`, 'error');
     return;
   }
-  const res = await kcFetch('/api/shop', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      op: 'sale',
-      lines: posBasket,
-      customerId: document.getElementById('posCustomer').value,
-      paidNow,
-      method: posMethod,
-    }),
-  }).then(r => r.json()).catch(() => null);
+  // Guard against a double-tap firing two sales; clientRef makes any retry
+  // idempotent server-side. audit U3.
+  if (!kcBeginWrite('sale')) return;
+  let res;
+  try {
+    res = await kcFetch('/api/shop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        op: 'sale',
+        lines: posBasket,
+        customerId: document.getElementById('posCustomer').value,
+        paidNow,
+        method: posMethod,
+        clientRef: kcRef(),
+      }),
+    }).then(r => r.json()).catch(() => null);
+  } finally {
+    kcEndWrite('sale');
+  }
   if (!res || !res.success) { toast(res?.error || 'Could not record the sale.', 'error'); return; }
+  if (res.duplicate) {
+    posBasket = [];
+    posRenderTiles(); posRenderBasket(); posRenderTender();
+    toast('Sale already recorded — no double charge.', 'info');
+    const scan = document.getElementById('posScan');
+    if (scan) { scan.value = ''; scan.focus(); }
+    return;
+  }
 
   // Stay in the till for the next customer: update local stock, clear the
   // basket, show the change banner, keep the scanner focused.
@@ -7621,9 +7647,9 @@ async function renderSettingsTab() {
             </td>
             <td style="white-space:nowrap;">
               <button class="action-btn" style="font-size:11px;"
-                onclick="openResetPasswordModal('${escHtml(m.id)}', '${escHtml(m.fullName || m.email)}')">🔑 Reset password</button>
+                onclick="openResetPasswordModal('${escHtml(m.id)}', '${escJs(m.fullName || m.email)}')">🔑 Reset password</button>
               <button class="action-btn danger" style="font-size:11px;"
-                onclick="removeTeamMember('${escHtml(m.id)}', '${escHtml(m.fullName || m.email)}', ${m.isYou})">✕ Remove${m.isYou ? ' (you)' : ''}</button></td>
+                onclick="removeTeamMember('${escHtml(m.id)}', '${escJs(m.fullName || m.email)}', ${m.isYou})">✕ Remove${m.isYou ? ' (you)' : ''}</button></td>
           </tr>`).join('')}
         <tr>
           <td><input class="form-input" id="tmName" placeholder="Full name" style="min-height:0;padding:6px 10px;font-size:13px;"></td>
