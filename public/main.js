@@ -7563,15 +7563,18 @@ function dashPaint(money, tasksList2, stillLoading) {
   const hebDate = hebrewDateString(now);
   const pad2 = (n) => String(n).padStart(2, '0');
   const clockHM = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
-  // One global 30s ticker keeps the dashboard clock's minute live (a CSS pulse
-  // dot shows it's live, so no ticking seconds). No-ops when off the dashboard.
+  const clockSS = pad2(now.getSeconds());
+  // One global 1s ticker keeps the dashboard clock live: the pulse dot beats
+  // and the seconds tick beside it. No-ops when off the dashboard.
   if (!window.__dashClockTimer) {
     window.__dashClockTimer = setInterval(() => {
       const el = document.getElementById('dashClock'); if (!el) return;
       const d = new Date(), p = (n) => String(n).padStart(2, '0');
       const b = el.querySelector('b');
       if (b) b.textContent = `${p(d.getHours())}:${p(d.getMinutes())}`;
-    }, 30000);
+      const s = el.querySelector('.dash-secs');
+      if (s) s.textContent = p(d.getSeconds());
+    }, 1000);
   }
 
   // ── Featured money card (dark navy) ──
@@ -7671,7 +7674,7 @@ function dashPaint(money, tasksList2, stillLoading) {
   content.innerHTML = `
     <div class="dash-head">
       <div>
-        <div class="dash-date"><span class="dash-clock" id="dashClock" title="Current time"><b>${clockHM}</b><span class="dash-pulse" aria-hidden="true"></span></span>&nbsp;·&nbsp;${enDate}${hebDate ? ` &nbsp;·&nbsp; <span class="heb">${hebDate}</span>` : ''}</div>
+        <div class="dash-date"><span class="dash-clock" id="dashClock" title="Current time"><b>${clockHM}</b><span class="dash-pulse" aria-hidden="true"></span><span class="dash-secs" id="dashSecs">${clockSS}</span></span>&nbsp;·&nbsp;${enDate}${hebDate ? ` &nbsp;·&nbsp; <span class="heb">${hebDate}</span>` : ''}</div>
         <div class="dash-greeting">${greeting}${staffFirstName ? ', ' + nameHtml(staffFirstName) : ''}.</div>
       </div>
       <div class="dash-actions">
