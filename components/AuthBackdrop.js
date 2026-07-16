@@ -9,8 +9,9 @@ import { useState, useRef, useEffect } from 'react'
 //   is "inspired by" the mark without ever forming it.
 // • Six time-of-day phases (Pre-dawn → Night) the operator can pick, or "Auto"
 //   which slowly drifts through them so the colours keep mixing.
-// • A faint scene sits under the burst: flight-route arcs high in the sky and
-//   telephone poles/wires receding to the horizon — travel + connectivity.
+// • A faint scene sits under the burst: a wireframe globe with aeroplane
+//   outlines orbiting it (travel) and a well-connected pole/wire "provider
+//   network" on the ground with several signals routing to the best line.
 // • The pointer acts like a charge: nearby rays are repelled and part around
 //   it (a static-electricity / magnet reorganisation), with a faint glow.
 // • Theme-aware, pauses when the tab is hidden, and renders a single static
@@ -60,41 +61,46 @@ export default function AuthBackdrop() {
       ds: 1.1 + Math.random() * 1.6,
     }))
 
-    // Faint "airline map" arcs high in the sky — clearly curved, dashed, with a
-    // little plane gliding along, so they read as flight paths (not ray tips).
-    // Positions kept as fractions so they survive resize.
-    const arcs = Array.from({ length: 4 }, () => {
-      const y = 0.07 + Math.random() * 0.15
-      return {
-        x1: -0.05 + Math.random() * 0.4, y1: y + (Math.random() - 0.5) * 0.06,
-        x2: 0.6 + Math.random() * 0.48, y2: y + (Math.random() - 0.5) * 0.06,
-        bow: 0.12 + Math.random() * 0.09, ph: Math.random() * 6.283,
-        sp: 0.00011 + Math.random() * 0.00008,
-      }
-    })
+    // A faint wireframe globe with small aeroplane OUTLINES of varying size
+    // orbiting it — the travel motif, up in the sky. Held as fractions.
+    const globe = { fx: 0.2, fy: 0.2, fr: 0.1 }
+    const planes = Array.from({ length: 7 }, (_, i) => ({
+      orbit: 1.35 + (i % 3) * 0.5 + Math.random() * 0.25,     // × globe radius
+      a0: Math.random() * 6.283, sp: 0.00007 + Math.random() * 0.00009,
+      dir: i % 2 ? 1 : -1, size: 6 + Math.random() * 9,
+    }))
+    // Unit aeroplane outline (nose at +x), built from a half-silhouette mirrored.
+    const PLANE_HALF = [
+      [1.0, 0], [0.2, 0.1], [-0.05, 0.52], [-0.22, 0.52], [-0.27, 0.13],
+      [-0.62, 0.13], [-0.74, 0.42], [-0.86, 0.42], [-0.9, 0],
+    ]
+    const PLANE = PLANE_HALF.concat(PLANE_HALF.slice(1, -1).reverse().map(([x, y]) => [x, -y]))
 
-    // Ground "provider network": scattered telephone poles with a wire mesh
-    // between neighbours, plus one highlighted route that "navigates" to the
-    // best-provider node — geometry built once, held as fractions.
-    const NODEN = 12
+    // Ground "provider network": scattered poles with a well-connected wire mesh
+    // (nearest neighbours + some long crossing links = crossdimensional
+    // intersections), and several routes each carrying their own signal pulse.
+    const NODEN = 15
     const nodes = Array.from({ length: NODEN }, (_, i) => {
-      const fx = 0.04 + (i / (NODEN - 1)) * 0.92 + (Math.random() - 0.5) * 0.06
-      return { fx: Math.min(0.97, Math.max(0.03, fx)), fy: 0.66 + Math.random() * 0.34 }
+      const fx = 0.03 + (i / (NODEN - 1)) * 0.94 + (Math.random() - 0.5) * 0.07
+      return { fx: Math.min(0.98, Math.max(0.02, fx)), fy: 0.64 + Math.random() * 0.36 }
     })
     const edges = []; const seenE = new Set()
+    const addEdge = (i, j) => {
+      if (i === j) return
+      const k = i < j ? i + '-' + j : j + '-' + i
+      if (!seenE.has(k)) { seenE.add(k); edges.push([i, j]) }
+    }
     for (let i = 0; i < NODEN; i++) {
       const near = nodes.map((n, j) => ({ j, d: Math.hypot(n.fx - nodes[i].fx, n.fy - nodes[i].fy) }))
         .filter((o) => o.j !== i).sort((a, b) => a.d - b.d)
-      for (const { j } of near.slice(0, 2)) {
-        const k = i < j ? i + '-' + j : j + '-' + i
-        if (!seenE.has(k)) { seenE.add(k); edges.push([i, j]) }
-      }
+      for (const { j } of near.slice(0, 3)) addEdge(i, j)     // denser mesh
     }
-    // Route: a greedy nearest-neighbour path threading pole to pole from a
-    // near-left node, so it reads as an organic "best route" (its far end is
-    // the highlighted best-provider node).
-    const route = (() => {
-      const start = nodes.map((n, i) => ({ i, s: n.fy - n.fx })).sort((a, b) => b.s - a.s)[0].i
+    for (let n = 0; n < 6; n++) {                              // long crossing links
+      addEdge(Math.floor(Math.random() * NODEN), Math.floor(Math.random() * NODEN))
+    }
+    // Several routes, each a greedy nearest-neighbour chain from a different seed,
+    // so multiple signals travel different paths (not one repeating dot).
+    const chain = (start) => {
       const seenN = new Set([start]); const path = [start]
       while (path.length < 6) {
         const c = nodes[path[path.length - 1]]; let best = -1, bd = Infinity
@@ -106,7 +112,13 @@ export default function AuthBackdrop() {
         if (best < 0) break; seenN.add(best); path.push(best)
       }
       return path
-    })()
+    }
+    const byScore = (f) => nodes.map((n, i) => ({ i, s: f(n) })).sort((a, b) => b.s - a.s)[0].i
+    const routes = [
+      { path: chain(byScore((n) => n.fy - n.fx)), sp: 0.00010, dir: 1, gold: true },   // near-left → best provider
+      { path: chain(byScore((n) => n.fy + n.fx)), sp: 0.00014, dir: -1, gold: false },  // near-right, reverse
+      { path: chain(byScore((n) => n.fy * 0.4 - Math.abs(n.fx - 0.5))), sp: 0.00008, dir: 1, gold: false },
+    ]
 
     let W = 0, H = 0, cx = 0, cy = 0, R = 0
     const resize = () => {
@@ -154,45 +166,52 @@ export default function AuthBackdrop() {
       g.addColorStop(1, rgba(base, 0))
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, H)
 
-      // Faint logo mark tucked into the bottom-left corner — a calm patch of the
+      // Faint logo mark tucked into the top-right corner — a calm patch of the
       // field, clear of the card and the busy ray convergence, so it reads as a
       // proper watermark rather than getting lost behind the sign-in box.
       if (logoReady) {
-        const lw = Math.min(W, H) * 0.14
+        const lw = Math.min(W, H) * 0.13
         const lh = lw * (logo.height / logo.width)
         const pad = Math.min(W, H) * 0.05
         ctx.save()
         ctx.globalAlpha = dk ? 0.11 : 0.08
-        ctx.drawImage(logo, pad, H - pad - lh, lw, lh)
+        ctx.drawImage(logo, W - pad - lw, pad, lw, lh)
         ctx.restore()
       }
 
-      // ── Faint flight paths high in the sky. Clearly curved + dashed, hollow
-      //    "airport" rings at each end and a small plane gliding along, so they
-      //    read as flights rather than continuations of the burst rays.
-      ctx.save(); ctx.lineWidth = 1
-      for (const ac of arcs) {
-        const x1 = ac.x1 * W, y1 = ac.y1 * H, x2 = ac.x2 * W, y2 = ac.y2 * H
-        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 - ac.bow * H
-        ctx.setLineDash([7, 7]); ctx.strokeStyle = rgba(cur.line, dk ? 0.2 : 0.15)
-        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(mx, my, x2, y2); ctx.stroke()
-        ctx.setLineDash([]); ctx.strokeStyle = rgba(cur.line, dk ? 0.42 : 0.34)
-        ctx.beginPath(); ctx.arc(x1, y1, 2.4, 0, 6.283); ctx.stroke()
-        ctx.beginPath(); ctx.arc(x2, y2, 2.4, 0, 6.283); ctx.stroke()
-        const u = 0.5 + 0.5 * Math.sin(t * ac.sp + ac.ph)
-        const bx = (1 - u) * (1 - u) * x1 + 2 * (1 - u) * u * mx + u * u * x2
-        const by = (1 - u) * (1 - u) * y1 + 2 * (1 - u) * u * my + u * u * y2
-        const ang = Math.atan2(2 * (1 - u) * (my - y1) + 2 * u * (y2 - my), 2 * (1 - u) * (mx - x1) + 2 * u * (x2 - mx))
-        ctx.save(); ctx.translate(bx, by); ctx.rotate(ang)
-        ctx.fillStyle = rgba(cur.dot, dk ? 0.85 : 0.7)
-        ctx.beginPath(); ctx.moveTo(5, 0); ctx.lineTo(-3, 3); ctx.lineTo(-3, -3); ctx.closePath(); ctx.fill()
-        ctx.restore()
+      // ── Faint wireframe globe with aeroplane OUTLINES of varying size orbiting
+      //    it — the travel motif, kept up in the sky and away from the rays.
+      const gX = globe.fx * W, gY = globe.fy * H, gR = globe.fr * Math.min(W, H)
+      ctx.save(); ctx.lineWidth = 1; ctx.strokeStyle = rgba(cur.line, dk ? 0.2 : 0.15)
+      ctx.beginPath(); ctx.arc(gX, gY, gR, 0, 6.283); ctx.stroke()
+      for (let k = -2; k <= 2; k++) {                          // latitudes
+        const yy = gY + (k / 3) * gR, rx = gR * Math.cos(Math.asin(Math.max(-1, Math.min(1, (k / 3)))))
+        ctx.beginPath(); ctx.ellipse(gX, yy, rx, rx * 0.16, 0, 0, 6.283); ctx.stroke()
+      }
+      for (let k = 0; k < 3; k++) {                            // meridians
+        ctx.beginPath(); ctx.ellipse(gX, gY, gR * (0.34 + k * 0.33), gR, 0, 0, 6.283); ctx.stroke()
+      }
+      // planes on faint orbits
+      const drawPlane = (x, y, s, ang, a) => {
+        ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(s, s)
+        ctx.lineWidth = 1 / s; ctx.strokeStyle = rgba(cur.dot, a)
+        ctx.beginPath()
+        PLANE.forEach(([px2, py2], i) => (i ? ctx.lineTo(px2, py2) : ctx.moveTo(px2, py2)))
+        ctx.closePath(); ctx.stroke(); ctx.restore()
+      }
+      for (const p of planes) {
+        const orb = gR * p.orbit, ang = p.a0 + t * p.sp * p.dir
+        const x = gX + Math.cos(ang) * orb, y = gY + Math.sin(ang) * orb * 0.7
+        ctx.setLineDash([2, 6]); ctx.strokeStyle = rgba(cur.line, dk ? 0.09 : 0.07)
+        ctx.beginPath(); ctx.ellipse(gX, gY, orb, orb * 0.7, 0, 0, 6.283); ctx.stroke(); ctx.setLineDash([])
+        drawPlane(x, y, p.size, ang + p.dir * Math.PI / 2, dk ? 0.6 : 0.5)
       }
       ctx.restore()
 
-      // ── Faint "provider network" on the ground: scattered telephone poles
-      //    (double crossarms), a wire mesh between neighbours, and one gold
-      //    route weaving to the best-provider node — "we find you the best line".
+      // ── Faint "provider network" on the ground: scattered double-crossarm
+      //    poles, a well-connected wire mesh (neighbours + long crossing links),
+      //    and several routes each carrying their own signal — "we navigate you
+      //    to the best line". The primary (gold) route ends at the best provider.
       const NX = (n) => n.fx * W, NY = (n) => n.fy * H
       const poleH = (n) => H * 0.13 * ((n.fy - 0.66) / 0.34) + 5
       const topY = (n) => NY(n) - poleH(n)
@@ -210,19 +229,23 @@ export default function AuthBackdrop() {
         ctx.beginPath(); ctx.moveTo(gx - arm, a1); ctx.lineTo(gx + arm, a1); ctx.stroke()
         ctx.beginPath(); ctx.moveTo(gx - arm * 0.7, a2); ctx.lineTo(gx + arm * 0.7, a2); ctx.stroke()
       }
-      if (route.length >= 2) {
-        ctx.strokeStyle = rgba(GOLD, dk ? 0.34 : 0.4); ctx.lineWidth = 1.2
+      for (const rt of routes) {
+        if (rt.path.length < 2) continue
+        const col = rt.gold ? GOLD : cur.dot
+        ctx.strokeStyle = rgba(col, rt.gold ? (dk ? 0.34 : 0.4) : (dk ? 0.24 : 0.2)); ctx.lineWidth = rt.gold ? 1.2 : 1
         ctx.beginPath()
-        route.forEach((idx, k) => { const n = nodes[idx]; k ? ctx.lineTo(NX(n), topY(n)) : ctx.moveTo(NX(n), topY(n)) })
+        rt.path.forEach((idx, k) => { const n = nodes[idx]; k ? ctx.lineTo(NX(n), topY(n)) : ctx.moveTo(NX(n), topY(n)) })
         ctx.stroke()
-        // Travelling pulse along the route.
-        const s = (t * 0.00009) % 1, segF = s * (route.length - 1)
-        const si = Math.min(route.length - 2, Math.floor(segF)), lf = segF - si
-        const A = nodes[route[si]], B = nodes[route[si + 1]]
-        ctx.fillStyle = rgba(GOLD, dk ? 0.85 : 0.72)
-        ctx.beginPath(); ctx.arc(lerp(NX(A), NX(B), lf), lerp(topY(A), topY(B), lf), 2.2, 0, 6.283); ctx.fill()
-        // Best-provider node: a soft pulsing ring at the far end.
-        const dest = nodes[route[route.length - 1]], pr = 4 + 1.6 * (0.5 + 0.5 * Math.sin(t * 0.004))
+        const s = ((t * rt.sp * rt.dir) % 1 + 1) % 1, segF = s * (rt.path.length - 1)
+        const si = Math.min(rt.path.length - 2, Math.floor(segF)), lf = segF - si
+        const A = nodes[rt.path[si]], B = nodes[rt.path[si + 1]]
+        ctx.fillStyle = rgba(col, dk ? 0.85 : 0.72)
+        ctx.beginPath(); ctx.arc(lerp(NX(A), NX(B), lf), lerp(topY(A), topY(B), lf), rt.gold ? 2.4 : 1.9, 0, 6.283); ctx.fill()
+      }
+      // Best-provider node: a soft pulsing ring at the gold route's far end.
+      const gr0 = routes.find((r) => r.gold && r.path.length >= 2)
+      if (gr0) {
+        const dest = nodes[gr0.path[gr0.path.length - 1]], pr = 4 + 1.6 * (0.5 + 0.5 * Math.sin(t * 0.004))
         ctx.strokeStyle = rgba(GOLD, dk ? 0.7 : 0.6); ctx.lineWidth = 1.2
         ctx.beginPath(); ctx.arc(NX(dest), topY(dest), pr, 0, 6.283); ctx.stroke()
         ctx.fillStyle = rgba(GOLD, dk ? 0.85 : 0.72)

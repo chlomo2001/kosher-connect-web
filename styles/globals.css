@@ -17,6 +17,7 @@
      for hours while staying bright and clean. Cards sit a touch brighter so
      they still lift off the canvas. */
   --bg: #f7f3ea;                /* warm ivory app canvas */
+  --dot: rgba(20, 30, 45, 0.05);/* faint dot-grid texture on the app canvas */
   --surface: #fffdf8;           /* warm white cards */
   --surface2: #f1ebdd;          /* table headers, subtle fills */
   --panel: #f1ebdd;             /* recessed sub-panels */
@@ -47,7 +48,7 @@
   --sim: #0e7490;               /* #53 — SIM gets its own teal so "SIM" ≠ "warning" */
   --danger: #df1b41;            /* Stripe red */
   --magenta: #a435c9;
-  --success: #0e8a52;           /* readable green on light */
+  --success: #0c8049;           /* readable green on light — AA (4.9:1) on cards */
 
   /* #77 — 4/8/12/16/24 spacing scale so paddings/gaps stop being re-typed */
   --space-1: 4px;  --space-2: 8px;  --space-3: 12px;  --space-4: 16px;  --space-6: 24px;
@@ -77,6 +78,7 @@
    won't flip, but every surface, text and border does. */
 :root[data-theme="dark"] {
   --bg: #0a0e16;                /* near-black canvas */
+  --dot: rgba(255, 255, 255, 0.045);/* faint dot-grid texture on the dark canvas */
   --surface: #151d29;          /* cards (clearer step above canvas) */
   --surface2: #0e131c;
   --panel: #0d121b;            /* recessed — sits below the card */
@@ -195,12 +197,15 @@ body {
 
 .nav-item {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 20px; font-size: 14px; font-weight: 300;
+  margin: 2px 10px; padding: 10px 12px; border-radius: 11px;
+  font-size: 14px; font-weight: 300;
   color: rgba(255,255,255,0.65); cursor: pointer;
-  border-left: 3px solid transparent; transition: all 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
-.nav-item:hover { color: #ffffff; background: rgba(255,255,255,0.06); }
-.nav-item.active { color: #ffffff; border-left-color: var(--accent2); background: rgba(0, 96, 168,0.16); }
+.nav-item:hover { color: #ffffff; background: rgba(255,255,255,0.07); }
+/* Rimless selected state — a soft frosted panel (no accent bar), like the
+   Travel-Planner reference: the highlight reads as a calm shade, not a rule. */
+.nav-item.active { color: #ffffff; background: rgba(255,255,255,0.13); }
 .nav-icon { width: 20px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0.85; }
 .nav-icon svg { display: block; }
 .nav-item.active .nav-icon, .nav-item:hover .nav-icon { opacity: 1; }
@@ -212,7 +217,7 @@ body {
   letter-spacing: 0.08em; text-transform: uppercase;
   color: rgba(255,255,255,0.35);
 }
-.nav-item.nav-nested { padding-left: 30px; }
+.nav-item.nav-nested { padding-left: 26px; }
 
 /* Settings body: a category eyebrow above its cards, mirroring .nav-group-label
    above. The section header is a small uppercase indigo label with a hairline
@@ -324,7 +329,14 @@ body {
 .btn-sm { padding: 6px 12px; font-size: 13px; }
 
 /* ─── CONTENT ─── */
-.content { flex: 1; overflow-y: auto; padding: 32px 40px; }
+.content {
+  flex: 1; overflow-y: auto; padding: 32px 40px;
+  /* Base44-style faint dot-grid texture across the working canvas. Cards sit
+     on their own surface, so the dots read only in the gaps between them. */
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
+  background-size: 22px 22px; background-position: -1px -1px;
+}
 
 /* POS takeover — the till owns the whole screen (sidebar + topbar hidden),
    like a real shopfloor POS. body.pos-mode is set/cleared by the till. */
