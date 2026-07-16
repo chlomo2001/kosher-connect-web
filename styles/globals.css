@@ -720,6 +720,12 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .rentals-split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .rentals-split-col { display: flex; flex-direction: column; }
 .rentals-split-col .table-wrap { overflow-y: auto; max-height: 420px; }
+/* The rentals column carries a filter/sort toolbar; the Phone Inventory column
+   carries an equal-height spacer so both tables line up side-by-side. The
+   shared min-height guarantees they match; the spacer is dropped once the two
+   columns stack (≤1150px), where alignment no longer applies. */
+.rentals-filter-row { min-height: 38px; margin-bottom: 10px; }
+@media (max-width: 1150px) { .rentals-inv-spacer { display: none; } }
 
 /* CUSTOMER SEARCH DROPDOWN */
 .customer-search-wrap { position: relative; }

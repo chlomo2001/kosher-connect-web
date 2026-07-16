@@ -1179,8 +1179,8 @@ function renderRentalsTab() {
       <button class="btn btn-outline" onclick="openManagePhonesModal()">⚙️ Manage Phones</button>
       <button class="btn ${rentalView === 'calendar' ? 'btn-primary' : 'btn-outline'}"
         onclick="rentalView = rentalView === 'calendar' ? 'list' : 'calendar'; renderRentalsTab();">📅 Availability</button>
-      <input class="search-box" style="width:240px;" type="text" id="rentalSearch"
-        placeholder="🔍 Search customer or phone..."
+      <input class="search-box" style="width:280px;" type="text" id="rentalSearch"
+        placeholder="Search customer or phone…"
         value="${rentalSearchTerm}"
         oninput="rentalSearchTerm=this.value; renderRentalRows()">
     </div>
@@ -1192,7 +1192,7 @@ function renderRentalsTab() {
         <div class="section-header">
           <div class="section-title">Active & Recent Rentals</div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
+        <div class="rentals-filter-row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           <input type="text" class="search-box" id="filterCustomer" placeholder="Filter by customer..."
             style="width:180px;" value="${filterCustomer}"
             oninput="filterCustomer=this.value;renderRentalRows()">
@@ -1236,6 +1236,7 @@ function renderRentalsTab() {
         <div class="section-header">
           <div class="section-title">Phone Inventory</div>
         </div>
+        <div class="rentals-filter-row rentals-inv-spacer" aria-hidden="true"></div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -4323,8 +4324,8 @@ function renderSimsTab() {
 
     <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:center;">
       <button class="btn btn-primary" onclick="openAddSimModal()">+ New SIM Plan</button>
-      <input class="search-box" style="width:220px;" type="text" id="simSearch"
-        placeholder="🔍 Search customer, number, provider..."
+      <input class="search-box" style="width:260px;" type="text" id="simSearch"
+        placeholder="Search customer, number, provider…"
         value="${escHtml(simSearchTerm)}"
         oninput="simSearchTerm=this.value; renderSimRows()">
       <select class="form-input" style="width:160px;" onchange="simFilterPay=this.value; renderSimRows()">
