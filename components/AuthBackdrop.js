@@ -104,14 +104,16 @@ export default function AuthBackdrop() {
       g.addColorStop(1, rgba(base, 0))
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, H)
 
-      // Faint logo mark, small and low, woven under the rays so it reads as a
-      // watermark within the burst rather than a badge sitting on top.
+      // Faint logo mark tucked into the bottom-right corner — a calm patch of
+      // the field, clear of the card and the busy ray convergence, so it reads
+      // as a proper watermark rather than getting lost behind the sign-in box.
       if (logoReady) {
-        const lw = Math.min(W, H) * 0.2
+        const lw = Math.min(W, H) * 0.14
         const lh = lw * (logo.height / logo.width)
+        const pad = Math.min(W, H) * 0.05
         ctx.save()
-        ctx.globalAlpha = dk ? 0.08 : 0.06
-        ctx.drawImage(logo, cx - lw / 2, H * 0.72 - lh / 2, lw, lh)
+        ctx.globalAlpha = dk ? 0.11 : 0.08
+        ctx.drawImage(logo, W - pad - lw, H - pad - lh, lw, lh)
         ctx.restore()
       }
 
