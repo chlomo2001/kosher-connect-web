@@ -1,41 +1,46 @@
 /* ============================================================
-   KosherConnect UI — Stripe-inspired design system
-   Stripe navy ink (#0A2540) on a light-gray canvas · exact
-   Stripe indigo (#635BFF) · Inter 300 display with tight tracking ·
-   tabular figures on money · hairline borders (#E2E8F0) ·
-   flat cards (rounded-md, crisp micro-shadow) · dark-navy sidebar.
-   No gradients, glassmorphic blur, or glow rings.
+   KosherConnect UI — logo-led design system
+   Navy ink (#0A2540) on a WARM IVORY paper canvas (#F7F3EA — a
+   whisper of the logo's gold, calmer than white for long sessions) ·
+   logo azure blue (#0060A8) accent + gold highlights · Inter 300
+   display with tight tracking · tabular figures on money · warm
+   hairline borders · flat cards (rounded-md, crisp micro-shadow) ·
+   dark-navy sidebar. No gradients, glassmorphic blur, or glow rings.
    ============================================================ */
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
   /* ── Surfaces — light-gray app canvas, white cards, flat recessed panels ── */
-  --bg: #f6f9fc;                /* app canvas (Stripe #F6F9FC) */
-  --surface: #ffffff;           /* cards */
-  --surface2: #f6f9fc;          /* table headers, subtle fills */
-  --panel: #f6f9fc;             /* recessed sub-panels */
-  --panel-2: #f8fafc;           /* alt sub-panel (slate-50) */
-  --bg-secondary: #f6f9fc;
-  --canvas-cream: #fbf4e6;      /* warm accent fill (SIM · hebrew dates) */
-  --border: #e2e8f0;            /* hairline (slate-200) */
-  --border-subtle: #f1f5f9;     /* faint divider (slate-100) */
-  --border-input: #cbd5e1;      /* input hairline (slate-300) */
+  /* Warm "paper" canvas — a whisper of the logo's gold in off-white. Pure
+     white (#fff) glares over long sessions; this warm ivory is calmer to read
+     for hours while staying bright and clean. Cards sit a touch brighter so
+     they still lift off the canvas. */
+  --bg: #f7f3ea;                /* warm ivory app canvas */
+  --surface: #fffdf8;           /* warm white cards */
+  --surface2: #f1ebdd;          /* table headers, subtle fills */
+  --panel: #f1ebdd;             /* recessed sub-panels */
+  --panel-2: #f5efe2;           /* alt sub-panel */
+  --bg-secondary: #f1ebdd;
+  --canvas-cream: #fbf1de;      /* warm accent fill (SIM · hebrew dates) */
+  --border: #e7dece;            /* warm hairline */
+  --border-subtle: #f0e9da;     /* faint warm divider */
+  --border-input: #d8ceba;      /* warm input hairline */
 
-  /* ── Brand — exact Stripe indigo, navy ink ── */
-  --accent: #635bff;            /* primary indigo (#635BFF) */
-  --accent2: #7a73ff;           /* indigo-soft */
-  --primary-deep: #0a2540;      /* button hover → Stripe navy */
+  /* ── Brand — the logo's own colours: azure blue + gold, navy ink ── */
+  --accent: #0060a8;            /* logo azure blue (primary) */
+  --accent2: #1c7bc4;           /* blue-soft */
+  --primary-deep: #0a2540;      /* button hover → navy */
   --primary-press: #061a2e;     /* button active */
-  --primary-subdued: #c7c4ff;   /* light indigo fill */
-  --accent-wash: #f4f4ff;       /* faintest indigo panel */
-  --brand-dark: #0a2540;        /* sidebar dark track — Stripe navy */
+  --primary-subdued: #b6d4ea;   /* light blue fill */
+  --accent-wash: #eef4fa;       /* faintest blue panel */
+  --brand-dark: #0a2540;        /* sidebar dark track — navy */
   --vn: #7c3aed;                /* virtual-number violet */
 
-  /* ── Text — Stripe navy ── */
+  /* ── Text — navy ink on warm paper ── */
   --text: #0a2540;              /* ink / display */
-  --ink-secondary: #425466;     /* body */
-  --muted: #64748b;             /* slate-500 */
+  --ink-secondary: #46505c;     /* body (warm slate) */
+  --muted: #6a6d70;             /* muted (warm slate, AA on ivory) */
 
   /* ── Semantic ── */
   --gold: #7c5d24;              /* warm accent text (AA on cream) */
@@ -56,7 +61,7 @@
   /* ── Elevation — cards carry a tight crisp micro-shadow; overlays a soft neutral one ── */
   --shadow-1: 0 1px 1px rgba(10, 37, 64, 0.04), 0 1px 2px rgba(10, 37, 64, 0.06);
   --shadow-2: 0 1px 3px rgba(10, 37, 64, 0.10), 0 12px 30px rgba(10, 37, 64, 0.14);
-  --ring: 0 0 0 3px rgba(99, 91, 255, 0.20);   /* focus ring */
+  --ring: 0 0 0 3px rgba(0, 96, 168, 0.22);   /* focus ring */
 
   /* ── Motion scale — named durations + easing so transitions stop being
      magic numbers and read as one designed system. Consumed by buttons,
@@ -82,12 +87,12 @@
   --border-subtle: #1e2733;
   --border-input: #3a4a5b;
 
-  --accent: #8b84ff;           /* lightened Stripe indigo for dark */
-  --accent2: #a29bff;
-  --primary-deep: #a29bff;     /* on dark, button hover lightens */
-  --primary-press: #b7b1ff;
-  --primary-subdued: #2f2c5c;
-  --accent-wash: #171a2e;
+  --accent: #57a6e6;           /* lightened logo blue for dark */
+  --accent2: #7dbdf0;
+  --primary-deep: #7dbdf0;     /* on dark, button hover lightens */
+  --primary-press: #a0d2f6;
+  --primary-subdued: #143247;
+  --accent-wash: #10202e;
   --brand-dark: #0d1420;       /* sidebar track */
   --vn: #a78bfa;
 
@@ -104,7 +109,7 @@
 
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
   --shadow-2: 0 1px 3px rgba(0, 0, 0, 0.5), 0 14px 34px rgba(0, 0, 0, 0.55);
-  --ring: 0 0 0 3px rgba(139, 132, 255, 0.30);
+  --ring: 0 0 0 3px rgba(87, 166, 230, 0.32);
 }
 :root[data-theme="dark"] body { background: var(--bg); color: var(--text); }
 html { color-scheme: light; }
@@ -195,7 +200,7 @@ body {
   border-left: 3px solid transparent; transition: all 0.15s;
 }
 .nav-item:hover { color: #ffffff; background: rgba(255,255,255,0.06); }
-.nav-item.active { color: #ffffff; border-left-color: var(--accent2); background: rgba(99, 91, 255,0.16); }
+.nav-item.active { color: #ffffff; border-left-color: var(--accent2); background: rgba(0, 96, 168,0.16); }
 .nav-icon { width: 20px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0.85; }
 .nav-icon svg { display: block; }
 .nav-item.active .nav-icon, .nav-item:hover .nav-icon { opacity: 1; }
@@ -399,7 +404,7 @@ tbody tr { cursor: pointer; transition: background 0.1s; }
 tbody tr:hover td { background: var(--bg); }
 /* Inline customer card row — not a data row, no hover/stripe treatment. */
 #detailRow > td, #detailRow:hover > td { background: transparent; padding: 8px 0 14px; cursor: default; }
-tbody tr.selected td { background: rgba(99, 91, 255, 0.05); }
+tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 
 .customer-name { font-weight: 500; letter-spacing: 0; }
 .customer-email { color: var(--muted); font-size: 13px; letter-spacing: -0.13px; }
@@ -414,7 +419,7 @@ tbody tr.selected td { background: rgba(99, 91, 255, 0.05); }
   margin: 1px 2px;
 }
 .badge-active { background: rgba(14,138,82,0.14); color: #0a6e3f; } /* audit U16 — darker green + stronger tint to clear AA contrast on 11px text */
-.badge-rental { background: rgba(99,91,255,0.10); color: var(--accent); }
+.badge-rental { background: rgba(0,96,168,0.10); color: var(--accent); }
 .badge-sim { background: rgba(14,116,144,0.10); color: var(--sim); }
 .badge-vn { background: rgba(124,58,237,0.11); color: var(--vn); }
 .badge-booking { background: rgba(2,132,199,0.11); color: #0369a1; }
@@ -502,7 +507,7 @@ tbody tr.selected td { background: rgba(99, 91, 255, 0.05); }
 /* Shared compact filter/sort selects (feature #4) — the two-dropdown control
    every list tab carries, matching the Customers-tab styling. */
 .kc-fs-sel { width: auto; min-width: 150px; padding: 6px 10px; font-size: 13px; min-height: 0; }
-.form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.12); }
+.form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0, 96, 168, 0.12); }
 .form-input.error { border-color: var(--danger); }
 .form-input::placeholder { color: var(--muted); }
 
@@ -609,7 +614,7 @@ tbody tr.selected td { background: rgba(99, 91, 255, 0.05); }
 }
 .card-close:hover { background: var(--bg-secondary); color: var(--text); }
 .btn-rental { background: var(--accent-wash); color: var(--accent); border: 1px solid var(--primary-subdued); }
-.btn-rental:hover { background: rgba(99,91,255,0.12); border-color: var(--accent); }
+.btn-rental:hover { background: rgba(0,96,168,0.12); border-color: var(--accent); }
 .btn-sim { background: rgba(14,116,144,0.10); color: var(--sim); border: 1px solid rgba(14,116,144,0.30); }
 .btn-sim:hover { border-color: var(--sim); }
 .btn-vn { background: rgba(124,58,237,0.09); color: var(--vn); border: 1px solid rgba(124,58,237,0.28); }
@@ -727,7 +732,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   cursor: pointer; color: var(--accent); font-weight: 500;
   border-bottom: 1px dashed var(--accent);
   border-radius: 4px; padding: 1px 19px 1px 5px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23635bff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%230060a8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 3px center; background-size: 11px;
   transition: background-color 0.12s, border-color 0.12s;
   white-space: nowrap;
@@ -760,7 +765,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 }
 .customer-dropdown.open { display: block; }
 .customer-dropdown-item { padding: 9px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid var(--border); }
-.customer-dropdown-item:hover { background: rgba(99, 91, 255,0.06); color: var(--accent); }
+.customer-dropdown-item:hover { background: rgba(0, 96, 168,0.06); color: var(--accent); }
 .customer-dropdown-item:last-child { border-bottom: none; }
 .customer-dropdown-empty { padding: 9px 12px; font-size: 13px; color: var(--muted); }
 
@@ -882,7 +887,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
     radial-gradient(38% 52% at 20% 28%, #7A5CFF 0%, rgba(122,92,255,0) 60%),
     radial-gradient(32% 46% at 64% 16%, #00D4FF 0%, rgba(0,212,255,0) 62%),
     radial-gradient(42% 52% at 82% 40%, #FF6BCB 0%, rgba(255,107,203,0) 60%),
-    radial-gradient(48% 58% at 44% 74%, #635BFF 0%, rgba(99,91,255,0) 64%),
+    radial-gradient(48% 58% at 44% 74%, #0060a8 0%, rgba(0,96,168,0) 64%),
     radial-gradient(30% 40% at 90% 82%, #FFB86B 0%, rgba(255,184,107,0) 60%);
   animation: loginDrift 22s ease-in-out infinite alternate;
 }
@@ -1011,7 +1016,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 8px 10px;
   cursor: pointer; background: var(--surface); user-select: none;
 }
-.pos-tile:hover { border-color: var(--accent); background: rgba(99, 91, 255, 0.05); }
+.pos-tile:hover { border-color: var(--accent); background: rgba(0, 96, 168, 0.05); }
 .pos-tile:active { transform: scale(0.97); }
 
 /* Full-screen till: item grid on the left, receipt + tender on the right.
@@ -1090,7 +1095,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .cal-phone { text-align: left !important; white-space: nowrap; padding: 4px 10px 4px 0 !important; font-size: 12px; position: sticky; left: 0; background: var(--surface); }
 .cal-cell { width: 22px; height: 24px; border: 1px solid var(--border); padding: 0 !important; }
 .cal-free { background: var(--surface); cursor: pointer; }
-.cal-free:hover { background: rgba(99, 91, 255, 0.12); }
+.cal-free:hover { background: rgba(0, 96, 168, 0.12); }
 .cal-active  { background: var(--accent); cursor: pointer; }
 .cal-booked  { background: #e8b93c; cursor: pointer; }
 .cal-overdue { background: var(--danger); cursor: pointer; }
@@ -1140,7 +1145,7 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .task-suggest {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   margin: 8px 0 0 25px; padding: 7px 10px; border-radius: 8px;
-  background: rgba(99, 91, 255, 0.06); border: 1px solid rgba(99, 91, 255, 0.18);
+  background: rgba(0, 96, 168, 0.06); border: 1px solid rgba(0, 96, 168, 0.18);
   font-size: 12px; color: var(--text);
 }
 

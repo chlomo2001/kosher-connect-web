@@ -98,6 +98,15 @@ export default function AuthBackdrop() {
       g.addColorStop(1, rgba(base, 0))
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, H)
 
+      // Faint "KC" monogram woven into the field — the rays draw over it, so
+      // it reads as part of the burst rather than a sticker on top.
+      ctx.save()
+      ctx.font = `800 ${Math.round(Math.min(W, H) * 0.5)}px Inter, system-ui, sans-serif`
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+      ctx.fillStyle = rgba(mix(cur.line, base, 0.5), dk ? 0.09 : 0.07)
+      ctx.fillText('KC', cx, H * 0.46)
+      ctx.restore()
+
       ctx.lineWidth = 1
       const lineA = dk ? 0.24 : 0.16
       const bendK = Math.min(W, H) * 0.34
