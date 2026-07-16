@@ -995,10 +995,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .dash-date .heb { color: var(--gold); text-transform: none; letter-spacing: 0; font-size: 12px; }
 /* Live clock — sits ahead of the date. A small gold pulse (matching the Hebrew
    date's gold) shows it's live, instead of ticking seconds in a clashing hue. */
-.dash-clock { text-transform: none; letter-spacing: 0; display: inline-flex; align-items: center; }
+.dash-clock { text-transform: none; letter-spacing: 0; display: inline-flex; align-items: baseline; }
 .dash-clock b { font-size: 15px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: 0.4px; }
-.dash-pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); margin-left: 8px; animation: dashPulse 1.7s ease-in-out infinite; }
-.dash-secs { font-size: 12px; font-weight: 600; color: var(--gold); font-variant-numeric: tabular-nums; margin-left: 5px; }
+.dash-pulse { align-self: center; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); margin-left: 8px; animation: dashPulse 1.7s ease-in-out infinite; }
+.dash-secs { align-self: baseline; font-size: 10px; font-weight: 400; color: var(--gold); opacity: 0.6; font-variant-numeric: tabular-nums; margin-left: 4px; letter-spacing: 0.3px; }
 @keyframes dashPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.28; transform: scale(0.66); } }
 @media (prefers-reduced-motion: reduce) { .dash-pulse { animation: none; } }
 .dash-greeting { font-size: 40px; font-weight: 300; letter-spacing: -1px; line-height: 1.08; }

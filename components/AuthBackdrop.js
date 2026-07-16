@@ -22,19 +22,25 @@ const PHASES = [
   { id: 'night', label: 'Night', core: '#22345c', line: '#2a6fb0', dot: '#c09060' },
 ]
 
-// Hub cities (lon, lat) and the intercontinental links between them.
+// Hub cities (lon, lat). Indices: 0 NYC, 1 London, 2 Tel-Aviv, 3 Dubai,
+// 4 Tokyo, 5 LA, 6 São Paulo, 7 Sydney, 8 Joburg, 9 Mumbai, 10 Paris,
+// 11 Beijing, 12 Moscow, 13 Singapore.
 const CITIES = [
   [-74, 40.7], [-0.1, 51.5], [34.8, 32.1], [55.3, 25.2], [139.7, 35.7],
   [-118.2, 34], [-46.6, -23.5], [151.2, -33.9], [28, -26.2], [72.8, 19],
   [2.3, 48.9], [116.4, 39.9], [37.6, 55.7], [103.8, 1.35],
 ]
-// [i, j, gold?] — a couple of "flight" links carry a little plane.
-const LINKS = [
-  [2, 1, 1], [2, 0, 0], [2, 3, 0], [1, 0, 0], [1, 10, 0], [3, 9, 0],
-  [3, 13, 0], [13, 4, 0], [11, 4, 0], [0, 5, 0], [0, 6, 0], [9, 13, 0],
-  [8, 2, 0], [7, 13, 0], [12, 1, 0], [2, 4, 0],
+// Flight routes [i, j] — carry a little plane, drawn airport-to-airport (from
+// the ground node, no signal pulse). A distinct set from the signal network.
+const FLIGHTS = [
+  [0, 1], [1, 3], [3, 4], [5, 0], [3, 7], [9, 13], [2, 10], [4, 7],
 ]
-const FLIGHT_LINKS = [1, 3, 7, 9, 14]  // indices into LINKS that carry a plane
+// Signal links [i, j, gold?] — carry a travelling data pulse, drawn tower-to-
+// tower (tip-to-tip, off the mast top). The "phone network", no planes.
+const SIGNALS = [
+  [2, 3, 1], [2, 1, 0], [3, 9, 0], [13, 11, 0], [8, 2, 1], [12, 1, 0],
+  [4, 13, 0], [6, 0, 0], [11, 4, 0], [5, 6, 0], [1, 10, 0],
+]
 
 export default function AuthBackdrop() {
   const canvasRef = useRef(null)
@@ -143,16 +149,20 @@ export default function AuthBackdrop() {
         ctx.beginPath(); ctx.arc(tx, ty, ry.ds, 0, 6.2832); ctx.fill()
       }
 
-      // 2) Globe disc — a lit atmosphere so the sphere reads over the halo.
+      // 2) Globe disc — the OCEAN: a subtly tinted sphere (a warm gold sheen on
+      //    dark, a cool azure on light). Kept dim so the land + network read
+      //    clearly over it.
       ctx.save(); ctx.beginPath(); ctx.arc(gx, gy, Rg, 0, 6.2832); ctx.clip()
+      const oceanHue = dk ? GOLD : cur.line
+      const ocean = mix(cur.core, oceanHue, dk ? 0.4 : 0.32)
       const gg = ctx.createRadialGradient(gx - Rg * 0.35, gy - Rg * 0.35, Rg * 0.1, gx, gy, Rg * 1.15)
-      gg.addColorStop(0, rgba(cur.core, dk ? 0.55 : 0.5))
-      gg.addColorStop(0.6, rgba(midWash, dk ? 0.28 : 0.3))
-      gg.addColorStop(1, rgba(base, dk ? 0.1 : 0.05))
+      gg.addColorStop(0, rgba(ocean, dk ? 0.34 : 0.44))
+      gg.addColorStop(0.55, rgba(mix(midWash, oceanHue, dk ? 0.24 : 0.2), dk ? 0.2 : 0.34))
+      gg.addColorStop(1, rgba(base, dk ? 0.06 : 0.08))
       ctx.fillStyle = gg; ctx.fillRect(gx - Rg, gy - Rg, Rg * 2, Rg * 2)
 
       // 3) Graticule (parallels + meridians), clipped to the globe.
-      ctx.strokeStyle = rgba(cur.line, dk ? 0.16 : 0.13); ctx.lineWidth = 1
+      ctx.strokeStyle = rgba(cur.line, dk ? 0.2 : 0.2); ctx.lineWidth = 1
       const strokePath = (samples) => {
         ctx.beginPath(); let pen = false
         for (const [lon, lat] of samples) { const p = project(lon, lat); if (p.vis) { pen ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); pen = true } else pen = false }
@@ -161,74 +171,148 @@ export default function AuthBackdrop() {
       for (let lat = -60; lat <= 60; lat += 30) { const s = []; for (let lon = -180; lon <= 180; lon += 6) s.push([lon, lat]); strokePath(s) }
       for (let lon = -180; lon < 180; lon += 30) { const s = []; for (let lat = -90; lat <= 90; lat += 6) s.push([lon, lat]); strokePath(s) }
 
-      // 4) Continent outlines — the real map, rotating with the globe.
-      ctx.strokeStyle = rgba(cur.line, dk ? 0.4 : 0.32); ctx.lineWidth = 1.1
-      for (const ring of WORLD) strokePath(ring)
+      // 4) Continents — the real map, rotating with the globe. Each ring is
+      //    filled a touch (so LAND reads distinct from the tinted ocean) then
+      //    outlined with quadratic midpoint smoothing (curved coasts, not boxy).
+      //    Runs are split at the horizon so only the near face draws.
+      const landFill = dk ? mix(cur.core, DARKBG, 0.5) : WHITE
+      const runsOf = (samples) => {
+        const runs = []; let run = []
+        for (const [lon, lat] of samples) { const p = project(lon, lat); if (p.vis) run.push(p); else { if (run.length >= 2) runs.push(run); run = [] } }
+        if (run.length >= 2) runs.push(run)
+        return runs
+      }
+      const smoothPath = (run) => {
+        ctx.moveTo(run[0].x, run[0].y)
+        for (let k = 1; k < run.length - 1; k++) {
+          const mx = (run[k].x + run[k + 1].x) / 2, my = (run[k].y + run[k + 1].y) / 2
+          ctx.quadraticCurveTo(run[k].x, run[k].y, mx, my)
+        }
+        ctx.lineTo(run[run.length - 1].x, run[run.length - 1].y)
+      }
+      ctx.lineJoin = 'round'; ctx.lineCap = 'round'
+      const RINGS = WORLD.map(runsOf)
+      ctx.fillStyle = rgba(landFill, dk ? 0.22 : 0.26)                     // land tint
+      for (const runs of RINGS) for (const run of runs) { ctx.beginPath(); smoothPath(run); ctx.closePath(); ctx.fill() }
+      ctx.strokeStyle = rgba(dk ? mix(cur.line, WHITE, 0.55) : mix(cur.line, DARKBG, 0.2), dk ? 0.85 : 0.8)  // coastline
+      ctx.lineWidth = 1.2
+      for (const runs of RINGS) for (const run of runs) { ctx.beginPath(); smoothPath(run); ctx.stroke() }
+      ctx.lineJoin = 'miter'; ctx.lineCap = 'butt'
       ctx.restore()
 
-      // 5) Rim + soft outer atmosphere glow.
-      const atm = ctx.createRadialGradient(gx, gy, Rg * 0.92, gx, gy, Rg * 1.14)
-      atm.addColorStop(0, rgba(cur.line, dk ? 0.18 : 0.12)); atm.addColorStop(1, rgba(cur.line, 0))
+      // 5) Rim glow (outer only — no interior wash) + crisp limb.
+      const atm = ctx.createRadialGradient(gx, gy, Rg * 0.6, gx, gy, Rg * 1.14)
+      atm.addColorStop(0, rgba(cur.line, 0)); atm.addColorStop(0.82, rgba(cur.line, 0))
+      atm.addColorStop(0.93, rgba(cur.line, dk ? 0.2 : 0.13)); atm.addColorStop(1, rgba(cur.line, 0))
       ctx.fillStyle = atm; ctx.beginPath(); ctx.arc(gx, gy, Rg * 1.14, 0, 6.2832); ctx.fill()
-      ctx.strokeStyle = rgba(cur.line, dk ? 0.34 : 0.26); ctx.lineWidth = 1
+      ctx.strokeStyle = rgba(cur.line, dk ? 0.38 : 0.3); ctx.lineWidth = 1
       ctx.beginPath(); ctx.arc(gx, gy, Rg, 0, 6.2832); ctx.stroke()
 
-      // 6) Intercontinental connections — arcs lifting off the globe between
-      //    hub cities (flights + provider links). Only when both ends face us.
+      // 6) Cell-towers / telephone poles at each hub — a vertical post with two
+      //    cross-arms and insulator nubs (a real utility pole, not a plus sign),
+      //    the antenna at the top broadcasting signal waves. Tower tips are
+      //    captured so the phone network can run tower-top to tower-top.
       const proj = CITIES.map(([lo, la]) => project(lo, la))
-      LINKS.forEach(([i, j, gold], li) => {
-        const a = proj[i], b = proj[j]
-        if (!a.vis || !b.vis) return
+      const mast = Math.min(W, H) * 0.04
+      const tips = proj.map((p) => {
+        if (!p.vis) return null
+        const dx = p.x - gx, dy = p.y - gy, d = Math.hypot(dx, dy) || 1
+        return { x: p.x + (dx / d) * mast, y: p.y + (dy / d) * mast, ux: dx / d, uy: dy / d, base: p }
+      })
+      ctx.lineCap = 'round'
+      tips.forEach((tp, i) => {
+        if (!tp) return
+        const { base, ux, uy } = tp, perpx = -uy, perpy = ux
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.5 : 0.42); ctx.lineWidth = 1.3
+        ctx.beginPath(); ctx.moveTo(base.x, base.y); ctx.lineTo(tp.x, tp.y); ctx.stroke()      // post
+        ctx.lineWidth = 1; ctx.strokeStyle = rgba(cur.line, dk ? 0.46 : 0.38)
+        for (const [h, w] of [[0.82, 0.3], [0.6, 0.22]]) {                                     // two cross-arms
+          const cx = base.x + ux * mast * h, cy = base.y + uy * mast * h, aw = mast * w
+          const e1x = cx - perpx * aw, e1y = cy - perpy * aw, e2x = cx + perpx * aw, e2y = cy + perpy * aw
+          ctx.beginPath(); ctx.moveTo(e1x, e1y); ctx.lineTo(e2x, e2y); ctx.stroke()
+          ctx.fillStyle = rgba(cur.dot, dk ? 0.6 : 0.5)                                        // insulator nubs
+          for (const [ex, ey] of [[e1x, e1y], [e2x, e2y]]) { ctx.beginPath(); ctx.arc(ex, ey, 1.1, 0, 6.2832); ctx.fill() }
+        }
+        const baseA = Math.atan2(uy, ux)                                                       // waves off the top
+        for (let s = 0; s < 2; s++) {
+          const ph = ((t * 0.001 + i * 0.5 + s * 0.5) % 1 + 1) % 1
+          ctx.strokeStyle = rgba(cur.dot, (dk ? 0.34 : 0.28) * (1 - ph))
+          ctx.beginPath(); ctx.arc(tp.x, tp.y, mast * (0.22 + ph * 0.8), baseA - 0.6, baseA + 0.6); ctx.stroke()
+        }
+        ctx.fillStyle = rgba(cur.dot, dk ? 0.85 : 0.72)
+        ctx.beginPath(); ctx.arc(tp.x, tp.y, 1.6, 0, 6.2832); ctx.fill()
+      })
+      ctx.lineCap = 'butt'
+
+      // A lifted quadratic control point (a great-circle-ish bow off the globe).
+      const arcCtrl = (a, b) => {
         const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
         const dx = mx - gx, dy = my - gy, d = Math.hypot(dx, dy) || 1
         const lift = Rg * 0.22 + d * 0.15
-        const cxp = mx + (dx / d) * lift, cyp = my + (dy / d) * lift
-        const col = gold ? GOLD : cur.dot
-        ctx.setLineDash([6, 6]); ctx.strokeStyle = rgba(col, gold ? (dk ? 0.5 : 0.46) : (dk ? 0.3 : 0.26))
-        ctx.lineWidth = gold ? 1.4 : 1
-        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(cxp, cyp, b.x, b.y); ctx.stroke()
-        ctx.setLineDash([])
-        // travelling signal pulse
-        const u = ((t * (gold ? 0.00016 : 0.00012) + li * 0.13) % 1 + 1) % 1
-        const bx = (1 - u) * (1 - u) * a.x + 2 * (1 - u) * u * cxp + u * u * b.x
-        const by = (1 - u) * (1 - u) * a.y + 2 * (1 - u) * u * cyp + u * u * b.y
-        ctx.fillStyle = rgba(col, dk ? 0.9 : 0.78)
-        ctx.beginPath(); ctx.arc(bx, by, gold ? 2.4 : 1.9, 0, 6.2832); ctx.fill()
-        // a small plane outline on flight links
-        if (FLIGHT_LINKS.includes(li)) {
-          const dxdu = 2 * (1 - u) * (cxp - a.x) + 2 * u * (b.x - cxp)
-          const dydu = 2 * (1 - u) * (cyp - a.y) + 2 * u * (b.y - cyp)
-          const ang = Math.atan2(dydu, dxdu), s = 6
-          ctx.save(); ctx.translate(bx, by); ctx.rotate(ang); ctx.scale(s, s)
-          ctx.lineWidth = 1 / s; ctx.strokeStyle = rgba(cur.dot, dk ? 0.75 : 0.62)
-          ctx.beginPath(); PLANE.forEach(([qx, qy], k) => (k ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy)))
-          ctx.closePath(); ctx.stroke(); ctx.restore()
-        }
-      })
-      // 7) Hub nodes as little cell masts with broadcasting signal arcs — so the
-      //    connections read as a phone/telecom network, not only flight paths.
-      const mast = Math.min(W, H) * 0.032
-      proj.forEach((p, i) => {
-        if (!p.vis) return
-        const dx = p.x - gx, dy = p.y - gy, d = Math.hypot(dx, dy) || 1
-        const ux = dx / d, uy = dy / d                       // outward = "up" off the surface
-        const tx = p.x + ux * mast, ty = p.y + uy * mast
-        ctx.strokeStyle = rgba(cur.line, dk ? 0.5 : 0.42); ctx.lineWidth = 1
-        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(tx, ty); ctx.stroke()
-        const perpx = -uy, perpy = ux, arm = mast * 0.24
-        const cxk = p.x + ux * mast * 0.68, cyk = p.y + uy * mast * 0.68
-        ctx.beginPath(); ctx.moveTo(cxk - perpx * arm, cyk - perpy * arm); ctx.lineTo(cxk + perpx * arm, cyk + perpy * arm); ctx.stroke()
-        const baseA = Math.atan2(uy, ux)                     // broadcast waves fan outward
-        for (let s = 0; s < 2; s++) {
-          const ph = ((t * 0.0011 + i * 0.5 + s * 0.5) % 1 + 1) % 1
-          ctx.strokeStyle = rgba(cur.dot, (dk ? 0.42 : 0.36) * (1 - ph))
-          ctx.beginPath(); ctx.arc(tx, ty, mast * (0.35 + ph * 1.1), baseA - 0.7, baseA + 0.7); ctx.stroke()
-        }
-        ctx.fillStyle = rgba(cur.dot, dk ? 0.85 : 0.72)
-        ctx.beginPath(); ctx.arc(tx, ty, 1.5, 0, 6.2832); ctx.fill()
+        return { cx: mx + (dx / d) * lift, cy: my + (dy / d) * lift }
+      }
+      const bez = (a, cx, cy, b, u) => ({
+        x: (1 - u) * (1 - u) * a.x + 2 * (1 - u) * u * cx + u * u * b.x,
+        y: (1 - u) * (1 - u) * a.y + 2 * (1 - u) * u * cy + u * u * b.y,
       })
 
-      // 8) Faint logo watermark, top-left.
+      // 7) Flight routes — AIRPORT to AIRPORT (ground node to ground node): a
+      //    dashed bow with a little plane tracing it. No signal pulse here.
+      const flightCol = mix(cur.line, WHITE, dk ? 0.6 : 0.2)   // pale silver contrail — NOT gold
+      FLIGHTS.forEach(([i, j], li) => {
+        const a = proj[i], b = proj[j]
+        if (!a || !b || !a.vis || !b.vis) return
+        const { cx, cy } = arcCtrl(a, b)
+        ctx.setLineDash([5, 7]); ctx.strokeStyle = rgba(flightCol, dk ? 0.36 : 0.3); ctx.lineWidth = 1
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(cx, cy, b.x, b.y); ctx.stroke()
+        ctx.setLineDash([])
+        const u = ((t * 0.00009 + li * 0.17) % 1 + 1) % 1, pt = bez(a, cx, cy, b, u)
+        const dxdu = 2 * (1 - u) * (cx - a.x) + 2 * u * (b.x - cx)
+        const dydu = 2 * (1 - u) * (cy - a.y) + 2 * u * (b.y - cy)
+        const sp = 6.5
+        ctx.save(); ctx.translate(pt.x, pt.y); ctx.rotate(Math.atan2(dydu, dxdu)); ctx.scale(sp, sp)
+        ctx.lineWidth = 1 / sp; ctx.strokeStyle = rgba(flightCol, dk ? 0.9 : 0.7)
+        ctx.beginPath(); PLANE.forEach(([qx, qy], k) => (k ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy)))
+        ctx.closePath(); ctx.stroke(); ctx.restore()
+      })
+
+      // 8) Signal network — TOWER-TOP to TOWER-TOP (tip to tip): a bow carrying
+      //    a travelling data pulse. No plane. Some links glow gold ("best route").
+      SIGNALS.forEach(([i, j, gold], li) => {
+        const a = tips[i], b = tips[j]
+        if (!a || !b) return
+        const { cx, cy } = arcCtrl(a, b)
+        ctx.setLineDash([2, 5]); ctx.strokeStyle = rgba(gold ? GOLD : cur.line, gold ? (dk ? 0.5 : 0.44) : (dk ? 0.34 : 0.28))
+        ctx.lineWidth = gold ? 1.3 : 1
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(cx, cy, b.x, b.y); ctx.stroke()
+        ctx.setLineDash([])
+        const u = ((t * (gold ? 0.0002 : 0.00015) + li * 0.11) % 1 + 1) % 1, pt = bez(a, cx, cy, b, u)
+        ctx.fillStyle = rgba(gold ? GOLD : cur.dot, dk ? 0.92 : 0.8)
+        ctx.beginPath(); ctx.arc(pt.x, pt.y, gold ? 2.3 : 1.8, 0, 6.2832); ctx.fill()
+      })
+
+      // 9) Shop motifs — faint corner emblems tying in the counter trade: an
+      //    audio-CD (media) bottom-left, a charger cable + USB plug bottom-right.
+      const em = Math.min(W, H)
+      ctx.save(); ctx.globalAlpha = dk ? 0.13 : 0.1; ctx.lineCap = 'round'
+      const cdx = em * 0.1, cdy = H - em * 0.11, rd = em * 0.058
+      ctx.strokeStyle = rgba(cur.line, 1); ctx.lineWidth = 1
+      for (const rr of [rd, rd * 0.72, rd * 0.32]) { ctx.beginPath(); ctx.arc(cdx, cdy, rr, 0, 6.2832); ctx.stroke() }
+      ctx.lineWidth = 2
+      ctx.strokeStyle = rgba(GOLD, 1); ctx.beginPath(); ctx.arc(cdx, cdy, rd * 0.85, -1.25, -0.25); ctx.stroke()
+      ctx.strokeStyle = rgba(cur.dot, 1); ctx.beginPath(); ctx.arc(cdx, cdy, rd * 0.52, 2.1, 3.1); ctx.stroke()
+      const cx0 = W - em * 0.19, cy0 = H - em * 0.08, k = em * 0.05
+      ctx.strokeStyle = rgba(cur.line, 1); ctx.lineWidth = 2
+      ctx.beginPath(); ctx.moveTo(cx0, cy0)
+      ctx.bezierCurveTo(cx0 + k * 1.7, cy0 - k * 1.3, cx0 - k * 0.2, cy0 - k * 2.7, cx0 + k * 1.9, cy0 - k * 3)
+      ctx.stroke()
+      const plx = cx0 + k * 1.9, ply = cy0 - k * 3                                            // USB plug
+      ctx.lineWidth = 1.5; ctx.strokeStyle = rgba(cur.dot, 1)
+      ctx.strokeRect(plx - 3.5, ply - 6, 7, 9)
+      ctx.beginPath(); ctx.moveTo(plx, ply + 3); ctx.lineTo(plx, ply + 6); ctx.stroke()
+      ctx.restore()
+
+      // 10) Faint logo watermark, top-left.
       if (logoReady) {
         const lw = Math.min(W, H) * 0.13, lh = lw * (logo.height / logo.width), pad = Math.min(W, H) * 0.05
         ctx.save(); ctx.globalAlpha = dk ? 0.11 : 0.08
