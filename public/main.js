@@ -7105,6 +7105,20 @@ function paletteRun(i) {
   if (r) r.run();
 }
 
+// Spotlight-style quick actions — the common "create" commands as icon tiles,
+// shown while the palette query is empty (hidden the moment you start typing).
+function paletteQuickItems() { return PALETTE_COMMANDS.filter(c => c.sub === 'create'); }
+window.paletteQuickRun = (i) => { const it = paletteQuickItems()[i]; closePalette(); if (it) it.run(); };
+function fillPaletteQuick() {
+  const q = document.getElementById('paletteQuick');
+  if (!q) return;
+  q.innerHTML = `<div class="palette-quick-label">Quick actions</div><div class="palette-quick-row">` +
+    paletteQuickItems().map((c, i) =>
+      `<button type="button" class="palette-quick-card" onclick="paletteQuickRun(${i})">
+        <span class="pq-icon">${c.icon}</span><span class="pq-label">${escHtml(c.label.replace(/^New /, ''))}</span>
+      </button>`).join('') + `</div>`;
+}
+
 function openPalette() {
   if (document.getElementById('paletteOverlay')) return;
   const el = document.createElement('div');
@@ -7114,6 +7128,7 @@ function openPalette() {
     <div class="palette-box">
       <input class="palette-input" id="paletteInput" placeholder="Search customers, phones, IMEI… or type a command"
         autocomplete="off" spellcheck="false">
+      <div id="paletteQuick" class="palette-quick"></div>
       <div id="paletteList"></div>
       <div style="padding:7px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);">↑↓ navigate · Enter open · Esc close · scan a barcode straight in</div>
     </div>`;
@@ -7122,11 +7137,14 @@ function openPalette() {
   const input = document.getElementById('paletteInput');
   paletteIndex = 0;
   paletteResults = paletteSearch('');
+  fillPaletteQuick();
   paletteRender();
   input.focus();
+  const quick = document.getElementById('paletteQuick');
   input.addEventListener('input', () => {
     paletteIndex = 0;
     paletteResults = paletteSearch(input.value);
+    if (quick) quick.style.display = input.value.trim() ? 'none' : 'block';
     paletteRender();
   });
   input.addEventListener('keydown', e => {
@@ -7487,17 +7505,16 @@ function dashPaint(money, tasksList2, stillLoading) {
   const enDate = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const hebDate = hebrewDateString(now);
   const pad2 = (n) => String(n).padStart(2, '0');
-  const clockHM = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`, clockS = pad2(now.getSeconds());
-  // One global 1s ticker keeps the dashboard clock live; it no-ops when the
-  // dashboard isn't mounted, so it's safe to leave running.
+  const clockHM = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+  // One global 30s ticker keeps the dashboard clock's minute live (a CSS pulse
+  // dot shows it's live, so no ticking seconds). No-ops when off the dashboard.
   if (!window.__dashClockTimer) {
     window.__dashClockTimer = setInterval(() => {
       const el = document.getElementById('dashClock'); if (!el) return;
       const d = new Date(), p = (n) => String(n).padStart(2, '0');
-      const b = el.querySelector('b'), i = el.querySelector('i');
+      const b = el.querySelector('b');
       if (b) b.textContent = `${p(d.getHours())}:${p(d.getMinutes())}`;
-      if (i) i.textContent = p(d.getSeconds());
-    }, 1000);
+    }, 30000);
   }
 
   // ── Featured money card (dark navy) ──
@@ -7597,7 +7614,7 @@ function dashPaint(money, tasksList2, stillLoading) {
   content.innerHTML = `
     <div class="dash-head">
       <div>
-        <div class="dash-date"><span class="dash-clock" id="dashClock" title="Current time"><b>${clockHM}</b><i>${clockS}</i></span>&nbsp;·&nbsp;${enDate}${hebDate ? ` &nbsp;·&nbsp; <span class="heb">${hebDate}</span>` : ''}</div>
+        <div class="dash-date"><span class="dash-clock" id="dashClock" title="Current time"><b>${clockHM}</b><span class="dash-pulse" aria-hidden="true"></span></span>&nbsp;·&nbsp;${enDate}${hebDate ? ` &nbsp;·&nbsp; <span class="heb">${hebDate}</span>` : ''}</div>
         <div class="dash-greeting">${greeting}${staffFirstName ? ', ' + nameHtml(staffFirstName) : ''}.</div>
       </div>
       <div class="dash-actions">

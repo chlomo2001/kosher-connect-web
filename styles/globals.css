@@ -271,8 +271,8 @@ body {
   /* Base44-style faint dot-grid across the whole working canvas — behind the
      floating topbar and the scrolling content alike. */
   background-color: var(--bg);
-  background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
-  background-size: 22px 22px; background-position: -1px -1px;
+  background-image: radial-gradient(var(--dot) 1.1px, transparent 1.5px);
+  background-size: 16px 16px; background-position: -1px -1px;
 }
 
 /* Hybrid nav: the sidebar keeps the sections, and the topbar becomes a clean
@@ -346,8 +346,8 @@ body {
    Its inner sub-cards sit on their own surface, so the dots show in the gaps. */
 #customerCard .modal {
   background-color: var(--surface);
-  background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
-  background-size: 22px 22px; background-position: -1px -1px;
+  background-image: radial-gradient(var(--dot) 1.3px, transparent 1.6px);
+  background-size: 15px 15px; background-position: -1px -1px;
 }
 
 /* POS takeover — the till owns the whole screen (sidebar + topbar hidden),
@@ -993,10 +993,13 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   color: var(--muted); margin-bottom: 8px;
 }
 .dash-date .heb { color: var(--gold); text-transform: none; letter-spacing: 0; font-size: 12px; }
-/* Live clock — sits ahead of the date, seconds tick in the accent for life. */
-.dash-clock { text-transform: none; letter-spacing: 0; }
+/* Live clock — sits ahead of the date. A small gold pulse (matching the Hebrew
+   date's gold) shows it's live, instead of ticking seconds in a clashing hue. */
+.dash-clock { text-transform: none; letter-spacing: 0; display: inline-flex; align-items: center; }
 .dash-clock b { font-size: 15px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: 0.4px; }
-.dash-clock i { font-size: 11px; font-style: normal; color: var(--accent); font-variant-numeric: tabular-nums; margin-left: 1px; vertical-align: super; }
+.dash-pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); margin-left: 8px; animation: dashPulse 1.7s ease-in-out infinite; }
+@keyframes dashPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.28; transform: scale(0.66); } }
+@media (prefers-reduced-motion: reduce) { .dash-pulse { animation: none; } }
 .dash-greeting { font-size: 40px; font-weight: 300; letter-spacing: -1px; line-height: 1.08; }
 .dash-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -1181,6 +1184,21 @@ td.cal-active.cal-shabbat { background: var(--accent); }
   padding: 10px 14px; font-size: 13px; cursor: pointer;
 }
 .palette-item.active, .palette-item:hover { background: var(--bg-secondary); }
+
+/* Spotlight-style quick-action cards — shown when the palette is empty, a row
+   of icon tiles for the common "create" actions (like macOS Spotlight). */
+.palette-quick { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.palette-quick-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.palette-quick-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.palette-quick-card {
+  flex: 1 0 78px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 6px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--panel); color: var(--text); cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, transform 0.12s;
+}
+.palette-quick-card:hover { border-color: var(--accent); background: var(--accent-wash); transform: translateY(-1px); }
+.pq-icon { font-size: 20px; line-height: 1; }
+.pq-label { font-size: 11px; color: var(--ink-secondary); text-align: center; }
 
 /* Task triage cards */
 .task-card { padding: 10px 2px; border-bottom: 1px solid var(--border); }
