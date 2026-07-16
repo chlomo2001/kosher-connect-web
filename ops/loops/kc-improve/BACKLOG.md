@@ -7,6 +7,30 @@ verify, present for accept. Log outcomes at the bottom.
 Legend: **P** = priority (1 high → 3 low) · **E** = effort (S/M/L) ·
 🔒 = blocked on an owner decision.
 
+## From deep review 2026-07-16 (verified — see docs/REVIEW-2026-07-16.md)
+Safe UX quick-wins (one kc-improve cycle, no money risk, offline-verifiable):
+- [ ] **P1 · S** — Toasts need a live region (`main.js:4903`) — payment/error
+      confirmations are silent to screen readers. `role="status" aria-live`.
+- [ ] **P1 · S** — Booking status badges don't flip for dark theme
+      (`main.js:4920-4929`) — "Booked" goes dark-on-dark. Route through tokens.
+- [ ] **P2 · S** — `user-select:none` on body blocks copying phone/IMEI/ref
+      (`globals.css:143`) — re-enable on data cells.
+- [ ] **P2 · S** — Two-column forms don't collapse on mobile (`globals.css:515`).
+- [ ] **P2 · M** — Unify the Rentals filter chrome into `kcFilterSort`
+      (`main.js:1197-1242`) — it's the one tab that predates the shared control.
+- [ ] **P2 · L** — Keyboard-operate clickable rows + dashboard drill-downs
+      (`main.js:4956`,`3772`,`3793`) — currently mouse-only.
+- [ ] **P2 · M** — Modal dialog semantics + focus trap (`main.js:2591`).
+
+Correctness (human-reviewed, NOT loop-autofixed — touches money/inventory):
+- [ ] **P1 · S** — Shop oversell: guarded/atomic stock decrement
+      (`shop.js:149,195`) — two tills can both sell the last unit. **Real bug.**
+- [ ] **P2 · S** — Cash-up/revenue day uses UTC not `Europe/London`
+      (`cashup.js`,`ledger.js`) — BST 00:00-01:00 misattributed. Reuse the
+      London-day helper the sweep already has.
+- [ ] **P3 · S** — Customer `legacy_id = Date.now()` ms-collision
+      (`customers.js:24`) — add a random suffix.
+
 ## UX / smoothness / delight
 - [ ] **P1 · S** — Owner live-test pass on this session's work (dark theme retune,
       login backdrop, dashboard clock+charts, dotted cards, ⌘K quick-actions,
@@ -41,8 +65,11 @@ Legend: **P** = priority (1 high → 3 low) · **E** = effort (S/M/L) ·
 ## Ops / go-live blockers (not features, but gate Phase-2 shipping)
 - [ ] **P1 · S** — **Apply pending migrations on deploy**: `20260716140000`
       (ivr_platforms) and `20260715160000` (customer documents).
-- [ ] **P1 · M** — **Production DB** `Kc-production` was RESTORE_FAILED — get it
-      healthy, then apply migrations + reconcile history.
+- [ ] **P1 · M** 🔒 — **Production DB** `Kc-production` is now `ACTIVE_HEALTHY`
+      (2026-07-16, confirmed). BUT its migration ledger records only **1**
+      migration (`20260514103821`) vs staging's **40** — a full history
+      reconcile is needed (confirm actual schema, then mark migrations applied
+      without re-running). Careful one-shot job; do with owner, don't auto-run.
 - [ ] **P1 · S** — **Vercel auto-deploy stalled** after `11630e2` — pushes aren't
       building; unblock the GitHub→Vercel integration (or Redeploy from dashboard).
 
