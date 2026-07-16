@@ -1898,7 +1898,15 @@ async function saveNewRental() {
   };
 
   rentals.push(rental);
-  saveRentals(rentals);
+  // Await the persist and only continue if it actually saved — otherwise we'd
+  // create a VN for a rental that doesn't exist and toast success on a lost save.
+  const saveRes = await saveRentals(rentals);
+  if (!saveRes || saveRes.success === false) {
+    const idx = rentals.indexOf(rental);
+    if (idx >= 0) rentals.splice(idx, 1); // undo the optimistic push
+    renderRentalsTab();
+    return; // reportSave already surfaced the error
+  }
 
   // #73 — persist the phone status ONLY when it actually changed. A future-
   // dated reservation leaves the phone free, so it needs no phones write.
@@ -2606,8 +2614,23 @@ function kcConfirmDone(ok) {
 // ─────────────────────────────────────────────
 //  CUSTOMERS TAB
 // ─────────────────────────────────────────────
+// Authoritative wallet balances (legacy customer id → balance; negative = owes),
+// loaded from the ledger so the Balance column + arrears filter reflect ALL money
+// (bookings, services, SIM/VN, shop — not just rentals). null until loaded. audit U9.
+let customerLedgerBal = null;
+
 function renderCustomersTab() {
   applySearch();
+  // Refresh the authoritative balances; falls back to rental math until it lands
+  // (or stays on the fallback if the wallet tab isn't permitted for this staff).
+  kcFetch('/api/ledger').then(r => r.ok ? r.json() : null).then(d => {
+    if (!d || !d.success) return;
+    const m = new Map();
+    for (const b of (d.arrears || [])) if (b.customerId != null) m.set(String(b.customerId), Number(b.balance));
+    for (const b of (d.credits || [])) if (b.customerId != null) m.set(String(b.customerId), Number(b.balance));
+    customerLedgerBal = m;
+    if (currentTab === 'customers') renderTableRows();
+  }).catch(() => {});
   const content = document.getElementById('mainContent');
   const totalPaid = rentals.reduce((s, r) => s + (r.amountPaid || 0), 0);
 
@@ -2686,8 +2709,18 @@ function renderCustomersTab() {
   });
 }
 
-// Live debt/services per customer, used for sorting.
+// The customer's authoritative wallet balance (negative = owes), or null until the
+// ledger has loaded / when it isn't available to this staff member. audit U9.
+function customerLedgerBalance(c) {
+  if (!customerLedgerBal) return null;
+  return customerLedgerBal.has(String(c.id)) ? customerLedgerBal.get(String(c.id)) : 0;
+}
+
+// Live debt per customer, used for the arrears filter and the "most owed" sort.
+// Prefers the ledger balance; falls back to rental-only math before it loads.
 function customerOwed(c) {
+  const bal = customerLedgerBalance(c);
+  if (bal !== null) return bal < 0 ? -bal : 0;
   return rentals.filter(r => r.customerId === c.id).reduce((s, r) => s + rentalDebt(r), 0);
 }
 // Bookings that are still upcoming — booked/ticketed and NOT flown yet
@@ -2780,9 +2813,13 @@ function renderTableRows() {
       ...otherServices.map(s => `<span class="badge badge-${s.type}">${escHtml(s.label)}</span>`),
     ].join('');
 
-    const customerDebt = rentals
-      .filter(r => r.customerId === c.id)
-      .reduce((sum, r) => sum + rentalDebt(r), 0);
+    // Prefer the authoritative ledger balance; fall back to rental-only math until
+    // it loads (or if the wallet tab isn't permitted for this staff member). U9.
+    const ledgerBal = customerLedgerBalance(c);
+    const customerDebt = ledgerBal !== null
+      ? (ledgerBal < 0 ? -ledgerBal : 0)
+      : rentals.filter(r => r.customerId === c.id).reduce((sum, r) => sum + rentalDebt(r), 0);
+    const customerCredit = ledgerBal !== null && ledgerBal > 0 ? ledgerBal : 0;
     const customerPaid = rentals
       .filter(r => r.customerId === c.id)
       .reduce((sum, r) => sum + (r.amountPaid || 0), 0);
@@ -2795,7 +2832,11 @@ function renderTableRows() {
       </td>
       <td>${escHtml(c.phone || '—')}</td>
       <td>${services || '<span style="color:var(--muted);font-size:12px;">None</span>'}</td>
-      <td style="color: ${customerDebt > 0 ? 'var(--danger)' : 'var(--success)'}; font-weight: 700;">${customerDebt > 0 ? `${fmtGbp(customerDebt)} debt` : `${fmtGbp(customerPaid)}`}</td>
+      <td style="color: ${customerDebt > 0 ? 'var(--danger)' : (customerCredit > 0 ? 'var(--accent)' : 'var(--success)')}; font-weight: 700;">${
+        customerDebt > 0 ? `${fmtGbp(customerDebt)} debt`
+        : customerCredit > 0 ? `${fmtGbp(customerCredit)} credit`
+        : ledgerBal !== null ? 'Settled'
+        : `${fmtGbp(customerPaid)}`}</td>
       <td>
         <div class="row-actions">
           <button class="action-btn" data-action="edit" data-id="${c.id}">Edit</button>
