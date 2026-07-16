@@ -9,8 +9,8 @@ import { useState, useRef, useEffect } from 'react'
 //   is "inspired by" the mark without ever forming it.
 // • Six time-of-day phases (Pre-dawn → Night) the operator can pick, or "Auto"
 //   which slowly drifts through them so the colours keep mixing.
-// • The pointer acts as a moving light: rays bend around it (a lens/refraction
-//   bulge) and a soft additive glow follows it — the "3D light" bend.
+// • The pointer acts like a charge: nearby rays are repelled and part around
+//   it (a static-electricity / magnet reorganisation), with a faint glow.
 // • Theme-aware, pauses when the tab is hidden, and renders a single static
 //   frame under prefers-reduced-motion.
 const PHASES = [
@@ -43,6 +43,12 @@ export default function AuthBackdrop() {
     const rgba = (c, a) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`
     const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark'
     const WHITE = [255, 255, 255], DARKBG = [6, 9, 18]
+
+    // The logo mark, drawn as a faint low watermark once it has loaded.
+    const logo = new Image()
+    let logoReady = false
+    logo.onload = () => { logoReady = true }
+    logo.src = '/logo.png'
 
     const N = 210
     const rays = Array.from({ length: N }, (_, i) => ({
@@ -98,41 +104,49 @@ export default function AuthBackdrop() {
       g.addColorStop(1, rgba(base, 0))
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, H)
 
-      // Faint "KC" monogram woven into the field — the rays draw over it, so
-      // it reads as part of the burst rather than a sticker on top.
-      ctx.save()
-      ctx.font = `800 ${Math.round(Math.min(W, H) * 0.5)}px Inter, system-ui, sans-serif`
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-      ctx.fillStyle = rgba(mix(cur.line, base, 0.5), dk ? 0.09 : 0.07)
-      ctx.fillText('KC', cx, H * 0.46)
-      ctx.restore()
+      // Faint logo mark, small and low, woven under the rays so it reads as a
+      // watermark within the burst rather than a badge sitting on top.
+      if (logoReady) {
+        const lw = Math.min(W, H) * 0.2
+        const lh = lw * (logo.height / logo.width)
+        ctx.save()
+        ctx.globalAlpha = dk ? 0.08 : 0.06
+        ctx.drawImage(logo, cx - lw / 2, H * 0.72 - lh / 2, lw, lh)
+        ctx.restore()
+      }
 
       ctx.lineWidth = 1
       const lineA = dk ? 0.24 : 0.16
-      const bendK = Math.min(W, H) * 0.34
+      // The pointer is a repelling charge: rays near it are shoved radially
+      // outward with a Gaussian falloff, so they part and reorganise around
+      // the cursor — a static-electricity / magnet parting rather than a lens.
+      const fieldR = Math.min(W, H) * 0.19
+      const fieldR2 = fieldR * fieldR
       for (const ry of rays) {
         const len = ry.r * R * (1 + 0.06 * Math.sin(t * 0.0006 + ry.lp))
-        const tx = cx + Math.cos(ry.a) * len, ty = cy + Math.sin(ry.a) * len
-        const mxp = (cx + tx) / 2, myp = (cy + ty) / 2
-        // Repel the ray's midpoint away from the pointer → a lens-like bulge.
-        const dxp = mxp - px, dyp = myp - py, dist = Math.hypot(dxp, dyp) || 1
-        const pull = 74 / (1 + dist / bendK)
-        const cxp = mxp + (dxp / dist) * pull, cyp = myp + (dyp / dist) * pull
+        let tx = cx + Math.cos(ry.a) * len, ty = cy + Math.sin(ry.a) * len
+        let mxp = (cx + tx) / 2, myp = (cy + ty) / 2
+        const dmx = mxp - px, dmy = myp - py, dm = Math.hypot(dmx, dmy) || 1
+        const fM = Math.exp(-(dm * dm) / fieldR2)
+        mxp += (dmx / dm) * fM * 155; myp += (dmy / dm) * fM * 155
+        const dtx = tx - px, dty = ty - py, dt = Math.hypot(dtx, dty) || 1
+        const fT = Math.exp(-(dt * dt) / fieldR2)
+        tx += (dtx / dt) * fT * 96; ty += (dty / dt) * fT * 96
         ctx.strokeStyle = rgba(cur.line, lineA)
-        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.quadraticCurveTo(cxp, cyp, tx, ty); ctx.stroke()
-        const near = Math.max(0, 1 - dist / (bendK * 1.4))
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.quadraticCurveTo(mxp, myp, tx, ty); ctx.stroke()
         const tw = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 0.0011 + ry.tp))
-        ctx.fillStyle = rgba(cur.dot, (dk ? 0.5 : 0.55) * tw + near * 0.35)
-        ctx.beginPath(); ctx.arc(tx, ty, ry.ds + near * 1.5, 0, 6.2832); ctx.fill()
+        ctx.fillStyle = rgba(cur.dot, (dk ? 0.5 : 0.55) * tw + fT * 0.3)
+        ctx.beginPath(); ctx.arc(tx, ty, ry.ds + fT * 1.4, 0, 6.2832); ctx.fill()
       }
 
-      // The "3D light": a soft additive glow that follows the pointer.
-      const gr = Math.min(W, H) * 0.3
+      // A whisper of light on the pointer — just enough to read as warmth at
+      // the parting, not a bright lamp.
+      const gr = Math.min(W, H) * 0.26
       const glowC = mix(cur.line, WHITE, dk ? 0.15 : 0.4)
       ctx.globalCompositeOperation = 'lighter'
       const lg = ctx.createRadialGradient(px, py, 0, px, py, gr)
-      lg.addColorStop(0, rgba(glowC, dk ? 0.22 : 0.3))
-      lg.addColorStop(0.5, rgba(glowC, dk ? 0.08 : 0.1))
+      lg.addColorStop(0, rgba(glowC, dk ? 0.1 : 0.13))
+      lg.addColorStop(0.5, rgba(glowC, dk ? 0.03 : 0.045))
       lg.addColorStop(1, rgba(glowC, 0))
       ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(px, py, gr, 0, 6.2832); ctx.fill()
       ctx.globalCompositeOperation = 'source-over'
