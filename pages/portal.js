@@ -10,6 +10,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
+import AuthBackdrop from '../components/AuthBackdrop'
 
 function loadStripeJs() {
   return new Promise((resolve, reject) => {
@@ -246,6 +247,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       <>
         <Head><title>My KosherConnect</title></Head>
         <div className="login-shell"><div className="login-mesh" aria-hidden="true" />
+          <AuthBackdrop />
           <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
           <div className="login-card" style={{ textAlign: 'center' }}>Loading your account…</div>
         </div>
@@ -400,6 +402,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       <Head><title>My KosherConnect</title></Head>
       <div className="login-shell">
         <div className="login-mesh" aria-hidden="true" />
+        <AuthBackdrop />
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         <form className="login-card" onSubmit={submit}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
