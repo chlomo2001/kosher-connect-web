@@ -1,21 +1,18 @@
 import { useState, useRef, useEffect } from 'react'
+import WORLD from './worldOutline'
 
-// Branded "sunburst" auth background — the Stripe-hero effect done as a live
-// <canvas> (crisp at any DPR, a few KB, no heavy GIF). Shared by the staff
-// login and the customer portal sign-in.
+// Branded auth background — a slowly-rotating wireframe globe with real
+// continent outlines as the centrepiece, a soft sunburst halo of light behind
+// it, and intercontinental arcs (flights + provider links) connecting hub
+// cities around the world. Live <canvas>, a few KB, crisp at any DPR.
 //
-// • Colours are BASED ON THE LOGO: its two dominant colours — azure blue
-//   (#0060a8) and warm gold (#c09060) — drive every ray and dot, so the field
-//   is "inspired by" the mark without ever forming it.
+// • Colours are BASED ON THE LOGO: azure blue (#0060a8) + warm gold (#c09060)
+//   drive the atmosphere, coastlines and connections.
 // • Six time-of-day phases (Pre-dawn → Night) the operator can pick, or "Auto"
-//   which slowly drifts through them so the colours keep mixing.
-// • A faint scene sits under the burst: a wireframe globe with aeroplane
-//   outlines orbiting it (travel) and a well-connected pole/wire "provider
-//   network" on the ground with several signals routing to the best line.
-// • The pointer acts like a charge: nearby rays are repelled and part around
-//   it (a static-electricity / magnet reorganisation), with a faint glow.
-// • Theme-aware, pauses when the tab is hidden, and renders a single static
-//   frame under prefers-reduced-motion.
+//   which slowly drifts through them.
+// • The pointer is a moving light: the halo rays part around it and a soft glow
+//   follows it.
+// • Theme-aware, pauses when hidden, single static frame under reduced-motion.
 const PHASES = [
   { id: 'predawn', label: 'Pre-dawn', core: '#3b5a86', line: '#0060a8', dot: '#a9b8d8' },
   { id: 'sunrise', label: 'Sunrise', core: '#e8b06a', line: '#1878a8', dot: '#d89858' },
@@ -24,6 +21,20 @@ const PHASES = [
   { id: 'sunset', label: 'Sunset', core: '#e0894a', line: '#0a68b0', dot: '#d89858' },
   { id: 'night', label: 'Night', core: '#22345c', line: '#2a6fb0', dot: '#c09060' },
 ]
+
+// Hub cities (lon, lat) and the intercontinental links between them.
+const CITIES = [
+  [-74, 40.7], [-0.1, 51.5], [34.8, 32.1], [55.3, 25.2], [139.7, 35.7],
+  [-118.2, 34], [-46.6, -23.5], [151.2, -33.9], [28, -26.2], [72.8, 19],
+  [2.3, 48.9], [116.4, 39.9], [37.6, 55.7], [103.8, 1.35],
+]
+// [i, j, gold?] — a couple of "flight" links carry a little plane.
+const LINKS = [
+  [2, 1, 1], [2, 0, 0], [2, 3, 0], [1, 0, 0], [1, 10, 0], [3, 9, 0],
+  [3, 13, 0], [13, 4, 0], [11, 4, 0], [0, 5, 0], [0, 6, 0], [9, 13, 0],
+  [8, 2, 0], [7, 13, 0], [12, 1, 0], [2, 4, 0],
+]
+const FLIGHT_LINKS = [1, 3, 7, 9, 14]  // indices into LINKS that carry a plane
 
 export default function AuthBackdrop() {
   const canvasRef = useRef(null)
@@ -46,97 +57,38 @@ export default function AuthBackdrop() {
     const rgba = (c, a) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`
     const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark'
     const WHITE = [255, 255, 255], DARKBG = [6, 9, 18], GOLD = [212, 158, 96]
+    const D2R = Math.PI / 180
 
-    // The logo mark, drawn as a faint low watermark once it has loaded.
     const logo = new Image()
     let logoReady = false
     logo.onload = () => { logoReady = true }
     logo.src = '/logo.png'
 
-    const N = 210
+    // Soft sunburst halo behind the globe — rays radiate from the globe centre.
+    const N = 170
     const rays = Array.from({ length: N }, (_, i) => ({
-      a: Math.PI + (i + 0.5) / N * Math.PI + (Math.random() - 0.5) * 0.01,
-      r: 0.42 + Math.random() * 0.58,
-      lp: Math.random() * 6.283, tp: Math.random() * 6.283,
-      ds: 1.1 + Math.random() * 1.6,
+      a: (i + 0.5) / N * 6.283 + (Math.random() - 0.5) * 0.02,
+      r: 0.7 + Math.random() * 0.7, lp: Math.random() * 6.283,
+      tp: Math.random() * 6.283, ds: 0.9 + Math.random() * 1.4,
     }))
+    // Small aeroplane outline (nose at +x), a half-silhouette mirrored.
+    const PH = [[1, 0], [0.2, 0.1], [-0.05, 0.52], [-0.22, 0.52], [-0.27, 0.13], [-0.62, 0.13], [-0.74, 0.42], [-0.86, 0.42], [-0.9, 0]]
+    const PLANE = PH.concat(PH.slice(1, -1).reverse().map(([x, y]) => [x, -y]))
 
-    // A faint wireframe globe with small aeroplane OUTLINES of varying size
-    // orbiting it — the travel motif, up in the sky. Held as fractions.
-    const globe = { fx: 0.2, fy: 0.2, fr: 0.1 }
-    const planes = Array.from({ length: 7 }, (_, i) => ({
-      orbit: 1.35 + (i % 3) * 0.5 + Math.random() * 0.25,     // × globe radius
-      a0: Math.random() * 6.283, sp: 0.00007 + Math.random() * 0.00009,
-      dir: i % 2 ? 1 : -1, size: 6 + Math.random() * 9,
-    }))
-    // Unit aeroplane outline (nose at +x), built from a half-silhouette mirrored.
-    const PLANE_HALF = [
-      [1.0, 0], [0.2, 0.1], [-0.05, 0.52], [-0.22, 0.52], [-0.27, 0.13],
-      [-0.62, 0.13], [-0.74, 0.42], [-0.86, 0.42], [-0.9, 0],
-    ]
-    const PLANE = PLANE_HALF.concat(PLANE_HALF.slice(1, -1).reverse().map(([x, y]) => [x, -y]))
-
-    // Ground "provider network": scattered poles with a well-connected wire mesh
-    // (nearest neighbours + some long crossing links = crossdimensional
-    // intersections), and several routes each carrying their own signal pulse.
-    const NODEN = 15
-    const nodes = Array.from({ length: NODEN }, (_, i) => {
-      const fx = 0.03 + (i / (NODEN - 1)) * 0.94 + (Math.random() - 0.5) * 0.07
-      return { fx: Math.min(0.98, Math.max(0.02, fx)), fy: 0.64 + Math.random() * 0.36 }
-    })
-    const edges = []; const seenE = new Set()
-    const addEdge = (i, j) => {
-      if (i === j) return
-      const k = i < j ? i + '-' + j : j + '-' + i
-      if (!seenE.has(k)) { seenE.add(k); edges.push([i, j]) }
-    }
-    for (let i = 0; i < NODEN; i++) {
-      const near = nodes.map((n, j) => ({ j, d: Math.hypot(n.fx - nodes[i].fx, n.fy - nodes[i].fy) }))
-        .filter((o) => o.j !== i).sort((a, b) => a.d - b.d)
-      for (const { j } of near.slice(0, 3)) addEdge(i, j)     // denser mesh
-    }
-    for (let n = 0; n < 6; n++) {                              // long crossing links
-      addEdge(Math.floor(Math.random() * NODEN), Math.floor(Math.random() * NODEN))
-    }
-    // Several routes, each a greedy nearest-neighbour chain from a different seed,
-    // so multiple signals travel different paths (not one repeating dot).
-    const chain = (start) => {
-      const seenN = new Set([start]); const path = [start]
-      while (path.length < 6) {
-        const c = nodes[path[path.length - 1]]; let best = -1, bd = Infinity
-        for (let j = 0; j < NODEN; j++) {
-          if (seenN.has(j)) continue
-          const d = Math.hypot(nodes[j].fx - c.fx, nodes[j].fy - c.fy)
-          if (d < bd) { bd = d; best = j }
-        }
-        if (best < 0) break; seenN.add(best); path.push(best)
-      }
-      return path
-    }
-    const byScore = (f) => nodes.map((n, i) => ({ i, s: f(n) })).sort((a, b) => b.s - a.s)[0].i
-    const routes = [
-      { path: chain(byScore((n) => n.fy - n.fx)), sp: 0.00010, dir: 1, gold: true },   // near-left → best provider
-      { path: chain(byScore((n) => n.fy + n.fx)), sp: 0.00014, dir: -1, gold: false },  // near-right, reverse
-      { path: chain(byScore((n) => n.fy * 0.4 - Math.abs(n.fx - 0.5))), sp: 0.00008, dir: 1, gold: false },
-    ]
-
-    let W = 0, H = 0, cx = 0, cy = 0, R = 0
+    let W = 0, H = 0
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       W = canvas.clientWidth; H = canvas.clientHeight
       canvas.width = Math.max(1, Math.round(W * dpr))
       canvas.height = Math.max(1, Math.round(H * dpr))
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      cx = W / 2; cy = H * 1.03; R = Math.hypot(W, H) * 0.64
     }
 
-    // Smoothed pointer — idles high-centre when the cursor isn't over the shell.
     let px = 0, py = 0, tpx = 0, tpy = 0, haveP = false
-    const idleP = () => { tpx = cx; tpy = cy - H * 0.42 }
+    const idleP = () => { tpx = W / 2; tpy = H * 0.32 }
     const onMove = (e) => { const r = canvas.getBoundingClientRect(); tpx = e.clientX - r.left; tpy = e.clientY - r.top; haveP = true }
     const onLeave = () => { haveP = false; idleP() }
 
-    // Displayed palette eases toward the target, so phase changes cross-fade.
     let cur = null
     const target = (t) => {
       const ph = phaseRef.current
@@ -160,131 +112,118 @@ export default function AuthBackdrop() {
       const base = dk ? mix(cur.core, DARKBG, 0.86) : mix(cur.core, WHITE, 0.9)
       const midWash = mix(cur.core, base, 0.45)
       ctx.fillStyle = rgb(base); ctx.fillRect(0, 0, W, H)
-      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R)
-      g.addColorStop(0, rgba(cur.core, dk ? 0.62 : 0.92))
-      g.addColorStop(0.36, rgba(midWash, dk ? 0.5 : 0.72))
-      g.addColorStop(1, rgba(base, 0))
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H)
 
-      // Faint logo mark tucked into the top-right corner — a calm patch of the
-      // field, clear of the card and the busy ray convergence, so it reads as a
-      // proper watermark rather than getting lost behind the sign-in box.
-      if (logoReady) {
-        const lw = Math.min(W, H) * 0.13
-        const lh = lw * (logo.height / logo.width)
-        const pad = Math.min(W, H) * 0.05
-        ctx.save()
-        ctx.globalAlpha = dk ? 0.11 : 0.08
-        ctx.drawImage(logo, W - pad - lw, pad, lw, lh)
-        ctx.restore()
+      // Globe geometry: big and central — the backbone of the scene.
+      const gx = W / 2, gy = H * 0.5, Rg = Math.min(W, H) * 0.46
+      const lam0 = t * 0.00003, phi0 = 0.36
+      const sinP = Math.sin(phi0), cosP = Math.cos(phi0)
+      const project = (lon, lat) => {
+        const lam = lon * D2R - lam0, phi = lat * D2R, cphi = Math.cos(phi), sphi = Math.sin(phi)
+        const cosc = sinP * sphi + cosP * cphi * Math.cos(lam)
+        return { x: gx + Rg * cphi * Math.sin(lam), y: gy - Rg * (cosP * sphi - sinP * cphi * Math.cos(lam)), vis: cosc >= 0 }
       }
 
-      // ── Faint wireframe globe with aeroplane OUTLINES of varying size orbiting
-      //    it — the travel motif, kept up in the sky and away from the rays.
-      const gX = globe.fx * W, gY = globe.fy * H, gR = globe.fr * Math.min(W, H)
-      ctx.save(); ctx.lineWidth = 1; ctx.strokeStyle = rgba(cur.line, dk ? 0.2 : 0.15)
-      ctx.beginPath(); ctx.arc(gX, gY, gR, 0, 6.283); ctx.stroke()
-      for (let k = -2; k <= 2; k++) {                          // latitudes
-        const yy = gY + (k / 3) * gR, rx = gR * Math.cos(Math.asin(Math.max(-1, Math.min(1, (k / 3)))))
-        ctx.beginPath(); ctx.ellipse(gX, yy, rx, rx * 0.16, 0, 0, 6.283); ctx.stroke()
+      // 1) Sunburst halo behind the globe (rays from the globe centre), parted
+      //    by the pointer like a charge (static-electricity magnet).
+      const RR = Math.hypot(W, H) * 0.55, fieldR = Math.min(W, H) * 0.17, fieldR2 = fieldR * fieldR
+      const rim = Rg * 0.98
+      ctx.lineWidth = 1
+      for (const ry of rays) {
+        const ca = Math.cos(ry.a), sa = Math.sin(ry.a)
+        const sx = gx + ca * rim, sy = gy + sa * rim              // start at the globe rim
+        const len = Rg * 0.1 + ry.r * RR * (0.55 + 0.05 * Math.sin(t * 0.0006 + ry.lp))
+        let tx = gx + ca * (rim + len), ty = gy + sa * (rim + len)
+        let mxp = (sx + tx) / 2, myp = (sy + ty) / 2
+        const dmx = mxp - px, dmy = myp - py, dm = Math.hypot(dmx, dmy) || 1, fM = Math.exp(-(dm * dm) / fieldR2)
+        mxp += (dmx / dm) * fM * 150; myp += (dmy / dm) * fM * 150
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.14 : 0.1)
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(mxp, myp, tx, ty); ctx.stroke()
+        const tw = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 0.0011 + ry.tp))
+        ctx.fillStyle = rgba(cur.dot, (dk ? 0.4 : 0.42) * tw)
+        ctx.beginPath(); ctx.arc(tx, ty, ry.ds, 0, 6.2832); ctx.fill()
       }
-      for (let k = 0; k < 3; k++) {                            // meridians
-        ctx.beginPath(); ctx.ellipse(gX, gY, gR * (0.34 + k * 0.33), gR, 0, 0, 6.283); ctx.stroke()
+
+      // 2) Globe disc — a lit atmosphere so the sphere reads over the halo.
+      ctx.save(); ctx.beginPath(); ctx.arc(gx, gy, Rg, 0, 6.2832); ctx.clip()
+      const gg = ctx.createRadialGradient(gx - Rg * 0.35, gy - Rg * 0.35, Rg * 0.1, gx, gy, Rg * 1.15)
+      gg.addColorStop(0, rgba(cur.core, dk ? 0.55 : 0.5))
+      gg.addColorStop(0.6, rgba(midWash, dk ? 0.28 : 0.3))
+      gg.addColorStop(1, rgba(base, dk ? 0.1 : 0.05))
+      ctx.fillStyle = gg; ctx.fillRect(gx - Rg, gy - Rg, Rg * 2, Rg * 2)
+
+      // 3) Graticule (parallels + meridians), clipped to the globe.
+      ctx.strokeStyle = rgba(cur.line, dk ? 0.16 : 0.13); ctx.lineWidth = 1
+      const strokePath = (samples) => {
+        ctx.beginPath(); let pen = false
+        for (const [lon, lat] of samples) { const p = project(lon, lat); if (p.vis) { pen ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); pen = true } else pen = false }
+        ctx.stroke()
       }
-      // planes on faint orbits
-      const drawPlane = (x, y, s, ang, a) => {
-        ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(s, s)
-        ctx.lineWidth = 1 / s; ctx.strokeStyle = rgba(cur.dot, a)
-        ctx.beginPath()
-        PLANE.forEach(([px2, py2], i) => (i ? ctx.lineTo(px2, py2) : ctx.moveTo(px2, py2)))
-        ctx.closePath(); ctx.stroke(); ctx.restore()
-      }
-      for (const p of planes) {
-        const orb = gR * p.orbit, ang = p.a0 + t * p.sp * p.dir
-        const x = gX + Math.cos(ang) * orb, y = gY + Math.sin(ang) * orb * 0.7
-        ctx.setLineDash([2, 6]); ctx.strokeStyle = rgba(cur.line, dk ? 0.09 : 0.07)
-        ctx.beginPath(); ctx.ellipse(gX, gY, orb, orb * 0.7, 0, 0, 6.283); ctx.stroke(); ctx.setLineDash([])
-        drawPlane(x, y, p.size, ang + p.dir * Math.PI / 2, dk ? 0.6 : 0.5)
-      }
+      for (let lat = -60; lat <= 60; lat += 30) { const s = []; for (let lon = -180; lon <= 180; lon += 6) s.push([lon, lat]); strokePath(s) }
+      for (let lon = -180; lon < 180; lon += 30) { const s = []; for (let lat = -90; lat <= 90; lat += 6) s.push([lon, lat]); strokePath(s) }
+
+      // 4) Continent outlines — the real map, rotating with the globe.
+      ctx.strokeStyle = rgba(cur.line, dk ? 0.4 : 0.32); ctx.lineWidth = 1.1
+      for (const ring of WORLD) strokePath(ring)
       ctx.restore()
 
-      // ── Faint "provider network" on the ground: scattered double-crossarm
-      //    poles, a well-connected wire mesh (neighbours + long crossing links),
-      //    and several routes each carrying their own signal — "we navigate you
-      //    to the best line". The primary (gold) route ends at the best provider.
-      const NX = (n) => n.fx * W, NY = (n) => n.fy * H
-      const poleH = (n) => H * 0.13 * ((n.fy - 0.66) / 0.34) + 5
-      const topY = (n) => NY(n) - poleH(n)
-      ctx.lineWidth = 1; ctx.strokeStyle = rgba(cur.line, dk ? 0.1 : 0.08)
-      for (const [i, j] of edges) {
-        const a = nodes[i], b = nodes[j], ax = NX(a), ay = topY(a), bx = NX(b), by = topY(b)
-        const sag = Math.min(30, Math.abs(bx - ax) * 0.14)
-        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo((ax + bx) / 2, (ay + by) / 2 + sag, bx, by); ctx.stroke()
-      }
-      for (const n of nodes) {
-        const gx = NX(n), gy = NY(n), h = poleH(n), arm = 4 + h * 0.28
-        ctx.strokeStyle = rgba(cur.line, dk ? 0.17 : 0.12); ctx.lineWidth = Math.max(1, h * 0.03)
-        ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx, gy - h); ctx.stroke()
-        const a1 = gy - h * 0.86, a2 = gy - h * 0.68
-        ctx.beginPath(); ctx.moveTo(gx - arm, a1); ctx.lineTo(gx + arm, a1); ctx.stroke()
-        ctx.beginPath(); ctx.moveTo(gx - arm * 0.7, a2); ctx.lineTo(gx + arm * 0.7, a2); ctx.stroke()
-      }
-      for (const rt of routes) {
-        if (rt.path.length < 2) continue
-        const col = rt.gold ? GOLD : cur.dot
-        ctx.strokeStyle = rgba(col, rt.gold ? (dk ? 0.34 : 0.4) : (dk ? 0.24 : 0.2)); ctx.lineWidth = rt.gold ? 1.2 : 1
-        ctx.beginPath()
-        rt.path.forEach((idx, k) => { const n = nodes[idx]; k ? ctx.lineTo(NX(n), topY(n)) : ctx.moveTo(NX(n), topY(n)) })
-        ctx.stroke()
-        const s = ((t * rt.sp * rt.dir) % 1 + 1) % 1, segF = s * (rt.path.length - 1)
-        const si = Math.min(rt.path.length - 2, Math.floor(segF)), lf = segF - si
-        const A = nodes[rt.path[si]], B = nodes[rt.path[si + 1]]
-        ctx.fillStyle = rgba(col, dk ? 0.85 : 0.72)
-        ctx.beginPath(); ctx.arc(lerp(NX(A), NX(B), lf), lerp(topY(A), topY(B), lf), rt.gold ? 2.4 : 1.9, 0, 6.283); ctx.fill()
-      }
-      // Best-provider node: a soft pulsing ring at the gold route's far end.
-      const gr0 = routes.find((r) => r.gold && r.path.length >= 2)
-      if (gr0) {
-        const dest = nodes[gr0.path[gr0.path.length - 1]], pr = 4 + 1.6 * (0.5 + 0.5 * Math.sin(t * 0.004))
-        ctx.strokeStyle = rgba(GOLD, dk ? 0.7 : 0.6); ctx.lineWidth = 1.2
-        ctx.beginPath(); ctx.arc(NX(dest), topY(dest), pr, 0, 6.283); ctx.stroke()
-        ctx.fillStyle = rgba(GOLD, dk ? 0.85 : 0.72)
-        ctx.beginPath(); ctx.arc(NX(dest), topY(dest), 1.7, 0, 6.283); ctx.fill()
+      // 5) Rim + soft outer atmosphere glow.
+      const atm = ctx.createRadialGradient(gx, gy, Rg * 0.92, gx, gy, Rg * 1.14)
+      atm.addColorStop(0, rgba(cur.line, dk ? 0.18 : 0.12)); atm.addColorStop(1, rgba(cur.line, 0))
+      ctx.fillStyle = atm; ctx.beginPath(); ctx.arc(gx, gy, Rg * 1.14, 0, 6.2832); ctx.fill()
+      ctx.strokeStyle = rgba(cur.line, dk ? 0.34 : 0.26); ctx.lineWidth = 1
+      ctx.beginPath(); ctx.arc(gx, gy, Rg, 0, 6.2832); ctx.stroke()
+
+      // 6) Intercontinental connections — arcs lifting off the globe between
+      //    hub cities (flights + provider links). Only when both ends face us.
+      const proj = CITIES.map(([lo, la]) => project(lo, la))
+      LINKS.forEach(([i, j, gold], li) => {
+        const a = proj[i], b = proj[j]
+        if (!a.vis || !b.vis) return
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
+        const dx = mx - gx, dy = my - gy, d = Math.hypot(dx, dy) || 1
+        const lift = Rg * 0.22 + d * 0.15
+        const cxp = mx + (dx / d) * lift, cyp = my + (dy / d) * lift
+        const col = gold ? GOLD : cur.dot
+        ctx.setLineDash([6, 6]); ctx.strokeStyle = rgba(col, gold ? (dk ? 0.5 : 0.46) : (dk ? 0.3 : 0.26))
+        ctx.lineWidth = gold ? 1.4 : 1
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(cxp, cyp, b.x, b.y); ctx.stroke()
+        ctx.setLineDash([])
+        // travelling signal pulse
+        const u = ((t * (gold ? 0.00016 : 0.00012) + li * 0.13) % 1 + 1) % 1
+        const bx = (1 - u) * (1 - u) * a.x + 2 * (1 - u) * u * cxp + u * u * b.x
+        const by = (1 - u) * (1 - u) * a.y + 2 * (1 - u) * u * cyp + u * u * b.y
+        ctx.fillStyle = rgba(col, dk ? 0.9 : 0.78)
+        ctx.beginPath(); ctx.arc(bx, by, gold ? 2.4 : 1.9, 0, 6.2832); ctx.fill()
+        // a small plane outline on flight links
+        if (FLIGHT_LINKS.includes(li)) {
+          const dxdu = 2 * (1 - u) * (cxp - a.x) + 2 * u * (b.x - cxp)
+          const dydu = 2 * (1 - u) * (cyp - a.y) + 2 * u * (b.y - cyp)
+          const ang = Math.atan2(dydu, dxdu), s = 6
+          ctx.save(); ctx.translate(bx, by); ctx.rotate(ang); ctx.scale(s, s)
+          ctx.lineWidth = 1 / s; ctx.strokeStyle = rgba(cur.dot, dk ? 0.75 : 0.62)
+          ctx.beginPath(); PLANE.forEach(([qx, qy], k) => (k ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy)))
+          ctx.closePath(); ctx.stroke(); ctx.restore()
+        }
+      })
+      // 7) City nodes.
+      for (const p of proj) {
+        if (!p.vis) continue
+        ctx.fillStyle = rgba(cur.dot, dk ? 0.8 : 0.7)
+        ctx.beginPath(); ctx.arc(p.x, p.y, 1.8, 0, 6.2832); ctx.fill()
       }
 
-      ctx.lineWidth = 1
-      const lineA = dk ? 0.24 : 0.16
-      // The pointer is a repelling charge: rays near it are shoved radially
-      // outward with a Gaussian falloff, so they part and reorganise around
-      // the cursor — a static-electricity / magnet parting rather than a lens.
-      const fieldR = Math.min(W, H) * 0.19
-      const fieldR2 = fieldR * fieldR
-      for (const ry of rays) {
-        const len = ry.r * R * (1 + 0.06 * Math.sin(t * 0.0006 + ry.lp))
-        let tx = cx + Math.cos(ry.a) * len, ty = cy + Math.sin(ry.a) * len
-        let mxp = (cx + tx) / 2, myp = (cy + ty) / 2
-        const dmx = mxp - px, dmy = myp - py, dm = Math.hypot(dmx, dmy) || 1
-        const fM = Math.exp(-(dm * dm) / fieldR2)
-        mxp += (dmx / dm) * fM * 155; myp += (dmy / dm) * fM * 155
-        const dtx = tx - px, dty = ty - py, dt = Math.hypot(dtx, dty) || 1
-        const fT = Math.exp(-(dt * dt) / fieldR2)
-        tx += (dtx / dt) * fT * 96; ty += (dty / dt) * fT * 96
-        ctx.strokeStyle = rgba(cur.line, lineA)
-        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.quadraticCurveTo(mxp, myp, tx, ty); ctx.stroke()
-        const tw = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 0.0011 + ry.tp))
-        ctx.fillStyle = rgba(cur.dot, (dk ? 0.5 : 0.55) * tw + fT * 0.3)
-        ctx.beginPath(); ctx.arc(tx, ty, ry.ds + fT * 1.4, 0, 6.2832); ctx.fill()
+      // 8) Faint logo watermark, top-left.
+      if (logoReady) {
+        const lw = Math.min(W, H) * 0.13, lh = lw * (logo.height / logo.width), pad = Math.min(W, H) * 0.05
+        ctx.save(); ctx.globalAlpha = dk ? 0.11 : 0.08
+        ctx.drawImage(logo, pad, pad, lw, lh); ctx.restore()
       }
 
-      // A whisper of light on the pointer — just enough to read as warmth at
-      // the parting, not a bright lamp.
-      const gr = Math.min(W, H) * 0.26
-      const glowC = mix(cur.line, WHITE, dk ? 0.15 : 0.4)
+      // 9) Pointer glow — a whisper of light on the cursor.
+      const gr = Math.min(W, H) * 0.24, glowC = mix(cur.line, WHITE, dk ? 0.15 : 0.4)
       ctx.globalCompositeOperation = 'lighter'
       const lg = ctx.createRadialGradient(px, py, 0, px, py, gr)
-      lg.addColorStop(0, rgba(glowC, dk ? 0.1 : 0.13))
-      lg.addColorStop(0.5, rgba(glowC, dk ? 0.03 : 0.045))
-      lg.addColorStop(1, rgba(glowC, 0))
+      lg.addColorStop(0, rgba(glowC, dk ? 0.1 : 0.13)); lg.addColorStop(0.5, rgba(glowC, dk ? 0.03 : 0.045)); lg.addColorStop(1, rgba(glowC, 0))
       ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(px, py, gr, 0, 6.2832); ctx.fill()
       ctx.globalCompositeOperation = 'source-over'
     }
