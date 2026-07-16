@@ -44,7 +44,7 @@ export default function AuthBackdrop() {
     const rgb = (c) => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`
     const rgba = (c, a) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`
     const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark'
-    const WHITE = [255, 255, 255], DARKBG = [6, 9, 18]
+    const WHITE = [255, 255, 255], DARKBG = [6, 9, 18], GOLD = [212, 158, 96]
 
     // The logo mark, drawn as a faint low watermark once it has loaded.
     const logo = new Image()
@@ -60,17 +60,53 @@ export default function AuthBackdrop() {
       ds: 1.1 + Math.random() * 1.6,
     }))
 
-    // Faint "airline map" arcs across the sky — positions kept as fractions so
-    // they survive resize. Each carries a slow-travelling "flight" dot.
-    const arcs = Array.from({ length: 6 }, () => {
-      const y = 0.1 + Math.random() * 0.32
+    // Faint "airline map" arcs high in the sky — clearly curved, dashed, with a
+    // little plane gliding along, so they read as flight paths (not ray tips).
+    // Positions kept as fractions so they survive resize.
+    const arcs = Array.from({ length: 4 }, () => {
+      const y = 0.07 + Math.random() * 0.15
       return {
-        x1: -0.05 + Math.random() * 0.35, y1: y + (Math.random() - 0.5) * 0.08,
-        x2: 0.62 + Math.random() * 0.45, y2: y + (Math.random() - 0.5) * 0.08,
-        bow: 0.08 + Math.random() * 0.14, ph: Math.random() * 6.283,
-        sp: 0.00012 + Math.random() * 0.0001,
+        x1: -0.05 + Math.random() * 0.4, y1: y + (Math.random() - 0.5) * 0.06,
+        x2: 0.6 + Math.random() * 0.48, y2: y + (Math.random() - 0.5) * 0.06,
+        bow: 0.12 + Math.random() * 0.09, ph: Math.random() * 6.283,
+        sp: 0.00011 + Math.random() * 0.00008,
       }
     })
+
+    // Ground "provider network": scattered telephone poles with a wire mesh
+    // between neighbours, plus one highlighted route that "navigates" to the
+    // best-provider node — geometry built once, held as fractions.
+    const NODEN = 12
+    const nodes = Array.from({ length: NODEN }, (_, i) => {
+      const fx = 0.04 + (i / (NODEN - 1)) * 0.92 + (Math.random() - 0.5) * 0.06
+      return { fx: Math.min(0.97, Math.max(0.03, fx)), fy: 0.66 + Math.random() * 0.34 }
+    })
+    const edges = []; const seenE = new Set()
+    for (let i = 0; i < NODEN; i++) {
+      const near = nodes.map((n, j) => ({ j, d: Math.hypot(n.fx - nodes[i].fx, n.fy - nodes[i].fy) }))
+        .filter((o) => o.j !== i).sort((a, b) => a.d - b.d)
+      for (const { j } of near.slice(0, 2)) {
+        const k = i < j ? i + '-' + j : j + '-' + i
+        if (!seenE.has(k)) { seenE.add(k); edges.push([i, j]) }
+      }
+    }
+    // Route: a greedy nearest-neighbour path threading pole to pole from a
+    // near-left node, so it reads as an organic "best route" (its far end is
+    // the highlighted best-provider node).
+    const route = (() => {
+      const start = nodes.map((n, i) => ({ i, s: n.fy - n.fx })).sort((a, b) => b.s - a.s)[0].i
+      const seenN = new Set([start]); const path = [start]
+      while (path.length < 6) {
+        const c = nodes[path[path.length - 1]]; let best = -1, bd = Infinity
+        for (let j = 0; j < NODEN; j++) {
+          if (seenN.has(j)) continue
+          const d = Math.hypot(nodes[j].fx - c.fx, nodes[j].fy - c.fy)
+          if (d < bd) { bd = d; best = j }
+        }
+        if (best < 0) break; seenN.add(best); path.push(best)
+      }
+      return path
+    })()
 
     let W = 0, H = 0, cx = 0, cy = 0, R = 0
     const resize = () => {
@@ -118,65 +154,80 @@ export default function AuthBackdrop() {
       g.addColorStop(1, rgba(base, 0))
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, H)
 
-      // Faint logo mark tucked into the bottom-right corner — a calm patch of
-      // the field, clear of the card and the busy ray convergence, so it reads
-      // as a proper watermark rather than getting lost behind the sign-in box.
+      // Faint logo mark tucked into the bottom-left corner — a calm patch of the
+      // field, clear of the card and the busy ray convergence, so it reads as a
+      // proper watermark rather than getting lost behind the sign-in box.
       if (logoReady) {
         const lw = Math.min(W, H) * 0.14
         const lh = lw * (logo.height / logo.width)
         const pad = Math.min(W, H) * 0.05
         ctx.save()
         ctx.globalAlpha = dk ? 0.11 : 0.08
-        ctx.drawImage(logo, W - pad - lw, H - pad - lh, lw, lh)
+        ctx.drawImage(logo, pad, H - pad - lh, lw, lh)
         ctx.restore()
       }
 
-      // ── Faint flight-route arcs (an airline map high in the sky). Dotted
-      //    great-circle curves with endpoint nodes and a slow "flight" dot.
+      // ── Faint flight paths high in the sky. Clearly curved + dashed, hollow
+      //    "airport" rings at each end and a small plane gliding along, so they
+      //    read as flights rather than continuations of the burst rays.
       ctx.save(); ctx.lineWidth = 1
       for (const ac of arcs) {
         const x1 = ac.x1 * W, y1 = ac.y1 * H, x2 = ac.x2 * W, y2 = ac.y2 * H
         const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 - ac.bow * H
-        ctx.setLineDash([1, 7]); ctx.strokeStyle = rgba(cur.line, dk ? 0.17 : 0.13)
+        ctx.setLineDash([7, 7]); ctx.strokeStyle = rgba(cur.line, dk ? 0.2 : 0.15)
         ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(mx, my, x2, y2); ctx.stroke()
-        ctx.setLineDash([]); ctx.fillStyle = rgba(cur.dot, dk ? 0.5 : 0.42)
-        ctx.beginPath(); ctx.arc(x1, y1, 2, 0, 6.283); ctx.fill()
-        ctx.beginPath(); ctx.arc(x2, y2, 2, 0, 6.283); ctx.fill()
+        ctx.setLineDash([]); ctx.strokeStyle = rgba(cur.line, dk ? 0.42 : 0.34)
+        ctx.beginPath(); ctx.arc(x1, y1, 2.4, 0, 6.283); ctx.stroke()
+        ctx.beginPath(); ctx.arc(x2, y2, 2.4, 0, 6.283); ctx.stroke()
         const u = 0.5 + 0.5 * Math.sin(t * ac.sp + ac.ph)
         const bx = (1 - u) * (1 - u) * x1 + 2 * (1 - u) * u * mx + u * u * x2
         const by = (1 - u) * (1 - u) * y1 + 2 * (1 - u) * u * my + u * u * y2
-        ctx.fillStyle = rgba(cur.dot, dk ? 0.75 : 0.6)
-        ctx.beginPath(); ctx.arc(bx, by, 1.7, 0, 6.283); ctx.fill()
+        const ang = Math.atan2(2 * (1 - u) * (my - y1) + 2 * u * (y2 - my), 2 * (1 - u) * (mx - x1) + 2 * u * (x2 - mx))
+        ctx.save(); ctx.translate(bx, by); ctx.rotate(ang)
+        ctx.fillStyle = rgba(cur.dot, dk ? 0.85 : 0.7)
+        ctx.beginPath(); ctx.moveTo(5, 0); ctx.lineTo(-3, 3); ctx.lineTo(-3, -3); ctx.closePath(); ctx.fill()
+        ctx.restore()
       }
       ctx.restore()
 
-      // ── Faint telephone poles + sagging wires, two rows lining an implied
-      //    road and receding to the horizon — the "far-reaching phone lines".
-      const hy = H * 0.66, POLES = 7
-      const poleRow = (nearX) => {
-        const pts = []
-        for (let i = 0; i < POLES; i++) {
-          const tt = 1 - Math.pow(0.6, i)
-          pts.push({
-            gx: nearX + (cx - nearX) * tt, gy: H * 1.02 + (hy - H * 1.02) * tt,
-            ph: H * 0.16 * (1 - tt) + 3, arm: 18 * (1 - tt) + 2,
-          })
-        }
-        ctx.strokeStyle = rgba(cur.line, dk ? 0.12 : 0.09); ctx.lineWidth = 1
-        for (let i = 0; i < pts.length - 1; i++) {
-          const a = pts[i], b = pts[i + 1], ay = a.gy - a.ph, by = b.gy - b.ph
-          ctx.beginPath(); ctx.moveTo(a.gx, ay)
-          ctx.quadraticCurveTo((a.gx + b.gx) / 2, (ay + by) / 2 + a.ph * 0.12, b.gx, by); ctx.stroke()
-        }
-        for (const p of pts) {
-          ctx.strokeStyle = rgba(cur.line, dk ? 0.18 : 0.13)
-          ctx.lineWidth = Math.max(1, p.ph * 0.03)
-          ctx.beginPath(); ctx.moveTo(p.gx, p.gy); ctx.lineTo(p.gx, p.gy - p.ph); ctx.stroke()
-          const ay = p.gy - p.ph * 0.82
-          ctx.beginPath(); ctx.moveTo(p.gx - p.arm, ay); ctx.lineTo(p.gx + p.arm, ay); ctx.stroke()
-        }
+      // ── Faint "provider network" on the ground: scattered telephone poles
+      //    (double crossarms), a wire mesh between neighbours, and one gold
+      //    route weaving to the best-provider node — "we find you the best line".
+      const NX = (n) => n.fx * W, NY = (n) => n.fy * H
+      const poleH = (n) => H * 0.13 * ((n.fy - 0.66) / 0.34) + 5
+      const topY = (n) => NY(n) - poleH(n)
+      ctx.lineWidth = 1; ctx.strokeStyle = rgba(cur.line, dk ? 0.1 : 0.08)
+      for (const [i, j] of edges) {
+        const a = nodes[i], b = nodes[j], ax = NX(a), ay = topY(a), bx = NX(b), by = topY(b)
+        const sag = Math.min(30, Math.abs(bx - ax) * 0.14)
+        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo((ax + bx) / 2, (ay + by) / 2 + sag, bx, by); ctx.stroke()
       }
-      poleRow(W * 0.14); poleRow(W * 0.86)
+      for (const n of nodes) {
+        const gx = NX(n), gy = NY(n), h = poleH(n), arm = 4 + h * 0.28
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.17 : 0.12); ctx.lineWidth = Math.max(1, h * 0.03)
+        ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx, gy - h); ctx.stroke()
+        const a1 = gy - h * 0.86, a2 = gy - h * 0.68
+        ctx.beginPath(); ctx.moveTo(gx - arm, a1); ctx.lineTo(gx + arm, a1); ctx.stroke()
+        ctx.beginPath(); ctx.moveTo(gx - arm * 0.7, a2); ctx.lineTo(gx + arm * 0.7, a2); ctx.stroke()
+      }
+      if (route.length >= 2) {
+        ctx.strokeStyle = rgba(GOLD, dk ? 0.34 : 0.4); ctx.lineWidth = 1.2
+        ctx.beginPath()
+        route.forEach((idx, k) => { const n = nodes[idx]; k ? ctx.lineTo(NX(n), topY(n)) : ctx.moveTo(NX(n), topY(n)) })
+        ctx.stroke()
+        // Travelling pulse along the route.
+        const s = (t * 0.00009) % 1, segF = s * (route.length - 1)
+        const si = Math.min(route.length - 2, Math.floor(segF)), lf = segF - si
+        const A = nodes[route[si]], B = nodes[route[si + 1]]
+        ctx.fillStyle = rgba(GOLD, dk ? 0.85 : 0.72)
+        ctx.beginPath(); ctx.arc(lerp(NX(A), NX(B), lf), lerp(topY(A), topY(B), lf), 2.2, 0, 6.283); ctx.fill()
+        // Best-provider node: a soft pulsing ring at the far end.
+        const dest = nodes[route[route.length - 1]], pr = 4 + 1.6 * (0.5 + 0.5 * Math.sin(t * 0.004))
+        ctx.strokeStyle = rgba(GOLD, dk ? 0.7 : 0.6); ctx.lineWidth = 1.2
+        ctx.beginPath(); ctx.arc(NX(dest), topY(dest), pr, 0, 6.283); ctx.stroke()
+        ctx.fillStyle = rgba(GOLD, dk ? 0.85 : 0.72)
+        ctx.beginPath(); ctx.arc(NX(dest), topY(dest), 1.7, 0, 6.283); ctx.fill()
+      }
 
       ctx.lineWidth = 1
       const lineA = dk ? 0.24 : 0.16
