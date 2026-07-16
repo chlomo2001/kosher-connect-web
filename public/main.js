@@ -346,6 +346,9 @@ function syncNavActive(tab) {
 
 function setupNav() {
   document.querySelectorAll('.nav-item').forEach(item => {
+    // These are <div>s — give them real button semantics so Tab/Enter/Space work. U11.
+    if (!item.hasAttribute('role')) item.setAttribute('role', 'button');
+    if (!item.hasAttribute('tabindex')) item.tabIndex = 0;
     item.addEventListener('click', () => {
       const tab = item.dataset.tab;
       syncNavActive(tab);
@@ -353,6 +356,17 @@ function setupNav() {
       renderTab(tab);
       pushTabUrl(tab); // reflect the screen in the address bar (new history entry)
     });
+    item.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); }
+    });
+  });
+  // U15 — click-only chips (equipment toggles, click-to-copy values) carry
+  // role=button tabindex=0 in their markup; activate them on Enter/Space too.
+  document.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target?.matches?.('.eq-btn, .copy-val')) {
+      e.preventDefault();
+      e.target.click();
+    }
   });
   // Back / Forward: re-open whatever tab the URL now points at.
   window.addEventListener('popstate', () => {
@@ -1563,10 +1577,10 @@ function openNewRentalModal(preselectCustomerId = null) {
       <div class="form-group form-full">
         <div class="section-divider" style="margin-bottom:8px;">Equipment given to customer</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <div class="eq-btn" id="nrGiven_phone" data-given="0" onclick="nrToggleGiven('phone')">📱 Phone</div>
-          <div class="eq-btn" id="nrGiven_sim"   data-given="1" onclick="nrToggleGiven('sim')">💳 SIM</div>
-          <div class="eq-btn" id="nrGiven_plug"  data-given="0" onclick="nrToggleGiven('plug')">🔌 Plug</div>
-          <div class="eq-btn" id="nrGiven_cable" data-given="0" onclick="nrToggleGiven('cable')">🔋 Cable</div>
+          <div class="eq-btn" tabindex="0" role="button" id="nrGiven_phone" data-given="0" onclick="nrToggleGiven('phone')">📱 Phone</div>
+          <div class="eq-btn" tabindex="0" role="button" id="nrGiven_sim"   data-given="1" onclick="nrToggleGiven('sim')">💳 SIM</div>
+          <div class="eq-btn" tabindex="0" role="button" id="nrGiven_plug"  data-given="0" onclick="nrToggleGiven('plug')">🔌 Plug</div>
+          <div class="eq-btn" tabindex="0" role="button" id="nrGiven_cable" data-given="0" onclick="nrToggleGiven('cable')">🔋 Cable</div>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:6px;">Tap to toggle — bright = given</div>
       </div>
@@ -2270,10 +2284,10 @@ function openManageRentalModal(rentalId) {
     <div style="margin-bottom:8px;">
       <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Given to customer — tap to toggle</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
-        <div class="eq-btn" id="mgGivenPhone" data-given="${(r.equipmentGiven?.phone??false)?'1':'0'}" onclick="mgToggleGiven('phone')">📱 Phone</div>
-        <div class="eq-btn" id="mgGivenSim"   data-given="${(r.equipmentGiven?.sim??true)?'1':'0'}"   onclick="mgToggleGiven('sim')">💳 SIM</div>
-        <div class="eq-btn" id="mgGivenPlug"  data-given="${(r.equipmentGiven?.plug??false)?'1':'0'}" onclick="mgToggleGiven('plug')">🔌 Plug</div>
-        <div class="eq-btn" id="mgGivenCable" data-given="${(r.equipmentGiven?.cable??false)?'1':'0'}" onclick="mgToggleGiven('cable')">🔋 Cable</div>
+        <div class="eq-btn" tabindex="0" role="button" id="mgGivenPhone" data-given="${(r.equipmentGiven?.phone??false)?'1':'0'}" onclick="mgToggleGiven('phone')">📱 Phone</div>
+        <div class="eq-btn" tabindex="0" role="button" id="mgGivenSim"   data-given="${(r.equipmentGiven?.sim??true)?'1':'0'}"   onclick="mgToggleGiven('sim')">💳 SIM</div>
+        <div class="eq-btn" tabindex="0" role="button" id="mgGivenPlug"  data-given="${(r.equipmentGiven?.plug??false)?'1':'0'}" onclick="mgToggleGiven('plug')">🔌 Plug</div>
+        <div class="eq-btn" tabindex="0" role="button" id="mgGivenCable" data-given="${(r.equipmentGiven?.cable??false)?'1':'0'}" onclick="mgToggleGiven('cable')">🔋 Cable</div>
       </div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Item status — tap Returned or Lost for each item given</div>
       <div style="display:flex;flex-direction:column;gap:4px;">${eqRows}</div>
@@ -5234,7 +5248,7 @@ async function openCheckinModal(bookingId) {
   const cell = (lbl, val, raw) => val ? `
     <div style="display:flex;align-items:center;gap:6px;">
       <span style="color:var(--muted);">${lbl}:</span>
-      <strong class="copy-val" title="Click to copy ${lbl}"
+      <strong class="copy-val" tabindex="0" role="button" title="Click to copy ${lbl}"
         onclick="copyText('${escHtml(String(raw != null ? raw : val)).replace(/'/g, "\\'")}','${lbl}')">${escHtml(val)}</strong>
     </div>` : '';
   const paxAll = (p) => [
@@ -5248,7 +5262,7 @@ async function openCheckinModal(bookingId) {
       ${pax.map((p, i) => `
         <div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12px;line-height:1.7;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <strong class="copy-val" style="font-size:13px;" title="Click to copy name" onclick="copyText('${escJs(p.fullName || '')}','name')">${escHtml(p.fullName || '(no name)')}</strong>
+            <strong class="copy-val" tabindex="0" role="button" style="font-size:13px;" title="Click to copy name" onclick="copyText('${escJs(p.fullName || '')}','name')">${escHtml(p.fullName || '(no name)')}</strong>
             <button type="button" class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;"
               onclick="copyText(paxCopyBlocks[${i}],'all details')">📋 Copy all</button>
           </div>

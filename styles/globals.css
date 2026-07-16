@@ -391,7 +391,7 @@ tbody tr.selected td { background: rgba(99, 91, 255, 0.05); }
   letter-spacing: 0;
   margin: 1px 2px;
 }
-.badge-active { background: rgba(14,138,82,0.12); color: var(--success); }
+.badge-active { background: rgba(14,138,82,0.14); color: #0a6e3f; } /* audit U16 — darker green + stronger tint to clear AA contrast on 11px text */
 .badge-rental { background: rgba(99,91,255,0.10); color: var(--accent); }
 .badge-sim { background: rgba(14,116,144,0.10); color: var(--sim); }
 .badge-vn { background: rgba(124,58,237,0.11); color: var(--vn); }
@@ -869,6 +869,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   border: 1px solid var(--border);
   border-radius: 16px;
   box-shadow: 0 24px 60px -18px rgba(10,37,64,.28), 0 6px 18px -10px rgba(10,37,64,.14);
+  /* On short / landscape viewports the centred card was clipped and unscrollable
+     (the shell clips overflow for the mesh). Let the card scroll itself. audit U14. */
+  max-height: calc(100vh - 48px); overflow-y: auto;
 }
 .login-title { font-size: 30px; font-weight: 300; letter-spacing: -0.5px; color: var(--text); }
 .login-sub { font-size: 13px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); margin-top: 6px; }
@@ -1026,7 +1029,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .cal-overdue { background: var(--danger); cursor: pointer; }
 td.cal-shabbat, th.cal-shabbat { background: var(--bg-secondary); }
 td.cal-active.cal-shabbat { background: var(--accent); }
-.cal-today { outline: 2px solid var(--ink, #0d253d); outline-offset: -2px; }
+.cal-today { outline: 2px solid var(--accent); outline-offset: -2px; } /* audit U13 — was var(--ink), undefined → invisible in dark mode */
 .cal-key { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin: 0 3px 0 8px; vertical-align: middle; }
 .cal-key.cal-active { background: var(--accent); }
 .cal-key.cal-booked { background: #e8b93c; }
