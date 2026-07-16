@@ -28,6 +28,11 @@ const KINDS = {
 }
 const METHODS = ['cash', 'card', 'bank_transfer', 'voucher', 'wallet', 'other']
 
+// A client idempotency token (uuid-ish) folds into a stable charge_reference so a
+// retried / double-submitted money-in POST collapses to one row via the ledger's
+// unique charge_reference. Loose length/charset guard — used only as a reference.
+const validRef = (v) => (typeof v === 'string' && /^[\w-]{8,64}$/.test(v)) ? v : null
+
 async function resolveCustomer(legacyId) {
   const rows = await db.select(
     'customers',
@@ -168,15 +173,26 @@ async function handler(req, res) {
       const uuid = await resolveCustomer(b.customerId)
       if (!uuid) return res.status(400).json({ success: false, error: `Customer ${b.customerId} not found.` })
 
-      const [row] = await db.insert('ledger', [{
+      // Idempotent write: a client token yields a stable reference; a replay/retry
+      // hits the unique charge_reference and is ignored, then we return the row that
+      // already exists — never a second credit/debit for one action.
+      const chargeRef = `${kind.prefix}-${validRef(b.clientRef) || crypto.randomUUID()}`
+      const inserted = await db.insertIgnoreDup('ledger', [{
         customer_id: uuid,
-        charge_reference: `${kind.prefix}-${crypto.randomUUID()}`,
+        charge_reference: chargeRef,
         entry_type: kind.entry_type,
         amount,
         method,
         description: b.note || null,
         created_by: req.staff?.id || null, // #46 — who moved the money
-      }])
+      }], 'charge_reference')
+      let row = inserted && inserted[0]
+      if (!row) {
+        // Duplicate submit — the entry already exists; return it idempotently.
+        const existing = await db.select('ledger', `charge_reference=eq.${encodeURIComponent(chargeRef)}&limit=1`)
+        row = existing[0]
+      }
+      if (!row) return res.status(500).json({ success: false, error: 'Storage error' })
 
       return res.json({
         success: true,

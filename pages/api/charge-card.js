@@ -13,9 +13,14 @@ async function handler(req, res) {
   if (!stripeEnabled) return res.status(503).json({ success: false, error: 'Card payments aren’t switched on yet.' })
   if (!(await tabAllowedFor(req.staff, 'wallet'))) return res.status(403).json({ success: false, error: 'Not permitted.' })
 
-  const { customerId, amount } = req.body || {}
+  const { customerId, amount, clientRef } = req.body || {}
   const amt = Math.round((Number(amount) || 0) * 100) / 100
+  // The idempotency token is REQUIRED here: it becomes Stripe's Idempotency-Key, so a
+  // double-submit collapses to one PaymentIntent (and one ledger row) instead of
+  // charging the card twice. A stale client that omits it fails loudly, not silently.
+  const ref = (typeof clientRef === 'string' && /^[\w-]{8,64}$/.test(clientRef)) ? clientRef : null
   if (!customerId) return res.status(400).json({ success: false, error: 'customerId required.' })
+  if (!ref) return res.status(400).json({ success: false, error: 'Missing idempotency token — refresh and try again.' })
   if (!(amt > 0)) return res.status(400).json({ success: false, error: 'Enter an amount greater than £0.' })
   if (amt > 5000) return res.status(400).json({ success: false, error: 'That amount is too large.' })
 
@@ -27,7 +32,7 @@ async function handler(req, res) {
     return res.status(400).json({ success: false, error: 'No card on file for this customer.' })
   }
 
-  const reference = `STRIPE-OFFSESSION-${c.id}-${Date.now()}`
+  const reference = `STRIPE-OFFSESSION-${c.id}-${ref}`
   try {
     const pi = await chargeOffSession({
       amountPence: Math.round(amt * 100), currency: 'gbp',

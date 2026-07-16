@@ -15,6 +15,7 @@ import { serviceOrderTotal } from '../../lib/money.mjs'
 
 const EMBED = 'customers(legacy_id,first_name,last_name),service_prices(name,category)'
 const METHODS = ['cash', 'card', 'bank_transfer', 'voucher', 'other']
+const validRef = (v) => (typeof v === 'string' && /^[\w-]{8,64}$/.test(v)) ? v : null
 
 // Tier maths lives in lib/money.js (tested; keep public/main.js in sync).
 const orderTotal = (svc, qty, repeatFrom) =>
@@ -49,6 +50,7 @@ async function handler(req, res) {
 
     if (req.method === 'POST') {
       const b = req.body || {}
+      const clientRef = validRef(b.clientRef)
       if (!b.customerId) return res.status(400).json({ success: false, error: 'Customer is required.' })
       if (!b.serviceId) return res.status(400).json({ success: false, error: 'Service is required.' })
 
@@ -68,6 +70,17 @@ async function handler(req, res) {
       const total = Number.isFinite(overridden) && overridden >= 0 ? overridden : tierTotal
       if (total <= 0) return res.status(400).json({ success: false, error: 'Total must be greater than £0.' })
 
+      // Idempotency: a repeat submit (retry / double-click) must not create a second
+      // order or a second charge. The SVC-<clientRef> ledger row is the dedup key; if
+      // it already exists this is a replay — return the current balance, post nothing.
+      if (clientRef) {
+        const dup = await db.select('ledger', `charge_reference=eq.${encodeURIComponent('SVC-' + clientRef)}&select=id&limit=1`)
+        if (dup.length) {
+          const balRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
+          return res.json({ success: true, duplicate: true, balance: balRows.length ? Number(balRows[0].balance) : 0 })
+        }
+      }
+
       const [order] = await db.insert('service_orders', [{
         customer_id: customerUuid,
         service_price_id: svc.id,
@@ -77,11 +90,14 @@ async function handler(req, res) {
         notes: b.notes || null,
       }])
 
-      // No related_* FK column for service orders — the SVC-<uuid> reference
+      // Reference base = the client idempotency token when present (so retries dedupe
+      // even across two order rows a race could create), else the order id.
+      const refBase = clientRef || order.id
+      // No related_* FK column for service orders — the SVC-<ref> reference
       // carries the link.
       await db.insertIgnoreDup('ledger', [{
         customer_id: customerUuid,
-        charge_reference: `SVC-${order.id}`,
+        charge_reference: `SVC-${refBase}`,
         entry_type: 'online_service',
         amount: -total,
         description: `${svc.name}${qty > 1 ? ` × ${qty}` : ''}`,
@@ -92,7 +108,7 @@ async function handler(req, res) {
       if (b.paidNow) {
         await db.insertIgnoreDup('ledger', [{
           customer_id: customerUuid,
-          charge_reference: `PAY-SVC-${order.id}`,
+          charge_reference: `PAY-SVC-${refBase}`,
           entry_type: 'payment',
           amount: total,
           method,
@@ -102,7 +118,7 @@ async function handler(req, res) {
 
       // Owner-defined auto extras for services.
       const extras = await postAutoCharges({
-        customerUuid, appliesTo: 'service', refBase: order.id,
+        customerUuid, appliesTo: 'service', refBase,
         paidNow: !!b.paidNow, method,
       })
 

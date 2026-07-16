@@ -136,6 +136,7 @@ async function handler(req, res) {
 
     if (req.method === 'POST') {
       const b = req.body || {}
+      const clientRef = (typeof b.clientRef === 'string' && /^[\w-]{8,64}$/.test(b.clientRef)) ? b.clientRef : null
       const price = Number(b.price)
       const fee = Number(b.bookingFee) || 0
       if (!b.customerId) return res.status(400).json({ success: false, error: 'Customer is required.' })
@@ -150,6 +151,24 @@ async function handler(req, res) {
       )
       if (!custRows.length) return res.status(400).json({ success: false, error: `Customer ${b.customerId} not found.` })
       const customerUuid = custRows[0].id
+
+      // Idempotency: a repeat submit (retry / double-click) must not create a second
+      // booking or a second charge. The BOOKING-<clientRef> ledger row is the dedup
+      // key; if it already exists, return the booking it points at — post nothing new.
+      if (clientRef) {
+        const dup = await db.select('ledger',
+          `charge_reference=eq.${encodeURIComponent('BOOKING-' + clientRef)}&select=related_booking_id&limit=1`)
+        if (dup.length && dup[0].related_booking_id) {
+          const [existing] = await db.select('bookings',
+            `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&id=eq.${dup[0].related_booking_id}`)
+          if (existing) {
+            return res.json({
+              success: true, duplicate: true, booking: toApp(existing, req.staff),
+              balance: await walletBalance(customerUuid),
+            })
+          }
+        }
+      }
 
       const inserted = await db.insert(
         'bookings',
@@ -187,6 +206,9 @@ async function handler(req, res) {
       // and the wallet nets to zero — no debt for a ticket already paid.
       const PAY_METHODS = { cash: 'cash', card: 'card', card_on_file: 'card', bank_transfer: 'bank_transfer' }
       const payMethod = PAY_METHODS[b.payment] || null
+      // Reference base = the client idempotency token when present (so retries dedupe
+      // even across a race that created two booking rows), else the booking id.
+      const refBase = clientRef || booking.id
       let chargePosted = false
       if (total > 0) {
         const memo =
@@ -196,7 +218,7 @@ async function handler(req, res) {
           'ledger',
           [{
             customer_id: customerUuid,
-            charge_reference: `BOOKING-${booking.id}`,
+            charge_reference: `BOOKING-${refBase}`,
             entry_type: 'booking',
             amount: -total,
             description: memo,
@@ -210,7 +232,7 @@ async function handler(req, res) {
             'ledger',
             [{
               customer_id: customerUuid,
-              charge_reference: `PAY-BOOKING-${booking.id}`,
+              charge_reference: `PAY-BOOKING-${refBase}`,
               entry_type: 'payment',
               amount: total,
               method: payMethod,
@@ -224,7 +246,7 @@ async function handler(req, res) {
 
       // Owner-defined auto extras for bookings (e.g. a service/handling fee).
       const extras = await postAutoCharges({
-        customerUuid, appliesTo: 'booking', refBase: booking.id,
+        customerUuid, appliesTo: 'booking', refBase,
         paidNow: !!payMethod, method: payMethod,
       })
       if (extras.total > 0) chargePosted = true

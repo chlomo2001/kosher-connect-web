@@ -13,6 +13,19 @@ function kcFetch(url, opts) {
   });
 }
 
+// Idempotency token for money writes: a stable id sent with the request so a
+// replayed / retried POST dedupes server-side (the ledger charge_reference is unique).
+function kcRef() {
+  try { if (self.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch {}
+  return 'r-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+}
+
+// Re-entrancy guard: stops a second concurrent submit of the same action (the
+// double-click that would otherwise fire two charges) while the first is in flight.
+const _kcInFlight = new Set();
+function kcBeginWrite(key) { if (_kcInFlight.has(key)) return false; _kcInFlight.add(key); return true; }
+function kcEndWrite(key) { _kcInFlight.delete(key); }
+
 window.api = {
   getAllCustomers: () => kcFetch('/api/customers').then(r => r.json()),
 
@@ -3236,16 +3249,20 @@ async function chargeCardOnFile(custId) {
   if (amtStr == null) return;
   const amount = parseFloat(amtStr);
   if (!(amount > 0)) { toast('Enter a valid amount.', 'warning'); return; }
+  const guardKey = 'chargecard:' + custId;
+  if (!kcBeginWrite(guardKey)) return;
   try {
     const r = await kcFetch('/api/charge-card', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customerId: custId, amount }),
+      // clientRef becomes Stripe's Idempotency-Key so a retry can't charge twice.
+      body: JSON.stringify({ customerId: custId, amount, clientRef: kcRef() }),
     });
     const d = await r.json();
     if (d.success && d.status === 'succeeded') { toast(`Charged £${amount.toFixed(2)} to card on file ✔`, 'success'); loadWalletSection(custId); }
     else if (d.success) { toast(d.note || 'Payment processing…', 'info'); }
     else toast(d.error || 'Charge failed.', 'error');
   } catch { toast('Charge failed.', 'error'); }
+  finally { kcEndWrite(guardKey); }
 }
 
 async function deleteCustomerDoc(custId, id) {
@@ -3511,17 +3528,26 @@ async function saveWalletEntry(customerId) {
   const method = document.getElementById('wlMethod').value;
   const note = document.getElementById('wlNote').value.trim();
   const wantEmail = !!document.getElementById('wlEmail')?.checked;
-  // A negative adjustment is a charge in disguise — confirm it like one.
-  if (kind === 'adjustment' && amount < 0) {
-    const wlCust = customers.find(x => x.id === customerId);
-    if (!(await kcConfirm({
-      title: 'Confirm adjustment (charge)',
-      body: `<strong>${wlCust ? escHtml(wlCust.firstName) + ' ' + escHtml(wlCust.lastName) : 'Customer'}</strong><br>${note ? escHtml(note) : 'Manual adjustment — reduces their balance'}`,
-      amount: Math.abs(amount),
-      okLabel: 'Apply adjustment',
-    }))) return;
+  // Stop a double-click from recording the money twice while the first save is in
+  // flight; the clientRef makes any retry idempotent server-side too.
+  const guardKey = 'wallet:' + customerId;
+  if (!kcBeginWrite(guardKey)) return;
+  let res;
+  try {
+    // A negative adjustment is a charge in disguise — confirm it like one.
+    if (kind === 'adjustment' && amount < 0) {
+      const wlCust = customers.find(x => x.id === customerId);
+      if (!(await kcConfirm({
+        title: 'Confirm adjustment (charge)',
+        body: `<strong>${wlCust ? escHtml(wlCust.firstName) + ' ' + escHtml(wlCust.lastName) : 'Customer'}</strong><br>${note ? escHtml(note) : 'Manual adjustment — reduces their balance'}`,
+        amount: Math.abs(amount),
+        okLabel: 'Apply adjustment',
+      }))) return;
+    }
+    res = await window.api.addLedgerEntry({ customerId, kind, amount, method, note, clientRef: kcRef() });
+  } finally {
+    kcEndWrite(guardKey);
   }
-  const res = await window.api.addLedgerEntry({ customerId, kind, amount, method, note });
   if (!res.success) { toast(res.error || 'Could not record it.', 'error'); return; }
   closeDynamicModal();
   toast(`Recorded — wallet balance now ${fmtGbp(res.balance)}.`, 'success');
@@ -5074,18 +5100,34 @@ async function saveNewBooking() {
   if (!payload.travelDate) { toast('Travel date is required.', 'error'); return; }
   if (!Number.isFinite(payload.price) || payload.price < 0) { toast('Enter a valid ticket price.', 'error'); return; }
 
-  const bkCust = customers.find(c => c.id === payload.customerId);
-  if (!(await kcConfirm({
-    title: 'Confirm booking charge',
-    body: `<strong>${bkCust ? escHtml(bkCust.firstName) + ' ' + escHtml(bkCust.lastName) : 'Customer'}</strong><br>
-      ${escHtml(payload.route)}${payload.airline ? ' · ' + escHtml(payload.airline) : ''} · ${fmtDate(payload.travelDate)}<br>
-      Ticket ${fmtGbp(payload.price)}${payload.bookingFee ? ` + fee ${fmtGbp(payload.bookingFee)}` : ''}${payload.payment === 'paid' ? ' · paid now' : ' · on account'}`,
-    amount: payload.price + (payload.bookingFee || 0),
-    okLabel: 'Charge booking',
-  }))) return;
-
-  const res = await window.api.addBooking(payload);
+  // Idempotent booking: one token for this submit (dedupes a retry server-side) and
+  // an in-flight guard so a double-click can't create two bookings / two charges.
+  payload.clientRef = kcRef();
+  const guardKey = 'booking:' + payload.customerId + ':' + payload.route + ':' + payload.travelDate;
+  if (!kcBeginWrite(guardKey)) return;
+  let res;
+  try {
+    const bkCust = customers.find(c => c.id === payload.customerId);
+    if (!(await kcConfirm({
+      title: 'Confirm booking charge',
+      body: `<strong>${bkCust ? escHtml(bkCust.firstName) + ' ' + escHtml(bkCust.lastName) : 'Customer'}</strong><br>
+        ${escHtml(payload.route)}${payload.airline ? ' · ' + escHtml(payload.airline) : ''} · ${fmtDate(payload.travelDate)}<br>
+        Ticket ${fmtGbp(payload.price)}${payload.bookingFee ? ` + fee ${fmtGbp(payload.bookingFee)}` : ''}${payload.payment === 'paid' ? ' · paid now' : ' · on account'}`,
+      amount: payload.price + (payload.bookingFee || 0),
+      okLabel: 'Charge booking',
+    }))) return;
+    res = await window.api.addBooking(payload);
+  } finally {
+    kcEndWrite(guardKey);
+  }
   if (!res.success) { toast(res.error || 'Could not save the booking.', 'error'); return; }
+  if (res.duplicate) {
+    closeDynamicModal();
+    if (res.booking && !bookings.some(x => x.id === res.booking.id)) bookings.unshift(res.booking);
+    toast('Already booked — no double charge.', 'info');
+    renderBookingsTab();
+    return;
+  }
 
   bookings.unshift(res.booking);
   await maybeCheckinTask(res.booking);
@@ -5840,24 +5882,35 @@ async function saveNewServiceOrder() {
   const svTotal = parseFloat(document.getElementById('svTotal').value);
   const svPaid = document.getElementById('svPaid').checked;
   const svLabel = document.getElementById('svService').selectedOptions[0]?.textContent || 'Service';
-  if (!(await kcConfirm({
-    title: 'Confirm service charge',
-    body: `<strong>${svCust ? escHtml(svCust.firstName) + ' ' + escHtml(svCust.lastName) : 'Customer'}</strong><br>
-      ${escHtml(svLabel.trim())}${svPaid ? ' · paid now' : ' · on account'}`,
-    amount: Number.isFinite(svTotal) ? svTotal : 0,
-    okLabel: 'Charge service',
-  }))) return;
-  const res = await window.api.addServiceOrder({
-    customerId,
-    serviceId,
-    qty: Math.max(1, parseInt(document.getElementById('svQty').value, 10) || 1),
-    total: parseFloat(document.getElementById('svTotal').value),
-    paidNow: document.getElementById('svPaid').checked,
-    method: document.getElementById('svMethod').value,
-    notes: document.getElementById('svNotes').value.trim(),
-  });
+  // One token per submit (server dedupes a retry) + an in-flight guard against a
+  // double-click posting the service charge twice.
+  const guardKey = 'svc:' + customerId + ':' + serviceId;
+  if (!kcBeginWrite(guardKey)) return;
+  let res;
+  try {
+    if (!(await kcConfirm({
+      title: 'Confirm service charge',
+      body: `<strong>${svCust ? escHtml(svCust.firstName) + ' ' + escHtml(svCust.lastName) : 'Customer'}</strong><br>
+        ${escHtml(svLabel.trim())}${svPaid ? ' · paid now' : ' · on account'}`,
+      amount: Number.isFinite(svTotal) ? svTotal : 0,
+      okLabel: 'Charge service',
+    }))) return;
+    res = await window.api.addServiceOrder({
+      customerId,
+      serviceId,
+      qty: Math.max(1, parseInt(document.getElementById('svQty').value, 10) || 1),
+      total: parseFloat(document.getElementById('svTotal').value),
+      paidNow: document.getElementById('svPaid').checked,
+      method: document.getElementById('svMethod').value,
+      notes: document.getElementById('svNotes').value.trim(),
+      clientRef: kcRef(),
+    });
+  } finally {
+    kcEndWrite(guardKey);
+  }
   if (!res.success) { toast(res.error || 'Could not charge the service.', 'error'); return; }
   closeDynamicModal();
+  if (res.duplicate) { toast('Already charged — no double charge.', 'info'); renderServicesTab(); return; }
   const extraMsg = res.extras?.length ? ` Incl. ${res.extras.map(e => `${e.label} ${fmtGbp(e.amount)}`).join(', ')}.` : '';
   toast(`Charged ${fmtGbp(res.order.total)} — wallet balance ${fmtGbp(res.balance)}.${extraMsg}`, 'success');
   renderServicesTab();
