@@ -9,6 +9,8 @@ import { useState, useRef, useEffect } from 'react'
 //   is "inspired by" the mark without ever forming it.
 // • Six time-of-day phases (Pre-dawn → Night) the operator can pick, or "Auto"
 //   which slowly drifts through them so the colours keep mixing.
+// • A faint scene sits under the burst: flight-route arcs high in the sky and
+//   telephone poles/wires receding to the horizon — travel + connectivity.
 // • The pointer acts like a charge: nearby rays are repelled and part around
 //   it (a static-electricity / magnet reorganisation), with a faint glow.
 // • Theme-aware, pauses when the tab is hidden, and renders a single static
@@ -57,6 +59,18 @@ export default function AuthBackdrop() {
       lp: Math.random() * 6.283, tp: Math.random() * 6.283,
       ds: 1.1 + Math.random() * 1.6,
     }))
+
+    // Faint "airline map" arcs across the sky — positions kept as fractions so
+    // they survive resize. Each carries a slow-travelling "flight" dot.
+    const arcs = Array.from({ length: 6 }, () => {
+      const y = 0.1 + Math.random() * 0.32
+      return {
+        x1: -0.05 + Math.random() * 0.35, y1: y + (Math.random() - 0.5) * 0.08,
+        x2: 0.62 + Math.random() * 0.45, y2: y + (Math.random() - 0.5) * 0.08,
+        bow: 0.08 + Math.random() * 0.14, ph: Math.random() * 6.283,
+        sp: 0.00012 + Math.random() * 0.0001,
+      }
+    })
 
     let W = 0, H = 0, cx = 0, cy = 0, R = 0
     const resize = () => {
@@ -116,6 +130,53 @@ export default function AuthBackdrop() {
         ctx.drawImage(logo, W - pad - lw, H - pad - lh, lw, lh)
         ctx.restore()
       }
+
+      // ── Faint flight-route arcs (an airline map high in the sky). Dotted
+      //    great-circle curves with endpoint nodes and a slow "flight" dot.
+      ctx.save(); ctx.lineWidth = 1
+      for (const ac of arcs) {
+        const x1 = ac.x1 * W, y1 = ac.y1 * H, x2 = ac.x2 * W, y2 = ac.y2 * H
+        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 - ac.bow * H
+        ctx.setLineDash([1, 7]); ctx.strokeStyle = rgba(cur.line, dk ? 0.17 : 0.13)
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(mx, my, x2, y2); ctx.stroke()
+        ctx.setLineDash([]); ctx.fillStyle = rgba(cur.dot, dk ? 0.5 : 0.42)
+        ctx.beginPath(); ctx.arc(x1, y1, 2, 0, 6.283); ctx.fill()
+        ctx.beginPath(); ctx.arc(x2, y2, 2, 0, 6.283); ctx.fill()
+        const u = 0.5 + 0.5 * Math.sin(t * ac.sp + ac.ph)
+        const bx = (1 - u) * (1 - u) * x1 + 2 * (1 - u) * u * mx + u * u * x2
+        const by = (1 - u) * (1 - u) * y1 + 2 * (1 - u) * u * my + u * u * y2
+        ctx.fillStyle = rgba(cur.dot, dk ? 0.75 : 0.6)
+        ctx.beginPath(); ctx.arc(bx, by, 1.7, 0, 6.283); ctx.fill()
+      }
+      ctx.restore()
+
+      // ── Faint telephone poles + sagging wires, two rows lining an implied
+      //    road and receding to the horizon — the "far-reaching phone lines".
+      const hy = H * 0.66, POLES = 7
+      const poleRow = (nearX) => {
+        const pts = []
+        for (let i = 0; i < POLES; i++) {
+          const tt = 1 - Math.pow(0.6, i)
+          pts.push({
+            gx: nearX + (cx - nearX) * tt, gy: H * 1.02 + (hy - H * 1.02) * tt,
+            ph: H * 0.16 * (1 - tt) + 3, arm: 18 * (1 - tt) + 2,
+          })
+        }
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.12 : 0.09); ctx.lineWidth = 1
+        for (let i = 0; i < pts.length - 1; i++) {
+          const a = pts[i], b = pts[i + 1], ay = a.gy - a.ph, by = b.gy - b.ph
+          ctx.beginPath(); ctx.moveTo(a.gx, ay)
+          ctx.quadraticCurveTo((a.gx + b.gx) / 2, (ay + by) / 2 + a.ph * 0.12, b.gx, by); ctx.stroke()
+        }
+        for (const p of pts) {
+          ctx.strokeStyle = rgba(cur.line, dk ? 0.18 : 0.13)
+          ctx.lineWidth = Math.max(1, p.ph * 0.03)
+          ctx.beginPath(); ctx.moveTo(p.gx, p.gy); ctx.lineTo(p.gx, p.gy - p.ph); ctx.stroke()
+          const ay = p.gy - p.ph * 0.82
+          ctx.beginPath(); ctx.moveTo(p.gx - p.arm, ay); ctx.lineTo(p.gx + p.arm, ay); ctx.stroke()
+        }
+      }
+      poleRow(W * 0.14); poleRow(W * 0.86)
 
       ctx.lineWidth = 1
       const lineA = dk ? 0.24 : 0.16
