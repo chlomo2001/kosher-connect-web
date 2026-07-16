@@ -233,6 +233,28 @@ body {
 }
 .sidebar-bottom a:hover { color: rgba(255,255,255,0.85) !important; }
 
+/* "Signed in as" identity in the sidebar footer — who's on the counter now. */
+.sidebar-user {
+  display: flex; align-items: center; gap: 9px;
+  padding-bottom: 12px; margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+.su-avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  background: rgba(255,255,255,0.14); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.3px;
+}
+.su-meta { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.su-name {
+  font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,0.85);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.su-role {
+  font-size: 10px; font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.06em; color: rgba(255,255,255,0.4);
+}
+
 /* ─── MAIN ─── */
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 

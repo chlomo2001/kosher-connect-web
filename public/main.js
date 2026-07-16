@@ -246,6 +246,7 @@ async function initApp() {
     currentStaff = me.staff || null;
     allowedTabs = Array.isArray(me.allowedTabs) ? me.allowedTabs : null;
   }
+  renderSidebarUser();
   // A failed load of a whole-array collection: warn, block saves, offer reload.
   const failedKeys = Object.keys(loadFailed).filter(k => loadFailed[k]);
   if (failedKeys.length) showReloadBanner(`Couldn’t load ${failedKeys.join(', ')} — some data is missing. Saving is paused to protect your records.`);
@@ -342,6 +343,25 @@ function pushTabUrl(tab, replace) {
 }
 function syncNavActive(tab) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.tab === tab));
+}
+
+// Small "signed in as" identity in the sidebar footer. Handy when staff share
+// a counter — it makes clear who the communication log / cash-up will attribute
+// actions to. Stays hidden when auth is disabled (no staff to show).
+function renderSidebarUser() {
+  const el = document.getElementById('sidebarUser');
+  if (!el) return;
+  const name = (currentStaff && String(currentStaff.full_name || currentStaff.email || '').trim()) || '';
+  if (!name) { el.hidden = true; el.innerHTML = ''; return; }
+  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || name[0].toUpperCase();
+  const role = currentStaff.role === 'owner' ? 'Admin' : 'Helper';
+  el.innerHTML = `
+    <span class="su-avatar">${escHtml(initials)}</span>
+    <span class="su-meta">
+      <span class="su-name" title="${escHtml(name)}">${escHtml(name)}</span>
+      <span class="su-role">${escHtml(role)}</span>
+    </span>`;
+  el.hidden = false;
 }
 
 function setupNav() {

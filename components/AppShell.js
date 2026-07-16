@@ -91,6 +91,10 @@ export default function AppShell({ initialTab = 'dashboard' }) {
         ))}
 
         <div className="sidebar-bottom">
+          {/* Who's signed in — filled by main.js once /api/auth/me resolves
+              (auth is client-side, so the server can't render it). Hidden until
+              then, and stays hidden when auth is disabled. */}
+          <div className="sidebar-user" id="sidebarUser" hidden />
           <a href="#" onClick={(e) => { e.preventDefault(); fetch('/api/auth/logout', { method: 'POST' }).then(() => { window.location.href = '/login' }) }}
              style={{ color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="nav-icon">{ICONS.signout}</span> Sign out</a>
