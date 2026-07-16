@@ -11,11 +11,14 @@ export default function Tab({ initialTab }) {
 }
 
 export async function getServerSideProps({ req, params }) {
+  // Gate FIRST: an unauthenticated request must be sent to /login regardless of
+  // whether the tab exists, so probing can't enumerate valid tab names (valid tab
+  // → /login vs unknown → 404 was an unauthenticated info leak). audit C21.
+  const gate = await requireStaffCookie(req)
+  if (gate) return gate
   const tab = String(params.tab || '').toLowerCase()
   // Dashboard lives at "/", so keep a single canonical URL for it.
   if (tab === 'dashboard') return { redirect: { destination: '/', permanent: false } }
   if (!TAB_IDS.includes(tab)) return { notFound: true }
-  const gate = await requireStaffCookie(req)
-  if (gate) return gate
   return { props: { initialTab: tab } }
 }

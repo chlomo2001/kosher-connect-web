@@ -25,13 +25,20 @@ export default async function handler(req, res) {
 
   const norm = normalizeEmail(user.email)
   const custRows = norm
-    ? await db.select('customers', `select=id,legacy_extras,stripe_pm_id&email_normalized=eq.${encodeURIComponent(norm)}`)
+    ? await db.select('customers', `select=id,legacy_extras,stripe_pm_id,email_raw&email_normalized=eq.${encodeURIComponent(norm)}`)
     : []
-  if (!custRows.length) {
-    // A signed-in email we don't recognise: succeed, but show nothing.
+  // Exact-match guard: when several customers collapse to one normalized email
+  // (dots/+ significant outside Gmail), require the verified raw email to match so
+  // distinct mailboxes can't read each other's data. audit C8 / U1.
+  let cust = custRows[0] || null
+  if (custRows.length > 1) {
+    const wanted = String(user.email || '').trim().toLowerCase()
+    cust = custRows.find((r) => String(r.email_raw || '').trim().toLowerCase() === wanted) || null
+  }
+  if (!cust) {
+    // No unambiguous match for this signed-in email: succeed, but show nothing.
     return res.json({ success: true, customer: null, balance: 0, rentals: [], bookings: [] })
   }
-  const cust = custRows[0]
   const extras = cust.legacy_extras || {}
 
   const [balRows, rentalRows, bookingRows] = await Promise.all([

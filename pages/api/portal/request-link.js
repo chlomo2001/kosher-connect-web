@@ -6,7 +6,7 @@
 // this is the customer-facing side.
 
 import { sendMagicLink } from '../../../lib/auth.js'
-import { db, tablesMode } from '../../../lib/db.js'
+import { tablesMode } from '../../../lib/db.js'
 import { normalizeEmail } from '../../../lib/mappers.js'
 
 export default async function handler(req, res) {
@@ -20,9 +20,10 @@ export default async function handler(req, res) {
   const generic = { success: true, message: 'If that email belongs to a KosherConnect customer, a sign-in link is on its way.' }
   if (!norm) return res.json(generic)
 
-  const rows = await db.select('customers', `select=id&email_normalized=eq.${encodeURIComponent(norm)}`)
-  if (rows.length) {
-    await sendMagicLink(String(req.body.email).trim()).catch(() => null)
-  }
+  // Always issue the link so response timing can't reveal whether the email is a
+  // known customer (the previous conditional send was a membership oracle). Supabase
+  // create_user tolerates unknown emails and rate-limits sends; an unknown signer
+  // sees nothing at /portal/me. audit C16.
+  await sendMagicLink(String(req.body.email).trim()).catch(() => null)
   return res.json(generic)
 }

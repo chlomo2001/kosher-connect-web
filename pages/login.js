@@ -133,10 +133,20 @@ export default function Login({ supabaseUrl, googleEnabled }) {
   )
 }
 
-// Already signed in (cookie present) → straight to the app.
-export async function getServerSideProps({ req }) {
-  if ((req.headers.cookie || '').includes('kc_session=')) {
-    return { redirect: { destination: '/', permanent: false } }
+// Already signed in → straight to the app. We VALIDATE the session here (not just
+// cookie presence): a present-but-invalid cookie must be cleared and the form
+// shown, otherwise the app shell renders, its boot 401s to /login, and this page
+// would bounce it back to '/' forever. audit C9 (+ C20: honest cookie check).
+export async function getServerSideProps({ req, res }) {
+  const { authEnabled, resolveStaff, sessionCookie, readSessionCookie } = await import('../lib/auth.js')
+  if (authEnabled && readSessionCookie(req)?.at) {
+    const resolved = await resolveStaff(req).catch(() => null)
+    if (resolved?.staff) {
+      if (resolved.setCookie) res.setHeader('Set-Cookie', resolved.setCookie)
+      return { redirect: { destination: '/', permanent: false } }
+    }
+    // Cookie present but not a valid staff session → clear it, show the form.
+    res.setHeader('Set-Cookie', sessionCookie(null))
   }
   return {
     props: {

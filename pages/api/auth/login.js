@@ -37,7 +37,10 @@ export default async function handler(req, res) {
       if (staff) console.log(`[auth] bootstrap: ${user.email} is now the owner`)
     }
     if (!staff) {
-      return res.status(403).json({ success: false, error: 'This account is not a staff member. Ask the owner to add you.' })
+      // Don't reveal that the password was correct but the account isn't staff —
+      // that distinguishes staff from non-staff Supabase accounts. Mirror the
+      // wrong-password response exactly. audit C19.
+      return res.status(401).json({ success: false, error: 'Wrong email or password.' })
     }
 
     if (staff2faEnabled()) {
