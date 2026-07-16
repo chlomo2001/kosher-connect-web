@@ -393,7 +393,7 @@ async function handler(req, res) {
     // missed days are safe; the date pointer only advances after posting.
     const billableVNs = await db.select(
       'virtual_numbers',
-      `select=id,number,monthly_price,next_billing_date,customer_id,bundle_label,plan` +
+      `select=id,number,monthly_price,next_billing_date,customer_id,bundle_label,plan,billing_anchor_day` +
       `&billing_enabled=is.true&status=eq.Active&customer_id=not.is.null` +
       `&monthly_price=gt.0&next_billing_date=lte.${today}`
     )
@@ -403,6 +403,15 @@ async function handler(req, res) {
       // recorded but never stops billing the remaining virtual numbers.
       try {
         let bill = vn.next_billing_date
+        // Immutable anchor day so a month-end subscription doesn't drift earlier
+        // forever (audit C15). Self-heal rows the backfill migration missed.
+        let anchorDay = vn.billing_anchor_day != null
+          ? Number(vn.billing_anchor_day)
+          : Number(String(vn.next_billing_date).slice(8, 10))
+        if (!(anchorDay >= 1 && anchorDay <= 31)) anchorDay = undefined
+        if (vn.billing_anchor_day == null && anchorDay) {
+          await db.update('virtual_numbers', `id=eq.${vn.id}`, { billing_anchor_day: anchorDay }).catch(() => {})
+        }
         // Catch up every period due to date (guard: max 24 to bound a bad date).
         for (let i = 0; i < 24 && bill <= today; i++) {
           await db.insertIgnoreDup('ledger', [{
@@ -416,7 +425,7 @@ async function handler(req, res) {
           // advanceOneMonth clamps to the month end instead of overflowing:
           // 31 Jan -> 28 Feb, never rolling to March and skipping February's
           // charge (the setUTCMonth bug this replaces).
-          bill = advanceOneMonth(bill)
+          bill = advanceOneMonth(bill, anchorDay)
           await db.update('virtual_numbers', `id=eq.${vn.id}`, { next_billing_date: bill })
         }
       } catch (e) {

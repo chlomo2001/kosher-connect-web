@@ -52,6 +52,17 @@ test('countDays — bad range = zero', () => {
   assert.deepEqual(countDays('2026-07-05', '2026-07-01'), { chargeableDays: 0, totalDays: 0 })
 })
 
+test('countDays — feeds the LOCAL calendar day to the free-day predicate (audit C10)', () => {
+  // Passing the day through toISOString() (UTC) shifted it back one in UK/Israel,
+  // so a Shabbos at the range edge was missed and charged. Assert the exact days
+  // handed to the predicate — this holds in every timezone now that the loop
+  // formats local components (it would fail under TZ=Asia/Jerusalem before the fix).
+  const seen = []
+  const r = countDays('2026-07-01', '2026-07-04', (iso) => { seen.push(iso); return iso === '2026-07-04' })
+  assert.deepEqual(seen, ['2026-07-01', '2026-07-02', '2026-07-03', '2026-07-04'])
+  assert.deepEqual(r, { chargeableDays: 3, totalDays: 4 }) // the Shabbos on the 4th is free
+})
+
 test('lateFeeAmount', () => {
   assert.equal(lateFeeAmount(3, 1), 3)
   assert.equal(lateFeeAmount(0, 5), 0)

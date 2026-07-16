@@ -45,6 +45,20 @@ test('advanceOneMonth — clamps to month end, never overflows', () => {
   assert.equal(advanceOneMonth('2026-02-28'), '2026-03-28')
 })
 
+test('advanceOneMonth — an immutable anchor day stops (and recovers) month-end drift (audit C15)', () => {
+  // With the anchor carried forward, a month-end line recovers instead of sticking
+  // on the 28th: 31 Jan → 28 Feb → back to 31 Mar → 30 Apr → 31 May.
+  assert.equal(advanceOneMonth('2026-01-31', 31), '2026-02-28')
+  assert.equal(advanceOneMonth('2026-02-28', 31), '2026-03-31')
+  assert.equal(advanceOneMonth('2026-03-31', 31), '2026-04-30')
+  assert.equal(advanceOneMonth('2026-04-30', 31), '2026-05-31')
+  // A mid-month anchor is untouched; an absent/out-of-range anchor falls back to
+  // the date's own day (legacy behaviour preserved).
+  assert.equal(advanceOneMonth('2026-01-15', 15), '2026-02-15')
+  assert.equal(advanceOneMonth('2026-01-31', 99), '2026-02-28')
+  assert.equal(advanceOneMonth('2026-01-31'), '2026-02-28')
+})
+
 test('cashExpected — nets by sign, adds float (a cash refund lowers it)', () => {
   const entries = [
     { method: 'cash', amount: 100 },   // payment in
