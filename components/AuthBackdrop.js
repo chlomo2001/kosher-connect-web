@@ -205,12 +205,28 @@ export default function AuthBackdrop() {
           ctx.closePath(); ctx.stroke(); ctx.restore()
         }
       })
-      // 7) City nodes.
-      for (const p of proj) {
-        if (!p.vis) continue
-        ctx.fillStyle = rgba(cur.dot, dk ? 0.8 : 0.7)
-        ctx.beginPath(); ctx.arc(p.x, p.y, 1.8, 0, 6.2832); ctx.fill()
-      }
+      // 7) Hub nodes as little cell masts with broadcasting signal arcs — so the
+      //    connections read as a phone/telecom network, not only flight paths.
+      const mast = Math.min(W, H) * 0.032
+      proj.forEach((p, i) => {
+        if (!p.vis) return
+        const dx = p.x - gx, dy = p.y - gy, d = Math.hypot(dx, dy) || 1
+        const ux = dx / d, uy = dy / d                       // outward = "up" off the surface
+        const tx = p.x + ux * mast, ty = p.y + uy * mast
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.5 : 0.42); ctx.lineWidth = 1
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(tx, ty); ctx.stroke()
+        const perpx = -uy, perpy = ux, arm = mast * 0.24
+        const cxk = p.x + ux * mast * 0.68, cyk = p.y + uy * mast * 0.68
+        ctx.beginPath(); ctx.moveTo(cxk - perpx * arm, cyk - perpy * arm); ctx.lineTo(cxk + perpx * arm, cyk + perpy * arm); ctx.stroke()
+        const baseA = Math.atan2(uy, ux)                     // broadcast waves fan outward
+        for (let s = 0; s < 2; s++) {
+          const ph = ((t * 0.0011 + i * 0.5 + s * 0.5) % 1 + 1) % 1
+          ctx.strokeStyle = rgba(cur.dot, (dk ? 0.42 : 0.36) * (1 - ph))
+          ctx.beginPath(); ctx.arc(tx, ty, mast * (0.35 + ph * 1.1), baseA - 0.7, baseA + 0.7); ctx.stroke()
+        }
+        ctx.fillStyle = rgba(cur.dot, dk ? 0.85 : 0.72)
+        ctx.beginPath(); ctx.arc(tx, ty, 1.5, 0, 6.2832); ctx.fill()
+      })
 
       // 8) Faint logo watermark, top-left.
       if (logoReady) {
