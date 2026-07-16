@@ -5,13 +5,17 @@
 // closed browser or a retry can't lose or double a payment.
 import { db, tablesMode } from '../../../lib/db.js'
 import { resolvePortalCustomer } from '../../../lib/portal.js'
-import { stripeEnabled, publishableKey, getOrCreateCustomer, createPaymentIntent } from '../../../lib/stripe.js'
+import { stripeEnabled, webhookConfigured, publishableKey, getOrCreateCustomer, createPaymentIntent } from '../../../lib/stripe.js'
 
 export default async function handler(req, res) {
   if (process.env.PORTAL_ENABLED !== '1') return res.status(404).json({ success: false, error: 'Not found.' })
   if (req.method !== 'POST') return res.status(405).end()
   if (!tablesMode) return res.status(503).json({ success: false, error: 'Portal unavailable.' })
   if (!stripeEnabled) return res.status(503).json({ success: false, error: 'Card payments aren’t switched on yet.' })
+  // The ledger 'payment' row is posted only by the webhook. Refuse to take money
+  // while the webhook is unconfigured, or the payment would be captured and never
+  // reconciled (customer charged, balance still shows owing). (audit C7)
+  if (!webhookConfigured) return res.status(503).json({ success: false, error: 'Card payments aren’t fully set up yet — please pay in store.' })
 
   const base = await resolvePortalCustomer(req)
   if (!base) return res.status(401).json({ success: false, error: 'Please sign in again.' })

@@ -22,11 +22,15 @@ export default async function handler(req, res) {
   const event = verifyWebhook(raw, req.headers['stripe-signature'])
   if (!event) return res.status(400).json({ error: 'Invalid signature.' })
 
-  // Idempotency: first insert wins; a duplicate delivery inserts nothing.
+  // Idempotency is anchored on the WORK, not a marker written ahead of it: if this
+  // event was already fully processed we skip, but we record it as processed only
+  // AFTER the side effects below succeed. That way a retry following a partial
+  // failure re-runs the work (the ledger charge_reference unique key makes the
+  // re-run a no-op) instead of being suppressed with the payment never posted.
   try {
-    const inserted = await db.insertIgnoreDup('stripe_events', [{ id: event.id, type: event.type }], 'id')
-    if (Array.isArray(inserted) && inserted.length === 0) return res.json({ received: true, duplicate: true })
-  } catch { /* if the dedupe insert fails, still process — the ledger key dedupes too */ }
+    const seen = await db.select('stripe_events', `id=eq.${encodeURIComponent(event.id)}&select=id&limit=1`)
+    if (Array.isArray(seen) && seen.length) return res.json({ received: true, duplicate: true })
+  } catch { /* if the read fails, fall through and process — the ledger key dedupes too */ }
 
   if (event.type === 'payment_intent.succeeded') {
     const pi = event.data?.object || {}
@@ -57,6 +61,10 @@ export default async function handler(req, res) {
       await db.update('customers', `id=eq.${appCustomerId}`, { stripe_pm_id: si.payment_method }).catch(() => {})
     }
   }
+
+  // Record the event as processed only now that its side effects have succeeded.
+  // (A throw above skips this, so Stripe retries and the work runs again.)
+  try { await db.insertIgnoreDup('stripe_events', [{ id: event.id, type: event.type }], 'id') } catch { /* observational only */ }
 
   return res.json({ received: true })
 }
