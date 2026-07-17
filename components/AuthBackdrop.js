@@ -348,6 +348,17 @@ export default function AuthBackdrop() {
         const a = tips[i], b = tips[j]
         if (!a || !b) return
         const gold = kind >= 1
+        // The WIRE is the infrastructure: one thin solid strand hung tip to
+        // tip with a real sag (catenary-ish), like telegraph line. The taut
+        // dashed arc above it is the SIGNAL leaping the same span.
+        {
+          const span = Math.hypot(b.x - a.x, b.y - a.y)
+          const sag = Math.min(span * 0.12, Rg * 0.09)
+          ctx.strokeStyle = rgba(cur.line, dk ? 0.3 : 0.24); ctx.lineWidth = 0.8
+          ctx.beginPath(); ctx.moveTo(a.x, a.y)
+          ctx.quadraticCurveTo((a.x + b.x) / 2, (a.y + b.y) / 2 + sag, b.x, b.y)
+          ctx.stroke()
+        }
         const { cx, cy } = arcCtrl(a, b)
         ctx.setLineDash([2, 5]); ctx.strokeStyle = rgba(gold ? GOLD : cur.line, gold ? (dk ? 0.5 : 0.44) : (dk ? 0.34 : 0.28))
         ctx.lineWidth = gold ? 1.3 : 1
