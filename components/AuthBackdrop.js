@@ -73,7 +73,7 @@ export default function AuthBackdrop() {
 
     // Engraved sunburst behind the globe — many THIN rays (etching-style, no
     // soft halo), radiating from the globe centre.
-    const N = 260
+    const N = 380
     const rays = Array.from({ length: N }, (_, i) => ({
       a: (i + 0.5) / N * 6.283 + (Math.random() - 0.5) * 0.015,
       r: 0.7 + Math.random() * 0.7, lp: Math.random() * 6.283,
@@ -144,16 +144,18 @@ export default function AuthBackdrop() {
         let mxp = (sx + tx) / 2, myp = (sy + ty) / 2
         const dmx = mxp - px, dmy = myp - py, dm = Math.hypot(dmx, dmy) || 1, fM = Math.exp(-(dm * dm) / fieldR2)
         mxp += (dmx / dm) * fM * 150; myp += (dmy / dm) * fM * 150
-        ctx.strokeStyle = rgba(cur.line, dk ? 0.18 : 0.09)
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.15 : 0.08)
         ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(mxp, myp, tx, ty); ctx.stroke()
         const tw = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 0.0011 + ry.tp))
-        ctx.fillStyle = rgba(cur.dot, (dk ? 0.42 : 0.36) * tw)
+        ctx.fillStyle = rgba(cur.dot, (dk ? 0.36 : 0.3) * tw)
         ctx.beginPath(); ctx.arc(tx, ty, ry.ds, 0, 6.2832); ctx.fill()
       }
 
-      // 1b) CD-satellite — the audio line as part of the scene: a small disc
-      //     orbiting the globe like a satellite (grooved rings + a gold sheen
-      //     that sweeps as it spins). Far half draws behind the globe.
+      // 1b) CD-satellite — the audio line as part of the scene: a disc orbiting
+      //     the globe like a satellite. Real CD anatomy so it READS as one: a
+      //     punched centre hole inside a clamp hub, a data surface with two
+      //     rotating radial light-glints (the rainbow flash), rim + data-edge
+      //     rings. Far half draws behind the globe.
       const su = t * 0.00009, tilt = -0.42
       const eA = Rg * 1.32, eB = Rg * 0.34
       const ex = Math.cos(su) * eA, ey = Math.sin(su) * eB
@@ -161,7 +163,7 @@ export default function AuthBackdrop() {
         x: gx + ex * Math.cos(tilt) - ey * Math.sin(tilt),
         y: gy + ex * Math.sin(tilt) + ey * Math.cos(tilt),
         front: Math.sin(su) > 0,
-        r: Math.min(W, H) * 0.028,
+        r: Math.min(W, H) * 0.034,
       }
       // faint orbit path so the disc reads as a satellite, not a floater
       ctx.save(); ctx.translate(gx, gy); ctx.rotate(tilt)
@@ -170,18 +172,38 @@ export default function AuthBackdrop() {
       ctx.setLineDash([]); ctx.restore()
       const drawSat = () => {
         const { x, y, r } = sat
+        const hub = r * 0.34, hole = r * 0.16
         ctx.save(); ctx.lineCap = 'round'
         ctx.fillStyle = rgb(base)                                  // occlude what's behind
         ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill()
-        ctx.strokeStyle = rgba(cur.line, dk ? 0.55 : 0.45); ctx.lineWidth = 1
-        for (const rr of [1, 0.66, 0.3]) { ctx.beginPath(); ctx.arc(x, y, r * rr, 0, 6.2832); ctx.stroke() }
-        ctx.fillStyle = rgba(cur.line, dk ? 0.5 : 0.4)
-        ctx.beginPath(); ctx.arc(x, y, r * 0.08, 0, 6.2832); ctx.fill()
-        const sweep = t * 0.0012                                   // spinning gold sheen
-        ctx.strokeStyle = rgba(GOLD, dk ? 0.75 : 0.6); ctx.lineWidth = 1.6
-        ctx.beginPath(); ctx.arc(x, y, r * 0.82, sweep, sweep + 0.9); ctx.stroke()
-        ctx.strokeStyle = rgba(GOLD, dk ? 0.35 : 0.28); ctx.lineWidth = 1
-        ctx.beginPath(); ctx.arc(x, y, r * 0.5, sweep + 2.4, sweep + 3.0); ctx.stroke()
+        const dg = ctx.createRadialGradient(x, y, hub, x, y, r)    // data-surface tint
+        dg.addColorStop(0, rgba(cur.line, dk ? 0.16 : 0.12))
+        dg.addColorStop(1, rgba(cur.line, dk ? 0.05 : 0.04))
+        ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill()
+        // the tell-tale glints: two radial light wedges sweeping hub → rim
+        const sweep = t * 0.0009
+        for (const [off, col, al, wd] of [
+          [0, GOLD, dk ? 0.42 : 0.34, 0.24],
+          [Math.PI, GOLD, dk ? 0.26 : 0.2, 0.24],
+          [Math.PI * 0.5, mix(cur.line, WHITE, 0.6), dk ? 0.22 : 0.16, 0.16],
+          [Math.PI * 1.5, mix(cur.line, WHITE, 0.6), dk ? 0.22 : 0.16, 0.16],
+        ]) {
+          const a0 = sweep + off
+          ctx.fillStyle = rgba(col, al)
+          ctx.beginPath()
+          ctx.arc(x, y, r * 0.97, a0 - wd, a0 + wd)
+          ctx.arc(x, y, hub, a0 + wd, a0 - wd, true)
+          ctx.closePath(); ctx.fill()
+        }
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.6 : 0.48); ctx.lineWidth = 1   // rim
+        ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.stroke()
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.28 : 0.22); ctx.lineWidth = 0.7 // data edge
+        ctx.beginPath(); ctx.arc(x, y, r * 0.9, 0, 6.2832); ctx.stroke()
+        ctx.fillStyle = rgb(base)                                  // punched centre hole
+        ctx.beginPath(); ctx.arc(x, y, hole, 0, 6.2832); ctx.fill()
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.55 : 0.45); ctx.lineWidth = 0.9
+        ctx.beginPath(); ctx.arc(x, y, hole, 0, 6.2832); ctx.stroke()
+        ctx.beginPath(); ctx.arc(x, y, hub, 0, 6.2832); ctx.stroke()           // clamp hub
         ctx.restore()
       }
       if (!sat.front) drawSat()
@@ -229,8 +251,21 @@ export default function AuthBackdrop() {
       }
       ctx.lineJoin = 'round'; ctx.lineCap = 'round'
       const RINGS = WORLD.map(runsOf)
+      // Fills use the FULL ring with hidden points pinned to the limb, so a
+      // continent setting over the horizon hugs the curve instead of closing
+      // with a straight chord (which flashed boxy shapes while rotating).
+      const clampProj = (lon, lat) => {
+        const p = project(lon, lat)
+        if (p.vis) return p
+        const dx = p.x - gx, dy = p.y - gy, d = Math.hypot(dx, dy) || 1
+        return { x: gx + (dx / d) * Rg, y: gy + (dy / d) * Rg, vis: false }
+      }
       ctx.fillStyle = rgba(landFill, dk ? 0.22 : 0.26)                     // land tint
-      for (const runs of RINGS) for (const run of runs) { ctx.beginPath(); smoothPath(run); ctx.closePath(); ctx.fill() }
+      for (const ring of WORLD) {
+        const pts = ring.map(([lon, lat]) => clampProj(lon, lat))
+        if (pts.length < 3 || !pts.some((p) => p.vis)) continue            // fully set
+        ctx.beginPath(); smoothPath(pts); ctx.closePath(); ctx.fill()
+      }
       ctx.strokeStyle = rgba(dk ? mix(cur.line, WHITE, 0.55) : mix(cur.line, DARKBG, 0.2), dk ? 0.85 : 0.8)  // coastline
       ctx.lineWidth = 1.2
       for (const runs of RINGS) for (const run of runs) { ctx.beginPath(); smoothPath(run); ctx.stroke() }
@@ -242,10 +277,11 @@ export default function AuthBackdrop() {
       ctx.strokeStyle = rgba(cur.line, dk ? 0.38 : 0.3); ctx.lineWidth = 1
       ctx.beginPath(); ctx.arc(gx, gy, Rg, 0, 6.2832); ctx.stroke()
 
-      // 6) Cell-towers / telephone poles at each hub — a vertical post with two
-      //    cross-arms and insulator nubs (a real utility pole, not a plus sign),
-      //    the antenna at the top broadcasting signal waves. Tower tips are
-      //    captured so the phone network can run tower-top to tower-top.
+      // 6) Lattice masts at each hub — a real 4-leg transmission tower, not a
+      //    2D stick: a square footprint (two front legs, two back legs drawn
+      //    fainter and offset for depth) tapering to the antenna, ladder rungs
+      //    on every face plus an X-brace. Tower tips are captured so the phone
+      //    network can run tower-top to tower-top.
       const proj = CITIES.map(([lo, la]) => project(lo, la))
       const mast = Math.min(W, H) * 0.04
       const tips = proj.map((p) => {
@@ -257,20 +293,33 @@ export default function AuthBackdrop() {
       tips.forEach((tp, i) => {
         if (!tp) return
         const { base, ux, uy } = tp, perpx = -uy, perpy = ux
-        ctx.strokeStyle = rgba(cur.line, dk ? 0.5 : 0.42); ctx.lineWidth = 1.3
-        ctx.beginPath(); ctx.moveTo(base.x, base.y); ctx.lineTo(tp.x, tp.y); ctx.stroke()      // post
-        ctx.lineWidth = 1; ctx.strokeStyle = rgba(cur.line, dk ? 0.46 : 0.38)
-        for (const [h, w] of [[0.82, 0.3], [0.6, 0.22]]) {                                     // two cross-arms
-          const cx = base.x + ux * mast * h, cy = base.y + uy * mast * h, aw = mast * w
-          const e1x = cx - perpx * aw, e1y = cy - perpy * aw, e2x = cx + perpx * aw, e2y = cy + perpy * aw
-          ctx.beginPath(); ctx.moveTo(e1x, e1y); ctx.lineTo(e2x, e2y); ctx.stroke()
-          ctx.fillStyle = rgba(cur.dot, dk ? 0.6 : 0.5)                                        // insulator nubs
-          for (const [ex, ey] of [[e1x, e1y], [e2x, e2y]]) { ctx.beginPath(); ctx.arc(ex, ey, 1.1, 0, 6.2832); ctx.fill() }
+        const bw = mast * 0.26, tw2 = mast * 0.05
+        const dpx = (ux * 0.16 + perpx * 0.3) * bw, dpy = (uy * 0.16 + perpy * 0.3) * bw
+        const leg = (side, back) => (h) => {
+          const w = lerp(bw, tw2, h) * (back ? 0.62 : 1)
+          return {
+            x: base.x + ux * mast * h + perpx * side * w + (back ? dpx * (1 - h) : 0),
+            y: base.y + uy * mast * h + perpy * side * w + (back ? dpy * (1 - h) : 0),
+          }
         }
+        const FL = leg(-1, false), FR = leg(1, false), BL = leg(-1, true), BR = leg(1, true)
+        const seg = (p, q) => { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke() }
+        const RUNGS = [0.16, 0.36, 0.56, 0.76]
+        ctx.lineWidth = 0.9
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.26 : 0.2)          // back face, faint
+        seg(BL(0), BL(1)); seg(BR(0), BR(1))
+        for (const h of RUNGS) seg(BL(h), BR(h))
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.34 : 0.26)         // side-face rungs
+        for (const h of RUNGS) { seg(FL(h), BL(h)); seg(FR(h), BR(h)) }
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.52 : 0.44)         // front face
+        seg(FL(0), FL(1)); seg(FR(0), FR(1))
+        for (const h of RUNGS) seg(FL(h), FR(h))
+        seg(FL(RUNGS[1]), FR(RUNGS[2])); seg(FR(RUNGS[1]), FL(RUNGS[2]))   // X-brace
         const baseA = Math.atan2(uy, ux)                                                       // waves off the top
         for (let s = 0; s < 2; s++) {
           const ph = ((t * 0.001 + i * 0.5 + s * 0.5) % 1 + 1) % 1
           ctx.strokeStyle = rgba(cur.dot, (dk ? 0.34 : 0.28) * (1 - ph))
+          ctx.lineWidth = 1
           ctx.beginPath(); ctx.arc(tp.x, tp.y, mast * (0.22 + ph * 0.8), baseA - 0.6, baseA + 0.6); ctx.stroke()
         }
         ctx.fillStyle = rgba(cur.dot, dk ? 0.85 : 0.72)
@@ -279,11 +328,13 @@ export default function AuthBackdrop() {
       ctx.lineCap = 'butt'
 
       // A lifted quadratic control point (a great-circle-ish bow off the globe).
+      // Extra lift + a small upward bias keep the links taut ABOVE the tower
+      // tips — they were reading as wires sagging low between the masts.
       const arcCtrl = (a, b) => {
         const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
         const dx = mx - gx, dy = my - gy, d = Math.hypot(dx, dy) || 1
-        const lift = Rg * 0.22 + d * 0.15
-        return { cx: mx + (dx / d) * lift, cy: my + (dy / d) * lift }
+        const lift = Rg * 0.3 + d * 0.18
+        return { cx: mx + (dx / d) * lift, cy: my + (dy / d) * lift - Rg * 0.08 }
       }
       const bez = (a, cx, cy, b, u) => ({
         x: (1 - u) * (1 - u) * a.x + 2 * (1 - u) * u * cx + u * u * b.x,
@@ -343,47 +394,56 @@ export default function AuthBackdrop() {
         }
       })
 
-      // 9) The CHARGER line, in-scene: the world plugged in. A thin cable rises
-      //    from the bottom-left edge to the globe's lower-left rim, ends in a
-      //    small connector, and gold power ticks flow INTO the globe. Reads as
-      //    "we keep the world charged" instead of a pasted-on cable doodle.
+      // 9) The RENTAL line, in-scene: a kosher handset — a candy-bar phone
+      //    (earpiece, small screen, nav pill, 3×4 keypad; deliberately NOT a
+      //    smartphone slab) at the lower left. A dashed downlink from the
+      //    globe delivers gold pulses to it and reception arcs bloom off its
+      //    top: the network, brought to your kosher phone.
       {
-        const plugA = Math.PI * 0.78                               // lower-left of the rim
-        const pxr = gx + Math.cos(plugA) * (Rg + 3), pyr = gy + Math.sin(plugA) * (Rg + 3)
-        const nx = Math.cos(plugA), ny = Math.sin(plugA)           // rim normal (outward)
-        const sx0 = Math.max(0, gx - Rg * 1.55), sy0 = H + 8       // enters from bottom edge
-        const c1x = sx0 + (pxr - sx0) * 0.15, c1y = sy0 - (sy0 - pyr) * 0.55
-        const c2x = pxr + nx * Rg * 0.45, c2y = pyr + ny * Rg * 0.45
-        ctx.lineCap = 'round'
-        ctx.strokeStyle = rgba(flightCol, dk ? 0.34 : 0.26); ctx.lineWidth = 1.4
-        ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.bezierCurveTo(c1x, c1y, c2x, c2y, pxr, pyr); ctx.stroke()
-        // connector head: a small lozenge seated on the rim, aligned to the normal
-        ctx.save(); ctx.translate(pxr, pyr); ctx.rotate(Math.atan2(ny, nx) + Math.PI / 2)
-        ctx.strokeStyle = rgba(cur.line, dk ? 0.6 : 0.45); ctx.lineWidth = 1.2
-        const cw = 4.6, ch = 7
-        ctx.beginPath()
-        ctx.moveTo(-cw / 2, 0); ctx.lineTo(-cw / 2, ch * 0.65); ctx.arcTo(-cw / 2, ch, 0, ch, 2.4)
-        ctx.arcTo(cw / 2, ch, cw / 2, ch * 0.65, 2.4); ctx.lineTo(cw / 2, 0)
-        ctx.stroke(); ctx.restore()
-        // power ticks flowing along the cable toward the globe
-        const cbez = (u) => {
-          const a = 1 - u
-          return {
-            x: a * a * a * sx0 + 3 * a * a * u * c1x + 3 * a * u * u * c2x + u * u * u * pxr,
-            y: a * a * a * sy0 + 3 * a * a * u * c1y + 3 * a * u * u * c2y + u * u * u * pyr,
-          }
+        const s = Math.min(W, H) * 0.0028                          // 1 unit ≈ a phone mm
+        const phx = Math.max(W * 0.12, gx - Rg * 1.45), phy = H * 0.79
+        const rot = -0.12
+        const top = {                                              // top edge, in canvas coords
+          x: phx + (0 * Math.cos(rot) - (-21) * Math.sin(rot)) * s,
+          y: phy + (0 * Math.sin(rot) + (-21) * Math.cos(rot)) * s,
         }
-        for (let s = 0; s < 3; s++) {
-          const u = ((t * 0.00016 + s / 3) % 1 + 1) % 1
-          const pt = cbez(u)
-          ctx.fillStyle = rgba(GOLD, (dk ? 0.8 : 0.65) * (0.35 + 0.65 * u))
-          ctx.beginPath(); ctx.arc(pt.x, pt.y, 1.5, 0, 6.2832); ctx.fill()
+        // downlink first so the handset sits over its arrival point
+        const rimA = Math.PI * 0.7
+        const ra = { x: gx + Math.cos(rimA) * Rg, y: gy + Math.sin(rimA) * Rg }
+        const { cx, cy } = arcCtrl(ra, top)
+        ctx.setLineDash([2, 5]); ctx.strokeStyle = rgba(cur.line, dk ? 0.3 : 0.24); ctx.lineWidth = 1
+        ctx.beginPath(); ctx.moveTo(ra.x, ra.y); ctx.quadraticCurveTo(cx, cy, top.x, top.y); ctx.stroke()
+        ctx.setLineDash([])
+        for (let k = 0; k < 2; k++) {
+          const u = ((t * 0.00014 + k * 0.5) % 1 + 1) % 1
+          const pt = bez(ra, cx, cy, top, u)
+          ctx.fillStyle = rgba(GOLD, (dk ? 0.85 : 0.7) * (0.3 + 0.7 * u))
+          ctx.beginPath(); ctx.arc(pt.x, pt.y, 1.7, 0, 6.2832); ctx.fill()
         }
-        // charge glimmer where the connector meets the rim
-        const gl = 0.5 + 0.5 * Math.sin(t * 0.003)
-        ctx.strokeStyle = rgba(GOLD, (dk ? 0.5 : 0.4) * gl); ctx.lineWidth = 1.4
-        ctx.beginPath(); ctx.arc(gx, gy, Rg, plugA - 0.09, plugA + 0.09); ctx.stroke()
-        ctx.lineCap = 'butt'
+        const rp = ((t * 0.001) % 1 + 1) % 1                       // reception bloom
+        ctx.strokeStyle = rgba(GOLD, (dk ? 0.5 : 0.4) * (1 - rp)); ctx.lineWidth = 1
+        ctx.beginPath(); ctx.arc(top.x, top.y, s * (3 + rp * 8), -2.6, -0.6); ctx.stroke()
+        // the handset
+        ctx.save(); ctx.translate(phx, phy); ctx.rotate(rot); ctx.scale(s, s)
+        ctx.lineWidth = 1.1 / s; ctx.lineJoin = 'round'; ctx.lineCap = 'round'
+        ctx.fillStyle = rgb(base)
+        ctx.beginPath(); ctx.roundRect(-9, -21, 18, 42, 2.6); ctx.fill()
+        ctx.fillStyle = rgba(cur.line, dk ? 0.1 : 0.07); ctx.fill()
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.62 : 0.5); ctx.stroke()
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.5 : 0.4)
+        ctx.beginPath(); ctx.moveTo(-2.6, -18.8); ctx.lineTo(2.6, -18.8); ctx.stroke()   // earpiece
+        ctx.beginPath(); ctx.roundRect(-6.6, -16.6, 13.2, 10.6, 1); ctx.stroke()          // screen
+        ctx.fillStyle = rgba(GOLD, dk ? 0.8 : 0.62)                // gold signal bars
+        for (let b2 = 0; b2 < 4; b2++) { ctx.beginPath(); ctx.rect(-5.6 + b2 * 1.5, -8.4 - b2 * 1.1, 1, 1.2 + b2 * 1.1); ctx.fill() }
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.38 : 0.3)          // two lines of "text"
+        ctx.beginPath(); ctx.moveTo(0.6, -13.6); ctx.lineTo(5.4, -13.6); ctx.stroke()
+        ctx.beginPath(); ctx.moveTo(0.6, -11.2); ctx.lineTo(4.2, -11.2); ctx.stroke()
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.5 : 0.4)           // nav pill
+        ctx.beginPath(); ctx.roundRect(-3.4, -4.2, 6.8, 2.8, 1.4); ctx.stroke()
+        for (let row = 0; row < 4; row++) for (let col = 0; col < 3; col++) {  // 3×4 keypad
+          ctx.beginPath(); ctx.roundRect(-6.4 + col * 4.5, 0.4 + row * 4.4, 3.8, 2.9, 0.9); ctx.stroke()
+        }
+        ctx.restore()
       }
 
       // 9b) Near half of the CD-satellite passes in FRONT of the globe.
