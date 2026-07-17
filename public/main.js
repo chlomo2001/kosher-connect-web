@@ -1081,11 +1081,15 @@ const MG_UI_ITEMS = ['phone', 'sim', 'charger'];
 function eqKeysFor(item) { return item === 'charger' ? ['plug', 'cable'] : [item]; }
 function chargerGiven(r) { return (r.equipmentGiven?.plug ?? false) || (r.equipmentGiven?.cable ?? false); }
 // Worst status across the stored keys of a UI item: lost > undecided > returned.
+// Considers given keys PLUS any key recorded 'lost' even if its given-toggle
+// was later switched off — a lost item carries a £ charge, and hiding it would
+// silently drop that charge on the next save (verify finding 07-17).
 function uiItemStatus(r, item) {
-  const given = item === 'charger'
-    ? eqKeysFor(item).filter(k => r.equipmentGiven?.[k] ?? false)
-    : eqKeysFor(item);
-  const sts = (given.length ? given : eqKeysFor(item)).map(k => getItemStatus(r, k));
+  const keys = eqKeysFor(item);
+  const considered = item === 'charger'
+    ? keys.filter(k => (r.equipmentGiven?.[k] ?? false) || getItemStatus(r, k) === 'lost')
+    : keys;
+  const sts = (considered.length ? considered : keys).map(k => getItemStatus(r, k));
   if (sts.includes('lost')) return 'lost';
   if (sts.includes('undecided')) return 'undecided';
   return 'returned';
@@ -1403,7 +1407,11 @@ function getComputedStatus(r, today) {
   if (r.status === 'booked') return 'booked'; // reservation — not picked up yet
   if (r.status !== 'returned') return r.toDate < today ? 'overdue' : 'active';
   const eq = r.equipmentGiven || { phone: true, sim: true, plug: true, cable: true };
-  const incomplete = ['phone', 'sim', 'plug', 'cable'].some(k => (eq[k] ?? true) && getItemStatus(r, k) === 'undecided');
+  // Plug+cable are judged as ONE charger item (same merged semantics as the
+  // manage modal), so the ⚠️ badge can never point at a key the UI can't show.
+  const incomplete =
+    ['phone', 'sim'].some(k => (eq[k] ?? true) && getItemStatus(r, k) === 'undecided') ||
+    (((eq.plug ?? true) || (eq.cable ?? true)) && uiItemStatus(r, 'charger') === 'undecided');
   return incomplete ? 'returned_incomplete' : 'returned';
 }
 
@@ -2539,27 +2547,42 @@ async function saveManageRental(rentalId) {
   r.totalDays      = totalDays;
   r.notes          = document.getElementById('mgNotes').value.trim();
   // Per-item status and per-item loss amounts (A1 data model). The single
-  // charger UI row fans out to the stored plug+cable pair: same status on
-  // both, and the whole lost amount on plug so charges never double-count.
+  // charger UI row fans out to the stored plug+cable pair — but ONLY when the
+  // operator actually changed it: an untouched charger keeps the genuine
+  // per-key history (a cable recorded 'returned' next to a lost plug stays
+  // 'returned'), so a price-only re-save can't rewrite the forensic record.
+  const prevChargerSt  = uiItemStatus(r, 'charger');
+  const prevChargerAmt = parseFloat(uiItemLostAmt(r, 'charger')) || null;
+  const prevStatus     = r.itemStatus  || {};
+  const prevLost       = r.lostCharges || {};
+  const prevEq         = r.equipmentGiven || {};
+  const mgCharger      = document.getElementById('mgGivenCharger')?.dataset.given === '1';
   r.itemStatus  = {};
   r.lostCharges = {};
   MG_UI_ITEMS.forEach(item => {
     const st  = document.getElementById('mgItemStatus_' + item)?.value || 'undecided';
     const amt = st === 'lost' ? (parseFloat(document.getElementById('mgLostAmt_' + item)?.value) || null) : null;
     if (item === 'charger') {
-      r.itemStatus.plug = st; r.itemStatus.cable = st;
-      r.lostCharges.plug = amt; r.lostCharges.cable = null;
+      if (st === prevChargerSt && (amt || null) === (prevChargerAmt || null) && mgCharger === ((prevEq.plug ?? false) || (prevEq.cable ?? false))) {
+        r.itemStatus.plug  = prevStatus.plug  ?? st;
+        r.itemStatus.cable = prevStatus.cable ?? st;
+        r.lostCharges.plug  = prevLost.plug  ?? null;
+        r.lostCharges.cable = prevLost.cable ?? null;
+      } else {
+        r.itemStatus.plug = st; r.itemStatus.cable = st;
+        r.lostCharges.plug = amt; r.lostCharges.cable = null;
+      }
     } else {
       r.itemStatus[item]  = st;
       r.lostCharges[item] = amt;
     }
   });
-  const mgCharger = document.getElementById('mgGivenCharger')?.dataset.given === '1';
+  const chargerUntouched = mgCharger === ((prevEq.plug ?? false) || (prevEq.cable ?? false));
   r.equipmentGiven = {
     phone: document.getElementById('mgGivenPhone')?.dataset.given === '1',
     sim:   document.getElementById('mgGivenSim')?.dataset.given   === '1',
-    plug:  mgCharger,
-    cable: mgCharger,
+    plug:  chargerUntouched ? (prevEq.plug ?? mgCharger)  : mgCharger,
+    cable: chargerUntouched ? (prevEq.cable ?? mgCharger) : mgCharger,
   };
   const mgAddDiscount   = document.getElementById('mgAddDiscount')?.checked || false;
   const mgDiscountType  = document.getElementById('mgDiscountType')?.value  || 'percent';
@@ -6445,6 +6468,11 @@ let posBasket = []; // [{itemId, qty, imei}]
 let posCat = 'all';
 let posMethod = 'cash';
 let posWallet = 0;  // £ of the sale drawn from the customer's wallet credit (split tender)
+// One idempotency token per HANDOVER, minted on the first Charge press and kept
+// through failed attempts — a re-ring after a lost response replays the SAME
+// token, so the server can dedupe instead of double-charging. Cleared only on
+// success/duplicate (and when the till opens fresh).
+let posSaleRef = null;
 let posLastSale = null; // { total, change } — shown as a banner until the next action
 
 function openSaleModal(preselectItemId = null) { // name kept: every Sell button calls it
@@ -6453,6 +6481,8 @@ function openSaleModal(preselectItemId = null) { // name kept: every Sell button
   posBasket = preselectItemId ? [{ itemId: preselectItemId, qty: 1, imei: '' }] : [];
   posCat = 'all';
   posMethod = 'cash';
+  posWallet = 0;
+  posSaleRef = null;   // fresh till session = fresh handover token
   posLastSale = null;
   renderPosView();
 }
@@ -6603,13 +6633,15 @@ function posCustomerChange() {
   document.getElementById('posScan')?.focus();
 }
 
-// Update on wallet-field keystrokes WITHOUT re-rendering (keeps the field focused).
+// Update on wallet-field keystrokes WITHOUT re-rendering (keeps the field
+// focused). Stores the RAW typed value — every reader (posCashDue, the split
+// summary, submit) clamps against the LIVE total, so growing the basket after
+// typing honours the full typed amount instead of a stale clamp.
 function posWalletInput() {
   const el = document.getElementById('posWalletIn');
-  const total = posTotalNow();
   let v = parseFloat(el?.value);
   if (!Number.isFinite(v) || v < 0) v = 0;
-  posWallet = Math.min(v, total);
+  posWallet = v;
   const info = document.getElementById('posSplitInfo');
   if (info) info.textContent = posSplitText();
   posChangeCalc();
@@ -6746,6 +6778,9 @@ function posRenderBasket() {
       }).join('');
   const totalEl = document.getElementById('posTotal');
   if (totalEl) totalEl.textContent = `${fmtGbp(total)}`;
+  // Basket edits change the split — keep the wallet summary + change live.
+  const splitInfo = document.getElementById('posSplitInfo');
+  if (splitInfo) splitInfo.textContent = posSplitText();
   posChangeCalc();
 }
 
@@ -6804,9 +6839,12 @@ async function saveSale() {
     toast(`Cash given (${fmtGbp(given)}) is less than the ${fmtGbp(cashDue)} due.`, 'error');
     return;
   }
-  // Guard against a double-tap firing two sales; clientRef makes any retry
-  // idempotent server-side. audit U3.
+  // Guard against a double-tap firing two sales; the per-HANDOVER token (kept
+  // across failed attempts, cleared on success/duplicate) makes an operator
+  // re-ring after a lost response replay the same token — the server dedupes
+  // instead of charging twice. audit U3/A2.
   if (!kcBeginWrite('sale')) return;
+  if (!posSaleRef) posSaleRef = kcRef();
   let res;
   try {
     res = await kcFetch('/api/shop', {
@@ -6819,7 +6857,7 @@ async function saveSale() {
         paidNow,
         method: posMethod,
         walletAmount,
-        clientRef: kcRef(),
+        clientRef: posSaleRef,
       }),
     }).then(r => r.json()).catch(() => null);
   } finally {
@@ -6827,7 +6865,7 @@ async function saveSale() {
   }
   if (!res || !res.success) { toast(res?.error || 'Could not record the sale.', 'error'); return; }
   if (res.duplicate) {
-    posBasket = []; posWallet = 0;
+    posBasket = []; posWallet = 0; posSaleRef = null;
     posRenderTiles(); posRenderBasket(); posRenderTender();
     toast('Sale already recorded — no double charge.', 'info');
     const scan = document.getElementById('posScan');
@@ -6863,9 +6901,14 @@ async function saveSale() {
   if (custId && custId !== 'walkin' && customerLedgerBal && typeof res.balance === 'number') {
     customerLedgerBal.set(String(custId), Number(res.balance));
   }
-  posBasket = []; posWallet = 0;
+  posBasket = []; posWallet = 0; posSaleRef = null;
   const walletNote = res.walletApplied > 0 ? ` (${fmtGbp(res.walletApplied)} from wallet)` : '';
   toast(`Sold ${res.lines} item${res.lines === 1 ? '' : 's'} — ${fmtGbp(res.total)}${walletNote}.`, 'success');
+  // Credit turned out smaller than the agreed split — the uncovered part stayed
+  // on the customer's account. Loud, persistent (error toasts stay until clicked).
+  if (res.walletShortfall > 0) {
+    toast(`Heads up: only ${fmtGbp(res.walletApplied)} credit was available — ${fmtGbp(res.walletShortfall)} left on the customer's account.`, 'error');
+  }
   posRenderTiles();
   posRenderBasket();
   posRenderTender();

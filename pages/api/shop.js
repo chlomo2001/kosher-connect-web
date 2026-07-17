@@ -142,11 +142,27 @@ async function handler(req, res) {
         'stock_items',
         `id=in.(${[...wanted.keys()].map(encodeURIComponent).join(',')})&active=is.true`
       )
+      // A committed sale whose response was lost replays with the same token —
+      // possibly after its own commit emptied the shelf. Check "did this exact
+      // basket already commit?" against the ledger (the source of truth), so a
+      // sold-out replay reports duplicate instead of a phantom stock error.
+      const alreadyCommitted = async () => {
+        if (!clientRef) return false
+        const dup = await db.select('ledger',
+          `charge_reference=eq.${encodeURIComponent('SALE-' + clientRef + '-0')}&select=id&limit=1`)
+        return dup.length > 0
+      }
+      const duplicateResponse = async () => {
+        const balRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
+        return res.json({ success: true, duplicate: true, balance: balRows.length ? Number(balRows[0].balance) : 0 })
+      }
+
       const byId = new Map(itemRows.map(i => [String(i.id), i]))
       for (const [id, q] of wanted) {
         const item = byId.get(id)
         if (!item) return res.status(400).json({ success: false, error: 'An item is unknown or retired.' })
         if ((item.quantity ?? 0) < q) {
+          if (await alreadyCommitted()) return duplicateResponse()
           return res.status(400).json({ success: false, error: `Only ${item.quantity ?? 0} × ${item.model} in stock.` })
         }
       }
@@ -176,8 +192,12 @@ async function handler(req, res) {
       if (clientRef) {
         const claimed = await db.claimKey(`SALE-${clientRef}`, { scope: 'shop_sale', customerId: customerUuid })
         if (!claimed) {
-          const balRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
-          return res.json({ success: true, duplicate: true, balance: balRows.length ? Number(balRows[0].balance) : 0 })
+          // A held key only means "someone claimed it" — verify the sale actually
+          // committed (ledger row exists) before telling the till it's recorded.
+          // No ledger row = the first attempt is still in flight or died; 409 so
+          // the operator retries rather than handing over unpaid goods.
+          if (await alreadyCommitted()) return duplicateResponse()
+          return res.status(409).json({ success: false, error: 'That sale is still being processed — give it a second and try again.' })
         }
       }
 
@@ -186,14 +206,33 @@ async function handler(req, res) {
       // last unit can both pass it; the guarded DB decrement (quantity + delta >= 0)
       // is the real race-closer — only one can win. If any line loses the race we
       // give back everything already taken in this basket and charge nothing. audit A1.
+      // Give back everything this request took. Each step is individually
+      // guarded — one failed give-back must not stop the others, and the key
+      // release runs regardless so a genuine retry isn't locked out.
+      const saleRowIds = []
+      const unwind = async () => {
+        for (const sid of saleRowIds) {
+          try { await db.delete('stock_sales', `id=eq.${sid}`) }
+          catch (e2) { console.error('[api/shop] unwind: stock_sales row stranded', sid, e2) }
+        }
+        for (const r of reserved) {
+          try { await db.rpc('adjust_stock_qty', { p_item: r.id, p_qty: r.qty }) }
+          catch (e2) { console.error('[api/shop] unwind: stock not returned', r.id, e2) }
+        }
+        if (clientRef) {
+          try { await db.releaseKey(`SALE-${clientRef}`) }
+          catch (e2) { console.error('[api/shop] unwind: key not released', clientRef, e2) }
+        }
+      }
+
       const reserved = []
       for (const [id, q] of wanted) {
-        const left = await db.rpc('adjust_stock_qty', { p_item: id, p_qty: -q })
+        let left = null
+        try { left = await db.rpc('adjust_stock_qty', { p_item: id, p_qty: -q }) }
+        catch (e2) { await unwind(); throw e2 }
         if (left === null || left === undefined) {
-          for (const r of reserved) await db.rpc('adjust_stock_qty', { p_item: r.id, p_qty: r.qty })
-          // Nothing was charged and all stock was returned — release the key so
-          // the counter can simply retry once stock is corrected.
-          if (clientRef) await db.releaseKey(`SALE-${clientRef}`)
+          // Lost the last-unit race: nothing was charged, return what we took.
+          await unwind()
           const fresh = await db.select('stock_items', `select=quantity,model&id=eq.${encodeURIComponent(id)}`)
           const have = fresh.length ? (fresh[0].quantity ?? 0) : 0
           const name = fresh.length ? fresh[0].model : 'that item'
@@ -202,66 +241,93 @@ async function handler(req, res) {
         reserved.push({ id, qty: q })
       }
 
+      // Commit. From here on any thrown error (transient DB/network) unwinds:
+      // this request's stock_sales rows are removed, reserved stock is returned,
+      // and the claim key is released — so the operator's retry starts clean and
+      // the ledger's insertIgnoreDup dedupes anything that did land. audit A2.
       let grandTotal = 0
       let basketRef = clientRef
-      for (let i = 0; i < computed.length; i++) {
-        const { l, item, qty, unit, total } = computed[i]
-        const [sale] = await db.insert('stock_sales', [{
-          customer_id: customerUuid,
-          stock_item_id: item.id,
-          qty,
-          unit_price: unit,
-          total,
-          imei: l.imei || null,
-          notes: b.notes || null,
-          created_by: req.staff?.id || null,
-        }])
-        if (!basketRef) basketRef = sale.id  // stable settlement ref when no client token
-        // Stock already decremented atomically above (audit A1) — don't PATCH here.
+      try {
+        for (let i = 0; i < computed.length; i++) {
+          const { l, item, qty, unit, total } = computed[i]
+          const [sale] = await db.insert('stock_sales', [{
+            customer_id: customerUuid,
+            stock_item_id: item.id,
+            qty,
+            unit_price: unit,
+            total,
+            imei: l.imei || null,
+            notes: b.notes || null,
+            created_by: req.staff?.id || null,
+          }])
+          saleRowIds.push(sale.id)
+          if (!basketRef) basketRef = sale.id  // stable settlement ref when no client token
+          // Stock already decremented atomically above (audit A1) — don't PATCH here.
 
-        // Idempotent per-line charge reference (client token + index) so a retry
-        // can't double-post; falls back to the sale id when no token is sent.
-        const saleRef = clientRef ? `${clientRef}-${i}` : sale.id
-        const label = `${item.company || ''} ${item.model || ''}`.trim()
-        await db.insertIgnoreDup('ledger', [{
-          customer_id: customerUuid,
-          charge_reference: `SALE-${saleRef}`,
-          entry_type: item.category === 'phone' ? 'phone_sale' : 'stock_sale',
-          amount: -total,
-          description: `${label}${qty > 1 ? ` × ${qty}` : ''}${l.imei ? ` — IMEI ${l.imei}` : ''}`,
-        }], 'charge_reference')
-        grandTotal = money(grandTotal + total)
+          // Idempotent per-line charge reference (client token + index) so a retry
+          // can't double-post; falls back to the sale id when no token is sent.
+          const saleRef = clientRef ? `${clientRef}-${i}` : sale.id
+          const label = `${item.company || ''} ${item.model || ''}`.trim()
+          await db.insertIgnoreDup('ledger', [{
+            customer_id: customerUuid,
+            charge_reference: `SALE-${saleRef}`,
+            entry_type: item.category === 'phone' ? 'phone_sale' : 'stock_sale',
+            amount: -total,
+            description: `${label}${qty > 1 ? ` × ${qty}` : ''}${l.imei ? ` — IMEI ${l.imei}` : ''}`,
+          }], 'charge_reference')
+          grandTotal = money(grandTotal + total)
+        }
+
+        // Settlement. The per-line charges above already sit on the customer's
+        // running wallet. Post a PAYMENT only for money that physically moved NOW
+        // (cash/card/…). The wallet portion posts NO payment — the charge draws it
+        // straight from their credit, and it is capped by the credit they ACTUALLY
+        // have right now (never trust the client's figure): wallet tender must
+        // never mark goods settled against credit that isn't there. Split falls
+        // out naturally (wallet £20 + cash £10 on a £30 sale → one £10 payment).
+        const isWalkin = !b.customerId || b.customerId === 'walkin'
+        const requestedWallet = isWalkin ? 0 : Math.min(Math.max(money(b.walletAmount), 0), grandTotal)
+        let walletApplied = requestedWallet
+        if (requestedWallet > 0) {
+          const credRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
+          // Balance BEFORE this basket's charges = current balance + what we just
+          // charged (charges are negative, so add grandTotal back).
+          const balanceNow = credRows.length ? Number(credRows[0].balance) : 0
+          const creditAvailable = Math.max(0, money(balanceNow + grandTotal))
+          walletApplied = Math.min(requestedWallet, creditAvailable)
+        }
+        // The payment records what PHYSICALLY moved at the till — the agreed
+        // cash/card part (total − agreed wallet split). If the credit turned out
+        // smaller than the agreed split, the uncovered part stays ON ACCOUNT as
+        // visible debt — it never inflates the payment (the drawer doesn't have
+        // it) and never books credit the customer doesn't hold.
+        const walletShortfall = money(requestedWallet - walletApplied)
+        const paidNowAmount = b.paidNow ? money(grandTotal - requestedWallet) : 0
+        if (paidNowAmount > 0) {
+          await db.insertIgnoreDup('ledger', [{
+            customer_id: customerUuid,
+            charge_reference: `PAY-SALE-${basketRef}-now`,
+            entry_type: 'payment',
+            amount: paidNowAmount,
+            method,
+            description: walletApplied > 0 ? 'Paid — shop sale (part)' : 'Paid — shop sale',
+          }], 'charge_reference')
+        }
+
+        const balRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
+        return res.json({
+          success: true,
+          total: grandTotal,
+          lines: lines.length,
+          walletApplied,
+          walletShortfall,
+          paidNow: paidNowAmount,
+          balance: balRows.length ? Number(balRows[0].balance) : 0,
+        })
+      } catch (e) {
+        await unwind()
+        throw e
       }
-
-      // Settlement. The per-line charges above already sit on the customer's
-      // running wallet. Post a PAYMENT only for money that physically moved NOW
-      // (cash/card/…). The wallet portion posts NO payment — the charge draws it
-      // straight from their credit. That's what keeps the cash-up honest: wallet
-      // tender never adds phantom cash to the drawer. Split falls out naturally
-      // (wallet £20 + cash £10 on a £30 sale → one £10 cash payment).
-      const isWalkin = !b.customerId || b.customerId === 'walkin'
-      const walletApplied = isWalkin ? 0 : Math.min(Math.max(money(b.walletAmount), 0), grandTotal)
-      const paidNowAmount = b.paidNow ? money(grandTotal - walletApplied) : 0
-      if (paidNowAmount > 0) {
-        await db.insertIgnoreDup('ledger', [{
-          customer_id: customerUuid,
-          charge_reference: `PAY-SALE-${basketRef}-now`,
-          entry_type: 'payment',
-          amount: paidNowAmount,
-          method,
-          description: walletApplied > 0 ? 'Paid — shop sale (part)' : 'Paid — shop sale',
-        }], 'charge_reference')
-      }
-
-      const balRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
-      return res.json({
-        success: true,
-        total: grandTotal,
-        lines: lines.length,
-        walletApplied,
-        paidNow: paidNowAmount,
-        balance: balRows.length ? Number(balRows[0].balance) : 0,
-      })
     }
 
     return res.status(405).end()
