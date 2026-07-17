@@ -386,24 +386,22 @@ export default function AuthBackdrop() {
         }
       })
 
-      // 9) Faint logo watermark, top-left — magnetised like the pointer glow:
-      //    a MOVING cursor pulls the logo toward itself from anywhere on the
-      //    canvas; once the cursor rests for about a second the pull dies and
-      //    an underdamped spring sends the logo travelling home with a bounce.
+      // 9) Faint logo watermark, top-left — it RIDES with the cursor like the
+      //    glow does: while the pointer moves, the logo smoothly travels all
+      //    the way to it and stays with it wherever it goes; once the pointer
+      //    rests for about a second the spring carries it home with a bounce.
       if (logoReady) {
         const lw = Math.min(W, H) * 0.13, lh = lw * (logo.height / logo.width), pad = Math.min(W, H) * 0.05
         const cx0 = pad + lw / 2, cy0 = pad + lh / 2
-        const cap = Math.min(W, H) * 0.08
         const sp = Math.hypot(px - lpx, py - lpy); lpx = px; lpy = py
         // heat rises while the cursor moves, decays ~1s after it stops
         moveHeat = Math.min(1, moveHeat * 0.93 + (haveP ? Math.min(sp, 18) * 0.03 : 0))
-        const dxL = px - cx0, dyL = py - cy0, dL = Math.hypot(dxL, dyL) || 1
-        const txL = (dxL / dL) * cap * moveHeat, tyL = (dyL / dL) * cap * moveHeat
-        lovx = (lovx + (txL - lox) * 0.045) * 0.9        // underdamped → bounce-back
-        lovy = (lovy + (tyL - loy) * 0.045) * 0.9
+        const txL = (px - cx0) * moveHeat, tyL = (py - cy0) * moveHeat   // full travel
+        lovx = (lovx + (txL - lox) * 0.05) * 0.88        // smooth chase; bounce on return
+        lovy = (lovy + (tyL - loy) * 0.05) * 0.88
         lox += lovx; loy += lovy
-        const carried = Math.min(1, Math.hypot(lox, loy) / (cap * 0.7))
-        ctx.save(); ctx.globalAlpha = (dk ? 0.11 : 0.08) * (1 + carried * 1.1)
+        const carried = Math.min(1, Math.hypot(lox, loy) / (Math.min(W, H) * 0.1))
+        ctx.save(); ctx.globalAlpha = (dk ? 0.11 : 0.08) * (1 + carried * 1.3)
         ctx.drawImage(logo, pad + lox, pad + loy, lw, lh); ctx.restore()
       }
 

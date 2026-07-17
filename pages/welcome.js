@@ -17,7 +17,7 @@ const SERVICES = [
   { icon: '📶', title: 'Find the best SIM plan for your needs', body: 'We help you choose a plan that fits your usage — without overpaying. International minute bundles available.' },
   { icon: '🌍', title: 'Call global like a local', body: 'Get an Israeli or USA number connected to your phone today, and skip expensive international rates.' },
   { icon: '🎟️', title: 'Flights & travel bookings', body: 'We book your tickets and keep an eye on the details, so the whole trip is sorted in one place.' },
-  { icon: '🎵', title: 'Kol Torah audio line', body: 'Torah and music down the line — dial in from any kosher phone.' },
+  { icon: '🎵', title: 'Kol Torah audio', body: 'Shiurim, music and children’s storytellers — on CD or as audio files, ready for your kosher phone or player.' },
   { icon: '🛠️', title: 'Phone smashed? Don’t worry! We can fix it', body: 'Screen repairs, charging issues, battery problems, and more — we’ll sort it.' },
   { icon: '🛍️', title: 'Accessories & more', body: 'Chargers, cables, cases and audio CDs — in the shop whenever you need them.' },
   { icon: '✅', title: 'Simple, clear guidance', body: 'No tech stress. We explain everything clearly and help you pick the best option.' },
@@ -64,12 +64,11 @@ export default function Welcome() {
           <section className="w-hero" id="top">
             <div className="w-hero-inner">
               <div>
-                <h2>Welcome to <span>Kosher Connect</span></h2>
+                <h2>Welcome to Kosher Connect</h2>
                 <div className="w-strap">Your Kosher Mobile Store in Manchester</div>
                 <p>
-                  Proudly serving the Heimishe community with kosher technology — without
-                  compromise on quality, efficiency and service. Travel rentals, SIM plans,
-                  repairs, flight bookings, and Israeli/USA numbers on your device.
+                  Everything you need for kosher phones — travel rentals, SIM plans, repairs,
+                  flight bookings, Kol Torah audio, and Israeli/USA numbers on your device.
                 </p>
                 <div className="w-cta">
                   <a className="btn btn-primary" href="#services">View Services</a>
@@ -91,23 +90,6 @@ export default function Welcome() {
             </div>
           </section>
 
-          <section className="w-section" aria-label="What we stand for">
-            <div className="w-pillars">
-              <div className="w-pillar w-reveal">
-                <b>Trust <span>· Emunah</span></b>
-                <p>Built for the Heimishe community — with clarity, accountability, and care.</p>
-              </div>
-              <div className="w-pillar w-reveal">
-                <b>Responsibility <span>· Achrayus</span></b>
-                <p>Kosher technology without compromise on quality, efficiency, and service.</p>
-              </div>
-              <div className="w-pillar w-reveal">
-                <b>Community <span>· Kehilla</span></b>
-                <p>Phones, plans, rentals, and repairs — designed to serve people, not distract them.</p>
-              </div>
-            </div>
-          </section>
-
           <section className="w-section" id="services">
             <h3>Our Services</h3>
             <div className="w-grid">
@@ -125,14 +107,11 @@ export default function Welcome() {
             <h3>Contact</h3>
             <div className="w-card w-show">
               <p style={{ marginBottom: 10 }}>Want to ask about a phone, repair, SIM plan, or travel option?</p>
-              <p style={{ margin: 0 }}>Email: <a href="mailto:admin@kosher-connect.com"><b>admin@kosher-connect.com</b></a></p>
+              <p style={{ margin: '0 0 6px' }}>📍 421 Bury New Road (door left of Toy Zone, first floor up)</p>
+              <p style={{ margin: '0 0 6px' }}>📞 <a href="tel:01615311386"><b>0161 531 1386</b></a></p>
+              <p style={{ margin: 0 }}>✉️ <a href="mailto:admin@kosher-connect.com"><b>admin@kosher-connect.com</b></a></p>
             </div>
           </section>
-
-          <div className="w-close w-reveal">
-            <div className="w-close-line">Kosher. Connected. Cared for.</div>
-            <p>“Technology should serve the people — not the other way around.”</p>
-          </div>
 
           <footer className="w-footer">
             <div>© {new Date().getFullYear()} Kosher Connect. All rights reserved.</div>
