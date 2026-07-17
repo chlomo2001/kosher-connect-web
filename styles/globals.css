@@ -10,6 +10,26 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* ── Hebrew type: David Libre (the classic "David" face), self-hosted,
+      HEBREW UNICODE-RANGE ONLY — full niqqud support. Because these faces
+      cover no Latin codepoints, listing the family first in the body stack
+      styles Hebrew beautifully while Latin text is untouched. ── */
+@font-face {
+  font-family: 'David Libre KC'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('/fonts/david-libre-400-hebrew.woff2') format('woff2');
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+@font-face {
+  font-family: 'David Libre KC'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('/fonts/david-libre-500-hebrew.woff2') format('woff2');
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+@font-face {
+  font-family: 'David Libre KC'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('/fonts/david-libre-700-hebrew.woff2') format('woff2');
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
 :root {
   /* ── Surfaces — light-gray app canvas, white cards, flat recessed panels ── */
   /* Warm "paper" canvas — a whisper of the logo's gold in off-white. Pure
@@ -130,7 +150,10 @@ html { color-scheme: light; }
 html, body { height: 100%; }
 
 body {
-  font-family: 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif;
+  /* 'David Libre KC' covers ONLY the Hebrew unicode-range (see @font-face
+     above) and sits FIRST: Hebrew glyphs — dates, names, notes, full niqqud —
+     render in the classic David face; Latin falls straight through. */
+  font-family: 'David Libre KC', 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif;
   font-size: 15px;              /* body-md */
   font-weight: 400;             /* #57 — 300 was too thin to read comfortably */
   font-feature-settings: "ss01";
@@ -817,7 +840,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .customer-dropdown-empty { padding: 9px 12px; font-size: 13px; color: var(--muted); }
 
 /* HEBREW DATE label */
-.hebrew-date-label, .hebrew-date { font-size: 11px; color: var(--gold); margin-top: 3px; min-height: 16px; }
+.hebrew-date-label, .hebrew-date { font-size: 12.5px; color: var(--gold); margin-top: 3px; min-height: 16px; }
 
 /* DEBT BADGE */
 .badge-debt { background: rgba(234,34,97,0.1); color: var(--danger); }

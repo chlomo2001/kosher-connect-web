@@ -35,10 +35,11 @@ const CITIES = [
 const FLIGHTS = [
   [0, 1], [1, 3], [3, 4], [5, 0], [3, 7], [9, 13], [2, 10], [4, 7],
 ]
-// Signal links [i, j, gold?] — carry a travelling data pulse, drawn tower-to-
-// tower (tip-to-tip, off the mast top). The "phone network", no planes.
+// Signal links [i, j, kind] — carry a travelling pulse, drawn tower-to-tower
+// (tip-to-tip, off the mast top). kind: 0 = data, 1 = gold "best route",
+// 2 = AUDIO (Kol Torah — Tel Aviv → London carries music notes, not dots).
 const SIGNALS = [
-  [2, 3, 1], [2, 1, 0], [3, 9, 0], [13, 11, 0], [8, 2, 1], [12, 1, 0],
+  [2, 3, 1], [2, 1, 2], [3, 9, 0], [13, 11, 0], [8, 2, 1], [12, 1, 0],
   [4, 13, 0], [6, 0, 0], [11, 4, 0], [5, 6, 0], [1, 10, 0],
 ]
 
@@ -70,12 +71,13 @@ export default function AuthBackdrop() {
     logo.onload = () => { logoReady = true }
     logo.src = '/logo.png'
 
-    // Soft sunburst halo behind the globe — rays radiate from the globe centre.
-    const N = 170
+    // Engraved sunburst behind the globe — many THIN rays (etching-style, no
+    // soft halo), radiating from the globe centre.
+    const N = 260
     const rays = Array.from({ length: N }, (_, i) => ({
-      a: (i + 0.5) / N * 6.283 + (Math.random() - 0.5) * 0.02,
+      a: (i + 0.5) / N * 6.283 + (Math.random() - 0.5) * 0.015,
       r: 0.7 + Math.random() * 0.7, lp: Math.random() * 6.283,
-      tp: Math.random() * 6.283, ds: 0.9 + Math.random() * 1.4,
+      tp: Math.random() * 6.283, ds: 0.5 + Math.random() * 0.8,
     }))
     // Small aeroplane outline (nose at +x), a half-silhouette mirrored.
     const PH = [[1, 0], [0.2, 0.1], [-0.05, 0.52], [-0.22, 0.52], [-0.27, 0.13], [-0.62, 0.13], [-0.74, 0.42], [-0.86, 0.42], [-0.9, 0]]
@@ -133,7 +135,7 @@ export default function AuthBackdrop() {
       //    by the pointer like a charge (static-electricity magnet).
       const RR = Math.hypot(W, H) * 0.55, fieldR = Math.min(W, H) * 0.17, fieldR2 = fieldR * fieldR
       const rim = Rg * 0.98
-      ctx.lineWidth = 1
+      ctx.lineWidth = 0.55                                        // etching-thin
       for (const ry of rays) {
         const ca = Math.cos(ry.a), sa = Math.sin(ry.a)
         const sx = gx + ca * rim, sy = gy + sa * rim              // start at the globe rim
@@ -142,12 +144,47 @@ export default function AuthBackdrop() {
         let mxp = (sx + tx) / 2, myp = (sy + ty) / 2
         const dmx = mxp - px, dmy = myp - py, dm = Math.hypot(dmx, dmy) || 1, fM = Math.exp(-(dm * dm) / fieldR2)
         mxp += (dmx / dm) * fM * 150; myp += (dmy / dm) * fM * 150
-        ctx.strokeStyle = rgba(cur.line, dk ? 0.14 : 0.1)
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.18 : 0.09)
         ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(mxp, myp, tx, ty); ctx.stroke()
         const tw = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 0.0011 + ry.tp))
-        ctx.fillStyle = rgba(cur.dot, (dk ? 0.4 : 0.42) * tw)
+        ctx.fillStyle = rgba(cur.dot, (dk ? 0.42 : 0.36) * tw)
         ctx.beginPath(); ctx.arc(tx, ty, ry.ds, 0, 6.2832); ctx.fill()
       }
+
+      // 1b) CD-satellite — the audio line as part of the scene: a small disc
+      //     orbiting the globe like a satellite (grooved rings + a gold sheen
+      //     that sweeps as it spins). Far half draws behind the globe.
+      const su = t * 0.00009, tilt = -0.42
+      const eA = Rg * 1.32, eB = Rg * 0.34
+      const ex = Math.cos(su) * eA, ey = Math.sin(su) * eB
+      const sat = {
+        x: gx + ex * Math.cos(tilt) - ey * Math.sin(tilt),
+        y: gy + ex * Math.sin(tilt) + ey * Math.cos(tilt),
+        front: Math.sin(su) > 0,
+        r: Math.min(W, H) * 0.028,
+      }
+      // faint orbit path so the disc reads as a satellite, not a floater
+      ctx.save(); ctx.translate(gx, gy); ctx.rotate(tilt)
+      ctx.strokeStyle = rgba(cur.line, dk ? 0.08 : 0.06); ctx.lineWidth = 0.6
+      ctx.setLineDash([2, 6]); ctx.beginPath(); ctx.ellipse(0, 0, eA, eB, 0, 0, 6.2832); ctx.stroke()
+      ctx.setLineDash([]); ctx.restore()
+      const drawSat = () => {
+        const { x, y, r } = sat
+        ctx.save(); ctx.lineCap = 'round'
+        ctx.fillStyle = rgb(base)                                  // occlude what's behind
+        ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill()
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.55 : 0.45); ctx.lineWidth = 1
+        for (const rr of [1, 0.66, 0.3]) { ctx.beginPath(); ctx.arc(x, y, r * rr, 0, 6.2832); ctx.stroke() }
+        ctx.fillStyle = rgba(cur.line, dk ? 0.5 : 0.4)
+        ctx.beginPath(); ctx.arc(x, y, r * 0.08, 0, 6.2832); ctx.fill()
+        const sweep = t * 0.0012                                   // spinning gold sheen
+        ctx.strokeStyle = rgba(GOLD, dk ? 0.75 : 0.6); ctx.lineWidth = 1.6
+        ctx.beginPath(); ctx.arc(x, y, r * 0.82, sweep, sweep + 0.9); ctx.stroke()
+        ctx.strokeStyle = rgba(GOLD, dk ? 0.35 : 0.28); ctx.lineWidth = 1
+        ctx.beginPath(); ctx.arc(x, y, r * 0.5, sweep + 2.4, sweep + 3.0); ctx.stroke()
+        ctx.restore()
+      }
+      if (!sat.front) drawSat()
 
       // 2) Globe disc — the OCEAN: a subtly tinted sphere (a warm gold sheen on
       //    dark, a cool azure on light). Kept dim so the land + network read
@@ -200,11 +237,8 @@ export default function AuthBackdrop() {
       ctx.lineJoin = 'miter'; ctx.lineCap = 'butt'
       ctx.restore()
 
-      // 5) Rim glow (outer only — no interior wash) + crisp limb.
-      const atm = ctx.createRadialGradient(gx, gy, Rg * 0.6, gx, gy, Rg * 1.14)
-      atm.addColorStop(0, rgba(cur.line, 0)); atm.addColorStop(0.82, rgba(cur.line, 0))
-      atm.addColorStop(0.93, rgba(cur.line, dk ? 0.2 : 0.13)); atm.addColorStop(1, rgba(cur.line, 0))
-      ctx.fillStyle = atm; ctx.beginPath(); ctx.arc(gx, gy, Rg * 1.14, 0, 6.2832); ctx.fill()
+      // 5) Crisp limb only — no soft outer glow (the engraved rays ARE the
+      //    halo now; a gradient wash on top muddied them).
       ctx.strokeStyle = rgba(cur.line, dk ? 0.38 : 0.3); ctx.lineWidth = 1
       ctx.beginPath(); ctx.arc(gx, gy, Rg, 0, 6.2832); ctx.stroke()
 
@@ -277,40 +311,83 @@ export default function AuthBackdrop() {
       })
 
       // 8) Signal network — TOWER-TOP to TOWER-TOP (tip to tip): a bow carrying
-      //    a travelling data pulse. No plane. Some links glow gold ("best route").
-      SIGNALS.forEach(([i, j, gold], li) => {
+      //    a travelling pulse. No plane. Gold links = "best route"; the AUDIO
+      //    link broadcasts Kol Torah — tiny quavers travel it instead of dots.
+      const drawNote = (x, y, alpha) => {
+        ctx.save(); ctx.translate(x, y); ctx.scale(1.15, 1.15)
+        ctx.strokeStyle = rgba(GOLD, alpha); ctx.fillStyle = rgba(GOLD, alpha); ctx.lineWidth = 1
+        ctx.beginPath(); ctx.ellipse(0, 2.2, 2.1, 1.5, -0.45, 0, 6.2832); ctx.fill()   // head
+        ctx.beginPath(); ctx.moveTo(1.9, 1.6); ctx.lineTo(1.9, -3.6); ctx.stroke()      // stem
+        ctx.beginPath(); ctx.moveTo(1.9, -3.6); ctx.quadraticCurveTo(4.4, -2.8, 4.6, -0.6); ctx.stroke() // flag
+        ctx.restore()
+      }
+      SIGNALS.forEach(([i, j, kind], li) => {
         const a = tips[i], b = tips[j]
         if (!a || !b) return
+        const gold = kind >= 1
         const { cx, cy } = arcCtrl(a, b)
         ctx.setLineDash([2, 5]); ctx.strokeStyle = rgba(gold ? GOLD : cur.line, gold ? (dk ? 0.5 : 0.44) : (dk ? 0.34 : 0.28))
         ctx.lineWidth = gold ? 1.3 : 1
         ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(cx, cy, b.x, b.y); ctx.stroke()
         ctx.setLineDash([])
-        const u = ((t * (gold ? 0.0002 : 0.00015) + li * 0.11) % 1 + 1) % 1, pt = bez(a, cx, cy, b, u)
-        ctx.fillStyle = rgba(gold ? GOLD : cur.dot, dk ? 0.92 : 0.8)
-        ctx.beginPath(); ctx.arc(pt.x, pt.y, gold ? 2.3 : 1.8, 0, 6.2832); ctx.fill()
+        if (kind === 2) {
+          for (let s = 0; s < 2; s++) {                            // two phase-offset quavers
+            const u = ((t * 0.00013 + li * 0.11 + s * 0.5) % 1 + 1) % 1
+            const pt = bez(a, cx, cy, b, u)
+            drawNote(pt.x, pt.y, (dk ? 0.9 : 0.75) * Math.sin(Math.PI * u))
+          }
+        } else {
+          const u = ((t * (gold ? 0.0002 : 0.00015) + li * 0.11) % 1 + 1) % 1, pt = bez(a, cx, cy, b, u)
+          ctx.fillStyle = rgba(gold ? GOLD : cur.dot, dk ? 0.92 : 0.8)
+          ctx.beginPath(); ctx.arc(pt.x, pt.y, gold ? 2.3 : 1.8, 0, 6.2832); ctx.fill()
+        }
       })
 
-      // 9) Shop motifs — faint corner emblems tying in the counter trade: an
-      //    audio-CD (media) bottom-left, a charger cable + USB plug bottom-right.
-      const em = Math.min(W, H)
-      ctx.save(); ctx.globalAlpha = dk ? 0.13 : 0.1; ctx.lineCap = 'round'
-      const cdx = em * 0.1, cdy = H - em * 0.11, rd = em * 0.058
-      ctx.strokeStyle = rgba(cur.line, 1); ctx.lineWidth = 1
-      for (const rr of [rd, rd * 0.72, rd * 0.32]) { ctx.beginPath(); ctx.arc(cdx, cdy, rr, 0, 6.2832); ctx.stroke() }
-      ctx.lineWidth = 2
-      ctx.strokeStyle = rgba(GOLD, 1); ctx.beginPath(); ctx.arc(cdx, cdy, rd * 0.85, -1.25, -0.25); ctx.stroke()
-      ctx.strokeStyle = rgba(cur.dot, 1); ctx.beginPath(); ctx.arc(cdx, cdy, rd * 0.52, 2.1, 3.1); ctx.stroke()
-      const cx0 = W - em * 0.19, cy0 = H - em * 0.08, k = em * 0.05
-      ctx.strokeStyle = rgba(cur.line, 1); ctx.lineWidth = 2
-      ctx.beginPath(); ctx.moveTo(cx0, cy0)
-      ctx.bezierCurveTo(cx0 + k * 1.7, cy0 - k * 1.3, cx0 - k * 0.2, cy0 - k * 2.7, cx0 + k * 1.9, cy0 - k * 3)
-      ctx.stroke()
-      const plx = cx0 + k * 1.9, ply = cy0 - k * 3                                            // USB plug
-      ctx.lineWidth = 1.5; ctx.strokeStyle = rgba(cur.dot, 1)
-      ctx.strokeRect(plx - 3.5, ply - 6, 7, 9)
-      ctx.beginPath(); ctx.moveTo(plx, ply + 3); ctx.lineTo(plx, ply + 6); ctx.stroke()
-      ctx.restore()
+      // 9) The CHARGER line, in-scene: the world plugged in. A thin cable rises
+      //    from the bottom-left edge to the globe's lower-left rim, ends in a
+      //    small connector, and gold power ticks flow INTO the globe. Reads as
+      //    "we keep the world charged" instead of a pasted-on cable doodle.
+      {
+        const plugA = Math.PI * 0.78                               // lower-left of the rim
+        const pxr = gx + Math.cos(plugA) * (Rg + 3), pyr = gy + Math.sin(plugA) * (Rg + 3)
+        const nx = Math.cos(plugA), ny = Math.sin(plugA)           // rim normal (outward)
+        const sx0 = Math.max(0, gx - Rg * 1.55), sy0 = H + 8       // enters from bottom edge
+        const c1x = sx0 + (pxr - sx0) * 0.15, c1y = sy0 - (sy0 - pyr) * 0.55
+        const c2x = pxr + nx * Rg * 0.45, c2y = pyr + ny * Rg * 0.45
+        ctx.lineCap = 'round'
+        ctx.strokeStyle = rgba(flightCol, dk ? 0.34 : 0.26); ctx.lineWidth = 1.4
+        ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.bezierCurveTo(c1x, c1y, c2x, c2y, pxr, pyr); ctx.stroke()
+        // connector head: a small lozenge seated on the rim, aligned to the normal
+        ctx.save(); ctx.translate(pxr, pyr); ctx.rotate(Math.atan2(ny, nx) + Math.PI / 2)
+        ctx.strokeStyle = rgba(cur.line, dk ? 0.6 : 0.45); ctx.lineWidth = 1.2
+        const cw = 4.6, ch = 7
+        ctx.beginPath()
+        ctx.moveTo(-cw / 2, 0); ctx.lineTo(-cw / 2, ch * 0.65); ctx.arcTo(-cw / 2, ch, 0, ch, 2.4)
+        ctx.arcTo(cw / 2, ch, cw / 2, ch * 0.65, 2.4); ctx.lineTo(cw / 2, 0)
+        ctx.stroke(); ctx.restore()
+        // power ticks flowing along the cable toward the globe
+        const cbez = (u) => {
+          const a = 1 - u
+          return {
+            x: a * a * a * sx0 + 3 * a * a * u * c1x + 3 * a * u * u * c2x + u * u * u * pxr,
+            y: a * a * a * sy0 + 3 * a * a * u * c1y + 3 * a * u * u * c2y + u * u * u * pyr,
+          }
+        }
+        for (let s = 0; s < 3; s++) {
+          const u = ((t * 0.00016 + s / 3) % 1 + 1) % 1
+          const pt = cbez(u)
+          ctx.fillStyle = rgba(GOLD, (dk ? 0.8 : 0.65) * (0.35 + 0.65 * u))
+          ctx.beginPath(); ctx.arc(pt.x, pt.y, 1.5, 0, 6.2832); ctx.fill()
+        }
+        // charge glimmer where the connector meets the rim
+        const gl = 0.5 + 0.5 * Math.sin(t * 0.003)
+        ctx.strokeStyle = rgba(GOLD, (dk ? 0.5 : 0.4) * gl); ctx.lineWidth = 1.4
+        ctx.beginPath(); ctx.arc(gx, gy, Rg, plugA - 0.09, plugA + 0.09); ctx.stroke()
+        ctx.lineCap = 'butt'
+      }
+
+      // 9b) Near half of the CD-satellite passes in FRONT of the globe.
+      if (sat.front) drawSat()
 
       // 10) Faint logo watermark, top-left.
       if (logoReady) {
