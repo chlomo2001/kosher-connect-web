@@ -178,6 +178,24 @@ async function handler(req, res) {
         }
       }
 
+      // Reserve stock atomically for every DISTINCT item BEFORE posting anything.
+      // The JS pre-check above catches the common case, but two tills selling the
+      // last unit can both pass it; the guarded DB decrement (quantity + delta >= 0)
+      // is the real race-closer — only one can win. If any line loses the race we
+      // give back everything already taken in this basket and charge nothing. audit A1.
+      const reserved = []
+      for (const [id, q] of wanted) {
+        const left = await db.rpc('adjust_stock_qty', { p_item: id, p_qty: -q })
+        if (left === null || left === undefined) {
+          for (const r of reserved) await db.rpc('adjust_stock_qty', { p_item: r.id, p_qty: r.qty })
+          const fresh = await db.select('stock_items', `select=quantity,model&id=eq.${encodeURIComponent(id)}`)
+          const have = fresh.length ? (fresh[0].quantity ?? 0) : 0
+          const name = fresh.length ? fresh[0].model : 'that item'
+          return res.status(409).json({ success: false, error: `Only ${have} × ${name} left — the last of it just sold. Nothing was charged.` })
+        }
+        reserved.push({ id, qty: q })
+      }
+
       let grandTotal = 0
       for (let i = 0; i < computed.length; i++) {
         const { l, item, qty, unit, total } = computed[i]
@@ -191,11 +209,7 @@ async function handler(req, res) {
           notes: b.notes || null,
           created_by: req.staff?.id || null,
         }])
-        item.quantity = (item.quantity ?? 0) - qty
-        await db.update('stock_items', `id=eq.${item.id}`, {
-          quantity: item.quantity,
-          updated_at: new Date().toISOString(),
-        })
+        // Stock already decremented atomically above (audit A1) — don't PATCH here.
 
         // Idempotent per-line reference (client token + index) so a retry can't
         // double-charge the ledger; falls back to the sale id when no token is sent.
