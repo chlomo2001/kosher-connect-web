@@ -6410,6 +6410,7 @@ async function retireStockItem(itemId) {
 let posBasket = []; // [{itemId, qty, imei}]
 let posCat = 'all';
 let posMethod = 'cash';
+let posWallet = 0;  // £ of the sale drawn from the customer's wallet credit (split tender)
 let posLastSale = null; // { total, change } — shown as a banner until the next action
 
 function openSaleModal(preselectItemId = null) { // name kept: every Sell button calls it
@@ -6460,7 +6461,7 @@ function renderPosView() {
         <div id="posLastSale"></div>
         <div id="posBasket" class="pos-receipt"></div>
         <div class="pos-summary">
-          <select class="form-input" id="posCustomer" style="width:100%;min-height:0;padding:8px 12px;margin-bottom:8px;">
+          <select class="form-input" id="posCustomer" onchange="posCustomerChange()" style="width:100%;min-height:0;padding:8px 12px;margin-bottom:8px;">
             <option value="walkin">🚶 Walk-in</option>
             ${customerOptions}
           </select>
@@ -6504,20 +6505,87 @@ function posSetCat(c) {
   document.getElementById('posScan')?.focus();
 }
 
-// Cash tender: quick notes + change due, exactly like a shop till.
+// Tender area: an optional wallet-split row (real customer only) + the cash
+// change helper. The wallet portion draws down the customer's credit — no cash
+// moves for it; the remainder is paid by the method above, or left on account.
 function posRenderTender() {
   const el = document.getElementById('posTender');
   if (!el) return;
+  const custVal = document.getElementById('posCustomer')?.value || 'walkin';
   const paid = document.getElementById('posPaid')?.checked;
-  if (!paid || posMethod !== 'cash') { el.innerHTML = ''; return; }
-  el.innerHTML = `
-    <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
-      <input class="form-input" id="posTenderIn" type="number" min="0" step="0.01" placeholder="Cash given £"
-        oninput="posChangeCalc()" style="width:110px;min-height:0;padding:7px 10px;">
-      ${[5, 10, 20, 50].map(n => `<button class="pos-note" onclick="posTenderQuick(${n})">£${n}</button>`).join('')}
-      <span id="posChange" style="font-weight:700;font-size:14px;margin-left:auto;"></span>
-    </div>`;
+  const total = posTotalNow();
+  let html = '';
+
+  if (custVal && custVal !== 'walkin') {
+    const cust = customers.find(c => String(c.id) === String(custVal));
+    const bal = cust ? customerLedgerBalance(cust) : null;
+    const credit = (typeof bal === 'number' && bal > 0) ? bal : 0;
+    const maxW = Math.min(credit, total);
+    html += `
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
+        <label style="font-size:13px;flex-shrink:0;">👛 From wallet £</label>
+        <input class="form-input" id="posWalletIn" type="number" min="0" step="0.01"
+          value="${posWallet ? posWallet.toFixed(2) : ''}" placeholder="0.00"
+          oninput="posWalletInput()" style="width:96px;min-height:0;padding:7px 10px;">
+        <button class="pos-note" onclick="posWalletMax(${maxW.toFixed(2)})" ${maxW > 0 ? '' : 'disabled'}>Max</button>
+        <span style="font-size:12px;color:var(--muted);margin-left:auto;">${credit > 0 ? `credit ${fmtGbp(credit)}` : 'no credit'}</span>
+      </div>
+      <div id="posSplitInfo" style="font-size:12px;color:var(--ink-secondary);margin-bottom:8px;min-height:15px;">${posSplitText()}</div>`;
+  }
+
+  if (paid && posMethod === 'cash') {
+    html += `
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+        <input class="form-input" id="posTenderIn" type="number" min="0" step="0.01" placeholder="Cash given £"
+          oninput="posChangeCalc()" style="width:110px;min-height:0;padding:7px 10px;">
+        ${[5, 10, 20, 50].map(n => `<button class="pos-note" onclick="posTenderQuick(${n})">£${n}</button>`).join('')}
+        <span id="posChange" style="font-weight:700;font-size:14px;margin-left:auto;"></span>
+      </div>`;
+  }
+  el.innerHTML = html;
   posChangeCalc();
+}
+
+// £ still to settle at the till after the wallet portion (the cash/card due).
+function posCashDue() {
+  const total = posTotalNow();
+  return Math.max(0, +(total - Math.min(posWallet, total)).toFixed(2));
+}
+
+// One-line split summary: "👛 Wallet £20 · Cash £10" / "· On account £10".
+function posSplitText() {
+  const total = posTotalNow();
+  const w = Math.min(posWallet, total);
+  if (w <= 0) return '';
+  const rest = posCashDue();
+  const paid = document.getElementById('posPaid')?.checked;
+  const restLabel = rest <= 0 ? '' : ` · ${paid ? (METHOD_LABELS[posMethod] || posMethod) : 'On account'} ${fmtGbp(rest)}`;
+  return `👛 Wallet ${fmtGbp(w)}${restLabel}`;
+}
+
+function posCustomerChange() {
+  posWallet = 0;            // wallet credit is per-customer — reset on switch
+  posRenderTender();
+  document.getElementById('posScan')?.focus();
+}
+
+// Update on wallet-field keystrokes WITHOUT re-rendering (keeps the field focused).
+function posWalletInput() {
+  const el = document.getElementById('posWalletIn');
+  const total = posTotalNow();
+  let v = parseFloat(el?.value);
+  if (!Number.isFinite(v) || v < 0) v = 0;
+  posWallet = Math.min(v, total);
+  const info = document.getElementById('posSplitInfo');
+  if (info) info.textContent = posSplitText();
+  posChangeCalc();
+}
+
+function posWalletMax(v) {
+  posWallet = Math.max(0, Number(v) || 0);
+  const el = document.getElementById('posWalletIn');
+  if (el) el.value = posWallet ? posWallet.toFixed(2) : '';
+  posRenderTender();
 }
 
 function posTotalNow() {
@@ -6539,7 +6607,7 @@ function posChangeCalc() {
   if (!out) return;
   const given = parseFloat(document.getElementById('posTenderIn')?.value);
   if (!Number.isFinite(given)) { out.textContent = ''; return; }
-  const change = given - posTotalNow();
+  const change = given - posCashDue();   // change is against the cash due, not the gross total
   out.style.color = change < 0 ? 'var(--danger)' : 'var(--success)';
   out.textContent = change < 0 ? `${fmtGbp(Math.abs(change))} short` : `Change ${fmtGbp(change)}`;
 }
@@ -6696,8 +6764,10 @@ async function saveSale() {
   const paidNow = document.getElementById('posPaid').checked;
   const given = parseFloat(document.getElementById('posTenderIn')?.value);
   const totalBefore = posTotalNow();
-  if (paidNow && posMethod === 'cash' && Number.isFinite(given) && given < totalBefore) {
-    toast(`Cash given (${fmtGbp(given)}) is less than the total.`, 'error');
+  const walletAmount = Math.min(Math.max(posWallet, 0), totalBefore);
+  const cashDue = Math.max(0, +(totalBefore - walletAmount).toFixed(2));
+  if (paidNow && posMethod === 'cash' && Number.isFinite(given) && given < cashDue) {
+    toast(`Cash given (${fmtGbp(given)}) is less than the ${fmtGbp(cashDue)} due.`, 'error');
     return;
   }
   // Guard against a double-tap firing two sales; clientRef makes any retry
@@ -6714,6 +6784,7 @@ async function saveSale() {
         customerId: document.getElementById('posCustomer').value,
         paidNow,
         method: posMethod,
+        walletAmount,
         clientRef: kcRef(),
       }),
     }).then(r => r.json()).catch(() => null);
@@ -6722,7 +6793,7 @@ async function saveSale() {
   }
   if (!res || !res.success) { toast(res?.error || 'Could not record the sale.', 'error'); return; }
   if (res.duplicate) {
-    posBasket = [];
+    posBasket = []; posWallet = 0;
     posRenderTiles(); posRenderBasket(); posRenderTender();
     toast('Sale already recorded — no double charge.', 'info');
     const scan = document.getElementById('posScan');
@@ -6747,15 +6818,20 @@ async function saveSale() {
   });
   posLastSale = {
     total: res.total,
-    change: paidNow && posMethod === 'cash' && Number.isFinite(given) ? Math.max(0, given - res.total) : null,
+    change: paidNow && posMethod === 'cash' && Number.isFinite(given) ? Math.max(0, given - cashDue) : null,
     customerId: custId && custId !== 'walkin' ? custId : null,
     lines: receiptLines,
     method: posMethod,
     paidNow,
     emailed: false,
   };
-  posBasket = [];
-  toast(`Sold ${res.lines} item${res.lines === 1 ? '' : 's'} — ${fmtGbp(res.total)}.`, 'success');
+  // Keep the till's view of this customer's credit fresh for the next sale.
+  if (custId && custId !== 'walkin' && customerLedgerBal && typeof res.balance === 'number') {
+    customerLedgerBal.set(String(custId), Number(res.balance));
+  }
+  posBasket = []; posWallet = 0;
+  const walletNote = res.walletApplied > 0 ? ` (${fmtGbp(res.walletApplied)} from wallet)` : '';
+  toast(`Sold ${res.lines} item${res.lines === 1 ? '' : 's'} — ${fmtGbp(res.total)}${walletNote}.`, 'success');
   posRenderTiles();
   posRenderBasket();
   posRenderTender();

@@ -203,6 +203,7 @@ async function handler(req, res) {
       }
 
       let grandTotal = 0
+      let basketRef = clientRef
       for (let i = 0; i < computed.length; i++) {
         const { l, item, qty, unit, total } = computed[i]
         const [sale] = await db.insert('stock_sales', [{
@@ -215,10 +216,11 @@ async function handler(req, res) {
           notes: b.notes || null,
           created_by: req.staff?.id || null,
         }])
+        if (!basketRef) basketRef = sale.id  // stable settlement ref when no client token
         // Stock already decremented atomically above (audit A1) — don't PATCH here.
 
-        // Idempotent per-line reference (client token + index) so a retry can't
-        // double-charge the ledger; falls back to the sale id when no token is sent.
+        // Idempotent per-line charge reference (client token + index) so a retry
+        // can't double-post; falls back to the sale id when no token is sent.
         const saleRef = clientRef ? `${clientRef}-${i}` : sale.id
         const label = `${item.company || ''} ${item.model || ''}`.trim()
         await db.insertIgnoreDup('ledger', [{
@@ -228,17 +230,27 @@ async function handler(req, res) {
           amount: -total,
           description: `${label}${qty > 1 ? ` × ${qty}` : ''}${l.imei ? ` — IMEI ${l.imei}` : ''}`,
         }], 'charge_reference')
-        if (b.paidNow) {
-          await db.insertIgnoreDup('ledger', [{
-            customer_id: customerUuid,
-            charge_reference: `PAY-SALE-${saleRef}`,
-            entry_type: 'payment',
-            amount: total,
-            method,
-            description: `Paid — ${label}`,
-          }], 'charge_reference')
-        }
         grandTotal = money(grandTotal + total)
+      }
+
+      // Settlement. The per-line charges above already sit on the customer's
+      // running wallet. Post a PAYMENT only for money that physically moved NOW
+      // (cash/card/…). The wallet portion posts NO payment — the charge draws it
+      // straight from their credit. That's what keeps the cash-up honest: wallet
+      // tender never adds phantom cash to the drawer. Split falls out naturally
+      // (wallet £20 + cash £10 on a £30 sale → one £10 cash payment).
+      const isWalkin = !b.customerId || b.customerId === 'walkin'
+      const walletApplied = isWalkin ? 0 : Math.min(Math.max(money(b.walletAmount), 0), grandTotal)
+      const paidNowAmount = b.paidNow ? money(grandTotal - walletApplied) : 0
+      if (paidNowAmount > 0) {
+        await db.insertIgnoreDup('ledger', [{
+          customer_id: customerUuid,
+          charge_reference: `PAY-SALE-${basketRef}-now`,
+          entry_type: 'payment',
+          amount: paidNowAmount,
+          method,
+          description: walletApplied > 0 ? 'Paid — shop sale (part)' : 'Paid — shop sale',
+        }], 'charge_reference')
       }
 
       const balRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
@@ -246,6 +258,8 @@ async function handler(req, res) {
         success: true,
         total: grandTotal,
         lines: lines.length,
+        walletApplied,
+        paidNow: paidNowAmount,
         balance: balRows.length ? Number(balRows[0].balance) : 0,
       })
     }
