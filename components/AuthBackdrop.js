@@ -93,8 +93,6 @@ export default function AuthBackdrop() {
     }
 
     let px = 0, py = 0, tpx = 0, tpy = 0, haveP = false
-    let lox = 0, loy = 0, lovx = 0, lovy = 0   // logo spring: offset + velocity
-    let lpx = 0, lpy = 0, moveHeat = 0         // cursor speed → pull "heat"
     const idleP = () => { tpx = W / 2; tpy = H * 0.32 }
     const onMove = (e) => { const r = canvas.getBoundingClientRect(); tpx = e.clientX - r.left; tpy = e.clientY - r.top; haveP = true }
     const onLeave = () => { haveP = false; idleP() }
@@ -386,23 +384,13 @@ export default function AuthBackdrop() {
         }
       })
 
-      // 9) Faint logo watermark, top-left — it RIDES with the cursor like the
-      //    glow does: while the pointer moves, the logo smoothly travels all
-      //    the way to it and stays with it wherever it goes; once the pointer
-      //    rests for about a second the spring carries it home with a bounce.
+      // 9) Faint logo watermark, top-left. Static — the LOGO now lives on the
+      //    cursor itself (a faint mark baked into the CSS pointer), so the
+      //    watermark just holds the corner quietly.
       if (logoReady) {
         const lw = Math.min(W, H) * 0.13, lh = lw * (logo.height / logo.width), pad = Math.min(W, H) * 0.05
-        const cx0 = pad + lw / 2, cy0 = pad + lh / 2
-        const sp = Math.hypot(px - lpx, py - lpy); lpx = px; lpy = py
-        // heat rises while the cursor moves, decays ~1s after it stops
-        moveHeat = Math.min(1, moveHeat * 0.93 + (haveP ? Math.min(sp, 18) * 0.03 : 0))
-        const txL = (px - cx0) * moveHeat, tyL = (py - cy0) * moveHeat   // full travel
-        lovx = (lovx + (txL - lox) * 0.05) * 0.88        // smooth chase; bounce on return
-        lovy = (lovy + (tyL - loy) * 0.05) * 0.88
-        lox += lovx; loy += lovy
-        const carried = Math.min(1, Math.hypot(lox, loy) / (Math.min(W, H) * 0.1))
-        ctx.save(); ctx.globalAlpha = (dk ? 0.11 : 0.08) * (1 + carried * 1.3)
-        ctx.drawImage(logo, pad + lox, pad + loy, lw, lh); ctx.restore()
+        ctx.save(); ctx.globalAlpha = dk ? 0.11 : 0.08
+        ctx.drawImage(logo, pad, pad, lw, lh); ctx.restore()
       }
 
       // 9) Pointer glow — a whisper of light on the cursor.
@@ -442,7 +430,7 @@ export default function AuthBackdrop() {
           <button
             key={p.id} type="button"
             className={'fx-item' + (phase === p.id ? ' active' : '')}
-            aria-pressed={phase === p.id}
+            title={p.label} aria-pressed={phase === p.id}
             onClick={() => setPhase(p.id)}
           >
             <span

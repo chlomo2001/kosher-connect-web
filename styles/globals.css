@@ -944,18 +944,23 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   background: var(--bg);
   position: relative; overflow: hidden;
   padding: 24px;
-  /* A small ring-of-light pointer over the sunburst — the cursor reads as the
-     point of light that parts the rays. Form controls keep natural cursors. */
-  cursor: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='30'%20height='30'%3E%3Ccircle%20cx='15'%20cy='15'%20r='9'%20fill='none'%20stroke='%23ffffff'%20stroke-width='3'%20opacity='.5'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='9'%20fill='none'%20stroke='%230060a8'%20stroke-width='1.6'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.3'%20fill='%230060a8'/%3E%3C/svg%3E") 15 15, crosshair;
+  /* The pointer IS the brand: a faint logo mark rides as the cursor over the
+     scene, with a tiny dot at the hotspot for precision. Form controls keep
+     natural cursors. */
+  cursor: url("/cursor-logo.png") 16 16, auto;
 }
 .login-card { cursor: default; }
 .login-card input, .login-card textarea, .login-card select { cursor: text; }
 .login-shell button, .login-card a, .login-card [role="button"] { cursor: pointer; }
-/* Gold ring-of-light on the dark theme (blue on light). */
+/* Brighter mark (gold dot) on the dark theme. */
 :root[data-theme="dark"] .login-shell {
-  cursor: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='30'%20height='30'%3E%3Ccircle%20cx='15'%20cy='15'%20r='9'%20fill='none'%20stroke='%230a1220'%20stroke-width='3'%20opacity='.45'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='9'%20fill='none'%20stroke='%23d0a878'%20stroke-width='1.6'/%3E%3Ccircle%20cx='15'%20cy='15'%20r='2.3'%20fill='%23d0a878'/%3E%3C/svg%3E") 15 15, crosshair;
+  cursor: url("/cursor-logo-dark.png") 16 16, auto;
 }
-@media (prefers-reduced-motion: reduce) { .login-shell { cursor: auto; } }
+/* The welcome page shares the scene — and the cursor. */
+.welcome-shell { cursor: url("/cursor-logo.png") 16 16, auto; }
+:root[data-theme="dark"] .welcome-shell { cursor: url("/cursor-logo-dark.png") 16 16, auto; }
+.welcome-shell a, .welcome-shell button { cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .login-shell, .welcome-shell { cursor: auto; } }
 /* Kept as a decorative hook, but the rainbow blur is gone. A single flat
    hairline band frames the top of the canvas — structure, not glow. */
 /* Premium sign-in: a slow flowing gradient behind a crisp floating card —
@@ -1362,21 +1367,36 @@ td.cal-active.cal-shabbat { background: var(--accent); }
   }
 }
 
-/* ─── WELCOME — the public site (owner's vision, app design system) ─── */
+/* ─── WELCOME — the public site (owner's vision, login-page polish) ───
+   The globe scene rides fixed behind the content; every surface floats over it
+   like the login card does — frosted glass + the login card's shadow — so the
+   scene (and its Pre-dawn…Night moods) washes the WHOLE page, not just the
+   gaps between opaque cards. */
 .welcome-shell { position: relative; min-height: 100vh; background: var(--bg); }
-/* The globe scene rides fixed behind the scrolling content. */
 .welcome-shell .login-fx { position: fixed; inset: 0; }
-.welcome-shell .fx-switch { position: fixed; }
-.w-wrap { position: relative; z-index: 1; width: 100%; padding: 26px clamp(20px, 4.5vw, 64px) 70px; }
+.w-wrap { position: relative; z-index: 1; width: 100%; padding: 22px clamp(20px, 4.5vw, 64px) 70px; }
 
-.w-topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 6px 0 22px; }
+/* One glass recipe, shared by every floating surface (matches .fx-switch). */
+.w-topbar, .w-hero, .w-card, .w-pills a, .w-lang {
+  background: rgba(255, 255, 255, 0.66);
+  backdrop-filter: blur(14px) saturate(1.15); -webkit-backdrop-filter: blur(14px) saturate(1.15);
+}
+:root[data-theme="dark"] .w-topbar, :root[data-theme="dark"] .w-hero,
+:root[data-theme="dark"] .w-card, :root[data-theme="dark"] .w-pills a,
+:root[data-theme="dark"] .w-lang { background: rgba(16, 20, 34, 0.55); }
+
+.w-topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  border: 1px solid var(--border); border-radius: 16px; padding: 12px 18px; margin-bottom: 22px;
+  box-shadow: 0 12px 32px -18px rgba(10,37,64,.25);
+}
 .w-brand { display: flex; align-items: center; gap: 14px; min-width: 240px; }
 .w-brand img { height: 44px; width: auto; display: block; }
 .w-brand h1 { font-size: 18px; margin: 0; line-height: 1.1; color: var(--text); letter-spacing: 0.2px; }
 .w-brand p { margin: 3px 0 0; font-size: 12.5px; color: var(--muted); }
-.w-pills { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.w-pills { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
 .w-pills a {
-  border: 1px solid var(--border); background: var(--surface);
+  border: 1px solid var(--border);
   padding: 9px 14px; border-radius: 999px; font-size: 13px; color: var(--muted);
   text-decoration: none; transition: transform .15s, background .15s, color .15s, border-color .15s;
 }
@@ -1384,37 +1404,57 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .w-pills a.w-pill-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .w-pills a.w-pill-primary:hover { background: var(--primary-deep); border-color: var(--primary-deep); color: #fff; }
 
-.w-hero {
-  border: 1px solid var(--border); background: var(--surface);
-  border-radius: var(--radius-lg); padding: 34px 30px;
+/* Language switch — EN / אידיש / לשה״ק as one segmented pill. */
+.w-lang { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+.w-lang button {
+  border: 0; background: transparent; padding: 8px 13px; font: inherit; font-size: 12.5px;
+  color: var(--muted); cursor: pointer; line-height: 1; transition: background .15s, color .15s;
 }
-.w-hero-inner { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 22px; align-items: center; }
+.w-lang button + button { border-inline-start: 1px solid var(--border); }
+.w-lang button:hover { color: var(--text); }
+.w-lang button.active { background: var(--accent); color: #fff; }
+
+.w-hero {
+  border: 1px solid var(--border); border-radius: 16px; padding: 40px 36px;
+  box-shadow: 0 24px 60px -18px rgba(10,37,64,.28), 0 6px 18px -10px rgba(10,37,64,.14);
+}
+.w-hero-inner { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 26px; align-items: center; }
 @media (max-width: 860px) { .w-hero-inner { grid-template-columns: 1fr; } }
-.w-hero h2 { font-size: clamp(26px, 3.4vw, 38px); margin: 0 0 8px; letter-spacing: -0.5px; color: var(--text); }
-.w-hero p { margin: 0 0 18px; color: var(--ink-secondary); font-size: 15px; line-height: 1.6; max-width: 62ch; }
+/* Hero title speaks the login card's language: large, light, tight. */
+.w-hero h2 { font-size: clamp(28px, 3.6vw, 42px); font-weight: 300; margin: 0 0 10px; letter-spacing: -0.8px; color: var(--text); line-height: 1.12; }
+.w-hero p { margin: 0 0 14px; color: var(--ink-secondary); font-size: 15px; line-height: 1.65; max-width: 62ch; }
+.w-quote { font-size: 13.5px; font-style: italic; color: var(--muted); margin: 0 0 20px; }
 .w-cta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-.w-side { border: 1px solid var(--border); background: var(--bg); border-radius: var(--radius-lg); padding: 16px; }
+.w-cta .btn { text-decoration: none; }
+.w-side { border: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 55%, transparent); border-radius: 12px; padding: 16px; }
 .w-mini { display: flex; gap: 12px; align-items: flex-start; }
-.w-mini + .w-mini { margin-top: 12px; }
+.w-mini + .w-mini { margin-top: 14px; }
 .w-dot { width: 10px; height: 10px; border-radius: 999px; margin-top: 5px; flex: 0 0 auto; }
 .w-mini b { display: block; font-size: 14px; margin-bottom: 4px; color: var(--text); }
-.w-mini span:not(.w-dot) { color: var(--muted); font-size: 13px; line-height: 1.45; }
+.w-mini span:not(.w-dot) { color: var(--muted); font-size: 13px; line-height: 1.5; }
 
-.w-section { margin-top: 28px; }
-.w-section h3 { margin: 0 0 12px; font-size: 18px; color: var(--text); letter-spacing: 0.2px; }
-.w-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.w-section { margin-top: 34px; }
+/* Section headings as quiet kickers — the app's voice, not marketing shout. */
+.w-section h3 {
+  margin: 0 0 14px; font-size: 12px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.09em;
+}
+.w-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 @media (max-width: 980px) { .w-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 620px) { .w-grid { grid-template-columns: 1fr; } }
 .w-card {
-  border: 1px solid var(--border); background: var(--surface);
-  border-radius: var(--radius-lg); padding: 18px;
+  border: 1px solid var(--border); border-radius: 14px; padding: 20px;
+  box-shadow: 0 16px 40px -22px rgba(10,37,64,.28);
+  transition: transform .18s var(--ease-out), box-shadow .18s var(--ease-out);
 }
+.w-card:hover { transform: translateY(-2px); box-shadow: 0 22px 52px -22px rgba(10,37,64,.34); }
 .w-card h4 { margin: 0 0 8px; font-size: 15px; color: var(--text); }
 .w-card p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
 .w-card a { color: var(--accent); text-decoration: none; }
 .w-icon {
-  width: 38px; height: 38px; border-radius: var(--radius-lg); display: grid; place-items: center;
-  border: 1px solid var(--border); background: var(--bg); margin-bottom: 12px; font-size: 17px;
+  width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center;
+  border: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 55%, transparent);
+  margin-bottom: 12px; font-size: 17px; color: var(--accent);
 }
 /* Scroll-reveal (ported from the owner's original site). */
 .w-reveal { opacity: 0; transform: translateY(22px) scale(0.98); transition: opacity 550ms var(--ease-out), transform 550ms var(--ease-out); }
@@ -1422,7 +1462,7 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .w-reveal { opacity: 1; transform: none; transition: none; } }
 
 .w-footer {
-  margin-top: 28px; border-top: 1px solid var(--border); padding-top: 16px;
+  margin-top: 30px; border-top: 1px solid var(--border); padding-top: 16px;
   color: var(--muted); font-size: 13px;
   display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;
 }
@@ -1431,5 +1471,20 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
-/* Welcome — strapline under the hero title */
-.w-strap { font-size: 12.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--gold); margin: 0 0 10px; }
+/* Strapline above the hero title */
+.w-strap { font-size: 12px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--gold); margin: 0 0 10px; }
+
+/* RTL (Yiddish / lashon hakodesh): Hebrew script hates tracking. */
+.w-wrap[dir="rtl"] .w-strap, .w-wrap[dir="rtl"] .w-hero h2,
+.w-wrap[dir="rtl"] .w-section h3 { letter-spacing: 0; }
+.w-wrap[dir="rtl"] .w-hero h2 { font-weight: 400; }
+
+/* The phase switcher shrinks to a quiet dot rail on the public page — the
+   full labelled card read as a striking UI block that didn't belong. */
+.welcome-shell .fx-switch {
+  position: fixed; right: 12px; padding: 7px 6px; gap: 6px; border-radius: 999px;
+}
+.welcome-shell .fx-item { font-size: 0; gap: 0; padding: 4px; border-radius: 999px; line-height: 0; }
+.welcome-shell .fx-item .fx-dot { width: 13px; height: 13px; }
+.welcome-shell .fx-item.active { background: transparent; box-shadow: 0 0 0 2px var(--accent); }
+:root[data-theme="dark"] .welcome-shell .fx-item.active { background: transparent; box-shadow: 0 0 0 2px #7db8e6; }

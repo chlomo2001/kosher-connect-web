@@ -12,6 +12,82 @@ import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
 import AuthBackdrop from '../components/AuthBackdrop'
 
+// Portal copy in English + lashon hakodesh — some customers are Israelis who
+// don't know English. Shares the 'kcLang' preference with /welcome (the
+// welcome page's Yiddish falls back to English here).
+const P = {
+  en: {
+    locale: 'en-GB',
+    loading: 'Loading your account…',
+    account: 'Your KosherConnect account',
+    signout: 'Sign out',
+    wallet: 'Wallet balance',
+    youOwe: (v) => `You owe ${v}`,
+    inCredit: (v) => `${v} in credit`,
+    paidNote: '✓ Payment received — thank you. Your balance will update shortly.',
+    payBtn: (v) => `Pay ${v} by card`,
+    pay: (v) => `Pay ${v}`,
+    starting: 'Starting…', processing: 'Processing…', cancel: 'Cancel',
+    payStartFail: 'Could not start the payment.',
+    payFormFail: 'Could not load the payment form.',
+    payFailed: 'Payment failed.',
+    payProcessing: 'Your payment is processing — we’ll update your balance shortly.',
+    pmTitle: '💳 Payment method',
+    cardOnFile: '✓ A card is saved on file.',
+    saveCard: 'Save card', saving: 'Saving…',
+    saveCardStart: 'Save a card for future payments',
+    couldNotStart: 'Could not start.', couldNotLoadForm: 'Could not load the form.',
+    couldNotSaveCard: 'Could not save the card.',
+    rentals: '📱 Rentals', noRentals: 'No active rentals.',
+    flights: '✈️ Flights', noFlights: 'No upcoming flights.',
+    docs: '📄 Documents', noDocs: 'Nothing shared with you yet.',
+    download: 'Download', upload: '⬆︎ Send us a document', uploading: 'Uploading…',
+    upSent: 'Sent — we’ll review it shortly.', upFailed: 'Upload failed.',
+    pendingReview: '⏳ awaiting review', received: '✓ received',
+    questions: 'Questions? Reply to your usual KosherConnect contact.',
+    subSignedOut: (g) => `${g}! See your rentals, bookings and balance`,
+    yourEmail: 'Your email', emailLink: 'Email me a sign-in link', sending: 'Sending…',
+    sent: '📬 If that email belongs to a KosherConnect customer, a sign-in link is on its way. You can close this page.',
+    or: 'or', google: 'Continue with Google',
+    greeting: (h) => (h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'),
+  },
+  he: {
+    locale: 'he-IL',
+    loading: 'טוען את החשבון שלך…',
+    account: 'החשבון שלך בכשר קונקט',
+    signout: 'התנתקות',
+    wallet: 'יתרת הארנק',
+    youOwe: (v) => `לתשלום: ${v}`,
+    inCredit: (v) => `${v} ביתרת זכות`,
+    paidNote: '✓ התשלום התקבל — תודה. היתרה תתעדכן בקרוב.',
+    payBtn: (v) => `תשלום ${v} בכרטיס`,
+    pay: (v) => `לשלם ${v}`,
+    starting: 'מתחיל…', processing: 'מעבד…', cancel: 'ביטול',
+    payStartFail: 'לא הצלחנו להתחיל את התשלום.',
+    payFormFail: 'טופס התשלום לא נטען.',
+    payFailed: 'התשלום נכשל.',
+    payProcessing: 'התשלום בתהליך — היתרה תתעדכן בקרוב.',
+    pmTitle: '💳 אמצעי תשלום',
+    cardOnFile: '✓ כרטיס שמור במערכת.',
+    saveCard: 'שמירת כרטיס', saving: 'שומר…',
+    saveCardStart: 'שמירת כרטיס לתשלומים עתידיים',
+    couldNotStart: 'לא הצלחנו להתחיל.', couldNotLoadForm: 'הטופס לא נטען.',
+    couldNotSaveCard: 'לא הצלחנו לשמור את הכרטיס.',
+    rentals: '📱 השכרות', noRentals: 'אין השכרות פעילות.',
+    flights: '✈️ טיסות', noFlights: 'אין טיסות קרובות.',
+    docs: '📄 מסמכים', noDocs: 'עדיין לא שותפו איתך מסמכים.',
+    download: 'הורדה', upload: '⬆︎ שליחת מסמך אלינו', uploading: 'מעלה…',
+    upSent: 'נשלח — נבדוק בקרוב.', upFailed: 'ההעלאה נכשלה.',
+    pendingReview: '⏳ ממתין לבדיקה', received: '✓ התקבל',
+    questions: 'שאלות? פנו לאיש הקשר הקבוע שלכם בכשר קונקט.',
+    subSignedOut: (g) => `${g}! ההשכרות, ההזמנות והיתרה שלך — במקום אחד`,
+    yourEmail: 'כתובת האימייל שלך', emailLink: 'שלחו לי קישור כניסה במייל', sending: 'שולח…',
+    sent: '📬 אם האימייל שייך ללקוח של כשר קונקט, קישור כניסה כבר בדרך. אפשר לסגור את העמוד.',
+    or: 'או', google: 'המשך עם Google',
+    greeting: (h) => (h < 12 ? 'בוקר טוב' : h < 18 ? 'צהריים טובים' : 'ערב טוב'),
+  },
+}
+
 function loadStripeJs() {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined') return reject(new Error('no window'))
@@ -30,6 +106,30 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   const [busy, setBusy] = useState(false)
   const [account, setAccount] = useState(null)
   const [loading, setLoading] = useState(false)
+
+  // Language: English / lashon hakodesh
+  const [lang, setLang] = useState('en')
+  useEffect(() => { try { if (localStorage.getItem('kcLang') === 'he') setLang('he') } catch { /* stay en */ } }, [])
+  const L = P[lang]
+  const isHe = lang === 'he'
+  const dir = isHe ? 'rtl' : 'ltr'
+  const fl = isHe ? 'left' : 'right'      // "float to the far side" flips in RTL
+  const flipLang = () => {
+    const n = isHe ? 'en' : 'he'
+    setLang(n)
+    try { localStorage.setItem('kcLang', n) } catch { /* not persisted */ }
+  }
+  const langBtn = (
+    <button type="button" onClick={flipLang} lang={isHe ? 'en' : 'he'}
+      title={isHe ? 'Switch to English' : 'לעבור לעברית'}
+      style={{
+        position: 'fixed', top: 16, right: 62, zIndex: 10, cursor: 'pointer',
+        border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)',
+        borderRadius: 999, padding: '8px 13px', fontSize: 12.5, lineHeight: 1,
+      }}>
+      {isHe ? 'English' : 'עברית'}
+    </button>
+  )
 
   // Documents
   const [docs, setDocs] = useState(null)
@@ -93,7 +193,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   const fmtDate = (d) => {
     if (!d) return ''
     const t = new Date(d)
-    return isNaN(t) ? d : t.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    return isNaN(t) ? d : t.toLocaleDateString(L.locale, { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
   // ── Documents actions ──────────────────────────────────────────────────────
@@ -114,9 +214,9 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
         body: JSON.stringify({ filename: file.name, contentType: file.type, dataBase64 }),
       })
       const d = await r.json()
-      if (!d.success) setDocMsg(d.error || 'Upload failed.')
-      else { setDocMsg('Sent — we’ll review it shortly.'); loadDocs() }
-    } catch { setDocMsg('Upload failed.') }
+      if (!d.success) setDocMsg(d.error || L.upFailed)
+      else { setDocMsg(L.upSent); loadDocs() }
+    } catch { setDocMsg(L.upFailed) }
     finally { setDocBusy(false); if (fileRef.current) fileRef.current.value = '' }
   }
   async function downloadDoc(id) {
@@ -139,9 +239,9 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
         body: JSON.stringify({}),
       })
       const d = await r.json()
-      if (!d.success) { setPayMsg(d.error || 'Could not start the payment.'); setPayBusy(false); return }
+      if (!d.success) { setPayMsg(d.error || L.payStartFail); setPayBusy(false); return }
       setPay({ clientSecret: d.clientSecret, publishableKey: d.publishableKey, amount: d.amount })
-    } catch { setPayMsg('Could not start the payment.'); setPayBusy(false) }
+    } catch { setPayMsg(L.payStartFail); setPayBusy(false) }
   }
   // Mount the Stripe Payment Element once we have a client secret.
   useEffect(() => {
@@ -157,7 +257,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
         el.mount('#kc-pay-element')
         stripeRef.current = { stripe, elements }
         setPayBusy(false)
-      } catch (e) { setPayMsg(e.message || 'Could not load the payment form.'); setPayBusy(false) }
+      } catch (e) { setPayMsg(e.message || L.payFormFail); setPayBusy(false) }
     })()
     return () => { cancelled = true }
   }, [pay])
@@ -166,12 +266,12 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     setPayBusy(true); setPayMsg('')
     const { stripe, elements } = stripeRef.current
     const { error, paymentIntent } = await stripe.confirmPayment({ elements, redirect: 'if_required' })
-    if (error) { setPayMsg(error.message || 'Payment failed.'); setPayBusy(false); return }
+    if (error) { setPayMsg(error.message || L.payFailed); setPayBusy(false); return }
     if (paymentIntent && paymentIntent.status === 'succeeded') {
       setPaid(true); setPay(null); stripeRef.current = null
       // The webhook posts the ledger entry; give it a moment, then refresh.
       setTimeout(() => loadAccount(token()), 2500)
-    } else { setPayMsg('Your payment is processing — we’ll update your balance shortly.'); setPayBusy(false) }
+    } else { setPayMsg(L.payProcessing); setPayBusy(false) }
   }
 
   // ── Save a card on file ────────────────────────────────────────────────────
@@ -184,9 +284,9 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
         body: JSON.stringify({}),
       })
       const d = await r.json()
-      if (!d.success) { setSaveMsg(d.error || 'Could not start.'); setSaveBusy(false); return }
+      if (!d.success) { setSaveMsg(d.error || L.couldNotStart); setSaveBusy(false); return }
       setSaveCard({ clientSecret: d.clientSecret, publishableKey: d.publishableKey })
-    } catch { setSaveMsg('Could not start.'); setSaveBusy(false) }
+    } catch { setSaveMsg(L.couldNotStart); setSaveBusy(false) }
   }
   useEffect(() => {
     if (!saveCard?.clientSecret) return
@@ -201,7 +301,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
         el.mount('#kc-savecard-element')
         setupRef.current = { stripe, elements }
         setSaveBusy(false)
-      } catch (e) { setSaveMsg(e.message || 'Could not load the form.'); setSaveBusy(false) }
+      } catch (e) { setSaveMsg(e.message || L.couldNotLoadForm); setSaveBusy(false) }
     })()
     return () => { cancelled = true }
   }, [saveCard])
@@ -210,10 +310,10 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     setSaveBusy(true); setSaveMsg('')
     const { stripe, elements } = setupRef.current
     const { error, setupIntent } = await stripe.confirmSetup({ elements, redirect: 'if_required' })
-    if (error) { setSaveMsg(error.message || 'Could not save the card.'); setSaveBusy(false); return }
+    if (error) { setSaveMsg(error.message || L.couldNotSaveCard); setSaveBusy(false); return }
     if (setupIntent && setupIntent.status === 'succeeded') {
       setCardSaved(true); setSaveCard(null); setupRef.current = null
-    } else { setSaveMsg('Saving…'); setSaveBusy(false) }
+    } else { setSaveMsg(L.saving); setSaveBusy(false) }
   }
 
   function google() {
@@ -223,8 +323,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirect)}`
   }
 
-  const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+  const greeting = L.greeting(new Date().getHours())
 
   async function submit(e) {
     e.preventDefault()
@@ -249,7 +348,8 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
         <div className="login-shell"><div className="login-mesh" aria-hidden="true" />
           <AuthBackdrop />
           <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
-          <div className="login-card" style={{ textAlign: 'center' }}>Loading your account…</div>
+          {langBtn}
+          <div className="login-card" dir={dir} style={{ textAlign: 'center' }}>{L.loading}</div>
         </div>
       </>
     )
@@ -266,15 +366,16 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
         <div className="login-shell">
           <div className="login-mesh" aria-hidden="true" />
           <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
-          <div className="login-card" style={{ maxWidth: 520, width: '100%' }}>
+          {langBtn}
+          <div className="login-card" dir={dir} style={{ maxWidth: 520, width: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
               <div>
                 <div className="login-title" style={{ fontSize: 22 }}>
                   {greeting}{account.customer?.firstName ? `, ${account.customer.firstName}` : ''}
                 </div>
-                <div className="login-sub">Your KosherConnect account</div>
+                <div className="login-sub">{L.account}</div>
               </div>
-              <button className="btn btn-outline" onClick={signOut} style={{ fontSize: 12, padding: '6px 12px' }}>Sign out</button>
+              <button className="btn btn-outline" onClick={signOut} style={{ fontSize: 12, padding: '6px 12px' }}>{L.signout}</button>
             </div>
 
             <div style={{
@@ -282,15 +383,15 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
               background: owes ? 'rgba(239,68,68,0.10)' : 'rgba(34,197,94,0.10)',
               border: `1px solid ${owes ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`,
             }}>
-              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Wallet balance</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>{L.wallet}</div>
               <div style={{ fontSize: 26, fontWeight: 700, color: owes ? '#dc2626' : '#16a34a' }}>
-                {owes ? `You owe ${fmtGbp(Math.abs(account.balance))}` : account.balance > 0 ? `${fmtGbp(account.balance)} in credit` : fmtGbp(0)}
+                {owes ? L.youOwe(fmtGbp(Math.abs(account.balance))) : account.balance > 0 ? L.inCredit(fmtGbp(account.balance)) : fmtGbp(0)}
               </div>
-              {paid && <div style={{ fontSize: 13, color: '#16a34a', marginTop: 8 }}>✓ Payment received — thank you. Your balance will update shortly.</div>}
+              {paid && <div style={{ fontSize: 13, color: '#16a34a', marginTop: 8 }}>{L.paidNote}</div>}
               {owes && !pay && (
                 <button className="btn btn-primary" onClick={startPay} disabled={payBusy}
                   style={{ marginTop: 12, width: '100%', padding: '10px 16px' }}>
-                  {payBusy ? 'Starting…' : `Pay ${fmtGbp(Math.abs(account.balance))} by card`}
+                  {payBusy ? L.starting : L.payBtn(fmtGbp(Math.abs(account.balance)))}
                 </button>
               )}
               {payMsg && <div style={{ fontSize: 12, color: '#dc2626', marginTop: 8 }}>{payMsg}</div>}
@@ -299,69 +400,69 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                   <div id="kc-pay-element" />
                   <button className="btn btn-primary" onClick={confirmPay} disabled={payBusy}
                     style={{ marginTop: 12, width: '100%', padding: '10px 16px' }}>
-                    {payBusy ? 'Processing…' : `Pay ${fmtGbp(pay.amount)}`}
+                    {payBusy ? L.processing : L.pay(fmtGbp(pay.amount))}
                   </button>
                   <button className="btn btn-outline" onClick={() => { setPay(null); stripeRef.current = null }}
-                    style={{ marginTop: 8, width: '100%', padding: '8px 16px', fontSize: 13 }}>Cancel</button>
+                    style={{ marginTop: 8, width: '100%', padding: '8px 16px', fontSize: 13 }}>{L.cancel}</button>
                 </div>
               )}
             </div>
 
             {/* Payment method — save a card for future payments */}
             <div style={{ marginBottom: 18 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>💳 Payment method</div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{L.pmTitle}</div>
               {(account.cardOnFile || cardSaved) ? (
-                <div style={{ fontSize: 13, color: 'var(--muted)' }}>✓ A card is saved on file.</div>
+                <div style={{ fontSize: 13, color: 'var(--muted)' }}>{L.cardOnFile}</div>
               ) : saveCard ? (
                 <div>
                   <div id="kc-savecard-element" />
                   <button className="btn btn-primary" onClick={confirmSaveCard} disabled={saveBusy}
-                    style={{ marginTop: 12, width: '100%', padding: '10px 16px' }}>{saveBusy ? 'Saving…' : 'Save card'}</button>
+                    style={{ marginTop: 12, width: '100%', padding: '10px 16px' }}>{saveBusy ? L.saving : L.saveCard}</button>
                   <button className="btn btn-outline" onClick={() => { setSaveCard(null); setupRef.current = null }}
-                    style={{ marginTop: 8, width: '100%', padding: '8px 16px', fontSize: 13 }}>Cancel</button>
+                    style={{ marginTop: 8, width: '100%', padding: '8px 16px', fontSize: 13 }}>{L.cancel}</button>
                 </div>
               ) : (
                 <button className="btn btn-outline" onClick={startSaveCard} disabled={saveBusy}
-                  style={{ fontSize: 13, padding: '8px 14px' }}>{saveBusy ? 'Starting…' : 'Save a card for future payments'}</button>
+                  style={{ fontSize: 13, padding: '8px 14px' }}>{saveBusy ? L.starting : L.saveCardStart}</button>
               )}
               {saveMsg && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>{saveMsg}</div>}
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>📱 Rentals</div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{L.rentals}</div>
               {activeRentals.length === 0
-                ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>No active rentals.</div>
+                ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>{L.noRentals}</div>
                 : activeRentals.map((r, i) => (
                   <div key={i} style={{ fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
                     {r.phoneNumber || 'Phone'} · {r.country}
                     <span style={{ color: 'var(--muted)' }}> · {fmtDate(r.fromDate)} → {fmtDate(r.toDate)}</span>
-                    <span style={{ float: 'right', color: 'var(--muted)' }}>{r.status}</span>
+                    <span style={{ float: fl, color: 'var(--muted)' }}>{r.status}</span>
                   </div>
                 ))}
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>✈️ Flights</div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{L.flights}</div>
               {upcoming.length === 0
-                ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>No upcoming flights.</div>
+                ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>{L.noFlights}</div>
                 : upcoming.map((b, i) => (
                   <div key={i} style={{ fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
                     {b.route || 'Flight'}{b.airline ? ` · ${b.airline}` : ''}
                     <span style={{ color: 'var(--muted)' }}>{b.travelDate ? ` · ${fmtDate(b.travelDate)}` : ''}</span>
-                    <span style={{ float: 'right', color: 'var(--muted)' }}>{b.status}</span>
+                    <span style={{ float: fl, color: 'var(--muted)' }}>{b.status}</span>
                   </div>
                 ))}
             </div>
 
             {/* Documents */}
             <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>📄 Documents</div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{L.docs}</div>
               {staffDocs.length === 0
-                ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>Nothing shared with you yet.</div>
+                ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>{L.noDocs}</div>
                 : staffDocs.map((d) => (
                   <div key={d.id} style={{ fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{d.filename}</span>
-                    <button className="btn btn-outline" onClick={() => downloadDoc(d.id)} style={{ fontSize: 12, padding: '4px 10px' }}>Download</button>
+                    <button className="btn btn-outline" onClick={() => downloadDoc(d.id)} style={{ fontSize: 12, padding: '4px 10px' }}>{L.download}</button>
                   </div>
                 ))}
 
@@ -369,9 +470,9 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                 <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={onPickFile} style={{ display: 'none' }} />
                 <button className="btn btn-outline" onClick={() => fileRef.current && fileRef.current.click()} disabled={docBusy}
                   style={{ fontSize: 13, padding: '8px 14px' }}>
-                  {docBusy ? 'Uploading…' : '⬆︎ Send us a document'}
+                  {docBusy ? L.uploading : L.upload}
                 </button>
-                {docMsg && <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 10 }}>{docMsg}</span>}
+                {docMsg && <span style={{ fontSize: 12, color: 'var(--muted)', marginInlineStart: 10 }}>{docMsg}</span>}
               </div>
 
               {myUploads.length > 0 && (
@@ -379,8 +480,8 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                   {myUploads.map((d) => (
                     <div key={d.id} style={{ fontSize: 12, color: 'var(--muted)', padding: '4px 0' }}>
                       {d.filename}
-                      <span style={{ float: 'right' }}>
-                        {d.status === 'pending' ? '⏳ awaiting review' : d.status === 'published' ? '✓ received' : d.status}
+                      <span style={{ float: fl }}>
+                        {d.status === 'pending' ? L.pendingReview : d.status === 'published' ? L.received : d.status}
                       </span>
                     </div>
                   ))}
@@ -389,7 +490,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
             </div>
 
             <div style={{ marginTop: 18, fontSize: 11, color: 'var(--muted)', textAlign: 'center' }}>
-              Questions? Reply to your usual KosherConnect contact.
+              {L.questions}
             </div>
           </div>
         </div>
@@ -404,35 +505,35 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
         <div className="login-mesh" aria-hidden="true" />
         <AuthBackdrop />
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
-        <form className="login-card" onSubmit={submit}>
+        {langBtn}
+        <form className="login-card" dir={dir} onSubmit={submit}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <img src="/logo-full.png" alt="KosherConnect" style={{ height: 72, marginBottom: 10 }} />
             <div className="login-title">My KosherConnect</div>
-            <div className="login-sub">{greeting}! See your rentals, bookings and balance</div>
+            <div className="login-sub">{L.subSignedOut(greeting)}</div>
           </div>
           {sent ? (
             <div style={{ fontSize: 14, textAlign: 'center', lineHeight: 1.5 }}>
-              📬 If that email belongs to a KosherConnect customer, a sign-in
-              link is on its way. You can close this page.
+              {L.sent}
             </div>
           ) : (
             <>
               <input
-                className="form-input" type="email" placeholder="Your email" value={email}
+                className="form-input" type="email" placeholder={L.yourEmail} value={email}
                 onChange={e => setEmail(e.target.value)} autoFocus required
                 style={{ width: '100%', marginBottom: 14 }}
               />
               <button className="btn btn-primary" type="submit" disabled={busy} style={{ width: '100%', padding: '10px 16px' }}>
-                {busy ? 'Sending…' : 'Email me a sign-in link'}
+                {busy ? L.sending : L.emailLink}
               </button>
               {googleEnabled && (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0', color: 'var(--muted)', fontSize: 12 }}>
-                    <div style={{ flex: 1, height: 1, background: 'var(--border)' }} /> or <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                    <div style={{ flex: 1, height: 1, background: 'var(--border)' }} /> {L.or} <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                   </div>
                   <button type="button" className="btn btn-outline" onClick={google}
                     style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                    <span style={{ fontWeight: 700 }}>G</span> Continue with Google
+                    <span style={{ fontWeight: 700 }}>G</span> {L.google}
                   </button>
                 </>
               )}
