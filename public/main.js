@@ -4929,15 +4929,18 @@ function toast(msg, type = 'success') {
 const BOOKING_STATUSES = ['Booked', 'Ticketed', 'Completed', 'Cancelled'];
 
 function bookingStatusBadge(status) {
-  const styles = {
-    Booked:    'background:rgba(185,185,249,0.45);color:#4434d4;',
-    Ticketed:  'background:rgba(124,58,237,0.13);color:var(--vn);',
-    Completed: 'background:rgba(34,197,94,0.15);color:var(--success);',
-    Cancelled: 'background:rgba(239,68,68,0.15);color:var(--danger);',
+  // Route through the themed .badge-* classes (each has a dark override) instead
+  // of inline hex — inline colours didn't flip for dark theme, so "Booked" went
+  // dark-on-dark in the evening. These four all clear AA in both themes.
+  const cls = {
+    Booked:    'badge-booking',
+    Ticketed:  'badge-vn',
+    Completed: 'badge-active',
+    Cancelled: 'badge-cancelled',
   };
   // For flights, "Completed" reads more naturally as "Flown".
   const label = status === 'Completed' ? '✈️ Flown' : status;
-  return `<span class="badge" style="${styles[status] || styles.Booked}">${escHtml(label)}</span>`;
+  return `<span class="badge ${cls[status] || 'badge-booking'}">${escHtml(label)}</span>`;
 }
 
 function renderBookingsTab() {
