@@ -143,6 +143,12 @@ body {
   user-select: none;
 }
 
+/* The body-wide user-select:none stops app chrome (nav, buttons, labels) from
+   being accidentally highlighted — but real data the counter needs to copy
+   (phone, IMEI, reference, amounts) lives in table cells and copy values, and
+   was unselectable too. Opt those data surfaces back in. */
+td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
+
 #__next { display: flex; width: 100%; height: 100%; overflow: hidden; }
 
 /* ─── CUSTOM SELECT ─── */
@@ -619,7 +625,12 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .card-action-grid {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 18px;
 }
-@media (max-width: 560px) { .card-action-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) {
+  .card-action-grid { grid-template-columns: repeat(2, 1fr); }
+  /* Two-column forms are unusable in a ~95vw modal on a handset — collapse to
+     a single column so every field gets full width. */
+  .form-grid { grid-template-columns: 1fr; }
+}
 .card-action {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 12px; font-size: 13px; font-weight: 500;
