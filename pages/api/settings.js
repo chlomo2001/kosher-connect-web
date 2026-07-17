@@ -34,6 +34,7 @@ const SETTING_RULES = {
   till_opening_float:        { type: 'money',   unit: '£' },
   sim_dd_surcharge_pct:      { type: 'percent', unit: '%' },
   sim_dd_surcharge_min:      { type: 'money',   unit: '£' },
+  damage_waiver_pct:         { type: 'percent', unit: '%' },
 }
 
 // A key is editable if it's in the known-rules whitelist OR it's a custom_

@@ -1488,6 +1488,7 @@ function renderRentalRows() {
         <div class="row-actions">
           ${computedStatus === 'booked' ? `<button class="action-btn" style="color:var(--success);font-weight:600;" onclick="startReservation('${r.id}')">▶ Start</button>` : ''}
           <button class="action-btn" onclick="openRemindModal('rental','${r.id}')" title="Remind me">⏰</button>
+          <button class="action-btn" onclick="openRentalSmsModal('${r.id}')" title="Draft a status SMS (does not send)">✉️</button>
           <button class="action-btn" onclick="openManageRentalModal('${r.id}')">⚙ Manage</button>
           <button class="action-btn danger" onclick="deleteRental('${r.id}')">Delete</button>
         </div>
@@ -1674,6 +1675,13 @@ function openNewRentalModal(preselectCustomerId = null) {
       </div>
 
       <div class="form-group form-full">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+          <input type="checkbox" id="rWaiver" style="accent-color:var(--accent);" onchange="updateRentalCalc()">
+          <span>🛡️ Damage waiver — <span id="rWaiverLabel">5% of the rental</span>, covers accidental damage (not loss)</span>
+        </label>
+      </div>
+
+      <div class="form-group form-full">
         <label class="form-label">Notes</label>
         <input class="form-input" type="text" id="rNotes" placeholder="Any notes...">
       </div>
@@ -1809,6 +1817,15 @@ function updateRentalCalc() {
       discountLine = ` &nbsp;|&nbsp; <span style="color:var(--gold);font-size:12px;">3rd phone+ −${autoPct}% → <strong>${fmtGbp(finalPrice)}</strong></span>`;
     }
   }
+  // Damage waiver: an optional % of the (discounted) rental, priced from
+  // settings. The label always shows what it WOULD cost so staff can offer it.
+  const waiverPct = settingNum('damage_waiver_pct', 5);
+  const waiverAmt = document.getElementById('rWaiver')?.checked
+    ? Math.round(finalPrice * waiverPct) / 100 : 0;
+  const wLabel = document.getElementById('rWaiverLabel');
+  if (wLabel) wLabel.textContent = `${waiverPct}% = ${fmtGbp(Math.round(finalPrice * waiverPct) / 100)}`;
+  const waiverLine = waiverAmt > 0
+    ? ` &nbsp;|&nbsp; <span style="color:var(--accent);font-size:12px;">+ waiver ${fmtGbp(waiverAmt)}</span>` : '';
   box.style.display = 'block';
   // Full reasoning: rate math, which days were dropped for Shabbat/Yom Tov,
   // and whether the minimum or the cap kicked in.
@@ -1840,7 +1857,7 @@ function updateRentalCalc() {
     <span style="color:var(--muted);">Total days:</span> ${totalDays} &nbsp;|&nbsp;
     <span style="color:var(--muted);">Shabbat/Yom Tov excluded:</span> <span style="color:var(--gold);">${excluded}</span> &nbsp;|&nbsp;
     <span style="color:var(--muted);">Chargeable days:</span> ${chargeableDays} &nbsp;|&nbsp;
-    <strong style="color:var(--success);font-size:15px;">${fmtGbp(price)}</strong>${discountLine}
+    <strong style="color:var(--success);font-size:15px;">${fmtGbp(price)}</strong>${discountLine}${waiverLine}
     <div style="margin-top:6px;font-size:11px;color:var(--muted);line-height:1.6;">
       🧮 ${steps.join(' → ')}
       ${excluded > 0 ? `<br>📅 <span style="cursor:help;" title="Every Shabbos and full Yom Tov in the rental window is free — guests keep the phone over those days at no charge.">${excluded} free day${excluded === 1 ? '' : 's'} (Shabbos / Yom Tov) — hover for why</span>` : ''}
@@ -1852,7 +1869,7 @@ function updateRentalCalc() {
   const vnMonthly = document.getElementById('rVNSub')?.value === 'monthly';
   const vnAmt = (document.getElementById('rAddVN')?.checked && !vnMonthly)
     ? (parseFloat(document.getElementById('rVNPrice')?.value) || 0) : 0;
-  rLastTotal = Math.round((finalPrice + vnAmt) * 100) / 100;
+  rLastTotal = Math.round((finalPrice + vnAmt + waiverAmt) * 100) / 100;
   const payAmt = document.getElementById('rPayAmount');
   if (payAmt && document.getElementById('rPay')?.value !== 'account' && payAmt.dataset.touched !== '1') {
     payAmt.value = rLastTotal.toFixed(2);
@@ -1934,7 +1951,12 @@ async function saveNewRental() {
   // one-off line inside the rental exactly as before.
   const vnRecurs = addVN && vnSub === 'monthly';
   const vnOnRental = addVN && !vnRecurs ? vnPrice : 0;
-  const totalPrice = discountedRental + vnOnRental;
+  // Damage waiver folds into the rental price exactly like the weekly VN
+  // line — one money channel — and is remembered as its own fields so every
+  // breakdown can show it as a line.
+  const waiverPct = document.getElementById('rWaiver')?.checked ? settingNum('damage_waiver_pct', 5) : 0;
+  const waiverAmount = waiverPct > 0 ? Math.round(discountedRental * waiverPct) / 100 : 0;
+  const totalPrice = discountedRental + vnOnRental + waiverAmount;
   // #25 — capture payment at rental time. "On account" = wallet debt (the old
   // behaviour); a "paid now" method settles some/all of it immediately.
   const payMethod = document.getElementById('rPay')?.value || 'account';
@@ -1945,7 +1967,7 @@ async function saveNewRental() {
   if (!(await kcConfirm({
     title: isReservation ? 'Confirm reservation' : 'Confirm rental charge',
     body: `<strong>${escHtml(customer.firstName)} ${escHtml(customer.lastName)}</strong><br>
-      ${escHtml(phone.number)} (${escHtml(phone.country)}) · ${fmtDate(from)} → ${fmtDate(to)} · ${chargeableDays} chargeable days${addVN ? '<br>+ virtual number' : ''}${discountValue > 0 ? '<br>discount applied' : ''}`,
+      ${escHtml(phone.number)} (${escHtml(phone.country)}) · ${fmtDate(from)} → ${fmtDate(to)} · ${chargeableDays} chargeable days${addVN ? '<br>+ virtual number' : ''}${waiverAmount > 0 ? `<br>+ damage waiver ${fmtGbp(waiverAmount)}` : ''}${discountValue > 0 ? '<br>discount applied' : ''}`,
     amount: totalPrice,
     okLabel: isReservation ? 'Reserve & charge' : 'Charge rental',
   }))) return;
@@ -1971,6 +1993,8 @@ async function saveNewRental() {
     vnPrefix,
     vnSub,
     vnPrice,
+    waiverPct,
+    waiverAmount,
     notes,
     amountPaid:   payAmt, // #25
     // #26 — optional refundable deposit, tracked as held (not a wallet charge).
@@ -2396,7 +2420,9 @@ function openManageRentalModal(rentalId) {
     <input type="hidden" id="mgCountry" value="${r.country || 'USA'}">
     <input type="hidden" id="mgUKPlan" value="${r.ukPlan || 'standard'}">
     <input type="hidden" id="mgBasePrice" value="${r.basePrice || r.price}">
-    <input type="hidden" id="mgVnPrice" value="${r.vnPrice || 0}">
+    <input type="hidden" id="mgVnPrice" value="${(r.vn && r.vnSub !== 'monthly' ? r.vnPrice : 0) || 0}">
+    <input type="hidden" id="mgWaiverPct" value="${r.waiverPct || 0}">
+    <input type="hidden" id="mgWaiverAmount" value="${r.waiverAmount || 0}">
     <input type="hidden" id="mgWasReturned" value="${r.status === 'returned' ? '1' : '0'}">
     <input type="hidden" id="mgFrozenLateFee" value="${r.lateFee || 0}">
     <div class="modal-actions">
@@ -2435,11 +2461,17 @@ function mgUpdateCalc() {
   // rental's ledger charge). The base-only recompute must not drop it, or
   // saving Manage silently refunds the VN.
   const vnPrice = Number(document.getElementById('mgVnPrice')?.value) || 0;
-  const finalPrice = discountedBase + vnPrice;
+  // Waiver tracks the rental it covers: recompute from the stored % so date
+  // or discount edits keep it honest, and stash the £ for the save.
+  const waiverPct = Number(document.getElementById('mgWaiverPct')?.value) || 0;
+  const waiverAmt = waiverPct > 0 ? Math.round(discountedBase * waiverPct) / 100 : 0;
+  const waiverEl = document.getElementById('mgWaiverAmount');
+  if (waiverEl) waiverEl.value = waiverAmt;
+  const finalPrice = discountedBase + vnPrice + waiverAmt;
 
   const lateFee  = mgComputeLateFee();
   document.getElementById('mgCalcText').innerHTML =
-    `Total: ${totalDays}d &nbsp;|&nbsp; Shabbat/YT excluded: <span style="color:var(--gold);">${excl}</span> &nbsp;|&nbsp; Chargeable: ${chargeableDays}d &nbsp;|&nbsp; <strong style="color:var(--success);">${fmtGbp(price)}</strong>${discountLine}${vnPrice > 0 ? ` &nbsp;+&nbsp; VN ${fmtGbp(vnPrice)}` : ''}`;
+    `Total: ${totalDays}d &nbsp;|&nbsp; Shabbat/YT excluded: <span style="color:var(--gold);">${excl}</span> &nbsp;|&nbsp; Chargeable: ${chargeableDays}d &nbsp;|&nbsp; <strong style="color:var(--success);">${fmtGbp(price)}</strong>${discountLine}${vnPrice > 0 ? ` &nbsp;+&nbsp; VN ${fmtGbp(vnPrice)}` : ''}${waiverAmt > 0 ? ` &nbsp;+&nbsp; waiver ${fmtGbp(waiverAmt)}` : ''}`;
   document.getElementById('mgPrice').value    = finalPrice.toFixed(2);
   document.getElementById('mgBasePrice').value = price;
 
@@ -2453,6 +2485,7 @@ function mgUpdateCalc() {
     </div>`;
   let html = row('Rental', discountedBase);
   if (vnPrice > 0)     html += row('Virtual number', vnPrice, 'var(--accent)');
+  if (waiverAmt > 0)   html += row(`Damage waiver (${waiverPct}%)`, waiverAmt, 'var(--accent)');
   if (lateFee > 0)     html += row('Late fee', lateFee, 'var(--gold)');
   lostInfo.items.forEach(({ label, amount }) => {
     html += row(label + ' — lost', amount, 'var(--danger)');
@@ -2588,6 +2621,8 @@ async function saveManageRental(rentalId) {
   const mgDiscountType  = document.getElementById('mgDiscountType')?.value  || 'percent';
   const mgDiscountValue = parseFloat(document.getElementById('mgDiscountValue')?.value) || 0;
   r.basePrice    = parseFloat(document.getElementById('mgBasePrice')?.value) || newPrice;
+  // Waiver £ tracks the recompute done in mgUpdateCalc (0 if never taken).
+  r.waiverAmount = parseFloat(document.getElementById('mgWaiverAmount')?.value) || 0;
   r.discountValue = mgAddDiscount ? mgDiscountValue : 0;
   r.discountType  = mgDiscountType;
 
@@ -3686,6 +3721,56 @@ async function copyReminderDraft(customerId) {
   catch { toast('Select the text and copy it manually.', 'warning'); return; }
   // Log that a reminder was drafted/copied, so the timeline shows the contact.
   recordComm(customerId, { type: 'message', text: 'Reminder drafted & copied' });
+  closeDynamicModal();
+}
+
+// Status SMS for a single rental, drafted not sent (same HOLD as reminders:
+// staff copy it into their own SMS/WhatsApp; the app never messages anyone).
+// The message tracks where the rental actually is in its lifecycle.
+function buildRentalSms(r) {
+  const first = (r.customerName || '').split(' ')[0] || 'there';
+  const today = localISO();
+  const tomorrow = localISO(new Date(Date.now() + 86400000));
+  const owed = Math.max(0, rentalGrandTotal(r) - (r.amountPaid || 0));
+  const owedLine = owed > 0.005 ? ` ${fmtGbp(owed)} is still open on this rental.` : '';
+  const status = getComputedStatus(r);
+  let body;
+  if (status === 'booked') {
+    body = `your ${r.country || ''} phone is reserved and ready — pickup ${fmtDate(r.fromDate)}. See you then!`;
+  } else if (status === 'overdue') {
+    body = `your rental phone ${r.phoneNumber || ''} was due back ${fmtDate(r.toDate)}. Please return it, or reply to extend — late fees may apply.`;
+  } else if (r.status === 'returned') {
+    body = `thanks for returning the phone!${owedLine || ' All settled — see you next trip!'}`;
+  } else if (r.toDate === today) {
+    body = `a quick reminder — your rental phone ${r.phoneNumber || ''} is due back today.`;
+  } else if (r.toDate === tomorrow) {
+    body = `a quick reminder — your rental phone ${r.phoneNumber || ''} is due back tomorrow (${fmtDate(r.toDate)}).`;
+  } else {
+    body = `your rental of ${r.phoneNumber || 'the phone'} runs until ${fmtDate(r.toDate)}.${owedLine}`;
+  }
+  return `Hi ${first}, ${body}\n— KosherConnect`;
+}
+function openRentalSmsModal(rentalId) {
+  const r = rentals.find(x => x.id === rentalId);
+  if (!r) return;
+  showDynamicModal(`
+    <div class="modal-title">✉️ Status SMS — ${escHtml(r.customerName || '')}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+      Drafted from the rental's current status${r.customerPhone ? ` · 📞 <span class="copy-val">${escHtml(r.customerPhone)}</span>` : ''}.
+      Edit it, then copy — <strong>nothing is sent</strong>.</div>
+    <textarea class="form-input" id="rsmsText" rows="5" style="font-family:inherit;">${escHtml(buildRentalSms(r))}</textarea>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
+      <button class="btn btn-primary" onclick="copyRentalSms('${escHtml(String(rentalId))}')">📋 Copy message</button>
+    </div>
+  `);
+}
+async function copyRentalSms(rentalId) {
+  const r = rentals.find(x => x.id === rentalId);
+  const text = document.getElementById('rsmsText')?.value || '';
+  try { await navigator.clipboard.writeText(text); toast('SMS copied — paste it into your messaging app.', 'success'); }
+  catch { toast('Select the text and copy it manually.', 'warning'); return; }
+  if (r?.customerId) recordComm(r.customerId, { type: 'message', text: `Status SMS drafted & copied (${getComputedStatus(r)})` });
   closeDynamicModal();
 }
 

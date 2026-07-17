@@ -133,6 +133,8 @@ Safe (loop-eligible), ranked value ÷ effort:
 | 07-17 | T&C loss fees + Charger merge (73162e5) | ✅ 38/38 | owner approved ("T&C wins") |
 | 07-17 | secretbox restore for creds (6660dae) | ✅ round-trip tests | key handoff to owner |
 | 07-17 | Shloime docs: Three enrich (62 aliases/33 ICCIDs/10 creds), 2 Wizz bookings, 5 USA phones, 11 intl bundles + PAYG settings | staging SQL, verified | audit in session log |
+| 07-17 | Damage waiver line — settings `damage_waiver_pct` (5%), New Rental + Manage, folds into price like weekly VN; also fixed monthly-VN Manage re-add bug | ✅ 38/38 | BUSINESS_RULES §1.7 |
+| 07-17 | Status SMS drafts per rental (✉️ on row) — lifecycle-aware text, copy + comm-log, HOLD stays (nothing sent) | ✅ 38/38 | templates in code for now |
 
 Held / owner input: family-trip sheet (£1,364 balance) needs the customer's
 name before it's entered; Canada/EU loss rates — follow T&C schedule or stay?
