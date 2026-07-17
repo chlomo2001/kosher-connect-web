@@ -9,18 +9,14 @@ Legend: **P** = priority (1 high → 3 low) · **E** = effort (S/M/L) ·
 
 ## From deep review 2026-07-16 (verified — see docs/REVIEW-2026-07-16.md)
 Safe UX quick-wins (one kc-improve cycle, no money risk, offline-verifiable):
-- [ ] **P1 · S** — Toasts need a live region (`main.js:4903`) — payment/error
-      confirmations are silent to screen readers. `role="status" aria-live`.
-- [ ] **P1 · S** — Booking status badges don't flip for dark theme
-      (`main.js:4920-4929`) — "Booked" goes dark-on-dark. Route through tokens.
-- [ ] **P2 · S** — `user-select:none` on body blocks copying phone/IMEI/ref
-      (`globals.css:143`) — re-enable on data cells.
-- [ ] **P2 · S** — Two-column forms don't collapse on mobile (`globals.css:515`).
+- [x] **P1 · S** — Toasts need a live region — DONE (fba63c4, B1+B10).
+- [x] **P1 · S** — Booking status badges don't flip for dark theme — DONE (82d09fc, B2).
+- [x] **P2 · S** — `user-select:none` blocks copying phone/IMEI/ref — DONE (097aa56, B3).
+- [x] **P2 · S** — Two-column forms don't collapse on mobile — DONE (097aa56, B4).
 - [ ] **P2 · M** — Unify the Rentals filter chrome into `kcFilterSort`
       (`main.js:1197-1242`) — it's the one tab that predates the shared control.
-- [ ] **P2 · L** — Keyboard-operate clickable rows + dashboard drill-downs
-      (`main.js:4956`,`3772`,`3793`) — currently mouse-only.
-- [ ] **P2 · M** — Modal dialog semantics + focus trap (`main.js:2591`).
+- [x] **P2 · L** — Keyboard-operate clickable rows + drill-downs — DONE (9fb80d7, B6).
+- [x] **P2 · M** — Modal dialog semantics + focus trap — DONE (b4150a0, B7).
 
 Correctness (human-reviewed, NOT loop-autofixed — touches money/inventory):
 - [ ] **P1 · S** — Shop oversell: guarded/atomic stock decrement
@@ -124,3 +120,9 @@ Safe (loop-eligible), ranked value ÷ effort:
 | date | item | gate | accepted? |
 |------|------|------|-----------|
 | _seed_ | backlog created from PHASE-2-NOTES + session threads | n/a | n/a |
+| 07-17 | B1+B10 toast live region + errors persist (fba63c4) | ✅ 32/32 ×2 + build | owner live-test pending |
+| 07-17 | B2 booking badges dark-theme flip (82d09fc) | ✅ + harness L/D | owner live-test pending |
+| 07-17 | B3+B4 selectable data cells + mobile form collapse (097aa56) | ✅ | owner live-test pending |
+| 07-17 | B6 keyboard-operable rows (9fb80d7) | ✅ + harness (Enter/Space) | owner live-test pending |
+| 07-17 | B7 modal role=dialog + focus trap (b4150a0) | ✅ | owner live-test pending |
+| 07-17 | discover: big-tech idea-hunt → 30 ideas (02def6a) | n/a (research) | folded to backlog |
