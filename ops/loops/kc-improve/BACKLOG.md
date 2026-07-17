@@ -37,7 +37,7 @@ consent/comms → human-in-the-loop only.
 Safe (loop-eligible), ranked value ÷ effort:
 - [ ] **P1 · S** — **Undo toast** on destructive actions (delete/void/status): 5–8s
       "Undone" revert instead of a confirm dialog. (Superhuman/Linear pattern.)
-- [ ] **P1 · S** — **Shift+? shortcuts overlay** — context-aware cheat-sheet of the
+- [x] **P1 · S** — **Shift+? shortcuts overlay** — DONE (39de3ef). Cheat-sheet of the
       active keys; pairs with ⌘K. (Linear.)
 - [ ] **P1 · S** — **Park/hold an open till sale** — suspend a named basket, resume
       later without losing it. (Loyverse.)
@@ -126,3 +126,4 @@ Safe (loop-eligible), ranked value ÷ effort:
 | 07-17 | B6 keyboard-operable rows (9fb80d7) | ✅ + harness (Enter/Space) | owner live-test pending |
 | 07-17 | B7 modal role=dialog + focus trap (b4150a0) | ✅ | owner live-test pending |
 | 07-17 | discover: big-tech idea-hunt → 30 ideas (02def6a) | n/a (research) | folded to backlog |
+| 07-17 | Shift+? keyboard shortcuts overlay (39de3ef) | ✅ + harness L/D | owner live-test pending |
