@@ -127,3 +127,12 @@ Safe (loop-eligible), ranked value ÷ effort:
 | 07-17 | B7 modal role=dialog + focus trap (b4150a0) | ✅ | owner live-test pending |
 | 07-17 | discover: big-tech idea-hunt → 30 ideas (02def6a) | n/a (research) | folded to backlog |
 | 07-17 | Shift+? keyboard shortcuts overlay (39de3ef) | ✅ + harness L/D | owner live-test pending |
+| 07-17 | A1 atomic stock decrement (9293730) | ✅ + SQL guard proof | **owner live-till test wanted** |
+| 07-17 | Idempotency claim keys (63b1b10) | ✅ | owner live-till test wanted |
+| 07-17 | Wallet as till tender + split (3ba6700) | ✅ | **owner live-till test wanted** |
+| 07-17 | T&C loss fees + Charger merge (73162e5) | ✅ 38/38 | owner approved ("T&C wins") |
+| 07-17 | secretbox restore for creds (6660dae) | ✅ round-trip tests | key handoff to owner |
+| 07-17 | Shloime docs: Three enrich (62 aliases/33 ICCIDs/10 creds), 2 Wizz bookings, 5 USA phones, 11 intl bundles + PAYG settings | staging SQL, verified | audit in session log |
+
+Held / owner input: family-trip sheet (£1,364 balance) needs the customer's
+name before it's entered; Canada/EU loss rates — follow T&C schedule or stay?
