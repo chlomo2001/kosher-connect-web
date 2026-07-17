@@ -1488,3 +1488,36 @@ html { scroll-behavior: smooth; }
 .welcome-shell .fx-item .fx-dot { width: 13px; height: 13px; }
 .welcome-shell .fx-item.active { background: transparent; box-shadow: 0 0 0 2px var(--accent); }
 :root[data-theme="dark"] .welcome-shell .fx-item.active { background: transparent; box-shadow: 0 0 0 2px #7db8e6; }
+
+/* ─── TOOLS — converter pages (/tools/*): the working app's flat language ─── */
+.tool-shell { min-height: 100vh; background: var(--bg); padding: 34px 18px 60px; }
+.tool-wrap { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.tool-head h1 { font-size: 26px; font-weight: 300; letter-spacing: -0.5px; color: var(--text); margin: 6px 0 8px; }
+.tool-head p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; max-width: 64ch; }
+.tool-back { font-size: 12.5px; color: var(--muted); text-decoration: none; }
+.tool-back:hover { color: var(--text); }
+.tool-card { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-lg); padding: 18px; }
+.tool-card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+.tool-optional { color: var(--muted); font-weight: 400; }
+.tool-hint { font-size: 12.5px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
+.tool-msg { font-size: 13px; color: var(--text); margin-top: 12px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-secondary); }
+.tool-msg-ok { border-color: rgba(34,197,94,0.4); }
+.tool-detect { margin-top: 12px; font-size: 13.5px; color: var(--text); }
+.tool-stats { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+.tool-options { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; margin-bottom: 14px; }
+.tool-options label { font-size: 12.5px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
+.tool-check { flex-direction: row !important; align-items: center; gap: 8px !important; cursor: pointer; color: var(--text) !important; font-size: 13px !important; }
+.tool-check input { width: 15px; height: 15px; accent-color: var(--accent); }
+.tool-scroll { overflow-x: auto; margin-top: 10px; }
+.tool-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.tool-table th, .tool-table td { border: 1px solid var(--border); padding: 6px 9px; text-align: left; color: var(--text); white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.tool-table th { background: var(--bg-secondary); }
+.tool-row-header td { color: var(--muted); font-style: italic; }
+.tool-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
+.tool-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.tool-chip { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text); border: 1px solid var(--border); background: var(--bg-secondary); border-radius: 999px; padding: 4px 6px 4px 11px; }
+.tool-chip button { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 11px; padding: 2px 5px; border-radius: 999px; }
+.tool-chip button:hover { color: var(--danger); }
+.tool-foot { font-size: 12.5px; color: var(--muted); padding: 4px 2px; }
+.tool-foot a { color: var(--accent); text-decoration: none; }
+.tool-shell input[type="file"] { font-size: 13px; color: var(--muted); }
