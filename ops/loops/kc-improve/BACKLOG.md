@@ -31,6 +31,53 @@ Correctness (human-reviewed, NOT loop-autofixed — touches money/inventory):
 - [ ] **P3 · S** — Customer `legacy_id = Date.now()` ms-collision
       (`customers.js:24`) — add a random suffix.
 
+## From competitive research 2026-07-17 (big-tech / premium idea-hunt)
+Scouted live product/help pages (Linear, Stripe, Square, Loyverse, Booqable,
+RepairShopr/RepairDesk, Airalo/Holafly, Superhuman, Goodshuffle). Full sourced
+table + URLs archived in `docs/IDEAS-2026-07-17.md`. **Safe = offline-verifiable,
+no money/auth surface → eligible for the autonomous loop.** ⚠ = touches money/
+consent/comms → human-in-the-loop only.
+
+Safe (loop-eligible), ranked value ÷ effort:
+- [ ] **P1 · S** — **Undo toast** on destructive actions (delete/void/status): 5–8s
+      "Undone" revert instead of a confirm dialog. (Superhuman/Linear pattern.)
+- [ ] **P1 · S** — **Shift+? shortcuts overlay** — context-aware cheat-sheet of the
+      active keys; pairs with ⌘K. (Linear.)
+- [ ] **P1 · S** — **Park/hold an open till sale** — suspend a named basket, resume
+      later without losing it. (Loyverse.)
+- [ ] **P1 · S** — **Maintenance/downtime block** on a phone/IMEI — removed from
+      availability until cleared. (Booqable.)
+- [ ] **P2 · S** — **Pinned + recently-visited** quick-nav in the top bar. (Stripe.)
+- [ ] **P2 · S** — **Low-stock threshold** per accessory SKU → dashboard badge +
+      list filter. (Loyverse.)
+- [ ] **P2 · S** — **Quick-create keys** in ⌘K (type P → payment, etc.). (Stripe.)
+- [ ] **P1 · M** — **Availability conflict detection** — warn before double-booking a
+      specific unit across overlapping dates. (Booqable.) *(server guard exists for
+      bookings; extend to rental units.)*
+- [ ] **P1 · M** — **Barcode/QR check-out ↔ return** — one scan flips rental status.
+      (Booqable.) *(reuses the existing IMEI scanner.)*
+- [ ] **P1 · M** — **Saved views** — named filters per module (overdue rentals,
+      unpaid statements, SIMs expiring 7d). (Linear.)
+- [ ] **P2 · M** — **Per-SIM usage bar** (data left / days / expiry) in the portal.
+      (Airalo.) *(display-only; the data feed is the work.)*
+- [ ] **P2 · M** — **Customer-360 detail page** w/ an activity-log tab. (Stripe.)
+- [ ] **P2 · M** — **⌘K acts on the current selection** (verbs, not just nav). (Linear.)
+- [ ] **P3 · M** — **NL snooze** ("remind me tomorrow 9am") on bookings/customers.
+
+⚠ Money / consent / comms — human-reviewed, NOT loop-autofixed:
+- [ ] **P1 · M** ⚠ — **Idempotency key on every charge/ledger write** (client-generated)
+      so retries/double-clicks can't double-charge. (Stripe.) *Highest-leverage
+      safety pattern; overlaps review A2. Do with owner.*
+- [ ] **P2 · M** ⚠ — **Wallet balance as a tender** at the till (store credit). (Square.)
+- [ ] **P2 · S** ⚠ — **Cash pay-in/pay-out log** + **Z-report variance** (expected vs
+      counted) at shift close. (Loyverse.) *internal cash reconciliation.*
+- [ ] **P2 · M** ⚠ — **Status-change auto-SMS** ("ready for collection", "conversion
+      done") + **reply-to-approve**. (RepairShopr.) *gated on the email/SMS decision.*
+- [ ] **P2 · S** ⚠ — **Non-refundable damage waiver** (~5% line) as a deposit
+      alternative. (Goodshuffle.) *customer charge.*
+- [ ] **P3 · L** ⚠ — **Offline sale queue** + unsynced badge, auto-sync on reconnect.
+      (Loyverse.) *money persistence — careful design.*
+
 ## UX / smoothness / delight
 - [ ] **P1 · S** — Owner live-test pass on this session's work (dark theme retune,
       login backdrop, dashboard clock+charts, dotted cards, ⌘K quick-actions,
