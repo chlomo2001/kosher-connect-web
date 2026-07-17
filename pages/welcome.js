@@ -65,9 +65,11 @@ export default function Welcome() {
             <div className="w-hero-inner">
               <div>
                 <h2>Welcome to <span>Kosher Connect</span></h2>
+                <div className="w-strap">Your Kosher Mobile Store in Manchester</div>
                 <p>
-                  Everything you need for kosher phones — travel rentals, SIM plans, repairs,
-                  flight bookings, and getting an Israeli/USA number on your device.
+                  Proudly serving the Heimishe community with kosher technology — without
+                  compromise on quality, efficiency and service. Travel rentals, SIM plans,
+                  repairs, flight bookings, and Israeli/USA numbers on your device.
                 </p>
                 <div className="w-cta">
                   <a className="btn btn-primary" href="#services">View Services</a>
@@ -85,6 +87,23 @@ export default function Welcome() {
                   <div><b>Travel Ready</b>
                     <span>USA / Canada / EU / Israel kosher phone options available.</span></div>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="w-section" aria-label="What we stand for">
+            <div className="w-pillars">
+              <div className="w-pillar w-reveal">
+                <b>Trust <span>· Emunah</span></b>
+                <p>Built for the Heimishe community — with clarity, accountability, and care.</p>
+              </div>
+              <div className="w-pillar w-reveal">
+                <b>Responsibility <span>· Achrayus</span></b>
+                <p>Kosher technology without compromise on quality, efficiency, and service.</p>
+              </div>
+              <div className="w-pillar w-reveal">
+                <b>Community <span>· Kehilla</span></b>
+                <p>Phones, plans, rentals, and repairs — designed to serve people, not distract them.</p>
               </div>
             </div>
           </section>
@@ -109,6 +128,11 @@ export default function Welcome() {
               <p style={{ margin: 0 }}>Email: <a href="mailto:admin@kosher-connect.com"><b>admin@kosher-connect.com</b></a></p>
             </div>
           </section>
+
+          <div className="w-close w-reveal">
+            <div className="w-close-line">Kosher. Connected. Cared for.</div>
+            <p>“Technology should serve the people — not the other way around.”</p>
+          </div>
 
           <footer className="w-footer">
             <div>© {new Date().getFullYear()} Kosher Connect. All rights reserved.</div>
