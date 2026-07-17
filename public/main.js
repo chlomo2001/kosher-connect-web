@@ -4905,8 +4905,19 @@ function toast(msg, type = 'success') {
   const el = document.createElement('div');
   el.className = `toast toast-${type}`;
   el.textContent = msg;
+  // Errors announce assertively (role=alert) and stay until dismissed — a
+  // payment/save failure shouldn't vanish in 3s before it's read. Success/info
+  // stay polite (the container's aria-live) and auto-clear.
+  if (type === 'error') {
+    el.setAttribute('role', 'alert');
+    el.title = 'Click to dismiss';
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', () => el.remove());
+  } else {
+    el.setAttribute('role', 'status');
+    setTimeout(() => el.remove(), 3000);
+  }
   container.appendChild(el);
-  setTimeout(() => el.remove(), 3000);
 }
 
 // ─────────────────────────────────────────────

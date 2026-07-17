@@ -214,7 +214,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
         </div>
       </div>
 
-      <div id="toast-container" />
+      <div id="toast-container" role="status" aria-live="polite" aria-atomic="false" />
 
       <Script src="/main.js" strategy="afterInteractive" />
       {/* Safety net: if main.js never loads (bad network), don't trap the user
