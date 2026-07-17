@@ -7246,6 +7246,43 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// ── Keyboard-operable clickable rows / drill-downs ───────────────────────
+// Dozens of rows and cards use inline onclick on non-button elements (tr, div),
+// which a keyboard can neither focus nor trigger. Rather than edit ~240 call
+// sites, mark every clickable non-native element focusable (tabindex) + give
+// non-row elements a button role, and let Enter/Space activate it. The
+// :focus-visible ring already covers tbody tr / [tabindex] / [role=button].
+function kcMarkClickable(el) {
+  const tag = el.tagName;
+  if (tag === 'BUTTON' || tag === 'A' || tag === 'INPUT' || tag === 'SELECT' ||
+      tag === 'TEXTAREA' || tag === 'LABEL') return;            // natively operable
+  if (el.hasAttribute('data-kc-key')) return;                   // already marked
+  el.setAttribute('data-kc-key', '1');
+  if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+  // Keep table rows as rows for screen readers; only non-rows become buttons.
+  if (tag !== 'TR' && !el.hasAttribute('role')) el.setAttribute('role', 'button');
+}
+function kcScanClickable(root) {
+  if (!root || root.nodeType !== 1) return;
+  if (root.hasAttribute && root.hasAttribute('onclick')) kcMarkClickable(root);
+  if (root.querySelectorAll) root.querySelectorAll('[onclick]').forEach(kcMarkClickable);
+}
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+  const el = document.activeElement;
+  if (!el || !el.hasAttribute || !el.hasAttribute('data-kc-key')) return;
+  if (e.target !== el) return;              // let inner controls handle their own keys
+  e.preventDefault();                        // Space would otherwise scroll the page
+  el.click();
+});
+try {
+  const kcClickObs = new MutationObserver(muts => {
+    for (const m of muts) m.addedNodes.forEach(n => kcScanClickable(n));
+  });
+  kcClickObs.observe(document.body, { childList: true, subtree: true });
+} catch { /* MutationObserver unsupported — rows stay mouse-only, no worse than before */ }
+kcScanClickable(document.body);
+
 // Keep the floating help-timer chip alive across the whole session.
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startSvcTimerFloat);
 else startSvcTimerFloat();
