@@ -93,6 +93,7 @@ export default function AuthBackdrop() {
     }
 
     let px = 0, py = 0, tpx = 0, tpy = 0, haveP = false
+    let lox = 0, loy = 0, lovx = 0, lovy = 0   // logo spring: offset + velocity
     const idleP = () => { tpx = W / 2; tpy = H * 0.32 }
     const onMove = (e) => { const r = canvas.getBoundingClientRect(); tpx = e.clientX - r.left; tpy = e.clientY - r.top; haveP = true }
     const onLeave = () => { haveP = false; idleP() }
@@ -384,11 +385,27 @@ export default function AuthBackdrop() {
         }
       })
 
-      // 9) Faint logo watermark, top-left.
+      // 9) Faint logo watermark, top-left — and the cursor can CARRY it: come
+      //    close and the logo is drawn along with the pointer; move away and
+      //    an underdamped spring snaps it home with a visible bounce.
       if (logoReady) {
         const lw = Math.min(W, H) * 0.13, lh = lw * (logo.height / logo.width), pad = Math.min(W, H) * 0.05
-        ctx.save(); ctx.globalAlpha = dk ? 0.11 : 0.08
-        ctx.drawImage(logo, pad, pad, lw, lh); ctx.restore()
+        const cx0 = pad + lw / 2, cy0 = pad + lh / 2
+        const reach = Math.min(W, H) * 0.22, cap = Math.min(W, H) * 0.07
+        let txL = 0, tyL = 0
+        const dL = Math.hypot(px - cx0, py - cy0)
+        if (haveP && dL < reach) {
+          const pull = 1 - dL / reach                    // stronger the closer you are
+          txL = (px - cx0) * 0.5 * pull; tyL = (py - cy0) * 0.5 * pull
+          const m = Math.hypot(txL, tyL)
+          if (m > cap) { txL *= cap / m; tyL *= cap / m }
+        }
+        lovx = (lovx + (txL - lox) * 0.045) * 0.9        // underdamped → bounce-back
+        lovy = (lovy + (tyL - loy) * 0.045) * 0.9
+        lox += lovx; loy += lovy
+        const carried = Math.min(1, Math.hypot(lox, loy) / (cap * 0.7))
+        ctx.save(); ctx.globalAlpha = (dk ? 0.11 : 0.08) * (1 + carried * 1.1)
+        ctx.drawImage(logo, pad + lox, pad + loy, lw, lh); ctx.restore()
       }
 
       // 9) Pointer glow — a whisper of light on the cursor.
