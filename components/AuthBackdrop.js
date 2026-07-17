@@ -223,7 +223,7 @@ export default function AuthBackdrop() {
       // A tiny quaver — the scene's word for "sound". Used by the Kol Torah
       // broadcast mast and the audio link.
       const drawNote = (x, y, alpha) => {
-        ctx.save(); ctx.translate(x, y); ctx.scale(1.15, 1.15)
+        ctx.save(); ctx.translate(x, y); ctx.scale(1.4, 1.4)
         ctx.strokeStyle = rgba(GOLD, alpha); ctx.fillStyle = rgba(GOLD, alpha); ctx.lineWidth = 1
         ctx.beginPath(); ctx.ellipse(0, 2.2, 2.1, 1.5, -0.45, 0, 6.2832); ctx.fill()   // head
         ctx.beginPath(); ctx.moveTo(1.9, 1.6); ctx.lineTo(1.9, -3.6); ctx.stroke()      // stem
@@ -358,6 +358,13 @@ export default function AuthBackdrop() {
             const u = ((t * 0.00013 + li * 0.11 + s * 0.5) % 1 + 1) % 1
             const pt = bez(a, cx, cy, b, u)
             drawNote(pt.x, pt.y, (dk ? 0.9 : 0.75) * Math.sin(Math.PI * u))
+            // The far end RECEIVES: as each note arrives, a soft gold ripple
+            // blooms off the destination mast — London hears Tel Aviv.
+            const land = u > 0.8 ? (u - 0.8) / 0.2 : 0
+            if (land > 0) {
+              ctx.strokeStyle = rgba(GOLD, (dk ? 0.55 : 0.45) * (1 - land)); ctx.lineWidth = 1
+              ctx.beginPath(); ctx.arc(b.x, b.y, 2.5 + land * 11, 0, 6.2832); ctx.stroke()
+            }
           }
         } else {
           const u = ((t * (gold ? 0.0002 : 0.00015) + li * 0.11) % 1 + 1) % 1, pt = bez(a, cx, cy, b, u)
