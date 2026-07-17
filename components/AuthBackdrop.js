@@ -151,63 +151,6 @@ export default function AuthBackdrop() {
         ctx.beginPath(); ctx.arc(tx, ty, ry.ds, 0, 6.2832); ctx.fill()
       }
 
-      // 1b) CD-satellite — the audio line as part of the scene: a disc orbiting
-      //     the globe like a satellite. Real CD anatomy so it READS as one: a
-      //     punched centre hole inside a clamp hub, a data surface with two
-      //     rotating radial light-glints (the rainbow flash), rim + data-edge
-      //     rings. Far half draws behind the globe.
-      const su = t * 0.00009, tilt = -0.42
-      const eA = Rg * 1.32, eB = Rg * 0.34
-      const ex = Math.cos(su) * eA, ey = Math.sin(su) * eB
-      const sat = {
-        x: gx + ex * Math.cos(tilt) - ey * Math.sin(tilt),
-        y: gy + ex * Math.sin(tilt) + ey * Math.cos(tilt),
-        front: Math.sin(su) > 0,
-        r: Math.min(W, H) * 0.034,
-      }
-      // faint orbit path so the disc reads as a satellite, not a floater
-      ctx.save(); ctx.translate(gx, gy); ctx.rotate(tilt)
-      ctx.strokeStyle = rgba(cur.line, dk ? 0.08 : 0.06); ctx.lineWidth = 0.6
-      ctx.setLineDash([2, 6]); ctx.beginPath(); ctx.ellipse(0, 0, eA, eB, 0, 0, 6.2832); ctx.stroke()
-      ctx.setLineDash([]); ctx.restore()
-      const drawSat = () => {
-        const { x, y, r } = sat
-        const hub = r * 0.34, hole = r * 0.16
-        ctx.save(); ctx.lineCap = 'round'
-        ctx.fillStyle = rgb(base)                                  // occlude what's behind
-        ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill()
-        const dg = ctx.createRadialGradient(x, y, hub, x, y, r)    // data-surface tint
-        dg.addColorStop(0, rgba(cur.line, dk ? 0.16 : 0.12))
-        dg.addColorStop(1, rgba(cur.line, dk ? 0.05 : 0.04))
-        ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill()
-        // the tell-tale glints: two radial light wedges sweeping hub → rim
-        const sweep = t * 0.0009
-        for (const [off, col, al, wd] of [
-          [0, GOLD, dk ? 0.42 : 0.34, 0.24],
-          [Math.PI, GOLD, dk ? 0.26 : 0.2, 0.24],
-          [Math.PI * 0.5, mix(cur.line, WHITE, 0.6), dk ? 0.22 : 0.16, 0.16],
-          [Math.PI * 1.5, mix(cur.line, WHITE, 0.6), dk ? 0.22 : 0.16, 0.16],
-        ]) {
-          const a0 = sweep + off
-          ctx.fillStyle = rgba(col, al)
-          ctx.beginPath()
-          ctx.arc(x, y, r * 0.97, a0 - wd, a0 + wd)
-          ctx.arc(x, y, hub, a0 + wd, a0 - wd, true)
-          ctx.closePath(); ctx.fill()
-        }
-        ctx.strokeStyle = rgba(cur.line, dk ? 0.6 : 0.48); ctx.lineWidth = 1   // rim
-        ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.stroke()
-        ctx.strokeStyle = rgba(cur.line, dk ? 0.28 : 0.22); ctx.lineWidth = 0.7 // data edge
-        ctx.beginPath(); ctx.arc(x, y, r * 0.9, 0, 6.2832); ctx.stroke()
-        ctx.fillStyle = rgb(base)                                  // punched centre hole
-        ctx.beginPath(); ctx.arc(x, y, hole, 0, 6.2832); ctx.fill()
-        ctx.strokeStyle = rgba(cur.line, dk ? 0.55 : 0.45); ctx.lineWidth = 0.9
-        ctx.beginPath(); ctx.arc(x, y, hole, 0, 6.2832); ctx.stroke()
-        ctx.beginPath(); ctx.arc(x, y, hub, 0, 6.2832); ctx.stroke()           // clamp hub
-        ctx.restore()
-      }
-      if (!sat.front) drawSat()
-
       // 2) Globe disc — the OCEAN: a subtly tinted sphere (a warm gold sheen on
       //    dark, a cool azure on light). Kept dim so the land + network read
       //    clearly over it.
@@ -277,6 +220,17 @@ export default function AuthBackdrop() {
       ctx.strokeStyle = rgba(cur.line, dk ? 0.38 : 0.3); ctx.lineWidth = 1
       ctx.beginPath(); ctx.arc(gx, gy, Rg, 0, 6.2832); ctx.stroke()
 
+      // A tiny quaver — the scene's word for "sound". Used by the Kol Torah
+      // broadcast mast and the audio link.
+      const drawNote = (x, y, alpha) => {
+        ctx.save(); ctx.translate(x, y); ctx.scale(1.15, 1.15)
+        ctx.strokeStyle = rgba(GOLD, alpha); ctx.fillStyle = rgba(GOLD, alpha); ctx.lineWidth = 1
+        ctx.beginPath(); ctx.ellipse(0, 2.2, 2.1, 1.5, -0.45, 0, 6.2832); ctx.fill()   // head
+        ctx.beginPath(); ctx.moveTo(1.9, 1.6); ctx.lineTo(1.9, -3.6); ctx.stroke()      // stem
+        ctx.beginPath(); ctx.moveTo(1.9, -3.6); ctx.quadraticCurveTo(4.4, -2.8, 4.6, -0.6); ctx.stroke() // flag
+        ctx.restore()
+      }
+
       // 6) Lattice masts at each hub — a real 4-leg transmission tower, not a
       //    2D stick: a square footprint (two front legs, two back legs drawn
       //    fainter and offset for depth) tapering to the antenna, ladder rungs
@@ -316,13 +270,28 @@ export default function AuthBackdrop() {
         for (const h of RUNGS) seg(FL(h), FR(h))
         seg(FL(RUNGS[1]), FR(RUNGS[2])); seg(FR(RUNGS[1]), FL(RUNGS[2]))   // X-brace
         const baseA = Math.atan2(uy, ux)                                                       // waves off the top
-        for (let s = 0; s < 2; s++) {
-          const ph = ((t * 0.001 + i * 0.5 + s * 0.5) % 1 + 1) % 1
-          ctx.strokeStyle = rgba(cur.dot, (dk ? 0.34 : 0.28) * (1 - ph))
-          ctx.lineWidth = 1
-          ctx.beginPath(); ctx.arc(tp.x, tp.y, mast * (0.22 + ph * 0.8), baseA - 0.6, baseA + 0.6); ctx.stroke()
+        if (i === 2) {
+          // Tel Aviv is the Kol Torah mast — it doesn't just signal, it SINGS.
+          // Wider, slower gold ripples spread from the antenna and a quaver
+          // rides the crest of each one: the audio line as behaviour, not an
+          // object pasted on the page.
+          for (let s = 0; s < 3; s++) {
+            const ph = ((t * 0.00045 + s / 3) % 1 + 1) % 1
+            const rr = mast * (0.3 + ph * 2.4)
+            const al = (dk ? 0.5 : 0.42) * (1 - ph)
+            ctx.strokeStyle = rgba(GOLD, al); ctx.lineWidth = 1
+            ctx.beginPath(); ctx.arc(tp.x, tp.y, rr, baseA - 0.95, baseA + 0.95); ctx.stroke()
+            drawNote(tp.x + Math.cos(baseA) * rr, tp.y + Math.sin(baseA) * rr, Math.min(1, al * 1.6))
+          }
+        } else {
+          for (let s = 0; s < 2; s++) {
+            const ph = ((t * 0.001 + i * 0.5 + s * 0.5) % 1 + 1) % 1
+            ctx.strokeStyle = rgba(cur.dot, (dk ? 0.34 : 0.28) * (1 - ph))
+            ctx.lineWidth = 1
+            ctx.beginPath(); ctx.arc(tp.x, tp.y, mast * (0.22 + ph * 0.8), baseA - 0.6, baseA + 0.6); ctx.stroke()
+          }
         }
-        ctx.fillStyle = rgba(cur.dot, dk ? 0.85 : 0.72)
+        ctx.fillStyle = rgba(i === 2 ? GOLD : cur.dot, dk ? 0.85 : 0.72)
         ctx.beginPath(); ctx.arc(tp.x, tp.y, 1.6, 0, 6.2832); ctx.fill()
       })
       ctx.lineCap = 'butt'
@@ -359,19 +328,22 @@ export default function AuthBackdrop() {
         ctx.lineWidth = 1 / sp; ctx.strokeStyle = rgba(flightCol, dk ? 0.9 : 0.7)
         ctx.beginPath(); PLANE.forEach(([qx, qy], k) => (k ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy)))
         ctx.closePath(); ctx.stroke(); ctx.restore()
+        // Touchdown: as the plane arrives, a gold ring blooms at the
+        // destination hub — landing IS connection (the rental phone / SIM is
+        // waiting the moment you step off). The travel line and the phone
+        // line as one system, not two icons.
+        const land = u > 0.8 ? (u - 0.8) / 0.2 : 0
+        if (land > 0) {
+          ctx.strokeStyle = rgba(GOLD, (dk ? 0.75 : 0.6) * (1 - land)); ctx.lineWidth = 1.2
+          ctx.beginPath(); ctx.arc(b.x, b.y, 2 + land * mast * 0.9, 0, 6.2832); ctx.stroke()
+          ctx.fillStyle = rgba(GOLD, (dk ? 0.9 : 0.75) * (1 - land * 0.4))
+          ctx.beginPath(); ctx.arc(b.x, b.y, 1.8, 0, 6.2832); ctx.fill()
+        }
       })
 
       // 8) Signal network — TOWER-TOP to TOWER-TOP (tip to tip): a bow carrying
       //    a travelling pulse. No plane. Gold links = "best route"; the AUDIO
       //    link broadcasts Kol Torah — tiny quavers travel it instead of dots.
-      const drawNote = (x, y, alpha) => {
-        ctx.save(); ctx.translate(x, y); ctx.scale(1.15, 1.15)
-        ctx.strokeStyle = rgba(GOLD, alpha); ctx.fillStyle = rgba(GOLD, alpha); ctx.lineWidth = 1
-        ctx.beginPath(); ctx.ellipse(0, 2.2, 2.1, 1.5, -0.45, 0, 6.2832); ctx.fill()   // head
-        ctx.beginPath(); ctx.moveTo(1.9, 1.6); ctx.lineTo(1.9, -3.6); ctx.stroke()      // stem
-        ctx.beginPath(); ctx.moveTo(1.9, -3.6); ctx.quadraticCurveTo(4.4, -2.8, 4.6, -0.6); ctx.stroke() // flag
-        ctx.restore()
-      }
       SIGNALS.forEach(([i, j, kind], li) => {
         const a = tips[i], b = tips[j]
         if (!a || !b) return
@@ -394,62 +366,7 @@ export default function AuthBackdrop() {
         }
       })
 
-      // 9) The RENTAL line, in-scene: a kosher handset — a candy-bar phone
-      //    (earpiece, small screen, nav pill, 3×4 keypad; deliberately NOT a
-      //    smartphone slab) at the lower left. A dashed downlink from the
-      //    globe delivers gold pulses to it and reception arcs bloom off its
-      //    top: the network, brought to your kosher phone.
-      {
-        const s = Math.min(W, H) * 0.0028                          // 1 unit ≈ a phone mm
-        const phx = Math.max(W * 0.12, gx - Rg * 1.45), phy = H * 0.79
-        const rot = -0.12
-        const top = {                                              // top edge, in canvas coords
-          x: phx + (0 * Math.cos(rot) - (-21) * Math.sin(rot)) * s,
-          y: phy + (0 * Math.sin(rot) + (-21) * Math.cos(rot)) * s,
-        }
-        // downlink first so the handset sits over its arrival point
-        const rimA = Math.PI * 0.7
-        const ra = { x: gx + Math.cos(rimA) * Rg, y: gy + Math.sin(rimA) * Rg }
-        const { cx, cy } = arcCtrl(ra, top)
-        ctx.setLineDash([2, 5]); ctx.strokeStyle = rgba(cur.line, dk ? 0.3 : 0.24); ctx.lineWidth = 1
-        ctx.beginPath(); ctx.moveTo(ra.x, ra.y); ctx.quadraticCurveTo(cx, cy, top.x, top.y); ctx.stroke()
-        ctx.setLineDash([])
-        for (let k = 0; k < 2; k++) {
-          const u = ((t * 0.00014 + k * 0.5) % 1 + 1) % 1
-          const pt = bez(ra, cx, cy, top, u)
-          ctx.fillStyle = rgba(GOLD, (dk ? 0.85 : 0.7) * (0.3 + 0.7 * u))
-          ctx.beginPath(); ctx.arc(pt.x, pt.y, 1.7, 0, 6.2832); ctx.fill()
-        }
-        const rp = ((t * 0.001) % 1 + 1) % 1                       // reception bloom
-        ctx.strokeStyle = rgba(GOLD, (dk ? 0.5 : 0.4) * (1 - rp)); ctx.lineWidth = 1
-        ctx.beginPath(); ctx.arc(top.x, top.y, s * (3 + rp * 8), -2.6, -0.6); ctx.stroke()
-        // the handset
-        ctx.save(); ctx.translate(phx, phy); ctx.rotate(rot); ctx.scale(s, s)
-        ctx.lineWidth = 1.1 / s; ctx.lineJoin = 'round'; ctx.lineCap = 'round'
-        ctx.fillStyle = rgb(base)
-        ctx.beginPath(); ctx.roundRect(-9, -21, 18, 42, 2.6); ctx.fill()
-        ctx.fillStyle = rgba(cur.line, dk ? 0.1 : 0.07); ctx.fill()
-        ctx.strokeStyle = rgba(cur.line, dk ? 0.62 : 0.5); ctx.stroke()
-        ctx.strokeStyle = rgba(cur.line, dk ? 0.5 : 0.4)
-        ctx.beginPath(); ctx.moveTo(-2.6, -18.8); ctx.lineTo(2.6, -18.8); ctx.stroke()   // earpiece
-        ctx.beginPath(); ctx.roundRect(-6.6, -16.6, 13.2, 10.6, 1); ctx.stroke()          // screen
-        ctx.fillStyle = rgba(GOLD, dk ? 0.8 : 0.62)                // gold signal bars
-        for (let b2 = 0; b2 < 4; b2++) { ctx.beginPath(); ctx.rect(-5.6 + b2 * 1.5, -8.4 - b2 * 1.1, 1, 1.2 + b2 * 1.1); ctx.fill() }
-        ctx.strokeStyle = rgba(cur.line, dk ? 0.38 : 0.3)          // two lines of "text"
-        ctx.beginPath(); ctx.moveTo(0.6, -13.6); ctx.lineTo(5.4, -13.6); ctx.stroke()
-        ctx.beginPath(); ctx.moveTo(0.6, -11.2); ctx.lineTo(4.2, -11.2); ctx.stroke()
-        ctx.strokeStyle = rgba(cur.line, dk ? 0.5 : 0.4)           // nav pill
-        ctx.beginPath(); ctx.roundRect(-3.4, -4.2, 6.8, 2.8, 1.4); ctx.stroke()
-        for (let row = 0; row < 4; row++) for (let col = 0; col < 3; col++) {  // 3×4 keypad
-          ctx.beginPath(); ctx.roundRect(-6.4 + col * 4.5, 0.4 + row * 4.4, 3.8, 2.9, 0.9); ctx.stroke()
-        }
-        ctx.restore()
-      }
-
-      // 9b) Near half of the CD-satellite passes in FRONT of the globe.
-      if (sat.front) drawSat()
-
-      // 10) Faint logo watermark, top-left.
+      // 9) Faint logo watermark, top-left.
       if (logoReady) {
         const lw = Math.min(W, H) * 0.13, lh = lw * (logo.height / logo.width), pad = Math.min(W, H) * 0.05
         ctx.save(); ctx.globalAlpha = dk ? 0.11 : 0.08
