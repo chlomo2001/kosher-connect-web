@@ -86,11 +86,20 @@ Per-country (customer price list, 30 Jun 2026), minimum 1 week:
 
 ### 1.6 Damage / Loss Charges
 
-| Item | UK | USA & Israel |
-|---|---|---|
-| Missing charger/plug | £5 | £10 |
-| Lost/broken phone handset | £45 | £100 (Israel: £120) |
-| SIM card | £10 | £10 |
+Source of truth: the customer-facing rental T&C (17 Jul 2026 — "the T&C wins").
+Editable per country in Settings → Damage / Loss Charges (`damage_rates`).
+
+| Item | USA & Israel |
+|---|---|
+| Lost/broken phone handset | £120 |
+| Missing charger (plug + cable — one item, per T&C) | £10 |
+| SIM card | £20 (Israel: up to £50 at staff discretion — enter the amount at return) |
+
+UK phones are not rented out yet, so the old UK column is retired (the
+`UK-*` rows remain in Settings at their old values until UK rentals launch).
+Canada/EU are not covered by the published T&C and keep their previous rates
+(£100 phone / £10 charger / £10 SIM) — owner to confirm whether they should
+follow the USA/Israel schedule.
 
 ---
 

@@ -1072,12 +1072,35 @@ function mgComputeLateFee() {
   return countChargeableDays(localISO(lateDayStart), today, country) * settingNum('late_fee_per_day', 1);
 }
 
+// The charger is ONE item to the business (the T&C prices "Charger: £10" —
+// no separate cable fee), but historically it was stored as two keys
+// (plug + cable). The UI now shows a single 🔌 Charger toggle/row that
+// drives BOTH stored keys together; old rentals that recorded plug and
+// cable separately still read correctly (worst status wins, charges sum).
+const MG_UI_ITEMS = ['phone', 'sim', 'charger'];
+function eqKeysFor(item) { return item === 'charger' ? ['plug', 'cable'] : [item]; }
+function chargerGiven(r) { return (r.equipmentGiven?.plug ?? false) || (r.equipmentGiven?.cable ?? false); }
+// Worst status across the stored keys of a UI item: lost > undecided > returned.
+function uiItemStatus(r, item) {
+  const given = item === 'charger'
+    ? eqKeysFor(item).filter(k => r.equipmentGiven?.[k] ?? false)
+    : eqKeysFor(item);
+  const sts = (given.length ? given : eqKeysFor(item)).map(k => getItemStatus(r, k));
+  if (sts.includes('lost')) return 'lost';
+  if (sts.includes('undecided')) return 'undecided';
+  return 'returned';
+}
+function uiItemLostAmt(r, item) {
+  const sum = eqKeysFor(item).reduce((s, k) => s + (parseFloat(r.lostCharges?.[k]) || 0), 0);
+  return sum > 0 ? sum : '';
+}
+
 // Returns lost-item charges entered in the modal: { total, items: [{label, amount}] }
 function mgComputeLostCharges() {
-  const LABELS = { phone: 'Phone', sim: 'SIM card', plug: 'Plug/Charger', cable: 'Cable' };
+  const LABELS = { phone: 'Phone', sim: 'SIM card', charger: 'Charger' };
   const items = [];
   let total = 0;
-  ['phone', 'sim', 'plug', 'cable'].forEach(item => {
+  MG_UI_ITEMS.forEach(item => {
     if (document.getElementById('mgItemStatus_' + item)?.value !== 'lost') return;
     const amt = parseFloat(document.getElementById('mgLostAmt_' + item)?.value) || 0;
     if (amt > 0) { items.push({ label: LABELS[item], amount: amt }); total += amt; }
@@ -1621,8 +1644,7 @@ function openNewRentalModal(preselectCustomerId = null) {
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <div class="eq-btn" tabindex="0" role="button" id="nrGiven_phone" data-given="0" onclick="nrToggleGiven('phone')">📱 Phone</div>
           <div class="eq-btn" tabindex="0" role="button" id="nrGiven_sim"   data-given="1" onclick="nrToggleGiven('sim')">💳 SIM</div>
-          <div class="eq-btn" tabindex="0" role="button" id="nrGiven_plug"  data-given="0" onclick="nrToggleGiven('plug')">🔌 Plug</div>
-          <div class="eq-btn" tabindex="0" role="button" id="nrGiven_cable" data-given="0" onclick="nrToggleGiven('cable')">🔋 Cable</div>
+          <div class="eq-btn" tabindex="0" role="button" id="nrGiven_charger" data-given="0" onclick="nrToggleGiven('charger')">🔌 Charger</div>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:6px;">Tap to toggle — bright = given</div>
       </div>
@@ -1867,11 +1889,14 @@ async function saveNewRental() {
 
   const customer = customers.find(c => c.id === customerId);
   const phone    = phones.find(p => p.id === phoneId);
+  // One 🔌 Charger toggle drives both stored keys (plug + cable) — the
+  // business treats the charger as a single item (T&C: "Charger: £10").
+  const nrCharger = document.getElementById('nrGiven_charger')?.dataset.given === '1';
   const equipmentGiven = {
     phone: document.getElementById('nrGiven_phone')?.dataset.given === '1',
     sim:   document.getElementById('nrGiven_sim')?.dataset.given   === '1',
-    plug:  document.getElementById('nrGiven_plug')?.dataset.given  === '1',
-    cable: document.getElementById('nrGiven_cable')?.dataset.given === '1',
+    plug:  nrCharger,
+    cable: nrCharger,
   };
   const { chargeableDays, totalDays, price } =
     calcRentalPrice(from, to, phone.country, phone.ukPlan || 'standard', equipmentGiven.sim);
@@ -2232,13 +2257,14 @@ function openManageRentalModal(rentalId) {
   const debt = Math.max(0, r.price - paid);
   const mgLateFee = calcLateFeeDays(r);
 
-  // Build per-item status rows — three-position sliding toggle (A2)
-  const EQ_LABELS   = { phone: '📱 Phone handset', sim: '💳 SIM card', plug: '🔌 Plug/Charger', cable: '🔋 Cable' };
-  const EQ_DEFAULTS = { phone: false, sim: true, plug: false, cable: false };
-  const eqRows = ['phone', 'sim', 'plug', 'cable'].map(item => {
-    const given   = r.equipmentGiven?.[item] ?? EQ_DEFAULTS[item];
-    const status  = getItemStatus(r, item);
-    const lostAmt = r.lostCharges?.[item] ?? '';
+  // Build per-item status rows — three-position sliding toggle (A2).
+  // Charger is one UI row driving the stored plug+cable pair (see eqKeysFor).
+  const EQ_LABELS   = { phone: '📱 Phone handset', sim: '💳 SIM card', charger: '🔌 Charger' };
+  const EQ_DEFAULTS = { phone: false, sim: true, charger: false };
+  const eqRows = MG_UI_ITEMS.map(item => {
+    const given   = item === 'charger' ? chargerGiven(r) : (r.equipmentGiven?.[item] ?? EQ_DEFAULTS[item]);
+    const status  = item === 'charger' ? uiItemStatus(r, item) : getItemStatus(r, item);
+    const lostAmt = item === 'charger' ? uiItemLostAmt(r, item) : (r.lostCharges?.[item] ?? '');
     const pending = status === 'undecided';
     return `
       <div id="mgEqRow_${item}" style="display:${given ? 'flex' : 'none'};align-items:center;gap:8px;flex-wrap:wrap;padding:3px 0;">
@@ -2328,8 +2354,7 @@ function openManageRentalModal(rentalId) {
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
         <div class="eq-btn" tabindex="0" role="button" id="mgGivenPhone" data-given="${(r.equipmentGiven?.phone??false)?'1':'0'}" onclick="mgToggleGiven('phone')">📱 Phone</div>
         <div class="eq-btn" tabindex="0" role="button" id="mgGivenSim"   data-given="${(r.equipmentGiven?.sim??true)?'1':'0'}"   onclick="mgToggleGiven('sim')">💳 SIM</div>
-        <div class="eq-btn" tabindex="0" role="button" id="mgGivenPlug"  data-given="${(r.equipmentGiven?.plug??false)?'1':'0'}" onclick="mgToggleGiven('plug')">🔌 Plug</div>
-        <div class="eq-btn" tabindex="0" role="button" id="mgGivenCable" data-given="${(r.equipmentGiven?.cable??false)?'1':'0'}" onclick="mgToggleGiven('cable')">🔋 Cable</div>
+        <div class="eq-btn" tabindex="0" role="button" id="mgGivenCharger" data-given="${chargerGiven(r)?'1':'0'}" onclick="mgToggleGiven('charger')">🔌 Charger</div>
       </div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Item status — tap Returned or Lost for each item given</div>
       <div style="display:flex;flex-direction:column;gap:4px;">${eqRows}</div>
@@ -2513,19 +2538,28 @@ async function saveManageRental(rentalId) {
   r.chargeableDays = chargeableDays;
   r.totalDays      = totalDays;
   r.notes          = document.getElementById('mgNotes').value.trim();
-  // Per-item status and per-item loss amounts (A1 data model)
+  // Per-item status and per-item loss amounts (A1 data model). The single
+  // charger UI row fans out to the stored plug+cable pair: same status on
+  // both, and the whole lost amount on plug so charges never double-count.
   r.itemStatus  = {};
   r.lostCharges = {};
-  ['phone', 'sim', 'plug', 'cable'].forEach(item => {
-    const st = document.getElementById('mgItemStatus_' + item)?.value || 'undecided';
-    r.itemStatus[item]  = st;
-    r.lostCharges[item] = st === 'lost' ? (parseFloat(document.getElementById('mgLostAmt_' + item)?.value) || null) : null;
+  MG_UI_ITEMS.forEach(item => {
+    const st  = document.getElementById('mgItemStatus_' + item)?.value || 'undecided';
+    const amt = st === 'lost' ? (parseFloat(document.getElementById('mgLostAmt_' + item)?.value) || null) : null;
+    if (item === 'charger') {
+      r.itemStatus.plug = st; r.itemStatus.cable = st;
+      r.lostCharges.plug = amt; r.lostCharges.cable = null;
+    } else {
+      r.itemStatus[item]  = st;
+      r.lostCharges[item] = amt;
+    }
   });
+  const mgCharger = document.getElementById('mgGivenCharger')?.dataset.given === '1';
   r.equipmentGiven = {
     phone: document.getElementById('mgGivenPhone')?.dataset.given === '1',
     sim:   document.getElementById('mgGivenSim')?.dataset.given   === '1',
-    plug:  document.getElementById('mgGivenPlug')?.dataset.given  === '1',
-    cable: document.getElementById('mgGivenCable')?.dataset.given === '1',
+    plug:  mgCharger,
+    cable: mgCharger,
   };
   const mgAddDiscount   = document.getElementById('mgAddDiscount')?.checked || false;
   const mgDiscountType  = document.getElementById('mgDiscountType')?.value  || 'percent';
