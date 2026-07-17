@@ -2597,7 +2597,7 @@ function showDynamicModal(html) {
     overlay.addEventListener('click', e => { if (e.target === overlay) closeDynamicModal(); });
     document.body.appendChild(overlay);
   }
-  overlay.innerHTML = `<div class="modal" style="width:560px;">${html}</div>`;
+  overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:560px;">${html}</div>`;
   overlay.classList.remove('hidden');
   suppressCardScrim(true);
   autofocusFirstField(overlay);
@@ -2648,8 +2648,8 @@ function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm cha
       document.body.appendChild(el);
     }
     el.innerHTML = `
-      <div class="modal" style="width:430px;">
-        <div class="modal-title">${escHtml(title)}</div>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="kcConfirmTitle" style="width:430px;">
+        <div class="modal-title" id="kcConfirmTitle">${escHtml(title)}</div>
         <div style="font-size:14px;line-height:1.65;margin:4px 0 10px;color:var(--text);">${body}</div>
         ${amount !== null ? `<div style="font-size:24px;font-weight:700;margin:0 0 16px;font-feature-settings:'tnum';">${fmtGbp(Number(amount))}</div>` : ''}
         <div class="modal-actions">
@@ -7282,6 +7282,33 @@ try {
   kcClickObs.observe(document.body, { childList: true, subtree: true });
 } catch { /* MutationObserver unsupported — rows stay mouse-only, no worse than before */ }
 kcScanClickable(document.body);
+
+// ── Modal focus trap ─────────────────────────────────────────────────────
+// Modals carry role=dialog + aria-modal (announced as dialogs) and Escape
+// already closes them; this keeps Tab inside the top-most open dialog so focus
+// can't wander into the dimmed page behind it. Stack order matches the Escape
+// handler: confirm > dynamic action modal > customer form.
+function kcTopModalOverlay() {
+  for (const id of ['kcConfirm', 'dynamicModal', 'customerModal']) {
+    const el = document.getElementById(id);
+    if (el && !el.classList.contains('hidden')) return el;
+  }
+  return null;
+}
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Tab') return;
+  const overlay = kcTopModalOverlay();
+  if (!overlay) return;
+  const scope = overlay.querySelector('.modal') || overlay;
+  const sel = 'a[href],button:not([disabled]),input:not([disabled]):not([type=hidden]),'
+            + 'select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  const f = [...scope.querySelectorAll(sel)].filter(el => el.offsetParent !== null);
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1], active = document.activeElement;
+  if (!scope.contains(active)) { e.preventDefault(); first.focus(); return; }
+  if (e.shiftKey && active === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
+});
 
 // Keep the floating help-timer chip alive across the whole session.
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startSvcTimerFloat);
