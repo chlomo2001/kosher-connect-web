@@ -94,6 +94,7 @@ export default function AuthBackdrop() {
 
     let px = 0, py = 0, tpx = 0, tpy = 0, haveP = false
     let lox = 0, loy = 0, lovx = 0, lovy = 0   // logo spring: offset + velocity
+    let lpx = 0, lpy = 0, moveHeat = 0         // cursor speed → pull "heat"
     const idleP = () => { tpx = W / 2; tpy = H * 0.32 }
     const onMove = (e) => { const r = canvas.getBoundingClientRect(); tpx = e.clientX - r.left; tpy = e.clientY - r.top; haveP = true }
     const onLeave = () => { haveP = false; idleP() }
@@ -385,21 +386,19 @@ export default function AuthBackdrop() {
         }
       })
 
-      // 9) Faint logo watermark, top-left — and the cursor can CARRY it: come
-      //    close and the logo is drawn along with the pointer; move away and
-      //    an underdamped spring snaps it home with a visible bounce.
+      // 9) Faint logo watermark, top-left — magnetised like the pointer glow:
+      //    a MOVING cursor pulls the logo toward itself from anywhere on the
+      //    canvas; once the cursor rests for about a second the pull dies and
+      //    an underdamped spring sends the logo travelling home with a bounce.
       if (logoReady) {
         const lw = Math.min(W, H) * 0.13, lh = lw * (logo.height / logo.width), pad = Math.min(W, H) * 0.05
         const cx0 = pad + lw / 2, cy0 = pad + lh / 2
-        const reach = Math.min(W, H) * 0.22, cap = Math.min(W, H) * 0.07
-        let txL = 0, tyL = 0
-        const dL = Math.hypot(px - cx0, py - cy0)
-        if (haveP && dL < reach) {
-          const pull = 1 - dL / reach                    // stronger the closer you are
-          txL = (px - cx0) * 0.5 * pull; tyL = (py - cy0) * 0.5 * pull
-          const m = Math.hypot(txL, tyL)
-          if (m > cap) { txL *= cap / m; tyL *= cap / m }
-        }
+        const cap = Math.min(W, H) * 0.08
+        const sp = Math.hypot(px - lpx, py - lpy); lpx = px; lpy = py
+        // heat rises while the cursor moves, decays ~1s after it stops
+        moveHeat = Math.min(1, moveHeat * 0.93 + (haveP ? Math.min(sp, 18) * 0.03 : 0))
+        const dxL = px - cx0, dyL = py - cy0, dL = Math.hypot(dxL, dyL) || 1
+        const txL = (dxL / dL) * cap * moveHeat, tyL = (dyL / dL) * cap * moveHeat
         lovx = (lovx + (txL - lox) * 0.045) * 0.9        // underdamped → bounce-back
         lovy = (lovy + (tyL - loy) * 0.045) * 0.9
         lox += lovx; loy += lovy
