@@ -701,6 +701,18 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .toast-error { background: var(--danger); color: #fff; }
 .toast-warning { background: var(--canvas-cream); color: var(--gold); border: 1px solid #e5d3b0; }
 
+/* ─── KEYBOARD SHORTCUTS HELP ─── */
+.kc-shortcuts { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 4px; }
+.kc-shortcut { display: flex; align-items: center; gap: 12px; }
+.kc-shortcut .kbd {
+  flex-shrink: 0; min-width: 104px; text-align: center;
+  font-family: inherit; font-size: 12px; font-weight: 500;
+  padding: 4px 8px; border-radius: 6px;
+  background: var(--panel-2); border: 1px solid var(--border);
+  color: var(--text);
+}
+.kc-shortcut-desc { font-size: 13px; color: var(--ink-secondary); line-height: 1.4; }
+
 /* ─── PLACEHOLDER TABS ─── */
 .tab-placeholder {
   display: flex; align-items: center; justify-content: center;

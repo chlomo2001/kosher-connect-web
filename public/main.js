@@ -7226,10 +7226,60 @@ function closePalette() {
   document.getElementById('paletteOverlay')?.remove();
 }
 
+// ── Keyboard shortcuts help (press ?) ────────────────────────────────────
+// A discoverability card for the keyboard-first work — the palette, the row/
+// card Enter-to-open, the Escape stack. Additive; opens on "?" from anywhere
+// you're not typing.
+const KC_SHORTCUTS = [
+  ['⌘K / Ctrl K', 'Open the command palette — search customers, phones, IMEI, or run a command'],
+  ['?', 'Show this shortcuts help'],
+  ['Esc', 'Close the open dialog, palette, or customer card'],
+  ['Enter / Space', 'Open the focused row, card, or dashboard drill-down'],
+  ['Tab / ⇧ Tab', 'Move between fields — stays inside an open dialog'],
+  ['↑ ↓ then Enter', 'In the palette: pick a result and open it'],
+  ['Scan a barcode', 'Scans straight into the palette or the till'],
+];
+function kcIsTyping() {
+  const el = document.activeElement;
+  if (!el) return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+}
+function openShortcuts() {
+  if (document.getElementById('kcShortcuts')) return;
+  const el = document.createElement('div');
+  el.id = 'kcShortcuts';
+  el.className = 'modal-overlay';
+  el.addEventListener('mousedown', e => { if (e.target === el) closeShortcuts(); });
+  el.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="kcShortcutsTitle" style="width:460px;">
+      <div class="modal-title" id="kcShortcutsTitle">⌨️ Keyboard shortcuts</div>
+      <div class="kc-shortcuts">
+        ${KC_SHORTCUTS.map(([k, d]) => `<div class="kc-shortcut"><span class="kbd">${escHtml(k)}</span><span class="kc-shortcut-desc">${escHtml(d)}</span></div>`).join('')}
+      </div>
+      <div class="modal-actions"><button class="btn btn-primary" onclick="closeShortcuts()">Got it</button></div>
+    </div>`;
+  document.body.appendChild(el);
+  const btn = el.querySelector('button');
+  if (btn) { try { btn.focus({ preventScroll: true }); } catch { btn.focus(); } }
+}
+function closeShortcuts() {
+  document.getElementById('kcShortcuts')?.remove();
+}
+
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();
     openPalette();
+    return;
+  }
+  // "?" opens the shortcuts help — but not while typing in a field, and not
+  // when an overlay is already up.
+  if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey && !kcIsTyping()
+      && !document.getElementById('paletteOverlay') && !document.getElementById('kcShortcuts')
+      && !kcTopModalOverlay()) {
+    e.preventDefault();
+    openShortcuts();
     return;
   }
   // Escape closes the top-most open overlay (a universal expectation). Order
@@ -7238,6 +7288,7 @@ document.addEventListener('keydown', e => {
   // rest and the case where focus isn't in the palette.
   if (e.key === 'Escape') {
     const open = (id) => { const el = document.getElementById(id); return el && !el.classList.contains('hidden') ? el : null; };
+    if (open('kcShortcuts')) { closeShortcuts(); return; }
     if (open('kcConfirm')) { kcConfirmDone(false); return; }
     if (open('paletteOverlay')) { closePalette(); return; }
     if (open('dynamicModal')) { closeDynamicModal(); return; }
@@ -7289,7 +7340,7 @@ kcScanClickable(document.body);
 // can't wander into the dimmed page behind it. Stack order matches the Escape
 // handler: confirm > dynamic action modal > customer form.
 function kcTopModalOverlay() {
-  for (const id of ['kcConfirm', 'dynamicModal', 'customerModal']) {
+  for (const id of ['kcShortcuts', 'kcConfirm', 'dynamicModal', 'customerModal']) {
     const el = document.getElementById(id);
     if (el && !el.classList.contains('hidden')) return el;
   }
