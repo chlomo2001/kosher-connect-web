@@ -168,11 +168,14 @@ async function handler(req, res) {
         return res.status(400).json({ success: false, error: 'Every line total must be greater than £0.' })
       }
 
-      // Idempotency: a full replay (retry / double-click) must not re-post. If the
-      // first line's ledger ref already exists, this basket already committed. audit U3.
+      // Idempotency: claim the basket's key BEFORE any side effect. A retry,
+      // double-click, or concurrent submit with the same token collides on the
+      // key and short-circuits — closing the window where two parallel submits
+      // both decrement stock before either ledger row exists (the ledger alone
+      // dedupes the charge but not the stock move). audit A2/U3.
       if (clientRef) {
-        const dup = await db.select('ledger', `charge_reference=eq.${encodeURIComponent('SALE-' + clientRef + '-0')}&select=id&limit=1`)
-        if (dup.length) {
+        const claimed = await db.claimKey(`SALE-${clientRef}`, { scope: 'shop_sale', customerId: customerUuid })
+        if (!claimed) {
           const balRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
           return res.json({ success: true, duplicate: true, balance: balRows.length ? Number(balRows[0].balance) : 0 })
         }
@@ -188,6 +191,9 @@ async function handler(req, res) {
         const left = await db.rpc('adjust_stock_qty', { p_item: id, p_qty: -q })
         if (left === null || left === undefined) {
           for (const r of reserved) await db.rpc('adjust_stock_qty', { p_item: r.id, p_qty: r.qty })
+          // Nothing was charged and all stock was returned — release the key so
+          // the counter can simply retry once stock is corrected.
+          if (clientRef) await db.releaseKey(`SALE-${clientRef}`)
           const fresh = await db.select('stock_items', `select=quantity,model&id=eq.${encodeURIComponent(id)}`)
           const have = fresh.length ? (fresh[0].quantity ?? 0) : 0
           const name = fresh.length ? fresh[0].model : 'that item'
