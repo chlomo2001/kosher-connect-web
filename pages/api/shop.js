@@ -13,10 +13,12 @@
 
 import { withStaff, tabAllowedFor } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
+import { money, settleSale } from '../../lib/money.mjs'
 
 const CATEGORIES = ['phone', 'accessory', 'sim', 'other']
 const METHODS = ['cash', 'card', 'bank_transfer', 'voucher', 'other']
-const money = (v) => Math.round((Number(v) || 0) * 100) / 100
+// money() and settleSale() are imported from lib/money.mjs (single source of
+// truth for penny rounding — a local copy here silently diverged on half-pennies).
 
 const itemToApp = (r) => ({
   id: r.id,
@@ -241,13 +243,17 @@ async function handler(req, res) {
         reserved.push({ id, qty: q })
       }
 
-      // Commit. From here on any thrown error (transient DB/network) unwinds:
-      // this request's stock_sales rows are removed, reserved stock is returned,
-      // and the claim key is released — so the operator's retry starts clean and
-      // the ledger's insertIgnoreDup dedupes anything that did land. audit A2.
+      // Commit. Insert every stock_sales row and BUILD (don't yet post) the
+      // ledger lines; then post ALL money — the line charges and the settlement
+      // payment — in ONE atomic insert at the very end. The ledger is append-only
+      // and can't be deleted, so posting charges mid-loop meant a failure on a
+      // later line (or the balance read) stranded a charge the customer could
+      // never get back. With the single terminal write, until it lands no charge
+      // exists, so unwind only has to undo stock/keys. audit A2.
       let grandTotal = 0
       let basketRef = clientRef
       try {
+        const ledgerRows = []
         for (let i = 0; i < computed.length; i++) {
           const { l, item, qty, unit, total } = computed[i]
           const [sale] = await db.insert('stock_sales', [{
@@ -268,53 +274,55 @@ async function handler(req, res) {
           // can't double-post; falls back to the sale id when no token is sent.
           const saleRef = clientRef ? `${clientRef}-${i}` : sale.id
           const label = `${item.company || ''} ${item.model || ''}`.trim()
-          await db.insertIgnoreDup('ledger', [{
+          ledgerRows.push({
             customer_id: customerUuid,
             charge_reference: `SALE-${saleRef}`,
             entry_type: item.category === 'phone' ? 'phone_sale' : 'stock_sale',
             amount: -total,
             description: `${label}${qty > 1 ? ` × ${qty}` : ''}${l.imei ? ` — IMEI ${l.imei}` : ''}`,
-          }], 'charge_reference')
+          })
           grandTotal = money(grandTotal + total)
         }
 
-        // Settlement. The per-line charges above already sit on the customer's
-        // running wallet. Post a PAYMENT only for money that physically moved NOW
-        // (cash/card/…). The wallet portion posts NO payment — the charge draws it
-        // straight from their credit, and it is capped by the credit they ACTUALLY
-        // have right now (never trust the client's figure): wallet tender must
-        // never mark goods settled against credit that isn't there. Split falls
-        // out naturally (wallet £20 + cash £10 on a £30 sale → one £10 payment).
+        // Settlement. Post a PAYMENT only for money that physically moved NOW
+        // (cash/card/…); the wallet portion posts NO payment — the charge draws it
+        // straight from their credit, capped by the credit they ACTUALLY hold.
+        // Because the charges aren't posted yet, the current balance IS the
+        // pre-basket balance — read it directly instead of reconstructing it.
         const isWalkin = !b.customerId || b.customerId === 'walkin'
-        const requestedWallet = isWalkin ? 0 : Math.min(Math.max(money(b.walletAmount), 0), grandTotal)
-        let walletApplied = requestedWallet
-        if (requestedWallet > 0) {
+        let preBasketBalance = 0
+        if (!isWalkin && money(b.walletAmount) > 0) {
           const credRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
-          // Balance BEFORE this basket's charges = current balance + what we just
-          // charged (charges are negative, so add grandTotal back).
-          const balanceNow = credRows.length ? Number(credRows[0].balance) : 0
-          const creditAvailable = Math.max(0, money(balanceNow + grandTotal))
-          walletApplied = Math.min(requestedWallet, creditAvailable)
+          preBasketBalance = credRows.length ? Number(credRows[0].balance) : 0
         }
-        // The payment records what PHYSICALLY moved at the till — the agreed
-        // cash/card part (total − agreed wallet split). If the credit turned out
-        // smaller than the agreed split, the uncovered part stays ON ACCOUNT as
-        // visible debt — it never inflates the payment (the drawer doesn't have
-        // it) and never books credit the customer doesn't hold.
-        const walletShortfall = money(requestedWallet - walletApplied)
-        const paidNowAmount = b.paidNow ? money(grandTotal - requestedWallet) : 0
+        const { walletApplied, walletShortfall, paidNowAmount } = settleSale({
+          grandTotal, walletRequested: b.walletAmount, preBasketBalance,
+          paidNow: b.paidNow, isWalkin,
+        })
         if (paidNowAmount > 0) {
-          await db.insertIgnoreDup('ledger', [{
+          ledgerRows.push({
             customer_id: customerUuid,
             charge_reference: `PAY-SALE-${basketRef}-now`,
             entry_type: 'payment',
             amount: paidNowAmount,
             method,
             description: walletApplied > 0 ? 'Paid — shop sale (part)' : 'Paid — shop sale',
-          }], 'charge_reference')
+          })
         }
 
-        const balRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
+        // The single, atomic money write: one PostgREST POST is one statement, so
+        // the whole basket's charges and its settlement payment land together or
+        // not at all. insertIgnoreDup makes an operator's retry (same refs) a no-op.
+        await db.insertIgnoreDup('ledger', ledgerRows, 'charge_reference')
+
+        // The sale is committed. A failed final balance read must NOT error the
+        // sale (that would unwind stock while the charges stay posted) — default
+        // the returned balance instead.
+        let balance = null
+        try {
+          const balRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
+          balance = balRows.length ? Number(balRows[0].balance) : 0
+        } catch (e2) { console.error('[api/shop] post-sale balance read failed', e2) }
         return res.json({
           success: true,
           total: grandTotal,
@@ -322,7 +330,7 @@ async function handler(req, res) {
           walletApplied,
           walletShortfall,
           paidNow: paidNowAmount,
-          balance: balRows.length ? Number(balRows[0].balance) : 0,
+          balance,
         })
       } catch (e) {
         await unwind()

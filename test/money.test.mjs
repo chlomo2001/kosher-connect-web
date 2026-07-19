@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   serviceOrderTotal, phoneDiscountApplies, simDiscountApplies,
-  advanceOneMonth, cashExpected, ledgerSignFor, money,
+  advanceOneMonth, cashExpected, ledgerSignFor, money, settleSale,
 } from '../lib/money.mjs'
 
 test('serviceOrderTotal — tiered "first / N or more"', () => {
@@ -87,6 +87,36 @@ test('money — rounds to pennies', () => {
   assert.equal(money('3.14159'), 3.14)
   assert.equal(money(10), 10)
   assert.equal(money(null), 0)
+})
+
+test('settleSale — wallet credit cap, shortfall, and paid-now split', () => {
+  // Shortfall: £5 credit before a £30 basket, operator agreed a £20 wallet split.
+  // Only £5 of credit exists → applied 5, the other £15 stays on account,
+  // paid-now = total − agreed split = 30 − 20 = 10 (NOT total − applied).
+  assert.deepEqual(
+    settleSale({ grandTotal: 30, walletRequested: 20, preBasketBalance: 5, paidNow: true, isWalkin: false }),
+    { requestedWallet: 20, walletApplied: 5, walletShortfall: 15, paidNowAmount: 10 },
+  )
+  // Ample credit + over-requested wallet: request is clamped to the basket total,
+  // fully applied, nothing to pay now.
+  assert.deepEqual(
+    settleSale({ grandTotal: 30, walletRequested: 50, preBasketBalance: 100, paidNow: true, isWalkin: false }),
+    { requestedWallet: 30, walletApplied: 30, walletShortfall: 0, paidNowAmount: 0 },
+  )
+  // Customer already in debt (negative balance) → no credit to draw.
+  assert.deepEqual(
+    settleSale({ grandTotal: 30, walletRequested: 20, preBasketBalance: -25, paidNow: true, isWalkin: false }),
+    { requestedWallet: 20, walletApplied: 0, walletShortfall: 20, paidNowAmount: 10 },
+  )
+  // Walk-in never draws wallet credit; not-paid-now leaves it all on account.
+  assert.deepEqual(
+    settleSale({ grandTotal: 30, walletRequested: 20, preBasketBalance: 100, paidNow: true, isWalkin: true }),
+    { requestedWallet: 0, walletApplied: 0, walletShortfall: 0, paidNowAmount: 30 },
+  )
+  assert.equal(
+    settleSale({ grandTotal: 30, walletRequested: 0, preBasketBalance: 0, paidNow: false, isWalkin: false }).paidNowAmount,
+    0,
+  )
 })
 
 test('money — exact half-pennies round up despite float representation', () => {
