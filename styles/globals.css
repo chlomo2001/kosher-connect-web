@@ -944,23 +944,27 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   background: var(--bg);
   position: relative; overflow: hidden;
   padding: 24px;
-  /* The pointer IS the brand: a faint logo mark rides as the cursor over the
-     scene, with a tiny dot at the hotspot for precision. Form controls keep
-     natural cursors. */
-  cursor: url("/cursor-logo.png") 16 16, auto;
+  /* Brand-coloured pointers: the classic arrow and hand shapes everyone
+     knows, redrawn in KC colours — navy ink with a gold keyline (warm ivory
+     on the dark theme). Familiar to use, unmistakably ours. */
+  cursor: url("/cursor-kc.png") 2 2, auto;
 }
-.login-card { cursor: default; }
 .login-card input, .login-card textarea, .login-card select { cursor: text; }
-.login-shell button, .login-card a, .login-card [role="button"] { cursor: pointer; }
-/* Brighter mark (gold dot) on the dark theme. */
-:root[data-theme="dark"] .login-shell {
-  cursor: url("/cursor-logo-dark.png") 16 16, auto;
+.login-shell button, .login-shell a, .login-shell [role="button"] {
+  cursor: url("/cursor-kc-hand.png") 15 3, pointer;
 }
-/* The welcome page shares the scene — and the cursor. */
-.welcome-shell { cursor: url("/cursor-logo.png") 16 16, auto; }
-:root[data-theme="dark"] .welcome-shell { cursor: url("/cursor-logo-dark.png") 16 16, auto; }
-.welcome-shell a, .welcome-shell button { cursor: pointer; }
-@media (prefers-reduced-motion: reduce) { .login-shell, .welcome-shell { cursor: auto; } }
+:root[data-theme="dark"] .login-shell { cursor: url("/cursor-kc-dark.png") 2 2, auto; }
+:root[data-theme="dark"] .login-shell button, :root[data-theme="dark"] .login-shell a,
+:root[data-theme="dark"] .login-shell [role="button"] {
+  cursor: url("/cursor-kc-hand-dark.png") 15 3, pointer;
+}
+/* The welcome page shares the scene — and the cursors. */
+.welcome-shell { cursor: url("/cursor-kc.png") 2 2, auto; }
+.welcome-shell a, .welcome-shell button { cursor: url("/cursor-kc-hand.png") 15 3, pointer; }
+:root[data-theme="dark"] .welcome-shell { cursor: url("/cursor-kc-dark.png") 2 2, auto; }
+:root[data-theme="dark"] .welcome-shell a, :root[data-theme="dark"] .welcome-shell button {
+  cursor: url("/cursor-kc-hand-dark.png") 15 3, pointer;
+}
 /* Kept as a decorative hook, but the rainbow blur is gone. A single flat
    hairline band frames the top of the canvas — structure, not glow. */
 /* Premium sign-in: a slow flowing gradient behind a crisp floating card —
