@@ -11,6 +11,7 @@
 import { withTab, tabAllowedFor } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 import { postAutoCharges } from '../../lib/customCharges.js'
+import { money } from '../../lib/money.mjs'
 
 const BOOKING_STATUSES = ['Booked', 'Ticketed', 'Completed', 'Cancelled']
 
@@ -343,6 +344,47 @@ async function handler(req, res) {
         updated = await db.select('bookings', `select=id&id=eq.${bid}`)
       }
       if (!updated.length) return res.status(404).json({ success: false, error: 'Booking not found.' })
+
+      // Cancelling reverses the booking's ledger position — mirrors rental void
+      // (idempotent net reversal). A cancelled UNPAID booking otherwise leaves
+      // permanent arrears that the sweep then chases; a booking already paid nets
+      // to zero, so nothing posts (the cash refund is handled at the counter).
+      if (patch.status === 'Cancelled') {
+        const buid = updated[0].id
+        // Base charge + its payment both carry related_booking_id.
+        const linked = await db.select('ledger', `select=amount,customer_id&related_booking_id=eq.${buid}`)
+        const net = money(linked.reduce((s, e) => s + Number(e.amount), 0))
+        if (linked.length && Math.abs(net) >= 0.005) {
+          await db.insertIgnoreDup('ledger', [{
+            customer_id: linked[0].customer_id,
+            charge_reference: `BOOKING-REVERSAL-${buid}`,
+            entry_type: 'manual_adjustment', // either-sign
+            amount: money(-net),
+            description: 'Booking cancelled — ledger position reversed',
+            related_booking_id: buid,
+          }], 'charge_reference')
+        }
+        // Auto/optional extras carry no related_booking_id — they're keyed
+        // EXTRA-…-<bookingId> / PAY-EXTRA-…-<bookingId>. Net and reverse those
+        // too so a cancelled booking leaves no stray handling-fee debt.
+        const extras = await db.select('ledger',
+          `select=charge_reference,amount,customer_id&charge_reference=like.*EXTRA-*-${buid}`)
+        const mine = extras.filter((e) => {
+          const ref = String(e.charge_reference)
+          return ref.endsWith(`-${buid}`) && (ref.startsWith('EXTRA-') || ref.startsWith('PAY-EXTRA-'))
+        })
+        const exNet = money(mine.reduce((s, e) => s + Number(e.amount), 0))
+        if (mine.length && Math.abs(exNet) >= 0.005) {
+          await db.insertIgnoreDup('ledger', [{
+            customer_id: mine[0].customer_id,
+            charge_reference: `BOOKING-EXTRA-REVERSAL-${buid}`,
+            entry_type: 'manual_adjustment',
+            amount: money(-exNet),
+            description: 'Booking cancelled — extra charges reversed',
+            related_booking_id: buid,
+          }], 'charge_reference')
+        }
+      }
 
       if (passengers !== undefined) {
         // Replace-all, with one wrinkle: helpers never see passport fields,

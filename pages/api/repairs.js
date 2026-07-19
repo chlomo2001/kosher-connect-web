@@ -11,6 +11,7 @@
 import { withStaff, withTab } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 import { postAutoCharges } from '../../lib/customCharges.js'
+import { money } from '../../lib/money.mjs'
 
 const REPAIR_STATUSES = ['Open', 'In Progress', 'Ready', 'Collected', 'Cancelled']
 const EMBED = 'customers(legacy_id,first_name,last_name),repair_services(id,price,service_prices(name))'
@@ -109,6 +110,43 @@ async function handler(req, res) {
       const updated = await db.update('repairs', `id=eq.${encodeURIComponent(String(id))}`, patch)
       if (!updated.length) return res.status(404).json({ success: false, error: 'Repair not found.' })
       const repair = updated[0]
+
+      // Cancelling reverses any charge already posted (a repair charges only on
+      // Collection, so this matters for Collected→Cancelled). Idempotent net
+      // reversal, mirroring rental void: a paid repair nets to zero (nothing
+      // posts); a collected-but-unpaid repair leaves no stranded debt.
+      if (patch.status === 'Cancelled') {
+        const linked = await db.select('ledger', `select=amount,customer_id&related_repair_id=eq.${repair.id}`)
+        const net = money(linked.reduce((s, e) => s + Number(e.amount), 0))
+        if (linked.length && Math.abs(net) >= 0.005) {
+          await db.insertIgnoreDup('ledger', [{
+            customer_id: linked[0].customer_id,
+            charge_reference: `REPAIR-REVERSAL-${repair.id}`,
+            entry_type: 'manual_adjustment', // either-sign
+            amount: money(-net),
+            description: 'Repair cancelled — ledger position reversed',
+            related_repair_id: repair.id,
+          }], 'charge_reference')
+        }
+        // Extras (EXTRA-…-<repairId>) carry no related_repair_id — net separately.
+        const extras = await db.select('ledger',
+          `select=charge_reference,amount,customer_id&charge_reference=like.*EXTRA-*-${repair.id}`)
+        const mine = extras.filter((e) => {
+          const ref = String(e.charge_reference)
+          return ref.endsWith(`-${repair.id}`) && (ref.startsWith('EXTRA-') || ref.startsWith('PAY-EXTRA-'))
+        })
+        const exNet = money(mine.reduce((s, e) => s + Number(e.amount), 0))
+        if (mine.length && Math.abs(exNet) >= 0.005) {
+          await db.insertIgnoreDup('ledger', [{
+            customer_id: mine[0].customer_id,
+            charge_reference: `REPAIR-EXTRA-REVERSAL-${repair.id}`,
+            entry_type: 'manual_adjustment',
+            amount: money(-exNet),
+            description: 'Repair cancelled — extra charges reversed',
+            related_repair_id: repair.id,
+          }], 'charge_reference')
+        }
+      }
 
       // Charge on collection — once, idempotently, never for £0. If paid on
       // collection (cash/card/…), post an equal payment so the wallet nets
