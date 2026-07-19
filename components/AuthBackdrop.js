@@ -407,8 +407,28 @@ export default function AuthBackdrop() {
     const shell = canvas.parentElement
     let raf = 0
     const loop = (t) => { if (!document.hidden) draw(t); raf = requestAnimationFrame(loop) }
-    const onResize = () => { resize(); if (!haveP) idleP(); if (reduce.matches) draw(0) }
+    // Coalesce resize events to one per frame and skip no-op resizes: mobile
+    // browsers fire 'resize' when the URL bar shows/hides during scroll, and each
+    // call reallocates a 2–8MP backing store — so bail when the CSS size is
+    // unchanged, and never reallocate more than once per animation frame.
+    let resizePending = false
+    const onResize = () => {
+      if (resizePending) return
+      resizePending = true
+      requestAnimationFrame(() => {
+        resizePending = false
+        if (canvas.clientWidth === W && canvas.clientHeight === H) return
+        resize(); if (!haveP) idleP(); if (reduce.matches) draw(0)
+      })
+    }
     window.addEventListener('resize', onResize)
+    // Stop scheduling frames entirely while the tab is hidden (browsers only
+    // throttle background rAF, they don't always pause it) and re-arm on return.
+    const onVis = () => {
+      if (document.hidden) { cancelAnimationFrame(raf); raf = 0 }
+      else if (!reduce.matches && !raf) raf = requestAnimationFrame(loop)
+    }
+    document.addEventListener('visibilitychange', onVis)
     if (!reduce.matches && shell) {
       shell.addEventListener('pointermove', onMove)
       shell.addEventListener('pointerleave', onLeave)
@@ -418,6 +438,7 @@ export default function AuthBackdrop() {
     return () => {
       cancelAnimationFrame(raf)
       window.removeEventListener('resize', onResize)
+      document.removeEventListener('visibilitychange', onVis)
       if (shell) { shell.removeEventListener('pointermove', onMove); shell.removeEventListener('pointerleave', onLeave) }
     }
   }, [])
