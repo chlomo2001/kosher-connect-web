@@ -27,21 +27,26 @@ const localDate = (offsetDays = 0) => {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(d)
 }
 
-// Every customer currently in debt (balance < 0), PAGED past PostgREST's
-// 1000-row default cap. The collections sweep must raise a task for each one;
-// an unbounded SELECT would silently stop at the cap and leave the overflow
-// debtors unchased. Only debtors are fetched (the filter bounds it hard), and
-// pages are walked until a short page proves the end.
-async function allDebtorBalances() {
+// Read an entire filtered result set, PAGED past PostgREST's 1000-row default
+// cap — an unbounded SELECT silently stops at the cap. `tail` is everything
+// after the column list (filters + a stable order); pages walk until a short
+// page proves the end. (An exact multiple of PAGE does one harmless empty read.)
+async function selectAllPaged(table, cols, tail) {
   const PAGE = 1000
   const out = []
   for (let offset = 0; ; offset += PAGE) {
-    const page = await db.select('customer_balances',
-      `select=customer_id,balance&balance=lt.0&order=customer_id.asc&limit=${PAGE}&offset=${offset}`)
+    const page = await db.select(table, `select=${cols}&${tail}&limit=${PAGE}&offset=${offset}`)
+    if (!Array.isArray(page) || !page.length) break
     out.push(...page)
-    if (!Array.isArray(page) || page.length < PAGE) break
+    if (page.length < PAGE) break
   }
   return out
+}
+
+// Every customer currently in debt (balance < 0). The collections sweep must
+// raise a task for each one, so this can't truncate at the cap.
+async function allDebtorBalances() {
+  return selectAllPaged('customer_balances', 'customer_id,balance', 'balance=lt.0&order=customer_id.asc')
 }
 
 async function upsertOpenTask({ reference, title, customerUuid = null, priority = 'high', notes = '', dueDate = null }) {
@@ -257,9 +262,10 @@ async function handler(req, res) {
     }
     // Close BALANCE tasks for anyone who has since cleared their debt. Drive this
     // off the OPEN tasks (bounded — only current/recent debtors) instead of
-    // scanning every customer with a non-negative balance.
-    const openBalanceTasks = await db.select('tasks',
-      'select=reference,customer_id&done=is.false&reference=like.BALANCE-*')
+    // scanning every customer with a non-negative balance. Paged so a >1000
+    // debtor set doesn't leave paid-up customers' tasks stuck open.
+    const openBalanceTasks = await selectAllPaged('tasks', 'reference,customer_id',
+      'done=is.false&reference=like.BALANCE-*&order=reference.asc')
     for (const t of openBalanceTasks) {
       if (!debtorIds.has(t.customer_id)) balClosed += await closeOpenTask(t.reference)
     }

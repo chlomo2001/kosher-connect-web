@@ -352,7 +352,7 @@ async function handler(req, res) {
       if (patch.status === 'Cancelled') {
         const buid = updated[0].id
         // Base charge + its payment both carry related_booking_id.
-        const linked = await db.select('ledger', `select=amount,customer_id&related_booking_id=eq.${buid}`)
+        const linked = await db.select('ledger', `select=charge_reference,amount,customer_id&related_booking_id=eq.${buid}`)
         const net = money(linked.reduce((s, e) => s + Number(e.amount), 0))
         if (linked.length && Math.abs(net) >= 0.005) {
           await db.insertIgnoreDup('ledger', [{
@@ -364,14 +364,22 @@ async function handler(req, res) {
             related_booking_id: buid,
           }], 'charge_reference')
         }
-        // Auto/optional extras carry no related_booking_id — they're keyed
-        // EXTRA-…-<bookingId> / PAY-EXTRA-…-<bookingId>. Net and reverse those
-        // too so a cancelled booking leaves no stray handling-fee debt.
+        // Auto/optional extras carry NO related_booking_id — they're keyed
+        // EXTRA-…-<refBase> / PAY-EXTRA-…-<refBase>, where refBase is the client
+        // token when one was sent (the UI always sends it), NOT the booking id.
+        // Recover that refBase from the base BOOKING-/PAY-BOOKING- charge (which
+        // does carry related_booking_id) so the extra keys actually match — a
+        // stale `-${bookingId}` match reversed nothing and left the fee owing.
+        let refBase = buid
+        for (const r of linked) {
+          const m = String(r.charge_reference || '').match(/^(?:PAY-)?BOOKING-(.+)$/)
+          if (m) { refBase = m[1]; break }
+        }
         const extras = await db.select('ledger',
-          `select=charge_reference,amount,customer_id&charge_reference=like.*EXTRA-*-${buid}`)
+          `select=charge_reference,amount,customer_id&charge_reference=like.*EXTRA-*-${encodeURIComponent(refBase)}`)
         const mine = extras.filter((e) => {
           const ref = String(e.charge_reference)
-          return ref.endsWith(`-${buid}`) && (ref.startsWith('EXTRA-') || ref.startsWith('PAY-EXTRA-'))
+          return ref.endsWith(`-${refBase}`) && (ref.startsWith('EXTRA-') || ref.startsWith('PAY-EXTRA-'))
         })
         const exNet = money(mine.reduce((s, e) => s + Number(e.amount), 0))
         if (mine.length && Math.abs(exNet) >= 0.005) {

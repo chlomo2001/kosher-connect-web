@@ -51,11 +51,16 @@ language sql
 stable
 set search_path = public
 as $$
+  -- Mirrors the old client-side split exactly: charges are money-out rows only
+  -- (amount < 0); received/refunded are money-in rows only (amount > 0). The
+  -- ledger sign constraint already forces payment/top_up/refund positive, so the
+  -- amount>0 guard is belt-and-suspenders — it keeps the aggregate honest even if
+  -- a future entry_type ever shared a bucket with a different sign.
   select
     l.entry_type::text,
     coalesce(sum(-l.amount) filter (where l.amount < 0), 0)::numeric,
-    coalesce(sum(l.amount) filter (where l.entry_type in ('payment', 'top_up')), 0)::numeric,
-    coalesce(sum(l.amount) filter (where l.entry_type = 'refund'), 0)::numeric
+    coalesce(sum(l.amount) filter (where l.entry_type in ('payment', 'top_up') and l.amount > 0), 0)::numeric,
+    coalesce(sum(l.amount) filter (where l.entry_type = 'refund' and l.amount > 0), 0)::numeric
   from ledger l
   where l.created_at >= p_from
   group by l.entry_type;
