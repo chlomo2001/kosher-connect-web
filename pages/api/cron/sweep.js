@@ -446,7 +446,15 @@ async function handler(req, res) {
     counts.ruleTasks = await runCustomRules({ today, names, custRows })
     })
 
-    if (Object.keys(errors).length) counts.errors = errors
+    // If any section failed, return non-2xx so Vercel's cron dashboard/monitoring
+    // marks the run failed. Otherwise a total DB outage (every section throws,
+    // including vn-billing — the only thing that posts recurring VN revenue)
+    // would be recorded as a healthy 200 and silently slip a day, indefinitely.
+    if (Object.keys(errors).length) {
+      counts.errors = errors
+      console.error('[cron/sweep] completed with section errors', JSON.stringify(errors))
+      return res.status(500).json({ success: false, ranAt: new Date().toISOString(), by: isCron ? 'cron' : staff.email, counts })
+    }
     console.log('[cron/sweep]', JSON.stringify(counts))
     return res.json({ success: true, ranAt: new Date().toISOString(), by: isCron ? 'cron' : staff.email, counts })
   } catch (e) {

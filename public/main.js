@@ -3851,7 +3851,11 @@ async function saveWalletEntry(customerId) {
         okLabel: 'Apply adjustment',
       }))) return;
     }
-    res = await window.api.addLedgerEntry({ customerId, kind, amount, method, note, clientRef: kcRef() });
+    // Only payment/top_up move through a till tender; a refund or adjustment must
+    // NOT carry the (hidden, still-'cash') method, or it inflates the Z-report's
+    // expected drawer cash. Mirrors the receipt-email guard below.
+    const tenderMethod = (kind === 'payment' || kind === 'top_up') ? method : null;
+    res = await window.api.addLedgerEntry({ customerId, kind, amount, method: tenderMethod, note, clientRef: kcRef() });
   } finally {
     kcEndWrite(guardKey);
   }

@@ -151,10 +151,13 @@ async function handler(req, res) {
       const b = req.body || {}
       const kind = KINDS[b.kind]
       if (!kind) return res.status(400).json({ success: false, error: `kind must be one of: ${Object.keys(KINDS).join(', ')}.` })
-      // Authorization: manual adjustments (arbitrary sign — the debt-wipe /
-      // self-credit vector) are ADMIN-ONLY; payments/top-ups/refunds need the
-      // wallet or customers tab. Previously the POST had no gate at all.
-      if (b.kind === 'adjustment') {
+      // Authorization: any positive credit NOT backed by money coming in is the
+      // debt-wipe / self-credit vector — a helper could mint wallet credit and
+      // convert it to goods at the till. So adjustment (arbitrary sign), refund
+      // and top_up (unbacked credits) are ADMIN-ONLY. Only 'payment' — which
+      // records real money received and requires a method — stays open to the
+      // wallet/customers tab. Previously only 'adjustment' was gated.
+      if (['adjustment', 'refund', 'top_up'].includes(b.kind)) {
         if (requireOwner(req, res)) return
       } else if (!(await canTouchWallet(req.staff))) {
         return res.status(403).json({ success: false, error: 'Not permitted to record wallet money.' })
@@ -166,7 +169,11 @@ async function handler(req, res) {
       if (b.kind !== 'adjustment' && amount < 0) {
         return res.status(400).json({ success: false, error: 'Amount must be positive — use an adjustment for corrections.' })
       }
-      const method = b.method && METHODS.includes(b.method) ? b.method : null
+      // A method (till tender) only makes sense for money that moves through the
+      // drawer — payment/top_up. Forcing it null for refund/adjustment stops a
+      // stale 'cash' method from inflating the Z-report's expected cash.
+      const method = (['payment', 'top_up'].includes(b.kind) && b.method && METHODS.includes(b.method))
+        ? b.method : null
       if (b.kind === 'payment' && !method) {
         return res.status(400).json({ success: false, error: `Payment method must be one of: ${METHODS.join(', ')}.` })
       }

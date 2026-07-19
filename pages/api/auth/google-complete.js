@@ -29,6 +29,22 @@ export default async function handler(req, res) {
     if (!user.ok || !user.json?.id) {
       return res.status(401).json({ success: false, error: 'Could not verify the Google sign-in.' })
     }
+    // The token is only a valid SECOND factor if it actually came from Google
+    // OAuth. Supabase issues the identical token shape for email magic-links, so
+    // without this check a portal magic-link token for a staff email (which
+    // anyone with that mailbox can request) would mint a full staff session and
+    // bypass the password factor entirely. Require a google identity/provider.
+    const provider = user.json.app_metadata?.provider
+    const providers = user.json.app_metadata?.providers || []
+    const hasGoogleIdentity = Array.isArray(user.json.identities)
+      && user.json.identities.some((i) => i?.provider === 'google')
+    const cameFromGoogle = provider === 'google' || providers.includes('google') || hasGoogleIdentity
+    if (!cameFromGoogle) {
+      return res.status(403).json({
+        success: false,
+        error: 'This sign-in did not come from Google. Use the Google button, or sign in with your password.',
+      })
+    }
     const email = (user.json.email || '').toLowerCase()
     // Must already be a staff member (by id or verified email). We never
     // auto-create staff from a Google login — the owner adds people.

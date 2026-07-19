@@ -56,8 +56,12 @@ function billingPatch(b) {
   }
   if (b.billingEnabled !== undefined) patch.billing_enabled = !!b.billingEnabled
   if (b.nextBillingDate !== undefined) {
-    patch.next_billing_date = /^\d{4}-\d{2}-\d{2}$/.test(String(b.nextBillingDate || ''))
-      ? b.nextBillingDate : null
+    const valid = /^\d{4}-\d{2}-\d{2}$/.test(String(b.nextBillingDate || ''))
+    patch.next_billing_date = valid ? b.nextBillingDate : null
+    // Track the operator's chosen billing DAY as the anchor. Without this the
+    // sweep keeps the stale anchor and silently reverts the day-of-month next
+    // cycle (e.g. anchor 31 pulls a date moved to the 15th back to month-end).
+    patch.billing_anchor_day = valid ? Number(String(b.nextBillingDate).slice(8, 10)) : null
   }
   return patch
 }

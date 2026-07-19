@@ -48,7 +48,11 @@ export default async function handler(req, res) {
       // Card-on-file: a portal payment with setup_future_usage leaves a reusable
       // payment method — remember it so the owner can charge it off-session later.
       if (appCustomerId && pi.payment_method) {
-        await db.update('customers', `id=eq.${appCustomerId}`, { stripe_pm_id: pi.payment_method }).catch(() => {})
+        // Let a failure throw: it skips the stripe_events insert below, so Stripe
+        // retries the whole event and the ledger insertIgnoreDup makes the payment
+        // re-post a no-op while this card-save runs again. Swallowing it would lose
+        // the saved card forever with the event marked processed.
+        await db.update('customers', `id=eq.${appCustomerId}`, { stripe_pm_id: pi.payment_method })
       }
     }
   }
