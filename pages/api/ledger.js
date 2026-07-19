@@ -81,31 +81,49 @@ async function handler(req, res) {
         if (req.query.report) {
           const from = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.from || ''))
             ? req.query.from : londonDate()
-          // Anchor the "since" boundary to London midnight (not UTC), so a report
-          // "since today" doesn't include last night's post-11pm UTC entries.
-          const rows = await db.select('ledger', `select=entry_type,amount&created_at=gte.${encodeURIComponent(londonDayStartUtc(from))}`)
+          // Aggregate in the DB (grouped by entry_type), anchored to London
+          // midnight. Summing raw rows client-side truncated at PostgREST's
+          // 1000-row cap — the report silently under-counted once the ledger grew
+          // past it. ledger_revenue_since returns one row per type, never capped.
+          const rows = await db.rpc('ledger_revenue_since', { p_from: londonDayStartUtc(from) })
           const round = (v) => Math.round(v * 100) / 100
           const byType = {}
           let charged = 0, received = 0, refunded = 0
-          for (const r of rows) {
-            const amt = Number(r.amount)
-            if (amt < 0) { byType[r.entry_type] = (byType[r.entry_type] || 0) - amt; charged -= amt }
-            else if (r.entry_type === 'payment' || r.entry_type === 'top_up') received += amt
-            else if (r.entry_type === 'refund') refunded += amt
+          for (const r of (rows || [])) {
+            const c = Number(r.charged) || 0
+            if (c > 0) byType[r.entry_type] = round((byType[r.entry_type] || 0) + c)
+            charged += c
+            received += Number(r.received) || 0
+            refunded += Number(r.refunded) || 0
           }
-          for (const k of Object.keys(byType)) byType[k] = round(byType[k])
           return res.json({ success: true, from, byType, charged: round(charged), received: round(received), refunded: round(refunded) })
         }
         const since = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.since || ''))
           ? req.query.since : londonDate()
         // recent=N lets the Wallet tab pull a longer feed than the dashboard.
         const recentLimit = Math.min(Math.max(parseInt(req.query.recent, 10) || 12, 1), 200)
-        const [recent, todays, balances, custRows] = await Promise.all([
-          db.select('ledger', `select=*,customers(first_name,last_name)&order=created_at.desc&limit=${recentLimit}`),
-          db.select('ledger', `select=amount&created_at=gte.${encodeURIComponent(londonDayStartUtc(since))}`),
-          db.select('customer_balances', ''),
-          db.select('customers', 'select=id,legacy_id,first_name,last_name'),
+        // How many debtors/creditors to LIST (the totals below are exact via the
+        // aggregate regardless). 500 covers every realistic debtor set; a bigger
+        // one caps the visible list, never the money figures.
+        const LIST_CAP = 500
+        const sinceUtc = londonDayStartUtc(since)
+        const [recent, flowRows, totalsRows, arrearsRows, creditRows] = await Promise.all([
+          // Names/app-ids ride along on each row's embed, so no whole-table
+          // customers read is needed (752 rows and climbing toward the 1000 cap).
+          db.select('ledger', `select=*,customers(legacy_id,first_name,last_name)&order=created_at.desc&limit=${recentLimit}`),
+          db.rpc('ledger_day_flow', { p_from: sinceUtc }),
+          db.rpc('wallet_totals', {}),
+          db.select('customer_balances', `select=customer_id,balance&balance=lt.0&order=balance.asc&limit=${LIST_CAP}`),
+          db.select('customer_balances', `select=customer_id,balance&balance=gt.0&order=balance.desc&limit=${LIST_CAP}`),
         ])
+        const flow = (flowRows && flowRows[0]) || { money_in: 0, money_out: 0 }
+        const totals = (totalsRows && totalsRows[0]) || { owed: 0, credit: 0 }
+        // Names for just the debtors/creditors being listed — a bounded id-set
+        // read, not the whole customers table.
+        const idSet = [...new Set([...arrearsRows, ...creditRows].map(b => b.customer_id))]
+        const custRows = idSet.length
+          ? await db.select('customers', `select=id,legacy_id,first_name,last_name&id=in.(${idSet.map(encodeURIComponent).join(',')})`)
+          : []
         const names = new Map(custRows.map(c => [c.id, `${c.first_name || ''} ${c.last_name || ''}`.trim()]))
         const appIds = new Map(custRows.map(c => [c.id, c.legacy_id]))
         const balanceRow = b => ({
@@ -113,23 +131,22 @@ async function handler(req, res) {
           customerName: names.get(b.customer_id) || '?',
           balance: Number(b.balance),
         })
-        const arrears = balances.filter(b => Number(b.balance) < 0)
-          .map(balanceRow).sort((a, b) => a.balance - b.balance)
-        const credits = balances.filter(b => Number(b.balance) > 0)
-          .map(balanceRow).sort((a, b) => b.balance - a.balance)
+        const arrears = arrearsRows.map(balanceRow) // already balance.asc (worst first)
+        const credits = creditRows.map(balanceRow)  // already balance.desc (biggest first)
         return res.json({
           success: true,
           recent: recent.map(r => ({
             ...toAppEntry(r),
-            customerId: appIds.get(r.customer_id) || null,
-            customerName: names.get(r.customer_id) || '',
+            customerId: r.customers?.legacy_id ?? null,
+            customerName: r.customers ? `${r.customers.first_name || ''} ${r.customers.last_name || ''}`.trim() : '',
           })),
           arrears,
           credits,
-          creditsTotal: credits.reduce((s, a) => s + a.balance, 0),
-          arrearsTotal: arrears.reduce((s, a) => s + a.balance, 0),
-          todayIn: todays.filter(r => Number(r.amount) > 0).reduce((s, r) => s + Number(r.amount), 0),
-          todayOut: todays.filter(r => Number(r.amount) < 0).reduce((s, r) => s + Number(r.amount), 0),
+          // Totals from the DB aggregate — exact no matter how many rows exist.
+          creditsTotal: Number(totals.credit) || 0,
+          arrearsTotal: Number(totals.owed) || 0,
+          todayIn: Number(flow.money_in) || 0,
+          todayOut: Number(flow.money_out) || 0,
         })
       }
       // A customer's statement is money data — gate it to wallet/customers.

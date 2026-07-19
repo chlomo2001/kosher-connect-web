@@ -27,6 +27,23 @@ const localDate = (offsetDays = 0) => {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(d)
 }
 
+// Every customer currently in debt (balance < 0), PAGED past PostgREST's
+// 1000-row default cap. The collections sweep must raise a task for each one;
+// an unbounded SELECT would silently stop at the cap and leave the overflow
+// debtors unchased. Only debtors are fetched (the filter bounds it hard), and
+// pages are walked until a short page proves the end.
+async function allDebtorBalances() {
+  const PAGE = 1000
+  const out = []
+  for (let offset = 0; ; offset += PAGE) {
+    const page = await db.select('customer_balances',
+      `select=customer_id,balance&balance=lt.0&order=customer_id.asc&limit=${PAGE}&offset=${offset}`)
+    out.push(...page)
+    if (!Array.isArray(page) || page.length < PAGE) break
+  }
+  return out
+}
+
 async function upsertOpenTask({ reference, title, customerUuid = null, priority = 'high', notes = '', dueDate = null }) {
   const open = await db.select('tasks', `select=id&reference=eq.${enc(reference)}&done=is.false`)
   if (open.length) {
@@ -63,7 +80,7 @@ function fillTitle(tpl, fallback, name, n) {
 }
 
 // Evaluate every enabled automation rule. Returns the number of tasks raised.
-async function runCustomRules({ today, names }) {
+async function runCustomRules({ today, names, debtors = [] }) {
   const rules = await db.select('automation_rules', 'enabled=is.true')
   let raised = 0
   const keep = new Set() // references that should stay open after this run
@@ -80,8 +97,10 @@ async function runCustomRules({ today, names }) {
     }
 
     if (rule.trigger === 'balance_over') {
-      const balances = await db.select('customer_balances', '')
-      for (const b of balances) {
+      // Reuse the paged debtor list built in §2 — only debtors can trip an
+      // "owes £N+" rule, and re-reading customer_balances unbounded here had the
+      // same 1000-row truncation risk.
+      for (const b of debtors) {
         const owed = -Number(b.balance) // positive = owes
         if (owed >= n && n > 0) {
           await raise(b.customer_id,
@@ -159,6 +178,7 @@ async function handler(req, res) {
   // leaves safe defaults instead of crashing later sections.
   let names = new Map()
   let custRows = []
+  let debtors = []
 
   // Run one sweep section in isolation: a thrown error is recorded and the
   // remaining sections still run. The sweep is idempotent, so a section that
@@ -214,27 +234,34 @@ async function handler(req, res) {
 
     await section('collections', async () => {
     // ── 2. Collections (BALANCE-<customer>) ──
-    const [balances, freshCustRows] = await Promise.all([
-      db.select('customer_balances', ''),
-      db.select('customers', 'select=id,first_name,last_name'),
-    ])
-    custRows = freshCustRows
+    // Only debtors matter here (and for the §6 balance rules). Fetch them paged
+    // — never the whole balances/customers tables, which truncate at 1000 rows.
+    debtors = await allDebtorBalances()
+    const debtorIds = new Set(debtors.map(b => b.customer_id))
+    const ids = [...debtorIds]
+    // Names for just the debtors — a bounded id-set read, not the full table.
+    custRows = ids.length
+      ? await db.select('customers', `select=id,first_name,last_name&id=in.(${ids.map(enc).join(',')})`)
+      : []
     names = new Map(custRows.map(c => [c.id, `${c.first_name || ''} ${c.last_name || ''}`.trim()]))
     let balCreated = 0, balClosed = 0
-    for (const b of balances) {
+    for (const b of debtors) {
       const bal = Number(b.balance)
-      const ref = `BALANCE-${b.customer_id}`
-      if (bal < 0) {
-        await upsertOpenTask({
-          reference: ref,
-          title: `Outstanding balance — ${names.get(b.customer_id) || '?'} — £${Math.abs(bal).toFixed(2)}`,
-          customerUuid: b.customer_id,
-          notes: `Negative wallet balance £${Math.abs(bal).toFixed(2)}.`,
-        })
-        balCreated++
-      } else {
-        balClosed += await closeOpenTask(ref)
-      }
+      await upsertOpenTask({
+        reference: `BALANCE-${b.customer_id}`,
+        title: `Outstanding balance — ${names.get(b.customer_id) || '?'} — £${Math.abs(bal).toFixed(2)}`,
+        customerUuid: b.customer_id,
+        notes: `Negative wallet balance £${Math.abs(bal).toFixed(2)}.`,
+      })
+      balCreated++
+    }
+    // Close BALANCE tasks for anyone who has since cleared their debt. Drive this
+    // off the OPEN tasks (bounded — only current/recent debtors) instead of
+    // scanning every customer with a non-negative balance.
+    const openBalanceTasks = await db.select('tasks',
+      'select=reference,customer_id&done=is.false&reference=like.BALANCE-*')
+    for (const t of openBalanceTasks) {
+      if (!debtorIds.has(t.customer_id)) balClosed += await closeOpenTask(t.reference)
     }
     counts.balanceTasks = balCreated
     counts.balanceClosed = balClosed
@@ -443,7 +470,7 @@ async function handler(req, res) {
     // Each enabled rule raises RULE-<ruleId>-<entityId> tasks for matching
     // records; keys not re-raised this run are closed. Built on the same
     // idempotent upsert as the fixed sweeps above.
-    counts.ruleTasks = await runCustomRules({ today, names, custRows })
+    counts.ruleTasks = await runCustomRules({ today, names, debtors })
     })
 
     // If any section failed, return non-2xx so Vercel's cron dashboard/monitoring
