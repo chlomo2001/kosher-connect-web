@@ -80,8 +80,11 @@ export default function Login({ supabaseUrl, googleEnabled }) {
             <img src="/logo-full.png" alt="KosherConnect" style={{ height: 72, marginBottom: 10 }} />
             <div className="login-title">Welcome back</div>
             <div className="login-sub">{ticket ? 'Check your email for your code' : 'Sign in to KosherConnect'}</div>
-            <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8, letterSpacing: '0.02em' }}>
-              Kosher phones worldwide&ensp;·&ensp;Travel &amp; SIMs&ensp;·&ensp;Kol Torah audio
+            <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8, letterSpacing: '0.02em', lineHeight: 1.5 }}>
+              {/* Deliberate two-line lockup: the full list never fits the card
+                  on one line, so break it where it balances — never mid-phrase
+                  (no orphaned "audio"), never a dangling separator. */}
+              Kosher phones worldwide<br />Travel &amp; SIMs&ensp;·&ensp;Kol Torah audio
             </div>
           </div>
           {ticket ? (
