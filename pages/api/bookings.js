@@ -152,114 +152,152 @@ async function handler(req, res) {
       if (!custRows.length) return res.status(400).json({ success: false, error: `Customer ${b.customerId} not found.` })
       const customerUuid = custRows[0].id
 
-      // Idempotency: a repeat submit (retry / double-click) must not create a second
-      // booking or a second charge. The BOOKING-<clientRef> ledger row is the dedup
-      // key; if it already exists, return the booking it points at — post nothing new.
-      if (clientRef) {
+      // Idempotency: a repeat submit (retry / double-click / concurrent) must not
+      // create a second booking or a second charge. Two layers:
+      //   1. Fast path — the BOOKING-<clientRef> charge already exists → this is a
+      //      completed replay: return the booking it points at, post nothing new.
+      //   2. claimKey — atomically claim the token BEFORE inserting the booking row.
+      //      The ledger dedupes the CHARGE, but not the booking row itself: without
+      //      the claim, two parallel submits both pass the read-check and each
+      //      insert a booking (one left with no charge). The claim lets only one win.
+      const existingBooking = async () => {
         const dup = await db.select('ledger',
           `charge_reference=eq.${encodeURIComponent('BOOKING-' + clientRef)}&select=related_booking_id&limit=1`)
-        if (dup.length && dup[0].related_booking_id) {
-          const [existing] = await db.select('bookings',
-            `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&id=eq.${dup[0].related_booking_id}`)
-          if (existing) {
-            return res.json({
-              success: true, duplicate: true, booking: toApp(existing, req.staff),
-              balance: await walletBalance(customerUuid),
-            })
-          }
+        if (!dup.length || !dup[0].related_booking_id) return null
+        const [existing] = await db.select('bookings',
+          `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&id=eq.${dup[0].related_booking_id}`)
+        return existing || null
+      }
+      const bookingDuplicate = async (existing) => res.json({
+        success: true, duplicate: true, booking: toApp(existing, req.staff),
+        balance: await walletBalance(customerUuid),
+      })
+      let keyClaimed = false
+      if (clientRef) {
+        const already = await existingBooking()
+        if (already) return bookingDuplicate(already)
+        keyClaimed = await db.claimKey(`BOOKING-${clientRef}`, { scope: 'booking', customerId: customerUuid })
+        if (!keyClaimed) {
+          // Another submit holds the token: if it already committed return that
+          // booking, otherwise it's still in flight — 409 so the client retries
+          // instead of double-posting.
+          const racing = await existingBooking()
+          if (racing) return bookingDuplicate(racing)
+          return res.status(409).json({ success: false, error: 'This booking is already being saved — give it a second and try again.' })
         }
       }
 
-      const inserted = await db.insert(
-        'bookings',
-        [{
-          customer_id: customerUuid,
-          passenger: b.passenger || null,
-          route: String(b.route).trim(),
-          airline: b.airline || null,
-          booking_reference: b.bookingReference || null,
-          travel_date: b.travelDate,
-          departure_time: b.departureTime || null,
-          arrival_time: b.arrivalTime || null,
-          price,
-          booking_fee: fee,
-          status: BOOKING_STATUSES.includes(b.status) ? b.status : 'Booked',
-          passport_on_file: !!b.passportOnFile,
-          passport_expiry: b.passportExpiry || null,
-          checkin_done: !!b.checkinDone,
-          checkin_by: b.checkinBy === 'us' || b.checkinBy === 'customer' ? b.checkinBy : null,
-          checkin_date: b.checkinDate || null,
-          notes: b.notes || null,
-        }]
-      )
-      const booking = inserted[0]
-
-      const paxRows = passengerRows(booking.id, b.passengers)
-      if (paxRows.length) await db.insert('booking_passengers', paxRows)
-
-      // Wallet charge: one signed, idempotent ledger row. A £0 booking posts
-      // nothing (the ledger forbids zero amounts by design).
-      const total = price + fee
-      // How the customer paid: 'account' leaves a wallet balance owing;
-      // any real method ('cash'/'card'/'card_on_file'/'bank_transfer')
-      // means paid on the spot, so we post an equal-and-opposite payment
-      // and the wallet nets to zero — no debt for a ticket already paid.
-      const PAY_METHODS = { cash: 'cash', card: 'card', card_on_file: 'card', bank_transfer: 'bank_transfer' }
-      const payMethod = PAY_METHODS[b.payment] || null
-      // Reference base = the client idempotency token when present (so retries dedupe
-      // even across a race that created two booking rows), else the booking id.
-      const refBase = clientRef || booking.id
-      let chargePosted = false
-      if (total > 0) {
-        const memo =
-          `Flight ${booking.route}${booking.airline ? ` (${booking.airline})` : ''}` +
-          (booking.booking_reference ? ` — ref ${booking.booking_reference}` : '')
-        await db.insertIgnoreDup(
-          'ledger',
+      let booking
+      try {
+        const inserted = await db.insert(
+          'bookings',
           [{
             customer_id: customerUuid,
-            charge_reference: `BOOKING-${refBase}`,
-            entry_type: 'booking',
-            amount: -total,
-            description: memo,
-            related_booking_id: booking.id,
-          }],
-          'charge_reference'
+            passenger: b.passenger || null,
+            route: String(b.route).trim(),
+            airline: b.airline || null,
+            booking_reference: b.bookingReference || null,
+            travel_date: b.travelDate,
+            departure_time: b.departureTime || null,
+            arrival_time: b.arrivalTime || null,
+            price,
+            booking_fee: fee,
+            status: BOOKING_STATUSES.includes(b.status) ? b.status : 'Booked',
+            passport_on_file: !!b.passportOnFile,
+            passport_expiry: b.passportExpiry || null,
+            checkin_done: !!b.checkinDone,
+            checkin_by: b.checkinBy === 'us' || b.checkinBy === 'customer' ? b.checkinBy : null,
+            checkin_date: b.checkinDate || null,
+            notes: b.notes || null,
+          }]
         )
-        chargePosted = true
-        if (payMethod) {
+        booking = inserted[0]
+
+        const paxRows = passengerRows(booking.id, b.passengers)
+        if (paxRows.length) await db.insert('booking_passengers', paxRows)
+
+        // Wallet charge: one signed, idempotent ledger row. A £0 booking posts
+        // nothing (the ledger forbids zero amounts by design).
+        const total = price + fee
+        // How the customer paid: 'account' leaves a wallet balance owing;
+        // any real method ('cash'/'card'/'card_on_file'/'bank_transfer')
+        // means paid on the spot, so we post an equal-and-opposite payment
+        // and the wallet nets to zero — no debt for a ticket already paid.
+        const PAY_METHODS = { cash: 'cash', card: 'card', card_on_file: 'card', bank_transfer: 'bank_transfer' }
+        const payMethod = PAY_METHODS[b.payment] || null
+        // Reference base = the client idempotency token when present (so retries dedupe
+        // even across a race that created two booking rows), else the booking id.
+        const refBase = clientRef || booking.id
+        let chargePosted = false
+        if (total > 0) {
+          const memo =
+            `Flight ${booking.route}${booking.airline ? ` (${booking.airline})` : ''}` +
+            (booking.booking_reference ? ` — ref ${booking.booking_reference}` : '')
           await db.insertIgnoreDup(
             'ledger',
             [{
               customer_id: customerUuid,
-              charge_reference: `PAY-BOOKING-${refBase}`,
-              entry_type: 'payment',
-              amount: total,
-              method: payMethod,
-              description: `Paid (${b.payment === 'card_on_file' ? 'card on file' : payMethod}) — ${memo}`,
+              charge_reference: `BOOKING-${refBase}`,
+              entry_type: 'booking',
+              amount: -total,
+              description: memo,
               related_booking_id: booking.id,
             }],
             'charge_reference'
           )
+          chargePosted = true
+          if (payMethod) {
+            await db.insertIgnoreDup(
+              'ledger',
+              [{
+                customer_id: customerUuid,
+                charge_reference: `PAY-BOOKING-${refBase}`,
+                entry_type: 'payment',
+                amount: total,
+                method: payMethod,
+                description: `Paid (${b.payment === 'card_on_file' ? 'card on file' : payMethod}) — ${memo}`,
+                related_booking_id: booking.id,
+              }],
+              'charge_reference'
+            )
+          }
         }
+
+        // Owner-defined auto extras for bookings (e.g. a service/handling fee).
+        const extras = await postAutoCharges({
+          customerUuid, appliesTo: 'booking', refBase,
+          paidNow: !!payMethod, method: payMethod,
+        })
+        if (extras.total > 0) chargePosted = true
+
+        // A £0 booking that posted no money leaves nothing on the ledger to dedupe
+        // a later re-save against — so free the token, or a legitimate resubmit
+        // would be refused forever. Money-bearing bookings keep the token as their
+        // permanent idempotency marker (a replay hits the fast path above).
+        if (keyClaimed && !chargePosted) {
+          try { await db.releaseKey(`BOOKING-${clientRef}`) }
+          catch (e2) { console.error('[api/bookings] token not released', clientRef, e2) }
+        }
+
+        const balance = await walletBalance(customerUuid)
+        const [full] = await db.select(
+          'bookings',
+          `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&id=eq.${booking.id}`
+        )
+        return res.json({
+          success: true, booking: toApp(full, req.staff), chargePosted,
+          charged: total + extras.total, extras: extras.lines, balance, paidNow: !!payMethod,
+        })
+      } catch (e) {
+        // Aborted after claiming but before the charge is durable: release the
+        // token so a genuine retry isn't locked out. The ledger's unique key still
+        // makes any charge that DID land a no-op on that retry.
+        if (keyClaimed) {
+          try { await db.releaseKey(`BOOKING-${clientRef}`) }
+          catch (e2) { console.error('[api/bookings] token not released after error', clientRef, e2) }
+        }
+        throw e
       }
-
-      // Owner-defined auto extras for bookings (e.g. a service/handling fee).
-      const extras = await postAutoCharges({
-        customerUuid, appliesTo: 'booking', refBase,
-        paidNow: !!payMethod, method: payMethod,
-      })
-      if (extras.total > 0) chargePosted = true
-
-      const balance = await walletBalance(customerUuid)
-      const [full] = await db.select(
-        'bookings',
-        `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&id=eq.${booking.id}`
-      )
-      return res.json({
-        success: true, booking: toApp(full, req.staff), chargePosted,
-        charged: total + extras.total, extras: extras.lines, balance, paidNow: !!payMethod,
-      })
     }
 
     if (req.method === 'PUT') {

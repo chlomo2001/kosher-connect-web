@@ -70,63 +70,88 @@ async function handler(req, res) {
       const total = Number.isFinite(overridden) && overridden >= 0 ? overridden : tierTotal
       if (total <= 0) return res.status(400).json({ success: false, error: 'Total must be greater than £0.' })
 
-      // Idempotency: a repeat submit (retry / double-click) must not create a second
-      // order or a second charge. The SVC-<clientRef> ledger row is the dedup key; if
-      // it already exists this is a replay — return the current balance, post nothing.
+      // Idempotency: a repeat submit (retry / double-click / concurrent) must not
+      // create a second order or a second charge. Two layers:
+      //   1. Fast path — the SVC-<clientRef> charge already exists → completed
+      //      replay: return the current balance, post nothing.
+      //   2. claimKey — atomically claim the token BEFORE inserting the order row.
+      //      The ledger dedupes the CHARGE, but not the order row; without the claim
+      //      two parallel submits both pass the read-check and each insert an order
+      //      (one left with no charge). The claim lets only one win.
+      const svcDuplicate = async () => {
+        const balRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
+        return res.json({ success: true, duplicate: true, balance: balRows.length ? Number(balRows[0].balance) : 0 })
+      }
+      let keyClaimed = false
       if (clientRef) {
         const dup = await db.select('ledger', `charge_reference=eq.${encodeURIComponent('SVC-' + clientRef)}&select=id&limit=1`)
-        if (dup.length) {
-          const balRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
-          return res.json({ success: true, duplicate: true, balance: balRows.length ? Number(balRows[0].balance) : 0 })
+        if (dup.length) return svcDuplicate()
+        keyClaimed = await db.claimKey(`SVC-${clientRef}`, { scope: 'service_order', customerId: customerUuid })
+        if (!keyClaimed) {
+          // Another submit holds the token: committed → duplicate; in flight → 409.
+          const dup2 = await db.select('ledger', `charge_reference=eq.${encodeURIComponent('SVC-' + clientRef)}&select=id&limit=1`)
+          if (dup2.length) return svcDuplicate()
+          return res.status(409).json({ success: false, error: 'That charge is still being saved — give it a second and try again.' })
         }
       }
 
-      const [order] = await db.insert('service_orders', [{
-        customer_id: customerUuid,
-        service_price_id: svc.id,
-        qty,
-        unit_price: Number(svc.price),
-        total,
-        notes: b.notes || null,
-      }])
+      try {
+        const [order] = await db.insert('service_orders', [{
+          customer_id: customerUuid,
+          service_price_id: svc.id,
+          qty,
+          unit_price: Number(svc.price),
+          total,
+          notes: b.notes || null,
+        }])
 
-      // Reference base = the client idempotency token when present (so retries dedupe
-      // even across two order rows a race could create), else the order id.
-      const refBase = clientRef || order.id
-      // No related_* FK column for service orders — the SVC-<ref> reference
-      // carries the link.
-      await db.insertIgnoreDup('ledger', [{
-        customer_id: customerUuid,
-        charge_reference: `SVC-${refBase}`,
-        entry_type: 'online_service',
-        amount: -total,
-        description: `${svc.name}${qty > 1 ? ` × ${qty}` : ''}`,
-      }], 'charge_reference')
-
-      // Optional immediate payment (most services are paid on the spot).
-      const method = METHODS.includes(b.method) ? b.method : 'cash'
-      if (b.paidNow) {
+        // Reference base = the client idempotency token when present (so retries dedupe
+        // even across two order rows a race could create), else the order id.
+        const refBase = clientRef || order.id
+        // No related_* FK column for service orders — the SVC-<ref> reference
+        // carries the link.
         await db.insertIgnoreDup('ledger', [{
           customer_id: customerUuid,
-          charge_reference: `PAY-SVC-${refBase}`,
-          entry_type: 'payment',
-          amount: total,
-          method,
-          description: `Paid — ${svc.name}`,
+          charge_reference: `SVC-${refBase}`,
+          entry_type: 'online_service',
+          amount: -total,
+          description: `${svc.name}${qty > 1 ? ` × ${qty}` : ''}`,
         }], 'charge_reference')
+
+        // Optional immediate payment (most services are paid on the spot).
+        const method = METHODS.includes(b.method) ? b.method : 'cash'
+        if (b.paidNow) {
+          await db.insertIgnoreDup('ledger', [{
+            customer_id: customerUuid,
+            charge_reference: `PAY-SVC-${refBase}`,
+            entry_type: 'payment',
+            amount: total,
+            method,
+            description: `Paid — ${svc.name}`,
+          }], 'charge_reference')
+        }
+
+        // Owner-defined auto extras for services.
+        const extras = await postAutoCharges({
+          customerUuid, appliesTo: 'service', refBase,
+          paidNow: !!b.paidNow, method,
+        })
+
+        const balRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
+        const balance = balRows.length ? Number(balRows[0].balance) : 0
+
+        const [full] = await db.select('service_orders', `select=*,${EMBED}&id=eq.${order.id}`)
+        return res.json({ success: true, order: toApp(full), extras: extras.lines, balance })
+      } catch (e) {
+        // Aborted after claiming but before the charge is durable: release the token
+        // so a genuine retry isn't locked out (the ledger key no-ops any charge that
+        // did land).
+        if (keyClaimed) {
+          try { await db.releaseKey(`SVC-${clientRef}`) }
+          catch (e2) { console.error('[api/service-orders] token not released after error', clientRef, e2) }
+        }
+        throw e
       }
-
-      // Owner-defined auto extras for services.
-      const extras = await postAutoCharges({
-        customerUuid, appliesTo: 'service', refBase,
-        paidNow: !!b.paidNow, method,
-      })
-
-      const balRows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
-      const balance = balRows.length ? Number(balRows[0].balance) : 0
-
-      const [full] = await db.select('service_orders', `select=*,${EMBED}&id=eq.${order.id}`)
-      return res.json({ success: true, order: toApp(full), extras: extras.lines, balance })
     }
 
     return res.status(405).end()

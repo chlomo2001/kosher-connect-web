@@ -57,12 +57,15 @@ export default async function handler(req, res) {
     }
   }
 
-  // Explicit "save a card" (no charge): store the payment method on file.
+  // Explicit "save a card" (no charge): store the payment method on file. This
+  // is the event's ONLY side effect, so a swallowed failure would mark the event
+  // processed with nothing saved. Let it throw: the stripe_events insert below is
+  // skipped, Stripe retries, and the update runs again (idempotent — same value).
   if (event.type === 'setup_intent.succeeded') {
     const si = event.data?.object || {}
     const appCustomerId = si.metadata?.app_customer_id
     if (appCustomerId && si.payment_method) {
-      await db.update('customers', `id=eq.${appCustomerId}`, { stripe_pm_id: si.payment_method }).catch(() => {})
+      await db.update('customers', `id=eq.${appCustomerId}`, { stripe_pm_id: si.payment_method })
     }
   }
 
