@@ -102,4 +102,8 @@ test('round2', () => {
   assert.equal(round2(1.006), 1.01)
   assert.equal(round2(1.004), 1)
   assert.equal(round2(2.5), 2.5)
+  // Exact half-penny must round up despite float representation (mirrors money()).
+  assert.equal(round2(1.005), 1.01)
+  assert.equal(round2(2.675), 2.68)
+  assert.equal(round2(-1.005), -1.01)
 })

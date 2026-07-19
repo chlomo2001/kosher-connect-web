@@ -88,3 +88,16 @@ test('money — rounds to pennies', () => {
   assert.equal(money(10), 10)
   assert.equal(money(null), 0)
 })
+
+test('money — exact half-pennies round up despite float representation', () => {
+  // These are the values a naive Math.round(v*100)/100 gets WRONG because
+  // v*100 lands just below the integer (1.005*100 === 100.4999999…).
+  assert.equal(money(1.005), 1.01)
+  assert.equal(money(2.675), 2.68)
+  assert.equal(money(0.005), 0.01)
+  // Refunds (negatives) must round symmetrically — same magnitude as the charge.
+  assert.equal(money(-1.005), -1.01)
+  assert.equal(money(-2.675), -2.68)
+  // A percentage-derived amount (damage waiver / DD surcharge) that lands on .5p.
+  assert.equal(money(20.45 * 0.1 + 20.45), 22.50)
+})
