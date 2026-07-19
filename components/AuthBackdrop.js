@@ -178,12 +178,6 @@ export default function AuthBackdrop() {
       //    outlined with quadratic midpoint smoothing (curved coasts, not boxy).
       //    Runs are split at the horizon so only the near face draws.
       const landFill = dk ? mix(cur.core, DARKBG, 0.5) : WHITE
-      const runsOf = (samples) => {
-        const runs = []; let run = []
-        for (const [lon, lat] of samples) { const p = project(lon, lat); if (p.vis) run.push(p); else { if (run.length >= 2) runs.push(run); run = [] } }
-        if (run.length >= 2) runs.push(run)
-        return runs
-      }
       const smoothPath = (run) => {
         ctx.moveTo(run[0].x, run[0].y)
         for (let k = 1; k < run.length - 1; k++) {
@@ -193,20 +187,30 @@ export default function AuthBackdrop() {
         ctx.lineTo(run[run.length - 1].x, run[run.length - 1].y)
       }
       ctx.lineJoin = 'round'; ctx.lineCap = 'round'
-      const RINGS = WORLD.map(runsOf)
-      // Fills use the FULL ring with hidden points pinned to the limb, so a
-      // continent setting over the horizon hugs the curve instead of closing
-      // with a straight chord (which flashed boxy shapes while rotating).
-      const clampProj = (lon, lat) => {
-        const p = project(lon, lat)
+      // Project each ring's points ONCE, then derive BOTH the limb-clamped fill
+      // and the near-face stroke runs from that single pass. The stroke runs and
+      // the fill used to re-project the same points independently — ~8,700
+      // duplicate trig projections per frame on this continuously-rotating globe.
+      const clampToLimb = (p) => {
         if (p.vis) return p
         const dx = p.x - gx, dy = p.y - gy, d = Math.hypot(dx, dy) || 1
         return { x: gx + (dx / d) * Rg, y: gy + (dy / d) * Rg, vis: false }
       }
+      const runsFrom = (proj) => {
+        const runs = []; let run = []
+        for (const p of proj) { if (p.vis) run.push(p); else { if (run.length >= 2) runs.push(run); run = [] } }
+        if (run.length >= 2) runs.push(run)
+        return runs
+      }
+      const PROJECTED = WORLD.map((ring) => ring.map(([lon, lat]) => project(lon, lat)))
+      const RINGS = PROJECTED.map(runsFrom)
+      // Fills use the FULL ring with hidden points pinned to the limb, so a
+      // continent setting over the horizon hugs the curve instead of closing
+      // with a straight chord (which flashed boxy shapes while rotating).
       ctx.fillStyle = rgba(landFill, dk ? 0.22 : 0.26)                     // land tint
-      for (const ring of WORLD) {
-        const pts = ring.map(([lon, lat]) => clampProj(lon, lat))
-        if (pts.length < 3 || !pts.some((p) => p.vis)) continue            // fully set
+      for (const proj of PROJECTED) {
+        if (proj.length < 3 || !proj.some((p) => p.vis)) continue          // fully set
+        const pts = proj.map(clampToLimb)
         ctx.beginPath(); smoothPath(pts); ctx.closePath(); ctx.fill()
       }
       ctx.strokeStyle = rgba(dk ? mix(cur.line, WHITE, 0.55) : mix(cur.line, DARKBG, 0.2), dk ? 0.85 : 0.8)  // coastline
