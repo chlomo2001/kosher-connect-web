@@ -167,12 +167,12 @@ export default function TransferWizard() {
           </div>
 
           <div className="tool-card">
-            <div className="tool-card-title">1 · The old phone’s file</div>
-            <input ref={fileRef} type="file" onChange={onFile} />
-            <div className="tool-hint">
+            <label className="tool-card-title" htmlFor="tool-transfer-file">1 · The old phone’s file</label>
+            <input id="tool-transfer-file" ref={fileRef} type="file" onChange={onFile} aria-describedby="tool-transfer-hint" />
+            <div className="tool-hint" id="tool-transfer-hint">
               SMS Backup &amp; Restore .xml · Nokia Messages.NBF · Nokia 215 phonebook .IB · any .vcf
             </div>
-            {msg && <div className="tool-msg">{msg}</div>}
+            <div role="alert">{msg && <div className="tool-msg">{msg}</div>}</div>
             {source && (
               <div className="tool-detect">
                 <b>{KIND_LABEL[source.kind]}</b> — {source.name}
@@ -192,14 +192,15 @@ export default function TransferWizard() {
 
           {smsFlow && (
             <div className="tool-card">
-              <div className="tool-card-title">2 · Target phone sample <span className="tool-optional">(optional, recommended)</span></div>
-              <p className="tool-hint" style={{ marginTop: 0 }}>
+              <label className="tool-card-title" htmlFor="tool-transfer-sample">2 · Target phone sample <span className="tool-optional">(optional, recommended)</span></label>
+              <p className="tool-hint" style={{ marginTop: 0 }} id="tool-transfer-sample-hint">
                 Make a fresh backup in FIG Messenger on the NEW phone and drop it here —
                 the exact message format is learned from it, so this keeps working even
                 after app updates. Without it the standard FIG format is used.
               </p>
-              <input ref={sampleRef} type="file" accept=".zip" onChange={onSample} />
-              {sample && <div className="tool-msg">Format learned from {sample.name} ({sample.schema.keys.length} fields).</div>}
+              <input id="tool-transfer-sample" ref={sampleRef} type="file" accept=".zip" onChange={onSample}
+                aria-describedby="tool-transfer-sample-hint" />
+              <div role="status" aria-live="polite">{sample && <div className="tool-msg">Format learned from {sample.name} ({sample.schema.keys.length} fields).</div>}</div>
             </div>
           )}
 
@@ -224,7 +225,7 @@ export default function TransferWizard() {
               <button className="btn btn-primary" onClick={convert} disabled={busy}>
                 {busy ? 'Converting…' : smsFlow ? '⬇ Download FIG backup (messages.zip)' : source.kind === 'ib' ? '⬇ Download contacts .vcf' : '⬇ Download fixed .vcf'}
               </button>
-              {done && <div className="tool-msg tool-msg-ok">{done}</div>}
+              <div role="status" aria-live="polite">{done && <div className="tool-msg tool-msg-ok">{done}</div>}</div>
             </div>
           )}
 

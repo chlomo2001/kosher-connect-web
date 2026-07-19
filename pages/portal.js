@@ -50,6 +50,7 @@ const P = {
     sent: '📬 If that email belongs to a KosherConnect customer, a sign-in link is on its way. You can close this page.',
     or: 'or', google: 'Continue with Google',
     greeting: (h) => (h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'),
+    title: 'My KosherConnect', phoneFallback: 'Phone', flightFallback: 'Flight',
   },
   he: {
     locale: 'he-IL',
@@ -85,6 +86,7 @@ const P = {
     sent: '📬 אם האימייל שייך ללקוח של כשר קונקט, קישור כניסה כבר בדרך. אפשר לסגור את העמוד.',
     or: 'או', google: 'המשך עם Google',
     greeting: (h) => (h < 12 ? 'בוקר טוב' : h < 18 ? 'צהריים טובים' : 'ערב טוב'),
+    title: 'כשר קונקט שלי', phoneFallback: 'טלפון', flightFallback: 'טיסה',
   },
 }
 
@@ -109,7 +111,14 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
 
   // Language: English / lashon hakodesh
   const [lang, setLang] = useState('en')
-  useEffect(() => { try { if (localStorage.getItem('kcLang') === 'he') setLang('he') } catch { /* stay en */ } }, [])
+  useEffect(() => { try {
+    // Portal keeps its OWN en/he view in kcPortalLang; fall back to the shared
+    // /welcome preference (which may be 'yi' — the portal has no Yiddish, so 'yi'
+    // shows English) only when the portal hasn't been toggled here before.
+    const p = localStorage.getItem('kcPortalLang')
+    if (p === 'he' || p === 'en') { setLang(p); return }
+    if (localStorage.getItem('kcLang') === 'he') setLang('he')
+  } catch { /* stay en */ } }, [])
   const L = P[lang]
   const isHe = lang === 'he'
   const dir = isHe ? 'rtl' : 'ltr'
@@ -117,7 +126,12 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   const flipLang = () => {
     const n = isHe ? 'en' : 'he'
     setLang(n)
-    try { localStorage.setItem('kcLang', n) } catch { /* not persisted */ }
+    try {
+      localStorage.setItem('kcPortalLang', n)
+      // Don't clobber a Yiddish site preference set on /welcome: only mirror the
+      // portal toggle into the shared key when it isn't 'yi'.
+      if (localStorage.getItem('kcLang') !== 'yi') localStorage.setItem('kcLang', n)
+    } catch { /* not persisted */ }
   }
   const langBtn = (
     <button type="button" onClick={flipLang} lang={isHe ? 'en' : 'he'}
@@ -344,7 +358,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   if (loading) {
     return (
       <>
-        <Head><title>My KosherConnect</title></Head>
+        <Head><title>{L.title}</title></Head>
         <div className="login-shell"><div className="login-mesh" aria-hidden="true" />
           <AuthBackdrop />
           <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
@@ -362,7 +376,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     const myUploads = (docs || []).filter((d) => d.source === 'customer')
     return (
       <>
-        <Head><title>My KosherConnect</title></Head>
+        <Head><title>{L.title}</title></Head>
         <div className="login-shell">
           <div className="login-mesh" aria-hidden="true" />
           <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
@@ -387,14 +401,14 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
               <div style={{ fontSize: 26, fontWeight: 700, color: owes ? '#dc2626' : '#16a34a' }}>
                 {owes ? L.youOwe(fmtGbp(Math.abs(account.balance))) : account.balance > 0 ? L.inCredit(fmtGbp(account.balance)) : fmtGbp(0)}
               </div>
-              {paid && <div style={{ fontSize: 13, color: '#16a34a', marginTop: 8 }}>{L.paidNote}</div>}
+              {paid && <div role="status" style={{ fontSize: 13, color: '#16a34a', marginTop: 8 }}>{L.paidNote}</div>}
               {owes && !pay && (
                 <button className="btn btn-primary" onClick={startPay} disabled={payBusy}
                   style={{ marginTop: 12, width: '100%', padding: '10px 16px' }}>
                   {payBusy ? L.starting : L.payBtn(fmtGbp(Math.abs(account.balance)))}
                 </button>
               )}
-              {payMsg && <div style={{ fontSize: 12, color: '#dc2626', marginTop: 8 }}>{payMsg}</div>}
+              {payMsg && <div role="alert" style={{ fontSize: 12, color: '#dc2626', marginTop: 8 }}>{payMsg}</div>}
               {pay && (
                 <div style={{ marginTop: 12 }}>
                   <div id="kc-pay-element" />
@@ -425,7 +439,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                 <button className="btn btn-outline" onClick={startSaveCard} disabled={saveBusy}
                   style={{ fontSize: 13, padding: '8px 14px' }}>{saveBusy ? L.starting : L.saveCardStart}</button>
               )}
-              {saveMsg && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>{saveMsg}</div>}
+              {saveMsg && <div role="status" style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>{saveMsg}</div>}
             </div>
 
             <div style={{ marginBottom: 16 }}>
@@ -434,8 +448,8 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                 ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>{L.noRentals}</div>
                 : activeRentals.map((r, i) => (
                   <div key={i} style={{ fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                    {r.phoneNumber || 'Phone'} · {r.country}
-                    <span style={{ color: 'var(--muted)' }}> · {fmtDate(r.fromDate)} → {fmtDate(r.toDate)}</span>
+                    <bdi dir="ltr">{r.phoneNumber || L.phoneFallback}</bdi> · {r.country}
+                    <span style={{ color: 'var(--muted)' }}> · <bdi dir="ltr">{fmtDate(r.fromDate)} {isHe ? '←' : '→'} {fmtDate(r.toDate)}</bdi></span>
                     <span style={{ float: fl, color: 'var(--muted)' }}>{r.status}</span>
                   </div>
                 ))}
@@ -447,7 +461,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                 ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>{L.noFlights}</div>
                 : upcoming.map((b, i) => (
                   <div key={i} style={{ fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                    {b.route || 'Flight'}{b.airline ? ` · ${b.airline}` : ''}
+                    {b.route || L.flightFallback}{b.airline ? ` · ${b.airline}` : ''}
                     <span style={{ color: 'var(--muted)' }}>{b.travelDate ? ` · ${fmtDate(b.travelDate)}` : ''}</span>
                     <span style={{ float: fl, color: 'var(--muted)' }}>{b.status}</span>
                   </div>
@@ -472,7 +486,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                   style={{ fontSize: 13, padding: '8px 14px' }}>
                   {docBusy ? L.uploading : L.upload}
                 </button>
-                {docMsg && <span style={{ fontSize: 12, color: 'var(--muted)', marginInlineStart: 10 }}>{docMsg}</span>}
+                {docMsg && <span role="status" style={{ fontSize: 12, color: 'var(--muted)', marginInlineStart: 10 }}>{docMsg}</span>}
               </div>
 
               {myUploads.length > 0 && (
@@ -500,7 +514,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
 
   return (
     <>
-      <Head><title>My KosherConnect</title></Head>
+      <Head><title>{L.title}</title></Head>
       <div className="login-shell">
         <div className="login-mesh" aria-hidden="true" />
         <AuthBackdrop />
@@ -509,7 +523,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
         <form className="login-card" dir={dir} onSubmit={submit}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <img src="/logo-full.png" alt="KosherConnect" style={{ height: 72, marginBottom: 10 }} />
-            <div className="login-title">My KosherConnect</div>
+            <div className="login-title">{L.title}</div>
             <div className="login-sub">{L.subSignedOut(greeting)}</div>
           </div>
           {sent ? (
@@ -521,7 +535,8 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
               <input
                 className="form-input" type="email" placeholder={L.yourEmail} value={email}
                 onChange={e => setEmail(e.target.value)} autoFocus required
-                style={{ width: '100%', marginBottom: 14 }}
+                aria-label={L.yourEmail} dir="ltr" autoComplete="email"
+                style={{ width: '100%', marginBottom: 14, textAlign: isHe ? 'right' : 'left' }}
               />
               <button className="btn btn-primary" type="submit" disabled={busy} style={{ width: '100%', padding: '10px 16px' }}>
                 {busy ? L.sending : L.emailLink}

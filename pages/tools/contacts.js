@@ -159,10 +159,11 @@ export default function ContactsConverter() {
           </div>
 
           <div className="tool-card">
-            <div className="tool-card-title">1 · Add files</div>
-            <input ref={fileRef} type="file" multiple accept=".csv,.txt,.xlsx,.xls,.vcf,.vcard" onChange={onFiles} />
-            <div className="tool-hint">.xlsx / .csv contact lists and existing .vcf files, in any mix. Old .xls? Re-save it as .xlsx first.</div>
-            {msg && <div className="tool-msg">{msg}</div>}
+            <label className="tool-card-title" htmlFor="tool-contacts-file">1 · Add files</label>
+            <input id="tool-contacts-file" ref={fileRef} type="file" multiple accept=".csv,.txt,.xlsx,.xls,.vcf,.vcard"
+              onChange={onFiles} aria-describedby="tool-contacts-hint" />
+            <div className="tool-hint" id="tool-contacts-hint">.xlsx / .csv contact lists and existing .vcf files, in any mix. Old .xls? Re-save it as .xlsx first.</div>
+            <div role="alert">{msg && <div className="tool-msg">{msg}</div>}</div>
           </div>
 
           {pending && (
@@ -180,6 +181,7 @@ export default function ContactsConverter() {
                       {pending.roles.map((role, i) => (
                         <th key={i}>
                           <select className="form-input" value={role}
+                            aria-label={`Column ${i + 1}${pending.hasHeader && pending.rows[0] && pending.rows[0][i] ? ` (${pending.rows[0][i]})` : ''} — map to`}
                             onChange={(e) => {
                               const roles = [...pending.roles]; roles[i] = e.target.value
                               setPending({ ...pending, roles })
@@ -253,13 +255,15 @@ export default function ContactsConverter() {
                 </label>
               </div>
               <button className="btn btn-primary" onClick={buildOutput}>⬇ Download merged .vcf</button>
-              {result && (
-                <div className="tool-msg">
-                  {result.kept} contact{result.kept === 1 ? '' : 's'} written
-                  {result.removed ? ` · ${result.removed} duplicate${result.removed === 1 ? '' : 's'} removed` : ''}
-                  {result.changed ? ` · ${result.changed} number${result.changed === 1 ? '' : 's'} normalised` : ''}.
-                </div>
-              )}
+              <div role="status" aria-live="polite">
+                {result && (
+                  <div className="tool-msg">
+                    {result.kept} contact{result.kept === 1 ? '' : 's'} written
+                    {result.removed ? ` · ${result.removed} duplicate${result.removed === 1 ? '' : 's'} removed` : ''}
+                    {result.changed ? ` · ${result.changed} number${result.changed === 1 ? '' : 's'} normalised` : ''}.
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
