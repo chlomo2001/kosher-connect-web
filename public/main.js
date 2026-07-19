@@ -3501,6 +3501,13 @@ async function reviewCustomerDoc(custId, id, action) {
 // Charge a customer's saved card-on-file off-session (owner action). The server
 // requires a stored card and reports clearly when there isn't one, or when the
 // bank needs the customer present to re-authorise (SCA).
+// One idempotency token per (customer, amount), reused across retries until a
+// charge confirms. The server turns clientRef into Stripe's Idempotency-Key, so
+// a retry after an AMBIGUOUS failure (504 "status unknown") must carry the SAME
+// token or Stripe treats it as a fresh charge and bills twice. Minting a new
+// kcRef() each press was exactly that bug.
+const cardChargeRefs = {};
+
 async function chargeCardOnFile(custId) {
   const amtStr = prompt('Charge the card on file — amount in £:');
   if (amtStr == null) return;
@@ -3508,14 +3515,23 @@ async function chargeCardOnFile(custId) {
   if (!(amount > 0)) { toast('Enter a valid amount.', 'warning'); return; }
   const guardKey = 'chargecard:' + custId;
   if (!kcBeginWrite(guardKey)) return;
+  const refKey = custId + ':' + amount.toFixed(2);
+  if (!cardChargeRefs[refKey]) cardChargeRefs[refKey] = kcRef();
+  const clientRef = cardChargeRefs[refKey];
   try {
     const r = await kcFetch('/api/charge-card', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      // clientRef becomes Stripe's Idempotency-Key so a retry can't charge twice.
-      body: JSON.stringify({ customerId: custId, amount, clientRef: kcRef() }),
+      body: JSON.stringify({ customerId: custId, amount, clientRef }),
     });
     const d = await r.json();
-    if (d.success && d.status === 'succeeded') { toast(`Charged £${amount.toFixed(2)} to card on file ✔`, 'success'); loadWalletSection(custId); }
+    if (d.success && d.status === 'succeeded') {
+      // Confirmed charged — retire the token so a later, deliberate charge of the
+      // same amount is a genuinely new operation with its own key.
+      delete cardChargeRefs[refKey];
+      toast(`Charged £${amount.toFixed(2)} to card on file ✔`, 'success'); loadWalletSection(custId);
+    }
+    // Processing or any failure: KEEP the token so a retry reuses it and Stripe
+    // dedupes rather than double-charging.
     else if (d.success) { toast(d.note || 'Payment processing…', 'info'); }
     else toast(d.error || 'Charge failed.', 'error');
   } catch { toast('Charge failed.', 'error'); }
