@@ -138,20 +138,20 @@ export default function AppShell({ initialTab = 'dashboard' }) {
 
           <div className="form-grid">
             <div className="form-group">
-              <label className="form-label">First Name *</label>
-              <input className="form-input" id="fFirstName" type="text" placeholder="Menachem" autoComplete="off" />
+              <label className="form-label" htmlFor="fFirstName">First Name *</label>
+              <input className="form-input" id="fFirstName" type="text" placeholder="Menachem" autoComplete="off" aria-describedby="errFirstName" />
               <span className="form-error" id="errFirstName">Required</span>
             </div>
             <div className="form-group">
-              <label className="form-label">Last Name *</label>
-              <input className="form-input" id="fLastName" type="text" placeholder="Adler" autoComplete="off" />
+              <label className="form-label" htmlFor="fLastName">Last Name *</label>
+              <input className="form-input" id="fLastName" type="text" placeholder="Adler" autoComplete="off" aria-describedby="errLastName" />
               <span className="form-error" id="errLastName">Required</span>
             </div>
 
             <div className="form-group form-full">
-              <label className="form-label">Phone *</label>
+              <label className="form-label" htmlFor="fPhoneNumber">Phone *</label>
               <div className="phone-row">
-                <select className="country-select" id="fCountryCode">
+                <select className="country-select" id="fCountryCode" aria-label="Country dialing code">
                   <option value="+44">🇬🇧 +44</option>
                   <option value="+1">🇺🇸 +1</option>
                   <option value="+972">🇮🇱 +972</option>
@@ -175,6 +175,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
                   placeholder="7911 123456"
                   style={{ flex: 1 }}
                   autoComplete="off"
+                  aria-describedby="errPhone warnPhone"
                 />
               </div>
               <span className="form-error" id="errPhone">Required</span>
@@ -182,23 +183,23 @@ export default function AppShell({ initialTab = 'dashboard' }) {
             </div>
 
             <div className="form-group">
-              <label className="form-label">✉️ Contact email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(the customer&apos;s own)</span></label>
-              <input className="form-input" id="fEmail" type="email" placeholder="customer@gmail.com" autoComplete="off" />
+              <label className="form-label" htmlFor="fEmail">✉️ Contact email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(the customer&apos;s own)</span></label>
+              <input className="form-input" id="fEmail" type="email" placeholder="customer@gmail.com" autoComplete="off" aria-describedby="warnEmail" />
               <div className="form-warning" id="warnEmail">⚠️ This email already exists for another customer.</div>
             </div>
 
             <div className="form-group">
-              <label className="form-label">⚙️ Account email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(our login for Lebara etc.)</span></label>
+              <label className="form-label" htmlFor="fAccountEmail">⚙️ Account email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(our login for Lebara etc.)</span></label>
               <input className="form-input" id="fAccountEmail" type="email" placeholder="kosherconnect+levi@gmail.com" autoComplete="off" />
             </div>
 
             <div className="form-group form-full">
-              <label className="form-label">Address</label>
+              <label className="form-label" htmlFor="fAddress">Address</label>
               <input className="form-input" id="fAddress" type="text" placeholder="123 Baker Street, London" autoComplete="off" />
             </div>
 
             <div className="form-group form-full">
-              <label className="form-label">📝 Notes <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(preferences, who they&apos;re related to, anything to remember)</span></label>
+              <label className="form-label" htmlFor="fNotes">📝 Notes <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(preferences, who they&apos;re related to, anything to remember)</span></label>
               <textarea className="form-input" id="fNotes" rows={2} placeholder="e.g. prefers the £20 US plan · pays end of month · brother of Yossi Adler" style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4 }}></textarea>
             </div>
 

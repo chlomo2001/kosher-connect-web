@@ -2690,6 +2690,7 @@ function showDynamicModal(html) {
     document.body.appendChild(overlay);
   }
   overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:560px;">${html}</div>`;
+  kcSaveReturnFocus('dynamicModal');
   overlay.classList.remove('hidden');
   suppressCardScrim(true);
   autofocusFirstField(overlay);
@@ -2715,10 +2716,28 @@ function autofocusFirstField(overlay) {
   const first = modal.querySelector('input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([readonly]):not([disabled]), textarea, select');
   if (first) { try { first.focus({ preventScroll: true }); } catch { first.focus(); } }
 }
+// Remember what had focus when a modal opened, so closing it returns focus
+// THERE instead of dumping a keyboard / screen-reader user at the top of the
+// page. Keyed by overlay id so stacked modals (confirm over an action modal)
+// each restore to the right place. Save BEFORE the modal moves focus.
+const kcModalReturnFocus = {};
+function kcSaveReturnFocus(id) {
+  const a = document.activeElement;
+  if (a && a !== document.body) kcModalReturnFocus[id] = a;
+}
+function kcRestoreReturnFocus(id) {
+  const el = kcModalReturnFocus[id];
+  delete kcModalReturnFocus[id];
+  if (el && document.contains(el) && typeof el.focus === 'function') {
+    try { el.focus({ preventScroll: true }); } catch { el.focus(); }
+  }
+}
+
 function closeDynamicModal() {
   const overlay = document.getElementById('dynamicModal');
   if (overlay) overlay.classList.add('hidden');
   suppressCardScrim(false);
+  kcRestoreReturnFocus('dynamicModal');
 }
 
 // ── Charge confirmation ──────────────────────────────────────────────────
@@ -2730,6 +2749,7 @@ let kcConfirmResolve = null;
 function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm charge', amount = null }) {
   return new Promise(resolve => {
     kcConfirmResolve = resolve;
+    kcSaveReturnFocus('kcConfirm');
     let el = document.getElementById('kcConfirm');
     if (!el) {
       el = document.createElement('div');
@@ -2750,12 +2770,19 @@ function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm cha
         </div>
       </div>`;
     el.classList.remove('hidden');
+    // Focus Cancel, not Confirm: this dialog opens over the trigger button, and
+    // an un-moved focus would let a stray Enter re-fire that trigger (orphaning
+    // this promise) or confirm a charge the user hadn't read. Cancel is the safe
+    // default landing spot.
+    const cancelBtn = el.querySelector('.btn-outline');
+    if (cancelBtn) { try { cancelBtn.focus({ preventScroll: true }); } catch { cancelBtn.focus(); } }
   });
 }
 function kcConfirmDone(ok) {
   const el = document.getElementById('kcConfirm');
   if (el) el.classList.add('hidden');
   const r = kcConfirmResolve; kcConfirmResolve = null;
+  kcRestoreReturnFocus('kcConfirm');
   if (r) r(ok);
 }
 
@@ -4246,8 +4273,8 @@ function clearModal() {
   ['warnPhone','warnEmail','warnName'].forEach(id => document.getElementById(id).classList.remove('visible'));
 }
 
-function showModal() { const m = document.getElementById('customerModal'); m.classList.remove('hidden'); suppressCardScrim(true); autofocusFirstField(m); }
-function closeModal() { document.getElementById('customerModal').classList.add('hidden'); suppressCardScrim(false); }
+function showModal() { const m = document.getElementById('customerModal'); kcSaveReturnFocus('customerModal'); m.classList.remove('hidden'); suppressCardScrim(true); autofocusFirstField(m); }
+function closeModal() { document.getElementById('customerModal').classList.add('hidden'); suppressCardScrim(false); kcRestoreReturnFocus('customerModal'); }
 
 function normalizeEmail(email) {
   if (!email) return '';
@@ -4975,7 +5002,12 @@ function setErr(id, msgOrFalse) {
   }
 }
 function setInputErr(id, isErr) {
-  document.getElementById(id).classList.toggle('error', isErr);
+  const el = document.getElementById(id);
+  el.classList.toggle('error', isErr);
+  // Announce the invalid state to assistive tech; the field's aria-describedby
+  // already points at its error text, so the reason is read out too.
+  if (isErr) el.setAttribute('aria-invalid', 'true');
+  else el.removeAttribute('aria-invalid');
 }
 
 function escHtml(str) {
@@ -7505,6 +7537,7 @@ function kcIsTyping() {
 }
 function openShortcuts() {
   if (document.getElementById('kcShortcuts')) return;
+  kcSaveReturnFocus('kcShortcuts');
   const el = document.createElement('div');
   el.id = 'kcShortcuts';
   el.className = 'modal-overlay';
@@ -7523,6 +7556,7 @@ function openShortcuts() {
 }
 function closeShortcuts() {
   document.getElementById('kcShortcuts')?.remove();
+  kcRestoreReturnFocus('kcShortcuts');
 }
 
 document.addEventListener('keydown', e => {
