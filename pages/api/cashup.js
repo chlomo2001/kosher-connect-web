@@ -7,19 +7,19 @@
 import { withStaff, tabAllowedFor } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 import { cashExpected } from '../../lib/money.mjs'
+import { londonDate, londonDayBoundsUtc } from '../../lib/localDay.mjs'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
-function nextDay(date) {
-  const d = new Date(date + 'T00:00:00Z')
-  d.setUTCDate(d.getUTCDate() + 1)
-  return d.toISOString().slice(0, 10)
-}
-
 async function dayLedger(date) {
+  // The Z-report day is a Europe/London calendar day, not a UTC one: a till
+  // movement at 00:30 local time is 23:30 UTC the previous day in summer, so a
+  // bare-date UTC window would file it on yesterday's report. Anchor the bounds
+  // to London instants.
+  const { start, end } = londonDayBoundsUtc(date)
   return db.select(
     'ledger',
-    `select=amount,method&created_at=gte.${date}&created_at=lt.${nextDay(date)}`
+    `select=amount,method&created_at=gte.${encodeURIComponent(start)}&created_at=lt.${encodeURIComponent(end)}`
   )
 }
 
@@ -64,7 +64,7 @@ async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const date = DATE_RE.test(String(req.query.date || '')) ? req.query.date : new Date().toISOString().slice(0, 10)
+      const date = DATE_RE.test(String(req.query.date || '')) ? req.query.date : londonDate()
       const [rows, counts, float] = await Promise.all([
         dayLedger(date),
         db.select('till_counts', `count_date=eq.${date}`),

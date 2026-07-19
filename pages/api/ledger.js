@@ -13,6 +13,7 @@
 import { withStaff, tabAllowedFor, requireOwner } from '../../lib/auth.js'
 import crypto from 'node:crypto'
 import { db, tablesMode } from '../../lib/db.js'
+import { londonDate, londonDayStartUtc } from '../../lib/localDay.mjs'
 
 // Wallet actions are reachable from the Wallet tab AND the customer card,
 // so either tab permits them (owners always pass).
@@ -79,8 +80,10 @@ async function handler(req, res) {
         // actually received (payments/top-ups), for entries since `from`.
         if (req.query.report) {
           const from = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.from || ''))
-            ? req.query.from : new Date().toISOString().slice(0, 10)
-          const rows = await db.select('ledger', `select=entry_type,amount&created_at=gte.${from}`)
+            ? req.query.from : londonDate()
+          // Anchor the "since" boundary to London midnight (not UTC), so a report
+          // "since today" doesn't include last night's post-11pm UTC entries.
+          const rows = await db.select('ledger', `select=entry_type,amount&created_at=gte.${encodeURIComponent(londonDayStartUtc(from))}`)
           const round = (v) => Math.round(v * 100) / 100
           const byType = {}
           let charged = 0, received = 0, refunded = 0
@@ -94,12 +97,12 @@ async function handler(req, res) {
           return res.json({ success: true, from, byType, charged: round(charged), received: round(received), refunded: round(refunded) })
         }
         const since = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.since || ''))
-          ? req.query.since : new Date().toISOString().slice(0, 10)
+          ? req.query.since : londonDate()
         // recent=N lets the Wallet tab pull a longer feed than the dashboard.
         const recentLimit = Math.min(Math.max(parseInt(req.query.recent, 10) || 12, 1), 200)
         const [recent, todays, balances, custRows] = await Promise.all([
           db.select('ledger', `select=*,customers(first_name,last_name)&order=created_at.desc&limit=${recentLimit}`),
-          db.select('ledger', `select=amount&created_at=gte.${since}`),
+          db.select('ledger', `select=amount&created_at=gte.${encodeURIComponent(londonDayStartUtc(since))}`),
           db.select('customer_balances', ''),
           db.select('customers', 'select=id,legacy_id,first_name,last_name'),
         ])
