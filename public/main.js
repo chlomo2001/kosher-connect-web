@@ -6965,6 +6965,57 @@ async function emailSaleReceipt(btn) {
   posShowLastSale();
 }
 
+// ── myPOS terminal bridge ("KosherConnect Till" wrapper on the K300) ─────
+// Inside the Android wrapper, the native side injects window.KCTill with
+// charge(amountPence, chargeReference) — it starts a sale on the terminal
+// (our reference rides along as the myPOS foreignTransactionId) and reports
+// back by calling window.kcTillResult({ chargeReference, approved, myposRef,
+// stan, authCode, brand, last4, error }). In a plain browser KCTill is absent
+// and none of this runs — the manual card flow is unchanged.
+const kcTillPending = {};
+// Approved terminal charges per reference: a re-ring after a lost sale POST
+// reuses the approval instead of charging the customer's card a second time.
+const kcTillApproved = {};
+function kcTillAvailable() { return !!(window.KCTill && typeof window.KCTill.charge === 'function'); }
+function kcTillCharge(amountPence, chargeReference) {
+  if (kcTillApproved[chargeReference]) return Promise.resolve(kcTillApproved[chargeReference]);
+  return new Promise((resolve) => {
+    // Terminal interactions are slow (card tap, PIN, issuer) — 3 minutes, then
+    // give up with "no answer" so the operator checks the machine itself.
+    const timer = setTimeout(() => { delete kcTillPending[chargeReference]; resolve(null); }, 180000);
+    kcTillPending[chargeReference] = (result) => {
+      clearTimeout(timer);
+      if (result && result.approved) kcTillApproved[chargeReference] = result;
+      resolve(result);
+    };
+    try { window.KCTill.charge(amountPence, chargeReference); }
+    catch (e) {
+      clearTimeout(timer);
+      delete kcTillPending[chargeReference];
+      resolve({ approved: false, error: String((e && e.message) || e) });
+    }
+  });
+}
+window.kcTillResult = (result) => {
+  const ref = result && result.chargeReference;
+  const done = ref && kcTillPending[ref];
+  if (done) { delete kcTillPending[ref]; done(result); }
+};
+// Attach the terminal's references to the ledger payment row (reconciliation).
+// Non-fatal: the money is already on the ledger; a miss only loses metadata.
+function kcTillRecordResult(payRef, amount, r) {
+  return kcFetch('/api/pos/card-result', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chargeReference: payRef, approved: true, amount,
+      myposRef: r.myposRef, stan: r.stan, authCode: r.authCode, brand: r.brand, last4: r.last4,
+    }),
+  }).then(res => res.json())
+    .then(res => { if (!res || !res.success) throw new Error('save failed'); })
+    .catch(() => toast('Card taken, but the terminal reference didn’t save for reconciliation.', 'warning'));
+}
+
 async function saveSale() {
   if (!posBasket.length) { toast('The basket is empty.', 'error'); return; }
   const paidNow = document.getElementById('posPaid').checked;
@@ -6982,8 +7033,26 @@ async function saveSale() {
   // instead of charging twice. audit U3/A2.
   if (!kcBeginWrite('sale')) return;
   if (!posSaleRef) posSaleRef = kcRef();
+  // Terminal lane: inside the K300 wrapper a card payment goes to the machine
+  // FIRST — only an approved tap records the sale. The result is keyed to the
+  // same reference as the ledger payment row (PAY-SALE-<ref>-now) so the
+  // settlement can be reconciled line by line.
+  const payRef = `PAY-SALE-${posSaleRef}-now`;
+  let tillResult = null;
   let res;
   try {
+    if (paidNow && posMethod === 'card' && cashDue > 0 && kcTillAvailable()) {
+      toast(`Take ${fmtGbp(cashDue)} on the card machine…`, 'info');
+      tillResult = await kcTillCharge(Math.round(cashDue * 100), payRef);
+      if (!tillResult) {
+        toast('No answer from the card machine — nothing was recorded. Check the terminal and try again.', 'error');
+        return;
+      }
+      if (!tillResult.approved) {
+        toast(`Card ${tillResult.error ? 'error: ' + tillResult.error : 'declined'} — nothing was recorded.`, 'error');
+        return;
+      }
+    }
     res = await kcFetch('/api/shop', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -7000,7 +7069,14 @@ async function saveSale() {
   } finally {
     kcEndWrite('sale');
   }
+  // NOTE: on a failed POST after an approved tap, posSaleRef and the cached
+  // approval are both kept — the operator's re-ring replays the same sale
+  // without touching the card again.
   if (!res || !res.success) { toast(res?.error || 'Could not record the sale.', 'error'); return; }
+  if (tillResult) {
+    kcTillRecordResult(payRef, cashDue, tillResult);
+    delete kcTillApproved[payRef];
+  }
   if (res.duplicate) {
     posBasket = []; posWallet = 0; posSaleRef = null;
     posRenderTiles(); posRenderBasket(); posRenderTender();
