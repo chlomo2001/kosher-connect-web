@@ -1,5 +1,35 @@
 # Phase 2 — kickoff (start 2026-07-17)
 
+## ✅ Day 1 happened Sunday 19 Jul — decisions taken + first wave shipped
+
+**Decisions (owner, 19 Jul):** ① Email → **Resend** on `mail.kosher-connect.com`;
+② Stripe card-on-file → **deposits + no-shows first**; ③ myPOS → owner
+applies to the developer programme this week; ④ Kol Torah → **all four**
+(titles, per-shul consignment, conversion jobs, takings).
+
+**Shipped (all gated, on staging):**
+- **Email hardening** (`d6b82a2`) — `email_log` (every attempt audited, even
+  held ones), `email_suppressions` + Svix-verified Resend bounce/complaint
+  webhook, Resend adapter preferred over SMTP. Still HOLD — inert until keys.
+- **myPOS web plumbing** (`8aafffc`) — `window.KCTill` bridge contract,
+  charge-first card flow in the till (approval cached per reference: a re-ring
+  never taps the card twice), `card_receipts` settlement sidecar +
+  `/api/pos/card-result`. Plain browsers: zero behaviour change.
+- **Phone-migration logging** (`1f0641c`) — "Contact Transfer / Phone Setup"
+  line on the Online & Print menu (£15/£10, owner-editable) + Contact Tools
+  workbench card in Settings.
+- **Kol Torah module** (`0a22f16`) — new tab: titles catalogue, per-shul
+  consignment (guarded stock RPC + movement audit), settlements that post
+  stock_sale/payment ledger rows on wallet-linked shuls, CD→MP3/SD jobs
+  charging on collection.
+
+**Owner next:** add the Resend domain + DNS, pull `RESEND_API_KEY` /
+`MAIL_FROM` / `RESEND_WEBHOOK_SECRET` into Vercel (HOLD stays until
+`MAIL_TEST_TO` walk-through); start the myPOS developer application; pull
+Stripe **test** keys. Kc-production is **ACTIVE_HEALTHY again** (was
+RESTORE_FAILED) — the §0 promote-vs-fill decision in LAUNCH-PHASE2.md is
+now unblocked.
+
 One page to start from. The detail already lives in **`PHASE-2-PLAN.md`**
 (payments & email) and **`PHASE-2-NOTES.md`** (new lines, ideas, limits); this
 is the sequencing, the decisions only you can make, and the Day-1 move.
