@@ -16,8 +16,18 @@ test('UK landline: 3-3-4', () => {
 })
 
 test('Israeli and US numbers group their own way', () => {
-  assert.equal(formatPhoneDisplay('+972521234567'), '+972 52 123 4567')
+  assert.equal(formatPhoneDisplay('+972521234567'), '+972 52 123 4567')  // mobile: 2-digit prefix
+  assert.equal(formatPhoneDisplay('+972525115445'), '+972 52 511 5445')
+  assert.equal(formatPhoneDisplay('+97225005656'), '+972 2 500 5656')    // landline: 1-digit area
   assert.equal(formatPhoneDisplay('+12125551234'), '+1 212 555 1234')
+  assert.equal(formatPhoneDisplay('+17185998889'), '+1 718 599 8889')
+})
+
+test('the owner\'s reference examples verbatim', () => {
+  assert.equal(formatPhoneDisplay('+441617952727'), '+44 161 795 2727')
+  assert.equal(formatPhoneDisplay('+97225005656'), '+972 2 500 5656')
+  assert.equal(formatPhoneDisplay('+17185998889'), '+1 718 599 8889')
+  assert.equal(formatPhoneDisplay('+972525115445'), '+972 52 511 5445')
 })
 
 test('pass-throughs: empty, sender IDs, short codes, odd lengths', () => {

@@ -196,7 +196,8 @@ function fmtPhone(raw) {
     return out.join(' ');
   };
   if (cc === '+44' && rest.length === 10) return '+44 ' + (rest[0] === '7' ? group(rest, [4, 3, 3]) : group(rest, [3, 3, 4]));
-  if (cc === '+972' && (rest.length === 8 || rest.length === 9)) return '+972 ' + group(rest, [2, 3, 4]);
+  if (cc === '+972' && rest.length === 9) return '+972 ' + group(rest, [2, 3, 4]);
+  if (cc === '+972' && rest.length === 8) return '+972 ' + group(rest, [1, 3, 4]);
   if (cc === '+1' && rest.length === 10) return '+1 ' + group(rest, [3, 3, 4]);
   return cc + ' ' + rest;
 }
