@@ -1403,7 +1403,7 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .w-pills a.w-pill-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .w-pills a.w-pill-primary:hover { background: var(--primary-deep); border-color: var(--primary-deep); color: #fff; }
 
-/* Language switch — EN / אידיש / לשה״ק as one segmented pill. */
+/* Language switch — EN / לשה״ק as one segmented pill. */
 .w-lang { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
 .w-lang button {
   border: 0; background: transparent; padding: 8px 13px; font: inherit; font-size: 12.5px;
@@ -1473,7 +1473,7 @@ html { scroll-behavior: smooth; }
 /* Strapline above the hero title */
 .w-strap { font-size: 12px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--gold); margin: 0 0 10px; }
 
-/* RTL (Yiddish / lashon hakodesh): Hebrew script hates tracking. */
+/* RTL (lashon hakodesh): Hebrew script hates tracking. */
 .w-wrap[dir="rtl"] .w-strap, .w-wrap[dir="rtl"] .w-hero h2,
 .w-wrap[dir="rtl"] .w-section h3 { letter-spacing: 0; }
 .w-wrap[dir="rtl"] .w-hero h2 { font-weight: 400; }

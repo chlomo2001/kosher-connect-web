@@ -113,8 +113,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   const [lang, setLang] = useState('en')
   useEffect(() => { try {
     // Portal keeps its OWN en/he view in kcPortalLang; fall back to the shared
-    // /welcome preference (which may be 'yi' — the portal has no Yiddish, so 'yi'
-    // shows English) only when the portal hasn't been toggled here before.
+    // /welcome preference only when the portal hasn't been toggled here before.
     const p = localStorage.getItem('kcPortalLang')
     if (p === 'he' || p === 'en') { setLang(p); return }
     if (localStorage.getItem('kcLang') === 'he') setLang('he')
@@ -128,9 +127,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     setLang(n)
     try {
       localStorage.setItem('kcPortalLang', n)
-      // Don't clobber a Yiddish site preference set on /welcome: only mirror the
-      // portal toggle into the shared key when it isn't 'yi'.
-      if (localStorage.getItem('kcLang') !== 'yi') localStorage.setItem('kcLang', n)
+      localStorage.setItem('kcLang', n)
     } catch { /* not persisted */ }
   }
   const langBtn = (
