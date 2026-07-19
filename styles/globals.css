@@ -1386,18 +1386,21 @@ td.cal-active.cal-shabbat { background: var(--accent); }
    like the login card does — frosted glass + the login card's shadow — so the
    scene (and its Pre-dawn…Night moods) washes the WHOLE page, not just the
    gaps between opaque cards. */
-.welcome-shell { position: relative; min-height: 100vh; background: var(--bg); }
+/* The shell is its own scroll container (like .tool-shell): body/#__next are
+   overflow:hidden for the app frame, which silently made this page
+   UNSCROLLABLE — everything below the first viewport was unreachable. */
+.welcome-shell { position: relative; height: 100vh; width: 100%; overflow-y: auto; background: var(--bg); }
 .welcome-shell .login-fx { position: fixed; inset: 0; }
 .w-wrap { position: relative; z-index: 1; width: 100%; padding: 22px clamp(20px, 4.5vw, 64px) 70px; }
 
 /* One glass recipe, shared by every floating surface (matches .fx-switch). */
-.w-topbar, .w-hero, .w-card, .w-pills a, .w-lang {
+.w-topbar, .w-hero, .w-card, .w-pills a, .w-lang, .w-proof {
   background: rgba(255, 255, 255, 0.66);
   backdrop-filter: blur(14px) saturate(1.15); -webkit-backdrop-filter: blur(14px) saturate(1.15);
 }
 :root[data-theme="dark"] .w-topbar, :root[data-theme="dark"] .w-hero,
 :root[data-theme="dark"] .w-card, :root[data-theme="dark"] .w-pills a,
-:root[data-theme="dark"] .w-lang { background: rgba(16, 20, 34, 0.55); }
+:root[data-theme="dark"] .w-lang, :root[data-theme="dark"] .w-proof { background: rgba(16, 20, 34, 0.55); }
 
 .w-topbar {
   display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
@@ -1565,3 +1568,131 @@ html { scroll-behavior: smooth; }
 .tool-foot { font-size: 12.5px; color: var(--muted); padding: 4px 2px; }
 .tool-foot a { color: var(--accent); text-decoration: none; }
 .tool-shell input[type="file"] { font-size: 13px; color: var(--muted); }
+
+/* ─── WELCOME premium pass — proof strip, contact tiles, real footer ───
+   Benchmarked against the way high-end service sites sell: concrete numbers
+   up front (the proof strip), contact as three doors (visit / call / write)
+   rather than one paragraph, and a footer that closes the page instead of
+   trailing off. Same glass recipe as every other floating surface. */
+.w-proof {
+  margin-top: 18px; border: 1px solid var(--border); border-radius: 16px;
+  padding: 20px 24px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+  box-shadow: 0 16px 40px -22px rgba(10,37,64,.28);
+}
+.w-proof-item + .w-proof-item { border-inline-start: 1px solid var(--border); padding-inline-start: 20px; }
+.w-proof-num { font-size: 23px; font-weight: 300; letter-spacing: -0.4px; color: var(--text); margin-bottom: 5px; white-space: nowrap; }
+.w-wrap[dir="rtl"] .w-proof-num { letter-spacing: 0; }
+.w-proof-cap { font-size: 12.5px; color: var(--muted); line-height: 1.55; max-width: 34ch; }
+@media (max-width: 760px) {
+  .w-proof { grid-template-columns: 1fr; gap: 14px; padding: 18px 20px; }
+  .w-proof-item + .w-proof-item { border-inline-start: 0; padding-inline-start: 0; border-top: 1px solid var(--border); padding-top: 14px; }
+}
+
+.w-lead { margin: -4px 0 16px; color: var(--ink-secondary); font-size: 14px; line-height: 1.6; max-width: 62ch; }
+.w-contact-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 860px) { .w-contact-grid { grid-template-columns: 1fr; } }
+.w-contact-link {
+  display: inline-block; margin-top: 12px; font-size: 13.5px; font-weight: 600;
+  color: var(--accent); text-decoration: none;
+}
+.w-contact-link:hover { text-decoration: underline; }
+
+.w-footer2 {
+  margin-top: 46px; border: 1px solid var(--border); border-radius: 16px;
+  padding: 26px 24px 18px; color: var(--muted); font-size: 13px;
+  box-shadow: 0 12px 32px -18px rgba(10,37,64,.25);
+  background: rgba(255, 255, 255, 0.66);
+  backdrop-filter: blur(14px) saturate(1.15); -webkit-backdrop-filter: blur(14px) saturate(1.15);
+}
+:root[data-theme="dark"] .w-footer2 { background: rgba(16, 20, 34, 0.55); }
+.w-footer-grid { display: grid; grid-template-columns: 1.3fr 0.7fr 1fr; gap: 26px; margin-bottom: 22px; }
+@media (max-width: 760px) { .w-footer-grid { grid-template-columns: 1fr; gap: 20px; } }
+.w-footer-brand { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.w-footer-blurb { margin: 0; line-height: 1.6; max-width: 46ch; }
+.w-footer-grid h5 {
+  margin: 0 0 10px; font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.09em;
+}
+.w-wrap[dir="rtl"] .w-footer-grid h5 { letter-spacing: 0; }
+.w-footer-grid a { display: block; padding: 3px 0; color: var(--muted); text-decoration: none; width: fit-content; }
+.w-footer-grid a:hover { color: var(--text); }
+.w-footer-line { margin: 0 0 6px; line-height: 1.6; }
+.w-footer-bottom {
+  border-top: 1px solid var(--border); padding-top: 15px;
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;
+}
+.w-footer-bottom a { color: var(--muted); text-decoration: none; }
+.w-footer-bottom a:hover { color: var(--text); }
+
+/* Mobile: the sticky topbar was three wrapped rows eating a third of the
+   screen. Drop the tag line and the in-page anchor pills (the content they
+   jump to is one thumb-flick away) — brand, language, account, sign-in stay. */
+@media (max-width: 640px) {
+  .w-topbar { padding: 10px 14px; gap: 10px; }
+  .w-brand { min-width: 0; gap: 10px; }
+  .w-brand img { height: 34px; }
+  .w-brand p { display: none; }
+  .w-pills a.w-anchor { display: none; }
+  .w-pills { gap: 6px; }
+  .w-pills a { padding: 8px 12px; font-size: 12.5px; }
+}
+
+/* ─── PORTAL — customer account, premium pass ───
+   One floating card over the globe (the login page's language), but inside it
+   a real account page: balance hero, kicker-labelled sections, flex rows with
+   status chips (no floats — RTL flips for free), and a contact line that
+   gives the two ways to actually reach the shop. */
+.portal-card { width: 560px; max-width: 100%; }
+.p-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.p-balance { border-radius: 14px; padding: 16px 18px 18px; margin-bottom: 6px; border: 1px solid transparent; }
+.p-balance.owe { background: rgba(239,68,68,0.07); border-color: rgba(239,68,68,0.28); }
+.p-balance.credit { background: rgba(34,197,94,0.07); border-color: rgba(34,197,94,0.25); }
+.p-balance-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 5px;
+}
+[dir="rtl"] .p-balance-label { letter-spacing: 0; }
+.p-balance-num { font-size: 29px; font-weight: 300; letter-spacing: -0.5px; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--text); }
+.p-balance.owe .p-balance-num { color: #dc2626; }
+.p-balance.credit .p-balance-num { color: #16a34a; }
+:root[data-theme="dark"] .p-balance.owe .p-balance-num { color: #f87171; }
+:root[data-theme="dark"] .p-balance.credit .p-balance-num { color: #4ade80; }
+.p-paid { font-size: 13px; color: #16a34a; margin-top: 8px; }
+:root[data-theme="dark"] .p-paid { color: #4ade80; }
+.p-payerr { font-size: 12px; color: #dc2626; margin-top: 8px; }
+:root[data-theme="dark"] .p-payerr { color: #f87171; }
+
+.p-section { padding: 15px 0 13px; }
+.p-section + .p-section { border-top: 1px solid var(--border); }
+.p-kicker {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 9px;
+}
+[dir="rtl"] .p-kicker { letter-spacing: 0; }
+.p-kicker svg { width: 15px; height: 15px; color: var(--accent); flex-shrink: 0; }
+
+.p-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+.p-row + .p-row { border-top: 1px solid var(--border); }
+.p-row-main { flex: 1 1 auto; min-width: 0; }
+.p-row-title { font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p-row-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.p-badge {
+  flex: 0 0 auto; font-size: 11px; font-weight: 500; line-height: 1;
+  padding: 4px 9px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap;
+}
+.p-badge-ok { background: rgba(34,197,94,0.12); color: #15803d; }
+:root[data-theme="dark"] .p-badge-ok { background: rgba(34,197,94,0.16); color: #4ade80; }
+.p-badge-warn { background: rgba(245,158,11,0.14); color: #92400e; }
+:root[data-theme="dark"] .p-badge-warn { background: rgba(245,158,11,0.18); color: #fbbf24; }
+.p-badge-muted { background: var(--bg-secondary); color: var(--muted); border-color: var(--border); }
+
+.p-empty { font-size: 13px; color: var(--muted); }
+.p-msg { font-size: 12px; color: var(--muted); margin-top: 8px; display: inline-block; }
+.p-foot {
+  margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);
+  font-size: 12px; color: var(--muted); text-align: center; line-height: 1.7;
+}
+.p-foot a { color: var(--accent); text-decoration: none; }
+.p-foot a:hover { text-decoration: underline; }
+.p-reassure { margin-top: 12px; font-size: 12px; color: var(--muted); text-align: center; line-height: 1.5; }

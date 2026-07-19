@@ -12,6 +12,7 @@ import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
 import { formatPhoneDisplay } from '../lib/ukPhone.mjs'
 import AuthBackdrop from '../components/AuthBackdrop'
+import { CardIcon, FlipPhoneIcon, PlaneIcon, DocIcon } from '../components/kcIcons'
 
 // Portal copy in English + lashon hakodesh — some customers are Israelis who
 // don't know English. Shares the 'kcLang' preference with /welcome (the
@@ -33,19 +34,22 @@ const P = {
     payFormFail: 'Could not load the payment form.',
     payFailed: 'Payment failed.',
     payProcessing: 'Your payment is processing — we’ll update your balance shortly.',
-    pmTitle: '💳 Payment method',
+    pmTitle: 'Payment method',
     cardOnFile: '✓ A card is saved on file.',
     saveCard: 'Save card', saving: 'Saving…',
     saveCardStart: 'Save a card for future payments',
     couldNotStart: 'Could not start.', couldNotLoadForm: 'Could not load the form.',
     couldNotSaveCard: 'Could not save the card.',
-    rentals: '📱 Rentals', noRentals: 'No active rentals.',
-    flights: '✈️ Flights', noFlights: 'No upcoming flights.',
-    docs: '📄 Documents', noDocs: 'Nothing shared with you yet.',
-    download: 'Download', upload: '⬆︎ Send us a document', uploading: 'Uploading…',
+    rentals: 'Rentals', noRentals: 'No active rentals.',
+    flights: 'Flights', noFlights: 'No upcoming flights.',
+    docs: 'Documents', noDocs: 'Nothing shared with you yet.',
+    download: 'Download', upload: 'Send us a document', uploading: 'Uploading…',
     upSent: 'Sent — we’ll review it shortly.', upFailed: 'Upload failed.',
-    pendingReview: '⏳ awaiting review', received: '✓ received',
-    questions: 'Questions? Reply to your usual KosherConnect contact.',
+    pendingReview: 'Awaiting review', received: 'Received',
+    qShort: 'Questions? We’re here —',
+    reassure: 'No password needed — we email you a secure one-time sign-in link.',
+    statuses: { active: 'Active', booked: 'Booked', overdue: 'Overdue', Booked: 'Booked', Ticketed: 'Ticketed', Confirmed: 'Confirmed' },
+    daysLeft: (n) => (n === 0 ? 'returns today' : n === 1 ? 'returns tomorrow' : `${n} days left`),
     subSignedOut: (g) => `${g}! See your rentals, bookings and balance`,
     yourEmail: 'Your email', emailLink: 'Email me a sign-in link', sending: 'Sending…',
     sent: '📬 If that email belongs to a KosherConnect customer, a sign-in link is on its way. You can close this page.',
@@ -69,19 +73,22 @@ const P = {
     payFormFail: 'טופס התשלום לא נטען.',
     payFailed: 'התשלום נכשל.',
     payProcessing: 'התשלום בתהליך — היתרה תתעדכן בקרוב.',
-    pmTitle: '💳 אמצעי תשלום',
+    pmTitle: 'אמצעי תשלום',
     cardOnFile: '✓ כרטיס שמור במערכת.',
     saveCard: 'שמירת כרטיס', saving: 'שומר…',
     saveCardStart: 'שמירת כרטיס לתשלומים עתידיים',
     couldNotStart: 'לא הצלחנו להתחיל.', couldNotLoadForm: 'הטופס לא נטען.',
     couldNotSaveCard: 'לא הצלחנו לשמור את הכרטיס.',
-    rentals: '📱 השכרות', noRentals: 'אין השכרות פעילות.',
-    flights: '✈️ טיסות', noFlights: 'אין טיסות קרובות.',
-    docs: '📄 מסמכים', noDocs: 'עדיין לא שותפו איתך מסמכים.',
-    download: 'הורדה', upload: '⬆︎ שליחת מסמך אלינו', uploading: 'מעלה…',
+    rentals: 'השכרות', noRentals: 'אין השכרות פעילות.',
+    flights: 'טיסות', noFlights: 'אין טיסות קרובות.',
+    docs: 'מסמכים', noDocs: 'עדיין לא שותפו איתך מסמכים.',
+    download: 'הורדה', upload: 'שליחת מסמך אלינו', uploading: 'מעלה…',
     upSent: 'נשלח — נבדוק בקרוב.', upFailed: 'ההעלאה נכשלה.',
-    pendingReview: '⏳ ממתין לבדיקה', received: '✓ התקבל',
-    questions: 'שאלות? פנו לאיש הקשר הקבוע שלכם בכשר קונקט.',
+    pendingReview: 'ממתין לבדיקה', received: 'התקבל',
+    qShort: 'שאלות? אנחנו כאן —',
+    reassure: 'בלי סיסמה — נשלח לכם למייל קישור כניסה מאובטח חד־פעמי.',
+    statuses: { active: 'פעילה', booked: 'הוזמנה', overdue: 'באיחור', Booked: 'הוזמנה', Ticketed: 'כורטס', Confirmed: 'מאושרת' },
+    daysLeft: (n) => (n === 0 ? 'חוזר היום' : n === 1 ? 'חוזר מחר' : `נותרו ${n} ימים`),
     subSignedOut: (g) => `${g}! ההשכרות, ההזמנות והיתרה שלך — במקום אחד`,
     yourEmail: 'כתובת האימייל שלך', emailLink: 'שלחו לי קישור כניסה במייל', sending: 'שולח…',
     sent: '📬 אם האימייל שייך ללקוח של כשר קונקט, קישור כניסה כבר בדרך. אפשר לסגור את העמוד.',
@@ -122,7 +129,6 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   const L = P[lang]
   const isHe = lang === 'he'
   const dir = isHe ? 'rtl' : 'ltr'
-  const fl = isHe ? 'left' : 'right'      // "float to the far side" flips in RTL
   const flipLang = () => {
     const n = isHe ? 'en' : 'he'
     setLang(n)
@@ -372,41 +378,49 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     const upcoming = (account.bookings || []).filter((b) => b.status !== 'Cancelled' && b.status !== 'Completed')
     const staffDocs = (docs || []).filter((d) => d.source === 'staff')
     const myUploads = (docs || []).filter((d) => d.source === 'customer')
+    const stLabel = (s) => L.statuses[s] || s
+    const stClass = (s) => (s === 'active' || s === 'Ticketed' ? 'p-badge-ok' : s === 'overdue' ? 'p-badge-warn' : 'p-badge-muted')
+    // "9 days left" on an active rental — the one number a traveller actually
+    // wants from this row. Display-only; silently absent for odd dates.
+    const daysLeft = (r) => {
+      if (r.status !== 'active' || !r.toDate) return ''
+      const d = new Date(r.toDate)
+      if (isNaN(d)) return ''
+      const n = Math.ceil((d.getTime() - Date.now()) / 86400000)
+      return n < 0 ? '' : ` · ${L.daysLeft(n)}`
+    }
     return (
       <>
         <Head><title>{L.title}</title></Head>
         <div className="login-shell">
           <div className="login-mesh" aria-hidden="true" />
+          <AuthBackdrop />
           <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
           {langBtn}
-          <div className="login-card" dir={dir} style={{ maxWidth: 520, width: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <div className="login-card portal-card" dir={dir}>
+            <div className="p-head">
               <div>
                 <div className="login-title" style={{ fontSize: 22 }}>
                   {greeting}{account.customer?.firstName ? `, ${account.customer.firstName}` : ''}
                 </div>
                 <div className="login-sub">{L.account}</div>
               </div>
-              <button className="btn btn-outline" onClick={signOut} style={{ fontSize: 12, padding: '6px 12px' }}>{L.signout}</button>
+              <button className="btn btn-outline" onClick={signOut} style={{ fontSize: 12, padding: '6px 12px', flexShrink: 0 }}>{L.signout}</button>
             </div>
 
-            <div style={{
-              borderRadius: 12, padding: '16px 18px', marginBottom: 18,
-              background: owes ? 'rgba(239,68,68,0.10)' : 'rgba(34,197,94,0.10)',
-              border: `1px solid ${owes ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`,
-            }}>
-              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>{L.wallet}</div>
-              <div style={{ fontSize: 26, fontWeight: 700, color: owes ? '#dc2626' : '#16a34a' }}>
+            <div className={`p-balance ${owes ? 'owe' : 'credit'}`}>
+              <div className="p-balance-label">{L.wallet}</div>
+              <div className="p-balance-num">
                 {owes ? L.youOwe(fmtGbp(Math.abs(account.balance))) : account.balance > 0 ? L.inCredit(fmtGbp(account.balance)) : fmtGbp(0)}
               </div>
-              {paid && <div role="status" style={{ fontSize: 13, color: '#16a34a', marginTop: 8 }}>{L.paidNote}</div>}
+              {paid && <div role="status" className="p-paid">{L.paidNote}</div>}
               {owes && !pay && (
                 <button className="btn btn-primary" onClick={startPay} disabled={payBusy}
                   style={{ marginTop: 12, width: '100%', padding: '10px 16px' }}>
                   {payBusy ? L.starting : L.payBtn(fmtGbp(Math.abs(account.balance)))}
                 </button>
               )}
-              {payMsg && <div role="alert" style={{ fontSize: 12, color: '#dc2626', marginTop: 8 }}>{payMsg}</div>}
+              {payMsg && <div role="alert" className="p-payerr">{payMsg}</div>}
               {pay && (
                 <div style={{ marginTop: 12 }}>
                   <div id="kc-pay-element" />
@@ -421,10 +435,10 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
             </div>
 
             {/* Payment method — save a card for future payments */}
-            <div style={{ marginBottom: 18 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{L.pmTitle}</div>
+            <div className="p-section">
+              <div className="p-kicker"><CardIcon /> {L.pmTitle}</div>
               {(account.cardOnFile || cardSaved) ? (
-                <div style={{ fontSize: 13, color: 'var(--muted)' }}>{L.cardOnFile}</div>
+                <div className="p-empty">{L.cardOnFile}</div>
               ) : saveCard ? (
                 <div>
                   <div id="kc-savecard-element" />
@@ -437,44 +451,48 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                 <button className="btn btn-outline" onClick={startSaveCard} disabled={saveBusy}
                   style={{ fontSize: 13, padding: '8px 14px' }}>{saveBusy ? L.starting : L.saveCardStart}</button>
               )}
-              {saveMsg && <div role="status" style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>{saveMsg}</div>}
+              {saveMsg && <div role="status" className="p-msg">{saveMsg}</div>}
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{L.rentals}</div>
+            <div className="p-section">
+              <div className="p-kicker"><FlipPhoneIcon /> {L.rentals}</div>
               {activeRentals.length === 0
-                ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>{L.noRentals}</div>
+                ? <div className="p-empty">{L.noRentals}</div>
                 : activeRentals.map((r, i) => (
-                  <div key={i} style={{ fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                    <bdi dir="ltr">{formatPhoneDisplay(r.phoneNumber) || L.phoneFallback}</bdi> · {r.country}
-                    <span style={{ color: 'var(--muted)' }}> · <bdi dir="ltr">{fmtDate(r.fromDate)} {isHe ? '←' : '→'} {fmtDate(r.toDate)}</bdi></span>
-                    <span style={{ float: fl, color: 'var(--muted)' }}>{r.status}</span>
+                  <div className="p-row" key={i}>
+                    <div className="p-row-main">
+                      <div className="p-row-title"><bdi dir="ltr">{formatPhoneDisplay(r.phoneNumber) || L.phoneFallback}</bdi> · {r.country}</div>
+                      <div className="p-row-sub"><bdi dir="ltr">{fmtDate(r.fromDate)} {isHe ? '←' : '→'} {fmtDate(r.toDate)}</bdi>{daysLeft(r)}</div>
+                    </div>
+                    <span className={`p-badge ${stClass(r.status)}`}>{stLabel(r.status)}</span>
                   </div>
                 ))}
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{L.flights}</div>
+            <div className="p-section">
+              <div className="p-kicker"><PlaneIcon /> {L.flights}</div>
               {upcoming.length === 0
-                ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>{L.noFlights}</div>
+                ? <div className="p-empty">{L.noFlights}</div>
                 : upcoming.map((b, i) => (
-                  <div key={i} style={{ fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                    {b.route || L.flightFallback}{b.airline ? ` · ${b.airline}` : ''}
-                    <span style={{ color: 'var(--muted)' }}>{b.travelDate ? ` · ${fmtDate(b.travelDate)}` : ''}</span>
-                    <span style={{ float: fl, color: 'var(--muted)' }}>{b.status}</span>
+                  <div className="p-row" key={i}>
+                    <div className="p-row-main">
+                      <div className="p-row-title">{b.route || L.flightFallback}{b.airline ? ` · ${b.airline}` : ''}</div>
+                      {b.travelDate ? <div className="p-row-sub">{fmtDate(b.travelDate)}</div> : null}
+                    </div>
+                    <span className={`p-badge ${stClass(b.status)}`}>{stLabel(b.status)}</span>
                   </div>
                 ))}
             </div>
 
             {/* Documents */}
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{L.docs}</div>
+            <div className="p-section">
+              <div className="p-kicker"><DocIcon /> {L.docs}</div>
               {staffDocs.length === 0
-                ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>{L.noDocs}</div>
+                ? <div className="p-empty">{L.noDocs}</div>
                 : staffDocs.map((d) => (
-                  <div key={d.id} style={{ fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>{d.filename}</span>
-                    <button className="btn btn-outline" onClick={() => downloadDoc(d.id)} style={{ fontSize: 12, padding: '4px 10px' }}>{L.download}</button>
+                  <div className="p-row" key={d.id}>
+                    <div className="p-row-main"><div className="p-row-title">{d.filename}</div></div>
+                    <button className="btn btn-outline" onClick={() => downloadDoc(d.id)} style={{ fontSize: 12, padding: '4px 10px', flexShrink: 0 }}>{L.download}</button>
                   </div>
                 ))}
 
@@ -484,15 +502,15 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                   style={{ fontSize: 13, padding: '8px 14px' }}>
                   {docBusy ? L.uploading : L.upload}
                 </button>
-                {docMsg && <span role="status" style={{ fontSize: 12, color: 'var(--muted)', marginInlineStart: 10 }}>{docMsg}</span>}
+                {docMsg && <span role="status" className="p-msg" style={{ marginInlineStart: 10 }}>{docMsg}</span>}
               </div>
 
               {myUploads.length > 0 && (
                 <div style={{ marginTop: 10 }}>
                   {myUploads.map((d) => (
-                    <div key={d.id} style={{ fontSize: 12, color: 'var(--muted)', padding: '4px 0' }}>
-                      {d.filename}
-                      <span style={{ float: fl }}>
+                    <div className="p-row" key={d.id}>
+                      <div className="p-row-main"><div className="p-row-sub">{d.filename}</div></div>
+                      <span className={`p-badge ${d.status === 'pending' ? 'p-badge-warn' : d.status === 'published' ? 'p-badge-ok' : 'p-badge-muted'}`}>
                         {d.status === 'pending' ? L.pendingReview : d.status === 'published' ? L.received : d.status}
                       </span>
                     </div>
@@ -501,8 +519,11 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
               )}
             </div>
 
-            <div style={{ marginTop: 18, fontSize: 11, color: 'var(--muted)', textAlign: 'center' }}>
-              {L.questions}
+            <div className="p-foot">
+              {L.qShort}{' '}
+              <a href="tel:+441615311386" dir="ltr">{formatPhoneDisplay('01615311386')}</a>
+              {' · '}
+              <a href="mailto:admin@kosher-connect.com" dir="ltr">admin@kosher-connect.com</a>
             </div>
           </div>
         </div>
@@ -539,6 +560,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
               <button className="btn btn-primary" type="submit" disabled={busy} style={{ width: '100%', padding: '10px 16px' }}>
                 {busy ? L.sending : L.emailLink}
               </button>
+              <div className="p-reassure">{L.reassure}</div>
               {googleEnabled && (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0', color: 'var(--muted)', fontSize: 12 }}>

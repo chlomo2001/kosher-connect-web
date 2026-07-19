@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
 import AuthBackdrop from '../components/AuthBackdrop'
+import { formatPhoneDisplay } from '../lib/ukPhone.mjs'
+import {
+  PlaneIcon, FlipPhoneIcon, SimIcon, GlobeIcon, TicketIcon, MusicIcon,
+  WrenchIcon, BagIcon, ChatIcon, PhoneCallIcon, MailIcon, PinIcon,
+} from '../components/kcIcons'
 
 // The public face of KosherConnect — the owner's original site rebuilt on the
 // app's design system, with the living globe scene behind it. His voice and
@@ -14,20 +19,12 @@ import AuthBackdrop from '../components/AuthBackdrop'
 // translation widget. RTL flips with the language.
 // No auth: Sign in / My account link into the staff app and customer portal.
 
-const FlipPhoneIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
-    <rect x="7" y="1.5" width="10" height="9" rx="2" />
-    <rect x="9.2" y="3.4" width="5.6" height="4.4" rx="0.8" />
-    <line x1="6.2" y1="11.9" x2="17.8" y2="11.9" />
-    <rect x="7" y="13.3" width="10" height="9.2" rx="2" />
-    {[15.7, 17.8, 19.9].map((cy) =>
-      [9.7, 12, 14.3].map((cx) => <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="0.62" fill="currentColor" stroke="none" />)
-    )}
-  </svg>
-)
+const ICONS = [PlaneIcon, FlipPhoneIcon, SimIcon, GlobeIcon, TicketIcon, MusicIcon, WrenchIcon, BagIcon, ChatIcon]
 
-const ICONS = ['✈️', <FlipPhoneIcon key="flip" />, '📶', '🌍', '🎟️', '🎵', '🛠️', '🛍️', '✅']
+const PHONE_TEL = 'tel:+441615311386'
+const PHONE_SHOWN = formatPhoneDisplay('01615311386')
+const EMAIL = 'admin@kosher-connect.com'
+const MAPS_URL = 'https://maps.google.com/?q=421+Bury+New+Road,+Manchester'
 
 const T = {
   en: {
@@ -42,6 +39,11 @@ const T = {
     ctaServices: 'See what we do', ctaContact: 'Ask us anything',
     mini1: { t: 'Straight answers', b: 'We recommend what fits your family and your pocket — even when it isn’t the dearest thing on the shelf.' },
     mini2: { t: 'Travel ready', b: 'USA · Canada · EU · Israel — phone and number working before you board.' },
+    proof: [
+      { v: '£35 → £18', c: 'what a typical monthly SIM bill becomes once the plan actually matches the usage' },
+      { v: 'Shabbos & Yom Tov', c: 'never charged on any rental — on every trip, automatically' },
+      { v: 'Same day', c: 'rentals, SIMs and international numbers working before you leave the shop' },
+    ],
     servicesTitle: 'What we do',
     services: [
       { title: 'Travelling? Don’t pay roaming prices', body: 'Rent a kosher phone for the trip — USA and Israel lines ready the day you leave. You pay only for the days you use; Shabbos and Yom Tov are always free.' },
@@ -57,6 +59,11 @@ const T = {
     contactTitle: 'Come in or call',
     contactLead: 'A phone, a plan, a repair, a trip — just ask. No obligation, and you’ll get a straight answer.',
     address: '421 Bury New Road (door left of Toy Zone, first floor up)',
+    visitTitle: 'Visit the shop', directions: 'Get directions',
+    callTitle: 'Call us', callBody: 'Whatever the question — you’ll get a straight answer.',
+    emailTitle: 'Email us', emailBody: 'For anything that can wait for a written reply.',
+    footExplore: 'Explore', footContact: 'Contact',
+    footBlurb: 'Kosher phones, SIM plans, travel rentals, international numbers, Kol Torah audio and repairs — for the Heimishe community, from Manchester.',
     rights: 'All rights reserved.', backTop: 'Back to top ↑',
   },
   he: {
@@ -71,6 +78,11 @@ const T = {
     ctaServices: 'מה אנחנו עושים', ctaContact: 'שאלו אותנו',
     mini1: { t: 'תשובות ישרות', b: 'אנחנו ממליצים על מה שמתאים למשפחה ולכיס — גם כשזה לא הדבר היקר ביותר על המדף.' },
     mini2: { t: 'מוכנים לנסיעה', b: 'ארה״ב · קנדה · אירופה · ארץ ישראל — הטלפון והמספר עובדים עוד לפני ההמראה.' },
+    proof: [
+      { v: '£18 במקום £35', c: 'כך נראה חשבון סים חודשי טיפוסי אחרי שהתוכנית באמת מותאמת לשימוש' },
+      { v: 'שבת ויום טוב', c: 'לעולם אינם מחויבים בהשכרה — בכל נסיעה, אוטומטית' },
+      { v: 'באותו יום', c: 'השכרות, כרטיסי סים ומספרים בינלאומיים עובדים עוד לפני שיוצאים מהחנות' },
+    ],
     servicesTitle: 'מה אנחנו עושים',
     services: [
       { title: 'נוסעים? אל תשלמו מחירי נדידה', body: 'שכרו טלפון כשר לנסיעה — קווים לארה״ב ולארץ ישראל מוכנים ביום היציאה. משלמים רק על הימים שבשימוש; שבת ויום טוב תמיד חינם.' },
@@ -86,9 +98,31 @@ const T = {
     contactTitle: 'בואו או התקשרו',
     contactLead: 'טלפון, תוכנית, תיקון או נסיעה — שאלו. בלי התחייבות, ותקבלו תשובה ישרה.',
     address: '421 בורי ניו רואד (הכניסה משמאל ל־Toy Zone, קומה ראשונה)',
+    visitTitle: 'בואו לחנות', directions: 'הוראות הגעה',
+    callTitle: 'התקשרו', callBody: 'לא משנה מה השאלה — תקבלו תשובה ישרה.',
+    emailTitle: 'כתבו לנו', emailBody: 'לכל דבר שיכול לחכות לתשובה בכתב.',
+    footExplore: 'ניווט', footContact: 'יצירת קשר',
+    footBlurb: 'טלפונים כשרים, תוכניות סים, השכרות לנסיעות, מספרים בינלאומיים, קול תורה ותיקונים — לקהילה החרדית, ממנצ׳סטר.',
     rights: 'כל הזכויות שמורות.', backTop: 'חזרה למעלה ↑',
   },
 }
+
+// LocalBusiness card for search engines — the honest basics only.
+const LD_JSON = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'LocalBusiness',
+  name: 'Kosher Connect',
+  description: 'Kosher phones, SIM plans, travel phone rentals, international numbers, Kol Torah audio and repairs. Serving the Heimishe community from Manchester.',
+  telephone: '+441615311386',
+  email: EMAIL,
+  url: 'https://kosher-connect.com/welcome',
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: '421 Bury New Road, First Floor',
+    addressLocality: 'Manchester',
+    addressCountry: 'GB',
+  },
+})
 
 export default function Welcome() {
   const [lang, setLang] = useState('en')
@@ -117,6 +151,13 @@ export default function Welcome() {
       <Head>
         <title>Kosher Connect — Kosher phones, SIM plans, travel, repairs & international numbers</title>
         <meta name="description" content="Kosher Connect - Kosher phones, SIM plans, travel phones, repairs, and international numbers. Serving the Heimishe community from Manchester." />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Kosher Connect" />
+        <meta property="og:title" content="Kosher Connect — Welcome to the Kosher World" />
+        <meta property="og:description" content="Kosher phones, SIM plans, travel rentals, international numbers, Kol Torah audio and repairs — under one roof in Manchester." />
+        <meta property="og:url" content="https://kosher-connect.com/welcome" />
+        <meta property="og:image" content="https://kosher-connect.com/logo-full.png" />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: LD_JSON }} />
       </Head>
       <div className="welcome-shell">
         <AuthBackdrop />
@@ -138,8 +179,8 @@ export default function Welcome() {
                     onClick={() => pick(l)}>{T[l].langLabel}</button>
                 ))}
               </div>
-              <a href="#services">{t.nav.services}</a>
-              <a href="#contact">{t.nav.contact}</a>
+              <a href="#services" className="w-anchor">{t.nav.services}</a>
+              <a href="#contact" className="w-anchor">{t.nav.contact}</a>
               <a href="/portal">{t.nav.account}</a>
               <a href="/login" className="w-pill-primary">{t.nav.signin}</a>
             </nav>
@@ -170,32 +211,83 @@ export default function Welcome() {
             </div>
           </section>
 
+          {/* The proof strip — three concrete promises, stated as numbers, the
+              way the shop actually talks. Every figure comes from the copy
+              below; nothing invented for effect. */}
+          <section className="w-proof" aria-label={t.servicesTitle}>
+            {t.proof.map((p, i) => (
+              <div className="w-proof-item" key={`${lang}-p${i}`}>
+                <div className="w-proof-num">{p.v}</div>
+                <div className="w-proof-cap">{p.c}</div>
+              </div>
+            ))}
+          </section>
+
           <section className="w-section" id="services">
             <h3>{t.servicesTitle}</h3>
             <div className="w-grid">
-              {t.services.map((s, i) => (
-                <div className="w-card w-reveal" key={`${lang}-${i}`}>
-                  <div className="w-icon" aria-hidden="true">{ICONS[i]}</div>
-                  <h4>{s.title}</h4>
-                  <p>{s.body}</p>
-                </div>
-              ))}
+              {t.services.map((s, i) => {
+                const Icon = ICONS[i]
+                return (
+                  <div className="w-card w-reveal" key={`${lang}-${i}`}>
+                    <div className="w-icon" aria-hidden="true"><Icon /></div>
+                    <h4>{s.title}</h4>
+                    <p>{s.body}</p>
+                  </div>
+                )
+              })}
             </div>
           </section>
 
           <section className="w-section" id="contact">
             <h3>{t.contactTitle}</h3>
-            <div className="w-card w-show">
-              <p style={{ marginBottom: 10 }}>{t.contactLead}</p>
-              <p style={{ margin: '0 0 6px' }}>📍 {t.address}</p>
-              <p style={{ margin: '0 0 6px' }}>📞 <a href="tel:01615311386" dir="ltr"><b>0161 531 1386</b></a></p>
-              <p style={{ margin: 0 }}>✉️ <a href="mailto:admin@kosher-connect.com" dir="ltr"><b>admin@kosher-connect.com</b></a></p>
+            <p className="w-lead">{t.contactLead}</p>
+            <div className="w-contact-grid">
+              <div className="w-card w-show">
+                <div className="w-icon" aria-hidden="true"><PinIcon /></div>
+                <h4>{t.visitTitle}</h4>
+                <p>{t.address}</p>
+                <a className="w-contact-link" href={MAPS_URL} target="_blank" rel="noopener noreferrer">{t.directions} ↗</a>
+              </div>
+              <div className="w-card w-show">
+                <div className="w-icon" aria-hidden="true"><PhoneCallIcon /></div>
+                <h4>{t.callTitle}</h4>
+                <p>{t.callBody}</p>
+                <a className="w-contact-link" href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a>
+              </div>
+              <div className="w-card w-show">
+                <div className="w-icon" aria-hidden="true"><MailIcon /></div>
+                <h4>{t.emailTitle}</h4>
+                <p>{t.emailBody}</p>
+                <a className="w-contact-link" href={`mailto:${EMAIL}`} dir="ltr">{EMAIL}</a>
+              </div>
             </div>
           </section>
 
-          <footer className="w-footer">
-            <div>© {new Date().getFullYear()} {t.brandName}. {t.rights}</div>
-            <div><a href="#top">{t.backTop}</a></div>
+          <footer className="w-footer2">
+            <div className="w-footer-grid">
+              <div>
+                <div className="w-footer-brand">{t.brandName}</div>
+                <p className="w-footer-blurb">{t.footBlurb}</p>
+              </div>
+              <nav aria-label={t.footExplore}>
+                <h5>{t.footExplore}</h5>
+                <a href="#services">{t.nav.services}</a>
+                <a href="#contact">{t.nav.contact}</a>
+                <a href="/portal">{t.nav.account}</a>
+                <a href="/login">{t.nav.signin}</a>
+              </nav>
+              <div>
+                <h5>{t.footContact}</h5>
+                <p className="w-footer-line">{t.address}</p>
+                <a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a>
+                <a href={`mailto:${EMAIL}`} dir="ltr">{EMAIL}</a>
+              </div>
+            </div>
+            <div className="w-footer-bottom">
+              <div>© {new Date().getFullYear()} {t.brandName}. {t.rights}</div>
+              <div><a href="#top">{t.backTop}</a></div>
+            </div>
           </footer>
         </div>
       </div>
