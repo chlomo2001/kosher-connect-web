@@ -49,12 +49,13 @@ async function customerEmail(customerId) {
   if (!customerId || customerId === 'walkin') return null
   const rows = await db.select(
     'customers',
-    `select=first_name,last_name,email_raw,email_normalized&legacy_id=eq.${encodeURIComponent(String(customerId))}`
+    `select=id,first_name,last_name,email_raw,email_normalized&legacy_id=eq.${encodeURIComponent(String(customerId))}`
   )
   const c = rows[0]
   if (!c) return null
   const email = (c.email_raw || c.email_normalized || '').trim()
   return {
+    id: c.id,
     email: email || null,
     isAccountEmail: isOwnAccountEmail(email),
     name: `${c.first_name || ''} ${c.last_name || ''}`.trim(),
@@ -69,7 +70,7 @@ async function handler(req, res) {
   if (!emailEnabled) {
     return res.status(503).json({
       success: false,
-      error: 'Email isn’t configured yet. Add SMTP_HOST, SMTP_USER and SMTP_PASS to send receipts.',
+      error: 'Email isn’t configured yet. Add RESEND_API_KEY + MAIL_FROM (or the SMTP_* trio) to send receipts.',
     })
   }
   if (!(await tabAllowedFor(req.staff, 'wallet'))) {
@@ -129,7 +130,13 @@ async function handler(req, res) {
       return res.status(400).json({ success: false, error: 'Unknown receipt kind.' })
     }
 
-    const r = await sendEmail({ to: who.email, subject, html })
+    const r = await sendEmail({ to: who.email, subject, html, kind: b.kind, customerId: who.id })
+    if (r.suppressed) {
+      return res.status(400).json({
+        success: false,
+        error: `${who.name || 'This customer'}'s address previously ${r.reason === 'complaint' ? 'marked our mail as spam' : 'bounced'} — send suppressed. Update their email on file first.`,
+      })
+    }
     if (r.held) {
       return res.json({ success: true, held: true, note: 'Email is on HOLD — the receipt was built but not sent. Set MAIL_LIVE=true when you’re ready to email real customers.' })
     }
