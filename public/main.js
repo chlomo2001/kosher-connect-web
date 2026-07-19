@@ -169,6 +169,38 @@ window.api = {
 // ─────────────────────────────────────────────
 let customers = [];
 let filteredCustomers = [];
+// Phone numbers for HUMANS — display-only grouping; storage stays canonical
+// (+447974924585). Mirrors lib/ukPhone.mjs formatPhoneDisplay: UK mobiles
+// 4-3-3 (+44 7974 924 585), UK landlines 3-3-4, +972 and +1 their usual
+// shapes, sender IDs / short codes untouched. Use at every render site;
+// never feed the output back into a save.
+function fmtPhone(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s) return '';
+  if (/[A-Za-z]/.test(s)) return s;
+  let n = s.replace(/[\s().\-]/g, '');
+  if (n.startsWith('00')) n = '+' + n.slice(2);
+  const digits = n.replace(/\D/g, '');
+  if (!n.startsWith('+')) {
+    if (n.startsWith('44') && digits.length >= 11) n = '+' + n;
+    else if (n.startsWith('0') && digits.length >= 10 && digits.length <= 12) n = '+44' + n.slice(1);
+    else return s;
+  }
+  const cc = ['+972', '+44', '+1'].find(c => n.startsWith(c));
+  if (!cc) return n;
+  const rest = n.slice(cc.length).replace(/\D/g, '');
+  const group = (str, sizes) => {
+    const out = []; let i = 0;
+    for (const sz of sizes) { if (i >= str.length) break; out.push(str.slice(i, i + sz)); i += sz; }
+    if (i < str.length) out.push(str.slice(i));
+    return out.join(' ');
+  };
+  if (cc === '+44' && rest.length === 10) return '+44 ' + (rest[0] === '7' ? group(rest, [4, 3, 3]) : group(rest, [3, 3, 4]));
+  if (cc === '+972' && (rest.length === 8 || rest.length === 9)) return '+972 ' + group(rest, [2, 3, 4]);
+  if (cc === '+1' && rest.length === 10) return '+1 ' + group(rest, [3, 3, 4]);
+  return cc + ' ' + rest;
+}
+
 // The master customers array stays sorted A–Z (first name, then surname) at
 // all times: every picker in the app — rentals, bookings, SIMs, repairs,
 // services, POS, VN, Kol Torah, tasks — renders straight off this array, so
@@ -561,7 +593,7 @@ function filterCustomerDropdown() {
     dropdown.innerHTML = matches.map(c => `
       <div class="customer-dropdown-item" onclick="selectRentalCustomer('${c.id}')">
         <strong>${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}</strong>
-        <span style="color:var(--muted);font-size:11px;margin-left:8px;">${escHtml(c.phone||'')} ${c.email ? '· '+escHtml(c.email) : ''}</span>
+        <span style="color:var(--muted);font-size:11px;margin-left:8px;">${escHtml(fmtPhone(c.phone||''))} ${c.email ? '· '+escHtml(c.email) : ''}</span>
       </div>`).join('');
   }
   dropdown.classList.add('open');
@@ -572,7 +604,7 @@ function selectRentalCustomer(id) {
   if (!c) return;
   document.getElementById('rCustomer').value = id;
   document.getElementById('rCustomerSearch').value = `${c.firstName} ${c.lastName}`;
-  document.getElementById('rCustomerSelected').textContent = `✓ ${c.phone || ''}`;
+  document.getElementById('rCustomerSelected').textContent = `✓ ${fmtPhone(c.phone || '')}`;
   document.getElementById('rCustomerDropdown').classList.remove('open');
   selectedRentalCustomerId = id;
   updateRentalCalc(); // customer drives the multi-phone (3rd+) auto-discount
@@ -584,7 +616,7 @@ function onCustomerSelectChange() {
   const sel = document.getElementById('rCustomer');
   const c = customers.find(x => x.id === sel.value);
   const div = document.getElementById('rCustomerSelected');
-  if (c && div) div.textContent = '✓ ' + (c.phone || '');
+  if (c && div) div.textContent = '✓ ' + fmtPhone(c.phone || '');
   else if (div) div.textContent = '';
 }
 
@@ -1382,7 +1414,7 @@ function availabilityCalendarHtml() {
         onclick="openManageRentalModal('${hit.r.id}')"></td>`;
     }).join('');
     return `<tr>
-      <td class="cal-phone"><strong>${escHtml(p.number)}</strong><div class="customer-email">${escHtml(p.country)}${p.ukPlan === 'unlimited' ? ' intl' : ''}</div></td>
+      <td class="cal-phone"><strong>${escHtml(fmtPhone(p.number))}</strong><div class="customer-email">${escHtml(p.country)}${p.ukPlan === 'unlimited' ? ' intl' : ''}</div></td>
       ${cells}
     </tr>`;
   }).join('');
@@ -1533,7 +1565,7 @@ function renderPhoneRows() {
     const poolDisplay   = isUSA ? (p.pool || '—') : 'N/A';
     const expiryDisplay = isUSA ? (p.poolExpiry || '—') : 'N/A';
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('.action-btn'))openEditPhoneModal('${p.id}')">
-      <td style="font-weight:600;font-size:12px;">${escHtml(p.number)}${p.model ? `<div class="customer-email">${escHtml(p.model)}</div>` : ''}</td>
+      <td style="font-weight:600;font-size:12px;">${escHtml(fmtPhone(p.number))}${p.model ? `<div class="customer-email">${escHtml(p.model)}</div>` : ''}</td>
       <td>${p.country === 'USA' ? '🇺🇸' : p.country === 'Israel' ? '🇮🇱' : p.country === 'UK' ? '🇬🇧' : p.country === 'Canada' ? '🇨🇦' : '🇪🇺'} ${escHtml(p.country)}</td>
       <td style="font-size:12px;color:${isUSA?'':'var(--muted)'};">${isUSA ? escHtml(poolDisplay) : poolDisplay}</td>
       <td style="font-size:11px;color:${poolExpired?'var(--danger)':isUSA?'var(--muted)':'var(--muted)'};">${isUSA ? expiryDisplay : '<span style="color:var(--muted);">N/A</span>'}</td>
@@ -1557,7 +1589,7 @@ function phoneOptionsFor(from, to) {
     ? phones.filter(p => phoneConflicts(rentals, p.id, from, to, today).length === 0)
     : phones.filter(p => p.status !== 'rented');
   return list
-    .map(p => `<option value="${p.id}">${escHtml(p.number)} · ${escHtml(p.country)} · ${escHtml(p.company||'')} ${p.pool ? '(Pool: '+escHtml(p.pool)+')' : ''}</option>`)
+    .map(p => `<option value="${p.id}">${escHtml(fmtPhone(p.number))} · ${escHtml(p.country)} · ${escHtml(p.company||'')} ${p.pool ? '(Pool: '+escHtml(p.pool)+')' : ''}</option>`)
     .join('');
 }
 
@@ -1860,7 +1892,7 @@ function updateRentalCalc() {
     const best = ranked[0];
     if (best && best.phone.id !== (phone && phone.id)) {
       poolLine = `<div style="margin-top:6px;font-size:11px;line-height:1.5;">
-        💡 <span style="color:var(--accent);font-weight:600;">Best pool match: ${escHtml(best.phone.number)}</span>
+        💡 <span style="color:var(--accent);font-weight:600;">Best pool match: ${escHtml(fmtPhone(best.phone.number))}</span>
         <button type="button" class="btn btn-outline" style="padding:1px 8px;font-size:11px;margin-left:4px;"
           onclick="document.getElementById('rPhone').value='${best.phone.id}';updateRentalPhoneInfo();updateRentalCalc();">Use</button>
         <br><span style="color:var(--muted);">${escHtml(best.reason)}</span></div>`;
@@ -2183,7 +2215,7 @@ function openManagePhonesModal() {
       ${phones.length === 0 ? '<p style="color:var(--muted);font-size:13px;">No phones yet.</p>' :
         phones.map(p => `
           <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">
-            <span style="font-weight:600;">${escHtml(p.number)}</span>
+            <span style="font-weight:600;">${escHtml(fmtPhone(p.number))}</span>
             <span style="color:var(--muted);">${escHtml(p.country)} · ${escHtml(p.company||'—')}</span>
             <span class="badge ${p.status==='rented'?'badge-rental':'badge-active'}">${p.status}</span>
           </div>`).join('')}
@@ -2230,7 +2262,7 @@ function openEditPhoneModal(phoneId) {
   const statusColor = p.status === 'rented' ? 'var(--accent)' : 'var(--success)';
   const statusLabel = p.status === 'rented' ? '🔴 Rented' : '🟢 Available';
   showDynamicModal(`
-    <div class="modal-title">✏️ Edit Phone — ${escHtml(p.number)}</div>
+    <div class="modal-title">✏️ Edit Phone — ${escHtml(fmtPhone(p.number))}</div>
     <div class="form-grid">
       ${p.country === 'USA' ? `
       <div class="form-group">
@@ -3076,7 +3108,7 @@ function renderTableRows() {
         <div class="customer-name">${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file">🛂</span>' : ''}</div>
         <div class="customer-email">${escHtml(c.email || '')}${c.accountEmail ? `${c.email ? '<br>' : ''}<span title="Account/login email (Lebara etc.) — not for contacting the customer" style="color:var(--muted);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''}</div>
       </td>
-      <td>${escHtml(c.phone || '—')}</td>
+      <td>${c.phone ? escHtml(fmtPhone(c.phone)) : '—'}</td>
       <td>${services || '<span style="color:var(--muted);font-size:12px;">None</span>'}</td>
       <td style="color: ${customerDebt > 0 ? 'var(--danger)' : (customerCredit > 0 ? 'var(--accent)' : 'var(--success)')}; font-weight: 700;">${
         customerDebt > 0 ? `${fmtGbp(customerDebt)} debt`
@@ -3157,7 +3189,7 @@ function buildCustomerTimeline(c) {
   }
   for (const v of virtualNumbers.filter(x => x.customerId === cid)) {
     ev.push({ date: v.createdAt, icon: '🔢', cat: 'Virtual number',
-      title: `VN ${v.number || ''}`.trim(), sub: v.status || '' });
+      title: `VN ${fmtPhone(v.number || '')}`.trim(), sub: v.status || '' });
   }
   for (const r of repairs.filter(x => x.customerId === cid)) {
     ev.push({ date: r.openedAt || r.createdAt, icon: '🔧', cat: 'Repair',
@@ -3280,7 +3312,7 @@ function renderDetailPanel(id) {
     ...cActiveRentals.map(r => ({ type: 'rental', label: `Rental ${r.country === 'USA' ? '🇺🇸' : r.country === 'UK' ? '🇬🇧' : r.country === 'Israel' ? '🇮🇱' : '🌍'}${r.depositHeld > 0 ? ' · 🔒£' + Number(r.depositHeld).toFixed(0) : ''}${r.termsAck ? ' · ✍️' : ''}` })),
     ...cUpcoming.map(b => ({ type: 'booking', label: `✈️ ${b.route}${b.travelDate ? ' · ' + fmtDate(b.travelDate) : ''}` })),
     ...cSims.map(s => ({ type: 'sim', label: `SIM · ${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}` })),
-    ...cVNs.map(v => ({ type: 'vn', label: `VN ${v.number || ''}` })),
+    ...cVNs.map(v => ({ type: 'vn', label: `VN ${fmtPhone(v.number || '')}` })),
     ...cOpenRepairs.map(r => ({ type: 'repair', label: `🔧 Repair — ${r.status}` })),
     // Recent one-off online/print services (last 90 days, newest first).
     ...serviceOrders
@@ -3325,7 +3357,7 @@ function renderDetailPanel(id) {
           'No active SIM plan',
           `<span style="color:var(--muted);font-size:11px;">add via SIM Plans tab</span>`)}
         ${item(!!vnCover,
-          `Virtual number — ${escHtml(vnCover?.number || '')}`,
+          `Virtual number — ${escHtml(fmtPhone(vnCover?.number || ''))}`,
           'No virtual number (family cannot call locally)',
           `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openNewVNModal('${c.id}')">🔢 Add a number</button>`)}
         ${item(nextTrip.hasPassportDetails,
@@ -3378,7 +3410,7 @@ function renderDetailPanel(id) {
         <div class="avatar">${initials}</div>
         <div style="flex:1;">
           <div class="detail-name">${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:16px;">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
-          <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(c.phone)}</a>` : '—'} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
+          <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openDraftReminderModal('${c.id}')" title="Draft a reminder message (does not send)">✉️</button>
@@ -3856,7 +3888,7 @@ function openRentalSmsModal(rentalId) {
   showDynamicModal(`
     <div class="modal-title">✉️ Status SMS — ${escHtml(r.customerName || '')}</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
-      Drafted from the rental's current status${r.customerPhone ? ` · 📞 <span class="copy-val">${escHtml(r.customerPhone)}</span>` : ''}.
+      Drafted from the rental's current status${r.customerPhone ? ` · 📞 <span class="copy-val">${escHtml(fmtPhone(r.customerPhone))}</span>` : ''}.
       Edit it, then copy — <strong>nothing is sent</strong>.</div>
     <textarea class="form-input" id="rsmsText" rows="5" style="font-family:inherit;">${escHtml(buildRentalSms(r))}</textarea>
     <div class="modal-actions">
@@ -5379,7 +5411,7 @@ async function openNewBookingModal(preselectCustomerId = null) {
     if (!Array.isArray(ticketsMenu)) ticketsMenu = [];
   }
   const customerOptions = customers.map(c =>
-    `<option value="${c.id}" ${c.id === preselectCustomerId ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone || '')}</option>`
+    `<option value="${c.id}" ${c.id === preselectCustomerId ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(fmtPhone(c.phone || ''))}</option>`
   ).join('');
   const startFee = ticketsMenu.find(s => /start fee/i.test(s.name));
   const svcOptions = ticketsMenu
@@ -5909,7 +5941,7 @@ async function renderRepairsTab() {
 
 function openNewRepairModal(preselectCustomerId = null) {
   const customerOptions = customers.map(c =>
-    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone || '')}</option>`
+    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(fmtPhone(c.phone || ''))}</option>`
   ).join('');
   const serviceChecks = repairMenu.map(m => `
     <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer;">
@@ -6346,7 +6378,7 @@ async function openNewServiceModal(preselectCustomerId = null) {
     if (!Array.isArray(onlineMenu)) onlineMenu = [];
   }
   const customerOptions = customers.map(c =>
-    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(c.phone || '')}</option>`).join('');
+    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(fmtPhone(c.phone || ''))}</option>`).join('');
   const svcOptions = onlineMenu.map(m =>
     `<option value="${escHtml(String(m.id))}">${escHtml(m.name)} — ${fmtGbp(m.price)}${m.repeatPrice !== null ? ` (${onlineRepeatFrom()}+ ${fmtGbp(m.repeatPrice)})` : ''}</option>`).join('');
   showDynamicModal(`
@@ -7902,7 +7934,7 @@ function paletteSearch(q) {
     if (name.toLowerCase().includes(needle) ||
         (digits.length >= 4 && (c.phone || '').replace(/\D/g, '').includes(digits)) ||
         (c.email || '').toLowerCase().includes(needle)) {
-      out.push({ icon: '👤', label: name, sub: c.phone || c.email || 'customer',
+      out.push({ icon: '👤', label: name, sub: fmtPhone(c.phone || '') || c.email || 'customer',
         run: () => goToTab('customers', { customerId: c.id }) });
     }
   }
@@ -7911,7 +7943,7 @@ function paletteSearch(q) {
     const hay = `${p.number || ''} ${p.imei || ''} ${p.simId || ''}`.replace(/\D/g, '');
     if ((p.number || '').toLowerCase().includes(needle) ||
         (digits.length >= 5 && hay.includes(digits))) {
-      out.push({ icon: '📱', label: p.number || '(no number)',
+      out.push({ icon: '📱', label: fmtPhone(p.number || '') || '(no number)',
         sub: `${p.country || ''} · ${p.status}${p.imei ? ' · IMEI ' + p.imei : ''}`,
         run: () => openEditPhoneModal(p.id) });
     }
@@ -7941,7 +7973,7 @@ function paletteSearch(q) {
     if ((v.number || '').toLowerCase().includes(needle) ||
         (v.customerName || '').toLowerCase().includes(needle) ||
         (digits.length >= 4 && (v.number || '').replace(/\D/g, '').includes(digits))) {
-      out.push({ icon: '🔢', label: `VN ${v.number || ''} — ${v.customerName || ''}`, sub: v.status || 'virtual number',
+      out.push({ icon: '🔢', label: `VN ${fmtPhone(v.number || '')} — ${v.customerName || ''}`, sub: v.status || 'virtual number',
         run: () => goToTab('virtual') });
     }
   }
@@ -8689,7 +8721,7 @@ async function renderVirtualTab() {
     ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔢</div><p>${virtualNumbers.length ? 'No numbers match this filter.' : 'No virtual numbers yet.'}</p></div></td></tr>`
     : vnShown.map(v => `
       <tr>
-        <td><strong>${escHtml(v.number)}</strong></td>
+        <td><strong>${escHtml(fmtPhone(v.number))}</strong></td>
         <td>${escHtml(v.customerName || '—')}</td>
         <td>${escHtml(v.platform || '—')}</td>
         <td>${v.billingEnabled && v.monthlyPrice
@@ -8832,7 +8864,7 @@ function openVNBillingModal(id) {
   const planOptions = Object.entries(VN_PLAN_LABELS).map(([k, label]) =>
     `<option value="${k}" ${v.plan === k ? 'selected' : ''}>${label}</option>`).join('');
   showDynamicModal(`
-    <div class="modal-title">💷 Monthly Billing — ${escHtml(v.number)}</div>
+    <div class="modal-title">💷 Monthly Billing — ${escHtml(fmtPhone(v.number))}</div>
     <div style="color:var(--muted);font-size:13px;margin-bottom:14px;">
       ${v.customerName ? `Customer: <strong style="color:var(--text);">${escHtml(v.customerName)}</strong>` :
         '<span style="color:var(--danger);">⚠ No customer assigned — billing needs one.</span>'}

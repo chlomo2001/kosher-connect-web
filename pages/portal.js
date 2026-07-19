@@ -10,6 +10,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
+import { formatPhoneDisplay } from '../lib/ukPhone.mjs'
 import AuthBackdrop from '../components/AuthBackdrop'
 
 // Portal copy in English + lashon hakodesh — some customers are Israelis who
@@ -445,7 +446,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                 ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>{L.noRentals}</div>
                 : activeRentals.map((r, i) => (
                   <div key={i} style={{ fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                    <bdi dir="ltr">{r.phoneNumber || L.phoneFallback}</bdi> · {r.country}
+                    <bdi dir="ltr">{formatPhoneDisplay(r.phoneNumber) || L.phoneFallback}</bdi> · {r.country}
                     <span style={{ color: 'var(--muted)' }}> · <bdi dir="ltr">{fmtDate(r.fromDate)} {isHe ? '←' : '→'} {fmtDate(r.toDate)}</bdi></span>
                     <span style={{ float: fl, color: 'var(--muted)' }}>{r.status}</span>
                   </div>
