@@ -146,7 +146,11 @@ async function handler(req, res) {
     return res.json({ success: true, sentTo: r.sentTo || who.email })
   } catch (e) {
     console.error('[api/email]', e)
-    return res.status(502).json({ success: false, error: 'The email server rejected the message. Check the SMTP credentials.' })
+    // Surface the provider's own reason to staff — "domain is not verified"
+    // beats a generic credentials guess. This is a staff-only route and the
+    // provider errors carry config hints, not secrets.
+    const detail = /^\[(resend|smtp)\] /.test(String(e?.message || '')) ? ` (${String(e.message).slice(0, 200)})` : ''
+    return res.status(502).json({ success: false, error: `The email provider rejected the message${detail || ' — check the mail settings'}.` })
   }
 }
 
