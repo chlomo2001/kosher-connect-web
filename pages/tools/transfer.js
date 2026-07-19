@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../../components/ThemeToggle'
+import ToolDrop from '../../components/ToolDrop'
 import { requireStaffCookie } from '../../lib/pageAuth'
 import { unzip, makeZip } from '../../lib/zipLite.mjs'
 import { normalizeUkNumber } from '../../lib/ukPhone.mjs'
@@ -43,8 +44,6 @@ const fmtDay = (ms) => {
 }
 
 export default function TransferWizard() {
-  const fileRef = useRef(null)
-  const sampleRef = useRef(null)
   const [source, setSource] = useState(null)   // { kind, name, messages? contacts? text? }
   const [sample, setSample] = useState(null)   // { name, schema }
   const [mode, setMode] = useState('plus44')
@@ -82,9 +81,8 @@ export default function TransferWizard() {
     throw new Error('Could not recognise this file. Expected SMS XML, Messages.NBF, a Nokia .IB, or a .vcf.')
   }
 
-  async function onFile(e) {
-    const file = e.target.files?.[0]
-    if (fileRef.current) fileRef.current.value = ''
+  async function onFile(files) {
+    const file = files[0]
     if (!file) return
     setMsg(''); setDone(''); setBusy(true)
     try { setSource(await detect(file)) }
@@ -92,9 +90,8 @@ export default function TransferWizard() {
     finally { setBusy(false) }
   }
 
-  async function onSample(e) {
-    const file = e.target.files?.[0]
-    if (sampleRef.current) sampleRef.current.value = ''
+  async function onSample(files) {
+    const file = files[0]
     if (!file) return
     setMsg('')
     try {
@@ -167,10 +164,13 @@ export default function TransferWizard() {
           </div>
 
           <div className="tool-card">
-            <label className="tool-card-title" htmlFor="tool-transfer-file">1 · The old phone’s file</label>
-            <input id="tool-transfer-file" ref={fileRef} type="file" onChange={onFile} aria-describedby="tool-transfer-hint" />
+            <div className="tool-card-title">1 · The old phone’s file</div>
+            <ToolDrop id="tool-transfer-file"
+              main="Drop the exported file here — or click to choose"
+              sub="SMS Backup & Restore .xml · Nokia Messages.NBF · Nokia 215 phonebook .IB · any .vcf"
+              describedBy="tool-transfer-hint" onFiles={onFile} />
             <div className="tool-hint" id="tool-transfer-hint">
-              SMS Backup &amp; Restore .xml · Nokia Messages.NBF · Nokia 215 phonebook .IB · any .vcf
+              The format is detected automatically — just drop whatever the old phone gave you.
             </div>
             <div role="alert">{msg && <div className="tool-msg">{msg}</div>}</div>
             {source && (
@@ -192,14 +192,15 @@ export default function TransferWizard() {
 
           {smsFlow && (
             <div className="tool-card">
-              <label className="tool-card-title" htmlFor="tool-transfer-sample">2 · Target phone sample <span className="tool-optional">(optional, recommended)</span></label>
-              <p className="tool-hint" style={{ marginTop: 0 }} id="tool-transfer-sample-hint">
+              <div className="tool-card-title">2 · Target phone sample <span className="tool-optional">(optional, recommended)</span></div>
+              <p className="tool-hint" style={{ margin: '0 0 12px' }} id="tool-transfer-sample-hint">
                 Make a fresh backup in FIG Messenger on the NEW phone and drop it here —
                 the exact message format is learned from it, so this keeps working even
                 after app updates. Without it the standard FIG format is used.
               </p>
-              <input id="tool-transfer-sample" ref={sampleRef} type="file" accept=".zip" onChange={onSample}
-                aria-describedby="tool-transfer-sample-hint" />
+              <ToolDrop id="tool-transfer-sample" accept=".zip"
+                main="Drop the FIG backup .zip here — or click to choose"
+                describedBy="tool-transfer-sample-hint" onFiles={onSample} />
               <div role="status" aria-live="polite">{sample && <div className="tool-msg">Format learned from {sample.name} ({sample.schema.keys.length} fields).</div>}</div>
             </div>
           )}

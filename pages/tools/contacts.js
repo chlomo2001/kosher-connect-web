@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../../components/ThemeToggle'
+import ToolDrop from '../../components/ToolDrop'
 import { requireStaffCookie } from '../../lib/pageAuth'
 import { parseVcf, buildCard, parseCard, dedupeCards, rewriteVcfTels } from '../../lib/vcard.mjs'
 import { parseCsv, parseXlsx } from '../../lib/sheetLite.mjs'
@@ -37,7 +38,6 @@ function download(name, text, type = 'text/vcard') {
 }
 
 export default function ContactsConverter() {
-  const fileRef = useRef(null)
   const [pool, setPool] = useState([])          // { fn, first, last, phones[], raw?, source }
   const [pending, setPending] = useState(null)  // spreadsheet awaiting mapping
   const [mode, setMode] = useState('plus44')
@@ -45,10 +45,8 @@ export default function ContactsConverter() {
   const [msg, setMsg] = useState('')
   const [result, setResult] = useState(null)
 
-  async function onFiles(e) {
+  async function onFiles(files) {
     setMsg(''); setResult(null)
-    const files = [...(e.target.files || [])]
-    if (fileRef.current) fileRef.current.value = ''
     for (const file of files) {
       const ext = file.name.toLowerCase().split('.').pop()
       try {
@@ -159,10 +157,12 @@ export default function ContactsConverter() {
           </div>
 
           <div className="tool-card">
-            <label className="tool-card-title" htmlFor="tool-contacts-file">1 · Add files</label>
-            <input id="tool-contacts-file" ref={fileRef} type="file" multiple accept=".csv,.txt,.xlsx,.xls,.vcf,.vcard"
-              onChange={onFiles} aria-describedby="tool-contacts-hint" />
-            <div className="tool-hint" id="tool-contacts-hint">.xlsx / .csv contact lists and existing .vcf files, in any mix. Old .xls? Re-save it as .xlsx first.</div>
+            <div className="tool-card-title">1 · Add files</div>
+            <ToolDrop id="tool-contacts-file" multiple accept=".csv,.txt,.xlsx,.xls,.vcf,.vcard"
+              main="Drop files here — or click to choose"
+              sub=".xlsx / .csv contact lists and existing .vcf files, in any mix"
+              describedBy="tool-contacts-hint" onFiles={onFiles} />
+            <div className="tool-hint" id="tool-contacts-hint">Old .xls? Re-save it as .xlsx or .csv first, then drop it here.</div>
             <div role="alert">{msg && <div className="tool-msg">{msg}</div>}</div>
           </div>
 
@@ -269,7 +269,7 @@ export default function ContactsConverter() {
 
           <div className="tool-card">
             <div className="tool-card-title">Export KC customers</div>
-            <p className="tool-hint" style={{ marginTop: 0 }}>
+            <p className="tool-hint" style={{ margin: '0 0 12px' }}>
               Download the whole customer base as a vCard file with +44-normalised numbers —
               for setting up a shop phone. Owner sign-in required.
             </p>

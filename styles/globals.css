@@ -1490,14 +1490,40 @@ html { scroll-behavior: smooth; }
 :root[data-theme="dark"] .welcome-shell .fx-item.active { background: transparent; box-shadow: 0 0 0 2px #7db8e6; }
 
 /* ─── TOOLS — converter pages (/tools/*): the working app's flat language ─── */
-.tool-shell { min-height: 100vh; background: var(--bg); padding: 34px 18px 60px; }
+/* The app's body/#__next are a fixed flex row with overflow:hidden (the
+   sidebar shell). These standalone pages must therefore fill the row AND be
+   their own scroll container — without width:100% they shrink-wrap to the
+   left, and without overflow-y the page can't scroll at all. */
+.tool-shell { width: 100%; height: 100vh; overflow-y: auto; background: var(--bg); padding: 34px 18px 60px; }
 .tool-wrap { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
 .tool-head h1 { font-size: 26px; font-weight: 300; letter-spacing: -0.5px; color: var(--text); margin: 6px 0 8px; }
 .tool-head p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; max-width: 64ch; }
 .tool-back { font-size: 12.5px; color: var(--muted); text-decoration: none; }
 .tool-back:hover { color: var(--text); }
 .tool-card { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-lg); padding: 18px; }
-.tool-card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+/* Titles are often <label>s (for the file inputs) — force block so the
+   control never renders inline beside its own heading. */
+.tool-card-title { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+
+/* Click-or-drop file intake (components/ToolDrop.js). The real input is
+   visually hidden but keyboard-focusable, so focus-within draws the ring. */
+.tool-drop {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 7px; padding: 26px 18px; cursor: pointer; text-align: center;
+  border: 1.5px dashed var(--border); border-radius: var(--radius);
+  background: var(--bg-secondary); color: var(--muted);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.tool-drop:hover, .tool-drop.dragover, .tool-drop:focus-within { border-color: var(--accent); color: var(--text); }
+.tool-drop-icon { display: inline-flex; color: inherit; }
+.tool-drop-main { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.tool-drop-sub { font-size: 12px; color: var(--muted); max-width: 52ch; line-height: 1.5; }
+.tool-drop-input {
+  position: absolute; width: 1px; height: 1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+/* Buttons that are links (the export download) — align like real buttons. */
+.tool-card a.btn { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
 .tool-optional { color: var(--muted); font-weight: 400; }
 .tool-hint { font-size: 12.5px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
 .tool-msg { font-size: 13px; color: var(--text); margin-top: 12px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-secondary); }
