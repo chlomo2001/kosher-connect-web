@@ -3604,6 +3604,10 @@ function dismissCustomerCard() {
 //  WALLET (append-only ledger; balance always derived)
 // ─────────────────────────────────────────────
 
+// Last-loaded ledger per customer, so the per-row ✉️ receipt buttons can
+// rebuild the entry they belong to at click time.
+const walletEntriesCache = {};
+
 const LEDGER_TYPE_LABELS = {
   payment: '💷 Payment', top_up: '➕ Top-up', refund: '↩️ Refund',
   manual_adjustment: '✏️ Adjustment', booking: '✈️ Flight', rental: '📱 Rental',
@@ -3637,9 +3641,14 @@ async function loadWalletSection(customerId) {
     stat.style.color = bal < 0 ? 'var(--danger)' : bal > 0 ? 'var(--success)' : 'var(--muted)';
   }
   if (statLbl) statLbl.textContent = bal < 0 ? 'Owes (wallet)' : bal > 0 ? 'In credit' : 'Wallet balance';
+  // Receiptable rows get an ✉️ action: sales re-send an itemised receipt,
+  // payments/top-ups a payment confirmation — so a receipt can be issued (or
+  // re-issued) any time from the card, not only in the moment on the till.
+  walletEntriesCache[customerId] = { entries: data.entries, balance: bal };
+  const RECEIPTABLE = { phone_sale: 'sale', stock_sale: 'sale', payment: 'payment', top_up: 'payment' };
   const entriesHtml = data.entries.length === 0
     ? `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No wallet activity yet — record a payment or charge to start the ledger.</div>`
-    : data.entries.slice(0, 8).map(e => `
+    : data.entries.slice(0, 8).map((e, i) => `
         <div class="history-item">
           <div style="display:flex;align-items:center;flex:1;">
             <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>
@@ -3648,6 +3657,8 @@ async function loadWalletSection(customerId) {
           <div class="history-date" style="margin:0 16px;">${fmtDate(e.at)}</div>
           <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--danger)'};">
             ${e.amount >= 0 ? '+' : '−'}${fmtGbp(Math.abs(e.amount))}</div>
+          ${RECEIPTABLE[e.type] && Math.abs(e.amount) >= 0.005 ? `<button class="btn btn-secondary" style="font-size:11px;padding:3px 8px;margin-left:10px;"
+            title="Email a receipt for this entry" onclick="emailLedgerReceipt(this, '${escHtml(customerId)}', ${i})">✉️</button>` : ''}
         </div>`).join('');
 
   el.innerHTML = `
@@ -3660,6 +3671,39 @@ async function loadWalletSection(customerId) {
     </div>
     <div class="history-list">${entriesHtml}</div>`;
   renderNextBestAction(customerId, bal);
+}
+
+// Email a receipt for one ledger entry from the customer card. Sales send the
+// itemised 'sale' template (one line rebuilt from the entry's description);
+// payments/top-ups send the 'payment' confirmation with the current balance.
+// The server decides the destination (email on file) and the HOLD/TEST/LIVE
+// gate — this is only a trigger, same as the till button.
+async function emailLedgerReceipt(btn, customerId, idx) {
+  const cached = walletEntriesCache[customerId];
+  const e = cached && cached.entries ? cached.entries[idx] : null;
+  if (!e) { toast('Reload the card and try again.', 'error'); return; }
+  const abs = Math.abs(Number(e.amount) || 0);
+  const body = e.type === 'payment' || e.type === 'top_up'
+    ? { kind: 'payment', customerId, amount: abs, method: e.method || null, note: e.description || null, balance: cached.balance }
+    : { kind: 'sale', customerId, lines: [{ name: e.description || 'Purchase', qty: 1, total: abs }], total: abs, method: e.method || null };
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  const res = await kcFetch('/api/email', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }).then(r => r.json()).catch(() => null);
+  if (res && res.success && res.held) {
+    toast(res.note || 'Email is on hold — receipt not sent.', 'warning');
+    if (btn) { btn.disabled = false; btn.textContent = '✉️'; }
+  } else if (res && res.success && res.redirected) {
+    toast(res.note || `Test mode — sent to ${res.sentTo}.`, 'warning');
+    if (btn) btn.textContent = '✅';
+  } else if (res && res.success) {
+    toast(`Receipt emailed to ${res.sentTo}.`, 'success');
+    recordComm(customerId, { type: 'email', text: `Receipt emailed — ${fmtGbp(abs)} ${e.type}` });
+    if (btn) btn.textContent = '✅';
+  } else {
+    toast(res?.error || 'Could not send the receipt.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '✉️'; }
+  }
 }
 
 // #82 — paint the "next best action" strip once the true balance is known.
