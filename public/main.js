@@ -169,6 +169,17 @@ window.api = {
 // ─────────────────────────────────────────────
 let customers = [];
 let filteredCustomers = [];
+// The master customers array stays sorted A–Z (first name, then surname) at
+// all times: every picker in the app — rentals, bookings, SIMs, repairs,
+// services, POS, VN, Kol Torah, tasks — renders straight off this array, so
+// sorting here once beats sorting at nine call sites. The Customers tab still
+// applies its own explicit sort (customerSort) on top when rendering rows.
+// localeCompare so Hebrew/Yiddish names collate properly alongside English.
+function sortCustomersAZ() {
+  customers.sort((a, b) =>
+    `${a.firstName || ''} ${a.lastName || ''}`.trim().localeCompare(
+      `${b.firstName || ''} ${b.lastName || ''}`.trim(), undefined, { sensitivity: 'base' }));
+}
 let selectedId = null;
 let currentTab = 'customers';
 let searchTerm = '';
@@ -225,6 +236,7 @@ async function initApp() {
     kcFetch('/api/auth/me').then(r => r.json()).catch(() => null),
   ]);
   customers = arr(cust);
+  sortCustomersAZ();
   filteredCustomers = [...customers];
   rentals = arr(rent);
   phones = arr(ph);
@@ -4385,6 +4397,7 @@ async function saveCustomer() {
     if (res.success) {
       const idx = customers.findIndex(c => c.id === editId);
       if (idx !== -1) customers[idx] = res.customer;
+      sortCustomersAZ();  // a rename may change where they sit in A–Z
       toast('Customer updated!', 'success');
 
       const updated = customers.find(c => c.id === editId);
@@ -4413,6 +4426,7 @@ async function saveCustomer() {
     const res = await window.api.addCustomer(payload);
     if (res.success) {
       customers.push(res.customer);
+      sortCustomersAZ();
       toast('Customer added!', 'success');
     }
   }
