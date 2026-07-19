@@ -432,6 +432,7 @@ const TAB_META = {
   repairs:   { label: 'Repairs',           title: 'Phone <span>Repairs</span>',         render: () => renderRepairsTab(),   search: false, primary: { label: '+ New Repair',   run: () => openNewRepairModal() } },
   services:  { label: 'Online & Print',    title: 'Online <span>&amp; Print</span>',    render: () => renderServicesTab(),  search: false, primary: { label: '+ New Service',  run: () => openNewServiceModal() } },
   shop:      { label: 'Shop',              title: 'Shop <span>&amp; Stock</span>',      render: () => renderShopTab(),      search: false },
+  koltorah:  { label: 'Kol Torah',         title: 'Kol <span>Torah</span>',             render: () => renderKolTorahTab(),  search: false, primary: { label: '+ New Job',      run: () => ktFocusNewJob() } },
   tasks:     { label: 'Tasks',             title: 'Task <span>List</span>',             render: () => renderTasksTab(),     search: false },
   virtual:   { label: 'Virtual Numbers',   title: 'Virtual <span>Numbers</span>',       render: () => renderVirtualTab(),   search: false, primary: { label: '+ New Number',   run: () => openNewVNModal() } },
   settings:  { label: 'Settings',          title: 'System <span>Settings</span>',       render: () => renderSettingsTab(),  search: false },
@@ -7131,6 +7132,365 @@ async function saveSale() {
 }
 
 // ─────────────────────────────────────────────
+//  KOL TORAH — CD catalogue, shul consignment, settlements, conversion jobs
+// ─────────────────────────────────────────────
+// The recently-acquired audio business. Money follows the house rules: a
+// settlement on a wallet-linked shul posts stock_sale + payment ledger rows;
+// collecting a priced job charges the customer's wallet (KT-JOB-<id>).
+let ktData = null;
+let ktJobRef = null;          // idempotency token for the in-flight new job
+const ktSettleRefs = {};      // per-shul settlement tokens, kept across retries
+const ktEditShuls = new Set();
+
+const KT_JOB_KINDS = { cd_to_mp3: 'CD → MP3', cd_to_sd: 'CD → SD card', cd_copy: 'CD copying', audio_other: 'Audio work' };
+const KT_JOB_BADGE = {
+  open:      'background:rgba(59,130,246,0.14);color:#2563eb;',
+  ready:     'background:rgba(16,185,129,0.15);color:#059669;',
+  collected: 'background:rgba(148,163,184,0.18);color:var(--muted);',
+  cancelled: 'background:rgba(239,68,68,0.12);color:var(--danger);',
+};
+
+function ktSectionHead(title, sub) {
+  return `<div style="display:flex;align-items:baseline;gap:10px;margin:18px 2px 8px;">
+    <h3 style="font-size:14px;font-weight:700;">${title}</h3>
+    <span style="font-size:12px;color:var(--muted);">${sub || ''}</span></div>`;
+}
+
+async function renderKolTorahTab() {
+  const content = document.getElementById('mainContent');
+  content.innerHTML = loadingHtml('Loading Kol Torah…');
+  const res = await kcFetch('/api/kol-torah').then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { content.innerHTML = errorHtml('Couldn’t load Kol Torah'); return; }
+  ktData = res;
+  if (currentTab !== 'koltorah') return; // user navigated away mid-load
+  const d = ktData;
+
+  const activeTitles = d.titles.filter(t => t.active);
+  const openJobs = d.jobs.filter(j => j.status === 'open' || j.status === 'ready');
+  const outQty = d.stock.reduce((s, r) => s + r.qty, 0);
+  const received30 = d.settlements
+    .filter(s => Date.now() - new Date(s.createdAt).getTime() < 30 * 86400000)
+    .reduce((s, x) => s + x.received, 0);
+
+  const customerOptions = customers.map(c =>
+    `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)}</option>`).join('');
+  const titleOptions = activeTitles.map(t =>
+    `<option value="${t.id}">${escHtml(t.name)}${t.price ? ` — ${fmtGbp(t.price)}` : ''}</option>`).join('');
+
+  // ── Jobs ────────────────────────────────────────────────────────────────
+  const jobBtns = (j) => {
+    const b = [];
+    if (j.status === 'open') b.push(['ready', '✅ Ready', 'btn btn-outline']);
+    if (j.status === 'open' || j.status === 'ready') {
+      b.push(['collected', '📤 Collected', 'btn btn-primary']);
+      b.push(['cancelled', '✕', 'action-btn danger']);
+    }
+    if (j.status === 'ready') b.push(['open', '↩', 'btn btn-outline']);
+    if (j.status === 'cancelled') b.push(['open', '↩ Reopen', 'btn btn-outline']);
+    return b.map(([to, label, cls]) =>
+      `<button class="${cls}" style="font-size:11px;padding:4px 8px;" onclick="ktJobStatus('${j.id}','${to}')">${label}</button>`).join(' ');
+  };
+  const jobRows = d.jobs.length === 0
+    ? `<tr><td colspan="6"><div class="empty-state"><div class="emoji">🎧</div><p>No conversion jobs yet — add the first drop-off above.</p></div></td></tr>`
+    : d.jobs.map(j => `
+      <tr>
+        <td><div class="customer-name">${escHtml(j.customerName)}</div>
+            <div style="font-size:11px;color:var(--muted);">${fmtDate(j.createdAt)}</div></td>
+        <td>${escHtml(KT_JOB_KINDS[j.kind] || j.kind)}${j.qty > 1 ? ` <span style="color:var(--muted);">× ${j.qty}</span>` : ''}</td>
+        <td style="max-width:260px;">${escHtml(j.details || '—')}</td>
+        <td><strong>${fmtGbp(j.price)}</strong></td>
+        <td><span class="badge" style="${KT_JOB_BADGE[j.status] || ''}">${escHtml(j.status)}</span></td>
+        <td style="white-space:nowrap;">${jobBtns(j)}</td>
+      </tr>`).join('');
+
+  // ── Consignment cards ───────────────────────────────────────────────────
+  const shulCards = d.shuls.filter(s => s.active).map(s => {
+    const rows = d.stock.filter(r => r.shulId === s.id && r.qty > 0);
+    const held = rows.reduce((n, r) => n + r.qty, 0);
+    const chips = rows.length
+      ? rows.map(r => {
+          const t = d.titles.find(x => x.id === r.titleId);
+          return `<span class="badge" style="background:var(--bg-secondary);color:var(--ink-secondary);">${r.qty} × ${escHtml(t ? t.name : '(retired)')}</span>`;
+        }).join(' ')
+      : '<span style="font-size:12px;color:var(--muted);">nothing on consignment</span>';
+    const editing = ktEditShuls.has(s.id);
+    return `
+      <div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:var(--bg-primary);">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <strong>${escHtml(s.name)}</strong>
+          ${s.contact ? `<span style="font-size:12px;color:var(--muted);">${escHtml(s.contact)}</span>` : ''}
+          ${s.customerName ? `<span class="badge" style="background:rgba(16,185,129,0.12);color:#059669;" title="Settlements post to this wallet">👛 ${escHtml(s.customerName)}</span>`
+            : '<span class="badge" style="background:rgba(239,68,68,0.1);color:var(--danger);" title="Link a customer record so settlements hit the ledger">no wallet link</span>'}
+          <span style="margin-left:auto;font-size:12px;color:var(--muted);">${held} CD${held === 1 ? '' : 's'} out</span>
+          <button class="btn btn-outline" style="font-size:11px;padding:4px 8px;" onclick="ktToggleShulEdit('${s.id}')">${editing ? 'Close' : '✎ Edit'}</button>
+        </div>
+        <div style="margin:8px 0;display:flex;flex-wrap:wrap;gap:5px;">${chips}</div>
+        ${editing ? `
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0;padding:8px;border-radius:6px;background:var(--bg-secondary);">
+          <input class="form-input" id="ktShulContact_${s.id}" value="${escHtml(s.contact || '')}" placeholder="Contact / gabbai" style="min-height:0;padding:6px 9px;font-size:12px;min-width:170px;">
+          <select class="form-input" id="ktShulCust_${s.id}" style="min-height:0;padding:6px 9px;font-size:12px;max-width:220px;">
+            <option value="">No wallet link</option>${customerOptions}
+          </select>
+          <button class="btn btn-outline btn-sm" style="font-size:11px;" onclick="ktSaveShul('${s.id}')">💾 Save</button>
+        </div>` : ''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          <select class="form-input" id="ktMoveTitle_${s.id}" style="min-height:0;padding:6px 9px;font-size:12px;max-width:230px;">${titleOptions}</select>
+          <input class="form-input" id="ktMoveQty_${s.id}" type="number" min="1" step="1" value="1" aria-label="Quantity" style="width:64px;min-height:0;padding:6px 9px;font-size:12px;">
+          <button class="btn btn-outline" style="font-size:11px;padding:5px 9px;" onclick="ktMove('${s.id}','delivery')">📦 Deliver</button>
+          <button class="btn btn-outline" style="font-size:11px;padding:5px 9px;" onclick="ktMove('${s.id}','sold')">💿 Sold</button>
+          <button class="btn btn-outline" style="font-size:11px;padding:5px 9px;" onclick="ktMove('${s.id}','return')">↩ Return</button>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);">
+          <span style="font-size:12px;color:var(--muted);">Settle:</span>
+          <input class="form-input" id="ktSettleSold_${s.id}" type="number" min="0" step="0.01" placeholder="£ sold" style="width:88px;min-height:0;padding:6px 9px;font-size:12px;">
+          <input class="form-input" id="ktSettleRecv_${s.id}" type="number" min="0" step="0.01" placeholder="£ collected" style="width:98px;min-height:0;padding:6px 9px;font-size:12px;">
+          <select class="form-input" id="ktSettleMethod_${s.id}" style="min-height:0;padding:6px 9px;font-size:12px;width:110px;">
+            <option value="cash">💵 Cash</option><option value="bank_transfer">🏦 Transfer</option><option value="card">💳 Card</option><option value="other">Other</option>
+          </select>
+          <button class="btn btn-primary" style="font-size:11px;padding:5px 10px;" onclick="ktSettle('${s.id}')">🧾 Settle</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  // ── Titles table ────────────────────────────────────────────────────────
+  const titleRows = d.titles.map(t => `
+    <tr style="${t.active ? '' : 'opacity:0.55;'}">
+      <td><input class="form-input" id="ktT_code_${t.id}" value="${escHtml(t.code || '')}" style="width:74px;min-height:0;padding:5px 8px;font-size:12px;"></td>
+      <td><input class="form-input" id="ktT_name_${t.id}" value="${escHtml(t.name)}" style="min-width:170px;min-height:0;padding:5px 8px;font-size:12px;"></td>
+      <td><input class="form-input" id="ktT_speaker_${t.id}" value="${escHtml(t.speaker || '')}" style="min-width:130px;min-height:0;padding:5px 8px;font-size:12px;"></td>
+      <td><input class="form-input" id="ktT_price_${t.id}" type="number" min="0" step="0.01" value="${t.price.toFixed(2)}" style="width:84px;min-height:0;padding:5px 8px;font-size:12px;"></td>
+      <td><input type="checkbox" id="ktT_active_${t.id}" ${t.active ? 'checked' : ''} style="accent-color:var(--accent);cursor:pointer;"></td>
+      <td><button class="btn btn-outline" style="font-size:12px;padding:5px 10px;" onclick="ktSaveTitle('${t.id}')">💾</button></td>
+    </tr>`).join('');
+
+  content.innerHTML = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
+      ${[
+        ['💿', `${activeTitles.length}`, 'titles in the catalogue'],
+        ['🏛️', `${d.shuls.filter(s => s.active).length}`, 'shuls stocked'],
+        ['📦', `${outQty}`, 'CDs out on consignment'],
+        ['🎧', `${openJobs.length}`, 'open jobs'],
+        ['💷', fmtGbp(received30), 'collected, last 30 days'],
+      ].map(([ico, big, label]) => `
+        <div style="flex:1;min-width:140px;border:1px solid var(--border);border-radius:8px;padding:10px 14px;background:var(--bg-primary);">
+          <div style="font-size:18px;font-weight:800;">${ico} ${big}</div>
+          <div style="font-size:11px;color:var(--muted);">${label}</div>
+        </div>`).join('')}
+    </div>
+
+    ${ktSectionHead('Conversion jobs', 'CD → MP3 / SD and audio work — drop-off to collection')}
+    <div class="table-wrap"><table>
+      <thead><tr><th>Customer</th><th>Job</th><th>Details</th><th>£</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <tr style="background:var(--bg-secondary);">
+          <td><select class="form-input" id="ktJobCust" style="min-height:0;padding:6px 9px;font-size:12px;max-width:180px;">
+              <option value="walkin">🚶 Walk-in</option>${customerOptions}</select>
+            <input class="form-input" id="ktJobName" placeholder="Name if walk-in" style="margin-top:4px;min-height:0;padding:6px 9px;font-size:12px;max-width:180px;"></td>
+          <td><select class="form-input" id="ktJobKind" style="min-height:0;padding:6px 9px;font-size:12px;">
+              ${Object.entries(KT_JOB_KINDS).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select>
+            <input class="form-input" id="ktJobQty" type="number" min="1" step="1" value="1" aria-label="Quantity" style="margin-top:4px;width:64px;min-height:0;padding:6px 9px;font-size:12px;"></td>
+          <td><input class="form-input" id="ktJobDetails" placeholder="e.g. 3 CDs of R' Shloime onto one SD" style="min-width:200px;min-height:0;padding:6px 9px;font-size:12px;"></td>
+          <td><input class="form-input" id="ktJobPrice" type="number" min="0" step="0.01" placeholder="£" style="width:80px;min-height:0;padding:6px 9px;font-size:12px;"></td>
+          <td colspan="2"><button class="btn btn-primary btn-sm" onclick="ktAddJob()">+ Add job</button></td>
+        </tr>
+        ${jobRows}
+      </tbody></table></div>
+
+    ${ktSectionHead('Consignment by shul', 'deliver / sold / return moves the count; Settle records the money')}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px;">
+      ${shulCards || '<div class="empty-state" style="grid-column:1/-1;"><div class="emoji">🏛️</div><p>No shuls yet — add the first one below.</p></div>'}
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px;padding:10px 12px;border:1px dashed var(--border);border-radius:8px;">
+      <span style="font-size:12px;font-weight:700;color:var(--accent);">➕ Add a shul</span>
+      <input class="form-input" id="ktNewShulName" placeholder="Shul name" style="min-height:0;padding:6px 9px;font-size:12px;min-width:170px;">
+      <input class="form-input" id="ktNewShulContact" placeholder="Contact / gabbai (optional)" style="min-height:0;padding:6px 9px;font-size:12px;min-width:170px;">
+      <select class="form-input" id="ktNewShulCust" style="min-height:0;padding:6px 9px;font-size:12px;max-width:210px;" title="Link a customer record so settlements hit the ledger">
+        <option value="">No wallet link yet</option>${customerOptions}
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="ktSaveShul()">+ Add shul</button>
+    </div>
+
+    ${ktSectionHead('Titles catalogue', 'code · title · speaker · price — retire with the tick')}
+    <div class="table-wrap"><table>
+      <thead><tr><th>Code</th><th>Title</th><th>Speaker</th><th>£</th><th>Active</th><th></th></tr></thead>
+      <tbody>
+        ${titleRows}
+        <tr style="background:var(--bg-secondary);">
+          <td><input class="form-input" id="ktNewT_code" placeholder="KT-…" style="width:74px;min-height:0;padding:5px 8px;font-size:12px;"></td>
+          <td><input class="form-input" id="ktNewT_name" placeholder="Title" style="min-width:170px;min-height:0;padding:5px 8px;font-size:12px;"></td>
+          <td><input class="form-input" id="ktNewT_speaker" placeholder="Speaker" style="min-width:130px;min-height:0;padding:5px 8px;font-size:12px;"></td>
+          <td><input class="form-input" id="ktNewT_price" type="number" min="0" step="0.01" placeholder="£" style="width:84px;min-height:0;padding:5px 8px;font-size:12px;"></td>
+          <td></td>
+          <td><button class="btn btn-primary btn-sm" onclick="ktSaveTitle()">+ Add</button></td>
+        </tr>
+      </tbody></table></div>
+
+    ${ktSectionHead('Takings — recent settlements', 'what each shul sold and what was collected')}
+    <div class="table-wrap"><table>
+      <thead><tr><th>Date</th><th>Shul</th><th>£ sold</th><th>£ collected</th><th>Method</th><th>Note</th></tr></thead>
+      <tbody>${d.settlements.length === 0
+        ? '<tr><td colspan="6"><div class="empty-state"><div class="emoji">🧾</div><p>No settlements recorded yet.</p></div></td></tr>'
+        : d.settlements.map(x => `
+          <tr>
+            <td>${fmtDate(x.createdAt)}</td>
+            <td>${escHtml(x.shulName)}</td>
+            <td>${fmtGbp(x.soldValue)}</td>
+            <td><strong>${fmtGbp(x.received)}</strong></td>
+            <td>${escHtml(x.method || '—')}</td>
+            <td style="max-width:240px;font-size:12px;color:var(--muted);">${escHtml(x.note || '')}</td>
+          </tr>`).join('')}</tbody></table></div>`;
+}
+
+function ktFocusNewJob() {
+  const el = document.getElementById('ktJobCust');
+  if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.focus(); }
+}
+
+function ktToggleShulEdit(id) {
+  if (ktEditShuls.has(id)) ktEditShuls.delete(id); else ktEditShuls.add(id);
+  renderKolTorahTab().then(() => {
+    // Preselect the current wallet link once the edit row exists.
+    const s = ktData?.shuls.find(x => x.id === id);
+    const sel = document.getElementById(`ktShulCust_${id}`);
+    if (s && sel && s.customerId) sel.value = s.customerId;
+  });
+}
+
+async function ktPost(body) {
+  return kcFetch('/api/kol-torah', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(r => r.json()).catch(() => null);
+}
+
+async function ktSaveTitle(id) {
+  const v = (f) => document.getElementById(id ? `ktT_${f}_${id}` : `ktNewT_${f}`)?.value;
+  const name = (v('name') || '').trim();
+  if (!name) { toast('The title needs a name.', 'error'); return; }
+  if (!kcBeginWrite('kt')) return;
+  let res;
+  try {
+    res = await ktPost({
+      op: 'title-save', id: id || undefined, code: v('code'), name, speaker: v('speaker'),
+      price: parseFloat(v('price')) || 0,
+      active: id ? !!document.getElementById(`ktT_active_${id}`)?.checked : true,
+    });
+  } finally { kcEndWrite('kt'); }
+  if (!res || !res.success) { toast(res?.error || 'Could not save the title.', 'error'); return; }
+  toast(id ? 'Title saved.' : 'Title added.', 'success');
+  renderKolTorahTab();
+}
+
+async function ktSaveShul(id) {
+  const name = id
+    ? ktData?.shuls.find(s => s.id === id)?.name
+    : (document.getElementById('ktNewShulName')?.value || '').trim();
+  if (!name) { toast('The shul needs a name.', 'error'); return; }
+  const contact = document.getElementById(id ? `ktShulContact_${id}` : 'ktNewShulContact')?.value;
+  const customerId = document.getElementById(id ? `ktShulCust_${id}` : 'ktNewShulCust')?.value || null;
+  if (!kcBeginWrite('kt')) return;
+  let res;
+  try {
+    res = await ktPost({ op: 'shul-save', id: id || undefined, name, contact, customerId });
+  } finally { kcEndWrite('kt'); }
+  if (!res || !res.success) { toast(res?.error || 'Could not save the shul.', 'error'); return; }
+  ktEditShuls.delete(id);
+  toast(id ? 'Shul saved.' : 'Shul added.', 'success');
+  renderKolTorahTab();
+}
+
+async function ktMove(shulId, kind) {
+  const titleId = document.getElementById(`ktMoveTitle_${shulId}`)?.value;
+  const qty = parseInt(document.getElementById(`ktMoveQty_${shulId}`)?.value, 10);
+  if (!titleId) { toast('Add a title to the catalogue first.', 'error'); return; }
+  if (!Number.isFinite(qty) || qty < 1) { toast('Quantity must be at least 1.', 'error'); return; }
+  if (!kcBeginWrite('kt')) return;
+  let res;
+  try {
+    res = await ktPost({ op: 'move', shulId, titleId, kind, qty });
+  } finally { kcEndWrite('kt'); }
+  if (!res || !res.success) { toast(res?.error || 'Could not record the movement.', 'error'); return; }
+  const verb = { delivery: 'Delivered', sold: 'Marked sold', return: 'Returned' }[kind] || 'Adjusted';
+  toast(`${verb} ${qty} — ${res.qty} now at the shul.`, 'success');
+  renderKolTorahTab();
+}
+
+async function ktSettle(shulId) {
+  const shul = ktData?.shuls.find(s => s.id === shulId);
+  const sold = parseFloat(document.getElementById(`ktSettleSold_${shulId}`)?.value) || 0;
+  const received = parseFloat(document.getElementById(`ktSettleRecv_${shulId}`)?.value) || 0;
+  const method = document.getElementById(`ktSettleMethod_${shulId}`)?.value || 'cash';
+  if (sold <= 0 && received <= 0) { toast('Enter the £ sold and/or the £ collected.', 'error'); return; }
+  if (!(await kcConfirm({
+    title: 'Confirm settlement',
+    body: `<strong>${escHtml(shul?.name || 'Shul')}</strong><br>
+      CDs sold: ${fmtGbp(sold)} · collected now: ${fmtGbp(received)}
+      ${shul?.customerName ? '<br>Posts to the linked wallet.' : '<br><em>No wallet link — recorded in Kol Torah only.</em>'}`,
+    amount: received,
+    okLabel: 'Record settlement',
+  }))) return;
+  if (!kcBeginWrite('kt')) return;
+  // Same-token retry: a lost response replays the SAME settlement, the server
+  // dedupes, and the shul is never settled twice.
+  if (!ktSettleRefs[shulId]) ktSettleRefs[shulId] = kcRef();
+  let res;
+  try {
+    res = await ktPost({ op: 'settle', shulId, soldValue: sold, received, method, clientRef: ktSettleRefs[shulId] });
+  } finally { kcEndWrite('kt'); }
+  if (!res || !res.success) { toast(res?.error || 'Could not record the settlement.', 'error'); return; }
+  delete ktSettleRefs[shulId];
+  toast(res.duplicate ? 'Settlement already recorded — no double post.' : 'Settlement recorded.', 'success');
+  renderKolTorahTab();
+}
+
+async function ktAddJob() {
+  const custId = document.getElementById('ktJobCust')?.value || 'walkin';
+  const customerName = (document.getElementById('ktJobName')?.value || '').trim();
+  if (custId === 'walkin' && !customerName) { toast('Pick a customer or type a name.', 'error'); return; }
+  const kind = document.getElementById('ktJobKind')?.value;
+  const qty = parseInt(document.getElementById('ktJobQty')?.value, 10) || 1;
+  const details = document.getElementById('ktJobDetails')?.value;
+  const price = parseFloat(document.getElementById('ktJobPrice')?.value) || 0;
+  if (!kcBeginWrite('kt')) return;
+  if (!ktJobRef) ktJobRef = kcRef();
+  let res;
+  try {
+    res = await ktPost({
+      op: 'job-save', customerId: custId === 'walkin' ? null : custId,
+      customerName, kind, qty, details, price, clientRef: ktJobRef,
+    });
+  } finally { kcEndWrite('kt'); }
+  if (!res || !res.success) { toast(res?.error || 'Could not save the job.', 'error'); return; }
+  ktJobRef = null;
+  toast(res.duplicate ? 'Job already saved — no double entry.' : 'Job added.', 'success');
+  renderKolTorahTab();
+}
+
+async function ktJobStatus(id, to) {
+  const job = ktData?.jobs.find(j => j.id === id);
+  if (to === 'cancelled' && !(await kcConfirm({
+    title: 'Cancel this job?',
+    body: `<strong>${escHtml(job?.customerName || '')}</strong> — ${escHtml(KT_JOB_KINDS[job?.kind] || '')}.<br>Nothing has been charged; the job is just closed.`,
+    okLabel: 'Cancel job',
+  }))) return;
+  if (to === 'collected' && job && job.price > 0 && !(await kcConfirm({
+    title: 'Confirm collection',
+    body: `<strong>${escHtml(job.customerName)}</strong> — ${escHtml(KT_JOB_KINDS[job.kind] || '')}${job.qty > 1 ? ` × ${job.qty}` : ''}.<br>${job.customerId ? 'Charges their wallet on collection.' : '<em>Walk-in — take the money at the till.</em>'}`,
+    amount: job.price,
+    okLabel: 'Mark collected',
+  }))) return;
+  if (!kcBeginWrite('kt')) return;
+  let res;
+  try {
+    res = await ktPost({ op: 'job-status', id, status: to });
+  } finally { kcEndWrite('kt'); }
+  if (!res || !res.success) { toast(res?.error || 'Could not update the job.', 'error'); return; }
+  toast('Job updated.', 'success');
+  renderKolTorahTab();
+}
+
+// ─────────────────────────────────────────────
 //  TASKS
 // ─────────────────────────────────────────────
 // Tables-native to-do list. Also displays the keyed auto-tasks the system
@@ -8519,7 +8879,7 @@ async function renderSettingsTab() {
       </tbody></table>
       <div class="section-divider" style="margin:14px 14px 4px;">🔓 What helpers can see</div>
       <div style="padding:4px 14px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
-        ${['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'shop', 'virtual', 'tasks', 'settings'].map(t => `
+        ${['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'shop', 'koltorah', 'virtual', 'tasks', 'settings'].map(t => `
           <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;">
             <input type="checkbox" class="htTab" value="${t}" style="accent-color:var(--accent);cursor:pointer;"
               ${(cfg.settings.find(s => s.key === 'helper_tabs')?.textValue || '').split(',').includes(t) ? 'checked' : ''}>
