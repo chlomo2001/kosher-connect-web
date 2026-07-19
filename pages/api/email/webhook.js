@@ -11,10 +11,18 @@ import { verifySvixSignature, normalizeEmail } from '../../../lib/emailGuards.mj
 
 export const config = { api: { bodyParser: false } }
 
-function readRaw(req) {
+// Cap the unauthenticated raw body BEFORE the signature check — with
+// bodyParser off there's otherwise no limit at all. Real Resend events are
+// a few KB; 1 MB is generous.
+function readRaw(req, maxBytes = 1_000_000) {
   return new Promise((resolve, reject) => {
     const chunks = []
-    req.on('data', (c) => chunks.push(c))
+    let size = 0
+    req.on('data', (c) => {
+      size += c.length
+      if (size > maxBytes) { req.destroy(); reject(new Error('payload-too-large')); return }
+      chunks.push(c)
+    })
     req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
     req.on('error', reject)
   })
@@ -49,7 +57,12 @@ export default async function handler(req, res) {
   if (!secret) return res.status(503).json({ error: 'Email webhook not configured.' })
   if (!tablesMode) return res.status(503).json({ error: 'Relational data layer unavailable.' })
 
-  const raw = await readRaw(req)
+  let raw
+  try {
+    raw = await readRaw(req)
+  } catch {
+    return res.status(413).json({ error: 'Payload too large.' })
+  }
   const ok = verifySvixSignature({
     secret,
     id: req.headers['svix-id'],

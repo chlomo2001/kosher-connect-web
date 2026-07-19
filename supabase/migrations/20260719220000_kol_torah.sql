@@ -50,6 +50,7 @@ create table if not exists kt_movements (
   delta      integer not null,               -- +delivered / −returned / −sold
   kind       text not null check (kind in ('delivery', 'return', 'sold', 'adjust')),
   note       text,
+  client_ref text unique,                    -- idempotency: one movement per submit
   created_at timestamptz not null default now()
 );
 create index if not exists kt_movements_shul_idx  on kt_movements (shul_id, created_at desc);

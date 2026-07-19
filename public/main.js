@@ -6974,21 +6974,25 @@ async function emailSaleReceipt(btn) {
 // stan, authCode, brand, last4, error }). In a plain browser KCTill is absent
 // and none of this runs — the manual card flow is unchanged.
 const kcTillPending = {};
-// Approved terminal charges per reference: a re-ring after a lost sale POST
-// reuses the approval instead of charging the customer's card a second time.
-const kcTillApproved = {};
+// Approved terminal charges per reference WITH the approved amount: a re-ring
+// after a lost sale POST reuses the approval instead of charging the card
+// twice — but ONLY for the same total. If the basket changed, the operator is
+// blocked and told to re-ring the original total or refund on the machine.
+const kcTillApproved = {};   // ref → { result, amountPence }
+const kcTillAmounts = {};    // ref → requested pence (survives the timeout)
 function kcTillAvailable() { return !!(window.KCTill && typeof window.KCTill.charge === 'function'); }
 function kcTillCharge(amountPence, chargeReference) {
-  if (kcTillApproved[chargeReference]) return Promise.resolve(kcTillApproved[chargeReference]);
+  const cached = kcTillApproved[chargeReference];
+  if (cached) {
+    if (cached.amountPence === amountPence) return Promise.resolve(cached.result);
+    return Promise.resolve({ approved: false, mismatch: true, approvedAmount: cached.amountPence });
+  }
+  kcTillAmounts[chargeReference] = amountPence;
   return new Promise((resolve) => {
     // Terminal interactions are slow (card tap, PIN, issuer) — 3 minutes, then
     // give up with "no answer" so the operator checks the machine itself.
     const timer = setTimeout(() => { delete kcTillPending[chargeReference]; resolve(null); }, 180000);
-    kcTillPending[chargeReference] = (result) => {
-      clearTimeout(timer);
-      if (result && result.approved) kcTillApproved[chargeReference] = result;
-      resolve(result);
-    };
+    kcTillPending[chargeReference] = (result) => { clearTimeout(timer); resolve(result); };
     try { window.KCTill.charge(amountPence, chargeReference); }
     catch (e) {
       clearTimeout(timer);
@@ -6999,8 +7003,21 @@ function kcTillCharge(amountPence, chargeReference) {
 }
 window.kcTillResult = (result) => {
   const ref = result && result.chargeReference;
-  const done = ref && kcTillPending[ref];
-  if (done) { delete kcTillPending[ref]; done(result); }
+  if (!ref) return;
+  // Cache and audit-log EVERY approval — even one arriving after the till
+  // gave up — so the card can never be tapped twice for this reference, and
+  // card_receipts shows the terminal charge whether or not the sale posted
+  // (an approved row with no ledger match = "card taken, sale missing").
+  if (result.approved && !kcTillApproved[ref]) {
+    const amountPence = kcTillAmounts[ref];
+    kcTillApproved[ref] = { result, amountPence };
+    if (Number.isFinite(amountPence)) kcTillRecordResult(ref, amountPence / 100, result);
+  }
+  const done = kcTillPending[ref];
+  if (done) { delete kcTillPending[ref]; done(result); return; }
+  if (result.approved) {
+    toast('The card machine approved after the till gave up — re-ring the SAME items to record the sale; the card will NOT be charged again.', 'warning');
+  }
 };
 // Attach the terminal's references to the ledger payment row (reconciliation).
 // Non-fatal: the money is already on the ledger; a miss only loses metadata.
@@ -7049,6 +7066,10 @@ async function saveSale() {
         toast('No answer from the card machine — nothing was recorded. Check the terminal and try again.', 'error');
         return;
       }
+      if (tillResult.mismatch) {
+        toast(`This sale already has a ${fmtGbp(tillResult.approvedAmount / 100)} card approval pending. Re-ring exactly that total to record it, or refund it on the machine and start fresh (Exit till).`, 'error');
+        return;
+      }
       if (!tillResult.approved) {
         toast(`Card ${tillResult.error ? 'error: ' + tillResult.error : 'declined'} — nothing was recorded.`, 'error');
         return;
@@ -7074,9 +7095,11 @@ async function saveSale() {
   // approval are both kept — the operator's re-ring replays the same sale
   // without touching the card again.
   if (!res || !res.success) { toast(res?.error || 'Could not record the sale.', 'error'); return; }
+  // The terminal metadata was already audit-logged at approval time
+  // (kcTillResult) — here we only retire the approval now the sale is real.
   if (tillResult) {
-    kcTillRecordResult(payRef, cashDue, tillResult);
     delete kcTillApproved[payRef];
+    delete kcTillAmounts[payRef];
   }
   if (res.duplicate) {
     posBasket = []; posWallet = 0; posSaleRef = null;
@@ -7140,6 +7163,7 @@ async function saveSale() {
 let ktData = null;
 let ktJobRef = null;          // idempotency token for the in-flight new job
 const ktSettleRefs = {};      // per-shul settlement tokens, kept across retries
+const ktMoveRefs = {};        // per-(shul,title,kind,qty) movement tokens, ditto
 const ktEditShuls = new Set();
 
 const KT_JOB_KINDS = { cd_to_mp3: 'CD → MP3', cd_to_sd: 'CD → SD card', cd_copy: 'CD copying', audio_other: 'Audio work' };
@@ -7173,7 +7197,7 @@ async function renderKolTorahTab() {
     .reduce((s, x) => s + x.received, 0);
 
   const customerOptions = customers.map(c =>
-    `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)}</option>`).join('');
+    `<option value="${escHtml(String(c.id))}">${escHtml(c.firstName)} ${escHtml(c.lastName)}</option>`).join('');
   const titleOptions = activeTitles.map(t =>
     `<option value="${t.id}">${escHtml(t.name)}${t.price ? ` — ${fmtGbp(t.price)}` : ''}</option>`).join('');
 
@@ -7406,11 +7430,18 @@ async function ktMove(shulId, kind) {
   if (!titleId) { toast('Add a title to the catalogue first.', 'error'); return; }
   if (!Number.isFinite(qty) || qty < 1) { toast('Quantity must be at least 1.', 'error'); return; }
   if (!kcBeginWrite('kt')) return;
+  // Same-token retry per exact movement: a lost response replays the SAME
+  // token and the server short-circuits, so "Deliver 10" can't land twice.
+  // Changing any part of the movement (qty, title, kind) mints a fresh token.
+  const fp = `${shulId}|${titleId}|${kind}|${qty}`;
+  if (!ktMoveRefs[fp]) ktMoveRefs[fp] = kcRef();
   let res;
   try {
-    res = await ktPost({ op: 'move', shulId, titleId, kind, qty });
+    res = await ktPost({ op: 'move', shulId, titleId, kind, qty, clientRef: ktMoveRefs[fp] });
   } finally { kcEndWrite('kt'); }
   if (!res || !res.success) { toast(res?.error || 'Could not record the movement.', 'error'); return; }
+  delete ktMoveRefs[fp];
+  if (res.duplicate) { toast('Movement already recorded — no double count.', 'info'); renderKolTorahTab(); return; }
   const verb = { delivery: 'Delivered', sold: 'Marked sold', return: 'Returned' }[kind] || 'Adjusted';
   toast(`${verb} ${qty} — ${res.qty} now at the shul.`, 'success');
   renderKolTorahTab();
@@ -7469,6 +7500,9 @@ async function ktAddJob() {
 
 async function ktJobStatus(id, to) {
   const job = ktData?.jobs.find(j => j.id === id);
+  // Never act on a job we can't show: the collect confirm displays the amount,
+  // and skipping it on stale data would charge without a confirmation.
+  if (!job) { toast('That job needs a refresh — try again.', 'warning'); renderKolTorahTab(); return; }
   if (to === 'cancelled' && !(await kcConfirm({
     title: 'Cancel this job?',
     body: `<strong>${escHtml(job?.customerName || '')}</strong> — ${escHtml(KT_JOB_KINDS[job?.kind] || '')}.<br>Nothing has been charged; the job is just closed.`,

@@ -85,17 +85,25 @@ async function handler(req, res) {
     if (!name) return res.status(400).json({ success: false, error: 'The title needs a name.' })
     const price = money(b.price)
     if (!(price >= 0)) return res.status(400).json({ success: false, error: 'Price can’t be negative.' })
-    const row = {
-      code: str(b.code, 20), name, speaker: str(b.speaker, 120),
-      price, active: b.active !== false, notes: str(b.notes, 500),
+    // Only touch fields the client actually sent — an edit-save from a form
+    // that doesn't show notes/active must not clobber them (review finding).
+    const row = { code: str(b.code, 20), name, speaker: str(b.speaker, 120), price }
+    if (b.active !== undefined) row.active = b.active !== false
+    if (b.notes !== undefined) row.notes = str(b.notes, 500)
+    try {
+      if (b.id) {
+        const updated = await db.update('kt_titles', `id=eq.${encodeURIComponent(String(b.id))}`, row)
+        if (!updated.length) return res.status(404).json({ success: false, error: 'Title not found.' })
+        return res.json({ success: true, title: updated[0] })
+      }
+      const [title] = await db.insert('kt_titles', [row])
+      return res.json({ success: true, title })
+    } catch (e) {
+      if (/HTTP 409|duplicate key/i.test(String(e.message || e))) {
+        return res.status(400).json({ success: false, error: 'That catalogue code is already in use.' })
+      }
+      throw e
     }
-    if (b.id) {
-      const updated = await db.update('kt_titles', `id=eq.${encodeURIComponent(String(b.id))}`, row)
-      if (!updated.length) return res.status(404).json({ success: false, error: 'Title not found.' })
-      return res.json({ success: true, title: updated[0] })
-    }
-    const [title] = await db.insert('kt_titles', [row])
-    return res.json({ success: true, title })
   }
 
   // ── Shuls ──────────────────────────────────────────────────────────────
@@ -109,17 +117,23 @@ async function handler(req, res) {
       customer_id = await customerUuidFor(b.customerId)
       if (!customer_id) return res.status(400).json({ success: false, error: 'That customer record wasn’t found.' })
     }
-    const row = {
-      name, contact: str(b.contact, 200), customer_id,
-      active: b.active !== false, notes: str(b.notes, 500),
+    const row = { name, contact: str(b.contact, 200), customer_id }
+    if (b.active !== undefined) row.active = b.active !== false
+    if (b.notes !== undefined) row.notes = str(b.notes, 500)
+    try {
+      if (b.id) {
+        const updated = await db.update('kt_shuls', `id=eq.${encodeURIComponent(String(b.id))}`, row)
+        if (!updated.length) return res.status(404).json({ success: false, error: 'Shul not found.' })
+        return res.json({ success: true, shul: updated[0] })
+      }
+      const [shul] = await db.insert('kt_shuls', [row])
+      return res.json({ success: true, shul })
+    } catch (e) {
+      if (/HTTP 409|duplicate key/i.test(String(e.message || e))) {
+        return res.status(400).json({ success: false, error: 'A shul with that name already exists.' })
+      }
+      throw e
     }
-    if (b.id) {
-      const updated = await db.update('kt_shuls', `id=eq.${encodeURIComponent(String(b.id))}`, row)
-      if (!updated.length) return res.status(404).json({ success: false, error: 'Shul not found.' })
-      return res.json({ success: true, shul: updated[0] })
-    }
-    const [shul] = await db.insert('kt_shuls', [row])
-    return res.json({ success: true, shul })
   }
 
   // ── Consignment movements ──────────────────────────────────────────────
@@ -132,16 +146,49 @@ async function handler(req, res) {
     }
     // delivery adds; return/sold remove; adjust takes the sign as typed.
     const delta = kind === 'delivery' ? Math.abs(qty) : kind === 'adjust' ? qty : -Math.abs(qty)
-    const left = await db.rpc('kt_adjust_stock', {
-      p_shul: String(b.shulId), p_title: String(b.titleId), p_delta: delta,
-    })
+    // Idempotency: a double-click or lost-response retry replays the SAME
+    // token and short-circuits — the consignment count feeds what the shul is
+    // settled against, so "Deliver 10" must never land twice (review finding).
+    const clientRef = cleanRef(b.clientRef)
+    if (clientRef) {
+      const claimed = await db.claimKey(`KT-MOVE-${clientRef}`, { scope: 'kt_move' })
+      if (!claimed) {
+        const dup = await db.select('kt_movements', `client_ref=eq.${encodeURIComponent(clientRef)}&select=id&limit=1`)
+        if (dup.length) return res.json({ success: true, duplicate: true })
+        return res.status(409).json({ success: false, error: 'That movement is still being recorded — give it a second.' })
+      }
+    }
+    const unwindKey = async () => {
+      if (!clientRef) return
+      try { await db.releaseKey(`KT-MOVE-${clientRef}`) }
+      catch (e2) { console.error('[api/kol-torah] move unwind: key not released', clientRef, e2) }
+    }
+    let left
+    try {
+      left = await db.rpc('kt_adjust_stock', {
+        p_shul: String(b.shulId), p_title: String(b.titleId), p_delta: delta,
+      })
+    } catch (e) {
+      await unwindKey()
+      throw e
+    }
     if (left === null || left === undefined) {
+      await unwindKey()
       return res.status(400).json({ success: false, error: 'That would take the shul below zero stock — check the count.' })
     }
-    await db.insert('kt_movements', [{
-      shul_id: String(b.shulId), title_id: String(b.titleId),
-      delta, kind, note: str(b.note, 300),
-    }])
+    try {
+      await db.insert('kt_movements', [{
+        shul_id: String(b.shulId), title_id: String(b.titleId),
+        delta, kind, note: str(b.note, 300), client_ref: clientRef,
+      }])
+    } catch (e) {
+      // The count changed but the audit row didn't land — put the count back
+      // and free the key so the retry replays the whole thing cleanly.
+      try { await db.rpc('kt_adjust_stock', { p_shul: String(b.shulId), p_title: String(b.titleId), p_delta: -delta }) }
+      catch (e2) { console.error('[api/kol-torah] move unwind: count not reverted', e2) }
+      await unwindKey()
+      throw e
+    }
     return res.json({ success: true, qty: left })
   }
 
@@ -159,10 +206,42 @@ async function handler(req, res) {
     if (!shuls.length) return res.status(404).json({ success: false, error: 'Shul not found.' })
     const shul = shuls[0]
 
+    // Ledger side of a settlement. Idempotent (insertIgnoreDup on the unique
+    // charge_reference), so it can safely run AGAIN on a retry that finds the
+    // settlement row already committed but the ledger rows missing.
+    const postSettlementLedger = async (row) => {
+      if (!shul.customer_id) return
+      const sold = money(row.sold_value)
+      const got = money(row.received)
+      const rows = []
+      if (sold > 0) rows.push({
+        customer_id: shul.customer_id,
+        charge_reference: `KT-SETTLE-${row.id}`,
+        entry_type: 'stock_sale',
+        amount: money(-sold),
+        description: `Kol Torah consignment — CDs sold at ${shul.name}`,
+      })
+      if (got > 0) rows.push({
+        customer_id: shul.customer_id,
+        charge_reference: `PAY-KT-SETTLE-${row.id}`,
+        entry_type: 'payment',
+        amount: got,
+        method: row.method || 'cash',
+        description: `Kol Torah settlement — ${shul.name}`,
+      })
+      if (rows.length) await db.insertIgnoreDup('ledger', rows, 'charge_reference')
+    }
+
     const claimed = await db.claimKey(`KT-SETTLE-${clientRef}`, { scope: 'kt_settlement' })
     if (!claimed) {
-      const dup = await db.select('kt_settlements', `client_ref=eq.${encodeURIComponent(clientRef)}&select=id&limit=1`)
-      if (dup.length) return res.json({ success: true, duplicate: true })
+      const dup = await db.select('kt_settlements', `client_ref=eq.${encodeURIComponent(clientRef)}&limit=1`)
+      if (dup.length) {
+        // Self-heal: a prior attempt may have committed the settlement but
+        // died before the ledger rows — re-post them (no-op when they exist)
+        // before reporting the duplicate (review finding).
+        await postSettlementLedger(dup[0])
+        return res.json({ success: true, duplicate: true })
+      }
       return res.status(409).json({ success: false, error: 'That settlement is still being processed — give it a second.' })
     }
     let settlement
@@ -171,30 +250,15 @@ async function handler(req, res) {
         shul_id: shul.id, sold_value: soldValue, received, method,
         note: str(b.note, 500), client_ref: clientRef,
       }])
-      if (shul.customer_id) {
-        const rows = []
-        if (soldValue > 0) rows.push({
-          customer_id: shul.customer_id,
-          charge_reference: `KT-SETTLE-${settlement.id}`,
-          entry_type: 'stock_sale',
-          amount: money(-soldValue),
-          description: `Kol Torah consignment — CDs sold at ${shul.name}`,
-        })
-        if (received > 0) rows.push({
-          customer_id: shul.customer_id,
-          charge_reference: `PAY-KT-SETTLE-${settlement.id}`,
-          entry_type: 'payment',
-          amount: received,
-          method,
-          description: `Kol Torah settlement — ${shul.name}`,
-        })
-        if (rows.length) await db.insertIgnoreDup('ledger', rows, 'charge_reference')
-      }
     } catch (e) {
+      // Nothing committed — free the key so a genuine retry isn't locked out.
       try { await db.releaseKey(`KT-SETTLE-${clientRef}`) }
       catch (e2) { console.error('[api/kol-torah] settle unwind: key not released', clientRef, e2) }
       throw e
     }
+    // Key deliberately KEPT if this throws: the retry re-enters through the
+    // duplicate path above and re-posts the missing ledger rows.
+    await postSettlementLedger(settlement)
     return res.json({ success: true, settlement })
   }
 
@@ -247,12 +311,10 @@ async function handler(req, res) {
     if (!(allowed[job.status] || []).includes(to)) {
       return res.status(400).json({ success: false, error: `A ${job.status} job can’t become ${to}.` })
     }
-    const patch = { status: to }
-    if (to === 'ready') patch.ready_at = new Date().toISOString()
-    if (to === 'collected') patch.collected_at = new Date().toISOString()
-    const updated = await db.update('kt_jobs', `id=eq.${encodeURIComponent(String(job.id))}`, patch)
-    // Collecting a priced job for a known customer charges their wallet — one
-    // idempotent row, so a repeat collect click can't double-charge.
+    // Charge BEFORE flipping the status: collected is a terminal state, so if
+    // the order were reversed a failed ledger insert would lose the charge
+    // forever (review finding). This way a failure leaves the job open/ready,
+    // and the retry's insertIgnoreDup makes the charge a no-op — never double.
     if (to === 'collected' && job.customer_id && money(job.price) > 0) {
       await db.insertIgnoreDup('ledger', [{
         customer_id: job.customer_id,
@@ -262,6 +324,10 @@ async function handler(req, res) {
         description: `Kol Torah — ${JOB_KINDS[job.kind]}${job.qty > 1 ? ` × ${job.qty}` : ''}`,
       }], 'charge_reference')
     }
+    const patch = { status: to }
+    if (to === 'ready') patch.ready_at = new Date().toISOString()
+    if (to === 'collected') patch.collected_at = new Date().toISOString()
+    const updated = await db.update('kt_jobs', `id=eq.${encodeURIComponent(String(job.id))}`, patch)
     return res.json({ success: true, job: updated[0] })
   }
 

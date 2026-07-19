@@ -7,10 +7,17 @@ import { verifyWebhook } from '../../../lib/stripe.js'
 
 export const config = { api: { bodyParser: false } }
 
-function readRaw(req) {
+// Cap the unauthenticated raw body BEFORE the signature check — with
+// bodyParser off there's otherwise no limit at all. Stripe events are KBs.
+function readRaw(req, maxBytes = 1_000_000) {
   return new Promise((resolve, reject) => {
     const chunks = []
-    req.on('data', (c) => chunks.push(c))
+    let size = 0
+    req.on('data', (c) => {
+      size += c.length
+      if (size > maxBytes) { req.destroy(); reject(new Error('payload-too-large')); return }
+      chunks.push(c)
+    })
     req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
     req.on('error', reject)
   })
@@ -18,7 +25,12 @@ function readRaw(req) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
-  const raw = await readRaw(req)
+  let raw
+  try {
+    raw = await readRaw(req)
+  } catch {
+    return res.status(413).json({ error: 'Payload too large.' })
+  }
   const event = verifyWebhook(raw, req.headers['stripe-signature'])
   if (!event) return res.status(400).json({ error: 'Invalid signature.' })
 
