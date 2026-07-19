@@ -93,20 +93,20 @@ export default function AppShell({ initialTab = 'dashboard' }) {
 
         <div className="sidebar-bottom">
           {/* Converter tools live on their own pages (not SPA tabs) — plain
-              links, styled like the Sign out row so they don't collide with
-              the nav-item tab machinery. */}
-          <a href="/tools/contacts" style={{ color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+              links under their own group label so the footer reads like the
+              nav above it, with one consistent row rhythm. */}
+          <div className="sb-label">Tools</div>
+          <a className="sb-row" href="/tools/contacts">
             <span className="nav-icon"><I><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><polyline points="16 11 18 13 22 9" /></I></span> Contacts converter</a>
-          <a href="/tools/transfer" style={{ color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <a className="sb-row" href="/tools/transfer">
             <span className="nav-icon"><I><polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" /><polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" /></I></span> Phone transfer</a>
           {/* Who's signed in — filled by main.js once /api/auth/me resolves
               (auth is client-side, so the server can't render it). Hidden until
               then, and stays hidden when auth is disabled. */}
           <div className="sidebar-user" id="sidebarUser" hidden />
-          <a href="#" onClick={(e) => { e.preventDefault(); fetch('/api/auth/logout', { method: 'POST' }).then(() => { window.location.href = '/login' }) }}
-             style={{ color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <a className="sb-row" href="#" onClick={(e) => { e.preventDefault(); fetch('/api/auth/logout', { method: 'POST' }).then(() => { window.location.href = '/login' }) }}>
             <span className="nav-icon">{ICONS.signout}</span> Sign out</a>
-          <div>Version 1.0 · KosherConnect</div>
+          <div className="sb-version">Version 1.0 · KosherConnect</div>
         </div>
       </div>
 
