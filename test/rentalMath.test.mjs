@@ -33,6 +33,21 @@ test('priceFromDays — uncapped when cap is null', () => {
   assert.equal(priceFromDays(40, 40, { ratePerDay: 3, minCharge: 20, cap: null }), 120)
 })
 
+test('priceFromDays — a cap below the minimum wins (cap clamps AFTER the min lift)', () => {
+  // Misconfigured rate: cap £15 < minCharge £20. One chargeable day lifts to £20,
+  // then the cap clamps it down to £15 — the cap is the hard ceiling.
+  const rate = { ratePerDay: 3, minCharge: 20, cap: 15, capPeriodDays: 30 }
+  assert.equal(priceFromDays(1, 1, rate), 15)
+  assert.equal(priceFromDays(10, 10, rate), 15) // 10×3=30 → cap 15
+})
+
+test('priceFromDays — an all-free rental (every day Shabbos/Yom Tov) is £0', () => {
+  // 0 chargeable days: the min lift is skipped (guarded on cd>0) and the cap
+  // never raises a price, so a fully-free span charges nothing.
+  assert.equal(priceFromDays(0, 3, USA), 0)
+  assert.equal(priceFromDays(0, 3, { ratePerDay: 3, minCharge: 20, cap: null }), 0)
+})
+
 test('capPeriods — ceil over the window', () => {
   assert.equal(capPeriods(30), 1)
   assert.equal(capPeriods(31), 2)

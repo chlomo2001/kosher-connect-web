@@ -104,6 +104,19 @@ test('makeZip → unzip roundtrip (STORE)', async () => {
   assert.equal(new TextDecoder().decode(await entries[0].bytes()), '{"a":"1"}\n')
   assert.deepEqual([...(await entries[1].bytes())], [1, 2, 3])
 })
+test('unzip rejects a member whose bytes fail the central-directory CRC-32', async () => {
+  // Build a valid STORE zip, then flip one payload byte WITHOUT fixing the CRC —
+  // unzip must refuse it instead of handing corrupt data to the importer.
+  const zip = makeZip([{ name: 'messages.ndjson', data: '{"a":"1"}\n' }])
+  // Sanity: the intact zip reads fine (do this BEFORE corrupting — unzip views
+  // the same buffer we're about to mutate).
+  assert.equal(new TextDecoder().decode(await (await unzip(zip))[0].bytes()), '{"a":"1"}\n')
+  // Locate the stored payload (STORE local header is 30 + nameLen, name = 15 chars).
+  const payloadStart = 30 + 'messages.ndjson'.length
+  zip[payloadStart] ^= 0xff                 // corrupt the first byte, leave the CRC
+  const entries = await unzip(zip)
+  await assert.rejects(() => entries[0].bytes(), /CRC-32 mismatch/)
+})
 test('unzip inflates DEFLATE members (the real-world NBF/FIG case)', async () => {
   // Hand-assemble a one-member deflated zip using node's raw deflate.
   const content = new TextEncoder().encode('hello deflate world '.repeat(20))
@@ -171,6 +184,19 @@ test('parseSmsBackupXml extracts attributes and decodes entities', () => {
 })
 test('parseSmsBackupXml rejects non-SMS XML', () => {
   assert.throws(() => parseSmsBackupXml('<contacts></contacts>'))
+})
+test('parseSmsBackupXml keeps a message body with a raw ">" (not required to be escaped in XML attrs)', () => {
+  // The old /[^>]*?/ tag matcher stopped at the first raw ">", truncating the
+  // tag and silently dropping the whole message.
+  const xml = `<smses count="2">
+    <sms address="07911123456" date="1" type="1" body="on my way -> see you > there" service_center="null" />
+    <sms address="MUM" date="2" type="2" body="ok &gt; great" />
+  </smses>`
+  const msgs = parseSmsBackupXml(xml)
+  assert.equal(msgs.length, 2)                          // neither message dropped
+  assert.equal(msgs[0].body, 'on my way -> see you > there')
+  assert.equal(msgs[0].service_center, '')
+  assert.equal(msgs[1].body, 'ok > great')
 })
 test('buildFigNdjson: default schema key order, threads per contact, normalisation', () => {
   const msgs = [

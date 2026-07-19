@@ -21,6 +21,17 @@ test('serviceOrderTotal — tiered "first / N or more"', () => {
   assert.equal(serviceOrderTotal(25, 20, -5, 4).qty, 1)
 })
 
+test('serviceOrderTotal — repeat-price contract: blank ≠ free, explicit 0 = free', () => {
+  // A blank/absent repeat price means "no tier": every unit at the single price,
+  // NOT free-from-N (the Number('')===0 trap).
+  assert.deepEqual(serviceOrderTotal(25, '', 6, 4), { qty: 6, total: 150 })      // 6×25
+  assert.deepEqual(serviceOrderTotal(25, undefined, 6, 4), { qty: 6, total: 150 })
+  assert.deepEqual(serviceOrderTotal(25, 'n/a', 6, 4), { qty: 6, total: 150 })   // non-numeric guarded
+  // An EXPLICIT numeric 0 IS a real tier: buy the first (from-1), extras free.
+  assert.deepEqual(serviceOrderTotal(25, 0, 6, 4), { qty: 6, total: 75 })        // 3×25 + 3×0
+  assert.deepEqual(serviceOrderTotal(25, '0', 4, 4), { qty: 4, total: 75 })      // 3×25 + 1×0
+})
+
 test('phone discount starts at the Nth concurrent phone', () => {
   // fromN=3 → applies once the customer has 2 other concurrent rentals (=3rd).
   assert.equal(phoneDiscountApplies(1, 3), false) // this is the 2nd phone
@@ -57,6 +68,16 @@ test('advanceOneMonth — an immutable anchor day stops (and recovers) month-end
   assert.equal(advanceOneMonth('2026-01-15', 15), '2026-02-15')
   assert.equal(advanceOneMonth('2026-01-31', 99), '2026-02-28')
   assert.equal(advanceOneMonth('2026-01-31'), '2026-02-28')
+})
+
+test('advanceOneMonth — unparseable / non-padded input passes through unchanged', () => {
+  // The parser requires zero-padded YYYY-MM-DD; anything else is returned as-is
+  // rather than silently coerced to a wrong date.
+  assert.equal(advanceOneMonth('2026-1-5'), '2026-1-5')       // not zero-padded
+  assert.equal(advanceOneMonth('not-a-date'), 'not-a-date')
+  assert.equal(advanceOneMonth(''), '')
+  // A full timestamp still advances on its date part (leading match is enough).
+  assert.equal(advanceOneMonth('2026-01-15T09:30:00Z'), '2026-02-15')
 })
 
 test('cashExpected — nets by sign, adds float (a cash refund lowers it)', () => {
