@@ -3980,8 +3980,7 @@ async function renderWalletTab() {
   const feedHtml = (data.recent || []).length === 0
     ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No wallet activity yet.</div>`
     : data.recent.map(e => `
-        <div class="history-item${e.customerId ? ' dash-link' : ''}"
-          style="background:transparent;border-bottom:1px solid var(--border);border-radius:0;padding:9px 2px;"
+        <div class="history-item history-flat${e.customerId ? ' dash-link' : ''}"
           ${e.customerId ? `onclick="goToTab('customers',{customerId:'${escHtml(String(e.customerId))}'})" title="Open customer"` : ''}>
           <div style="display:flex;align-items:center;flex:1;min-width:0;">
             <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>
@@ -3991,6 +3990,7 @@ async function renderWalletTab() {
           <div class="history-date" style="margin:0 12px;">${fmtDate(e.at)}</div>
           <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--text)'};font-feature-settings:'tnum';">
             ${e.amount >= 0 ? '+' : '−'}${fmtGbp(Math.abs(e.amount))}</div>
+          ${e.customerId ? '<span class="feed-go">›</span>' : ''}
         </div>`).join('');
 
   const customerOptions = [...customers]
@@ -6463,7 +6463,7 @@ async function renderShopTab() {
   const saleRows = shopSales.length === 0
     ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No sales recorded yet.</div>`
     : shopSales.slice(0, 25).map(s => `
-      <div class="history-item" style="background:transparent;border-bottom:1px solid var(--border);border-radius:0;padding:8px 2px;">
+      <div class="history-item history-flat">
         <div style="flex:1;min-width:0;">
           <div class="history-desc"><strong>${escHtml(s.item)}</strong>${s.qty > 1 ? ` × ${s.qty}` : ''} — ${escHtml(s.customerName || 'Walk-in')}</div>
           <div style="font-size:11px;color:var(--muted);">${s.imei ? 'IMEI ' + escHtml(s.imei) + ' · ' : ''}${escHtml(s.notes || '')}</div>
@@ -8545,8 +8545,7 @@ function dashPaint(money, tasksList2, stillLoading) {
   const activityHtml = !money || money.recent.length === 0
     ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No wallet activity yet.</div>`
     : money.recent.slice(0, 8).map(e => `
-        <div class="history-item${e.customerId ? ' dash-link' : ''}"
-          style="background:transparent;border-bottom:1px solid var(--border);border-radius:0;padding:9px 2px;"
+        <div class="history-item history-flat${e.customerId ? ' dash-link' : ''}"
           ${e.customerId ? `onclick="goToTab('customers',{customerId:'${escHtml(String(e.customerId))}'})" title="Open customer"` : ''}>
           <div style="display:flex;align-items:center;flex:1;min-width:0;">
             <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>

@@ -944,27 +944,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   background: var(--bg);
   position: relative; overflow: hidden;
   padding: 24px;
-  /* Brand-coloured pointers: the classic arrow and hand shapes everyone
-     knows, redrawn in KC colours — navy ink with a gold keyline (warm ivory
-     on the dark theme). Familiar to use, unmistakably ours. */
-  cursor: url("/cursor-kc.png") 2 2, auto;
 }
 .login-card input, .login-card textarea, .login-card select { cursor: text; }
-.login-shell button, .login-shell a, .login-shell [role="button"] {
-  cursor: url("/cursor-kc-hand.png") 15 3, pointer;
-}
-:root[data-theme="dark"] .login-shell { cursor: url("/cursor-kc-dark.png") 2 2, auto; }
-:root[data-theme="dark"] .login-shell button, :root[data-theme="dark"] .login-shell a,
-:root[data-theme="dark"] .login-shell [role="button"] {
-  cursor: url("/cursor-kc-hand-dark.png") 15 3, pointer;
-}
-/* The welcome page shares the scene — and the cursors. */
-.welcome-shell { cursor: url("/cursor-kc.png") 2 2, auto; }
-.welcome-shell a, .welcome-shell button { cursor: url("/cursor-kc-hand.png") 15 3, pointer; }
-:root[data-theme="dark"] .welcome-shell { cursor: url("/cursor-kc-dark.png") 2 2, auto; }
-:root[data-theme="dark"] .welcome-shell a, :root[data-theme="dark"] .welcome-shell button {
-  cursor: url("/cursor-kc-hand-dark.png") 15 3, pointer;
-}
+.login-shell button, .login-shell a, .login-shell [role="button"] { cursor: pointer; }
+.welcome-shell a, .welcome-shell button { cursor: pointer; }
 /* Kept as a decorative hook, but the rainbow blur is gone. A single flat
    hairline band frames the top of the canvas — structure, not glow. */
 /* Premium sign-in: a slow flowing gradient behind a crisp floating card —
@@ -1310,8 +1293,16 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .dash-link { cursor: pointer; }
 .feed-item.dash-link { margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 8px; transition: background 0.12s; }
 .feed-item.dash-link:hover { background: var(--bg-secondary); }
-.feed-item .feed-go { margin-left: auto; color: var(--muted); font-size: 15px; opacity: 0; transition: opacity 0.12s; }
+.feed-item .feed-go { margin-left: auto; padding-left: 12px; color: var(--muted); font-size: 15px; opacity: 0.5; transition: opacity 0.12s; flex-shrink: 0; }
 .feed-item.dash-link:hover .feed-go { opacity: 1; }
+/* Flat ledger rows (dashboard activity, wallet feed, shop sales): divider
+   lines instead of pill backgrounds, with the same hover affordance as the
+   feed rows when they deep-link somewhere. */
+.history-item.history-flat { background: transparent; border-bottom: 1px solid var(--border); border-radius: 0; padding: 9px 2px; }
+.history-flat.dash-link { transition: background 0.12s; }
+.history-flat.dash-link:hover { background: var(--bg-secondary); }
+.history-flat .feed-go { margin-left: 12px; color: var(--muted); font-size: 15px; opacity: 0.5; transition: opacity 0.12s; flex-shrink: 0; }
+.history-flat.dash-link:hover .feed-go { opacity: 1; }
 .stat-card.dash-link { transition: border-color 0.12s, background 0.12s; }
 .stat-card.dash-link:hover { border-color: var(--accent); background: var(--accent-wash); }
 .dash-hero-row.dash-link { border-radius: 6px; margin: 0 -6px; padding-left: 6px; padding-right: 6px; transition: background 0.12s; }
