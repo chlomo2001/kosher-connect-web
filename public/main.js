@@ -8770,6 +8770,30 @@ async function renderSettingsTab() {
         Comma-separated. These appear in the <strong>Platform / IVR provider</strong> dropdown when you add a virtual number.
         Existing numbers keep their provider even if you remove it here.</div>`);
 
+  // ── Contact Tools reference card — the phone-migration workbench SOP.
+  // A directory, not a launcher: a browser can't start a Windows program, so
+  // this tells any helper which converter handles which handset, and where the
+  // same job can be done in-app. The work itself is charged via the "Contact
+  // Transfer / Phone Setup" line on the Online & Print menu.
+  const contactToolsHtml = settingsCard('contacttools', '🔧 Contact tools (phone migrations)',
+    'which converter handles which handset', `
+      <div style="padding:10px 16px 6px;">
+        <div class="table-wrap"><table>
+          <thead><tr><th>Tool</th><th>What it does</th><th>Where</th></tr></thead>
+          <tbody>
+            <tr><td>Contacts Converter</td><td>Excel / CSV / VCF → clean +44 VCF (map, merge, dedupe)</td><td><a href="/tools/contacts" target="_blank" rel="noopener">in-app</a></td></tr>
+            <tr><td>Transfer Wizard</td><td>Phone-to-phone: XML / NBF / IB / VCF → VCF or FIG zip</td><td><a href="/tools/transfer" target="_blank" rel="noopener">in-app</a></td></tr>
+            <tr><td>xml→fig</td><td>Nokia backup XML → Fig core phone format</td><td>office PC</td></tr>
+            <tr><td>NokiaB→VCF</td><td>Nokia backup (NBF) → VCF</td><td>office PC</td></tr>
+            <tr><td>Excel→VCF / CSV→VCF offline</td><td>Spreadsheet exports → VCF</td><td>office PC</td></tr>
+            <tr><td>VCF UK-prefix converter</td><td>Normalises numbers to +44</td><td>office PC</td></tr>
+            <tr><td>VCF cleaner</td><td>Strips broken / duplicate entries from a VCF</td><td>office PC</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div style="padding:0 16px 14px;font-size:11px;color:var(--muted);line-height:1.5;">
+        Charge the job with the <strong>Contact Transfer / Phone Setup</strong> line on the Online &amp; Print menu — it lands on the customer's timeline and wallet like any other service. Then save the finished <strong>.vcf</strong> against the customer (Documents on their card), so next phone change their contacts are one click away.</div>`);
+
   // A category eyebrow above its cards — same idea as the sidebar's group
   // labels, so a section header reads as a CATEGORY and the cards below read as
   // its rows. The two levels are then unmistakably different (that's the "left
@@ -8807,6 +8831,9 @@ async function renderSettingsTab() {
     ${aliasesHtml ? sectionHead('Communications', 'email addresses for the business') + aliasesHtml : ''}
 
     ${ivrHtml ? sectionHead('Connectivity', 'virtual-number &amp; IVR providers') + ivrHtml : ''}
+
+    ${sectionHead('Workbench', 'phone migrations &amp; converters')}
+    ${contactToolsHtml}
 
     ${automationsHtml ? sectionHead('Automation', 'jobs the daily sweep runs for you') + automationsHtml : ''}`;
 }
