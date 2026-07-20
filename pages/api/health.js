@@ -11,8 +11,18 @@ export default async function handler(req, res) {
   // (hold / test / live) — never any secret — so the owner can confirm the
   // wiring AND the safety gate without opening Vercel.
   // `vault` says whether the credential-vault key (SIM_CRED_KEY) is present
-  // AND valid — on/off only, never the key itself.
-  const base = { email: emailStatus(), sms: smsStatus(), vault: secretsEnabled ? 'on' : 'off', time: new Date().toISOString() }
+  // AND valid — on/off only, never the key itself. `env`/`project` identify
+  // WHICH deployment answered — production vs preview vs a second project —
+  // because env vars differ per environment and "works here, broken there"
+  // is otherwise undiagnosable from the outside.
+  const base = {
+    email: emailStatus(),
+    sms: smsStatus(),
+    vault: secretsEnabled ? 'on' : 'off',
+    env: process.env.VERCEL_ENV || 'local',
+    project: process.env.VERCEL_PROJECT_PRODUCTION_URL || null,
+    time: new Date().toISOString(),
+  }
   // No-DB mode is a valid, healthy configuration (the app runs on file storage).
   if (!tablesMode) {
     return res.status(200).json({ ok: true, mode: 'file', ...base })
