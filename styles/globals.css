@@ -1860,9 +1860,12 @@ html { scroll-behavior: smooth; }
   .pg-verdict { grid-template-columns: 1fr; }
   .pg-row-head { flex-wrap: wrap; }
 }
-/* The Hebrew welcome speaks Heebo — the modern sans that matches the page's
-   Inter look — instead of the app-wide David Libre serif. */
-.welcome-shell .w-wrap[dir="rtl"] {
+/* The Hebrew welcome AND the Hebrew portal speak Heebo — the modern sans
+   that matches the Inter look — instead of the app-wide David Libre serif.
+   Form controls don't inherit font by default, so pull them along too. */
+.welcome-shell .w-wrap[dir="rtl"],
+.login-card[dir="rtl"],
+.login-card[dir="rtl"] :is(button, input, select, textarea) {
   font-family: 'Heebo KC', 'Inter', system-ui, -apple-system, sans-serif;
 }
 .w-contact-link:hover { text-decoration: underline; }
