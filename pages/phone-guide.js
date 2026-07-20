@@ -58,7 +58,7 @@ export default function PhoneGuide() {
 
           <section className="w-section pg-head" id="top">
             <div className="w-strap">Compared honestly — no favourites</div>
-            <h3>Which kosher phone is right for you?</h3>
+            <h3 className="w-show">Which kosher phone is right for you?</h3>
             <p className="w-lead">
               Every handset below is one we sell, set up and stand behind. The specs answer
               what people actually ask in the shop; the pros and cons are our honest take —

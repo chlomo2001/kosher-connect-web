@@ -159,7 +159,7 @@ export default function Welcome() {
   const t = T[lang]
 
   useEffect(() => {
-    const cards = document.querySelectorAll('.w-reveal:not(.w-show)')
+    const cards = document.querySelectorAll('.w-reveal:not(.w-show), .w-section > h3:not(.w-show)')
     const obs = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
         if (e.isIntersecting) { e.target.classList.add('w-show'); obs.unobserve(e.target) }
