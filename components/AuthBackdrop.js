@@ -97,6 +97,12 @@ export default function AuthBackdrop() {
     const onMove = (e) => { const r = canvas.getBoundingClientRect(); tpx = e.clientX - r.left; tpy = e.clientY - r.top; haveP = true }
     const onLeave = () => { haveP = false; idleP() }
 
+    // Scroll parallax (welcome page only): the whole globe scene rises at a
+    // fraction of the scroll speed, so the page reads as a layer travelling in
+    // front of the world. Smoothed in draw(); off under reduced motion.
+    let scrollRaw = 0, sd = 0, shellScrollEl = null
+    const onShellScroll = () => { scrollRaw = shellScrollEl ? shellScrollEl.scrollTop : 0 }
+
     let cur = null
     const target = (t) => {
       const ph = phaseRef.current
@@ -121,8 +127,11 @@ export default function AuthBackdrop() {
       const midWash = mix(cur.core, base, 0.45)
       ctx.fillStyle = rgb(base); ctx.fillRect(0, 0, W, H)
 
-      // Globe geometry: big and central — the backbone of the scene.
-      const gx = W / 2, gy = H * 0.5, Rg = Math.min(W, H) * 0.46
+      // Globe geometry: big and central — the backbone of the scene. On the
+      // welcome page the centre rises with scroll (22% of scroll speed,
+      // smoothed) so the content reads as a layer travelling over the world.
+      sd = lerp(sd, Math.min(scrollRaw * 0.22, H * 0.52), 0.12)
+      const gx = W / 2, gy = H * 0.5 - sd, Rg = Math.min(W, H) * 0.46
       const lam0 = t * 0.00003, phi0 = 0.36
       const sinP = Math.sin(phi0), cosP = Math.cos(phi0)
       const project = (lon, lat) => {
@@ -450,6 +459,11 @@ export default function AuthBackdrop() {
     if (!reduce.matches && shell) {
       shell.addEventListener('pointermove', onMove)
       shell.addEventListener('pointerleave', onLeave)
+      if (shell.classList.contains('welcome-shell')) {
+        shellScrollEl = shell
+        shell.addEventListener('scroll', onShellScroll, { passive: true })
+        onShellScroll()
+      }
     }
     if (reduce.matches) draw(0)
     else raf = requestAnimationFrame(loop)
@@ -458,6 +472,7 @@ export default function AuthBackdrop() {
       window.removeEventListener('resize', onResize)
       document.removeEventListener('visibilitychange', onVis)
       if (shell) { shell.removeEventListener('pointermove', onMove); shell.removeEventListener('pointerleave', onLeave) }
+      if (shellScrollEl) shellScrollEl.removeEventListener('scroll', onShellScroll)
     }
   }, [])
 

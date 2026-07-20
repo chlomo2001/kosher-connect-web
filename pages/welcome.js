@@ -56,6 +56,7 @@ const T = {
       { title: 'Accessories on the shelf', body: 'Chargers, cables and cases; MP3 players, power banks, SD cards and USB sticks; plug adapters, sat navs, USA SIM cards, replacement screens and batteries — pop in and pick up what you need.' },
       { title: 'Advice with no pressure', body: 'No jargon and no upsell. We lay out the options, you choose — and if we’re not the right answer, we’ll say so.' },
     ],
+    ticker: ['Kosher phones', 'SIM plans', 'Flights & tickets', 'Virtual numbers', 'Phone rental', 'Kol Torah audio', 'Repairs', 'Online services', 'Accessories'],
     phoneGuideCta: 'Choosing a handset? See the phone guide →',
     storyTitle: 'Why Kosher Connect exists',
     story1: 'It started with watching people overpay — badly. Good families tied into multi-year SIM contracts through reseller companies, where every minute past the allowance cost a small fortune. That needed an end.',
@@ -100,6 +101,7 @@ const T = {
       { title: 'אביזרים על המדף', body: 'מטענים, כבלים וכיסויים; נגני MP3, סוללות ניידות, כרטיסי זיכרון והחסני USB; מתאמי חשמל לחו״ל, מכשירי ניווט, כרטיסי סים לארה״ב, מסכים וסוללות חלופיים — נכנסים, לוקחים, ממשיכים הלאה.' },
       { title: 'ייעוץ בלי שום לחץ', body: 'בלי מונחים מסובכים ובלי מכירה בכוח. פורסים לפניכם את האפשרויות, אתם מחליטים — ואם אנחנו לא הכתובת הנכונה, נגיד זאת בפה מלא.' },
     ],
+    ticker: ['טלפונים כשרים', 'תוכניות סים', 'טיסות וכרטיסים', 'מספרים וירטואליים', 'השכרת טלפונים', 'קול תורה', 'תיקונים', 'שירותים מקוונים', 'אביזרים'],
     phoneGuideCta: 'בוחרים מכשיר? למדריך הטלפונים ←',
     storyTitle: 'למה קיים כשר קונקט',
     story1: 'הכול התחיל מלראות אנשים משלמים הרבה יותר מדי. משפחות טובות כבולות בחוזי סים לשנים דרך חברות מתווכות, כשכל דקה מעבר למכסה עולה הון קטן. לזה היה צריך לשים סוף.',
@@ -231,6 +233,21 @@ export default function Welcome() {
               </div>
             </div>
           </section>
+
+          {/* A whisper-weight reel of everything the shop does — decorative
+              (the services grid below is the real, accessible list), pauses
+              on hover, and holds still under reduced motion. */}
+          <div className="w-ticker" aria-hidden="true">
+            <div className="w-ticker-track">
+              {[0, 1].map((dup) => (
+                <div className="w-ticker-set" key={`${lang}-${dup}`}>
+                  {t.ticker.map((s, i) => (
+                    <span key={i}>{s}<i>●</i></span>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* The proof strip — three concrete promises, stated as numbers, the
               way the shop actually talks. Every figure comes from the copy

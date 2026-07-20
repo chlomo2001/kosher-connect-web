@@ -1657,6 +1657,27 @@ html { scroll-behavior: smooth; }
   .w-proof-item + .w-proof-item { border-inline-start: 0; padding-inline-start: 0; border-top: 1px solid var(--border); padding-top: 14px; }
 }
 
+/* Services ticker — a whisper-weight reel under the hero. Deliberately much
+   lighter than body text (small, muted, faint gold dots, slow) so it adds
+   life without adding noise; pauses on hover; still under reduced motion. */
+.w-ticker {
+  overflow: hidden; padding: 11px 0; margin-top: 6px;
+  border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.w-ticker-track { display: inline-flex; white-space: nowrap; animation: w-tick 46s linear infinite; }
+.w-ticker:hover .w-ticker-track { animation-play-state: paused; }
+.w-ticker-set { display: inline-flex; align-items: center; }
+.w-ticker-set span { font-size: 12px; letter-spacing: 0.02em; color: var(--muted); opacity: 0.8; }
+.w-ticker-set i {
+  font-style: normal; color: var(--gold); opacity: 0.4; font-size: 6px;
+  vertical-align: 2px; padding: 0 13px;
+}
+@keyframes w-tick { to { transform: translateX(-50%); } }
+.w-wrap[dir="rtl"] .w-ticker-track { animation-direction: reverse; }
+@media (prefers-reduced-motion: reduce) { .w-ticker-track { animation: none; } }
+
 .w-lead { margin: -4px 0 16px; color: var(--ink-secondary); font-size: 14px; line-height: 1.6; max-width: 62ch; }
 /* The story band — the owner's voice, set a touch larger and given room. */
 .w-story p { margin: 0 0 12px; color: var(--ink-secondary); font-size: 15px; line-height: 1.75; max-width: 68ch; }
