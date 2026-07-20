@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import AuthBackdrop from '../../components/AuthBackdrop'
+import ThemeToggle from '../../components/ThemeToggle'
 
 export default function GoogleAuth() {
   const [error, setError] = useState('')
@@ -37,6 +38,7 @@ export default function GoogleAuth() {
       <div className="login-shell">
         <div className="login-mesh" aria-hidden="true" />
         <AuthBackdrop />
+        <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         <div className="login-card" style={{ textAlign: 'center' }}>
           <img src="/logo-full.png" alt="KosherConnect" style={{ height: 64, marginBottom: 14 }} />
           {error ? (

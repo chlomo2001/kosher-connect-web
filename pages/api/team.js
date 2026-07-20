@@ -8,7 +8,7 @@
 // Guards: you cannot remove yourself, and the last owner can never be
 // demoted or removed.
 
-import { withStaff, adminCreateUser, adminUserEmail, adminSetPassword } from '../../lib/auth.js'
+import { withStaff, adminCreateUser, adminUserEmail, adminSetPassword, adminFindUserByEmail } from '../../lib/auth.js'
 import { db } from '../../lib/db.js'
 
 const ROLES = ['owner', 'helper']
@@ -49,17 +49,33 @@ async function handler(req, res) {
         return res.status(400).json({ success: false, error: 'Role must be owner or helper.' })
       }
       const created = await adminCreateUser(String(email).trim(), String(password), fullName || null)
-      if (!created.ok || !created.json?.id) {
+      let userId = created.ok && created.json?.id ? created.json.id : null
+      if (!userId) {
         const msg = created.json?.msg || created.json?.message || 'Could not create the account.'
-        return res.status(400).json({ success: false, error: msg })
+        // The auth account may already exist without being staff — a Google
+        // sign-in attempt or a portal magic link creates one automatically.
+        // Promoting it is exactly what the owner is asking for here.
+        if (/already|registered|exists/i.test(msg)) {
+          const existing = await adminFindUserByEmail(String(email).trim())
+          if (existing?.id) {
+            const staffRow = await db.select('staff_profiles', `select=id&id=eq.${encodeURIComponent(existing.id)}`)
+            if (staffRow.length) {
+              return res.status(400).json({ success: false, error: 'That email is already a staff member.' })
+            }
+            const set = await adminSetPassword(existing.id, String(password))
+            if (!set.ok) return res.status(500).json({ success: false, error: 'Could not set the password on the existing account.' })
+            userId = existing.id
+          }
+        }
+        if (!userId) return res.status(400).json({ success: false, error: msg })
       }
       await db.insert('staff_profiles', [{
-        id: created.json.id,
+        id: userId,
         role,
         full_name: fullName || null,
         email: String(email).trim().toLowerCase(),
       }])
-      return res.json({ success: true, member: { id: created.json.id, email, fullName: fullName || '', role } })
+      return res.json({ success: true, member: { id: userId, email, fullName: fullName || '', role } })
     }
 
     if (req.method === 'PUT') {

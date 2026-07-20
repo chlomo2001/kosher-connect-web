@@ -61,3 +61,16 @@ test('typed columns win over stale extras on read', () => {
   const back = customerRowFromTyped(row)
   assert.equal(back.address, '99 New Street')
 })
+
+// Gmail-aware sign-in email matching (staff Google login).
+test('emailsMatchLoose: gmail dots and +tags are one mailbox', async () => {
+  const { emailsMatchLoose } = await import('../lib/mappers.js')
+  assert.equal(emailsMatchLoose('e.a.rothbart@gmail.com', 'earothbart@gmail.com'), true)
+  assert.equal(emailsMatchLoose('EAROTHBART@GMAIL.COM', 'e.a.rothbart+kc@gmail.com'), true)
+  assert.equal(emailsMatchLoose('earothbart@googlemail.com', 'e.a.rothbart@gmail.com'), true)
+  assert.equal(emailsMatchLoose('same@example.com', 'same@example.com'), true)
+  // Non-gmail domains: dots may be significant — exact match only.
+  assert.equal(emailsMatchLoose('e.a@example.com', 'ea@example.com'), false)
+  assert.equal(emailsMatchLoose('a@gmail.com', 'b@gmail.com'), false)
+  assert.equal(emailsMatchLoose('', 'a@gmail.com'), false)
+})
