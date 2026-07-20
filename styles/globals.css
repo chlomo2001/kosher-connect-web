@@ -1545,8 +1545,14 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 }
 .w-wrap[dir="rtl"] .w-section > h3::after { transform-origin: 100% 50%; }
 .w-section > h3.w-show::after { transform: scaleX(1); }
+/* Once drawn, hovering the heading draws the line again from scratch —
+   the animation restarts on every hover without touching the slower
+   first-arrival transition above. */
+@keyframes w-hairline-redraw { from { transform: scaleX(0); } }
+.w-section > h3.w-show:hover::after { animation: w-hairline-redraw 0.9s cubic-bezier(0.22, 0.61, 0.2, 1); }
 @media (prefers-reduced-motion: reduce) {
   .w-section > h3::after { transition: none; transform: scaleX(1); }
+  .w-section > h3.w-show:hover::after { animation: none; }
 }
 
 /* Hero entrance — strap, heading, body, quote, CTAs and the side minis land
