@@ -283,8 +283,10 @@ export default function Welcome() {
           {/* The owner's own story, in his words — why the shop exists. */}
           <section className="w-section w-story" id="story">
             <h3>{t.storyTitle}</h3>
-            <p>{t.story1}</p>
-            <p>{t.story2}</p>
+            <div className="w-story-panel w-reveal">
+              <p>{t.story1}</p>
+              <p>{t.story2}</p>
+            </div>
           </section>
 
           <section className="w-section" id="contact">
