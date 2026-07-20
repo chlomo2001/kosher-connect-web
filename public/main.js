@@ -9019,7 +9019,7 @@ async function deleteVN(id, number) {
 async function renderSettingsTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = loadingHtml('Loading settings…');
-  const [cfg, team, autos, aliases, menu, extra, bizacc, pguide] = await Promise.all([
+  const [cfg, team, autos, aliases, menu, extra, bizacc, pguide, health] = await Promise.all([
     window.api.getSettings(),
     kcFetch('/api/team').then(r => r.status === 403 ? null : r.json()).catch(() => null),
     kcFetch('/api/automations').then(r => r.status === 403 ? null : r.json()).catch(() => null),
@@ -9028,6 +9028,7 @@ async function renderSettingsTab() {
     kcFetch('/api/custom-charges').then(r => r.ok ? r.json() : null).catch(() => null),
     kcFetch('/api/business-accounts').then(r => r.status === 403 ? null : r.json()).catch(() => null),
     kcFetch('/api/phone-guide').then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch('/api/health').then(r => r.json()).catch(() => null),
   ]);
   if (!cfg || !cfg.success) {
     content.innerHTML = `<div class="tab-placeholder"><div class="big">⚙️</div>
@@ -9432,6 +9433,42 @@ async function renderSettingsTab() {
         ${retiredModels.length ? `<span style="font-size:11px;color:var(--muted);">Hidden: ${retiredModels.map(m => `${escHtml(m.name)} <button class="action-btn" style="font-size:10px;" onclick="restorePhoneModel('${escHtml(m.id)}')">↩ restore</button>`).join(' · ')}</span>` : ''}
       </div>`) : '';
 
+  // ── Messaging status (email + SMS) — reads /api/health, which reports each
+  // channel's configuration and safety gate (hold / test / live) without ever
+  // exposing a secret. The test-SMS button proves the Twilio console
+  // connection end-to-end the moment the owner pastes the keys into Vercel.
+  const chanBadge = (st) => {
+    if (!st || !st.configured) return '<span class="badge" style="background:var(--bg-secondary);color:var(--muted);">not connected</span>';
+    const mode = st.mode || 'hold';
+    const style = mode === 'live' ? 'badge-active' : mode === 'test' ? 'badge-sim' : 'badge-rental';
+    return `<span class="badge ${style}">${escHtml(mode.toUpperCase())}</span>`;
+  };
+  const msgHtml = settingsCard('messaging', '📨 Messaging (email & SMS)',
+    `email ${health?.email?.configured ? health.email.mode : 'not connected'} · SMS ${health?.sms?.configured ? health.sms.mode : 'not connected'}`, `
+      <table><thead><tr><th>Channel</th><th>Provider</th><th>Status</th><th>What the status means</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>📧 Email</strong></td>
+          <td style="font-size:12px;">${escHtml(health?.email?.provider || '—')}</td>
+          <td>${chanBadge(health?.email)}</td>
+          <td style="font-size:11.5px;color:var(--muted);">HOLD builds &amp; logs but sends nothing · TEST sends everything to your own address · LIVE emails real customers (MAIL_LIVE).</td>
+        </tr>
+        <tr>
+          <td><strong>💬 SMS</strong></td>
+          <td style="font-size:12px;">${escHtml(health?.sms?.provider || 'Twilio (not connected)')}</td>
+          <td>${chanBadge(health?.sms)}</td>
+          <td style="font-size:11.5px;color:var(--muted);">${health?.sms?.configured
+            ? 'HOLD builds &amp; logs but sends nothing · TEST sends everything to SMS_TEST_TO · LIVE texts real customers (SMS_LIVE).'
+            : 'Connect the Twilio console: paste TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM (or TWILIO_MESSAGING_SERVICE_SID) into Vercel env vars, redeploy, and this flips to HOLD.'}</td>
+        </tr>
+      </tbody></table>
+      <div style="padding:8px 14px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <input class="form-input" id="smsTestTo" type="tel" dir="ltr" placeholder="+44 7…  (your own number)"
+          style="min-height:0;padding:7px 10px;font-size:13px;width:220px;">
+        <button class="btn btn-outline btn-sm" onclick="sendTestSms()">📤 Send test SMS</button>
+        <span style="font-size:11px;color:var(--muted);">Safe in every mode — on HOLD it only logs; on TEST it goes to the test number whatever you type.</span>
+      </div>`);
+
   // Shop details — public-facing facts the owner should be able to change
   // without a code change (they show on the welcome page within minutes).
   const openingHours = cfg.settings.find(s => s.key === 'opening_hours')?.textValue || 'Sunday–Thursday, 2:00–6:30pm';
@@ -9462,7 +9499,9 @@ async function renderSettingsTab() {
     ${sectionHead('Prices &amp; charges', 'what you charge and any automatic extras')}
     ${pricingCards}
 
-    ${aliasesHtml ? sectionHead('Communications', 'email addresses for the business') + aliasesHtml : ''}
+    ${sectionHead('Communications', 'channels, safety gates &amp; addresses')}
+    ${msgHtml}
+    ${aliasesHtml}
 
     ${ivrHtml ? sectionHead('Connectivity', 'virtual-number &amp; IVR providers') + ivrHtml : ''}
 
@@ -9470,6 +9509,22 @@ async function renderSettingsTab() {
     ${contactToolsHtml}
 
     ${automationsHtml ? sectionHead('Automation', 'jobs the daily sweep runs for you') + automationsHtml : ''}`;
+}
+
+// Settings → Messaging: prove the Twilio connection end-to-end. The server
+// gate still applies, so this is safe to press in any mode.
+async function sendTestSms() {
+  const to = document.getElementById('smsTestTo')?.value?.trim();
+  if (!to) { toast('Type the number to text first (your own).', 'warning'); return; }
+  const res = await kcFetch('/api/sms-test', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Test failed.', 'error'); return; }
+  if (res.held) toast('Twilio is connected, but SMS is on HOLD — the test was built and logged, nothing sent. Set SMS_TEST_TO or SMS_LIVE to send for real.', 'success');
+  else if (res.redirectedTo) toast(`Sent — redirected to the test number ${res.redirectedTo} (TEST mode).`, 'success');
+  else toast(`Sent to ${res.sentTo} ✔ The Twilio connection works.`, 'success');
 }
 
 // ── Collapsible settings cards ───────────────────────────────────────────
