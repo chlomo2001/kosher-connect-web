@@ -1629,6 +1629,9 @@ html { scroll-behavior: smooth; }
 }
 
 .w-lead { margin: -4px 0 16px; color: var(--ink-secondary); font-size: 14px; line-height: 1.6; max-width: 62ch; }
+/* The story band — the owner's voice, set a touch larger and given room. */
+.w-story p { margin: 0 0 12px; color: var(--ink-secondary); font-size: 15px; line-height: 1.75; max-width: 68ch; }
+.w-story p:first-of-type { color: var(--text); }
 .w-contact-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 @media (max-width: 860px) { .w-contact-grid { grid-template-columns: 1fr; } }
 .w-contact-link {

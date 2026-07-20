@@ -8975,13 +8975,14 @@ async function deleteVN(id, number) {
 async function renderSettingsTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = loadingHtml('Loading settings…');
-  const [cfg, team, autos, aliases, menu, extra] = await Promise.all([
+  const [cfg, team, autos, aliases, menu, extra, bizacc] = await Promise.all([
     window.api.getSettings(),
     kcFetch('/api/team').then(r => r.status === 403 ? null : r.json()).catch(() => null),
     kcFetch('/api/automations').then(r => r.status === 403 ? null : r.json()).catch(() => null),
     kcFetch('/api/email-aliases').then(r => r.status === 403 ? null : r.json()).catch(() => null),
     kcFetch('/api/services?all=1').then(r => r.ok ? r.json() : null).catch(() => null),
     kcFetch('/api/custom-charges').then(r => r.ok ? r.json() : null).catch(() => null),
+    kcFetch('/api/business-accounts').then(r => r.status === 403 ? null : r.json()).catch(() => null),
   ]);
   if (!cfg || !cfg.success) {
     content.innerHTML = `<div class="tab-placeholder"><div class="big">⚙️</div>
@@ -9325,6 +9326,38 @@ async function renderSettingsTab() {
       <tbody>${settingRows}</tbody></table></div>`),
   ].filter(Boolean).join('');
 
+  // ── Accounts & subscriptions register (owner-only) — every external
+  // account the business runs on: where to log in, what it costs, when it
+  // renews. Credentials live encrypted server-side; reveal is on demand.
+  bizAccountsCache = bizacc?.accounts || [];
+  const BIZ_CAT_LABELS = { infrastructure: '🏗 Infrastructure', telecom: '📶 Telecom', ivr: '📞 IVR / PBX', email: '📧 Email', finance: '💷 Finance', other: '📦 Other' };
+  const activeBiz = bizAccountsCache.filter(a => a.active);
+  const bizTotal = activeBiz.reduce((s, a) => s + (a.monthlyCost || 0), 0);
+  const today10 = new Date().toISOString().slice(0, 10);
+  const soon10 = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+  const bizAccHtml = bizacc?.success ? settingsCard('bizacc', '🗄 Accounts & subscriptions',
+    `${activeBiz.length} account${activeBiz.length === 1 ? '' : 's'} · ~${fmtGbp(bizTotal)}/month`, `
+      <table><thead><tr><th>Account</th><th>Login</th><th>£/month</th><th>Renews</th><th></th></tr></thead>
+      <tbody>
+        ${activeBiz.length === 0 ? `<tr><td colspan="5" style="color:var(--muted);font-size:13px;padding:12px 16px;">Nothing registered yet — add Vercel, Supabase, Resend, Twilio, elid, the carrier logins… so nothing lives only in someone's head.</td></tr>` : ''}
+        ${activeBiz.map(a => `
+          <tr>
+            <td><strong>${escHtml(a.name)}</strong><div style="font-size:11px;color:var(--muted);">${BIZ_CAT_LABELS[a.category] || escHtml(a.category)}${a.notes ? ' · ' + escHtml(a.notes.slice(0, 60)) : ''}</div></td>
+            <td style="font-size:12px;">${a.url ? `<a href="${escHtml(a.url)}" target="_blank" rel="noopener" style="color:var(--accent);">open ↗</a> ` : ''}${escHtml(a.loginEmail || '—')}</td>
+            <td style="font-feature-settings:'tnum';">${a.monthlyCost != null ? fmtGbp(a.monthlyCost) : '—'}</td>
+            <td>${a.renewalDate ? `<span style="${a.renewalDate <= soon10 ? 'color:var(--danger);font-weight:600;' : ''}">${fmtDate(a.renewalDate)}${a.renewalDate < today10 ? ' ⚠' : ''}</span>` : '—'}</td>
+            <td style="white-space:nowrap;">
+              ${a.hasCred ? `<button class="action-btn" style="font-size:11px;" onclick="revealBizAccount('${escHtml(a.id)}')">🔑 Reveal</button>` : ''}
+              <button class="action-btn" onclick="openBizAccountModal('${escHtml(a.id)}')">✏️</button>
+              <button class="action-btn danger" onclick="retireBizAccount('${escHtml(a.id)}', '${escJs(a.name)}')">✕</button>
+            </td>
+          </tr>`).join('')}
+      </tbody></table>
+      <div style="padding:8px 14px 14px;">
+        <button class="btn btn-outline btn-sm" onclick="openBizAccountModal()">+ Add account</button>
+        ${bizacc.credVault ? '' : '<span style="font-size:11px;color:var(--warning,#b45309);margin-left:8px;">Credential vault key missing — passwords cannot be stored until SIM_CRED_KEY is set.</span>'}
+      </div>`) : '';
+
   // Shop details — public-facing facts the owner should be able to change
   // without a code change (they show on the welcome page within minutes).
   const openingHours = cfg.settings.find(s => s.key === 'opening_hours')?.textValue || 'Sunday–Thursday, 2:00–6:30pm';
@@ -9346,6 +9379,8 @@ async function renderSettingsTab() {
 
     ${sectionHead('Shop', 'public-facing details')}
     ${shopHtml}
+
+    ${bizAccHtml ? sectionHead('Business', 'the accounts &amp; subscriptions the company runs on') + bizAccHtml : ''}
 
     ${team?.success ? sectionHead('People &amp; access', 'who works here and what they can see') + teamHtml : ''}
 
@@ -9442,6 +9477,106 @@ async function saveOpeningHours() {
     table: 'settings', key: 'opening_hours',
     values: { textValue: document.getElementById('stOpeningHours').value },
   });
+}
+
+// ── Accounts & subscriptions register ────────────────────────────────────
+let bizAccountsCache = [];
+
+function openBizAccountModal(id = null) {
+  const a = id ? bizAccountsCache.find(x => x.id === id) : null;
+  const cats = [['infrastructure', 'Infrastructure'], ['telecom', 'Telecom'], ['ivr', 'IVR / PBX'], ['email', 'Email'], ['finance', 'Finance'], ['other', 'Other']];
+  showDynamicModal(`
+    <div class="modal-title">${a ? '✏️ Edit account' : '➕ Add account'}</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Name *</label>
+        <input class="form-input" id="baName" value="${escHtml(a?.name || '')}" placeholder="e.g. Twilio">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-input" id="baCategory">
+          ${cats.map(([k, l]) => `<option value="${k}" ${a?.category === k ? 'selected' : ''}>${l}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Login page URL</label>
+        <input class="form-input" id="baUrl" value="${escHtml(a?.url || '')}" placeholder="https://…">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Login email / user</label>
+        <input class="form-input" id="baLogin" value="${escHtml(a?.loginEmail || '')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password ${a?.hasCred ? '<span style="color:var(--muted);font-weight:400;">(stored — leave empty to keep, type "-" to clear)</span>' : '<span style="color:var(--muted);font-weight:400;">(stored encrypted)</span>'}</label>
+        <input class="form-input" id="baCred" type="password" autocomplete="new-password" placeholder="${a?.hasCred ? '••••••••' : ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cost £/month</label>
+        <input class="form-input" type="number" step="0.01" min="0" id="baCost" value="${a?.monthlyCost ?? ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Next renewal</label>
+        <input class="form-input" type="date" id="baRenewal" value="${escHtml(a?.renewalDate || '')}">
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="baNotes" value="${escHtml(a?.notes || '')}" placeholder="what it's for, who pays, recovery details…">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveBizAccount(${a ? `'${a.id}'` : 'null'})">💾 Save</button>
+    </div>
+  `);
+}
+
+async function saveBizAccount(id) {
+  const res = await kcFetch('/api/business-accounts', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      op: 'save', id: id || undefined,
+      name: document.getElementById('baName').value,
+      category: document.getElementById('baCategory').value,
+      url: document.getElementById('baUrl').value,
+      loginEmail: document.getElementById('baLogin').value,
+      credential: document.getElementById('baCred').value,
+      monthlyCost: document.getElementById('baCost').value,
+      renewalDate: document.getElementById('baRenewal').value,
+      notes: document.getElementById('baNotes').value,
+    }),
+  }).then(r => r.json()).catch(() => ({ success: false, error: 'Network error.' }));
+  if (!res.success) { toast(res.error || 'Could not save.', 'error'); return; }
+  toast('Saved ✔', 'success');
+  closeDynamicModal();
+  renderSettingsTab();
+}
+
+async function revealBizAccount(id) {
+  const res = await kcFetch('/api/business-accounts', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: 'reveal', id }),
+  }).then(r => r.json()).catch(() => ({ success: false }));
+  if (!res.success) { toast(res.error || 'Could not reveal.', 'error'); return; }
+  const a = bizAccountsCache.find(x => x.id === id);
+  showDynamicModal(`
+    <div class="modal-title">🔑 ${escHtml(a?.name || 'Credential')}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Shown once — close this when you've used it.</div>
+    <input class="form-input" readonly value="${escHtml(res.credential)}" onclick="this.select()" style="font-family:monospace;">
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="closeDynamicModal()">Close</button>
+    </div>
+  `);
+}
+
+async function retireBizAccount(id, name) {
+  if (!confirm(`Retire "${name}" from the register? (It's kept in the database, just hidden.)`)) return;
+  const res = await kcFetch('/api/business-accounts', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: 'retire', id }),
+  }).then(r => r.json()).catch(() => ({ success: false }));
+  if (!res.success) { toast(res.error || 'Could not retire.', 'error'); return; }
+  toast('Retired ✔', 'success');
+  renderSettingsTab();
 }
 
 // ── Adding rows to the rate / fee cards ──────────────────────────────────

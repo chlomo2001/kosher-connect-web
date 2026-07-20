@@ -56,6 +56,9 @@ const T = {
       { title: 'Accessories on the shelf', body: 'Chargers, cables and cases; MP3 players, power banks, SD cards and USB sticks; plug adapters, sat navs, USA SIM cards, replacement screens and batteries — pop in and pick up what you need.' },
       { title: 'Advice with no pressure', body: 'No jargon and no upsell. We lay out the options, you choose — and if we’re not the right answer, we’ll say so.' },
     ],
+    storyTitle: 'Why Kosher Connect exists',
+    story1: 'It started with watching people overpay — badly. Good families tied into multi-year SIM contracts through a middleman, where every minute past the allowance cost a small fortune. That needed an end.',
+    story2: 'So it began with guiding friends to the network that actually fit them — no contract, no middleman, no catch. From there it grew into everything the community needs from kosher technology: phones, travel, numbers, Kol Torah audio and honest repairs — under one roof, explained straight.',
     contactTitle: 'Come in or call',
     contactLead: 'A phone, a plan, a repair, a trip — just ask. No obligation, and you’ll get a straight answer.',
     address: '421 Bury New Road, Salford M7 4ED (door left of Toy Zone, first floor up)',
@@ -96,6 +99,9 @@ const T = {
       { title: 'אביזרים על המדף', body: 'מטענים, כבלים וכיסויים; נגני MP3, סוללות ניידות, כרטיסי זיכרון והחסני USB; מתאמי חשמל לחו״ל, מכשירי ניווט, כרטיסי סים לארה״ב, מסכים וסוללות חלופיים — נכנסים, לוקחים, ממשיכים הלאה.' },
       { title: 'ייעוץ בלי שום לחץ', body: 'בלי מונחים מסובכים ובלי מכירה בכוח. פורסים לפניכם את האפשרויות, אתם מחליטים — ואם אנחנו לא הכתובת הנכונה, נגיד זאת בפה מלא.' },
     ],
+    storyTitle: 'למה קיים כשר קונקט',
+    story1: 'הכול התחיל מלראות אנשים משלמים הרבה יותר מדי. משפחות טובות כבולות בחוזי סים לשנים דרך מתווך, כשכל דקה מעבר למכסה עולה הון קטן. לזה היה צריך לשים סוף.',
+    story2: 'אז זה התחיל בלכוון חברים לרשת שבאמת מתאימה להם — בלי חוזה, בלי מתווך ובלי אותיות קטנות. ומשם זה צמח לכל מה שהקהילה צריכה מטכנולוגיה כשרה: טלפונים, נסיעות, מספרים, קול תורה ותיקונים ביושר — תחת קורת גג אחת.',
     contactTitle: 'בואו, התקשרו, כתבו',
     contactLead: 'טלפון, תוכנית, תיקון או נסיעה — כל שאלה מתקבלת בסבר פנים יפות. בלי שום התחייבות, ועם תשובה ישרה.',
     address: '421 בורי ניו רואד, סלפורד M7 4ED (הכניסה משמאל ל־Toy Zone, קומה ראשונה)',
@@ -250,6 +256,13 @@ export default function Welcome() {
                 )
               })}
             </div>
+          </section>
+
+          {/* The owner's own story, in his words — why the shop exists. */}
+          <section className="w-section w-story" id="story">
+            <h3>{t.storyTitle}</h3>
+            <p>{t.story1}</p>
+            <p>{t.story2}</p>
           </section>
 
           <section className="w-section" id="contact">
