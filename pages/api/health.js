@@ -4,12 +4,15 @@
 import { db, tablesMode } from '../../lib/db.js'
 import { emailStatus } from '../../lib/email.js'
 import { smsStatus } from '../../lib/sms.js'
+import { secretsEnabled } from '../../lib/secretbox.js'
 
 export default async function handler(req, res) {
   // `email`/`sms` report whether each channel is configured and its send mode
   // (hold / test / live) — never any secret — so the owner can confirm the
   // wiring AND the safety gate without opening Vercel.
-  const base = { email: emailStatus(), sms: smsStatus(), time: new Date().toISOString() }
+  // `vault` says whether the credential-vault key (SIM_CRED_KEY) is present
+  // AND valid — on/off only, never the key itself.
+  const base = { email: emailStatus(), sms: smsStatus(), vault: secretsEnabled ? 'on' : 'off', time: new Date().toISOString() }
   // No-DB mode is a valid, healthy configuration (the app runs on file storage).
   if (!tablesMode) {
     return res.status(200).json({ ok: true, mode: 'file', ...base })
