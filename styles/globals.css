@@ -1506,9 +1506,16 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .w-card {
   border: 1px solid var(--border); border-radius: 14px; padding: 20px;
   box-shadow: 0 16px 40px -22px rgba(10,37,64,.28);
-  transition: transform .18s var(--ease-out), box-shadow .18s var(--ease-out);
+  transition: translate .18s var(--ease-out), box-shadow .18s var(--ease-out), border-color .18s var(--ease-out);
 }
-.w-card:hover { transform: translateY(-2px); box-shadow: 0 22px 52px -22px rgba(10,37,64,.34); }
+/* Lift rides the independent `translate` channel so the slow scroll-reveal
+   transition on `transform` can never make hover feel floaty; the border
+   warms toward brand gold. */
+.w-card:hover {
+  translate: 0 -3px;
+  box-shadow: 0 22px 52px -22px rgba(10,37,64,.34);
+  border-color: color-mix(in srgb, var(--border) 45%, var(--gold));
+}
 .w-card h4 { margin: 0 0 8px; font-size: 15px; color: var(--text); }
 .w-card p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
 .w-card a { color: var(--accent); text-decoration: none; }
@@ -1520,7 +1527,29 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 /* Scroll-reveal (ported from the owner's original site). */
 .w-reveal { opacity: 0; transform: translateY(22px) scale(0.98); transition: opacity 550ms var(--ease-out), transform 550ms var(--ease-out); }
 .w-reveal.w-show { opacity: 1; transform: translateY(0) scale(1); }
+/* Revealed cards keep the fast hover channels alongside the slow reveal. */
+.w-card.w-reveal {
+  transition: opacity 550ms var(--ease-out), transform 550ms var(--ease-out),
+              translate .18s var(--ease-out), box-shadow .18s var(--ease-out), border-color .18s var(--ease-out);
+}
 @media (prefers-reduced-motion: reduce) { .w-reveal { opacity: 1; transform: none; transition: none; } }
+
+/* Hero entrance — strap, heading, body, quote, CTAs and the side minis land
+   as a quiet 90ms cascade once the globe has painted. Pure CSS, runs once. */
+@keyframes w-enter { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.w-hero .w-strap, .w-hero h2, .w-hero p, .w-hero .w-quote, .w-hero .w-cta, .w-hero .w-mini {
+  animation: w-enter 500ms var(--ease-out) both;
+}
+.w-hero .w-strap { animation-delay: 140ms; }
+.w-hero h2 { animation-delay: 230ms; }
+.w-hero p { animation-delay: 320ms; }
+.w-hero .w-quote { animation-delay: 410ms; }
+.w-hero .w-cta { animation-delay: 500ms; }
+.w-hero .w-mini { animation-delay: 590ms; }
+.w-hero .w-mini + .w-mini { animation-delay: 680ms; }
+@media (prefers-reduced-motion: reduce) {
+  .w-hero .w-strap, .w-hero h2, .w-hero p, .w-hero .w-quote, .w-hero .w-cta, .w-hero .w-mini { animation: none; }
+}
 
 .w-footer {
   margin-top: 30px; border-top: 1px solid var(--border); padding-top: 16px;

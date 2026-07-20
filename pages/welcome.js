@@ -235,7 +235,7 @@ export default function Welcome() {
               below; nothing invented for effect. */}
           <section className="w-proof" aria-label={t.servicesTitle}>
             {t.proof.map((p, i) => (
-              <div className="w-proof-item" key={`${lang}-p${i}`}>
+              <div className="w-proof-item w-reveal" key={`${lang}-p${i}`} style={{ transitionDelay: `${i * 110}ms` }}>
                 <div className="w-proof-num">{p.v}</div>
                 <div className="w-proof-cap">{p.c}</div>
               </div>
@@ -247,8 +247,10 @@ export default function Welcome() {
             <div className="w-grid">
               {t.services.map((s, i) => {
                 const Icon = ICONS[i]
+                // Staggered cascade: cards in the same viewport row land 80ms
+                // apart instead of as one block (agency-research pattern #1).
                 return (
-                  <div className="w-card w-reveal" key={`${lang}-${i}`}>
+                  <div className="w-card w-reveal" key={`${lang}-${i}`} style={{ transitionDelay: `${(i % 3) * 80}ms` }}>
                     <div className="w-icon" aria-hidden="true"><Icon /></div>
                     <h4>{s.title}</h4>
                     <p>{s.body}</p>
