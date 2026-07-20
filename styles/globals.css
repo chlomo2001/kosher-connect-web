@@ -1475,6 +1475,21 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 :root[data-theme="dark"] .w-card, :root[data-theme="dark"] .w-pills a,
 :root[data-theme="dark"] .w-lang, :root[data-theme="dark"] .w-proof { background: rgba(16, 20, 34, 0.55); }
 
+/* The story panel's cream warmth, carried across every card surface on the
+   page — same 135° wash, mixed a step lighter so small cards glow warm
+   instead of going yellow. Nav chrome (topbar, pills) stays neutral glass. */
+.w-hero, .w-proof, .w-card {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--canvas-cream) 45%, transparent), transparent 70%),
+    rgba(255, 255, 255, 0.66);
+}
+:root[data-theme="dark"] .w-hero, :root[data-theme="dark"] .w-proof,
+:root[data-theme="dark"] .w-card {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--canvas-cream) 45%, transparent), transparent 70%),
+    rgba(16, 20, 34, 0.55);
+}
+
 .w-topbar {
   display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
   border: 1px solid var(--border); border-radius: 16px; padding: 12px 18px; margin-bottom: 22px;
