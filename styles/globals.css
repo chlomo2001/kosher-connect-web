@@ -29,6 +29,14 @@
   src: url('/fonts/david-libre-700-hebrew.woff2') format('woff2');
   unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
 }
+/* Heebo (variable, Hebrew subset) — the modern sans companion to Inter, used
+   on the public Hebrew welcome page where David Libre's serif feel read as
+   old-fashioned. Hebrew glyphs only; Latin/digits fall through to Inter. */
+@font-face {
+  font-family: 'Heebo KC'; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url('/fonts/heebo-var-hebrew.woff2') format('woff2');
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
 
 :root {
   /* ── Surfaces — light-gray app canvas, white cards, flat recessed panels ── */
@@ -976,20 +984,19 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   position: relative; overflow: hidden;
   padding: 24px;
 }
-/* The pointer IS the brand: a faint logo mark rides as the cursor over the
-   scene, with a tiny dot at the hotspot for precision. Form controls keep
-   natural cursors. */
-.login-shell { cursor: url("/cursor-logo.png") 16 16, auto; }
+/* The orb pointer: a plain circle with a dot at the hotspot — no logo, no
+   arrow. Blue on the light theme, gold on dark, and the canvas halo breathes
+   around it. Form controls keep natural cursors. */
+.login-shell { cursor: url("/cursor-orb.png") 16 16, auto; }
 .login-card { cursor: default; }
 .login-card input, .login-card textarea, .login-card select { cursor: text; }
 .login-shell button, .login-card a, .login-card [role="button"] { cursor: pointer; }
-/* Brighter mark (gold dot) on the dark theme. */
 :root[data-theme="dark"] .login-shell {
-  cursor: url("/cursor-logo-dark.png") 16 16, auto;
+  cursor: url("/cursor-orb-dark.png") 16 16, auto;
 }
 /* The welcome page shares the scene — and the cursor. */
-.welcome-shell { cursor: url("/cursor-logo.png") 16 16, auto; }
-:root[data-theme="dark"] .welcome-shell { cursor: url("/cursor-logo-dark.png") 16 16, auto; }
+.welcome-shell { cursor: url("/cursor-orb.png") 16 16, auto; }
+:root[data-theme="dark"] .welcome-shell { cursor: url("/cursor-orb-dark.png") 16 16, auto; }
 .welcome-shell a, .welcome-shell button { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .login-shell, .welcome-shell { cursor: auto; } }
 /* Kept as a decorative hook, but the rainbow blur is gone. A single flat
@@ -1631,6 +1638,13 @@ html { scroll-behavior: smooth; }
 /* Opening hours line on the Visit card — quiet, under the address. */
 .w-hours { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
 .w-hours strong { font-weight: 600; color: var(--ink-secondary); }
+/* Legal trading-name line in the footer bottom bar. */
+.w-legal { color: var(--muted); }
+/* The Hebrew welcome speaks Heebo — the modern sans that matches the page's
+   Inter look — instead of the app-wide David Libre serif. */
+.welcome-shell .w-wrap[dir="rtl"] {
+  font-family: 'Heebo KC', 'Inter', system-ui, -apple-system, sans-serif;
+}
 .w-contact-link:hover { text-decoration: underline; }
 
 .w-footer2 {
