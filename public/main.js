@@ -1728,13 +1728,6 @@ function openNewRentalModal(preselectCustomerId = null) {
       </div>
 
       <div class="form-group form-full">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
-          <input type="checkbox" id="rWaiver" style="accent-color:var(--accent);" onchange="updateRentalCalc()">
-          <span>🛡️ Damage waiver — <span id="rWaiverLabel">5% of the rental</span>, covers accidental damage (not loss)</span>
-        </label>
-      </div>
-
-      <div class="form-group form-full">
         <label class="form-label">Notes</label>
         <input class="form-input" type="text" id="rNotes" placeholder="Any notes...">
       </div>
@@ -1870,15 +1863,6 @@ function updateRentalCalc() {
       discountLine = ` &nbsp;|&nbsp; <span style="color:var(--gold);font-size:12px;">3rd phone+ −${autoPct}% → <strong>${fmtGbp(finalPrice)}</strong></span>`;
     }
   }
-  // Damage waiver: an optional % of the (discounted) rental, priced from
-  // settings. The label always shows what it WOULD cost so staff can offer it.
-  const waiverPct = settingNum('damage_waiver_pct', 5);
-  const waiverAmt = document.getElementById('rWaiver')?.checked
-    ? Math.round(finalPrice * waiverPct) / 100 : 0;
-  const wLabel = document.getElementById('rWaiverLabel');
-  if (wLabel) wLabel.textContent = `${waiverPct}% = ${fmtGbp(Math.round(finalPrice * waiverPct) / 100)}`;
-  const waiverLine = waiverAmt > 0
-    ? ` &nbsp;|&nbsp; <span style="color:var(--accent);font-size:12px;">+ waiver ${fmtGbp(waiverAmt)}</span>` : '';
   box.style.display = 'block';
   // Full reasoning: rate math, which days were dropped for Shabbat/Yom Tov,
   // and whether the minimum or the cap kicked in.
@@ -1910,7 +1894,7 @@ function updateRentalCalc() {
     <span style="color:var(--muted);">Total days:</span> ${totalDays} &nbsp;|&nbsp;
     <span style="color:var(--muted);">Shabbat/Yom Tov excluded:</span> <span style="color:var(--gold);">${excluded}</span> &nbsp;|&nbsp;
     <span style="color:var(--muted);">Chargeable days:</span> ${chargeableDays} &nbsp;|&nbsp;
-    <strong style="color:var(--success);font-size:15px;">${fmtGbp(price)}</strong>${discountLine}${waiverLine}
+    <strong style="color:var(--success);font-size:15px;">${fmtGbp(price)}</strong>${discountLine}
     <div style="margin-top:6px;font-size:11px;color:var(--muted);line-height:1.6;">
       🧮 ${steps.join(' → ')}
       ${excluded > 0 ? `<br>📅 <span style="cursor:help;" title="Every Shabbos and full Yom Tov in the rental window is free — guests keep the phone over those days at no charge.">${excluded} free day${excluded === 1 ? '' : 's'} (Shabbos / Yom Tov) — hover for why</span>` : ''}
@@ -1922,7 +1906,7 @@ function updateRentalCalc() {
   const vnMonthly = document.getElementById('rVNSub')?.value === 'monthly';
   const vnAmt = (document.getElementById('rAddVN')?.checked && !vnMonthly)
     ? (parseFloat(document.getElementById('rVNPrice')?.value) || 0) : 0;
-  rLastTotal = Math.round((finalPrice + vnAmt + waiverAmt) * 100) / 100;
+  rLastTotal = Math.round((finalPrice + vnAmt) * 100) / 100;
   const payAmt = document.getElementById('rPayAmount');
   if (payAmt && document.getElementById('rPay')?.value !== 'account' && payAmt.dataset.touched !== '1') {
     payAmt.value = rLastTotal.toFixed(2);
@@ -2004,12 +1988,7 @@ async function saveNewRental() {
   // one-off line inside the rental exactly as before.
   const vnRecurs = addVN && vnSub === 'monthly';
   const vnOnRental = addVN && !vnRecurs ? vnPrice : 0;
-  // Damage waiver folds into the rental price exactly like the weekly VN
-  // line — one money channel — and is remembered as its own fields so every
-  // breakdown can show it as a line.
-  const waiverPct = document.getElementById('rWaiver')?.checked ? settingNum('damage_waiver_pct', 5) : 0;
-  const waiverAmount = waiverPct > 0 ? Math.round(discountedRental * waiverPct) / 100 : 0;
-  const totalPrice = discountedRental + vnOnRental + waiverAmount;
+  const totalPrice = discountedRental + vnOnRental;
   // #25 — capture payment at rental time. "On account" = wallet debt (the old
   // behaviour); a "paid now" method settles some/all of it immediately.
   const payMethod = document.getElementById('rPay')?.value || 'account';
@@ -2020,7 +1999,7 @@ async function saveNewRental() {
   if (!(await kcConfirm({
     title: isReservation ? 'Confirm reservation' : 'Confirm rental charge',
     body: `<strong>${escHtml(customer.firstName)} ${escHtml(customer.lastName)}</strong><br>
-      ${escHtml(phone.number)} (${escHtml(phone.country)}) · ${fmtDate(from)} → ${fmtDate(to)} · ${chargeableDays} chargeable days${addVN ? '<br>+ virtual number' : ''}${waiverAmount > 0 ? `<br>+ damage waiver ${fmtGbp(waiverAmount)}` : ''}${discountValue > 0 ? '<br>discount applied' : ''}`,
+      ${escHtml(phone.number)} (${escHtml(phone.country)}) · ${fmtDate(from)} → ${fmtDate(to)} · ${chargeableDays} chargeable days${addVN ? '<br>+ virtual number' : ''}${discountValue > 0 ? '<br>discount applied' : ''}`,
     amount: totalPrice,
     okLabel: isReservation ? 'Reserve & charge' : 'Charge rental',
   }))) return;
@@ -2046,8 +2025,6 @@ async function saveNewRental() {
     vnPrefix,
     vnSub,
     vnPrice,
-    waiverPct,
-    waiverAmount,
     notes,
     amountPaid:   payAmt, // #25
     // #26 — optional refundable deposit, tracked as held (not a wallet charge).
@@ -2474,8 +2451,6 @@ function openManageRentalModal(rentalId) {
     <input type="hidden" id="mgUKPlan" value="${r.ukPlan || 'standard'}">
     <input type="hidden" id="mgBasePrice" value="${r.basePrice || r.price}">
     <input type="hidden" id="mgVnPrice" value="${(r.vn && r.vnSub !== 'monthly' ? r.vnPrice : 0) || 0}">
-    <input type="hidden" id="mgWaiverPct" value="${r.waiverPct || 0}">
-    <input type="hidden" id="mgWaiverAmount" value="${r.waiverAmount || 0}">
     <input type="hidden" id="mgWasReturned" value="${r.status === 'returned' ? '1' : '0'}">
     <input type="hidden" id="mgFrozenLateFee" value="${r.lateFee || 0}">
     <div class="modal-actions">
@@ -2514,17 +2489,11 @@ function mgUpdateCalc() {
   // rental's ledger charge). The base-only recompute must not drop it, or
   // saving Manage silently refunds the VN.
   const vnPrice = Number(document.getElementById('mgVnPrice')?.value) || 0;
-  // Waiver tracks the rental it covers: recompute from the stored % so date
-  // or discount edits keep it honest, and stash the £ for the save.
-  const waiverPct = Number(document.getElementById('mgWaiverPct')?.value) || 0;
-  const waiverAmt = waiverPct > 0 ? Math.round(discountedBase * waiverPct) / 100 : 0;
-  const waiverEl = document.getElementById('mgWaiverAmount');
-  if (waiverEl) waiverEl.value = waiverAmt;
-  const finalPrice = discountedBase + vnPrice + waiverAmt;
+  const finalPrice = discountedBase + vnPrice;
 
   const lateFee  = mgComputeLateFee();
   document.getElementById('mgCalcText').innerHTML =
-    `Total: ${totalDays}d &nbsp;|&nbsp; Shabbat/YT excluded: <span style="color:var(--gold);">${excl}</span> &nbsp;|&nbsp; Chargeable: ${chargeableDays}d &nbsp;|&nbsp; <strong style="color:var(--success);">${fmtGbp(price)}</strong>${discountLine}${vnPrice > 0 ? ` &nbsp;+&nbsp; VN ${fmtGbp(vnPrice)}` : ''}${waiverAmt > 0 ? ` &nbsp;+&nbsp; waiver ${fmtGbp(waiverAmt)}` : ''}`;
+    `Total: ${totalDays}d &nbsp;|&nbsp; Shabbat/YT excluded: <span style="color:var(--gold);">${excl}</span> &nbsp;|&nbsp; Chargeable: ${chargeableDays}d &nbsp;|&nbsp; <strong style="color:var(--success);">${fmtGbp(price)}</strong>${discountLine}${vnPrice > 0 ? ` &nbsp;+&nbsp; VN ${fmtGbp(vnPrice)}` : ''}`;
   document.getElementById('mgPrice').value    = finalPrice.toFixed(2);
   document.getElementById('mgBasePrice').value = price;
 
@@ -2538,7 +2507,6 @@ function mgUpdateCalc() {
     </div>`;
   let html = row('Rental', discountedBase);
   if (vnPrice > 0)     html += row('Virtual number', vnPrice, 'var(--accent)');
-  if (waiverAmt > 0)   html += row(`Damage waiver (${waiverPct}%)`, waiverAmt, 'var(--accent)');
   if (lateFee > 0)     html += row('Late fee', lateFee, 'var(--gold)');
   lostInfo.items.forEach(({ label, amount }) => {
     html += row(label + ' — lost', amount, 'var(--danger)');
@@ -2674,8 +2642,6 @@ async function saveManageRental(rentalId) {
   const mgDiscountType  = document.getElementById('mgDiscountType')?.value  || 'percent';
   const mgDiscountValue = parseFloat(document.getElementById('mgDiscountValue')?.value) || 0;
   r.basePrice    = parseFloat(document.getElementById('mgBasePrice')?.value) || newPrice;
-  // Waiver £ tracks the recompute done in mgUpdateCalc (0 if never taken).
-  r.waiverAmount = parseFloat(document.getElementById('mgWaiverAmount')?.value) || 0;
   r.discountValue = mgAddDiscount ? mgDiscountValue : 0;
   r.discountType  = mgDiscountType;
 

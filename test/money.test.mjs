@@ -149,6 +149,6 @@ test('money — exact half-pennies round up despite float representation', () =>
   // Refunds (negatives) must round symmetrically — same magnitude as the charge.
   assert.equal(money(-1.005), -1.01)
   assert.equal(money(-2.675), -2.68)
-  // A percentage-derived amount (damage waiver / DD surcharge) that lands on .5p.
+  // A percentage-derived amount (e.g. the DD surcharge) that lands on .5p.
   assert.equal(money(20.45 * 0.1 + 20.45), 22.50)
 })

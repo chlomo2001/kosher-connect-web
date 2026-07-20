@@ -101,15 +101,13 @@ Canada/EU are not covered by the published T&C and keep their previous rates
 (£100 phone / £10 charger / £10 SIM) — owner to confirm whether they should
 follow the USA/Israel schedule.
 
-### 1.7 Damage Waiver (optional, added 17 Jul 2026)
+### 1.7 Damage Waiver — REMOVED (20 Jul 2026)
 
-An opt-in line offered at rental time: the customer pays a percentage of the
-(discounted) rental price — settings key `damage_waiver_pct`, default **5%** —
-and accidental damage to the handset is then not charged. It does **not**
-cover loss (a lost phone still bills the §1.6 fee). The waiver folds into the
-rental's price on the same single money channel as the weekly VN add-on, and
-shows as its own line in the price breakdowns. Date/discount edits in Manage
-recompute the £ from the stored %.
+A trial opt-in waiver line (added 17 Jul) was removed at the owner's request:
+it was never confirmed as policy, and damage is already billed directly via
+the §1.6 damage-charge schedule. No live rental ever carried a waiver, so no
+money history was affected. The `damage_waiver_pct` settings row was deleted
+by migration.
 
 ---
 

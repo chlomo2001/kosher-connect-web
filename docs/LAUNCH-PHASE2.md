@@ -96,8 +96,7 @@ under Vercel → Cron Jobs after the first production deploy, and that
 ## 6 · Owner smoke tests (the live-till list, still pending)
 
 - Sign in + 2FA; dashboard loads with real numbers.
-- New rental incl. the damage-waiver line (settings-driven 5%); Manage
-  recalculates; status-SMS draft opens (and sends nothing).
+- New rental; Manage recalculates; status-SMS draft opens (and sends nothing).
 - POS: sell the last unit of something from two tills (A1 oversell guard),
   double-click a sale (idempotency), part-pay from wallet credit.
 - Portal: request a magic link, see balance/rentals, upload a document.
@@ -109,7 +108,6 @@ under Vercel → Cron Jobs after the first production deploy, and that
 - Should `/` send signed-out visitors to `/welcome` instead of `/login`?
 - Keep or drop the "Serving the Heimishe community — Manchester" strapline.
 - Yiddish copy needs the owner's read-through (chasidish orthography).
-- Damage-waiver default 5% — confirm or adjust in Settings.
 - When (if ever) to lift the email/SMS HOLD — currently everything is
   draft-only by design.
 
