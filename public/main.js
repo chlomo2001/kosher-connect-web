@@ -3890,13 +3890,29 @@ function openRentalSmsModal(rentalId) {
     <div class="modal-title">✉️ Status SMS — ${escHtml(r.customerName || '')}</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
       Drafted from the rental's current status${r.customerPhone ? ` · 📞 <span class="copy-val">${escHtml(fmtPhone(r.customerPhone))}</span>` : ''}.
-      Edit it, then copy — <strong>nothing is sent</strong>.</div>
+      Edit it, then copy — or send it directly once Twilio is connected.</div>
     <textarea class="form-input" id="rsmsText" rows="5" style="font-family:inherit;">${escHtml(buildRentalSms(r))}</textarea>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
+      <button class="btn btn-outline" onclick="sendRentalSms('${escHtml(String(rentalId))}')">📤 Send SMS</button>
       <button class="btn btn-primary" onclick="copyRentalSms('${escHtml(String(rentalId))}')">📋 Copy message</button>
     </div>
   `);
+}
+async function sendRentalSms(rentalId) {
+  const r = rentals.find(x => x.id === rentalId);
+  const text = document.getElementById('rsmsText')?.value || '';
+  if (!r || !text.trim()) return;
+  const res = await kcFetch('/api/sms', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ customerId: r.customerId, text }),
+  }).then(x => x.json()).catch(() => ({ success: false, error: 'Network error.' }));
+  if (!res.success) { toast(res.error || 'Could not send.', 'error'); return; }
+  if (res.held) { toast(res.note, 'warning'); }
+  else if (res.redirected) { toast(res.note, 'warning'); }
+  else { toast(`SMS sent to ${r.customerName || 'the customer'} ✔`, 'success'); }
+  if (r.customerId) recordComm(r.customerId, { type: 'message', text: res.held ? `Status SMS built (HOLD, not sent)` : res.redirected ? `Status SMS sent to test number` : `Status SMS sent (${getComputedStatus(r)})` });
+  closeDynamicModal();
 }
 async function copyRentalSms(rentalId) {
   const r = rentals.find(x => x.id === rentalId);
@@ -9309,12 +9325,27 @@ async function renderSettingsTab() {
       <tbody>${settingRows}</tbody></table></div>`),
   ].filter(Boolean).join('');
 
+  // Shop details — public-facing facts the owner should be able to change
+  // without a code change (they show on the welcome page within minutes).
+  const openingHours = cfg.settings.find(s => s.key === 'opening_hours')?.textValue || 'Sunday–Thursday, 2:00–6:30pm';
+  const shopHtml = settingsCard('shop-details', '🏪 Shop details', 'what the public site shows', `
+      <div style="padding:12px 14px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+        <label style="font-size:12.5px;color:var(--muted);">Opening hours</label>
+        <input class="form-input" id="stOpeningHours" value="${escHtml(openingHours)}"
+          style="min-height:0;padding:7px 10px;font-size:13px;flex:1;min-width:240px;" placeholder="e.g. Sunday–Thursday, 2:00–6:30pm">
+        <button class="btn btn-primary btn-sm" onclick="saveOpeningHours()">💾 Save</button>
+        <span style="flex-basis:100%;font-size:11px;color:var(--muted);">Shown on the public welcome page (Visit-the-shop card and footer). Free text — write it the way you'd say it.</span>
+      </div>`);
+
   content.innerHTML = `
     <div style="margin-bottom:8px;padding:10px 14px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:12px;">
       <span style="flex:1;">Everything that runs the business — people, prices, messages and automation — lives here. Price edits apply to <strong>new</strong> charges only; existing tickets never reprice.</span>
       <button class="btn btn-outline btn-sm" onclick="openChangePasswordModal()" title="Change your own login password">🔑 My password</button>
       <button class="btn btn-outline btn-sm" onclick="runSweepsNow()" title="Overdue rentals, arrears, passport expiry, SIM renewals">⏰ Run sweeps now</button>
     </div>
+
+    ${sectionHead('Shop', 'public-facing details')}
+    ${shopHtml}
 
     ${team?.success ? sectionHead('People &amp; access', 'who works here and what they can see') + teamHtml : ''}
 
@@ -9403,6 +9434,13 @@ async function saveSettingKey(key) {
   await applySettingUpdate({
     table: 'settings', key,
     values: { numValue: document.getElementById(`st_${key}`).value },
+  });
+}
+
+async function saveOpeningHours() {
+  await applySettingUpdate({
+    table: 'settings', key: 'opening_hours',
+    values: { textValue: document.getElementById('stOpeningHours').value },
   });
 }
 

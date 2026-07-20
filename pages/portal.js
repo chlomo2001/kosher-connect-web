@@ -12,7 +12,7 @@ import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
 import { formatPhoneDisplay } from '../lib/ukPhone.mjs'
 import AuthBackdrop from '../components/AuthBackdrop'
-import { CardIcon, FlipPhoneIcon, PlaneIcon, DocIcon } from '../components/kcIcons'
+import { CardIcon, FlipPhoneIcon, PlaneIcon, DocIcon, TicketIcon } from '../components/kcIcons'
 
 // Portal copy in English + lashon hakodesh — some customers are Israelis who
 // don't know English. Shares the 'kcLang' preference with /welcome (the
@@ -42,6 +42,7 @@ const P = {
     couldNotSaveCard: 'Could not save the card.',
     rentals: 'Rentals', noRentals: 'No active rentals.',
     flights: 'Flights', noFlights: 'No upcoming flights.',
+    statement: 'Recent activity', noStatement: 'No activity yet.',
     docs: 'Documents', noDocs: 'Nothing shared with you yet.',
     download: 'Download', upload: 'Send us a document', uploading: 'Uploading…',
     upSent: 'Sent — we’ll review it shortly.', upFailed: 'Upload failed.',
@@ -81,6 +82,7 @@ const P = {
     couldNotSaveCard: 'לא הצלחנו לשמור את הכרטיס.',
     rentals: 'השכרות', noRentals: 'אין השכרות פעילות.',
     flights: 'טיסות', noFlights: 'אין טיסות קרובות.',
+    statement: 'תנועות אחרונות', noStatement: 'עדיין אין תנועות.',
     docs: 'מסמכים', noDocs: 'עדיין לא שותפו איתך מסמכים.',
     download: 'הורדה', upload: 'שליחת מסמך אלינו', uploading: 'מעלה…',
     upSent: 'נשלח — נבדוק בקרוב.', upFailed: 'ההעלאה נכשלה.',
@@ -432,6 +434,24 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                     style={{ marginTop: 8, width: '100%', padding: '8px 16px', fontSize: 13 }}>{L.cancel}</button>
                 </div>
               )}
+            </div>
+
+            {/* Mini statement — the customer's own last few wallet lines. */}
+            <div className="p-section">
+              <div className="p-kicker"><TicketIcon /> {L.statement}</div>
+              {(account.statement || []).length === 0
+                ? <div className="p-empty">{L.noStatement}</div>
+                : account.statement.map((e, i) => (
+                  <div className="p-row" key={i}>
+                    <div className="p-row-main">
+                      <div className="p-row-title">{e.description || (e.amount >= 0 ? L.received : '—')}</div>
+                      <div className="p-row-sub">{fmtDate(e.at)}</div>
+                    </div>
+                    <span className={`p-amt ${e.amount >= 0 ? 'p-amt-pos' : ''}`} dir="ltr">
+                      {e.amount >= 0 ? '+' : '−'}{fmtGbp(Math.abs(e.amount))}
+                    </span>
+                  </div>
+                ))}
             </div>
 
             {/* Payment method — save a card for future payments */}

@@ -59,7 +59,7 @@ const T = {
     contactTitle: 'Come in or call',
     contactLead: 'A phone, a plan, a repair, a trip — just ask. No obligation, and you’ll get a straight answer.',
     address: '421 Bury New Road, Salford M7 4ED (door left of Toy Zone, first floor up)',
-    visitTitle: 'Visit the shop', directions: 'Get directions',
+    visitTitle: 'Visit the shop', directions: 'Get directions', hoursLabel: 'Open',
     callTitle: 'Call us', callBody: 'Whatever the question — you’ll get a straight answer.',
     emailTitle: 'Email us', emailBody: 'For anything that can wait for a written reply.',
     footExplore: 'Explore', footContact: 'Contact',
@@ -98,7 +98,7 @@ const T = {
     contactTitle: 'בואו או התקשרו',
     contactLead: 'טלפון, תוכנית, תיקון או נסיעה — שאלו. בלי התחייבות, ותקבלו תשובה ישרה.',
     address: '421 בורי ניו רואד (הכניסה משמאל ל־Toy Zone, קומה ראשונה)',
-    visitTitle: 'בואו לחנות', directions: 'הוראות הגעה',
+    visitTitle: 'בואו לחנות', directions: 'הוראות הגעה', hoursLabel: 'פתוח',
     callTitle: 'התקשרו', callBody: 'לא משנה מה השאלה — תקבלו תשובה ישרה.',
     emailTitle: 'כתבו לנו', emailBody: 'לכל דבר שיכול לחכות לתשובה בכתב.',
     footExplore: 'ניווט', footContact: 'יצירת קשר',
@@ -124,15 +124,23 @@ const LD_JSON = JSON.stringify({
     postalCode: 'M7 4ED',
     addressCountry: 'GB',
   },
+  openingHours: ['Su 14:00-18:30', 'Mo-Th 14:00-18:30'],
 })
 
 export default function Welcome() {
   const [lang, setLang] = useState('en')
+  // Opening hours are owner-editable in the app's Settings; the page starts
+  // with the current default and follows whatever the API says.
+  const [hours, setHours] = useState('Sunday–Thursday, 2:00–6:30pm')
   useEffect(() => {
     try {
       const saved = localStorage.getItem('kcLang')
       if (saved && T[saved]) setLang(saved)
     } catch { /* default stays en */ }
+    fetch('/api/public/info')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.openingHours) setHours(d.openingHours) })
+      .catch(() => {})
   }, [])
   const pick = (l) => { setLang(l); try { localStorage.setItem('kcLang', l) } catch {} }
   const t = T[lang]
@@ -249,6 +257,7 @@ export default function Welcome() {
                 <div className="w-icon" aria-hidden="true"><PinIcon /></div>
                 <h4>{t.visitTitle}</h4>
                 <p>{t.address}</p>
+                <p className="w-hours"><strong>{t.hoursLabel}:</strong> {hours}</p>
                 <a className="w-contact-link" href={MAPS_URL} target="_blank" rel="noopener noreferrer">{t.directions} ↗</a>
               </div>
               <div className="w-card w-show">
@@ -282,6 +291,7 @@ export default function Welcome() {
               <div>
                 <h5>{t.footContact}</h5>
                 <p className="w-footer-line">{t.address}</p>
+                <p className="w-footer-line">{t.hoursLabel}: {hours}</p>
                 <a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a>
                 <a href={`mailto:${EMAIL}`} dir="ltr">{EMAIL}</a>
               </div>

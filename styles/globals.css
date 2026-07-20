@@ -1628,6 +1628,9 @@ html { scroll-behavior: smooth; }
   display: inline-block; margin-top: 12px; font-size: 13.5px; font-weight: 600;
   color: var(--accent); text-decoration: none;
 }
+/* Opening hours line on the Visit card — quiet, under the address. */
+.w-hours { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+.w-hours strong { font-weight: 600; color: var(--ink-secondary); }
 .w-contact-link:hover { text-decoration: underline; }
 
 .w-footer2 {
@@ -1719,6 +1722,10 @@ html { scroll-behavior: smooth; }
 .p-badge-warn { background: rgba(245,158,11,0.14); color: #92400e; }
 :root[data-theme="dark"] .p-badge-warn { background: rgba(245,158,11,0.18); color: #fbbf24; }
 .p-badge-muted { background: var(--bg-secondary); color: var(--muted); border-color: var(--border); }
+/* Mini-statement amounts: tabular figures, credits in green, charges in ink. */
+.p-amt { flex-shrink: 0; font-size: 13.5px; font-weight: 500; font-feature-settings: 'tnum'; color: var(--text); }
+.p-amt-pos { color: #15803d; }
+:root[data-theme="dark"] .p-amt-pos { color: #4ade80; }
 
 .p-empty { font-size: 13px; color: var(--muted); }
 .p-msg { font-size: 12px; color: var(--muted); margin-top: 8px; display: inline-block; }

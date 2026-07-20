@@ -11,7 +11,7 @@
 
 import { withStaff, tabAllowedFor } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
-import { emailEnabled, sendEmail, esc } from '../../lib/email.js'
+import { emailEnabled, sendEmail, esc, brandShell } from '../../lib/email.js'
 
 const money = (v) => (Math.round((Number(v) || 0) * 100) / 100)
 const gbp = (v) => `£${money(v).toFixed(2)}`
@@ -20,20 +20,9 @@ const METHOD_LABEL = {
   voucher: 'Voucher', other: 'Other',
 }
 
-function shell(title, bodyRows, footNote) {
-  return `<!doctype html><html><body style="margin:0;background:#f4f5f7;padding:24px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2430">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-    <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)">
-      <tr><td style="background:#0f172a;color:#fff;padding:20px 28px;font-size:18px;font-weight:600">KosherConnect</td></tr>
-      <tr><td style="padding:24px 28px 8px;font-size:15px;color:#64748b">${esc(title)}</td></tr>
-      <tr><td style="padding:0 28px 8px">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px">${bodyRows}</table>
-      </td></tr>
-      <tr><td style="padding:16px 28px 26px;font-size:12px;color:#94a3b8;line-height:1.5">${footNote || ''}
-        This is a courtesy receipt from KosherConnect. Please keep it for your records.</td></tr>
-    </table>
-  </td></tr></table></body></html>`
-}
+// The branded shell (logo, gold keyline, business footer) lives in lib/email —
+// every customer-facing email goes through it so they all read as one house.
+const shell = (title, bodyRows, footNote) => brandShell({ title, bodyRows, footNote })
 
 // The business's OWN Gmail bases: any dot/plus variant of these (including
 // the bare address) is a carrier-login "account email" — Shloime's inbox,
@@ -92,7 +81,9 @@ async function handler(req, res) {
     }
 
     let subject, html
-    const hi = who.name ? `<tr><td style="padding:2px 0 12px;color:#334155">Hi ${esc(who.name.split(' ')[0])},</td></tr>` : ''
+    const hi = who.name
+      ? `<tr><td colspan="2" style="padding:4px 0 14px;color:#334155">Dear ${esc(who.name.split(' ')[0])}, thank you for coming in — here are your details for your records.</td></tr>`
+      : `<tr><td colspan="2" style="padding:4px 0 14px;color:#334155">Thank you for coming in — here are your details for your records.</td></tr>`
     const method = b.method ? (METHOD_LABEL[b.method] || b.method) : null
 
     if (b.kind === 'sale') {
@@ -106,8 +97,8 @@ async function handler(req, res) {
         </tr>`
       }).join('')
       const total = money(b.total != null ? b.total : lines.reduce((s, l) => s + money(l.total), 0))
-      subject = `Your KosherConnect receipt — ${gbp(total)}`
-      html = shell('Receipt for your purchase', `
+      subject = `Your Kosher Connect receipt — ${gbp(total)}`
+      html = shell('Receipt', `
         ${hi}
         ${rowsHtml}
         <tr><td style="padding:12px 0 0;font-weight:700">Total</td>
@@ -118,7 +109,7 @@ async function handler(req, res) {
       const amount = money(b.amount)
       if (!(amount > 0)) return res.status(400).json({ success: false, error: 'Payment amount must be greater than £0.' })
       subject = `Payment received — ${gbp(amount)}`
-      html = shell('Payment received, thank you', `
+      html = shell('Payment received — thank you', `
         ${hi}
         <tr><td style="padding:6px 0;border-bottom:1px solid #eef1f4">Amount received</td>
             <td style="padding:6px 0;border-bottom:1px solid #eef1f4;text-align:right;font-weight:700">${gbp(amount)}</td></tr>

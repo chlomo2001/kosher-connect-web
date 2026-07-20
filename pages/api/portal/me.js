@@ -37,14 +37,17 @@ export default async function handler(req, res) {
   }
   if (!cust) {
     // No unambiguous match for this signed-in email: succeed, but show nothing.
-    return res.json({ success: true, customer: null, balance: 0, rentals: [], bookings: [] })
+    return res.json({ success: true, customer: null, balance: 0, rentals: [], bookings: [], statement: [] })
   }
   const extras = cust.legacy_extras || {}
 
-  const [balRows, rentalRows, bookingRows] = await Promise.all([
+  const [balRows, rentalRows, bookingRows, ledgerRows] = await Promise.all([
     db.select('customer_balances', `customer_id=eq.${cust.id}`),
     db.select('rentals', `select=legacy_extras&customer_id=eq.${cust.id}&order=created_at.desc`),
     db.select('bookings', `select=route,airline,booking_reference,travel_date,status&customer_id=eq.${cust.id}&order=travel_date.desc`),
+    // Mini statement: the customer's own last few wallet lines — date,
+    // description and amount only (no references, no staff ids).
+    db.select('ledger', `select=created_at,description,amount,entry_type&customer_id=eq.${cust.id}&order=created_at.desc&limit=6`),
   ])
 
   const balance = balRows.length ? Number(balRows[0].balance) : 0
@@ -65,12 +68,20 @@ export default async function handler(req, res) {
     status: b.status || '',
   }))
 
+  const statement = ledgerRows.map((e) => ({
+    at: e.created_at,
+    description: e.description || '',
+    amount: Number(e.amount) || 0,
+    type: e.entry_type || '',
+  }))
+
   return res.json({
     success: true,
     customer: { firstName: extras.firstName || '', lastName: extras.lastName || '' },
     balance,
     rentals,
     bookings,
+    statement,
     cardOnFile: !!cust.stripe_pm_id,
   })
 }

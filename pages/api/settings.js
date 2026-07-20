@@ -211,6 +211,25 @@ async function handler(req, res) {
         return res.json({ success: true, warnings, list })
       }
 
+      // Shop opening hours — free text, shown on the public welcome page.
+      // Owner edits it in Settings; no code change needed to update the site.
+      if (table === 'settings' && key === 'opening_hours') {
+        const text = String(values?.textValue || '').replace(/\s+/g, ' ').trim().slice(0, 120)
+        if (!text) return res.status(400).json({ success: false, error: 'Enter the opening hours.' })
+        const updated = await db.update('settings', `key=eq.opening_hours`, {
+          text_value: text,
+          updated_at: new Date().toISOString(),
+        })
+        if (!updated.length) {
+          await db.insert('settings', [{
+            key: 'opening_hours',
+            text_value: text,
+            description: 'Shop opening hours shown on the public welcome page',
+          }])
+        }
+        return res.json({ success: true, warnings })
+      }
+
       if (table === 'rental_rates') {
         const patch = {}
         for (const [field, type] of [['ratePerDay', 'money'], ['minCharge', 'money'], ['cap', 'money'], ['capPeriodDays', 'days'], ['vnWeekly', 'money'], ['vnPer30Days', 'money']]) {
