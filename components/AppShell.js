@@ -71,8 +71,9 @@ export default function AppShell({ initialTab = 'dashboard' }) {
         <div className="kc-boot-sub">Loading your business…</div>
       </div>
 
-      {/* SIDEBAR */}
-      <div className="sidebar">
+      {/* SIDEBAR — on phones it becomes an off-canvas drawer (body.nav-open),
+          driven by the topbar burger; the scrim below catches outside taps. */}
+      <div className="sidebar" id="appSidebar">
         <div className="logo">
           <img src="/logo.png" alt="KosherConnect" style={{ background: '#fff', padding: 5 }} />
           <div className="logo-title">KosherConnect</div>
@@ -114,9 +115,15 @@ export default function AppShell({ initialTab = 'dashboard' }) {
         </div>
       </div>
 
+      {/* Phone-only scrim behind the open drawer (display:none on desktop). */}
+      <div className="nav-scrim" id="navScrim" aria-hidden="true" />
+
       {/* MAIN */}
       <div className="main">
         <div className="topbar">
+          <button className="nav-burger" id="navBurger" aria-label="Open menu" aria-expanded="false" aria-controls="appSidebar">
+            <I><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></I>
+          </button>
           <div className="page-title" id="pageTitle">Customer <span>Management</span></div>
           <div className="topbar-actions">
             <input className="search-box" id="searchBox" type="text" placeholder="Search by name, phone, email…" />

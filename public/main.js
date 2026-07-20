@@ -425,6 +425,23 @@ function setupNav() {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); }
     });
   });
+  // B8 — phone drawer. The burger slides the sidebar in; the scrim, Escape,
+  // or choosing any destination slides it back out. All no-ops on desktop,
+  // where the burger and scrim are display:none.
+  const burger = document.getElementById('navBurger');
+  const scrim = document.getElementById('navScrim');
+  const setNavOpen = (open) => {
+    document.body.classList.toggle('nav-open', open);
+    burger?.setAttribute('aria-expanded', String(open));
+  };
+  burger?.addEventListener('click', () => setNavOpen(!document.body.classList.contains('nav-open')));
+  scrim?.addEventListener('click', () => setNavOpen(false));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.body.classList.contains('nav-open')) setNavOpen(false);
+  });
+  document.getElementById('appSidebar')?.addEventListener('click', (e) => {
+    if (e.target.closest('.nav-item, .sb-row')) setNavOpen(false);
+  });
   // U15 — click-only chips (equipment toggles, click-to-copy values) carry
   // role=button tabindex=0 in their markup; activate them on Enter/Space too.
   document.addEventListener('keydown', (e) => {
