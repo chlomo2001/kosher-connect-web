@@ -71,7 +71,7 @@ const T = {
     tradingName: 'Kosher Connect is a trading name of Hatzluche Ltd.',
   },
   he: {
-    dir: 'rtl', langLabel: 'לשה״ק',
+    dir: 'rtl', langLabel: 'HE',
     brandName: 'כשר קונקט',
     brandTag: 'טלפונים כשרים • השכרות ונסיעות • תוכניות סים • קול תורה • תיקונים',
     nav: { services: 'שירותים', contact: 'יצירת קשר', account: 'החשבון שלי', signin: 'כניסת צוות' },
