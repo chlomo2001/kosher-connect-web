@@ -426,15 +426,35 @@ function setupNav() {
     });
   });
   // B8 — phone drawer. The burger slides the sidebar in; the scrim, Escape,
-  // or choosing any destination slides it back out. All no-ops on desktop,
-  // where the burger and scrim are display:none.
+  // or choosing any destination slides it back out.
+  // On desktop the same burger instead collapses the sidebar to an icon rail
+  // (body.nav-collapsed, ⌘B/Ctrl+B too), remembered per browser. Two good
+  // states — full or rail — no drag-to-resize by design.
   const burger = document.getElementById('navBurger');
   const scrim = document.getElementById('navScrim');
+  const isPhone = () => window.matchMedia('(max-width: 820px)').matches;
   const setNavOpen = (open) => {
     document.body.classList.toggle('nav-open', open);
     burger?.setAttribute('aria-expanded', String(open));
   };
-  burger?.addEventListener('click', () => setNavOpen(!document.body.classList.contains('nav-open')));
+  const setCollapsed = (on) => {
+    document.body.classList.toggle('nav-collapsed', on);
+    burger?.setAttribute('aria-label', on ? 'Expand menu' : 'Collapse menu');
+    // Rail rows show icons only — surface each label as a native tooltip.
+    document.querySelectorAll('.sidebar .nav-item, .sidebar .sb-row').forEach(el => {
+      if (on) el.title = el.textContent.trim();
+      else el.removeAttribute('title');
+    });
+    try { localStorage.setItem('kcNavCollapsed', on ? '1' : '0'); } catch { /* private mode */ }
+  };
+  window.kcToggleNav = () => {
+    if (isPhone()) setNavOpen(!document.body.classList.contains('nav-open'));
+    else setCollapsed(!document.body.classList.contains('nav-collapsed'));
+  };
+  try {
+    if (!isPhone() && localStorage.getItem('kcNavCollapsed') === '1') setCollapsed(true);
+  } catch { /* private mode */ }
+  burger?.addEventListener('click', window.kcToggleNav);
   scrim?.addEventListener('click', () => setNavOpen(false));
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && document.body.classList.contains('nav-open')) setNavOpen(false);
@@ -1092,7 +1112,6 @@ let sims     = [];
 let bookings = [];
 let simMenu  = []; // 'sim'-category service menu (SIM-only monthlies, TomTom)
 let rentalSearchTerm = '';
-let filterCustomer = '', filterStatus = 'all', filterPaid = 'all';
 
 function csToggle(wrapId) {
   const wrap = document.getElementById(wrapId);
@@ -1112,12 +1131,10 @@ function csPick(wrapId, value, label, cb) {
   if (cb) cb(value);
 }
 function clearRentalFilters() {
-  filterCustomer = ''; filterStatus = 'all'; filterPaid = 'all';
-  const fc = document.getElementById('filterCustomer');
-  if (fc) fc.value = '';
-  csPick('csBalance', 'all', 'Balance', null);
-  csPick('csStatusFilter', 'all', 'Status', null);
-  renderRentalRows();
+  // Reset the shared control's dimensions; repaint the whole tab so the
+  // <select>s show their defaults again (sort choice is left alone).
+  kcView('rentals').dims = { balance: 'all', status: 'all' };
+  renderRentalsTab();
 }
 function mgComputeLateFee() {
   // Already-returned rental: the late fee was frozen at the return date — keep
@@ -1247,11 +1264,21 @@ function renderRentalsTab() {
   const returningToday  = rentals.filter(r => r.status === 'active' && r.toDate === today0).length;
   const outstandingDebt = rentals.reduce((s, r) => s + rentalDebt(r), 0);
 
-  const balLabel     = filterPaid==='paid'?'Fully Paid':filterPaid==='debt'?'Has Debt':'Balance';
-  const statusLabel  = filterStatus==='active'?'Active':filterStatus==='overdue'?'Overdue':filterStatus==='returned'?'Returned':filterStatus==='returned_incomplete'?'Returned ⚠️':'Status';
-
+  // B5 — the last tab predating the shared control: balance + status are now
+  // kcFilterSort dimensions, so Rentals reads like every other list tab.
   const rentalBar = kcFilterSort('rentals', [
-    { value: 'all', label: 'All' },
+    { dim: 'balance', title: 'Balance', options: [
+      { value: 'all', label: 'Balance: all' },
+      { value: 'paid', label: 'Fully paid', test: r => (r.amountPaid || 0) >= rentalGrandTotal(r) },
+      { value: 'debt', label: 'Has debt', test: r => (r.amountPaid || 0) < rentalGrandTotal(r) },
+    ] },
+    { dim: 'status', title: 'Status', options: [
+      { value: 'all', label: 'Status: all' },
+      { value: 'active', label: 'Active', test: r => getComputedStatus(r, localISO()) === 'active' },
+      { value: 'overdue', label: 'Overdue', test: r => getComputedStatus(r, localISO()) === 'overdue' },
+      { value: 'returned', label: 'Returned', test: r => getComputedStatus(r, localISO()) === 'returned' },
+      { value: 'returned_incomplete', label: 'Returned ⚠️', test: r => getComputedStatus(r, localISO()) === 'returned_incomplete' },
+    ] },
   ], [
     { value: 'default', label: 'Sort: Default' },
     { value: 'name', label: 'Customer A–Z', cmp: kcCmpStr(r => r.customerName) },
@@ -1303,30 +1330,6 @@ function renderRentalsTab() {
           <div class="section-title">Active & Recent Rentals</div>
         </div>
         <div class="rentals-filter-row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <input type="text" class="search-box" id="filterCustomer" placeholder="Filter by customer..."
-            style="width:180px;" value="${filterCustomer}"
-            oninput="filterCustomer=this.value;renderRentalRows()">
-
-          <div class="cs-wrap" id="csBalance">
-            <div class="cs-btn" onclick="csToggle('csBalance')"><span>${balLabel}</span></div>
-            <div class="cs-list">
-              <div class="cs-item ${filterPaid==='all'?'cs-active':''}" data-value="all" onclick="csPick('csBalance','all','Balance',v=>{filterPaid=v;renderRentalRows()})">Balance</div>
-              <div class="cs-item ${filterPaid==='paid'?'cs-active':''}" data-value="paid" onclick="csPick('csBalance','paid','Fully Paid',v=>{filterPaid=v;renderRentalRows()})">Fully Paid</div>
-              <div class="cs-item ${filterPaid==='debt'?'cs-active':''}" data-value="debt" onclick="csPick('csBalance','debt','Has Debt',v=>{filterPaid=v;renderRentalRows()})">Has Debt</div>
-            </div>
-          </div>
-
-          <div class="cs-wrap" id="csStatusFilter">
-            <div class="cs-btn" onclick="csToggle('csStatusFilter')"><span>${statusLabel}</span></div>
-            <div class="cs-list">
-              <div class="cs-item ${filterStatus==='all'?'cs-active':''}" data-value="all" onclick="csPick('csStatusFilter','all','Status',v=>{filterStatus=v;renderRentalRows()})">Status</div>
-              <div class="cs-item ${filterStatus==='active'?'cs-active':''}" data-value="active" onclick="csPick('csStatusFilter','active','Active',v=>{filterStatus=v;renderRentalRows()})">Active</div>
-              <div class="cs-item ${filterStatus==='overdue'?'cs-active':''}" data-value="overdue" onclick="csPick('csStatusFilter','overdue','Overdue',v=>{filterStatus=v;renderRentalRows()})">Overdue</div>
-              <div class="cs-item ${filterStatus==='returned'?'cs-active':''}" data-value="returned" onclick="csPick('csStatusFilter','returned','Returned',v=>{filterStatus=v;renderRentalRows()})">Returned</div>
-              <div class="cs-item ${filterStatus==='returned_incomplete'?'cs-active':''}" data-value="returned_incomplete" onclick="csPick('csStatusFilter','returned_incomplete','Returned ⚠️',v=>{filterStatus=v;renderRentalRows()})">Returned ⚠️</div>
-            </div>
-          </div>
-
           ${rentalBar}
           <button class="btn btn-outline" style="font-size:12px;padding:5px 12px;" onclick="clearRentalFilters()">Clear</button>
         </div>
@@ -1502,20 +1505,7 @@ function renderRentalRows() {
       (r.phoneNumber  || '').toLowerCase().includes(term)
     );
   }
-  if (filterCustomer) {
-    const fc = filterCustomer.toLowerCase();
-    filtered = filtered.filter(r => (r.customerName || '').toLowerCase().includes(fc));
-  }
-  if (filterStatus !== 'all') {
-    filtered = filtered.filter(r => getComputedStatus(r, today) === filterStatus);
-  }
-  if (filterPaid !== 'all') {
-    filtered = filtered.filter(r => {
-      const fullyPaid = (r.amountPaid || 0) >= rentalGrandTotal(r);
-      return filterPaid === 'paid' ? fullyPaid : !fullyPaid;
-    });
-  }
-
+  // Balance + status now live in the shared control's dimensions (B5).
   filtered = kcViewApply('rentals', filtered);
 
   if (filtered.length === 0) {
@@ -2865,19 +2855,34 @@ function kcView(key) {
 
 // filters/sorts: [{ value, label, test?(item), cmp?(a,b) }].
 //   filters[0] is the default ("everything"); sorts[0] is the default order.
-// render() repaints the tab after any change. Returns the two <select>
-// controls as HTML (the filter select is shown only when there's >1 option).
+// B5 — a tab may instead pass filter DIMENSIONS: [{ dim, title, options }, …],
+// one <select> per dimension, all applied together (Rentals: balance × status).
+// Dimension state lives in kcView(key).dims so palette views can preset it
+// before the tab has ever rendered.
+// render() repaints the tab after any change. Returns the <select> controls
+// as HTML (the flat filter select is shown only when there's >1 option).
+const kcFsDims = (filters) => (filters.length && Array.isArray(filters[0].options)) ? filters : null;
 function kcFilterSort(key, filters, sorts, render) {
   kcViewCfg[key] = { filters, sorts, render };
   const st = kcView(key);
-  if (!filters.some(f => f.value === st.filter)) st.filter = filters[0].value;
+  const dims = kcFsDims(filters);
+  if (dims) {
+    st.dims = st.dims || {};
+    for (const d of dims) {
+      if (!d.options.some(o => o.value === st.dims[d.dim])) st.dims[d.dim] = d.options[0].value;
+    }
+  } else if (!filters.some(f => f.value === st.filter)) st.filter = filters[0].value;
   if (!sorts.some(s => s.value === st.sort)) st.sort = sorts[0].value;
   const opts = (list, cur) => list.map(o =>
     `<option value="${escHtml(o.value)}" ${o.value === cur ? 'selected' : ''}>${escHtml(o.label)}</option>`).join('');
+  const filterSelects = dims
+    ? dims.map(d => `<select class="form-input kc-fs-sel" title="${escHtml(d.title || 'Filter')}"
+        onchange="kcViewSetDim('${key}','${d.dim}',this.value)">${opts(d.options, st.dims[d.dim])}</select>`).join('')
+    : (filters.length > 1 ? `<select class="form-input kc-fs-sel" title="Filter"
+        onchange="kcViewSet('${key}','filter',this.value)">${opts(filters, st.filter)}</select>` : '');
   return `
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      ${filters.length > 1 ? `<select class="form-input kc-fs-sel" title="Filter"
-        onchange="kcViewSet('${key}','filter',this.value)">${opts(filters, st.filter)}</select>` : ''}
+      ${filterSelects}
       <select class="form-input kc-fs-sel" title="Sort by"
         onchange="kcViewSet('${key}','sort',this.value)">${opts(sorts, st.sort)}</select>
     </div>`;
@@ -2888,6 +2893,13 @@ function kcViewSet(key, kind, value) {
   const cfg = kcViewCfg[key];
   if (cfg && cfg.render) cfg.render();
 }
+function kcViewSetDim(key, dim, value) {
+  const st = kcView(key);
+  st.dims = st.dims || {};
+  st.dims[dim] = value;
+  const cfg = kcViewCfg[key];
+  if (cfg && cfg.render) cfg.render();
+}
 
 // Apply the active filter + sort for a tab to a list (returns a new array).
 function kcViewApply(key, list) {
@@ -2895,8 +2907,16 @@ function kcViewApply(key, list) {
   const st = kcView(key);
   let out = Array.isArray(list) ? list.slice() : [];
   if (!cfg) return out;
-  const f = cfg.filters.find(x => x.value === st.filter);
-  if (f && f.test) out = out.filter(f.test);
+  const dims = kcFsDims(cfg.filters);
+  if (dims) {
+    for (const d of dims) {
+      const o = d.options.find(x => x.value === (st.dims || {})[d.dim]);
+      if (o && o.test) out = out.filter(o.test);
+    }
+  } else {
+    const f = cfg.filters.find(x => x.value === st.filter);
+    if (f && f.test) out = out.filter(f.test);
+  }
   const s = cfg.sorts.find(x => x.value === st.sort);
   if (s && s.cmp) out.sort(s.cmp);
   return out;
@@ -7931,8 +7951,8 @@ const PALETTE_COMMANDS = [
   { icon: '🔑', label: 'Change my password', sub: 'tool', run: () => openChangePasswordModal() },
   { icon: '🌓', label: 'Toggle dark mode', sub: 'tool', run: () => toggleTheme() },
   // ── Find (saved-filter views) ──
-  { icon: '⏰', label: 'Show overdue rentals', sub: 'view', run: () => filterView('rentals', () => { filterStatus = 'overdue'; filterPaid = 'all'; }, renderRentalRows) },
-  { icon: '💷', label: 'Rentals with a balance owing', sub: 'view', run: () => filterView('rentals', () => { filterPaid = 'debt'; filterStatus = 'all'; }, renderRentalRows) },
+  { icon: '⏰', label: 'Show overdue rentals', sub: 'view', run: () => filterView('rentals', () => { kcView('rentals').dims = { balance: 'all', status: 'overdue' }; }, renderRentalRows) },
+  { icon: '💷', label: 'Rentals with a balance owing', sub: 'view', run: () => filterView('rentals', () => { kcView('rentals').dims = { balance: 'debt', status: 'all' }; }, renderRentalRows) },
   { icon: '💰', label: 'Who owes money (arrears)', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'arrears'; }, renderTableRows) },
   { icon: '✈️', label: 'Customers flying soon', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'flight'; }, renderTableRows) },
   { icon: '🛂', label: 'Customers with passport on file', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'passport'; }, renderTableRows) },
@@ -8125,6 +8145,7 @@ function closePalette() {
 // you're not typing.
 const KC_SHORTCUTS = [
   ['⌘K / Ctrl K', 'Open the command palette — search customers, phones, IMEI, or run a command'],
+  ['⌘B / Ctrl B', 'Collapse or expand the sidebar (menu drawer on a phone)'],
   ['?', 'Show this shortcuts help'],
   ['Esc', 'Close the open dialog, palette, or customer card'],
   ['Enter / Space', 'Open the focused row, card, or dashboard drill-down'],
@@ -8166,6 +8187,12 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();
     openPalette();
+    return;
+  }
+  // ⌘B/Ctrl+B — sidebar: icon rail on desktop, drawer on phones.
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'b') {
+    e.preventDefault();
+    if (window.kcToggleNav) window.kcToggleNav();
     return;
   }
   // "?" opens the shortcuts help — but not while typing in a field, and not
@@ -8511,7 +8538,7 @@ let dashFeedActions = [];
 function goToTab(tab, opts = {}) {
   if (opts.rentalSearch !== undefined) {
     rentalSearchTerm = opts.rentalSearch;
-    filterCustomer = ''; filterStatus = 'all'; filterPaid = 'all';
+    kcView('rentals').dims = { balance: 'all', status: 'all' };
   }
   document.querySelector(`.nav-item[data-tab="${tab}"]`)?.click();
   // Customers tab renders synchronously from memory; open the detail after it.
