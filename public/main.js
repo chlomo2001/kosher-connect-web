@@ -6498,6 +6498,14 @@ let shopItems = [];
 let shopSales = [];
 
 const STOCK_CATEGORY_LABELS = { phone: '📱 Phone', accessory: '🔌 Accessory', sim: '💳 SIM', other: '📦 Other' };
+// What the shelf actually carries (owner's list) — offered as type-ahead
+// suggestions when adding stock, so new items land with consistent names.
+const STOCK_TYPE_SUGGESTIONS = [
+  'MP3 player', 'Power bank', 'SD card', 'USB stick', 'Charger plug', 'Charging cable',
+  'Phone case', 'International plug adapter', 'Air-con pay-as-you-go switch unit',
+  'TomTom sat nav', 'Waze auto device', 'Tello SIM (USA)', 'US Mobile SIM (USA)',
+  'Replacement screen', 'Phone battery', 'CD',
+];
 
 async function renderShopTab() {
   const content = document.getElementById('mainContent');
@@ -6623,7 +6631,8 @@ function openStockItemModal(itemId = null) {
       </div>
       <div class="form-group">
         <label class="form-label">Model / name *</label>
-        <input class="form-input" id="siModel" value="${escHtml(i?.model || '')}" placeholder="e.g. Powerbank 10000">
+        <input class="form-input" id="siModel" value="${escHtml(i?.model || '')}" placeholder="e.g. Powerbank 10000" list="siModelList">
+        <datalist id="siModelList">${STOCK_TYPE_SUGGESTIONS.map(s => `<option value="${s}">`).join('')}</datalist>
       </div>
       <div class="form-group">
         <label class="form-label">Cost (net) £</label>

@@ -24,14 +24,14 @@ const ICONS = [PlaneIcon, FlipPhoneIcon, SimIcon, GlobeIcon, TicketIcon, MusicIc
 const PHONE_TEL = 'tel:+441615311386'
 const PHONE_SHOWN = formatPhoneDisplay('01615311386')
 const EMAIL = 'admin@kosher-connect.com'
-const MAPS_URL = 'https://maps.google.com/?q=421+Bury+New+Road,+Manchester'
+const MAPS_URL = 'https://maps.google.com/?q=421+Bury+New+Road,+Salford+M7+4ED'
 
 const T = {
   en: {
     dir: 'ltr', langLabel: 'EN',
     brandName: 'Kosher Connect',
     brandTag: 'Kosher Phones • Rentals & Travel • SIM Plans • Kol Torah Audio • Repairs',
-    nav: { services: 'Services', contact: 'Contact', account: 'My account', signin: 'Sign in' },
+    nav: { services: 'Services', contact: 'Contact', account: 'My account', signin: 'Staff sign in' },
     heroTitle: 'Welcome to the Kosher World',
     strap: 'Serving the Heimishe community — Manchester',
     heroBody: 'Kosher technology without compromise on quality, efficiency or service. Phones, SIMs, travel, repairs and Kol Torah audio — under one roof, and explained properly before you spend a penny.',
@@ -49,21 +49,21 @@ const T = {
       { title: 'Travelling? Don’t pay roaming prices', body: 'Rent a kosher phone for the trip — USA and Israel lines ready the day you leave. You pay only for the days you use; Shabbos and Yom Tov are always free.' },
       { title: 'Kosher phones, properly set up', body: 'Reliable, tested handsets with the right kosher setup for your family — rent or buy, and walk out with it working.' },
       { title: 'Stop overpaying for your SIM', body: 'Most people are on the wrong plan. Bring us your bill — we’ll match the tariff to how you actually use it, international minutes included, and the monthly bill usually drops by half.' },
-      { title: 'A local number for family abroad', body: 'An Israeli or USA number that rings on your phone in Manchester — the family dials local, you answer here. Set up the same day.' },
+      { title: 'A local number for family abroad', body: 'An Israeli or USA number that rings on your phone in the UK — the family dials local, you answer here. Set up the same day.' },
       { title: 'Flights, booked and watched', body: 'We book the tickets and keep an eye on times and changes, so the trip is sorted before you start packing.' },
-      { title: 'Kol Torah audio', body: 'Shiurim, music and children’s stories — on CD or as audio files, loaded onto your kosher phone or player before you leave the shop.' },
+      { title: 'Kol Torah audio', body: 'Shiurim, music and children’s stories — on CD or as audio files, loaded onto your kosher phone or player while you wait.' },
       { title: 'Smashed screen? Bring it in', body: 'Screens, batteries, charging trouble — most repairs are done quickly, and we’ll tell you honestly if it isn’t worth fixing.' },
-      { title: 'Accessories on the shelf', body: 'Chargers, cables, cases and CDs in stock — pop in and pick up what you need.' },
+      { title: 'Accessories on the shelf', body: 'Chargers, cables and cases; MP3 players, power banks, SD cards and USB sticks; plug adapters, sat navs, USA SIM cards, replacement screens and batteries — pop in and pick up what you need.' },
       { title: 'Advice with no pressure', body: 'No jargon and no upsell. We lay out the options, you choose — and if we’re not the right answer, we’ll say so.' },
     ],
     contactTitle: 'Come in or call',
     contactLead: 'A phone, a plan, a repair, a trip — just ask. No obligation, and you’ll get a straight answer.',
-    address: '421 Bury New Road (door left of Toy Zone, first floor up)',
+    address: '421 Bury New Road, Salford M7 4ED (door left of Toy Zone, first floor up)',
     visitTitle: 'Visit the shop', directions: 'Get directions',
     callTitle: 'Call us', callBody: 'Whatever the question — you’ll get a straight answer.',
     emailTitle: 'Email us', emailBody: 'For anything that can wait for a written reply.',
     footExplore: 'Explore', footContact: 'Contact',
-    footBlurb: 'Kosher phones, SIM plans, travel rentals, international numbers, Kol Torah audio and repairs — for the Heimishe community, from Manchester.',
+    footBlurb: 'Kosher phones, SIM plans, travel rentals, international numbers, Kol Torah audio and repairs — everything under one roof, explained properly.',
     rights: 'All rights reserved.', backTop: 'Back to top ↑',
   },
   he: {
@@ -112,14 +112,16 @@ const LD_JSON = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'LocalBusiness',
   name: 'Kosher Connect',
-  description: 'Kosher phones, SIM plans, travel phone rentals, international numbers, Kol Torah audio and repairs. Serving the Heimishe community from Manchester.',
+  description: 'Kosher phones, SIM plans, travel phone rentals, international numbers, Kol Torah audio and repairs. Serving the Heimishe community.',
   telephone: '+441615311386',
   email: EMAIL,
   url: 'https://kosher-connect.com/welcome',
   address: {
     '@type': 'PostalAddress',
     streetAddress: '421 Bury New Road, First Floor',
-    addressLocality: 'Manchester',
+    addressLocality: 'Salford',
+    addressRegion: 'Greater Manchester',
+    postalCode: 'M7 4ED',
     addressCountry: 'GB',
   },
 })
@@ -181,8 +183,8 @@ export default function Welcome() {
               </div>
               <a href="#services" className="w-anchor">{t.nav.services}</a>
               <a href="#contact" className="w-anchor">{t.nav.contact}</a>
-              <a href="/portal">{t.nav.account}</a>
-              <a href="/login" className="w-pill-primary">{t.nav.signin}</a>
+              <a href="/portal" className="w-pill-primary">{t.nav.account}</a>
+              <a href="/login" className="w-staff">{t.nav.signin}</a>
             </nav>
           </div>
 
@@ -200,7 +202,7 @@ export default function Welcome() {
               </div>
               <div className="w-side">
                 <div className="w-mini">
-                  <span className="w-dot" style={{ background: 'var(--success)' }} />
+                  <span className="w-dot" style={{ background: 'var(--gold)' }} />
                   <div><b>{t.mini1.t}</b><span>{t.mini1.b}</span></div>
                 </div>
                 <div className="w-mini">

@@ -405,6 +405,19 @@ export default function AuthBackdrop() {
       lg.addColorStop(0, rgba(glowC, dk ? 0.1 : 0.13)); lg.addColorStop(0.5, rgba(glowC, dk ? 0.03 : 0.045)); lg.addColorStop(1, rgba(glowC, 0))
       ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(px, py, gr, 0, 6.2832); ctx.fill()
       ctx.globalCompositeOperation = 'source-over'
+
+      // 10) The cursor logo breathes: the CSS cursor image itself can't
+      //     animate, so a fine gold halo around it contracts and expands a
+      //     touch — the mark reads as alive without chasing or lag. Drawn
+      //     only under a real pointer (never on the idle resting spot).
+      if (haveP) {
+        ctx.strokeStyle = rgba(GOLD, (dk ? 0.5 : 0.38) * (0.55 + 0.45 * breath))
+        ctx.lineWidth = 1.1
+        ctx.beginPath(); ctx.arc(px, py, 15 + breath * 4, 0, 6.2832); ctx.stroke()
+        // a fainter echo half a breath behind
+        ctx.strokeStyle = rgba(GOLD, (dk ? 0.18 : 0.14) * (0.4 + 0.6 * (1 - breath)))
+        ctx.beginPath(); ctx.arc(px, py, 23 + (1 - breath) * 5, 0, 6.2832); ctx.stroke()
+      }
     }
 
     resize(); idleP(); px = tpx; py = tpy
