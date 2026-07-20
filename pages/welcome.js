@@ -31,7 +31,8 @@ const T = {
     dir: 'ltr', langLabel: 'EN',
     brandName: 'Kosher Connect',
     brandTag: 'Kosher Phones • Rentals & Travel • SIM Plans • Kol Torah Audio • Repairs',
-    nav: { services: 'Services', contact: 'Contact', account: 'My account', signin: 'Staff sign in' },
+    nav: { services: 'Services', contact: 'Contact', join: 'Join us', account: 'My account', signin: 'Staff sign in' },
+    joinCta: 'New to Kosher Connect? Leave your details →',
     heroTitle: 'Welcome to the Kosher World',
     strap: 'Serving the Heimishe community — Manchester',
     heroBody: 'Kosher technology without compromise on quality, efficiency or service. Phones, SIMs, travel, repairs and Kol Torah audio — under one roof, and explained properly before you spend a penny.',
@@ -74,7 +75,8 @@ const T = {
     dir: 'rtl', langLabel: 'HE',
     brandName: 'כשר קונקט',
     brandTag: 'טלפונים כשרים • השכרות ונסיעות • תוכניות סים • קול תורה • תיקונים',
-    nav: { services: 'שירותים', contact: 'יצירת קשר', account: 'החשבון שלי', signin: 'כניסת צוות' },
+    nav: { services: 'שירותים', contact: 'יצירת קשר', join: 'הצטרפות', account: 'החשבון שלי', signin: 'כניסת צוות' },
+    joinCta: 'חדשים אצלנו? השאירו פרטים ←',
     heroTitle: 'ברוכים הבאים לעולם הכשר',
     strap: 'לשירות הקהילה החרדית — מנצ׳סטר והסביבה',
     heroBody: 'טכנולוגיה כשרה בלי פשרות — לא באיכות, לא בשירות ולא במחיר. טלפונים כשרים, כרטיסי סים, השכרות לנסיעות, מספרים בינלאומיים, קול תורה ותיקונים — הכול תחת קורת גג אחת, מוסבר בסבלנות ובגובה העיניים לפני שמוציאים פרוטה.',
@@ -275,7 +277,7 @@ export default function Welcome() {
 
           <section className="w-section" id="contact">
             <h3>{t.contactTitle}</h3>
-            <p className="w-lead">{t.contactLead}</p>
+            <p className="w-lead">{t.contactLead} <a className="w-join-link" href="/join">{t.joinCta}</a></p>
             <div className="w-contact-grid">
               <div className="w-card w-show">
                 <div className="w-icon" aria-hidden="true"><PinIcon /></div>
@@ -309,6 +311,7 @@ export default function Welcome() {
                 <h5>{t.footExplore}</h5>
                 <a href="#services">{t.nav.services}</a>
                 <a href="#contact">{t.nav.contact}</a>
+                <a href="/join">{t.nav.join}</a>
                 <a href="/portal">{t.nav.account}</a>
                 <a href="/login">{t.nav.signin}</a>
               </nav>

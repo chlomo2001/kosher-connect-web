@@ -1864,10 +1864,23 @@ html { scroll-behavior: smooth; }
    that matches the Inter look — instead of the app-wide David Libre serif.
    Form controls don't inherit font by default, so pull them along too. */
 .welcome-shell .w-wrap[dir="rtl"],
+.welcome-shell .w-wrap[dir="rtl"] :is(button, input, select, textarea),
 .login-card[dir="rtl"],
 .login-card[dir="rtl"] :is(button, input, select, textarea) {
   font-family: 'Heebo KC', 'Inter', system-ui, -apple-system, sans-serif;
 }
+
+/* /join — the public signup card (native replacement for the Google form). */
+.jn-wrap { max-width: 660px; }
+.jn-card { padding: 26px; }
+.jn-card .form-error { color: var(--danger); font-size: 12px; margin-top: 4px; }
+.jn-hp { position: absolute; inset-inline-start: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+.jn-actions { margin-top: 18px; display: flex; justify-content: flex-end; }
+.jn-fail { margin: 12px 0 0; color: var(--danger); font-size: 13px; }
+.jn-done h4 { margin: 0 0 8px; font-size: 17px; }
+.jn-done p { margin: 0 0 8px; font-size: 14px; }
+.w-join-link { color: var(--accent); font-weight: 600; text-decoration: none; }
+.w-join-link:hover { text-decoration: underline; }
 .w-contact-link:hover { text-decoration: underline; }
 
 .w-footer2 {
