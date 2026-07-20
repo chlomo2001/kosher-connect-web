@@ -37,8 +37,6 @@ const T = {
     heroBody: 'Kosher technology without compromise on quality, efficiency or service. Phones, SIMs, travel, repairs and Kol Torah audio — under one roof, and explained properly before you spend a penny.',
     quote: '“Technology should serve the people — not the other way around.”',
     ctaServices: 'See what we do', ctaContact: 'Ask us anything',
-    mini1: { t: 'Straight answers', b: 'We recommend what fits your family and your pocket — even when it isn’t the dearest thing on the shelf.' },
-    mini2: { t: 'Travel ready', b: 'USA · Canada · EU · Israel — phone and number working before you board.' },
     proof: [
       { v: '£35 → £18', c: 'what a typical monthly SIM bill becomes once the plan actually matches the usage' },
       { v: 'Shabbos & Yom Tov', c: 'never charged on any rental — on every trip, automatically' },
@@ -46,7 +44,7 @@ const T = {
     ],
     servicesTitle: 'What we do',
     services: [
-      { title: 'Travelling? Don’t pay roaming prices', body: 'Rent a kosher phone for the trip — USA and Israel lines ready the day you leave. You pay only for the days you use; Shabbos and Yom Tov are always free.' },
+      { title: 'Travelling? Don’t pay roaming prices', body: 'Rent a kosher phone for the trip — USA · Canada · EU · Israel — phone and number working before you board. You pay only for the days you use; Shabbos and Yom Tov are always free.' },
       { title: 'Kosher phones, properly set up', body: 'Reliable, tested handsets with the right kosher setup for your family — rent or buy, and walk out with it working.' },
       { title: 'Stop overpaying for your SIM', body: 'Most people are on the wrong plan. Bring us your bill — we’ll match the tariff to how you actually use it, international minutes included, and the monthly bill usually drops by half.' },
       { title: 'A local number for family abroad', body: 'An Israeli or USA number that rings on your phone in the UK — the family dials local, you answer here. Set up the same day.' },
@@ -54,7 +52,7 @@ const T = {
       { title: 'Kol Torah audio', body: 'Shiurim, music and children’s stories — on CD or as audio files, loaded onto your kosher phone or player while you wait.' },
       { title: 'Smashed screen? Bring it in', body: 'Screens, batteries, charging trouble — most repairs are done quickly, and we’ll tell you honestly if it isn’t worth fixing.' },
       { title: 'Accessories on the shelf', body: 'Chargers, cables and cases; MP3 players, power banks, SD cards and USB sticks; plug adapters, sat navs, USA SIM cards, replacement screens and batteries — pop in and pick up what you need.' },
-      { title: 'Advice with no pressure', body: 'No jargon and no upsell. We lay out the options, you choose — and if we’re not the right answer, we’ll say so.' },
+      { title: 'Advice with no pressure', body: 'No jargon and no upsell. We recommend what fits your family and your pocket — even when it isn’t the dearest thing on the shelf. And if we’re not the right answer, we’ll say so.' },
     ],
     ticker: ['Kosher phones', 'SIM plans', 'Flights & tickets', 'Virtual numbers', 'Phone rental', 'Kol Torah audio', 'Repairs', 'Online services', 'Accessories'],
     phoneGuideCta: 'Choosing a handset? See the phone guide →',
@@ -82,8 +80,6 @@ const T = {
     heroBody: 'טכנולוגיה כשרה בלי פשרות — לא באיכות, לא בשירות ולא במחיר. טלפונים כשרים, כרטיסי סים, השכרות לנסיעות, מספרים בינלאומיים, קול תורה ותיקונים — הכול תחת קורת גג אחת, מוסבר בסבלנות ובגובה העיניים לפני שמוציאים פרוטה.',
     quote: '„הטכנולוגיה צריכה לשמש את האדם — ולא האדם את הטכנולוגיה.“',
     ctaServices: 'מה תמצאו אצלנו', ctaContact: 'דברו איתנו',
-    mini1: { t: 'עצה ישרה', b: 'ממליצים רק על מה שבאמת מתאים למשפחה ולכיס — גם כשזה לא הפריט היקר ביותר שעל המדף.' },
-    mini2: { t: 'מוכנים לדרך', b: 'ארה״ב · קנדה · אירופה · ארץ ישראל — הטלפון והמספר מוכנים ופועלים עוד לפני ההמראה.' },
     proof: [
       { v: '£18 במקום £35', c: 'כך נראה חשבון סים חודשי אצל רוב הלקוחות, ברגע שהתוכנית באמת מותאמת לשימוש' },
       { v: 'שבת ויום טוב', c: 'אף פעם לא בחשבון — בכל השכרה ובכל נסיעה, באופן אוטומטי' },
@@ -91,7 +87,7 @@ const T = {
     ],
     servicesTitle: 'מה תמצאו אצלנו',
     services: [
-      { title: 'נוסעים? אל תשלמו מחירי נדידה', body: 'טלפון כשר מושכר לנסיעה, עם קו לארה״ב או לארץ ישראל, מוכן ליום היציאה. משלמים רק על ימי השימוש — ושבת ויום טוב תמיד חינם.' },
+      { title: 'נוסעים? אל תשלמו מחירי נדידה', body: 'טלפון כשר מושכר לנסיעה — ארה״ב · קנדה · אירופה · ארץ ישראל — הטלפון והמספר פועלים עוד לפני ההמראה. משלמים רק על ימי השימוש — ושבת ויום טוב תמיד חינם.' },
       { title: 'טלפונים כשרים, מסודרים כמו שצריך', body: 'מכשירים אמינים ובדוקים, עם ההגדרות הכשרות המתאימות לכל משפחה — לקנייה או להשכרה. יוצאים מהחנות עם טלפון שעובד, לא עם קופסה ועם שאלות.' },
       { title: 'די לשלם יותר מדי על הסים', body: 'רוב האנשים מחזיקים תוכנית שלא מתאימה להם. הביאו את החשבון — נתאים את התוכנית לשימוש האמיתי, כולל דקות לחו״ל, ובדרך כלל החשבון החודשי יורד בחצי.' },
       { title: 'מספר מקומי למשפחה בחו״ל', body: 'מספר ישראלי או אמריקאי שמצלצל אצלכם כאן באנגליה — המשפחה מחייגת שיחה מקומית, ואתם עונים מכאן. ההפעלה עוד באותו יום.' },
@@ -99,7 +95,7 @@ const T = {
       { title: 'קול תורה', body: 'שיעורים, ניגונים וסיפורי ילדים — על דיסק או כקבצי שמע, מועברים לטלפון הכשר או לנגן בזמן שאתם מחכים.' },
       { title: 'המסך נשבר? תביאו אותו', body: 'מסכים, סוללות, בעיות טעינה — רוב התיקונים מסתיימים מהר. ואם לא משתלם לתקן — נאמר לכם ביושר.' },
       { title: 'אביזרים על המדף', body: 'מטענים, כבלים וכיסויים; נגני MP3, סוללות ניידות, כרטיסי זיכרון והחסני USB; מתאמי חשמל לחו״ל, מכשירי ניווט, כרטיסי סים לארה״ב, מסכים וסוללות חלופיים — נכנסים, לוקחים, ממשיכים הלאה.' },
-      { title: 'ייעוץ בלי שום לחץ', body: 'בלי מונחים מסובכים ובלי מכירה בכוח. פורסים לפניכם את האפשרויות, אתם מחליטים — ואם אנחנו לא הכתובת הנכונה, נגיד זאת בפה מלא.' },
+      { title: 'ייעוץ בלי שום לחץ', body: 'בלי מונחים מסובכים ובלי מכירה בכוח. ממליצים רק על מה שבאמת מתאים למשפחה ולכיס — גם כשזה לא הפריט היקר ביותר שעל המדף. ואם אנחנו לא הכתובת הנכונה — נגיד זאת בפה מלא.' },
     ],
     ticker: ['טלפונים כשרים', 'תוכניות סים', 'טיסות וכרטיסים', 'מספרים וירטואליים', 'השכרת טלפונים', 'קול תורה', 'תיקונים', 'שירותים מקוונים', 'אביזרים'],
     phoneGuideCta: 'בוחרים מכשיר? למדריך הטלפונים ←',
@@ -211,25 +207,13 @@ export default function Welcome() {
 
           <section className="w-hero" id="top">
             <div className="w-hero-inner">
-              <div>
-                <div className="w-strap">{t.strap}</div>
-                <h2>{t.heroTitle}</h2>
-                <p>{t.heroBody}</p>
-                <div className="w-quote">{t.quote}</div>
-                <div className="w-cta">
-                  <a className="btn btn-primary" href="#services">{t.ctaServices}</a>
-                  <a className="btn btn-outline" href="#contact">{t.ctaContact}</a>
-                </div>
-              </div>
-              <div className="w-side">
-                <div className="w-mini">
-                  <span className="w-dot" style={{ background: 'var(--gold)' }} />
-                  <div><b>{t.mini1.t}</b><span>{t.mini1.b}</span></div>
-                </div>
-                <div className="w-mini">
-                  <span className="w-dot" style={{ background: 'var(--accent)' }} />
-                  <div><b>{t.mini2.t}</b><span>{t.mini2.b}</span></div>
-                </div>
+              <div className="w-strap">{t.strap}</div>
+              <h2>{t.heroTitle}</h2>
+              <p>{t.heroBody}</p>
+              <div className="w-quote">{t.quote}</div>
+              <div className="w-cta">
+                <a className="btn btn-primary" href="#services">{t.ctaServices}</a>
+                <a className="btn btn-outline" href="#contact">{t.ctaContact}</a>
               </div>
             </div>
           </section>

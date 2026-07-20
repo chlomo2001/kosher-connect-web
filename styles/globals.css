@@ -1527,24 +1527,20 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .w-lang button:hover { color: var(--text); }
 .w-lang button.active { background: var(--accent); color: #fff; }
 
+/* Centred hero: one column of type over the globe. The old side panel of
+   hero minis was the only place its two claims lived — they now live in the
+   travel and advice cards below, said once, where they belong. */
 .w-hero {
-  border: 1px solid var(--border); border-radius: 16px; padding: 40px 36px;
+  border: 1px solid var(--border); border-radius: 16px; padding: 48px 36px 44px;
   box-shadow: 0 24px 60px -18px rgba(10,37,64,.28), 0 6px 18px -10px rgba(10,37,64,.14);
 }
-.w-hero-inner { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 26px; align-items: center; }
-@media (max-width: 860px) { .w-hero-inner { grid-template-columns: 1fr; } }
+.w-hero-inner { max-width: 66ch; margin: 0 auto; text-align: center; }
 /* Hero title speaks the login card's language: large, light, tight. */
 .w-hero h2 { font-size: clamp(28px, 3.6vw, 42px); font-weight: 300; margin: 0 0 10px; letter-spacing: -0.8px; color: var(--text); line-height: 1.12; }
-.w-hero p { margin: 0 0 14px; color: var(--ink-secondary); font-size: 15px; line-height: 1.65; max-width: 62ch; }
+.w-hero p { margin: 0 0 14px; color: var(--ink-secondary); font-size: 15px; line-height: 1.65; max-width: 62ch; margin-inline: auto; margin-bottom: 14px; }
 .w-quote { font-size: 13.5px; font-style: italic; color: var(--muted); margin: 0 0 20px; }
-.w-cta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.w-cta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: center; }
 .w-cta .btn { text-decoration: none; }
-.w-side { border: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 55%, transparent); border-radius: 12px; padding: 16px; }
-.w-mini { display: flex; gap: 12px; align-items: flex-start; }
-.w-mini + .w-mini { margin-top: 14px; }
-.w-dot { width: 10px; height: 10px; border-radius: 999px; margin-top: 5px; flex: 0 0 auto; }
-.w-mini b { display: block; font-size: 14px; margin-bottom: 4px; color: var(--text); }
-.w-mini span:not(.w-dot) { color: var(--muted); font-size: 13px; line-height: 1.5; }
 
 .w-section { margin-top: 34px; }
 /* Section headings as quiet kickers — the app's voice, not marketing shout. */
@@ -1607,10 +1603,10 @@ td.cal-active.cal-shabbat { background: var(--accent); }
   .w-section > h3.w-show:hover::after { animation: none; }
 }
 
-/* Hero entrance — strap, heading, body, quote, CTAs and the side minis land
-   as a quiet 90ms cascade once the globe has painted. Pure CSS, runs once. */
+/* Hero entrance — strap, heading, body, quote and CTAs land as a quiet 90ms
+   cascade once the globe has painted. Pure CSS, runs once. */
 @keyframes w-enter { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-.w-hero .w-strap, .w-hero h2, .w-hero p, .w-hero .w-quote, .w-hero .w-cta, .w-hero .w-mini {
+.w-hero .w-strap, .w-hero h2, .w-hero p, .w-hero .w-quote, .w-hero .w-cta {
   animation: w-enter 500ms var(--ease-out) both;
 }
 .w-hero .w-strap { animation-delay: 140ms; }
@@ -1618,10 +1614,8 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .w-hero p { animation-delay: 320ms; }
 .w-hero .w-quote { animation-delay: 410ms; }
 .w-hero .w-cta { animation-delay: 500ms; }
-.w-hero .w-mini { animation-delay: 590ms; }
-.w-hero .w-mini + .w-mini { animation-delay: 680ms; }
 @media (prefers-reduced-motion: reduce) {
-  .w-hero .w-strap, .w-hero h2, .w-hero p, .w-hero .w-quote, .w-hero .w-cta, .w-hero .w-mini { animation: none; }
+  .w-hero .w-strap, .w-hero h2, .w-hero p, .w-hero .w-quote, .w-hero .w-cta { animation: none; }
 }
 
 .w-footer {
