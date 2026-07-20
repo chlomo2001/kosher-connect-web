@@ -8975,7 +8975,7 @@ async function deleteVN(id, number) {
 async function renderSettingsTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = loadingHtml('Loading settings…');
-  const [cfg, team, autos, aliases, menu, extra, bizacc] = await Promise.all([
+  const [cfg, team, autos, aliases, menu, extra, bizacc, pguide] = await Promise.all([
     window.api.getSettings(),
     kcFetch('/api/team').then(r => r.status === 403 ? null : r.json()).catch(() => null),
     kcFetch('/api/automations').then(r => r.status === 403 ? null : r.json()).catch(() => null),
@@ -8983,6 +8983,7 @@ async function renderSettingsTab() {
     kcFetch('/api/services?all=1').then(r => r.ok ? r.json() : null).catch(() => null),
     kcFetch('/api/custom-charges').then(r => r.ok ? r.json() : null).catch(() => null),
     kcFetch('/api/business-accounts').then(r => r.status === 403 ? null : r.json()).catch(() => null),
+    kcFetch('/api/phone-guide').then(r => r.ok ? r.json() : null).catch(() => null),
   ]);
   if (!cfg || !cfg.success) {
     content.innerHTML = `<div class="tab-placeholder"><div class="big">⚙️</div>
@@ -9358,6 +9359,35 @@ async function renderSettingsTab() {
         ${bizacc.credVault ? '' : '<span style="font-size:11px;color:var(--warning,#b45309);margin-left:8px;">Credential vault key missing — passwords cannot be stored until SIM_CRED_KEY is set.</span>'}
       </div>`) : '';
 
+  // Phone guide — the public handset catalogue (/phone-guide), composed here.
+  // Specs came from the shop's Price List doc; pros/cons are the owner's to
+  // write, one point per line, no coding needed.
+  phoneModelsCache = pguide?.models || [];
+  const activeModels = phoneModelsCache.filter(m => m.active);
+  const retiredModels = phoneModelsCache.filter(m => !m.active);
+  const phoneGuideHtml = pguide?.success ? settingsCard('phoneguide', '📱 Phone guide',
+    `${activeModels.length} model${activeModels.length === 1 ? '' : 's'} on the public guide`, `
+      <table><thead><tr><th>Phone</th><th>Price</th><th>Specs</th><th>Pros &amp; cons</th><th></th></tr></thead>
+      <tbody>
+        ${activeModels.length === 0 ? '<tr><td colspan="5" style="color:var(--muted);font-size:13px;padding:12px 16px;">No models yet — add the first phone.</td></tr>' : ''}
+        ${activeModels.map(m => `
+          <tr>
+            <td><strong>${escHtml(m.name)}</strong><div style="font-size:11px;color:var(--muted);">order ${m.sortOrder}${m.notes ? ' · ' + escHtml(m.notes.slice(0, 50)) : ''}</div></td>
+            <td style="font-feature-settings:'tnum';">${m.price != null ? fmtGbp(m.price) : '—'}</td>
+            <td style="font-size:11.5px;color:var(--muted);max-width:260px;">${escHtml(['Dual SIM: ' + (m.dualSim || '—'), 'Yiddish: ' + (m.yiddishText || '—'), 'Touch: ' + (m.touchScreen || '—'), 'Text: ' + (m.texting || '—')].join(' · '))}</td>
+            <td style="font-size:11.5px;">${m.pros || m.cons ? '✍️ written' : '<span style="color:var(--muted);">not written yet</span>'}</td>
+            <td style="white-space:nowrap;">
+              <button class="action-btn" onclick="openPhoneModelModal('${escHtml(m.id)}')">✏️</button>
+              <button class="action-btn danger" onclick="retirePhoneModel('${escHtml(m.id)}', '${escJs(m.name)}')">✕</button>
+            </td>
+          </tr>`).join('')}
+      </tbody></table>
+      <div style="padding:8px 14px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <button class="btn btn-outline btn-sm" onclick="openPhoneModelModal()">+ Add phone</button>
+        <a class="btn btn-outline btn-sm" href="/phone-guide" target="_blank" rel="noopener">👁 View the public page ↗</a>
+        ${retiredModels.length ? `<span style="font-size:11px;color:var(--muted);">Hidden: ${retiredModels.map(m => `${escHtml(m.name)} <button class="action-btn" style="font-size:10px;" onclick="restorePhoneModel('${escHtml(m.id)}')">↩ restore</button>`).join(' · ')}</span>` : ''}
+      </div>`) : '';
+
   // Shop details — public-facing facts the owner should be able to change
   // without a code change (they show on the welcome page within minutes).
   const openingHours = cfg.settings.find(s => s.key === 'opening_hours')?.textValue || 'Sunday–Thursday, 2:00–6:30pm';
@@ -9379,6 +9409,7 @@ async function renderSettingsTab() {
 
     ${sectionHead('Shop', 'public-facing details')}
     ${shopHtml}
+    ${phoneGuideHtml}
 
     ${bizAccHtml ? sectionHead('Business', 'the accounts &amp; subscriptions the company runs on') + bizAccHtml : ''}
 
@@ -9576,6 +9607,107 @@ async function retireBizAccount(id, name) {
   }).then(r => r.json()).catch(() => ({ success: false }));
   if (!res.success) { toast(res.error || 'Could not retire.', 'error'); return; }
   toast('Retired ✔', 'success');
+  renderSettingsTab();
+}
+
+// ── Phone guide editor ───────────────────────────────────────────────────
+let phoneModelsCache = [];
+
+function openPhoneModelModal(id = null) {
+  const m = id ? phoneModelsCache.find(x => x.id === id) : null;
+  showDynamicModal(`
+    <div class="modal-title">${m ? '✏️ Edit ' + escHtml(m.name) : '➕ Add phone'}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Everything here shows on the public phone guide, except the internal notes. Pros and cons: one point per line.</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Phone name *</label>
+        <input class="form-input" id="pmName" value="${escHtml(m?.name || '')}" placeholder="e.g. FIG Pro">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Price £ <span style="color:var(--muted);font-weight:400;">(empty = "Ask in shop")</span></label>
+        <input class="form-input" type="number" step="0.01" min="0" id="pmPrice" value="${m?.price ?? ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Order on the guide <span style="color:var(--muted);font-weight:400;">(1 = top)</span></label>
+        <input class="form-input" type="number" step="1" id="pmOrder" value="${m?.sortOrder ?? (phoneModelsCache.length + 1)}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Dual SIM</label>
+        <input class="form-input" id="pmDual" value="${escHtml(m?.dualSim || '')}" placeholder="Yes / No / Yes (second SIM is 2G)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Yiddish text</label>
+        <input class="form-input" id="pmYiddish" value="${escHtml(m?.yiddishText || '')}" placeholder="Yes / No">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Touch-screen</label>
+        <input class="form-input" id="pmTouch" value="${escHtml(m?.touchScreen || '')}" placeholder="Yes / No / Semi">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Texting</label>
+        <input class="form-input" id="pmTexting" value="${escHtml(m?.texting || '')}" placeholder="Optional / With text / No text / OTP only">
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Pros <span style="color:var(--muted);font-weight:400;">(one per line — shown with a ✓)</span></label>
+        <textarea class="form-input" id="pmPros" rows="4" placeholder="Big clear buttons&#10;Battery lasts all week">${escHtml(m?.pros || '')}</textarea>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Cons <span style="color:var(--muted);font-weight:400;">(one per line — honest, like we'd say it in the shop)</span></label>
+        <textarea class="form-input" id="pmCons" rows="4" placeholder="No camera&#10;Speaker on the quiet side">${escHtml(m?.cons || '')}</textarea>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Internal notes <span style="color:var(--muted);font-weight:400;">(never shown publicly)</span></label>
+        <input class="form-input" id="pmNotes" value="${escHtml(m?.notes || '')}" placeholder="supplier, stock quirks…">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="savePhoneModel(${m ? `'${m.id}'` : 'null'})">💾 Save</button>
+    </div>
+  `);
+}
+
+async function savePhoneModel(id) {
+  const res = await kcFetch('/api/phone-guide', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      op: 'save', id: id || undefined,
+      name: document.getElementById('pmName').value,
+      price: document.getElementById('pmPrice').value,
+      sortOrder: document.getElementById('pmOrder').value,
+      dualSim: document.getElementById('pmDual').value,
+      yiddishText: document.getElementById('pmYiddish').value,
+      touchScreen: document.getElementById('pmTouch').value,
+      texting: document.getElementById('pmTexting').value,
+      pros: document.getElementById('pmPros').value,
+      cons: document.getElementById('pmCons').value,
+      notes: document.getElementById('pmNotes').value,
+    }),
+  }).then(r => r.json()).catch(() => ({ success: false, error: 'Network error.' }));
+  if (!res.success) { toast(res.error || 'Could not save.', 'error'); return; }
+  toast('Saved ✔ The public guide updates within a few minutes.', 'success');
+  closeDynamicModal();
+  renderSettingsTab();
+}
+
+async function retirePhoneModel(id, name) {
+  if (!confirm(`Take "${name}" off the public guide? (Kept here — you can restore it any time.)`)) return;
+  const res = await kcFetch('/api/phone-guide', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: 'retire', id }),
+  }).then(r => r.json()).catch(() => ({ success: false }));
+  if (!res.success) { toast(res.error || 'Could not update.', 'error'); return; }
+  toast('Hidden from the guide ✔', 'success');
+  renderSettingsTab();
+}
+
+async function restorePhoneModel(id) {
+  const res = await kcFetch('/api/phone-guide', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: 'restore', id }),
+  }).then(r => r.json()).catch(() => ({ success: false }));
+  if (!res.success) { toast(res.error || 'Could not update.', 'error'); return; }
+  toast('Back on the guide ✔', 'success');
   renderSettingsTab();
 }
 
