@@ -221,7 +221,7 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
   width: 220px;
   background: var(--brand-dark);
   display: flex; flex-direction: column;
-  padding: 24px 0; flex-shrink: 0;
+  padding: 16px 0; flex-shrink: 0;
   min-height: 0;
   /* Labels never wrap — so the rail-collapse width transition stays clean. */
   overflow-x: hidden;
@@ -239,18 +239,18 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
 }
 .sidebar-bottom { flex-shrink: 0; }
 .logo {
-  padding: 0 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.12);
-  margin-bottom: 20px; display: flex; flex-direction: column;
+  padding: 0 20px 14px; border-bottom: 1px solid rgba(255,255,255,0.12);
+  margin-bottom: 12px; display: flex; flex-direction: column;
   align-items: center; text-align: center;
 }
-.logo img { width: 60px; height: 60px; border-radius: 50%; margin-bottom: 10px; border: 2px solid rgba(255,255,255,0.25); }
-.logo-title { font-size: 17px; font-weight: 400; color: #ffffff; letter-spacing: -0.2px; }
+.logo img { width: 44px; height: 44px; border-radius: 50%; margin-bottom: 8px; border: 2px solid rgba(255,255,255,0.25); }
+.logo-title { font-size: 16px; font-weight: 400; color: #ffffff; letter-spacing: -0.2px; line-height: 1.25; }
 .logo-sub { font-size: 10px; font-weight: 400; letter-spacing: 0.1px; text-transform: uppercase; color: rgba(255,255,255,0.45); margin-top: 3px; }
 
 .nav-item {
   display: flex; align-items: center; gap: 10px;
-  margin: 2px 10px; padding: 10px 12px; border-radius: 11px;
-  font-size: 14px; font-weight: 300;
+  margin: 1px 10px; padding: 7px 12px; border-radius: 10px;
+  font-size: 14px; font-weight: 300; line-height: 1.35;
   color: rgba(255,255,255,0.65); cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
@@ -265,8 +265,8 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
 /* #74 — a quiet section label + slight indent groups SIM Plans & Virtual
    Numbers as one "Connectivity" pair without changing where they navigate. */
 .nav-group-label {
-  padding: 12px 20px 4px; font-size: 10px; font-weight: 600;
-  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 8px 20px 2px; font-size: 10px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.2;
   color: rgba(255,255,255,0.35);
 }
 .nav-item.nav-nested { padding-left: 26px; }
@@ -289,9 +289,9 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
 
 /* Sidebar footer — same rhythm as the nav above it: a group label, rows of
    one consistent height, hairline-separated identity block, quiet version
-   line. Every row is 32px tall so the spacing reads even. */
+   line. Every row is 28px tall so the spacing reads even. */
 .sidebar-bottom {
-  margin-top: auto; padding: 10px 20px 12px;
+  margin-top: auto; padding: 8px 20px 10px;
   border-top: 1px solid rgba(255,255,255,0.12);
   font-size: 12.5px; color: rgba(255,255,255,0.45);
   display: flex; flex-direction: column;
@@ -302,21 +302,21 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
   color: rgba(255,255,255,0.32); padding: 4px 0 3px;
 }
 .sb-row {
-  display: flex; align-items: center; gap: 9px; height: 32px;
+  display: flex; align-items: center; gap: 9px; height: 28px;
   color: inherit; text-decoration: none;
 }
-.sb-version { padding-top: 9px; font-size: 11px; color: rgba(255,255,255,0.30); }
+.sb-version { padding-top: 6px; font-size: 11px; color: rgba(255,255,255,0.30); }
 
 /* "Signed in as" identity in the sidebar footer — who's on the counter now. */
 .sidebar-user {
   display: flex; align-items: center; gap: 9px;
-  padding: 9px 0; margin: 5px 0;
+  padding: 6px 0; margin: 4px 0;
   border-top: 1px solid rgba(255,255,255,0.10);
   border-bottom: 1px solid rgba(255,255,255,0.10);
 }
 .sidebar-user[hidden] { display: none; }
 .su-avatar {
-  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
   background: rgba(255,255,255,0.14); color: #fff;
   display: flex; align-items: center; justify-content: center;
   font-size: 11px; font-weight: 700; letter-spacing: 0.3px;
@@ -329,6 +329,31 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
 .su-role {
   font-size: 10px; font-weight: 500; text-transform: uppercase;
   letter-spacing: 0.06em; color: rgba(255,255,255,0.4);
+}
+
+/* Short-screen tiers — the full nav (13 tabs + 5 group labels + footer) must
+   fit at default zoom with NO vertical scrolling. The default sizing above
+   fits ≥920px-tall viewports (a 1080p monitor); these two tiers tighten the
+   same rhythm for 1440×900/1280×800 laptops and then 1366×768. The nav's own
+   scroll region remains as the last-resort fallback (tiny windows, big zoom). */
+@media (max-height: 920px) {
+  .sidebar { padding: 10px 0; }
+  .logo { padding-bottom: 10px; margin-bottom: 8px; }
+  .logo img { width: 32px; height: 32px; margin-bottom: 5px; }
+  .logo-title { font-size: 15px; }
+  .nav-item { padding: 5px 12px; }
+  .nav-group-label { padding: 6px 20px 2px; }
+  .sidebar-bottom { padding: 6px 20px 8px; }
+  .sb-row { height: 26px; }
+  .sidebar-user { padding: 4px 0; margin: 3px 0; }
+  .sb-version { padding-top: 4px; }
+}
+@media (max-height: 760px) {
+  .logo-sub { display: none; }
+  .nav-item { padding: 2px 12px; }
+  .nav-group-label { padding: 4px 20px 1px; }
+  .sb-row { height: 24px; }
+  .sb-version { display: none; }
 }
 
 /* ─── MAIN ─── */

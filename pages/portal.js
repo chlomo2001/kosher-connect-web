@@ -15,8 +15,7 @@ import AuthBackdrop from '../components/AuthBackdrop'
 import { CardIcon, FlipPhoneIcon, PlaneIcon, DocIcon, TicketIcon } from '../components/kcIcons'
 
 // Portal copy in English + lashon hakodesh — some customers are Israelis who
-// don't know English. Shares the 'kcLang' preference with /welcome (the
-// welcome page's Yiddish falls back to English here).
+// don't know English. Shares the 'kcLang' preference with /welcome.
 const P = {
   en: {
     locale: 'en-GB',
