@@ -214,7 +214,19 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
   background: var(--brand-dark);
   display: flex; flex-direction: column;
   padding: 24px 0; flex-shrink: 0;
+  min-height: 0;
 }
+/* The nav list scrolls between the pinned logo and the pinned footer, so
+   "Sign out" is never pushed off the bottom of a short or zoomed screen. */
+.sidebar-nav {
+  flex: 1; min-height: 0; overflow-y: auto;
+  scrollbar-color: rgba(255,255,255,0.28) transparent;
+}
+.sidebar-nav::-webkit-scrollbar { width: 8px; }
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.22); border: 2px solid var(--brand-dark);
+}
+.sidebar-bottom { flex-shrink: 0; }
 .logo {
   padding: 0 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.12);
   margin-bottom: 20px; display: flex; flex-direction: column;
@@ -965,8 +977,26 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   padding: 24px;
 }
 .login-card input, .login-card textarea, .login-card select { cursor: text; }
-.login-shell button, .login-shell a, .login-shell [role="button"] { cursor: pointer; }
-.welcome-shell a, .welcome-shell button { cursor: pointer; }
+/* Brand-coloured pointers on the public pages: the classic arrow and hand
+   shapes everyone knows, redrawn in KC colours — navy ink with a gold keyline
+   (warm ivory on the dark theme). Familiar to use, unmistakably ours. The
+   working app keeps native cursors. */
+.login-shell { cursor: url("/cursor-kc.png") 2 2, auto; }
+.login-shell button, .login-shell a, .login-shell [role="button"] {
+  cursor: url("/cursor-kc-hand.png") 15 3, pointer;
+}
+:root[data-theme="dark"] .login-shell { cursor: url("/cursor-kc-dark.png") 2 2, auto; }
+:root[data-theme="dark"] .login-shell button, :root[data-theme="dark"] .login-shell a,
+:root[data-theme="dark"] .login-shell [role="button"] {
+  cursor: url("/cursor-kc-hand-dark.png") 15 3, pointer;
+}
+/* The welcome page shares the scene — and the cursors. */
+.welcome-shell { cursor: url("/cursor-kc.png") 2 2, auto; }
+.welcome-shell a, .welcome-shell button { cursor: url("/cursor-kc-hand.png") 15 3, pointer; }
+:root[data-theme="dark"] .welcome-shell { cursor: url("/cursor-kc-dark.png") 2 2, auto; }
+:root[data-theme="dark"] .welcome-shell a, :root[data-theme="dark"] .welcome-shell button {
+  cursor: url("/cursor-kc-hand-dark.png") 15 3, pointer;
+}
 /* Kept as a decorative hook, but the rainbow blur is gone. A single flat
    hairline band frames the top of the canvas — structure, not glow. */
 /* Premium sign-in: a slow flowing gradient behind a crisp floating card —

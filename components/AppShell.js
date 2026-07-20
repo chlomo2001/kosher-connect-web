@@ -79,17 +79,21 @@ export default function AppShell({ initialTab = 'dashboard' }) {
           <div className="logo-sub">Business Management System</div>
         </div>
 
-        {/* #20 grouped sections, with monochrome SVG line icons (no emoji). */}
-        {NAV.map((section, si) => (
-          <Fragment key={si}>
-            {section.label && <div className="nav-group-label">{section.label}</div>}
-            {section.items.map(([tab, label]) => (
-              <div key={tab} className={'nav-item' + (tab === initialTab ? ' active' : '')} data-tab={tab}>
-                <span className="nav-icon">{ICONS[tab]}</span> {label}
-              </div>
-            ))}
-          </Fragment>
-        ))}
+        {/* #20 grouped sections, with monochrome SVG line icons (no emoji).
+            The nav is its own scroll region so the identity/sign-out footer
+            stays reachable on short or zoomed screens instead of clipping. */}
+        <div className="sidebar-nav">
+          {NAV.map((section, si) => (
+            <Fragment key={si}>
+              {section.label && <div className="nav-group-label">{section.label}</div>}
+              {section.items.map(([tab, label]) => (
+                <div key={tab} className={'nav-item' + (tab === initialTab ? ' active' : '')} data-tab={tab}>
+                  <span className="nav-icon">{ICONS[tab]}</span> {label}
+                </div>
+              ))}
+            </Fragment>
+          ))}
+        </div>
 
         <div className="sidebar-bottom">
           {/* Converter tools live on their own pages (not SPA tabs) — plain

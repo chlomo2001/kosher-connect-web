@@ -11,7 +11,7 @@ const nextConfig = {
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
       {
-        source: '/:img(logo|logo-full).png',
+        source: '/:img(logo|logo-full|cursor-kc|cursor-kc-dark|cursor-kc-hand|cursor-kc-hand-dark).png',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
     ]

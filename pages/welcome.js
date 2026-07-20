@@ -48,7 +48,7 @@ const T = {
     services: [
       { title: 'Travelling? Don’t pay roaming prices', body: 'Rent a kosher phone for the trip — USA and Israel lines ready the day you leave. You pay only for the days you use; Shabbos and Yom Tov are always free.' },
       { title: 'Kosher phones, properly set up', body: 'Reliable, tested handsets with the right kosher setup for your family — rent or buy, and walk out with it working.' },
-      { title: 'Stop overpaying for your SIM', body: 'Most people are on the wrong plan. Bring us your bill — £35 a month often turns into £18 for the same usage, international minutes included.' },
+      { title: 'Stop overpaying for your SIM', body: 'Most people are on the wrong plan. Bring us your bill — we’ll match the tariff to how you actually use it, international minutes included, and the monthly bill usually drops by half.' },
       { title: 'A local number for family abroad', body: 'An Israeli or USA number that rings on your phone in Manchester — the family dials local, you answer here. Set up the same day.' },
       { title: 'Flights, booked and watched', body: 'We book the tickets and keep an eye on times and changes, so the trip is sorted before you start packing.' },
       { title: 'Kol Torah audio', body: 'Shiurim, music and children’s stories — on CD or as audio files, loaded onto your kosher phone or player before you leave the shop.' },
@@ -87,7 +87,7 @@ const T = {
     services: [
       { title: 'נוסעים? אל תשלמו מחירי נדידה', body: 'שכרו טלפון כשר לנסיעה — קווים לארה״ב ולארץ ישראל מוכנים ביום היציאה. משלמים רק על הימים שבשימוש; שבת ויום טוב תמיד חינם.' },
       { title: 'טלפונים כשרים, מוגדרים כמו שצריך', body: 'מכשירים אמינים ובדוקים עם ההגדרה הכשרה המתאימה למשפחה — להשכרה או לקנייה, ויוצאים מהחנות עם טלפון שעובד.' },
-      { title: 'תפסיקו לשלם יותר מדי על הסים', body: 'רוב האנשים על תוכנית לא נכונה. הביאו לנו את החשבון — £35 לחודש הופכים לא פעם ל־£18 על אותו שימוש, כולל דקות לחו״ל.' },
+      { title: 'תפסיקו לשלם יותר מדי על הסים', body: 'רוב האנשים על תוכנית לא נכונה. הביאו לנו את החשבון — נתאים את התוכנית לשימוש האמיתי, כולל דקות לחו״ל, והחשבון החודשי בדרך כלל יורד בחצי.' },
       { title: 'מספר מקומי למשפחה בחו״ל', body: 'מספר ישראלי או אמריקאי שמצלצל אצלכם במנצ׳סטר — המשפחה מחייגת מקומי, אתם עונים כאן. הפעלה באותו יום.' },
       { title: 'טיסות — מוזמנות ובהשגחה', body: 'אנחנו מזמינים את הכרטיסים ועוקבים אחרי הזמנים והשינויים, כך שהנסיעה מסודרת עוד לפני שאורזים.' },
       { title: 'קול תורה', body: 'שיעורים, מוזיקה וסיפורי ילדים — על דיסק או כקבצי שמע, מועברים לטלפון הכשר או לנגן עוד לפני שיוצאים מהחנות.' },
