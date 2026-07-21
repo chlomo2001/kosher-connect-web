@@ -105,6 +105,8 @@ export default function AppShell({ initialTab = 'dashboard' }) {
             <span className="nav-icon"><I><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><polyline points="16 11 18 13 22 9" /></I></span> Contacts converter</a>
           <a className="sb-row" href="/tools/transfer">
             <span className="nav-icon"><I><polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" /><polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" /></I></span> Phone transfer</a>
+          <a className="sb-row" href="/tools/ocr">
+            <span className="nav-icon"><I><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><line x1="7" y1="12" x2="17" y2="12" /></I></span> Scan reader (OCR)</a>
           {/* Who's signed in — filled by main.js once /api/auth/me resolves
               (auth is client-side, so the server can't render it). Hidden until
               then, and stays hidden when auth is disabled. */}
