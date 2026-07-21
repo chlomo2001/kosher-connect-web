@@ -20,6 +20,7 @@ import { db, tablesMode } from '../../../lib/db.js'
 import { resolveStaff } from '../../../lib/auth.js'
 import { advanceOneMonth } from '../../../lib/money.mjs'
 import { requirementFor, coverageStatus, KNOWN_DESTINATIONS } from '../../../lib/travelRules.mjs'
+import { loadTravelRules } from '../../../lib/travelRulesDb.js'
 
 const DEST_NAME = Object.fromEntries(KNOWN_DESTINATIONS.map(d => [d.code, d.name]))
 const RECORDABLE = new Set(['ESTA', 'ETA_CA', 'ETA_IL', 'ETIAS', 'ETA_UK'])
@@ -317,6 +318,7 @@ async function handler(req, res) {
     )
     const wanted = new Set()
     let travelTasks = 0
+    const rules = await loadTravelRules()
     // Cache authorisations per customer so a family's trips don't re-query.
     const authCache = new Map()
     for (const b of trips) {

@@ -61,6 +61,18 @@ test('Europe: none for EU nationals, ETIAS-coming note for others', () => {
   assert.match(gb.note, /ETIAS/)
 })
 
+test('requirementFor honours the owner-edited DB rules', () => {
+  const rules = [{ destination: 'US', nationality: 'GB', auth_type: 'VISA', note: 'changed', active: true }]
+  const r = requirementFor({ destination: 'USA', nationality: 'British', rules })
+  assert.equal(r.code, 'VISA')
+  assert.equal(r.note, 'changed')
+  // any cell not overridden falls back to the built-in default
+  assert.equal(requirementFor({ destination: 'USA', nationality: 'Israeli', rules }).code, 'ESTA')
+  // an inactive rule is ignored (falls back)
+  const inactive = [{ destination: 'US', nationality: 'GB', auth_type: 'VISA', active: false }]
+  assert.equal(requirementFor({ destination: 'USA', nationality: 'British', rules: inactive }).code, 'ESTA')
+})
+
 test('unknown inputs return CHECK with a helpful reason', () => {
   assert.equal(requirementFor({ destination: '', nationality: 'British' }).reason, 'destination-unknown')
   assert.equal(requirementFor({ destination: 'USA', nationality: '' }).reason, 'nationality-unknown')

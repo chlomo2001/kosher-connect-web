@@ -9715,6 +9715,12 @@ async function renderSettingsTab() {
         <span style="flex-basis:100%;font-size:11px;color:var(--muted);">Shown on the public welcome page (Visit-the-shop card and footer). Free text — write it the way you'd say it.</span>
       </div>`);
 
+  // Travel requirements matrix (owner-only) — filled lazily after render.
+  const travelRulesHtml = (currentStaff && currentStaff.role !== 'owner') ? '' :
+    settingsCard('travel-rules', '🛂 Travel requirements',
+      'what each passport needs, per destination', `
+      <div id="travelRulesBody" style="padding:12px 14px 14px;"><div style="color:var(--muted);font-size:13px;">Loading…</div></div>`);
+
   content.innerHTML = `
     <div style="margin-bottom:8px;padding:10px 14px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:12px;">
       <span style="flex:1;">Everything that runs the business — people, prices, messages and automation — lives here. Price edits apply to <strong>new</strong> charges only; existing tickets never reprice.</span>
@@ -9742,7 +9748,59 @@ async function renderSettingsTab() {
     ${sectionHead('Workbench', 'phone migrations &amp; converters')}
     ${contactToolsHtml}
 
+    ${travelRulesHtml ? sectionHead('Travel', 'entry requirements the booking panel &amp; reminders use') + travelRulesHtml : ''}
+
     ${automationsHtml ? sectionHead('Automation', 'jobs the daily sweep runs for you') + automationsHtml : ''}`;
+
+  if (travelRulesHtml) loadTravelRulesCard();
+}
+
+// Settings → Travel: edit the destination × passport matrix the booking panel
+// and reminders use. Owner-only (the API enforces it too). Loaded lazily so a
+// non-owner never fetches it.
+async function loadTravelRulesCard() {
+  const el = document.getElementById('travelRulesBody');
+  if (!el) return;
+  let d;
+  try { d = await kcFetch('/api/travel-rules').then(r => r.json()); } catch { d = null; }
+  if (!d || !d.success) { el.innerHTML = `<div style="color:var(--muted);font-size:13px;">${escHtml(d?.error || 'Could not load rules.')}</div>`; return; }
+  const natName = Object.fromEntries((d.nationalities || []).map(n => [n.code, n.name]));
+  const destName = Object.fromEntries((d.destinations || []).map(x => [x.code, x.name]));
+  const authOpts = (sel) => (d.authTypes || []).map(a => `<option value="${a.code}" ${a.code === sel ? 'selected' : ''}>${escHtml(a.label)}</option>`).join('');
+  const byDest = {};
+  (d.rules || []).forEach(r => { (byDest[r.destination] = byDest[r.destination] || []).push(r); });
+  const blocks = (d.destinations || []).map(dd => {
+    const rows = (byDest[dd.code] || []).map(r => `
+      <tr data-dest="${escHtml(r.destination)}" data-nat="${escHtml(r.nationality)}">
+        <td>${escHtml(natName[r.nationality] || r.nationality)}</td>
+        <td><select class="form-input tr-auth" style="min-height:0;padding:6px 8px;font-size:13px;">${authOpts(r.authType)}</select></td>
+        <td><input class="form-input tr-note" value="${escHtml(r.note || '')}" placeholder="optional note" style="min-height:0;padding:6px 8px;font-size:13px;width:100%;"></td>
+        <td><button class="btn btn-outline btn-sm" style="font-size:12px;padding:4px 10px;" onclick="saveTravelRule(this)">Save</button></td>
+      </tr>`).join('');
+    return `<div style="margin-bottom:14px;">
+      <div style="font-weight:600;margin-bottom:4px;">${escHtml(destName[dd.code] || dd.code)}</div>
+      <div class="table-wrap"><table><thead><tr><th>Passport</th><th>Needs</th><th>Note</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+    Change what each passport needs for each destination — used by the 🛂 panel on bookings and the reminders. New booking views pick up changes within a minute. Guidance only; always confirm on the official site.</div>${blocks}`;
+}
+
+async function saveTravelRule(btn) {
+  const tr = btn.closest('tr');
+  if (!tr) return;
+  const payload = {
+    destination: tr.dataset.dest,
+    nationality: tr.dataset.nat,
+    authType: tr.querySelector('.tr-auth').value,
+    note: tr.querySelector('.tr-note').value.trim(),
+    active: true,
+  };
+  const res = await kcFetch('/api/travel-rules', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not save the rule.', 'error'); return; }
+  toast('Rule saved ✓', 'success');
 }
 
 // Settings → Messaging: prove the Twilio connection end-to-end. The server

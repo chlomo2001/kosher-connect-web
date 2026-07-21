@@ -8,6 +8,7 @@
 import { withTab } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 import { requirementFor, passportCheck, coverageStatus } from '../../lib/travelRules.mjs'
+import { loadTravelRules } from '../../lib/travelRulesDb.js'
 
 const VALID_TYPES = new Set(['ESTA', 'ETA_CA', 'ETA_IL', 'ETIAS', 'ETA_UK', 'VISA'])
 
@@ -54,9 +55,10 @@ async function handler(req, res) {
           ? await db.select('travel_authorisations',
               `select=*&customer_id=eq.${(await customerUuid(legacyId)) || '00000000-0000-0000-0000-000000000000'}&order=updated_at.desc`)
           : []
+        const rules = await loadTravelRules()
         const passengers = (bk.booking_passengers || []).map(p => {
           const name = p.full_name || ''
-          const requirement = requirementFor({ destination, nationality: p.nationality })
+          const requirement = requirementFor({ destination, nationality: p.nationality, rules })
           const pass = passportCheck({ passportExpiry: p.passport_expiry, travelDate })
           const mine = auths.filter(a => (a.traveller_name || '').trim().toLowerCase() === name.trim().toLowerCase())
           const coverage = coverageStatus({ requirement, travelDate, auths: mine })
