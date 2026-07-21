@@ -25,6 +25,7 @@ export default function ScanReader() {
   const [stage, setStage] = useState('')
   const [progress, setProgress] = useState(0)
   const [copied, setCopied] = useState(false)
+  const [mode, setMode] = useState('device') // 'device' (private tesseract) | 'ai' (Gemini)
   const workerRef = useRef(null)
 
   async function getWorker() {
@@ -74,11 +75,28 @@ export default function ScanReader() {
     return { canvases, truncated: pdf.numPages > MAX_PDF_PAGES, numPages: pdf.numPages }
   }
 
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader()
+      fr.onload = () => resolve(fr.result)
+      fr.onerror = () => reject(new Error('read failed'))
+      fr.readAsDataURL(file)
+    })
+  }
+  // AI path: one image to the server, which calls Gemini and returns the text.
+  async function aiRead(imageBase64, mimeType) {
+    const r = await fetch('/api/ocr-ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageBase64, mimeType }) })
+    const j = await r.json().catch(() => ({}))
+    if (!j.success) throw new Error(j.error || 'AI reading failed')
+    return (j.text || '').trim()
+  }
+
   async function onFiles(files) {
     if (busy) return
     setBusy(true); setCopied(false)
+    const ai = mode === 'ai'
     try {
-      const worker = await getWorker()
+      const worker = ai ? null : await getWorker()
       for (const file of files) {
         const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
         const isImage = /^image\//.test(file.type)
@@ -95,8 +113,9 @@ export default function ScanReader() {
             const parts = []
             for (let i = 0; i < canvases.length; i++) {
               setStage(`Reading ${file.name} — page ${i + 1} of ${canvases.length}…`); setProgress(0)
-              const { data } = await worker.recognize(canvases[i])
-              const t = (data.text || '').trim()
+              let t
+              if (ai) t = await aiRead(canvases[i].toDataURL('image/jpeg', 0.9), 'image/jpeg')
+              else { const { data } = await worker.recognize(canvases[i]); t = (data.text || '').trim() }
               parts.push(canvases.length > 1 ? `— Page ${i + 1} —\n${t}` : t)
             }
             const thumb = canvases[0].toDataURL('image/jpeg', 0.6)
@@ -104,8 +123,10 @@ export default function ScanReader() {
             setItems((p) => [...p, { name: file.name, url: thumb, text: (parts.join('\n\n').trim() || '(no text found)') + note }])
           } else {
             const url = URL.createObjectURL(file)
-            const { data } = await worker.recognize(file)
-            setItems((p) => [...p, { name: file.name, url, text: (data.text || '').trim() || '(no text found)' }])
+            let t
+            if (ai) t = await aiRead(await fileToDataUrl(file), file.type || 'image/jpeg')
+            else { const { data } = await worker.recognize(file); t = (data.text || '').trim() }
+            setItems((p) => [...p, { name: file.name, url, text: t || '(no text found)' }])
           }
         } catch (err) {
           console.error('[scan-reader]', file.name, err)
@@ -133,13 +154,27 @@ export default function ScanReader() {
             <h1>Scan Reader</h1>
             <p>
               A customer sends a photo or PDF of a document — drop it here and the text comes out,
-              ready to copy. Reads English and Hebrew, image or PDF (every page). Everything runs
-              in your browser; the document is never uploaded anywhere.
+              ready to copy. Reads English and Hebrew, image or PDF (every page). By default it runs
+              entirely in your browser — nothing is uploaded.
             </p>
           </div>
 
           <div className="tool-card">
-            <div className="tool-card-title">1 · Drop the scan</div>
+            <div className="tool-card-title">1 · Reading mode</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className={`btn ${mode === 'device' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setMode('device')}>🔒 On this device (private)</button>
+              <button className={`btn ${mode === 'ai' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setMode('ai')}>✨ AI reading (higher accuracy)</button>
+            </div>
+            {mode === 'ai' && (
+              <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, fontSize: 13, lineHeight: 1.5, background: 'rgba(234,179,8,0.12)', border: '1px solid #eab308' }}>
+                ⚠ AI reading <strong>uploads the document to Google</strong> to read it — far more accurate, especially for Hebrew and messy scans, but the file leaves this device.
+                <strong> Don’t use it for passports, ID cards or other sensitive personal documents</strong> — use “On this device” for those.
+              </div>
+            )}
+          </div>
+
+          <div className="tool-card">
+            <div className="tool-card-title">2 · Drop the scan</div>
             <ToolDrop id="tool-ocr-file" multiple accept="image/*,application/pdf,.pdf"
               main={busy ? (stage || 'Working…') : 'Drop photos, scans or PDFs here — or click to choose'}
               sub="JPG / PNG / WEBP photos or PDF files. Clear, straight scans read best."
@@ -152,7 +187,7 @@ export default function ScanReader() {
 
           {items.length > 0 && (
             <div className="tool-card">
-              <div className="tool-card-title">2 · The text</div>
+              <div className="tool-card-title">3 · The text</div>
               {items.map((it, idx) => (
                 <div key={idx} style={{ marginBottom: 14 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
