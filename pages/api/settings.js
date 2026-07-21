@@ -25,8 +25,6 @@ const SETTING_RULES = {
   online_min_charge:      { type: 'money',   unit: '£' },
   online_hourly_rate:     { type: 'money',   unit: '£/hr' },
   online_repeat_from:     { type: 'count',   unit: 'th unit +' },
-  collect_later_late_pct: { type: 'percent', unit: '%' },
-  collect_later_late_min: { type: 'money',   unit: '£' },
   multi_phone_discount_pct: { type: 'percent', unit: '%' },
   multi_sim_discount_pct:   { type: 'percent', unit: '%' },
   multi_phone_discount_from: { type: 'count', unit: 'th phone' },
