@@ -1101,12 +1101,14 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .login-mesh {
   position: absolute; inset: -25%; z-index: 0;
   filter: blur(70px); opacity: 0.85; pointer-events: none;
+  /* Brand-only mesh (navy · sky · gold) so the split-second it shows before the
+     globe canvas paints is on-brand, never the old purple/cyan/pink flash. */
   background:
-    radial-gradient(38% 52% at 20% 28%, #7A5CFF 0%, rgba(122,92,255,0) 60%),
-    radial-gradient(32% 46% at 64% 16%, #00D4FF 0%, rgba(0,212,255,0) 62%),
-    radial-gradient(42% 52% at 82% 40%, #FF6BCB 0%, rgba(255,107,203,0) 60%),
-    radial-gradient(48% 58% at 44% 74%, #0060a8 0%, rgba(0,96,168,0) 64%),
-    radial-gradient(30% 40% at 90% 82%, #FFB86B 0%, rgba(255,184,107,0) 60%);
+    radial-gradient(38% 52% at 20% 28%, #0a5c93 0%, rgba(10,92,147,0) 60%),
+    radial-gradient(32% 46% at 64% 16%, #3ba0dd 0%, rgba(59,160,221,0) 62%),
+    radial-gradient(42% 52% at 82% 40%, #07639e 0%, rgba(7,99,158,0) 60%),
+    radial-gradient(48% 58% at 44% 74%, #0a2f5e 0%, rgba(10,47,94,0) 64%),
+    radial-gradient(30% 40% at 90% 82%, #c19161 0%, rgba(193,145,97,0) 60%);
   animation: loginDrift 22s ease-in-out infinite alternate;
 }
 @keyframes loginDrift {
