@@ -328,7 +328,9 @@ export default function Welcome() {
                 © {new Date().getFullYear()} {t.brandName}. {t.rights}
                 <span className="w-legal"> {t.tradingName}</span>
               </div>
-              <div><a href="#top">{t.backTop}</a></div>
+              <div>
+                <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="#top">{t.backTop}</a>
+              </div>
             </div>
           </footer>
         </div>
