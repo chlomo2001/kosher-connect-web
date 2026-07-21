@@ -39,6 +39,7 @@ function toAppFull(row) {
     passenger: row.passenger || '',
     route: row.route || '',
     airline: row.airline || '',
+    destinationCountry: row.destination_country || '',
     bookingReference: row.booking_reference || '',
     travelDate: row.travel_date || '',
     departureTime: row.departure_time ? String(row.departure_time).slice(0, 5) : '',
@@ -197,6 +198,7 @@ async function handler(req, res) {
             passenger: b.passenger || null,
             route: String(b.route).trim(),
             airline: b.airline || null,
+            destination_country: b.destinationCountry || null,
             booking_reference: b.bookingReference || null,
             travel_date: b.travelDate,
             departure_time: b.departureTime || null,
@@ -306,7 +308,7 @@ async function handler(req, res) {
       // MONEY (price/booking_fee) stays immutable once charged — corrections
       // go through an explicit wallet adjustment, so the ledger stays honest.
       const { id, status, notes, passengers, checkinDone, checkinBy, checkinDate,
-        passenger, route, airline, bookingReference, travelDate, departureTime,
+        passenger, route, airline, destinationCountry, bookingReference, travelDate, departureTime,
         arrivalTime, passportOnFile, passportExpiry } = req.body || {}
       if (!id) return res.status(400).json({ success: false, error: 'Booking id is required.' })
       const patch = {}
@@ -323,6 +325,7 @@ async function handler(req, res) {
         patch.route = String(route).trim()
       }
       if (airline !== undefined) patch.airline = airline || null
+      if (destinationCountry !== undefined) patch.destination_country = destinationCountry || null
       if (bookingReference !== undefined) patch.booking_reference = bookingReference || null
       if (travelDate !== undefined) patch.travel_date = travelDate || null
       if (departureTime !== undefined) patch.departure_time = departureTime || null

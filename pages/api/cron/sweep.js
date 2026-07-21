@@ -19,6 +19,10 @@
 import { db, tablesMode } from '../../../lib/db.js'
 import { resolveStaff } from '../../../lib/auth.js'
 import { advanceOneMonth } from '../../../lib/money.mjs'
+import { requirementFor, coverageStatus, KNOWN_DESTINATIONS } from '../../../lib/travelRules.mjs'
+
+const DEST_NAME = Object.fromEntries(KNOWN_DESTINATIONS.map(d => [d.code, d.name]))
+const RECORDABLE = new Set(['ESTA', 'ETA_CA', 'ETA_IL', 'ETIAS', 'ETA_UK'])
 
 const enc = encodeURIComponent
 const localDate = (offsetDays = 0) => {
@@ -293,6 +297,72 @@ async function handler(req, res) {
       passportTasks++
     }
     counts.passportTasks = passportTasks
+    })
+
+    await section('travelReq', async () => {
+    // ── 3c. Travel authorisations (ESTA / eTA / ETA-IL) not recorded, or
+    // expiring before an upcoming trip. Uses the same rules as the booking
+    // panel (lib/travelRules.mjs). Only the crisp, actionable case raises a
+    // task: an authorisation is NEEDED and is missing or expires before the
+    // travel date. CHECK / VISA / passport-only never nag here (staff see
+    // those in the panel). Key includes the passenger index so two travellers
+    // on one booking get their own task; the whole set is recomputed each run
+    // and stale ones closed. ~120-day look-ahead.
+    const trips = await db.select(
+      'bookings',
+      `select=id,travel_date,destination_country,customer_id,` +
+      `booking_passengers(full_name,nationality),customers(legacy_id)` +
+      `&travel_date=gte.${today}&travel_date=lte.${localDate(120)}` +
+      `&destination_country=not.is.null&status=neq.Cancelled`
+    )
+    const wanted = new Set()
+    let travelTasks = 0
+    // Cache authorisations per customer so a family's trips don't re-query.
+    const authCache = new Map()
+    for (const b of trips) {
+      const pax = b.booking_passengers || []
+      if (!pax.length) continue
+      if (!authCache.has(b.customer_id)) {
+        authCache.set(b.customer_id,
+          await db.select('travel_authorisations', `select=traveller_name,type,valid_until&customer_id=eq.${enc(b.customer_id)}`))
+      }
+      const allAuths = authCache.get(b.customer_id)
+      for (let i = 0; i < pax.length; i++) {
+        const p = pax[i]
+        const name = (p.full_name || '').trim()
+        if (!name) continue
+        const req = requirementFor({ destination: b.destination_country, nationality: p.nationality })
+        if (!RECORDABLE.has(req.code)) continue
+        const mine = allAuths.filter(a => (a.traveller_name || '').trim().toLowerCase() === name.toLowerCase() && a.type === req.code)
+        const cov = coverageStatus({ requirement: req, travelDate: b.travel_date, auths: mine })
+        const needsTask = cov.status === 'missing' || (cov.status === 'expiring' && cov.expiresBeforeTravel)
+        if (!needsTask) continue
+        const ref = `TRAVELREQ-${b.id}-${i}`
+        wanted.add(ref)
+        const destName = DEST_NAME[b.destination_country] || b.destination_country
+        const title = cov.status === 'missing'
+          ? `${req.label} needed — ${name} (${destName}, ${b.travel_date})`
+          : `${req.label} expires before trip — ${name} (${destName}, ${b.travel_date})`
+        await upsertOpenTask({
+          reference: ref,
+          title,
+          customerUuid: b.customer_id,
+          notes: 'Record it under the booking’s 🛂 Travel requirements, or send the customer the official link.',
+          dueDate: b.travel_date,
+        })
+        travelTasks++
+      }
+    }
+    counts.travelTasks = travelTasks
+
+    // Close any TRAVELREQ task no longer wanted (recorded now, trip passed,
+    // destination cleared, booking cancelled).
+    const openTravel = await db.select('tasks', 'select=id,reference&done=is.false&reference=like.TRAVELREQ-*')
+    let travelClosed = 0
+    for (const t of openTravel) {
+      if (!wanted.has(t.reference)) travelClosed += await closeOpenTask(t.reference)
+    }
+    counts.travelClosed = travelClosed
     })
 
     await section('pickups', async () => {

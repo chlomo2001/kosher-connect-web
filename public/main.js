@@ -98,6 +98,21 @@ window.api = {
     body: JSON.stringify(b),
   }).then(r => r.json()),
 
+  getTravelAuth: (customerId) =>
+    kcFetch(`/api/travel-auth?customerId=${encodeURIComponent(customerId)}`)
+      .then(r => (r.ok ? r.json() : { success: true, authorisations: [] })),
+  getTravelReqView: (bookingId) =>
+    kcFetch(`/api/travel-auth?bookingId=${encodeURIComponent(bookingId)}`)
+      .then(r => (r.ok ? r.json() : { success: false, error: 'Travel view unavailable.' })),
+  saveTravelAuth: (a) => kcFetch('/api/travel-auth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(a),
+  }).then(r => r.json()),
+  deleteTravelAuth: (id) => kcFetch(`/api/travel-auth?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  }).then(r => r.json()),
+
   getRepairs: () => kcFetch('/api/repairs').then(r => r.ok ? r.json() : []),
   addRepair: (r) => kcFetch('/api/repairs', {
     method: 'POST',
@@ -5850,6 +5865,7 @@ function openEditBookingModal(id) {
       💷 Price <strong>${fmtGbp((b.price || 0))}</strong> + fee <strong>${fmtGbp((b.bookingFee || 0))}</strong> (read-only — adjust money via the customer's wallet).
       &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openPassengersModal('${escHtml(b.id)}');return false;">👥 Passengers</a>
       &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openCheckinModal('${escHtml(b.id)}');return false;">🛫 Check-in</a>
+      &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openTravelReqModal('${escHtml(b.id)}');return false;">🛂 Travel requirements</a>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
@@ -5882,6 +5898,162 @@ async function saveEditBooking(id) {
   closeDynamicModal();
   toast('Booking updated.', 'success');
   renderBookingsTab();
+}
+
+// ─────────────────────────────────────────────
+//  TRAVEL REQUIREMENTS  (🛂)
+// ─────────────────────────────────────────────
+// Per-booking panel: for each passenger, what entry authorisation is needed
+// (ESTA / eTA / ETA-IL / visa / none) given their nationality + the trip's
+// destination, whether the passport is valid long enough, and whether a
+// recorded authorisation covers the trip. The rules run server-side
+// (lib/travelRules.mjs) — this only renders. Actions are DIY: an official
+// link + a draft message for the customer. GUIDANCE ONLY — the panel always
+// tells staff to confirm on the official site.
+
+const KC_DEST_NAMES = { US: 'USA', IL: 'Israel', CA: 'Canada', EU: 'Europe (Schengen)', UK: 'United Kingdom' };
+const KC_RECORDABLE = new Set(['ESTA', 'ETA_CA', 'ETA_IL', 'ETIAS', 'ETA_UK']);
+
+function travelReqBadge(code, label) {
+  const styles = {
+    ESTA:   'background:rgba(7,99,158,0.14);color:#07639e;',
+    ETA_CA: 'background:rgba(7,99,158,0.14);color:#07639e;',
+    ETA_IL: 'background:rgba(7,99,158,0.14);color:#07639e;',
+    ETIAS:  'background:rgba(7,99,158,0.14);color:#07639e;',
+    ETA_UK: 'background:rgba(7,99,158,0.14);color:#07639e;',
+    VISA:   'background:rgba(239,68,68,0.14);color:var(--danger);',
+    NONE:   'background:rgba(34,197,94,0.15);color:var(--success);',
+    CHECK:  'background:#f5e9d4;color:#9b6829;',
+  };
+  return `<span class="badge" style="${styles[code] || styles.CHECK}">${escHtml(label)}</span>`;
+}
+
+async function openTravelReqModal(bookingId) {
+  const res = await window.api.getTravelReqView(bookingId).catch(() => null);
+  if (!res || !res.success) {
+    toast((res && res.error) || 'Could not load travel requirements.', 'error');
+    return;
+  }
+  const destSel = ['', 'US', 'IL', 'CA', 'EU', 'UK'].map(code =>
+    `<option value="${code}" ${res.destination === code ? 'selected' : ''}>${code ? KC_DEST_NAMES[code] : '— choose destination —'}</option>`
+  ).join('');
+  const destName = KC_DEST_NAMES[res.destination] || '';
+
+  const paxHtml = (res.passengers || []).filter(p => p.name).map((p, i) => {
+    const r = p.requirement || {};
+    const cov = p.coverage || {};
+    const auth = (res.authorisations || []).find(a =>
+      a.travellerName.trim().toLowerCase() === p.name.trim().toLowerCase() && a.type === r.code);
+    // passport readiness line
+    let pass = '';
+    if (p.passport.ok === true) pass = `<span style="color:var(--success);">✓ Passport valid long enough</span>`;
+    else if (p.passport.ok === false) pass = `<span style="color:var(--danger);">⚠ ${escHtml(p.passport.note)}</span>`;
+    else pass = `<span style="color:var(--muted);">Passport expiry not on file</span>`;
+
+    // coverage + actions
+    let cover = '';
+    const validity = r.validityMonths ? ` · valid ~${Math.round(r.validityMonths / 12)} yr${r.validityMonths >= 24 ? 's' : ''}` : '';
+    const link = r.url ? `<a href="${escHtml(r.url)}" target="_blank" rel="noopener">Open official site ↗</a>` : '';
+    const draftBtn = r.code !== 'NONE'
+      ? `<a href="#" onclick="copyTravelDraft(${JSON.stringify(destName)},${JSON.stringify(r.label)},${JSON.stringify(r.url || '')});return false;">✉️ Copy draft for customer</a>` : '';
+
+    if (cov.status === 'not-needed') {
+      cover = `<div style="color:var(--success);font-size:13px;">No entry authorisation needed — passport only.</div>`;
+    } else if (cov.status === 'check') {
+      cover = `<div style="font-size:13px;color:#9b6829;">${escHtml(r.note || 'Confirm the requirement on the official site before travel.')} ${link}</div>`;
+    } else if (KC_RECORDABLE.has(r.code)) {
+      const covLine = cov.status === 'covered'
+        ? `<span style="color:var(--success);">✓ ${escHtml(r.label)} on file — valid until ${escHtml(cov.validUntil || '')}</span>`
+        : cov.status === 'expiring'
+          ? `<span style="color:#9b6829;">⚠ ${escHtml(r.label)} ${cov.expiresBeforeTravel ? 'expires BEFORE this trip' : 'expiring soon'} — valid until ${escHtml(cov.validUntil || '')}</span>`
+          : `<span style="color:var(--danger);">Not recorded yet — ${escHtml(r.label)} needed${validity}</span>`;
+      cover = `
+        <div style="font-size:13px;margin-bottom:6px;">${covLine}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          <input class="form-input" id="traUntil_${i}" type="date" value="${escHtml(auth ? auth.validUntil : '')}" title="Approved until" style="width:150px;">
+          <input class="form-input" id="traRef_${i}" value="${escHtml(auth ? auth.reference : '')}" placeholder="Reference no." style="width:150px;">
+          <button class="btn btn-outline btn-sm" style="font-size:12px;padding:4px 10px;"
+            onclick="recordTravelAuth('${escHtml(bookingId)}','${escHtml(res.customerId)}',${i},${JSON.stringify(p.name)},'${r.code}','${escHtml(res.destination)}')">
+            ${auth ? 'Update' : 'Record'} approved-until</button>
+          ${auth ? `<button class="btn btn-outline btn-sm" style="font-size:12px;padding:4px 10px;color:var(--danger);" onclick="deleteTravelAuthRow('${escHtml(bookingId)}','${escHtml(auth.id)}')">Remove</button>` : ''}
+        </div>
+        <div style="font-size:12px;margin-top:6px;">${link} ${link && draftBtn ? '&nbsp;·&nbsp;' : ''} ${draftBtn}</div>`;
+    } else {
+      cover = `<div style="font-size:13px;">${link} ${draftBtn}</div>`;
+    }
+
+    return `
+      <div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+          <strong>${escHtml(p.name)}</strong>
+          <span style="font-size:12px;color:var(--muted);">${escHtml(p.nationality || 'nationality not set')}</span>
+        </div>
+        <div style="margin-bottom:6px;">${travelReqBadge(r.code, r.label)}${r.note && cov.status !== 'check' ? `<span style="font-size:12px;color:var(--muted);margin-left:8px;">${escHtml(r.note)}</span>` : ''}</div>
+        <div style="font-size:13px;margin-bottom:8px;">${pass}</div>
+        ${cover}
+      </div>`;
+  }).join('');
+
+  showDynamicModal(`
+    <div class="modal-title">🛂 Travel requirements${res.route ? ` — ${escHtml(res.route)}` : ''}</div>
+    <div class="form-group form-full">
+      <label class="form-label">Destination</label>
+      <select class="form-input" onchange="saveBookingDestination('${escHtml(bookingId)}', this.value)">${destSel}</select>
+    </div>
+    ${!res.destination ? `<div style="color:var(--muted);font-size:13px;margin:6px 0 4px;">Choose the destination to see what each passenger needs.</div>` : ''}
+    ${res.destination && !paxHtml ? `<div style="color:var(--muted);font-size:13px;margin:6px 0;">No passengers on this booking yet — add them under 👥 Passengers.</div>` : ''}
+    <div style="margin-top:10px;">${paxHtml}</div>
+    <div style="font-size:12px;color:var(--muted);background:var(--bg-secondary);border-radius:8px;padding:8px 10px;margin-top:4px;">
+      ℹ️ Guidance based on the rules we've set for common routes — <strong>always confirm on the official site</strong> before travel. Requirements can change.
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="closeDynamicModal();openEditBookingModal('${escHtml(bookingId)}')">← Back to booking</button>
+    </div>
+  `);
+}
+
+async function saveBookingDestination(bookingId, value) {
+  const res = await window.api.updateBooking({ id: bookingId, destinationCountry: value });
+  if (!res.success) { toast(res.error || 'Could not save destination.', 'error'); return; }
+  const idx = bookings.findIndex(x => x.id === bookingId);
+  if (idx !== -1) bookings[idx] = res.booking;
+  openTravelReqModal(bookingId);
+}
+
+async function recordTravelAuth(bookingId, customerId, i, name, type, country) {
+  const validUntil = document.getElementById(`traUntil_${i}`)?.value || '';
+  const reference = document.getElementById(`traRef_${i}`)?.value.trim() || '';
+  if (!validUntil) { toast('Enter the “approved until” date.', 'error'); return; }
+  const res = await window.api.saveTravelAuth({ customerId, travellerName: name, type, country, validUntil, reference });
+  if (!res.success) { toast(res.error || 'Could not save the record.', 'error'); return; }
+  toast('Saved ✓', 'success');
+  openTravelReqModal(bookingId);
+}
+
+async function deleteTravelAuthRow(bookingId, id) {
+  if (!confirm('Remove this recorded authorisation?')) return;
+  const res = await window.api.deleteTravelAuth(id);
+  if (!res.success) { toast(res.error || 'Could not remove it.', 'error'); return; }
+  toast('Removed.', 'success');
+  openTravelReqModal(bookingId);
+}
+
+function copyTravelDraft(destName, label, url) {
+  const lines = [
+    `Hi,`,
+    ``,
+    `For your trip${destName ? ` to ${destName}` : ''} you'll need ${label} before you travel.`,
+    url ? `You can apply here (official site): ${url}` : `Please apply on the official government site before you travel.`,
+    `It usually only takes a few minutes. Once it's approved, please let us know.`,
+    ``,
+    `Thank you,`,
+    `Kosher Connect`,
+  ];
+  const text = lines.join('\n');
+  navigator.clipboard.writeText(text).then(
+    () => toast('Draft copied — paste it to the customer.', 'success'),
+    () => toast('Could not copy — select and copy manually.', 'error'),
+  );
 }
 
 // ─────────────────────────────────────────────
