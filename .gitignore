@@ -9,3 +9,6 @@ data/
 
 # Personal Claude Code overrides (permissions etc.) — never commit
 .claude/settings.local.json
+
+# Local scratch: screenshots, harnesses, dev logs — working files, never shipped
+scratchpad/
