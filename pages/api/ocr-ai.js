@@ -39,7 +39,12 @@ async function handler(req, res) {
     if (!r.ok) {
       const detail = (await r.text().catch(() => '')).slice(0, 200)
       console.error('[api/ocr-ai] gemini', r.status, detail)
-      return res.status(502).json({ success: false, error: `The AI reader returned an error (${r.status}). Check the API key.` })
+      const msg = r.status === 429
+        ? 'The AI reader is over its Google quota — enable billing on the Gemini project, or wait for the free-tier limit to reset.'
+        : r.status === 400 || r.status === 403
+          ? 'The AI reader key was rejected — check GEMINI_API_KEY in the server settings.'
+          : `The AI reader returned an error (${r.status}).`
+      return res.status(502).json({ success: false, error: msg })
     }
     const j = await r.json()
     const text = (j?.candidates?.[0]?.content?.parts || []).map((p) => p.text).filter(Boolean).join('') || ''
