@@ -51,7 +51,15 @@ export default function ScanReader() {
     const pdfjs = await import('pdfjs-dist')
     pdfjs.GlobalWorkerOptions.workerSrc = '/ocr/pdf.worker.min.mjs'
     const data = new Uint8Array(await file.arrayBuffer())
-    const pdf = await pdfjs.getDocument({ data }).promise
+    // cMapUrl + standardFontDataUrl let pdf.js render PDFs that embed CJK/Hebrew
+    // character maps or reference the standard 14 fonts — without them, those
+    // PDFs throw and the read fails. All self-hosted under /public/ocr.
+    const pdf = await pdfjs.getDocument({
+      data,
+      cMapUrl: '/ocr/cmaps/',
+      cMapPacked: true,
+      standardFontDataUrl: '/ocr/standard_fonts/',
+    }).promise
     const total = Math.min(pdf.numPages, MAX_PDF_PAGES)
     const canvases = []
     for (let n = 1; n <= total; n++) {
@@ -99,8 +107,10 @@ export default function ScanReader() {
             const { data } = await worker.recognize(file)
             setItems((p) => [...p, { name: file.name, url, text: (data.text || '').trim() || '(no text found)' }])
           }
-        } catch {
-          setItems((p) => [...p, { name: file.name, error: isPdf ? 'Could not read this PDF.' : 'Could not read this image.' }])
+        } catch (err) {
+          console.error('[scan-reader]', file.name, err)
+          const detail = err && err.message ? ` (${String(err.message).slice(0, 120)})` : ''
+          setItems((p) => [...p, { name: file.name, error: (isPdf ? 'Could not read this PDF' : 'Could not read this image') + detail }])
         }
       }
     } catch {
