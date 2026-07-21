@@ -43,7 +43,7 @@ export default function ScanReader() {
     return workerRef.current
   }
 
-  const MAX_PDF_PAGES = 25
+  const MAX_PDF_PAGES = 50
 
   // Render each PDF page to a canvas in the browser (pdf.js, self-hosted worker
   // under /public/ocr) so the same OCR path can read it. Nothing is uploaded.
@@ -135,7 +135,7 @@ export default function ScanReader() {
               sub="JPG / PNG / WEBP photos or PDF files. Clear, straight scans read best."
               describedBy="tool-ocr-hint" onFiles={onFiles} />
             <div className="tool-hint" id="tool-ocr-hint">
-              Multi-page PDFs are read page by page (up to 25 pages).
+              Multi-page PDFs are read page by page (up to 50 pages).
               {busy && progress > 0 ? ` · ${progress}%` : ''}
             </div>
           </div>
