@@ -1388,6 +1388,7 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .svc-float {
   position: fixed; right: 20px; bottom: 20px; z-index: 900;
   display: flex; align-items: center; gap: 6px;
+  cursor: grab; touch-action: none; user-select: none;
   background: var(--panel); border: 1px solid var(--border);
   border-radius: 14px; padding: 8px 10px 8px 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);

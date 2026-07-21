@@ -3839,7 +3839,7 @@ function buildReminderDraft(c) {
   const lines = [`Hi ${c.firstName || 'there'},`, ''];
   let any = false;
   const owed = customerOwed(c);
-  if (owed > 0) { lines.push(`You have an outstanding balance of ${fmtGbp(owed)} on your account. We'd appreciate settling it when you can.`); any = true; }
+  if (owed > 0) { lines.push(`Our records show an outstanding balance of ${fmtGbp(owed)} on your account. This balance is now due — please arrange payment within 7 days, either in store, by bank transfer, or through your online account. If payment has already been made, or you'd like to discuss the balance, please contact us right away.`); any = true; }
   const overdue = rentals.filter(r => r.customerId === c.id && r.status === 'overdue');
   for (const r of overdue) { lines.push(`Your rental phone ${r.phoneNumber || ''} was due back on ${fmtDate(r.toDate)} — please return it to avoid extra charges.`); any = true; }
   const soon = localISO(new Date(Date.now() + 7 * 86400000));
@@ -6237,7 +6237,7 @@ function svcTimerStop() {
 function svcTimerFloatFrame(t) {
   const paused = !t.runningSince;
   return `
-    <div class="svc-float-main" onclick="goToTab('services')" title="Open Services">
+    <div class="svc-float-main" onclick="if(!document.getElementById('svcTimerFloat')?.dataset.dragged)goToTab('services')" title="Open Services (drag to move)">
       <span class="svc-float-icon">${paused ? '⏸' : '⏱'}</span>
       <div class="svc-float-info">
         <div class="svc-float-name">${escHtml(t.customerName || 'customer')}</div>
@@ -6258,7 +6258,12 @@ function svcTimerFloatTick() {
   // Hidden with no session, outside the portal (login/portal-less), or on
   // Services where the full timer card already shows.
   if (!t || currentTab === 'services' || !document.getElementById('mainContent')) { if (el) el.remove(); return; }
-  if (!el) { el = document.createElement('div'); el.id = 'svcTimerFloat'; el.className = 'svc-float'; document.body.appendChild(el); }
+  if (!el) {
+    el = document.createElement('div'); el.id = 'svcTimerFloat'; el.className = 'svc-float';
+    svcFloatRestorePos(el);
+    el.addEventListener('pointerdown', svcFloatDragStart);
+    document.body.appendChild(el);
+  }
   const sig = `${t.customerId}|${t.runningSince ? 'run' : 'pause'}`;
   if (el.dataset.sig !== sig) {            // only rebuild the frame on a state change
     el.dataset.sig = sig;
@@ -6275,6 +6280,48 @@ function svcTimerFloatTick() {
 function startSvcTimerFloat() {
   svcTimerFloatTick();
   if (!window.__svcFloat) window.__svcFloat = setInterval(svcTimerFloatTick, 1000);
+}
+
+// The chip can cover exactly the corner you need to read — so it's draggable.
+// Grab anywhere that isn't a button; the spot sticks per browser. A plain
+// click (under 5px of movement) still opens Services.
+function svcFloatRestorePos(el) {
+  try {
+    const pos = JSON.parse(localStorage.getItem('kcTimerPos') || 'null');
+    if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.y)) {
+      el.style.left = `${Math.min(Math.max(0, pos.x), window.innerWidth - 90)}px`;
+      el.style.top = `${Math.min(Math.max(0, pos.y), window.innerHeight - 44)}px`;
+      el.style.right = 'auto'; el.style.bottom = 'auto';
+    }
+  } catch { /* default bottom-right */ }
+}
+function svcFloatDragStart(e) {
+  if (e.target.closest('button')) return;
+  const el = document.getElementById('svcTimerFloat');
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  const offX = e.clientX - r.left, offY = e.clientY - r.top;
+  const startX = e.clientX, startY = e.clientY;
+  let moved = false;
+  const move = (ev) => {
+    if (!moved && Math.hypot(ev.clientX - startX, ev.clientY - startY) < 5) return;
+    moved = true;
+    el.style.left = `${Math.min(Math.max(0, ev.clientX - offX), window.innerWidth - r.width)}px`;
+    el.style.top = `${Math.min(Math.max(0, ev.clientY - offY), window.innerHeight - r.height)}px`;
+    el.style.right = 'auto'; el.style.bottom = 'auto';
+  };
+  const up = () => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    if (moved) {
+      const r2 = el.getBoundingClientRect();
+      try { localStorage.setItem('kcTimerPos', JSON.stringify({ x: r2.left, y: r2.top })); } catch { /* not fatal */ }
+      el.dataset.dragged = '1';                    // swallow the click that follows the drop
+      setTimeout(() => { delete el.dataset.dragged; }, 0);
+    }
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
 }
 
 async function renderServicesTab() {
@@ -8400,13 +8447,15 @@ async function renderTasksTab() {
         <div style="flex:1;min-width:0;">
           <div class="history-desc" style="${t.done ? 'text-decoration:line-through;' : ''}">${escHtml(t.title)}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px;">
-            ${custLabel}${t.source !== 'manual' ? '🤖 auto · ' : ''}${t.dueDate ? `<span style="${overdueDue && !t.done ? 'color:var(--danger);font-weight:600;' : ''}">due ${fmtDate(t.dueDate)}</span> · ` : ''}${t.notes ? escHtml(t.notes) : ''}
+            ${custLabel}${t.source !== 'manual' ? '🤖 auto · ' : ''}${t.dueDate ? `<span style="${overdueDue && !t.done ? 'color:var(--danger);font-weight:600;' : ''}">due ${fmtDate(t.dueDate)}</span>` : ''}
           </div>
+          ${t.notes ? `<div style="font-size:12px;color:var(--text);margin-top:5px;white-space:pre-line;line-height:1.5;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:6px 10px;">${escHtml(t.notes)}</div>` : ''}
         </div>
         ${taskPriorityBadge(t.priority)}
       </div>
       ${!t.done ? `
       <div class="task-actions">
+        ${/^New signup:/i.test(t.title || '') && !t.customerId ? `<button class="btn btn-primary btn-sm" style="font-size:11px;padding:3px 10px;" onclick="addCustomerFromTask('${escHtml(t.id)}')">➕ Add as customer</button>` : ''}
         ${isMoneyTask ? `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openWalletModal('${escHtml(String(t.customerId))}')">💰 Record</button>` : ''}
         <select class="task-mini" onchange="setTaskPriority('${escHtml(t.id)}', this.value)" title="Priority">
           ${['High', 'Normal', 'Low'].map(p => `<option value="${p}" ${t.priority === p ? 'selected' : ''}>${p === 'High' ? '🔥 Now' : p === 'Normal' ? '📋 Next' : '🌙 Later'}</option>`).join('')}
@@ -8504,7 +8553,38 @@ async function saveNewTask() {
 async function toggleTaskDone(id, done) {
   const res = await window.api.updateTask({ id, done });
   if (!res.success) { toast(res.error || 'Could not update the task.', 'error'); }
+  // The card jumps lanes on re-render — say where it went so it doesn't feel
+  // like it vanished, and how to get it back.
+  else if (done) toast('Done ✓ — moved to “✓ Completed” at the bottom of this page. Untick it there to bring it back.', 'success');
   renderTasksTab();
+}
+
+// "New signup:" tasks → open the customer form prefilled from the task, so
+// approving a signup is one click + a check of the details. The task itself
+// stays open until it's ticked, so nothing disappears mid-flow.
+function addCustomerFromTask(id) {
+  const t = tasksList.find(x => x.id === id);
+  if (!t) return;
+  const name = (t.title || '').replace(/^New signup:\s*/i, '').trim();
+  const [firstName, ...rest] = name.split(/\s+/);
+  const phone = (t.notes || '').match(/Phone:\s*([^\n]+)/i)?.[1]?.trim() || '';
+  const email = (t.notes || '').match(/Email:\s*([^\n]+)/i)?.[1]?.trim() || '';
+  const asked = (t.notes || '').match(/Asked for:\s*([^\n]+)/i)?.[1]?.trim() || '';
+  openAddModal();
+  document.getElementById('fFirstName').value = firstName || '';
+  document.getElementById('fLastName').value = rest.join(' ');
+  document.getElementById('fEmail').value = email;
+  const codes = ['+972', '+44', '+1-CA', '+1', '+33', '+49', '+43', '+41', '+32', '+31', '+61', '+55', '+52', '+54', '+27'];
+  let code = '+44', phoneNum = phone;
+  for (const cc of codes) {
+    const plain = cc.replace('-CA', '');
+    if (phoneNum.startsWith(plain)) { code = cc; phoneNum = phoneNum.slice(plain.length).trim(); break; }
+  }
+  document.getElementById('fCountryCode').value = code;
+  document.getElementById('fPhoneNumber').value = phoneNum;
+  const fNotes = document.getElementById('fNotes');
+  if (fNotes && asked) fNotes.value = `Signup request: ${asked}`;
+  toast('Details filled in from the signup — check them, then Save. Tick the task when you’re done.', 'success');
 }
 
 // ─────────────────────────────────────────────

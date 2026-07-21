@@ -46,6 +46,12 @@ const P = {
     download: 'Download', upload: 'Send us a document', uploading: 'Uploading…',
     upSent: 'Sent — we’ll review it shortly.', upFailed: 'Upload failed.',
     pendingReview: 'Awaiting review', received: 'Received',
+    reqTitle: 'Need something?',
+    reqHint: 'Tell us what you need and we’ll get back to you — a call back, a question about your plan, anything.',
+    reqPlaceholder: 'e.g. Please call me about my SIM plan — mornings are best, 07…',
+    reqSend: 'Send request', reqSending: 'Sending…',
+    reqSent: '✓ Got it — we’ll be in touch.',
+    reqFailed: 'That didn’t send. Please try again, or just call us.',
     qShort: 'Questions? We’re here —',
     reassure: 'No password needed — we email you a secure one-time sign-in link.',
     statuses: { active: 'Active', booked: 'Booked', overdue: 'Overdue', Booked: 'Booked', Ticketed: 'Ticketed', Confirmed: 'Confirmed' },
@@ -88,6 +94,12 @@ const P = {
     download: 'הורדה', upload: 'שליחת מסמך אלינו', uploading: 'המסמך בדרך…',
     upSent: 'הגיע אלינו — נעבור עליו בקרוב.', upFailed: 'ההעלאה לא הצליחה. נסו שוב.',
     pendingReview: 'ממתין לבדיקה', received: 'התקבל',
+    reqTitle: 'צריכים משהו?',
+    reqHint: 'כתבו לנו מה אתם צריכים ונחזור אליכם — שיחת טלפון, שאלה על החבילה, כל דבר.',
+    reqPlaceholder: 'למשל: נא להתקשר אליי בעניין חבילת הסים — עדיף בבוקר, 07…',
+    reqSend: 'שליחת בקשה', reqSending: 'שולחים…',
+    reqSent: '✓ קיבלנו — נחזור אליכם בקרוב.',
+    reqFailed: 'הבקשה לא נשלחה. נסו שוב, או פשוט התקשרו אלינו.',
     qShort: 'יש שאלה? אנחנו כאן —',
     reassure: 'בלי סיסמה ובלי הרשמה — שולחים לכם למייל קישור כניסה מאובטח, חד־פעמי.',
     statuses: { active: 'פעילה', booked: 'שמורה', overdue: 'באיחור', Booked: 'הוזמנה', Ticketed: 'כורטסה', Confirmed: 'מאושרת' },
@@ -156,6 +168,9 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   const [docs, setDocs] = useState(null)
   const [docBusy, setDocBusy] = useState(false)
   const [docMsg, setDocMsg] = useState('')
+  const [reqText, setReqText] = useState('')
+  const [reqBusy, setReqBusy] = useState(false)
+  const [reqMsg, setReqMsg] = useState('')
   const fileRef = useRef(null)
 
   // Pay by card
@@ -239,6 +254,22 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       else { setDocMsg(L.upSent); loadDocs() }
     } catch { setDocMsg(L.upFailed) }
     finally { setDocBusy(false); if (fileRef.current) fileRef.current.value = '' }
+  }
+  async function sendRequest() {
+    const msg = reqText.trim()
+    if (!msg || reqBusy) return
+    setReqBusy(true); setReqMsg('')
+    try {
+      const r = await fetch('/api/portal/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ message: msg }),
+      })
+      const d = await r.json()
+      if (d.success) { setReqMsg(L.reqSent); setReqText('') }
+      else setReqMsg(d.error || L.reqFailed)
+    } catch { setReqMsg(L.reqFailed) }
+    finally { setReqBusy(false) }
   }
   async function downloadDoc(id) {
     try {
@@ -518,7 +549,9 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                 ))}
 
               <div style={{ marginTop: 12 }}>
-                <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={onPickFile} style={{ display: 'none' }} />
+                <input ref={fileRef} type="file"
+                  accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                  onChange={onPickFile} style={{ display: 'none' }} />
                 <button className="btn btn-outline" onClick={() => fileRef.current && fileRef.current.click()} disabled={docBusy}
                   style={{ fontSize: 13, padding: '8px 14px' }}>
                   {docBusy ? L.uploading : L.upload}
@@ -538,6 +571,19 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                   ))}
                 </div>
               )}
+            </div>
+
+            <div className="p-section">
+              <div className="p-kicker">💬 {L.reqTitle}</div>
+              <div className="p-empty" style={{ marginBottom: 8 }}>{L.reqHint}</div>
+              <textarea className="form-input" rows={3} value={reqText} maxLength={500}
+                onChange={(e) => setReqText(e.target.value)} placeholder={L.reqPlaceholder}
+                style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit', fontSize: 14 }} />
+              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <button className="btn btn-primary" onClick={sendRequest} disabled={reqBusy || !reqText.trim()}
+                  style={{ fontSize: 13, padding: '8px 16px' }}>{reqBusy ? L.reqSending : L.reqSend}</button>
+                {reqMsg && <span role="status" className="p-msg">{reqMsg}</span>}
+              </div>
             </div>
 
             <div className="p-foot">

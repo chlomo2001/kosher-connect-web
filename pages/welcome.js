@@ -60,7 +60,7 @@ const T = {
     storyTitle: 'Why Kosher Connect exists',
     story1: 'It started with watching people overpay — badly. Good families tied into multi-year SIM contracts through reseller companies, where every minute past the allowance cost a small fortune. That needed an end.',
     story2: 'So it began with guiding friends straight to the network that actually fit them — no contract, no company in the middle, no catch. From there it grew into everything the community needs from kosher technology: phones, travel, numbers, Kol Torah audio and repairs — under one roof, explained straight.',
-    contactTitle: 'Come in or call',
+    contactTitle: 'Come in, call or email',
     contactLead: 'A phone, a plan, a repair, a trip — just ask. No obligation, and you’ll get a straight answer.',
     address: '421 Bury New Road, Salford M7 4ED — the door left of Toy Zone (MMR Group sign), ring bell 5, one floor up',
     visitTitle: 'Visit the shop', directions: 'Get directions', hoursLabel: 'Open',
