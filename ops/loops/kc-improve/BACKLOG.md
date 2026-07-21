@@ -13,8 +13,7 @@ Safe UX quick-wins (one kc-improve cycle, no money risk, offline-verifiable):
 - [x] **P1 · S** — Booking status badges don't flip for dark theme — DONE (82d09fc, B2).
 - [x] **P2 · S** — `user-select:none` blocks copying phone/IMEI/ref — DONE (097aa56, B3).
 - [x] **P2 · S** — Two-column forms don't collapse on mobile — DONE (097aa56, B4).
-- [ ] **P2 · M** — Unify the Rentals filter chrome into `kcFilterSort`
-      (`main.js:1197-1242`) — it's the one tab that predates the shared control.
+- [x] **P2 · M** — Unify the Rentals filter chrome into `kcFilterSort` — DONE (4c9c225, B5).
 - [x] **P2 · L** — Keyboard-operate clickable rows + drill-downs — DONE (9fb80d7, B6).
 - [x] **P2 · M** — Modal dialog semantics + focus trap — DONE (b4150a0, B7).
 
@@ -41,8 +40,8 @@ Safe (loop-eligible), ranked value ÷ effort:
       active keys; pairs with ⌘K. (Linear.)
 - [ ] **P1 · S** — **Park/hold an open till sale** — suspend a named basket, resume
       later without losing it. (Loyverse.)
-- [ ] **P1 · S** — **Maintenance/downtime block** on a phone/IMEI — removed from
-      availability until cleared. (Booqable.)
+- [x] **P1 · S** — **Maintenance/downtime block** on a phone/IMEI — DONE (this cycle).
+      Edit Phone gains a 🔧 checkbox + reason; hidden from New Rental + pool picks.
 - [ ] **P2 · S** — **Pinned + recently-visited** quick-nav in the top bar. (Stripe.)
 - [ ] **P2 · S** — **Low-stock threshold** per accessory SKU → dashboard badge +
       list filter. (Loyverse.)
@@ -69,8 +68,9 @@ Safe (loop-eligible), ranked value ÷ effort:
       counted) at shift close. (Loyverse.) *internal cash reconciliation.*
 - [ ] **P2 · M** ⚠ — **Status-change auto-SMS** ("ready for collection", "conversion
       done") + **reply-to-approve**. (RepairShopr.) *gated on the email/SMS decision.*
-- [ ] **P2 · S** ⚠ — **Non-refundable damage waiver** (~5% line) as a deposit
-      alternative. (Goodshuffle.) *customer charge.*
+- [x] **P2 · S** ⚠ — ~~Non-refundable damage waiver~~ — built 17 Jul, then **REMOVED
+      by owner decision 20 Jul** (never confirmed; damage-charges schedule covers it).
+      **Do not rebuild.**
 - [ ] **P3 · L** ⚠ — **Offline sale queue** + unsynced badge, auto-sync on reconnect.
       (Loyverse.) *money persistence — careful design.*
 
@@ -135,6 +135,7 @@ Safe (loop-eligible), ranked value ÷ effort:
 | 07-17 | Shloime docs: Three enrich (62 aliases/33 ICCIDs/10 creds), 2 Wizz bookings, 5 USA phones, 11 intl bundles + PAYG settings | staging SQL, verified | audit in session log |
 | 07-17 | Damage waiver line — settings `damage_waiver_pct` (5%), New Rental + Manage, folds into price like weekly VN; also fixed monthly-VN Manage re-add bug | ✅ 38/38 | BUSINESS_RULES §1.7 |
 | 07-17 | Status SMS drafts per rental (✉️ on row) — lifecycle-aware text, copy + comm-log, HOLD stays (nothing sent) | ✅ 38/38 | templates in code for now |
+| 07-21 | Maintenance block on rental phones — 🔧 checkbox+reason in Edit Phone; excluded from New Rental picker, pool suggestions, dashboard available count; badge in inventory + palette | ✅ 103/103 ×2 + build + function-level assert | owner live-test pending |
 
 Held / owner input: family-trip sheet (£1,364 balance) needs the customer's
 name before it's entered; Canada/EU loss rates — follow T&C schedule or stay?

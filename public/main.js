@@ -1028,7 +1028,7 @@ function poolReason(overlap, alreadyActive) {
 function poolPhoneSuggestions(phones, rentals, from, to, todayISO) {
   const today = todayISO || localISO();
   return phones
-    .filter(p => (p.country || '').toUpperCase() === 'USA' && p.pool &&
+    .filter(p => (p.country || '').toUpperCase() === 'USA' && p.pool && !p.maintenance &&
       phoneConflicts(rentals, p.id, from, to, today).length === 0)
     .map(p => {
       const alreadyActive = !!(p.poolExpiry && p.poolExpiry >= today);
@@ -1260,7 +1260,7 @@ function renderRentalsTab() {
   const content = document.getElementById('mainContent');
   const today0  = localISO();
   const activeRentals   = rentals.filter(r => r.status === 'active').length;
-  const availablePhones = phones.filter(p => p.status === 'available').length;
+  const availablePhones = phones.filter(p => p.status === 'available' && !p.maintenance).length;
   const returningToday  = rentals.filter(r => r.status === 'active' && r.toDate === today0).length;
   const outstandingDebt = rentals.reduce((s, r) => s + rentalDebt(r), 0);
 
@@ -1564,6 +1564,7 @@ function renderPhoneRows() {
     const poolExpired = p.poolExpiry && p.poolExpiry < today;
     let statusBadge;
     if (p.status === 'rented')         statusBadge = `<span class="badge badge-rental">Rented</span>`;
+    else if (p.maintenance)            statusBadge = `<span class="badge" style="background:rgba(217,119,6,0.14);color:var(--gold);" title="${escHtml(p.maintenanceNote || 'Out of service')}">🔧 Maintenance</span>`;
     else if (p.status === 'available' && p.poolExpiry && !poolExpired)
                                         statusBadge = `<span class="badge badge-sim">Available (active pool)</span>`;
     else if (poolExpired)               statusBadge = `<span class="badge" style="background:rgba(107,114,128,0.15);color:var(--muted);">Pool Expired</span>`;
@@ -1593,9 +1594,11 @@ function renderPhoneRows() {
 // phone that's out today can still be reserved for future dates.
 function phoneOptionsFor(from, to) {
   const today = localISO();
+  // A phone under maintenance is never offerable, whatever the dates say.
+  const inService = phones.filter(p => !p.maintenance);
   const list = (from && to && to >= from)
-    ? phones.filter(p => phoneConflicts(rentals, p.id, from, to, today).length === 0)
-    : phones.filter(p => p.status !== 'rented');
+    ? inService.filter(p => phoneConflicts(rentals, p.id, from, to, today).length === 0)
+    : inService.filter(p => p.status !== 'rented');
   return list
     .map(p => `<option value="${p.id}">${escHtml(fmtPhone(p.number))} · ${escHtml(p.country)} · ${escHtml(p.company||'')} ${p.pool ? '(Pool: '+escHtml(p.pool)+')' : ''}</option>`)
     .join('');
@@ -2244,8 +2247,8 @@ function openEditPhoneModal(phoneId) {
   const renterInfo = activeRental
     ? `<div style="margin-top:6px;font-size:13px;color:var(--muted);">Rented to: <strong style="color:var(--text);">${escHtml(activeRental.customerName)}</strong> &nbsp;<button class="btn btn-outline" style="padding:3px 10px;font-size:12px;" onclick="closeDynamicModal();openManageRentalModal('${activeRental.id}')">Manage Rental</button></div>`
     : '';
-  const statusColor = p.status === 'rented' ? 'var(--accent)' : 'var(--success)';
-  const statusLabel = p.status === 'rented' ? '🔴 Rented' : '🟢 Available';
+  const statusColor = p.status === 'rented' ? 'var(--accent)' : p.maintenance ? 'var(--gold)' : 'var(--success)';
+  const statusLabel = p.status === 'rented' ? '🔴 Rented' : p.maintenance ? '🔧 Maintenance' : '🟢 Available';
   showDynamicModal(`
     <div class="modal-title">✏️ Edit Phone — ${escHtml(fmtPhone(p.number))}</div>
     <div class="form-grid">
@@ -2274,6 +2277,14 @@ function openEditPhoneModal(phoneId) {
         <label class="form-label">Status</label>
         <div style="font-size:13px;font-weight:600;color:${statusColor};padding:8px 0;">${statusLabel}</div>
         ${renterInfo}
+      </div>
+      <div class="form-group form-full">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+          <input type="checkbox" id="epMaint" ${p.maintenance ? 'checked' : ''} style="accent-color:var(--gold);">
+          <span>🔧 Under maintenance — hidden from New Rental until cleared</span>
+        </label>
+        <input class="form-input" id="epMaintNote" type="text" value="${escHtml(p.maintenanceNote || '')}"
+          placeholder="Why? e.g. cracked screen, battery on order (optional)" style="margin-top:6px;">
       </div>
       ${p.country === 'UK' ? `
       <div class="form-group">
@@ -2305,6 +2316,11 @@ function saveEditPhone(phoneId) {
   if (epIMEI) p.imei = epIMEI.value.trim();
   const epUKPlan = document.getElementById('epUKPlan');
   if (epUKPlan) p.ukPlan = epUKPlan.value;
+  const epMaint = document.getElementById('epMaint');
+  if (epMaint) {
+    p.maintenance = epMaint.checked;
+    p.maintenanceNote = epMaint.checked ? (document.getElementById('epMaintNote')?.value.trim() || '') : '';
+  }
   savePhones(phones);
   toast('Phone updated!', 'success');
   closeDynamicModal();
@@ -7973,7 +7989,7 @@ function paletteSearch(q) {
     if ((p.number || '').toLowerCase().includes(needle) ||
         (digits.length >= 5 && hay.includes(digits))) {
       out.push({ icon: '📱', label: fmtPhone(p.number || '') || '(no number)',
-        sub: `${p.country || ''} · ${p.status}${p.imei ? ' · IMEI ' + p.imei : ''}`,
+        sub: `${p.country || ''} · ${p.status}${p.maintenance ? ' · 🔧 maintenance' : ''}${p.imei ? ' · IMEI ' + p.imei : ''}`,
         run: () => openEditPhoneModal(p.id) });
     }
   }
