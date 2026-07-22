@@ -8199,7 +8199,7 @@ function paletteSearch(q) {
         (digits.length >= 4 && (c.phone || '').replace(/\D/g, '').includes(digits)) ||
         (c.email || '').toLowerCase().includes(needle)) {
       out.push({ icon: '👤', label: name, sub: fmtPhone(c.phone || '') || c.email || 'customer',
-        run: () => goToTab('customers', { customerId: c.id }) });
+        kind: 'customer', id: c.id, run: () => goToTab('customers', { customerId: c.id }) });
     }
   }
   for (const p of phones) {
@@ -8209,7 +8209,7 @@ function paletteSearch(q) {
         (digits.length >= 5 && hay.includes(digits))) {
       out.push({ icon: '📱', label: fmtPhone(p.number || '') || '(no number)',
         sub: `${p.country || ''} · ${p.status}${p.maintenance ? ' · 🔧 maintenance' : ''}${p.imei ? ' · IMEI ' + p.imei : ''}`,
-        run: () => openEditPhoneModal(p.id) });
+        kind: 'phone', id: p.id, run: () => openEditPhoneModal(p.id) });
     }
   }
   for (const b of bookings) {
@@ -8229,7 +8229,7 @@ function paletteSearch(q) {
         (s.simNumber || '').toLowerCase().includes(needle) ||
         (digits.length >= 4 && (s.simNumber || '').replace(/\D/g, '').includes(digits))) {
       out.push({ icon: '📶', label: `SIM — ${s.customerName || ''}`, sub: `${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}`,
-        run: () => openManageSimModal(s.id) });
+        kind: 'sim', id: s.id, run: () => openManageSimModal(s.id) });
     }
   }
   for (const v of virtualNumbers) {
@@ -8280,10 +8280,39 @@ function paletteRender() {
       </div>`).join('');
 }
 
+// ── Recently viewed (⌘K) ──────────────────────────────────────────────────
+// The last few records you opened from the palette, surfaced in its empty
+// state so ⌘K hops you straight back. Nav-only; persisted locally. Each entry
+// is serialisable {icon,label,sub,kind,id} and its action is rebuilt from
+// kind+id on click (the run closures themselves can't be stored).
+const RECENT_KEY = 'kc_recent_nav';
+let recentNav = [];
+try { recentNav = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); if (!Array.isArray(recentNav)) recentNav = []; } catch { recentNav = []; }
+
+const RECENT_RUN = {
+  customer: (id) => goToTab('customers', { customerId: id }),
+  phone:    (id) => openEditPhoneModal(id),
+  sim:      (id) => openManageSimModal(id),
+};
+
+function pushRecent(it) {
+  if (!it || !it.kind || !RECENT_RUN[it.kind]) return;
+  const key = it.kind + ':' + (it.id ?? '');
+  recentNav = [{ icon: it.icon, label: it.label, sub: it.sub, kind: it.kind, id: it.id ?? null },
+    ...recentNav.filter(r => (r.kind + ':' + (r.id ?? '')) !== key)].slice(0, 6);
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(recentNav)); } catch { /* private mode / full */ }
+}
+
+window.paletteRecentRun = (i) => {
+  const r = recentNav[i];
+  closePalette();
+  if (r && RECENT_RUN[r.kind]) RECENT_RUN[r.kind](r.id);
+};
+
 function paletteRun(i) {
   const r = paletteResults[i];
   closePalette();
-  if (r) r.run();
+  if (r) { pushRecent(r); r.run(); }
 }
 
 // Spotlight-style quick actions — the common "create" commands as icon tiles,
@@ -8293,7 +8322,14 @@ window.paletteQuickRun = (i) => { const it = paletteQuickItems()[i]; closePalett
 function fillPaletteQuick() {
   const q = document.getElementById('paletteQuick');
   if (!q) return;
-  q.innerHTML = `<div class="palette-quick-label">Quick actions</div><div class="palette-quick-row">` +
+  const recentHtml = recentNav.length
+    ? `<div class="palette-quick-label">Recent</div><div class="palette-quick-row">` +
+      recentNav.map((r, i) =>
+        `<button type="button" class="palette-quick-card" onclick="paletteRecentRun(${i})" title="${escHtml(r.sub || '')}">
+          <span class="pq-icon">${r.icon}</span><span class="pq-label">${escHtml(r.label)}</span>
+        </button>`).join('') + `</div>`
+    : '';
+  q.innerHTML = recentHtml + `<div class="palette-quick-label">Quick actions</div><div class="palette-quick-row">` +
     paletteQuickItems().map((c, i) =>
       `<button type="button" class="palette-quick-card" onclick="paletteQuickRun(${i})">
         <span class="pq-icon">${c.icon}</span><span class="pq-label">${escHtml(c.label.replace(/^New /, ''))}</span>
