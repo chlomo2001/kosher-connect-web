@@ -80,16 +80,23 @@ async function handler(req, res) {
     if (r.ok) resolvedModel = model // remember the known-good model
 
     if (!r.ok) {
-      const detail = (await r.text().catch(() => '')).slice(0, 200)
-      console.error('[api/ocr-ai] gemini', r.status, detail)
-      const msg = r.status === 429
-        ? 'The AI reader is over its Google quota — check the billing/limits on the Gemini project.'
-        : r.status === 400 || r.status === 403
-          ? 'The AI reader key was rejected — check GEMINI_API_KEY in the server settings.'
-          : r.status === 404
-            ? 'The AI reader could not find a usable Gemini model for this key — check the key’s project has the Generative Language API enabled.'
-            : `The AI reader returned an error (${r.status}).`
-      return res.status(502).json({ success: false, error: msg })
+      // Surface Google's OWN reason (status + message) so config problems are
+      // self-diagnosing instead of a generic "key rejected".
+      const raw = await r.text().catch(() => '')
+      let gStatus = '', gMessage = ''
+      try { const ej = JSON.parse(raw); gStatus = ej?.error?.status || ''; gMessage = ej?.error?.message || '' } catch { /* non-JSON */ }
+      console.error('[api/ocr-ai] gemini', r.status, gStatus, gMessage.slice(0, 300))
+      const base = r.status === 429
+        ? 'The AI reader has no Gemini quota/credits — top up the key’s project in AI Studio (Projects → your project → Buy credits).'
+        : r.status === 400
+          ? 'The AI reader key looks wrong — check GEMINI_API_KEY in Vercel matches the key shown in AI Studio.'
+          : r.status === 403
+            ? 'The AI reader was denied — usually the key’s Gemini project has no credits/billing, or the Generative Language API isn’t enabled for it.'
+            : r.status === 404
+              ? 'The AI reader could not find a usable Gemini model for this key — check the key’s project has the Generative Language API enabled.'
+              : `The AI reader returned an error (${r.status}).`
+      const reason = gMessage ? ` (Google: ${gStatus || r.status} — ${gMessage.slice(0, 160)})` : ''
+      return res.status(502).json({ success: false, error: base + reason })
     }
 
     const j = await r.json()
