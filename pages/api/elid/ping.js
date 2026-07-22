@@ -62,37 +62,49 @@ async function handler(req, res) {
     }
     const hit = results.find((r) => r.ok)
 
-    // ── Usage sweep, MOR-correct. `val` is treated as the MOR user_id when it
-    // arrived via ?id=, or the username via ?username=. Dates are UNIX seconds. ──
+    // ── Usage sweep, MOR-correct, with an auto-resolve step. A username alone
+    // can't drive user_calls_get (it needs the numeric s_user), so we read
+    // user_details_get first, pull the numeric id out of it, then use that. ──
     const periodEnd = Math.floor(Date.now() / 1000)
     const periodStart = periodEnd - 30 * 86400
     const usage = []
 
-    // user_details_get — hash SHA1(u + user_id + secret) (or + username)
-    if (id) usage.push(await run(base, 'user_details_get', { user_id: val }, ['user_id']))
-    if (username) usage.push(await run(base, 'user_details_get', { username: val }, ['username']))
+    // 1) user_details_get — hash SHA1(u + user_id + secret) OR SHA1(u + username + secret)
+    const detail = id
+      ? await run(base, 'user_details_get', { user_id: val }, ['user_id'])
+      : await run(base, 'user_details_get', { username: val }, ['username'])
+    usage.push(detail)
 
-    // user_calls_get — hash SHA1(u + s_user + period_start + period_end + secret)
-    usage.push(await run(base, 'user_calls_get',
-      { s_user: val, period_start: periodStart, period_end: periodEnd },
-      ['s_user', 'period_start', 'period_end']))
-    // …and with s_call_type=all appended (some installs want it in the hash)
-    usage.push(await run(base, 'user_calls_get',
-      { s_user: val, period_start: periodStart, period_end: periodEnd, s_call_type: 'all' },
-      ['s_user', 'period_start', 'period_end', 's_call_type']))
+    // Resolve the numeric MOR user id: given directly via ?id=, else dug out of
+    // the details response (MOR returns it as <id>/<user_id>/<userid>).
+    const firstNum = (v) => (Array.isArray(v) ? v[0] : v)
+    let resolvedId = id || null
+    if (detail.ok && detail.data) {
+      resolvedId = resolvedId || firstNum(detail.data.id) || firstNum(detail.data.user_id) || firstNum(detail.data.userid) || null
+    }
 
-    // dids_get — only u is hashed; filters are unhashed. List all, then narrow.
+    // 2) user_calls_get — needs the numeric s_user. hash SHA1(u + s_user + period_start + period_end + secret)
+    if (resolvedId) {
+      usage.push(await run(base, 'user_calls_get',
+        { s_user: resolvedId, period_start: periodStart, period_end: periodEnd },
+        ['s_user', 'period_start', 'period_end']))
+      usage.push(await run(base, 'user_calls_get',
+        { s_user: resolvedId, period_start: periodStart, period_end: periodEnd, s_call_type: 'all' },
+        ['s_user', 'period_start', 'period_end', 's_call_type']))
+    }
+
+    // 3) dids_get — only u is hashed; filters are unhashed. List all (maps every
+    // number → its owner), then the per-user filter once we know the id.
     usage.push(await run(base, 'dids_get', {}, []))
-    usage.push(await run(base, 'dids_get', { search_user: val }, []))
+    if (resolvedId) usage.push(await run(base, 'dids_get', { search_user: resolvedId }, []))
 
-    // payments_get — try the user_id-hashed and the u-only variants
-    usage.push(await run(base, 'payments_get', { user_id: val }, ['user_id']))
-    usage.push(await run(base, 'payments_get', {}, []))
+    // 4) payments_get — user_id-hashed if we have it, else the u-only variant
+    usage.push(await run(base, 'payments_get', resolvedId ? { user_id: resolvedId } : {}, resolvedId ? ['user_id'] : []))
 
     const usageHits = usage.filter((r) => r.ok)
 
     return res.json({
-      success: true, mode: 'target', target: { [key]: val }, base,
+      success: true, mode: 'target', target: { [key]: val }, base, resolvedUserId: resolvedId,
       liveReadWorks: !!hit,
       workingCall: hit ? { func: hit.func, hashRule: hit.hashRule, dataKeys: hit.dataKeys } : null,
       usageWorks: usageHits.map((r) => ({ func: r.func, params: Object.keys(r.params), hashRule: r.hashRule, dataKeys: r.dataKeys })),
