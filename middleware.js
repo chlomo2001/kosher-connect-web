@@ -1,18 +1,16 @@
-// The public marketing pages are locked again while the Sky redesign of the
-// homepage is built (owner decision, 21 Jul 2026): /welcome, /join and
-// /phone-guide are only reachable with a staff session cookie; everyone else
-// lands on sign-in. They were briefly opened for Google's OAuth homepage
-// review — that's finished (the app is published), so they go back behind the
-// gate until the new /welcome ships.
+// /welcome is PUBLIC (owner decision, 22 Jul 2026): both Google's OAuth review
+// and Stripe's business verification need a publicly reachable page showing the
+// business, its products/prices, contact details and policy links — and paused
+// Stripe payouts hinge on it. So /welcome (plus /privacy, /terms and the new
+// /refund) stay open. The bare root ("/") sends logged-out visitors to /welcome
+// too (see pages/index.js). /join and /phone-guide remain gated for now.
 //
-// Note: /privacy and /terms are deliberately NOT gated here, so the links on
-// the Google consent screen (and the privacy policy Google requires) stay
-// publicly reachable. The customer portal (Bearer-token auth) and the free
-// tools also stay public. Cookie PRESENCE is the gate; real verification
-// happens in the APIs, so the worst a forged cookie earns is marketing copy.
+// The customer portal (Bearer-token auth) and the free tools also stay public.
+// Cookie PRESENCE is the gate; real verification happens in the APIs, so the
+// worst a forged cookie earns on a gated page is marketing copy.
 import { NextResponse } from 'next/server'
 
-export const config = { matcher: ['/welcome', '/join', '/phone-guide'] }
+export const config = { matcher: ['/join', '/phone-guide'] }
 
 export function middleware(req) {
   if (req.cookies.get('kc_session')) return NextResponse.next()

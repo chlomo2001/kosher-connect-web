@@ -329,7 +329,7 @@ export default function Welcome() {
                 <span className="w-legal"> {t.tradingName}</span>
               </div>
               <div>
-                <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="#top">{t.backTop}</a>
+                <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/refund">Refunds</a> · <a href="#top">{t.backTop}</a>
               </div>
             </div>
           </footer>
