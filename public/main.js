@@ -4338,6 +4338,11 @@ function setupModal() {
   document.getElementById('fEmail').addEventListener('blur', checkEmailDuplicate);
   document.getElementById('fFirstName').addEventListener('blur', checkNameDuplicate);
   document.getElementById('fLastName').addEventListener('blur', checkNameDuplicate);
+  // Google address autocomplete on the Address field (no-op if the key/helper
+  // isn't loaded — the field stays a plain text box).
+  if (window.kcAddressAutocomplete) {
+    window.kcAddressAutocomplete(document.getElementById('fAddress'));
+  }
 }
 
 function openAddModal() {

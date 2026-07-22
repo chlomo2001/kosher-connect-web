@@ -240,6 +240,13 @@ export default function AppShell({ initialTab = 'dashboard' }) {
 
       <div id="toast-container" role="status" aria-live="polite" aria-atomic="false" />
 
+      {/* Google Maps key for address autocomplete — referrer-restricted, so
+          it's safe in the browser. Set before the app scripts so main.js can
+          read it when the customer form opens. */}
+      <Script id="kc-maps-key" strategy="beforeInteractive">
+        {`window.KC_MAPS_KEY=${JSON.stringify(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '')};`}
+      </Script>
+      <Script src="/address-autocomplete.js" strategy="afterInteractive" />
       <Script src="/main.js" strategy="afterInteractive" />
       {/* Safety net: if main.js never loads (bad network), don't trap the user
           behind the splash — fade it out after 12s regardless. */}

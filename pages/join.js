@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Head from 'next/head'
+import Script from 'next/script'
 import ThemeToggle from '../components/ThemeToggle'
 import AuthBackdrop from '../components/AuthBackdrop'
 
@@ -22,6 +23,7 @@ const T = {
     lead: 'Leave your details and what you’re after — a phone, a SIM, a trip, anything — and we’ll come back to you. No obligation, and you’ll get a straight answer.',
     firstName: 'First name', lastName: 'Last name (optional)',
     phone: 'Phone', email: 'Email (optional)',
+    address: 'Address (optional)', addressPh: 'Start typing your address…',
     message: 'How can we help?',
     msgPlaceholder: 'e.g. a kosher phone for my son · a SIM that matches how I actually use it · a rental for a simcha in Israel',
     send: 'Send', sending: 'Sending…',
@@ -42,6 +44,7 @@ const T = {
     lead: 'השאירו פרטים וספרו מה אתם מחפשים — טלפון, סים, נסיעה, כל דבר — ונחזור אליכם. בלי שום התחייבות, ועם תשובה ישרה.',
     firstName: 'שם פרטי', lastName: 'שם משפחה (לא חובה)',
     phone: 'טלפון', email: 'אימייל (לא חובה)',
+    address: 'כתובת (לא חובה)', addressPh: 'התחילו להקליד את הכתובת…',
     message: 'איך נוכל לעזור?',
     msgPlaceholder: 'למשל: טלפון כשר לבחור · סים שמתאים לשימוש האמיתי · השכרה לשמחה בארץ ישראל',
     send: 'שליחה', sending: 'שולחים…',
@@ -67,12 +70,25 @@ export default function Join() {
     try { localStorage.setItem('kcLang', n) } catch { /* not persisted */ }
   }
 
-  const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', email: '', message: '', company: '' })
+  const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', email: '', address: '', message: '', company: '' })
   const [busy, setBusy] = useState(false)
   const [errs, setErrs] = useState({})
   const [failMsg, setFailMsg] = useState('')
   const [done, setDone] = useState(false)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+
+  // Google address autocomplete on the Address field. Attaches once the helper
+  // script has loaded (and again on mount, in case it was already cached from a
+  // prior page). No-op if the key/helper isn't there — the field stays plain.
+  const addrRef = useRef(null)
+  const attachAddr = () => {
+    if (window.kcAddressAutocomplete && addrRef.current) {
+      window.kcAddressAutocomplete(addrRef.current, {
+        onSelect: (r) => setForm((f) => ({ ...f, address: r.formatted })),
+      })
+    }
+  }
+  useEffect(() => { attachAddr() }, [])
 
   async function submit(e) {
     e.preventDefault()
@@ -156,6 +172,12 @@ export default function Join() {
                   {field('phone', t.phone, 'tel', { dir: 'ltr', inputMode: 'tel' })}
                   {field('email', t.email, 'email', { dir: 'ltr', inputMode: 'email' })}
                   <div className="form-group form-full">
+                    <label className="form-label" htmlFor="jn-address">{t.address}</label>
+                    <input className="form-input" id="jn-address" ref={addrRef} type="text"
+                      value={form.address} onChange={set('address')} autoComplete="off"
+                      placeholder={t.addressPh} />
+                  </div>
+                  <div className="form-group form-full">
                     <label className="form-label" htmlFor="jn-message">{t.message}</label>
                     <textarea className="form-input" id="jn-message" rows={3} value={form.message}
                       onChange={set('message')} placeholder={t.msgPlaceholder}
@@ -185,6 +207,12 @@ export default function Join() {
           </footer>
         </div>
       </div>
+      {/* Google Maps key (referrer-restricted → safe in the browser) + the
+          shared autocomplete helper. attachAddr runs on the script's onLoad. */}
+      <Script id="kc-maps-key" strategy="beforeInteractive">
+        {`window.KC_MAPS_KEY=${JSON.stringify(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '')};`}
+      </Script>
+      <Script src="/address-autocomplete.js" strategy="afterInteractive" onLoad={attachAddr} />
     </>
   )
 }

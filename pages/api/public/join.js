@@ -26,6 +26,7 @@ export default async function handler(req, res) {
   const lastName = cap(b.lastName, 60)
   const phone = cap(b.phone, 30)
   const email = cap(b.email, 120)
+  const address = cap(b.address, 200)
   const message = cap(b.message, 1000)
   if (!firstName || !phone) {
     return res.status(400).json({ success: false, error: 'Name and phone are required.' })
@@ -66,6 +67,7 @@ export default async function handler(req, res) {
       const notes = [
         `Phone: ${phone}`,
         email ? `Email: ${email}` : null,
+        address ? `Address: ${address}` : null,
         message ? `Asked for: ${message}` : null,
         match
           ? `⚠ Possibly an existing customer: ${`${match.first_name || ''} ${match.last_name || ''}`.trim()} (#${match.legacy_id}) — open their card before creating a new one.`
