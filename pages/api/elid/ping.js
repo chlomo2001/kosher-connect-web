@@ -19,6 +19,16 @@ const SWEEP = [
   'services_get', 'users_get',
 ]
 
+// Per-user USAGE functions to crack once a target is known. MOR installs vary in
+// naming, so we try the common snake_case + legacy variants and report which
+// authenticate and return rows. Call/CDR functions also get a from/to window.
+const USAGE_DETAIL = ['user_get', 'user_details_get', 'user_info_get']
+const USAGE_CALLS = ['user_calls_get', 'calls_get', 'cdr_get', 'call_get', 'calls', 'getCDR']
+const USAGE_DIDS = ['user_dids_get', 'dids_get', 'did_get']
+const USAGE_PAY = ['user_payments_get', 'payments_get']
+
+function ymd(d) { return d.toISOString().slice(0, 10) }
+
 async function run(base, func, params, hashOrder) {
   const out = await elidCall(func, params, { hashOrder, base })
   return {
@@ -52,11 +62,30 @@ async function handler(req, res) {
       results.push(await run(base, func, { [key]: val }, [key]))    // target hashed
     }
     const hit = results.find((r) => r.ok)
+
+    // ── Usage sweep: crack the per-customer detail/CDR/DID/payment recipe ──
+    const from = ymd(new Date(Date.now() - 30 * 86400000))
+    const to = ymd(new Date())
+    const usage = []
+    for (const func of USAGE_DETAIL) {
+      usage.push(await run(base, func, { [key]: val }, []))
+      usage.push(await run(base, func, { [key]: val }, [key]))
+    }
+    for (const func of USAGE_CALLS) {
+      usage.push(await run(base, func, { [key]: val, from, to }, []))
+      usage.push(await run(base, func, { [key]: val, from, to }, [key]))
+    }
+    for (const func of [...USAGE_DIDS, ...USAGE_PAY]) {
+      usage.push(await run(base, func, { [key]: val }, []))
+    }
+    const usageHits = usage.filter((r) => r.ok)
+
     return res.json({
       success: true, mode: 'target', target: { [key]: val }, base,
       liveReadWorks: !!hit,
       workingCall: hit ? { func: hit.func, hashRule: hit.hashRule, dataKeys: hit.dataKeys } : null,
-      results, status,
+      usageWorks: usageHits.map((r) => ({ func: r.func, params: Object.keys(r.params), hashRule: r.hashRule, dataKeys: r.dataKeys })),
+      results, usage, status,
     })
   }
 
