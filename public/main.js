@@ -3453,6 +3453,7 @@ function renderDetailPanel(id) {
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openLogCommModal('${c.id}')" title="Log a call or note">📞</button>
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer">⏰</button>
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="chargeCardOnFile('${c.id}')" title="Charge the customer's saved card on file (Stripe)">💳</button>
+          <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openPaymentLinkModal('${c.id}')" title="Create a Stripe payment link tagged to this customer">🔗 Link</button>
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openEditModal('${c.id}')">✏️ Edit</button>
           <button class="card-close" onclick="dismissCustomerCard()" title="Close" aria-label="Close">✕</button>
         </div>
@@ -3644,6 +3645,71 @@ async function chargeCardOnFile(custId) {
     else toast(d.error || 'Charge failed.', 'error');
   } catch { toast('Charge failed.', 'error'); }
   finally { kcEndWrite(guardKey); }
+}
+
+// Create a Stripe payment link tagged to this customer, so when they pay it
+// lands on their wallet automatically. Staff copy the link and send it by text
+// or email (no message is sent from here). This is the tracked alternative to
+// making a link in the Stripe dashboard.
+function openPaymentLinkModal(custId) {
+  const c = customers.find(x => x.id === custId);
+  if (!c) return;
+  showDynamicModal(`
+    <div class="modal-title">🔗 Payment link — ${escHtml(c.firstName)} ${escHtml(c.lastName)}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Creates a Stripe pay-by-card link tied to this customer. When they pay, it's credited to their wallet automatically. Copy it and send it however you message this customer.</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Amount (£)</label>
+        <input class="form-input" id="plAmount" type="number" step="0.01" min="0.01" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label class="form-label">What it's for (optional)</label>
+        <input class="form-input" id="plDesc" type="text" maxlength="120" placeholder="e.g. SIM top-up">
+      </div>
+    </div>
+    <div class="form-group form-full" id="plResultWrap" style="display:none;">
+      <label class="form-label">Payment link <span style="color:var(--muted);font-weight:400;">— copy &amp; send</span></label>
+      <input class="form-input" id="plResult" readonly onclick="this.select()" style="font-family:monospace;font-size:12px;">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
+      <button class="btn btn-outline" id="plGo" onclick="createPaymentLink('${escHtml(String(custId))}')">Create link</button>
+      <button class="btn btn-primary" id="plCopy" style="display:none;" onclick="copyPaymentLink()">📋 Copy link</button>
+    </div>
+  `);
+}
+async function createPaymentLink(custId) {
+  const amount = Number(document.getElementById('plAmount')?.value);
+  if (!(amount > 0)) { toast('Enter an amount greater than £0.', 'error'); return; }
+  const description = document.getElementById('plDesc')?.value || '';
+  const guard = 'plink:' + custId;
+  if (!kcBeginWrite(guard)) { toast('Already creating a link…', 'warning'); return; }
+  const btn = document.getElementById('plGo');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating…'; }
+  try {
+    const r = await kcFetch('/api/payment-link', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customerId: custId, amount, description, clientRef: kcRef() }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.success) { toast(j.error || 'Could not create the link.', 'error'); return; }
+    const out = document.getElementById('plResult'); if (out) out.value = j.url;
+    const wrap = document.getElementById('plResultWrap'); if (wrap) wrap.style.display = '';
+    const copy = document.getElementById('plCopy'); if (copy) copy.style.display = '';
+    if (btn) btn.textContent = 'New link';
+    recordComm(custId, { type: 'note', text: `Payment link created — ${fmtGbp(amount)}` });
+  } catch {
+    toast('Could not reach the payment-link service.', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; if (btn.textContent === 'Creating…') btn.textContent = 'Create link'; }
+    kcEndWrite(guard);
+  }
+}
+async function copyPaymentLink() {
+  const url = document.getElementById('plResult')?.value || '';
+  if (!url) return;
+  try { await navigator.clipboard.writeText(url); toast('Link copied — send it to the customer.', 'success'); }
+  catch { toast('Select the link and copy it manually.', 'warning'); }
 }
 
 async function deleteCustomerDoc(custId, id) {
