@@ -24,6 +24,11 @@ export const LEGAL_CSS = `
   :root{--ink:#07639e;--gold:#c19161;--text:#1a2230;--muted:#5b6472;--line:#e4e8ef;--paper:#ffffff;--canvas:#f6f8fb}
   @media (prefers-color-scheme:dark){:root{--text:#e7edf9;--muted:#9aa6c0;--line:#26314c;--paper:#0d1424;--canvas:#080d1a}}
   *{box-sizing:border-box}
+  /* The app frame in globals.css pins html/body/#__next with height:100% and
+     overflow:hidden (for the SPA). These legal pages use normal document
+     scroll, so undo that here or the content is clipped and won't scroll. */
+  html,body{height:auto;overflow-x:hidden;overflow-y:auto}
+  #__next{display:block;height:auto;overflow:visible}
   body{margin:0;background:var(--canvas);color:var(--text);
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.7;font-size:16px}
   .legal-wrap{max-width:760px;margin:0 auto;padding:0 22px}
