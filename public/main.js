@@ -3727,6 +3727,8 @@ async function loadWalletSection(customerId) {
             ${e.amount >= 0 ? '+' : '−'}${fmtGbp(Math.abs(e.amount))}</div>
           ${RECEIPTABLE[e.type] && Math.abs(e.amount) >= 0.005 ? `<button class="btn btn-secondary" style="font-size:11px;padding:3px 8px;margin-left:10px;"
             title="Email a receipt for this entry" onclick="emailLedgerReceipt(this, '${escHtml(customerId)}', ${i})">✉️</button>` : ''}
+          ${e.type === 'payment' && e.method === 'card' && typeof e.reference === 'string' && /^STRIPE-pi_/.test(e.reference) ? `<button class="btn btn-secondary" style="font-size:11px;padding:3px 8px;margin-left:6px;"
+            title="Refund this card payment back to the card" onclick="openRefundModal('${escHtml(customerId)}', ${i})">↩️ Refund</button>` : ''}
         </div>`).join('');
 
   el.innerHTML = `
@@ -3771,6 +3773,58 @@ async function emailLedgerReceipt(btn, customerId, idx) {
   } else {
     toast(res?.error || 'Could not send the receipt.', 'error');
     if (btn) { btn.disabled = false; btn.textContent = '✉️'; }
+  }
+}
+
+// Refund a card payment back to the card (owner-only server-side). Reverses the
+// wallet credit the payment made. Full by default; the amount can be trimmed for
+// a partial refund. Opens from the ↩️ on a card-payment wallet row.
+function openRefundModal(customerId, idx) {
+  const cached = walletEntriesCache[customerId];
+  const e = cached && cached.entries ? cached.entries[idx] : null;
+  if (!e || !/^STRIPE-pi_/.test(e.reference || '')) { toast('Reload the card and try again.', 'error'); return; }
+  const max = Math.abs(Number(e.amount) || 0);
+  showDynamicModal(`
+    <div class="modal-title">↩️ Refund card payment</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Refunds money back to the customer's card via Stripe and removes the matching wallet credit. Original payment: <strong>${fmtGbp(max)}</strong>${e.description ? ' · ' + escHtml(e.description) : ''}.</div>
+    <div class="form-group form-full">
+      <label class="form-label">Amount to refund</label>
+      <input class="form-input" id="rfAmount" type="number" step="0.01" min="0.01" max="${max}" value="${max.toFixed(2)}">
+      <span style="font-size:11px;color:var(--muted);">Up to ${fmtGbp(max)}. Leave as-is for a full refund.</span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" id="rfGo" onclick="submitRefund('${escHtml(String(customerId))}', ${idx})">Refund to card</button>
+    </div>
+  `);
+}
+async function submitRefund(customerId, idx) {
+  const cached = walletEntriesCache[customerId];
+  const e = cached && cached.entries ? cached.entries[idx] : null;
+  if (!e) { toast('Reload the card and try again.', 'error'); return; }
+  const max = Math.abs(Number(e.amount) || 0);
+  const amount = Number(document.getElementById('rfAmount')?.value);
+  if (!(amount > 0) || amount > max + 0.005) { toast(`Enter an amount between £0 and ${fmtGbp(max)}.`, 'error'); return; }
+  const guard = `refund-${e.reference}`;
+  if (!kcBeginWrite(guard)) { toast('Refund already in progress.', 'warning'); return; }
+  const btn = document.getElementById('rfGo');
+  if (btn) { btn.disabled = true; btn.textContent = 'Refunding…'; }
+  try {
+    const r = await kcFetch('/api/refund-card', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customerId, reference: e.reference, amount, clientRef: kcRef() }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.success) { toast(j.error || 'Refund failed.', 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Refund to card'; } return; }
+    toast(`Refunded ${fmtGbp(j.amount || amount)} to the card.`, 'success');
+    recordComm(customerId, { type: 'note', text: `Card refund ${fmtGbp(j.amount || amount)}` });
+    closeDynamicModal();
+    loadWalletSection(customerId);
+  } catch {
+    toast('Could not reach the refund service.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Refund to card'; }
+  } finally {
+    kcEndWrite(guard);
   }
 }
 

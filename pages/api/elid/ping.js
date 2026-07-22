@@ -19,15 +19,14 @@ const SWEEP = [
   'services_get', 'users_get',
 ]
 
-// Per-user USAGE functions to crack once a target is known. MOR installs vary in
-// naming, so we try the common snake_case + legacy variants and report which
-// authenticate and return rows. Call/CDR functions also get a from/to window.
-const USAGE_DETAIL = ['user_get', 'user_details_get', 'user_info_get']
-const USAGE_CALLS = ['user_calls_get', 'calls_get', 'cdr_get', 'call_get', 'calls', 'getCDR']
-const USAGE_DIDS = ['user_dids_get', 'dids_get', 'did_get']
-const USAGE_PAY = ['user_payments_get', 'payments_get']
-
-function ymd(d) { return d.toISOString().slice(0, 10) }
+// Per-user USAGE recipes, now matched to the Kolmisoft MOR API docs
+// (wiki.kolmisoft.com). The earlier "Incorrect hash" was wrong param NAMES +
+// wrong date format, not a wrong secret:
+//   user_details_get → user_id | username ; hash SHA1(u + user_id + secret)
+//   user_calls_get   → s_user + period_start + period_end (UNIX seconds!) ;
+//                      hash SHA1(u + s_user + period_start + period_end + secret)
+//   dids_get         → only u is hashed: SHA1(u + secret) ; filters are unhashed
+//   payments_get     → try user_id hashed, and the u-only variant
 
 async function run(base, func, params, hashOrder) {
   const out = await elidCall(func, params, { hashOrder, base })
@@ -63,21 +62,33 @@ async function handler(req, res) {
     }
     const hit = results.find((r) => r.ok)
 
-    // ── Usage sweep: crack the per-customer detail/CDR/DID/payment recipe ──
-    const from = ymd(new Date(Date.now() - 30 * 86400000))
-    const to = ymd(new Date())
+    // ── Usage sweep, MOR-correct. `val` is treated as the MOR user_id when it
+    // arrived via ?id=, or the username via ?username=. Dates are UNIX seconds. ──
+    const periodEnd = Math.floor(Date.now() / 1000)
+    const periodStart = periodEnd - 30 * 86400
     const usage = []
-    for (const func of USAGE_DETAIL) {
-      usage.push(await run(base, func, { [key]: val }, []))
-      usage.push(await run(base, func, { [key]: val }, [key]))
-    }
-    for (const func of USAGE_CALLS) {
-      usage.push(await run(base, func, { [key]: val, from, to }, []))
-      usage.push(await run(base, func, { [key]: val, from, to }, [key]))
-    }
-    for (const func of [...USAGE_DIDS, ...USAGE_PAY]) {
-      usage.push(await run(base, func, { [key]: val }, []))
-    }
+
+    // user_details_get — hash SHA1(u + user_id + secret) (or + username)
+    if (id) usage.push(await run(base, 'user_details_get', { user_id: val }, ['user_id']))
+    if (username) usage.push(await run(base, 'user_details_get', { username: val }, ['username']))
+
+    // user_calls_get — hash SHA1(u + s_user + period_start + period_end + secret)
+    usage.push(await run(base, 'user_calls_get',
+      { s_user: val, period_start: periodStart, period_end: periodEnd },
+      ['s_user', 'period_start', 'period_end']))
+    // …and with s_call_type=all appended (some installs want it in the hash)
+    usage.push(await run(base, 'user_calls_get',
+      { s_user: val, period_start: periodStart, period_end: periodEnd, s_call_type: 'all' },
+      ['s_user', 'period_start', 'period_end', 's_call_type']))
+
+    // dids_get — only u is hashed; filters are unhashed. List all, then narrow.
+    usage.push(await run(base, 'dids_get', {}, []))
+    usage.push(await run(base, 'dids_get', { search_user: val }, []))
+
+    // payments_get — try the user_id-hashed and the u-only variants
+    usage.push(await run(base, 'payments_get', { user_id: val }, ['user_id']))
+    usage.push(await run(base, 'payments_get', {}, []))
+
     const usageHits = usage.filter((r) => r.ok)
 
     return res.json({
