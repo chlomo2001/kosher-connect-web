@@ -51,6 +51,56 @@ async function handler(req, res) {
   const id = (req.query.id || '').toString().trim()
   const username = (req.query.username || '').toString().trim()
 
+  // ── Crack mode: which hash construction does each function ACTUALLY accept? ──
+  // Same SHA1(u+secret) is accepted by user_balance_get yet rejected by dids_get,
+  // so MOR hashes a different param set per function. We can't read the spec
+  // (wiki blocks us), so we ask the live server: for each candidate we try a
+  // matrix of hash orderings and report which are NOT "Incorrect hash".
+  if (req.query.crack) {
+    const uname = username || 'kosherconnect'
+    async function tryK(func, params, hashKeys) {
+      const out = await elidCall(func, params, { hashKeys, base })
+      const err = out.error || null
+      // "Incorrect hash" = wrong construction. Anything else (data, "user not
+      // found", "access denied") means the HASH itself was accepted.
+      const hashOk = !!out.ok || (err && !/incorrect hash/i.test(err))
+      return {
+        func, params, hashKeys, hash: `SHA1(${hashKeys.join(' + ')} + secret)`,
+        ok: !!out.ok, error: err, hashOk,
+        dataKeys: out.ok ? Object.keys(out.data || {}).slice(0, 20) : [],
+        data: out.ok ? out.data : undefined, rawSnippet: String(out.raw || '').slice(0, 200),
+      }
+    }
+    // Candidate (func, params) pairs; for each we sweep several key orderings.
+    const cands = [
+      ['user_details_get', { username: uname }],
+      ['user_details_get', { user: uname }],
+      ['dids_get', {}],
+      ['dids_get', { search_status: 'all' }],
+      ['dids_get', { search_status: 'any' }],
+      ['payments_get', {}],
+      ['users_get', {}],
+    ]
+    const trials = []
+    for (const [func, params] of cands) {
+      const pk = Object.keys(params)
+      const orders = [['u'], ...pk.map((k) => ['u', k]), ...pk.map((k) => [k]), ...pk.map((k) => [k, 'u'])]
+      const seen = new Set()
+      for (const o of orders) {
+        const sig = func + '|' + o.join(',')
+        if (seen.has(sig)) continue
+        seen.add(sig)
+        trials.push(tryK(func, params, o))
+      }
+    }
+    const all = await Promise.all(trials)
+    return res.json({
+      success: true, mode: 'crack', base,
+      hashAccepted: all.filter((r) => r.hashOk).map((r) => ({ func: r.func, params: Object.keys(r.params), hash: r.hash, ok: r.ok, error: r.error, dataKeys: r.dataKeys })),
+      all, status,
+    })
+  }
+
   // ── Target mode: prove a live balance read + lock the hash recipe ──
   if (id || username) {
     const key = id ? 'id' : 'username'
