@@ -9294,7 +9294,7 @@ async function deleteVN(id, number) {
 async function renderSettingsTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = loadingHtml('Loading settings…');
-  const [cfg, team, autos, aliases, menu, extra, bizacc, pguide, health] = await Promise.all([
+  const [cfg, team, autos, aliases, menu, extra, bizacc, pguide, health, elidSummary] = await Promise.all([
     window.api.getSettings(),
     kcFetch('/api/team').then(r => r.status === 403 ? null : r.json()).catch(() => null),
     kcFetch('/api/automations').then(r => r.status === 403 ? null : r.json()).catch(() => null),
@@ -9304,6 +9304,7 @@ async function renderSettingsTab() {
     kcFetch('/api/business-accounts').then(r => r.status === 403 ? null : r.json()).catch(() => null),
     kcFetch('/api/phone-guide').then(r => r.ok ? r.json() : null).catch(() => null),
     fetch('/api/health').then(r => r.json()).catch(() => null),
+    kcFetch('/api/elid/summary').then(r => r.status === 403 ? null : r.json()).catch(() => null),
   ]);
   if (!cfg || !cfg.success) {
     content.innerHTML = `<div class="tab-placeholder"><div class="big">⚙️</div>
@@ -9760,6 +9761,20 @@ async function renderSettingsTab() {
       'what each passport needs, per destination', `
       <div id="travelRulesBody" style="padding:12px 14px 14px;"><div style="color:var(--muted);font-size:13px;">Loading…</div></div>`);
 
+  // ELID (telecom upstream) — owner-only. Shows the reseller's live ELID credit
+  // balance, read-only. Hidden until ELID is configured (a 503 "not configured"
+  // or a non-owner 403 → no card). Read live via lib/elid.js.
+  const elidCard = (!elidSummary || /not configured/i.test(elidSummary.error || '')) ? '' :
+    settingsCard('elid', '📞 ELID (telecom upstream)',
+      elidSummary.success ? `credit £${Number(elidSummary.balance).toFixed(2)}` : 'connection issue', `
+      <div style="padding:12px 14px 14px;font-size:13px;">
+        ${elidSummary.success
+          ? `Account <strong>${escHtml(elidSummary.account)}</strong> — upstream credit balance:
+             <strong style="font-size:16px;">£${Number(elidSummary.balance).toFixed(2)}</strong>
+             <div style="font-size:11px;color:var(--muted);margin-top:6px;">Read live from ELID (Kolmisoft MOR), read-only. Per-customer usage is next.</div>`
+          : `<span style="color:var(--danger);">Couldn't read ELID: ${escHtml(elidSummary.error || 'unknown error')}</span>`}
+      </div>`);
+
   content.innerHTML = `
     <div style="margin-bottom:8px;padding:10px 14px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:12px;">
       <span style="flex:1;">Everything that runs the business — people, prices, messages and automation — lives here. Price edits apply to <strong>new</strong> charges only; existing tickets never reprice.</span>
@@ -9782,7 +9797,7 @@ async function renderSettingsTab() {
     ${msgHtml}
     ${aliasesHtml}
 
-    ${ivrHtml ? sectionHead('Connectivity', 'virtual-number &amp; IVR providers') + ivrHtml : ''}
+    ${(ivrHtml || elidCard) ? sectionHead('Connectivity', 'virtual-number &amp; IVR providers') + ivrHtml + elidCard : ''}
 
     ${sectionHead('Workbench', 'phone migrations &amp; converters')}
     ${contactToolsHtml}
