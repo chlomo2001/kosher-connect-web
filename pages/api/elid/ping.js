@@ -119,10 +119,15 @@ async function handler(req, res) {
     const periodStart = periodEnd - 30 * 86400
     const usage = []
 
-    // 1) user_details_get — hash SHA1(u + user_id + secret) OR SHA1(u + username + secret)
+    // The ?crack=1 probe proved the recipe: hash = SHA1(u + secret) (hashOrder
+    // []). The target (username/user_id/s_user/period_*) is sent but NOT hashed —
+    // same as the balance read. So every call below uses hashOrder [].
+
+    // 1) user_details_get — SHA1(u + secret). Try user_id first (if numeric), then
+    // username. Returns the customer's balance, DIDs and numeric id in one shot.
     const detail = id
-      ? await run(base, 'user_details_get', { user_id: val }, ['user_id'])
-      : await run(base, 'user_details_get', { username: val }, ['username'])
+      ? await run(base, 'user_details_get', { user_id: val }, [])
+      : await run(base, 'user_details_get', { username: val }, [])
     usage.push(detail)
 
     // Resolve the numeric MOR user id: given directly via ?id=, else dug out of
@@ -133,23 +138,16 @@ async function handler(req, res) {
       resolvedId = resolvedId || firstNum(detail.data.id) || firstNum(detail.data.user_id) || firstNum(detail.data.userid) || null
     }
 
-    // 2) user_calls_get — needs the numeric s_user. hash SHA1(u + s_user + period_start + period_end + secret)
-    if (resolvedId) {
-      usage.push(await run(base, 'user_calls_get',
-        { s_user: resolvedId, period_start: periodStart, period_end: periodEnd },
-        ['s_user', 'period_start', 'period_end']))
-      usage.push(await run(base, 'user_calls_get',
-        { s_user: resolvedId, period_start: periodStart, period_end: periodEnd, s_call_type: 'all' },
-        ['s_user', 'period_start', 'period_end', 's_call_type']))
-    }
+    // 2) user_calls_get — SHA1(u + secret); s_user + period window sent unhashed.
+    const sUser = resolvedId || val
+    usage.push(await run(base, 'user_calls_get',
+      { s_user: sUser, period_start: periodStart, period_end: periodEnd, s_call_type: 'all' }, []))
 
-    // 3) dids_get — only u is hashed; filters are unhashed. List all (maps every
-    // number → its owner), then the per-user filter once we know the id.
-    usage.push(await run(base, 'dids_get', {}, []))
-    if (resolvedId) usage.push(await run(base, 'dids_get', { search_user: resolvedId }, []))
-
-    // 4) payments_get — user_id-hashed if we have it, else the u-only variant
-    usage.push(await run(base, 'payments_get', resolvedId ? { user_id: resolvedId } : {}, resolvedId ? ['user_id'] : []))
+    // 3) dids_get / payments_get still reject SHA1(u+secret) — they need extra
+    // hashed params we haven't cracked. user_details_get already returns the
+    // customer's DIDs, so these stay as a best-effort probe.
+    usage.push(await run(base, 'dids_get', resolvedId ? { search_user: resolvedId } : {}, []))
+    usage.push(await run(base, 'payments_get', resolvedId ? { user_id: resolvedId } : {}, []))
 
     const usageHits = usage.filter((r) => r.ok)
 
