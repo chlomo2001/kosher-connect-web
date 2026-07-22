@@ -101,62 +101,61 @@ async function handler(req, res) {
     })
   }
 
-  // ── Target mode: prove a live balance read + lock the hash recipe ──
+  // ── Target mode: crack + prove the per-customer recipe ──
+  // Key finding: SHA1(u+secret) works for kosherconnect but FAILS for a real
+  // customer — because kosherconnect==u made SHA1(u+secret)==SHA1(target+secret)
+  // by coincidence. So the hash is over the TARGET identifier, not u. This mode
+  // tries the target-only family and reports which construction each call wants.
   if (id || username) {
-    const key = id ? 'id' : 'username'
+    const key = id ? 'user_id' : 'username'
     const val = id || username
-    const results = []
-    for (const func of ['user_balance_get', 'balance']) {
-      results.push(await run(base, func, { [key]: val }, []))       // target NOT hashed
-      results.push(await run(base, func, { [key]: val }, [key]))    // target hashed
-    }
-    const hit = results.find((r) => r.ok)
-
-    // ── Usage sweep, MOR-correct, with an auto-resolve step. A username alone
-    // can't drive user_calls_get (it needs the numeric s_user), so we read
-    // user_details_get first, pull the numeric id out of it, then use that. ──
     const periodEnd = Math.floor(Date.now() / 1000)
     const periodStart = periodEnd - 30 * 86400
-    const usage = []
 
-    // The ?crack=1 probe proved the recipe: hash = SHA1(u + secret) (hashOrder
-    // []). The target (username/user_id/s_user/period_*) is sent but NOT hashed —
-    // same as the balance read. So every call below uses hashOrder [].
-
-    // 1) user_details_get — SHA1(u + secret). Try user_id first (if numeric), then
-    // username. Returns the customer's balance, DIDs and numeric id in one shot.
-    const detail = id
-      ? await run(base, 'user_details_get', { user_id: val }, [])
-      : await run(base, 'user_details_get', { username: val }, [])
-    usage.push(detail)
-
-    // Resolve the numeric MOR user id: given directly via ?id=, else dug out of
-    // the details response (MOR returns it as <id>/<user_id>/<userid>).
-    const firstNum = (v) => (Array.isArray(v) ? v[0] : v)
-    let resolvedId = id || null
-    if (detail.ok && detail.data) {
-      resolvedId = resolvedId || firstNum(detail.data.id) || firstNum(detail.data.user_id) || firstNum(detail.data.userid) || null
+    async function runK(func, params, hashKeys) {
+      const out = await elidCall(func, params, { hashKeys, base })
+      return {
+        func, params, hash: `SHA1(${hashKeys.join(' + ')} + secret)`,
+        httpStatus: out.httpStatus, ok: !!out.ok, error: out.error || null,
+        dataKeys: out.ok ? Object.keys(out.data || {}).slice(0, 30) : [],
+        data: out.ok ? out.data : undefined, rawSnippet: String(out.raw || '').slice(0, 200),
+      }
     }
 
-    // 2) user_calls_get — SHA1(u + secret); s_user + period window sent unhashed.
+    // Balance — primary hypothesis SHA1(target + secret), then ordered variants.
+    const balance = await Promise.all([
+      runK('user_balance_get', { [key]: val }, [key]),        // SHA1(target + secret)  ← primary
+      runK('user_balance_get', { [key]: val }, [key, 'u']),   // SHA1(target + u + secret)
+      runK('user_balance_get', { [key]: val }, ['u', key]),   // SHA1(u + target + secret)
+    ])
+    const balHit = balance.find((r) => r.ok)
+
+    // Details — same hash family; resolve the numeric id from whatever works.
+    const details = await Promise.all([
+      runK('user_details_get', { [key]: val }, [key]),
+      runK('user_details_get', { [key]: val }, [key, 'u']),
+    ])
+    const detHit = details.find((r) => r.ok)
+    const firstNum = (v) => (Array.isArray(v) ? v[0] : v)
+    let resolvedId = id || null
+    if (detHit?.data) resolvedId = resolvedId || firstNum(detHit.data.id) || firstNum(detHit.data.user_id) || firstNum(detHit.data.userid) || null
+
+    // Calls — needs the numeric s_user; try the target-only hash and the
+    // full-param hash (s_user + period window) in case calls signs the range.
     const sUser = resolvedId || val
-    usage.push(await run(base, 'user_calls_get',
-      { s_user: sUser, period_start: periodStart, period_end: periodEnd, s_call_type: 'all' }, []))
-
-    // 3) dids_get / payments_get still reject SHA1(u+secret) — they need extra
-    // hashed params we haven't cracked. user_details_get already returns the
-    // customer's DIDs, so these stay as a best-effort probe.
-    usage.push(await run(base, 'dids_get', resolvedId ? { search_user: resolvedId } : {}, []))
-    usage.push(await run(base, 'payments_get', resolvedId ? { user_id: resolvedId } : {}, []))
-
-    const usageHits = usage.filter((r) => r.ok)
+    const calls = await Promise.all([
+      runK('user_calls_get', { s_user: sUser, period_start: periodStart, period_end: periodEnd }, ['s_user']),
+      runK('user_calls_get', { s_user: sUser, period_start: periodStart, period_end: periodEnd }, ['s_user', 'period_start', 'period_end']),
+    ])
+    const callHit = calls.find((r) => r.ok)
 
     return res.json({
       success: true, mode: 'target', target: { [key]: val }, base, resolvedUserId: resolvedId,
-      liveReadWorks: !!hit,
-      workingCall: hit ? { func: hit.func, hashRule: hit.hashRule, dataKeys: hit.dataKeys } : null,
-      usageWorks: usageHits.map((r) => ({ func: r.func, params: Object.keys(r.params), hashRule: r.hashRule, dataKeys: r.dataKeys })),
-      results, usage, status,
+      liveReadWorks: !!balHit,
+      balance: balHit ? { value: balHit.data?.balance, recipe: balHit.hash } : null,
+      details: detHit ? { recipe: detHit.hash, dataKeys: detHit.dataKeys, data: detHit.data } : null,
+      calls: callHit ? { recipe: callHit.hash, dataKeys: callHit.dataKeys } : null,
+      tries: { balance, details, calls }, status,
     })
   }
 
