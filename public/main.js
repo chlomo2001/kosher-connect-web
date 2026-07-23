@@ -3454,6 +3454,7 @@ function renderDetailPanel(id) {
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer">⏰</button>
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="chargeCardOnFile('${c.id}')" title="Charge the customer's saved card on file (Stripe)">💳</button>
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openPaymentLinkModal('${c.id}')" title="Create a Stripe payment link tagged to this customer">🔗 Link</button>
+          ${(!currentStaff || currentStaff.role === 'owner') ? `<button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openElidModal('${c.id}')" title="Look up this customer's ELID (telecom) balance & status">📡 ELID</button>` : ''}
           <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openEditModal('${c.id}')">✏️ Edit</button>
           <button class="card-close" onclick="dismissCustomerCard()" title="Close" aria-label="Close">✕</button>
         </div>
@@ -3710,6 +3711,72 @@ async function copyPaymentLink() {
   if (!url) return;
   try { await navigator.clipboard.writeText(url); toast('Link copied — send it to the customer.', 'success'); }
   catch { toast('Select the link and copy it manually.', 'warning'); }
+}
+
+// Per-customer ELID (telecom switch) lookup — owner-only, read-only. Shows the
+// customer's live ELID balance + account status. ELID has no link to a KC
+// customer, so staff confirm the ELID username once (prefilled from the name);
+// it's remembered per-customer in localStorage so it auto-loads next time.
+const ELID_MAP_KEY = 'kc_elid_map';
+function elidMap() { try { return JSON.parse(localStorage.getItem(ELID_MAP_KEY) || '{}') || {}; } catch { return {}; } }
+function elidGuessUsername(c) { return `${c.firstName || ''}${c.lastName || ''}`.toLowerCase().replace(/[^a-z0-9]/g, ''); }
+function openElidModal(customerId) {
+  const c = customers.find(x => x.id === customerId);
+  if (!c) return;
+  const saved = elidMap()[customerId];
+  const guess = saved || elidGuessUsername(c);
+  showDynamicModal(`
+    <div class="modal-title">📡 ELID account — ${escHtml(c.firstName)} ${escHtml(c.lastName)}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Live balance &amp; status on the ELID telecom switch. Read-only. The username is remembered for next time.</div>
+    <div style="display:flex;gap:8px;align-items:flex-end;">
+      <div class="form-group form-full" style="flex:1;margin:0;">
+        <label class="form-label">ELID username</label>
+        <input class="form-input" id="elidUser" value="${escHtml(guess)}" placeholder="e.g. babbygrinfeld" onkeydown="if(event.key==='Enter')lookupElid('${escHtml(String(customerId))}')">
+      </div>
+      <button class="btn btn-primary" id="elidGo" onclick="lookupElid('${escHtml(String(customerId))}')">Look up</button>
+    </div>
+    <div id="elidResult" style="margin-top:14px;"></div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
+  `);
+  if (saved) lookupElid(customerId);
+}
+async function lookupElid(customerId) {
+  const uname = document.getElementById('elidUser')?.value.trim();
+  const out = document.getElementById('elidResult');
+  if (!uname) { toast('Enter an ELID username.', 'error'); return; }
+  const btn = document.getElementById('elidGo');
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  if (out) out.innerHTML = `<div style="color:var(--muted);font-size:13px;">Looking up…</div>`;
+  try {
+    const r = await kcFetch('/api/elid/user?username=' + encodeURIComponent(uname));
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.success) {
+      if (out) out.innerHTML = `<div style="color:var(--danger);font-size:13px;">${escHtml(j.error || 'Lookup failed.')}</div>`;
+      return;
+    }
+    const a = j.account;
+    try { const m = elidMap(); m[customerId] = uname; localStorage.setItem(ELID_MAP_KEY, JSON.stringify(m)); } catch { /* private mode */ }
+    const owes = (a.balance != null && a.balance < 0);
+    const balTxt = a.balance == null ? '—' : `${owes ? '−' : ''}${fmtGbp(Math.abs(a.balance))}`;
+    const balColor = a.balance == null ? 'var(--muted)' : owes ? 'var(--danger)' : 'var(--success)';
+    const row = (k, v) => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--muted);">${k}</span><span>${v}</span></div>`;
+    if (out) out.innerHTML =
+      `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+          <strong>${escHtml(a.name || a.username || uname)}</strong>
+          <span style="font-size:11px;color:var(--muted);">ELID #${escHtml(String(a.userid || '—'))}</span>
+        </div>
+        <div style="font-size:22px;font-weight:700;color:${balColor};margin-bottom:10px;">${balTxt} <span style="font-size:12px;font-weight:400;color:var(--muted);">${a.balance == null ? '' : owes ? 'owing' : 'in credit'}</span></div>
+        ${row('Account', escHtml(a.account || '—'))}
+        ${row('Tariff', escHtml(String(a.tariffId || '—')))}
+        ${row('Status', a.blocked ? '<span style="color:var(--danger);">Blocked</span>' : a.active ? '<span style="color:var(--success);">Active</span>' : 'Inactive')}
+        ${a.agreementDate ? row('Customer since', escHtml(a.agreementDate)) : ''}
+      </div>`;
+  } catch {
+    if (out) out.innerHTML = `<div style="color:var(--danger);font-size:13px;">Could not reach ELID.</div>`;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Look up'; }
+  }
 }
 
 async function deleteCustomerDoc(custId, id) {
