@@ -1,56 +1,64 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
-import { formatPhoneDisplay } from '../lib/ukPhone.mjs'
 import {
   PlaneIcon, FlipPhoneIcon, SimIcon, GlobeIcon, TicketIcon, MusicIcon,
   WrenchIcon, BagIcon, ChatIcon, PhoneCallIcon, MailIcon, PinIcon,
 } from '../components/kcIcons'
 
-// The public face of Kosher Connect — telecom-first, Sky-style layout (bold
-// hero, alternating feature bands, clean light/dark surfaces), driven by the
-// owner's own bilingual copy so nothing in Hebrew is lost. Preserves the
-// dynamic opening hours, JSON-LD SEO and the sign-in / portal / join links.
-// Two languages: English and lashon hakodesh — same content, RTL flips with it.
+// The public face of Kosher Connect — the bold, telecom-first Sky layout from
+// the approved artifact: dark punchy hero, product-category nav, alternating
+// feature bands with real concept illustrations, then More / Our story /
+// Contact. Bilingual (English + lashon hakodesh, RTL flips with it) with the
+// dynamic opening hours, JSON-LD SEO and the sign-in / portal / join links kept.
 
 const ICONS = [PlaneIcon, FlipPhoneIcon, SimIcon, GlobeIcon, TicketIcon, MusicIcon, WrenchIcon, BagIcon, ChatIcon]
 
 const PHONE_TEL = 'tel:+441615311386'
-const PHONE_SHOWN = formatPhoneDisplay('01615311386')
+// Shown in the shop's own local form (the community dials 0161…); the tel: link
+// stays fully qualified so it dials correctly from any device.
+const PHONE_SHOWN = '0161 531 1386'
 const EMAIL = 'admin@kosher-connect.com'
 const MAPS_URL = 'https://maps.google.com/?q=421+Bury+New+Road,+Salford+M7+4ED'
+
+const BAND_IDS = ['mobile', 'travel', 'intl']
 
 const T = {
   en: {
     dir: 'ltr', langLabel: 'EN',
     brandName: 'Kosher Connect',
-    brandTag: 'Kosher Phones • Rentals & Travel • SIM Plans • Kol Torah Audio • Repairs',
-    nav: { services: 'Services', contact: 'Contact', join: 'Join us', account: 'My account', signin: 'Staff sign in' },
+    nav: { mobile: 'Mobile & SIM', travel: 'Travel phones', intl: 'International numbers', repairs: 'Repairs & more', visit: 'Visit us', message: 'Message us', account: 'My account', signin: 'Staff sign in', join: 'Join us' },
     joinCta: 'New to Kosher Connect? Leave your details →',
-    heroTitle: 'Welcome to the Kosher World',
-    strap: 'Serving the Heimishe community — Manchester',
-    heroBody: 'Kosher technology without compromise on quality, efficiency or service. Phones, SIMs, travel, repairs and Kol Torah audio — under one roof, and explained properly before you spend a penny.',
-    quote: '“Technology should serve the people — not the other way around.”',
-    ctaServices: 'See what we do', ctaContact: 'Ask us anything',
+    heroEyebrow: 'Kosher Connect · Salford, Manchester',
+    heroTitle: 'Your phone bill, halved.',
+    heroBody: 'Most people are quietly on the wrong SIM. Bring us your last bill and we’ll match a plan to how you actually use your phone — same coverage, same number, far less money.',
+    heroPill: 'Same network · same number · far less every month',
+    ctaMessage: 'Message us', ctaCall: 'Call',
+    heroSub: 'And whatever else a phone needs — travel phones, international numbers, repairs and Kol Torah audio — it’s all under one roof.',
     proof: [
       { v: '£35 → £18', c: 'what a typical monthly SIM bill becomes once the plan actually matches the usage' },
       { v: 'Shabbos & Yom Tov', c: 'never charged on any rental — on every trip, automatically' },
       { v: 'Same day', c: 'SIMs and international numbers, set up before you leave the shop' },
     ],
-    // The three headline products get their own feature band.
     bands: [
       {
-        eyebrow: 'Mobile & SIM', title: 'Stop overpaying for your SIM',
+        eyebrow: 'Mobile & SIM',
+        title: 'Kosher SIM plans, matched to how you really use your phone',
+        title2: 'Same network, less money',
         body: 'Most people are quietly on the wrong plan. Bring us your last bill and we’ll match the tariff to how you actually use your phone — international minutes included — and the monthly bill usually drops by half.',
         chips: ['Keep your number', 'Keep your phone', 'We do the switch for you'], cta: 'Bring us your bill',
       },
       {
-        eyebrow: 'Travel phones', title: 'A kosher phone, sorted before you travel',
+        eyebrow: 'Travel phones',
+        title: 'A kosher phone, sorted before you travel',
+        title2: 'Nothing to arrange abroad',
         body: 'Off to the USA, Canada, Europe or Eretz Yisroel? Rent a kosher phone, set up with you in the shop before you go — so there’s nothing to arrange at a foreign airport. You pay only for the days you use, and Shabbos and Yom Tov are never charged.',
         chips: ['Set up before you travel', 'Only pay for days used', 'Shabbos never charged'], cta: 'Plan your trip',
       },
       {
-        eyebrow: 'International numbers', title: 'An Israeli or USA number that rings on your UK phone',
+        eyebrow: 'International numbers',
+        title: 'A local number, on the phone you already carry',
+        title2: 'Israel or the USA, ringing in your pocket',
         body: 'Family in Israel? Business in the States? Get a local number that rings straight through to the phone already in your pocket — no second handset, and no roaming charges for the people calling you.',
         chips: ['Rings on your own phone', 'Israeli or USA number', 'No roaming for callers'], cta: 'Get your number',
       },
@@ -75,22 +83,20 @@ const T = {
     visitTitle: 'Visit the shop', directions: 'Get directions', hoursLabel: 'Open',
     callTitle: 'Call us', callBody: 'Whatever the question — you’ll get a straight answer.',
     emailTitle: 'Email us', emailBody: 'For anything that can wait for a written reply.',
-    footExplore: 'Explore', footContact: 'Contact',
-    footBlurb: 'Kosher phones, SIM plans, travel rentals, international numbers, Kol Torah audio and repairs — everything under one roof, explained properly.',
-    rights: 'All rights reserved.', backTop: 'Back to top ↑',
+    rights: 'All rights reserved.',
     tradingName: 'Kosher Connect is a trading name of Hatzluche Ltd.',
   },
   he: {
     dir: 'rtl', langLabel: 'HE',
     brandName: 'כשר קונקט',
-    brandTag: 'טלפונים כשרים • השכרות ונסיעות • תוכניות סים • קול תורה • תיקונים',
-    nav: { services: 'שירותים', contact: 'יצירת קשר', join: 'הצטרפות', account: 'החשבון שלי', signin: 'כניסת צוות' },
+    nav: { mobile: 'סים וטלפון', travel: 'טלפונים לנסיעות', intl: 'מספרים בינלאומיים', repairs: 'תיקונים ועוד', visit: 'בואו לחנות', message: 'דברו איתנו', account: 'החשבון שלי', signin: 'כניסת צוות', join: 'הצטרפות' },
     joinCta: 'חדשים אצלנו? השאירו פרטים ←',
-    heroTitle: 'ברוכים הבאים לעולם הכשר',
-    strap: 'לשירות הקהילה החרדית — מנצ׳סטר והסביבה',
-    heroBody: 'טכנולוגיה כשרה בלי פשרות — לא באיכות, לא בשירות ולא במחיר. טלפונים כשרים, כרטיסי סים, השכרות לנסיעות, מספרים בינלאומיים, קול תורה ותיקונים — הכול תחת קורת גג אחת, מוסבר בסבלנות לפני שמוציאים פרוטה.',
-    quote: '„הטכנולוגיה צריכה לשמש את האדם — ולא האדם את הטכנולוגיה.“',
-    ctaServices: 'מה תמצאו אצלנו', ctaContact: 'דברו איתנו',
+    heroEyebrow: 'כשר קונקט · סלפורד, מנצ׳סטר',
+    heroTitle: 'חשבון הטלפון שלכם — בחצי.',
+    heroBody: 'רוב האנשים מחזיקים סים לא מתאים ומשלמים יותר מדי. הביאו את החשבון האחרון — נתאים תוכנית לשימוש האמיתי שלכם: אותה רשת, אותו מספר, הרבה פחות כסף.',
+    heroPill: 'אותה רשת · אותו מספר · הרבה פחות כל חודש',
+    ctaMessage: 'דברו איתנו', ctaCall: 'חייגו',
+    heroSub: 'וכל מה שעוד צריך לטלפון — טלפונים לנסיעות, מספרים בינלאומיים, תיקונים וקול תורה — הכול תחת קורת גג אחת.',
     proof: [
       { v: '£18 במקום £35', c: 'כך נראה חשבון סים חודשי אצל רוב הלקוחות, ברגע שהתוכנית באמת מותאמת לשימוש' },
       { v: 'שבת ויום טוב', c: 'אף פעם לא בחשבון — בכל השכרה ובכל נסיעה, באופן אוטומטי' },
@@ -98,17 +104,23 @@ const T = {
     ],
     bands: [
       {
-        eyebrow: 'סים וטלפון', title: 'די לשלם יותר מדי על הסים',
+        eyebrow: 'סים וטלפון',
+        title: 'תוכניות סים כשרות, מותאמות לשימוש האמיתי שלכם',
+        title2: 'אותה רשת, פחות כסף',
         body: 'רוב האנשים מחזיקים תוכנית שלא מתאימה להם. הביאו את החשבון האחרון — נתאים את התוכנית לשימוש האמיתי, כולל דקות לחו״ל, ובדרך כלל החשבון החודשי יורד בחצי.',
         chips: ['שומרים על המספר', 'שומרים על הטלפון', 'אנחנו מבצעים את המעבר'], cta: 'הביאו את החשבון',
       },
       {
-        eyebrow: 'טלפונים לנסיעות', title: 'טלפון כשר, מסודר עוד לפני הנסיעה',
+        eyebrow: 'טלפונים לנסיעות',
+        title: 'טלפון כשר, מסודר עוד לפני הנסיעה',
+        title2: 'אין מה לסדר בחו״ל',
         body: 'נוסעים לארה״ב, קנדה, אירופה או ארץ ישראל? טלפון כשר מושכר, מוגדר אתכם בחנות עוד לפני היציאה — כך שאין מה לסדר בשדה תעופה זר. משלמים רק על ימי השימוש, ושבת ויום טוב תמיד חינם.',
         chips: ['מסודר לפני הנסיעה', 'תשלום רק על ימי שימוש', 'שבת תמיד חינם'], cta: 'לתכנון הנסיעה',
       },
       {
-        eyebrow: 'מספרים בינלאומיים', title: 'מספר ישראלי או אמריקאי שמצלצל בטלפון שלכם',
+        eyebrow: 'מספרים בינלאומיים',
+        title: 'מספר מקומי, בטלפון שכבר בכיס שלכם',
+        title2: 'ישראל או ארה״ב — מצלצל אצלכם',
         body: 'משפחה בישראל? עסקים בארה״ב? מספר מקומי שמצלצל ישירות אל הטלפון שכבר בכיס שלכם — בלי מכשיר שני, ובלי חיובי נדידה למי שמתקשר אליכם.',
         chips: ['מצלצל בטלפון שלכם', 'מספר ישראלי או אמריקאי', 'בלי נדידה למתקשרים'], cta: 'קבלו מספר',
       },
@@ -133,12 +145,102 @@ const T = {
     visitTitle: 'בואו לחנות', directions: 'הוראות הגעה', hoursLabel: 'שעות פתיחה',
     callTitle: 'התקשרו אלינו', callBody: 'כל שאלה שהיא — ותצאו עם תשובה ברורה.',
     emailTitle: 'כתבו לנו', emailBody: 'לכל דבר שיכול להמתין לתשובה מסודרת בכתב.',
-    footExplore: 'ניווט מהיר', footContact: 'יצירת קשר',
-    footBlurb: 'טלפונים כשרים, תוכניות סים, השכרות לנסיעות, מספרים בינלאומיים, קול תורה ותיקונים — הכול תחת קורת גג אחת.',
-    rights: 'כל הזכויות שמורות.', backTop: 'חזרה למעלה ↑',
+    rights: 'כל הזכויות שמורות.',
     tradingName: 'כשר קונקט הוא שם מסחרי של Hatzluche Ltd.',
   },
 }
+
+// Concept illustrations for the three feature bands — the punchy artwork from
+// the approved artifact, as self-contained inline SVG (no external assets).
+// Decorative: each is aria-hidden and drawn on its own navy card.
+function ArtSim() {
+  return (
+    <svg viewBox="0 0 400 300" className="sk-art" aria-hidden="true">
+      <rect width="400" height="300" rx="22" fill="#0d1b3a" />
+      {/* the bill */}
+      <rect x="44" y="60" width="182" height="154" rx="13" fill="#ffffff" />
+      <path d="M44 73 a13 13 0 0 1 13-13 h156 a13 13 0 0 1 13 13 v25 h-182 z" fill="#07639e" />
+      <rect x="66" y="114" width="140" height="9" rx="4.5" fill="#c9d6ea" />
+      <rect x="66" y="134" width="112" height="9" rx="4.5" fill="#dde5f2" />
+      <rect x="66" y="154" width="132" height="9" rx="4.5" fill="#dde5f2" />
+      <text x="120" y="197" fontSize="27" fontWeight="800" fill="#c19161" fontFamily="Arial, sans-serif" textAnchor="middle">£££</text>
+      <ellipse cx="120" cy="188" rx="47" ry="27" fill="none" stroke="#e2574c" strokeWidth="3" />
+      {/* arrow to the result */}
+      <path d="M236 150 H318" stroke="#2f95d8" strokeWidth="4.5" fill="none" strokeLinecap="round" />
+      <path d="M310 139 L326 150 L310 161 Z" fill="#2f95d8" />
+      <rect x="300" y="116" width="76" height="68" rx="13" fill="#07639e" />
+      <text x="338" y="150" fontSize="21" fontWeight="800" fill="#ffffff" fontFamily="Arial, sans-serif" textAnchor="middle">LESS</text>
+      <text x="338" y="169" fontSize="10" fontWeight="700" fill="#8fd0ff" fontFamily="Arial, sans-serif" textAnchor="middle" letterSpacing="1.5">A MONTH</text>
+      {/* SIM chip */}
+      <rect x="52" y="238" width="54" height="42" rx="8" fill="none" stroke="#c19161" strokeWidth="2.6" />
+      <path d="M52 254 H106 M52 264 H106 M71 238 V280 M87 238 V280" stroke="#c19161" strokeWidth="2.2" />
+    </svg>
+  )
+}
+function ArtTravel() {
+  return (
+    <svg viewBox="0 0 400 300" className="sk-art" aria-hidden="true">
+      <rect width="400" height="300" rx="22" fill="#0d1b3a" />
+      {/* globe */}
+      <circle cx="306" cy="84" r="42" fill="#07639e" />
+      <g stroke="#8fd0ff" strokeWidth="1.3" fill="none" opacity="0.5">
+        <path d="M266 76 Q306 60 346 76 M266 92 Q306 108 346 92 M306 42 V126 M276 52 Q306 84 276 116 M336 52 Q306 84 336 116" />
+      </g>
+      {/* dotted flight path */}
+      <path d="M64 214 Q186 118 300 116" stroke="#c19161" strokeWidth="2.6" strokeDasharray="2 8" strokeLinecap="round" fill="none" opacity="0.85" />
+      {/* plane */}
+      <g transform="translate(158 150) rotate(-34)">
+        <path d="M0 0 L46 -6 L64 0 L46 6 Z" fill="#ffffff" />
+        <path d="M20 -4 L32 -22 L40 -20 L30 -2 Z" fill="#8fd0ff" />
+        <path d="M20 4 L32 22 L40 20 L30 2 Z" fill="#8fd0ff" />
+      </g>
+      {/* phone, ready */}
+      <rect x="56" y="150" width="90" height="130" rx="17" fill="#12224a" stroke="#2f95d8" strokeWidth="2" />
+      <rect x="69" y="167" width="64" height="88" rx="7" fill="#0a1734" />
+      <circle cx="101" cy="198" r="18" fill="none" stroke="#5fd08a" strokeWidth="3.2" />
+      <path d="M93 198 l6 7 l11 -14" stroke="#5fd08a" strokeWidth="3.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="83" y="226" width="36" height="7" rx="3.5" fill="#2f95d8" opacity="0.7" />
+      <circle cx="101" cy="268" r="5" fill="#2f95d8" />
+    </svg>
+  )
+}
+function ArtIntl() {
+  return (
+    <svg viewBox="0 0 400 300" className="sk-art" aria-hidden="true">
+      <rect width="400" height="300" rx="22" fill="#0d1b3a" />
+      <defs>
+        <clipPath id="ilRound"><circle cx="86" cy="150" r="27" /></clipPath>
+        <clipPath id="usRound"><circle cx="314" cy="150" r="27" /></clipPath>
+      </defs>
+      {/* incoming signal waves */}
+      <g stroke="#8fd0ff" strokeWidth="2" fill="none" opacity="0.45">
+        <path d="M126 106 q-15 44 0 88 M104 90 q-24 60 0 120" />
+        <path d="M274 106 q15 44 0 88 M296 90 q24 60 0 120" />
+      </g>
+      {/* phone in your pocket */}
+      <rect x="156" y="58" width="88" height="154" rx="18" fill="#12224a" stroke="#2f95d8" strokeWidth="2" />
+      <rect x="169" y="76" width="62" height="106" rx="7" fill="#0a1734" />
+      <path d="M186 108 q-4 -6 2 -10 l8 -3 6 11 -5 5 q6 12 18 18 l5 -5 11 6 -3 8 q-4 6 -10 3 -25 -10 -35 -36 z" fill="#5fd08a" opacity="0.92" />
+      <circle cx="200" cy="196" r="4" fill="#2f95d8" />
+      {/* Israel roundel */}
+      <g clipPath="url(#ilRound)">
+        <rect x="59" y="123" width="54" height="54" fill="#ffffff" />
+        <rect x="59" y="133" width="54" height="7" fill="#0a5cc4" />
+        <rect x="59" y="160" width="54" height="7" fill="#0a5cc4" />
+        <path d="M86 143 l7 12 -14 0 z M86 157 l7 -12 -14 0 z" fill="none" stroke="#0a5cc4" strokeWidth="1.7" />
+      </g>
+      <circle cx="86" cy="150" r="27" fill="none" stroke="#26305c" strokeWidth="2" />
+      {/* USA roundel */}
+      <g clipPath="url(#usRound)">
+        <rect x="287" y="123" width="54" height="54" fill="#ffffff" />
+        <g fill="#e2574c"><rect x="287" y="123" width="54" height="6" /><rect x="287" y="135" width="54" height="6" /><rect x="287" y="147" width="54" height="6" /><rect x="287" y="159" width="54" height="6" /><rect x="287" y="171" width="54" height="6" /></g>
+        <rect x="287" y="123" width="24" height="24" fill="#0a3a8a" />
+      </g>
+      <circle cx="314" cy="150" r="27" fill="none" stroke="#26305c" strokeWidth="2" />
+    </svg>
+  )
+}
+const BAND_ART = [ArtSim, ArtTravel, ArtIntl]
 
 const LD_JSON = JSON.stringify({
   '@context': 'https://schema.org',
@@ -189,7 +291,7 @@ export default function Welcome() {
         <meta name="description" content="Kosher Connect - Kosher phones, SIM plans, travel phones, repairs, and international numbers. Serving the Heimishe community from Manchester." />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Kosher Connect" />
-        <meta property="og:title" content="Kosher Connect — Welcome to the Kosher World" />
+        <meta property="og:title" content="Kosher Connect — Your phone bill, halved" />
         <meta property="og:description" content="Kosher phones, SIM plans, travel rentals, international numbers, Kol Torah audio and repairs — under one roof in Manchester." />
         <meta property="og:url" content="https://kosher-connect.com/welcome" />
         <meta property="og:image" content="https://kosher-connect.com/logo-full.png" />
@@ -206,8 +308,11 @@ export default function Welcome() {
               <img className="sk-logo" src="/logo-full.png" alt="Kosher Connect" />
             </a>
             <nav className="sk-nav-links" aria-label="Site">
-              <a href="#services" className="sk-navlink">{t.nav.services}</a>
-              <a href="#contact" className="sk-navlink">{t.nav.contact}</a>
+              <a href="#mobile" className="sk-navlink">{t.nav.mobile}</a>
+              <a href="#travel" className="sk-navlink">{t.nav.travel}</a>
+              <a href="#intl" className="sk-navlink">{t.nav.intl}</a>
+              <a href="#services" className="sk-navlink">{t.nav.repairs}</a>
+              <a href="#contact" className="sk-navlink">{t.nav.visit}</a>
               <div className="sk-lang" role="group" aria-label="Language">
                 {['en', 'he'].map((l) => (
                   <button key={l} type="button" lang={l === 'en' ? 'en' : l}
@@ -215,57 +320,57 @@ export default function Welcome() {
                     onClick={() => pick(l)}>{T[l].langLabel}</button>
                 ))}
               </div>
-              <a href="/portal" className="sk-btn sk-btn-sky sk-btn-sm">{t.nav.account}</a>
-              <a href="/login" className="sk-staff">{t.nav.signin}</a>
+              <a href={PHONE_TEL} className="sk-nav-phone" dir="ltr" aria-label="Call Kosher Connect">
+                <strong>{PHONE_SHOWN}</strong>
+              </a>
+              <a href="#contact" className="sk-btn sk-btn-sky sk-btn-sm">{t.nav.message}</a>
             </nav>
           </div>
         </header>
 
         <section className="sk-hero" id="top">
           <div className="sk-wrap">
-            <span className="sk-eyebrow">{t.strap}</span>
+            <span className="sk-eyebrow">{t.heroEyebrow}</span>
             <h1>{t.heroTitle}</h1>
             <p className="sk-hero-body">{t.heroBody}</p>
-            <div className="sk-quote">{t.quote}</div>
+            <span className="sk-pill">{t.heroPill}</span>
             <div className="sk-hero-cta">
-              <a className="sk-btn sk-btn-sky sk-btn-lg" href="#services">{t.ctaServices}</a>
-              <a className="sk-btn sk-btn-ghost sk-btn-lg" href="#contact">{t.ctaContact}</a>
+              <a className="sk-btn sk-btn-sky sk-btn-lg" href="#contact">{t.ctaMessage}</a>
+              <a className="sk-btn sk-btn-ghost sk-btn-lg" href={PHONE_TEL}>{t.ctaCall}{' '}<span dir="ltr">{PHONE_SHOWN}</span></a>
             </div>
-            <div className="sk-proof">
-              {t.proof.map((p, i) => (
-                <div className="sk-proof-item" key={`${lang}-p${i}`}>
-                  <div className="sk-proof-num">{p.v}</div>
-                  <div className="sk-proof-cap">{p.c}</div>
-                </div>
-              ))}
-            </div>
+            <p className="sk-hero-sub">{t.heroSub}</p>
+          </div>
+        </section>
+
+        <section className="sk-proofstrip" aria-label="Why customers switch">
+          <div className="sk-wrap">
+            {t.proof.map((p, i) => (
+              <div className="sk-proof-item" key={`${lang}-p${i}`}>
+                <div className="sk-proof-num">{p.v}</div>
+                <div className="sk-proof-cap">{p.c}</div>
+              </div>
+            ))}
           </div>
         </section>
 
         <div id="services" />
-        {t.bands.map((b, i) => (
-          <section className={`sk-band ${i % 2 ? 'sk-flip' : ''}`} key={`${lang}-b${i}`}>
-            <div className="sk-wrap sk-band-inner">
-              <div className="sk-band-copy sk-reveal">
-                <span className="sk-eyebrow">{b.eyebrow}</span>
-                <h2>{b.title}</h2>
-                <p>{b.body}</p>
-                <div className="sk-chips">{b.chips.map((c, j) => <span key={j}>✓ {c}</span>)}</div>
-                <a className="sk-btn sk-btn-sky sk-btn-lg" href="#contact">{b.cta}</a>
+        {t.bands.map((b, i) => {
+          const Art = BAND_ART[i] || BAND_ART[0]
+          return (
+            <section className={`sk-band ${i % 2 ? 'sk-flip sk-band-tint' : ''}`} id={BAND_IDS[i]} key={`${lang}-b${i}`}>
+              <div className="sk-wrap sk-band-inner">
+                <div className="sk-band-copy sk-reveal">
+                  <span className="sk-eyebrow">{b.eyebrow}</span>
+                  <h2>{b.title}<span className="sk-accent">{b.title2}</span></h2>
+                  <p>{b.body}</p>
+                  <div className="sk-chips">{b.chips.map((c, j) => <span key={j}>✓ {c}</span>)}</div>
+                  <a className="sk-btn sk-btn-sky sk-btn-lg" href="#contact">{b.cta}</a>
+                </div>
+                <div className="sk-band-art sk-reveal"><Art /></div>
               </div>
-              <div className="sk-band-art sk-reveal" aria-hidden="true">
-                <svg viewBox="0 0 320 256"><defs><radialGradient id={`orb${i}`} cx="40%" cy="32%" r="75%">
-                  <stop offset="0%" stopColor="#5cb4e8" /><stop offset="55%" stopColor="#0a5c93" /><stop offset="100%" stopColor="#0a2f5e" />
-                </radialGradient></defs>
-                  <ellipse cx="160" cy="128" rx="108" ry="48" fill="none" stroke="#c19161" strokeWidth="1.6" opacity=".5" transform={`rotate(${i % 2 ? 18 : -18} 160 128)`} />
-                  <circle cx="160" cy="128" r="72" fill={`url(#orb${i})`} />
-                  <circle cx="160" cy="128" r="72" fill="none" stroke="#8fd0ff" strokeWidth="1.4" opacity=".22" />
-                  <circle cx="238" cy="86" r="5" fill="#c19161" />
-                </svg>
-              </div>
-            </div>
-          </section>
-        ))}
+            </section>
+          )
+        })}
 
         <section className="sk-also">
           <div className="sk-wrap">
@@ -330,8 +435,10 @@ export default function Welcome() {
             <div className="sk-foot-top">
               <img className="sk-logo sk-foot-logo" src="/logo-full.png" alt="Kosher Connect" />
               <nav className="sk-foot-links" aria-label="Footer">
-                <a href="#services">{t.nav.services}</a>
-                <a href="#contact">{t.nav.contact}</a>
+                <a href="#mobile">{t.nav.mobile}</a>
+                <a href="#travel">{t.nav.travel}</a>
+                <a href="#intl">{t.nav.intl}</a>
+                <a href="#contact">{t.nav.visit}</a>
                 <a href="/join">{t.nav.join}</a>
                 <a href="/portal">{t.nav.account}</a>
                 <a href="/login">{t.nav.signin}</a>
@@ -382,62 +489,74 @@ const SKY_CSS = `
   :root[data-theme="dark"] .sk-eyebrow{color:var(--sk-sky-bright)}
 
   /* nav */
-  .sk-nav-wrap{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--sk-paper) 86%,transparent);
+  .sk-nav-wrap{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--sk-paper) 88%,transparent);
     backdrop-filter:saturate(150%) blur(12px);border-bottom:1px solid var(--sk-line)}
-  .sk-nav{display:flex;align-items:center;justify-content:space-between;height:64px;gap:16px}
+  .sk-nav{display:flex;align-items:center;justify-content:space-between;height:66px;gap:14px}
   .sk-logo{height:30px;width:auto;display:block}
   :root[data-theme="dark"] .sk-logo{filter:brightness(0) invert(1)}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-logo{filter:brightness(0) invert(1)}}
-  .sk-nav-links{display:flex;align-items:center;gap:18px}
-  .sk-navlink{color:var(--sk-muted);font-weight:600;font-size:14.5px}
+  .sk-nav-links{display:flex;align-items:center;gap:20px}
+  .sk-navlink{color:var(--sk-muted);font-weight:600;font-size:14.5px;white-space:nowrap}
   .sk-navlink:hover{color:var(--sk-text)}
   .sk-lang{display:inline-flex;border:1px solid var(--sk-line);border-radius:999px;overflow:hidden}
   .sk-lang button{border:0;background:transparent;color:var(--sk-muted);font-weight:700;font-size:12.5px;
     padding:5px 11px;cursor:pointer}
   .sk-lang button.on{background:var(--sk-sky);color:#fff}
-  .sk-staff{color:var(--sk-muted);font-size:13.5px;font-weight:600}
-  .sk-staff:hover{color:var(--sk-text)}
+  .sk-nav-phone{color:var(--sk-text);font-size:15px;white-space:nowrap}
+  .sk-nav-phone strong{font-weight:800;letter-spacing:-.01em}
+  .sk-nav-phone:hover{color:var(--sk-sky)}
+  :root[data-theme="dark"] .sk-nav-phone:hover{color:var(--sk-sky-bright)}
 
   /* buttons */
   .sk-btn{display:inline-flex;align-items:center;justify-content:center;font-weight:700;
     border-radius:999px;cursor:pointer;transition:transform .12s ease,filter .12s ease;white-space:nowrap}
   .sk-btn:hover{transform:translateY(-1px)}
   .sk-btn-sky{background:var(--sk-sky);color:#fff}
-  .sk-btn-sky:hover{filter:brightness(1.06)}
+  .sk-btn-sky:hover{filter:brightness(1.08)}
   .sk-btn-ghost{background:transparent;color:var(--sk-sky);border:1.5px solid var(--sk-sky)}
-  :root[data-theme="dark"] .sk-btn-ghost{color:var(--sk-sky-bright);border-color:var(--sk-sky-bright)}
-  .sk-btn-sm{padding:8px 16px;font-size:14px}
+  .sk-btn-sm{padding:9px 17px;font-size:14px}
   .sk-btn-lg{padding:13px 26px;font-size:15.5px}
 
-  /* hero */
-  .sk-hero{background:linear-gradient(180deg,var(--sk-canvas),var(--sk-paper));padding:74px 0 58px;text-align:center;
-    border-bottom:1px solid var(--sk-line)}
-  .sk-hero h1{font-size:clamp(34px,6vw,60px);margin:0 auto;max-width:14ch}
-  .sk-hero-body{color:var(--sk-muted);max-width:60ch;margin:20px auto 0;font-size:clamp(16px,2.2vw,19px)}
-  .sk-quote{color:var(--sk-gold);font-style:italic;margin:18px auto 0;max-width:52ch}
-  .sk-hero-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}
-  .sk-proof{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin-top:44px}
-  .sk-proof-item{flex:1 1 240px;max-width:320px;background:var(--sk-band);border:1px solid var(--sk-line);
-    border-radius:16px;padding:20px 18px;text-align:center}
-  .sk-proof-num{font-family:var(--sk-fdisp);font-weight:800;font-size:22px;color:var(--sk-sky);letter-spacing:-.02em}
+  /* hero — always the dark Sky banner, both themes */
+  .sk-hero{background:radial-gradient(130% 150% at 14% 0%,#123a6b 0%,#0b2350 42%,#071634 100%);
+    color:#eaf2ff;padding:88px 0 76px;overflow:hidden;position:relative}
+  .sk-hero .sk-eyebrow{color:#7db8e6}
+  .sk-hero h1{font-size:clamp(38px,7vw,74px);max-width:15ch;color:#fff;letter-spacing:-.035em;line-height:1.0}
+  .sk-hero-body{color:#c4d4ee;max-width:47ch;margin:22px 0 0;font-size:clamp(16.5px,2.2vw,20px)}
+  .sk-pill{display:inline-block;margin-top:22px;border:1px solid rgba(255,255,255,.22);
+    border-radius:999px;padding:9px 18px;font-size:13.5px;font-weight:600;color:#cfe0f6;background:rgba(255,255,255,.05)}
+  .sk-hero-cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+  .sk-hero .sk-btn-ghost{color:#fff;border-color:rgba(255,255,255,.5)}
+  .sk-hero .sk-btn-ghost:hover{background:rgba(255,255,255,.08)}
+  .sk-hero-sub{color:#9fb4d6;max-width:46ch;margin:24px 0 0;font-size:15px}
+
+  /* proof strip */
+  .sk-proofstrip{background:var(--sk-band-alt);border-bottom:1px solid var(--sk-line);padding:26px 0}
+  .sk-proofstrip .sk-wrap{display:flex;gap:26px;flex-wrap:wrap;justify-content:center}
+  .sk-proof-item{flex:1 1 250px;max-width:360px;text-align:center}
+  .sk-proof-num{font-family:var(--sk-fdisp);font-weight:800;font-size:21px;color:var(--sk-sky);letter-spacing:-.02em}
   :root[data-theme="dark"] .sk-proof-num{color:var(--sk-sky-bright)}
-  .sk-proof-cap{color:var(--sk-muted);font-size:14px;margin-top:8px;line-height:1.5}
+  .sk-proof-cap{color:var(--sk-muted);font-size:13.5px;margin-top:7px;line-height:1.5}
 
   /* feature bands */
-  .sk-band{padding:64px 0;border-bottom:1px solid var(--sk-line)}
-  .sk-band:nth-child(odd){background:var(--sk-band-alt)}
-  .sk-band-inner{display:grid;grid-template-columns:1.05fr .95fr;gap:44px;align-items:center}
+  .sk-band{padding:66px 0;border-bottom:1px solid var(--sk-line)}
+  .sk-band-tint{background:var(--sk-band-alt)}
+  .sk-band-inner{display:grid;grid-template-columns:1.02fr .98fr;gap:48px;align-items:center}
   .sk-flip .sk-band-copy{order:2}
-  .sk-band-copy h2{font-size:clamp(26px,4vw,38px);margin:0 0 14px}
-  .sk-band-copy p{color:var(--sk-muted);margin:0 0 18px}
-  .sk-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
+  .sk-band-copy h2{font-size:clamp(26px,4vw,40px);margin:0 0 16px;line-height:1.06}
+  .sk-accent{display:block;color:var(--sk-sky)}
+  :root[data-theme="dark"] .sk-accent{color:var(--sk-sky-bright)}
+  .sk-band-copy p{color:var(--sk-muted);margin:0 0 20px;font-size:16.5px}
+  .sk-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px}
   .sk-chips span{background:var(--sk-band);border:1px solid var(--sk-line);border-radius:999px;
-    padding:7px 13px;font-size:13.5px;font-weight:600;color:var(--sk-text)}
+    padding:7px 14px;font-size:13.5px;font-weight:600;color:var(--sk-text)}
+  .sk-band-tint .sk-chips span{background:var(--sk-paper)}
   .sk-band-art{display:flex;justify-content:center}
-  .sk-band-art svg{width:min(100%,360px);height:auto}
+  .sk-art{width:min(100%,440px);height:auto;border-radius:22px;
+    box-shadow:0 24px 60px -28px rgba(6,18,44,.55),0 2px 10px -4px rgba(6,18,44,.4)}
 
   /* also grid */
-  .sk-also{padding:64px 0;background:var(--sk-band)}
+  .sk-also{padding:66px 0;background:var(--sk-band)}
   .sk-also h2{font-size:clamp(24px,3.6vw,34px);text-align:center}
   .sk-also-lead{color:var(--sk-muted);text-align:center;max-width:60ch;margin:12px auto 34px}
   .sk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
@@ -462,7 +581,7 @@ const SKY_CSS = `
   .sk-story-panel p:last-child{margin:0}
 
   /* visit */
-  .sk-visit{padding:64px 0;background:var(--sk-band)}
+  .sk-visit{padding:66px 0;background:var(--sk-band)}
   .sk-visit h2{font-size:clamp(24px,3.6vw,34px);text-align:center}
   .sk-join{color:var(--sk-sky);font-weight:700;white-space:nowrap}
   :root[data-theme="dark"] .sk-join{color:var(--sk-sky-bright)}
@@ -484,11 +603,14 @@ const SKY_CSS = `
   .sk-reveal.in{opacity:1;transform:none}
   @media (prefers-reduced-motion:reduce){.sk-reveal{opacity:1;transform:none;transition:none}}
 
+  @media (max-width:960px){
+    .sk-navlink{display:none}
+    .sk-nav-phone{display:none}
+  }
   @media (max-width:820px){
-    .sk-band-inner{grid-template-columns:1fr;gap:22px}
+    .sk-band-inner{grid-template-columns:1fr;gap:26px}
     .sk-flip .sk-band-copy{order:0}
     .sk-band-art{order:-1}
     .sk-grid,.sk-grid-3{grid-template-columns:1fr}
-    .sk-navlink{display:none}
   }
 `
