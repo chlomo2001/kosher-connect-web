@@ -3447,15 +3447,15 @@ function renderDetailPanel(id) {
           <div class="detail-name">${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:16px;">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
           <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openDraftReminderModal('${c.id}')" title="Draft a reminder message (does not send)">✉️</button>
-          <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openAiReplyModal('${c.id}')" title="Draft an AI reply to a customer message (does not send)">💬</button>
-          <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openLogCommModal('${c.id}')" title="Log a call or note">📞</button>
-          <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer">⏰</button>
-          <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="chargeCardOnFile('${c.id}')" title="Charge the customer's saved card on file (Stripe)">💳</button>
-          <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openPaymentLinkModal('${c.id}')" title="Create a Stripe payment link tagged to this customer">🔗 Link</button>
-          ${(!currentStaff || currentStaff.role === 'owner') ? `<button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openElidModal('${c.id}')" title="Look up this customer's ELID (telecom) balance & status">📡 ELID</button>` : ''}
-          <button class="btn btn-outline" style="font-size:12px;padding:6px 14px;" onclick="openEditModal('${c.id}')">✏️ Edit</button>
+        <div class="card-tools">
+          <button class="card-tool" onclick="openDraftReminderModal('${c.id}')" title="Draft a reminder message (does not send)" aria-label="Draft reminder">✉️</button>
+          <button class="card-tool" onclick="openAiReplyModal('${c.id}')" title="Draft an AI reply to a customer message (does not send)" aria-label="AI reply">💬</button>
+          <button class="card-tool" onclick="openLogCommModal('${c.id}')" title="Log a call or note" aria-label="Log call or note">📞</button>
+          <button class="card-tool" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer" aria-label="Set reminder">⏰</button>
+          <button class="card-tool" onclick="chargeCardOnFile('${c.id}')" title="Charge the customer's saved card on file (Stripe)" aria-label="Charge saved card">💳</button>
+          <button class="card-tool" onclick="openPaymentLinkModal('${c.id}')" title="Create a Stripe payment link tagged to this customer" aria-label="Create payment link">🔗</button>
+          ${(!currentStaff || currentStaff.role === 'owner') ? `<button class="card-tool" onclick="openElidModal('${c.id}')" title="Look up this customer's ELID (telecom) balance & status" aria-label="ELID lookup">📡</button>` : ''}
+          <button class="card-tool" onclick="openEditModal('${c.id}')" title="Edit customer" aria-label="Edit customer">✏️</button>
           <button class="card-close" onclick="dismissCustomerCard()" title="Close" aria-label="Close">✕</button>
         </div>
       </div>

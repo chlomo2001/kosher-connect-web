@@ -792,6 +792,22 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .card-action:hover { border-color: var(--accent); background: var(--accent-wash); }
 .card-action .ca-icon { font-size: 17px; flex-shrink: 0; }
 
+/* Customer-card action toolbar — one uniform square icon button so the row
+   reads as a tidy toolbar. Was a ragged mix of icon-only and text-labelled
+   pills that overflowed the header and clipped "Edit" → "Ed". Labels moved to
+   tooltips; the row wraps instead of truncating. */
+.card-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.card-tool {
+  width: 34px; height: 34px; padding: 0; flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 15px; line-height: 1;
+  background: transparent; color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.card-tool:hover { border-color: var(--accent); background: var(--accent-wash); }
+.card-tool:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
 /* #76 — demote the card's ✕ from a full button to a quiet icon */
 .card-close {
   width: 30px; height: 30px; border-radius: var(--radius); border: 1px solid var(--border);
