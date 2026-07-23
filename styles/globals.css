@@ -1385,6 +1385,14 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .palette-quick-card:hover { border-color: var(--accent); background: var(--accent-wash); transform: translateY(-1px); }
 .pq-icon { font-size: 20px; line-height: 1; }
 .pq-label { font-size: 11px; color: var(--ink-secondary); text-align: center; }
+/* Pin toggle in the corner of a Recent/Pinned card. Hidden until hover/focus
+   on Recent cards; always visible (gold) on Pinned cards. */
+.palette-quick-card { position: relative; }
+.pq-pin { position: absolute; top: 4px; inset-inline-end: 5px; font-size: 11px; line-height: 1;
+  opacity: 0; filter: grayscale(1) opacity(0.6); cursor: pointer; transition: opacity 0.12s, transform 0.12s; }
+.palette-quick-card:hover .pq-pin, .palette-quick-card:focus-within .pq-pin, .pq-pin:focus, .pq-pin.on { opacity: 1; }
+.pq-pin.on { filter: none; }
+.pq-pin:hover { transform: scale(1.18); }
 
 /* Floating help-timer chip — persists across tabs while a session runs */
 .svc-float {

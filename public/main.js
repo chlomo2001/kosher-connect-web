@@ -8540,6 +8540,27 @@ window.paletteRecentRun = (i) => {
   if (r && RECENT_RUN[r.kind]) RECENT_RUN[r.kind](r.id);
 };
 
+// ── Pinned favourites (⌘K) — keep the records you touch most at the top of the
+// palette. Same serialisable {icon,label,sub,kind,id} shape and RECENT_RUN
+// actions as recently-viewed; nav-only, persisted locally. Pin from a Recent
+// card's 📌, unpin from the pinned card's 📌.
+const PIN_KEY = 'kc_pinned_nav';
+let pinnedNav = [];
+try { pinnedNav = JSON.parse(localStorage.getItem(PIN_KEY) || '[]'); if (!Array.isArray(pinnedNav)) pinnedNav = []; } catch { pinnedNav = []; }
+const pinKeyOf = (r) => (r.kind + ':' + (r.id ?? ''));
+const isPinned = (r) => pinnedNav.some((p) => pinKeyOf(p) === pinKeyOf(r));
+function savePins() { try { localStorage.setItem(PIN_KEY, JSON.stringify(pinnedNav)); } catch { /* private mode / full */ } }
+window.palettePin = (i) => {
+  const r = recentNav[i];
+  if (r && RECENT_RUN[r.kind] && !isPinned(r)) {
+    pinnedNav = [{ icon: r.icon, label: r.label, sub: r.sub, kind: r.kind, id: r.id ?? null }, ...pinnedNav].slice(0, 8);
+    savePins();
+  }
+  fillPaletteQuick();
+};
+window.paletteUnpin = (i) => { pinnedNav = pinnedNav.filter((_, j) => j !== i); savePins(); fillPaletteQuick(); };
+window.palettePinRun = (i) => { const r = pinnedNav[i]; closePalette(); if (r && RECENT_RUN[r.kind]) RECENT_RUN[r.kind](r.id); };
+
 function paletteRun(i) {
   const r = paletteResults[i];
   closePalette();
@@ -8553,18 +8574,33 @@ window.paletteQuickRun = (i) => { const it = paletteQuickItems()[i]; closePalett
 function fillPaletteQuick() {
   const q = document.getElementById('paletteQuick');
   if (!q) return;
-  const recentHtml = recentNav.length
-    ? `<div class="palette-quick-label">Recent</div><div class="palette-quick-row">` +
-      recentNav.map((r, i) =>
-        `<button type="button" class="palette-quick-card" onclick="paletteRecentRun(${i})" title="${escHtml(r.sub || '')}">
-          <span class="pq-icon">${r.icon}</span><span class="pq-label">${escHtml(r.label)}</span>
-        </button>`).join('') + `</div>`
-    : '';
-  q.innerHTML = recentHtml + `<div class="palette-quick-label">Quick actions</div><div class="palette-quick-row">` +
+  // A nav card (keyboard-operable div, so the 📌 corner can be its own control
+  // — a button can't nest a button) with a pin toggle in the corner.
+  const navCard = (navCall, r, corner) =>
+    `<div class="palette-quick-card" role="button" tabindex="0" title="${escHtml(r.sub || '')}"
+        onclick="${navCall}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${navCall}}">
+      <span class="pq-icon">${r.icon}</span><span class="pq-label">${escHtml(r.label)}</span>${corner}
+    </div>`;
+  const pin = (call, on, title) =>
+    `<span class="pq-pin${on ? ' on' : ''}" role="button" tabindex="0" aria-label="${title}" title="${title}"
+        onclick="event.stopPropagation();${call}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();${call}}">📌</span>`;
+  let html = '';
+  if (pinnedNav.length) {
+    html += `<div class="palette-quick-label">Pinned</div><div class="palette-quick-row">` +
+      pinnedNav.map((r, i) => navCard(`palettePinRun(${i})`, r, pin(`paletteUnpin(${i})`, true, 'Unpin'))).join('') + `</div>`;
+  }
+  // Recent, minus anything already pinned (kept at its real index for the run).
+  const recentShown = recentNav.map((r, i) => ({ r, i })).filter((x) => !isPinned(x.r));
+  if (recentShown.length) {
+    html += `<div class="palette-quick-label">Recent</div><div class="palette-quick-row">` +
+      recentShown.map(({ r, i }) => navCard(`paletteRecentRun(${i})`, r, pin(`palettePin(${i})`, false, 'Pin'))).join('') + `</div>`;
+  }
+  html += `<div class="palette-quick-label">Quick actions</div><div class="palette-quick-row">` +
     paletteQuickItems().map((c, i) =>
       `<button type="button" class="palette-quick-card" onclick="paletteQuickRun(${i})">
         <span class="pq-icon">${c.icon}</span><span class="pq-label">${escHtml(c.label.replace(/^New /, ''))}</span>
       </button>`).join('') + `</div>`;
+  q.innerHTML = html;
 }
 
 function openPalette() {
