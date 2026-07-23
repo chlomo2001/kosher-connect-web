@@ -4083,18 +4083,49 @@ function renderDupScan(j) {
     + (x.imported ? ' <span style="font-size:10px;color:var(--gold);">ELID-new</span>' : '')
     + (x.elid && x.elid.length ? ` <span style="font-size:10px;color:var(--muted);">📡${x.elid.length}</span>` : '')
     + (x.phone ? ` <span style="font-size:10px;color:var(--muted);">${escHtml(x.phone)}</span>` : '');
-  const rows = (j.pairs || []).map((p) =>
-    `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;">
-      <button style="flex:1;text-align:start;background:none;border:0;color:var(--accent);cursor:pointer;padding:0;" onclick="openCustomerById('${escHtml(p.a.id)}')">${tag(p.a)}</button>
-      <span style="color:var(--muted);">⇄</span>
-      <button style="flex:1;text-align:start;background:none;border:0;color:var(--accent);cursor:pointer;padding:0;" onclick="openCustomerById('${escHtml(p.b.id)}')">${tag(p.b)}</button>
-    </div>`).join('') || '<div style="color:var(--success);font-size:13px;">No likely duplicates found. 🎉</div>';
+  const mBtn = (from, to, label) =>
+    `<button style="font-size:11.5px;background:none;border:1px solid var(--border);border-radius:999px;padding:3px 10px;color:var(--accent);cursor:pointer;" onclick="mergeElidDup('${escHtml(from)}','${escHtml(to)}')">${label}</button>`;
+  const rows = (j.pairs || []).map((p) => {
+    // Only an ELID-import can be the one deleted. Offer to keep the non-import
+    // side; if both are imports, let the owner choose which to keep.
+    let merge = '';
+    if (p.a.imported && p.b.imported) {
+      merge = `${mBtn(p.b.id, p.a.id, '⌫ merge → keep ' + escHtml(p.a.name))} ${mBtn(p.a.id, p.b.id, '⌫ merge → keep ' + escHtml(p.b.name))}`;
+    } else if (p.a.imported) {
+      merge = mBtn(p.a.id, p.b.id, '⌫ merge → keep ' + escHtml(p.b.name));
+    } else if (p.b.imported) {
+      merge = mBtn(p.b.id, p.a.id, '⌫ merge → keep ' + escHtml(p.a.name));
+    }
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px;">
+        <button style="flex:1;text-align:start;background:none;border:0;color:var(--accent);cursor:pointer;padding:0;" onclick="openCustomerById('${escHtml(p.a.id)}')">${tag(p.a)}</button>
+        <span style="color:var(--muted);">⇄</span>
+        <button style="flex:1;text-align:start;background:none;border:0;color:var(--accent);cursor:pointer;padding:0;" onclick="openCustomerById('${escHtml(p.b.id)}')">${tag(p.b)}</button>
+      </div>
+      ${merge ? `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">${merge}</div>` : ''}
+    </div>`;
+  }).join('') || '<div style="color:var(--success);font-size:13px;">No likely duplicates found. 🎉</div>';
   showDynamicModal(`
     <div class="modal-title">👥 Find duplicate customers</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">${j.count} possible duplicate pair${j.count === 1 ? '' : 's'} among the ${j.seeds} ELID-imported customers. Click a name to open that customer. Nothing merges automatically — review each pair and delete the duplicate by hand if it’s a true match.</div>
-    <div style="max-height:340px;overflow:auto;">${rows}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">${j.count} possible duplicate pair${j.count === 1 ? '' : 's'} among the ${j.seeds} ELID-imported customers. Click a name to open the customer. <strong>Merge</strong> moves the ELID line onto the record you keep and deletes the empty import — only offered when one side is an ELID import, and never for a record with money history.</div>
+    <div style="max-height:360px;overflow:auto;">${rows}</div>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
   `);
+}
+async function mergeElidDup(fromId, toId) {
+  if (!confirm('Merge these two? The ELID import will be deleted and its ELID line(s) moved onto the customer you keep.')) return;
+  try {
+    const r = await kcFetch('/api/customers/merge-elid', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fromId, toId }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.success) { toast(j.error || 'Merge failed.', 'error'); return; }
+    const fi = customers.findIndex((c) => String(c.id) === String(fromId));
+    if (fi >= 0) customers.splice(fi, 1);
+    const to = customers.find((c) => String(c.id) === String(toId));
+    if (to && j.kept) { to.elidUsernames = j.kept.elid || to.elidUsernames; to.elidUsername = (j.kept.elid || [])[0] || to.elidUsername; }
+    toast(`Merged — kept ${j.kept?.name || 'customer'}.`, 'success');
+    if (typeof renderTableRows === 'function') renderTableRows();
+    openDupScanModal(); // refresh the list (merged pair drops out)
+  } catch { toast('Could not reach the server.', 'error'); }
 }
 
 async function deleteCustomerDoc(custId, id) {
