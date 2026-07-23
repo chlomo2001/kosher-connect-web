@@ -8780,6 +8780,181 @@ const openOnTab = (tab, fn) => { goToTab(tab); setTimeout(() => fn(), 130); };
 // like the on-page dropdowns — the tab's own "Clear" button resets them.
 const filterView = (tab, apply, reRender) => { apply(); goToTab(tab); if (reRender) setTimeout(reRender, 60); };
 
+// ── In-house AI assistant — "Ask / do anything" ──
+// Gemini (server) turns plain language into ONE structured action; the client
+// answers reads from data it already holds, and shows a confirm card for any
+// write before running it through the app's existing flow. Money actions are
+// owner-only. Gemini proposes; only a human tap makes anything happen.
+let assistantBusy = false;
+let assistantPending = null;
+
+function openAssistantModal(prefill) {
+  showDynamicModal(`
+    <div class="modal-title">🤖 Ask Kosher Connect</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Ask a question or say what you want to do — e.g. “who owes money?”, “overdue rentals”, “what's Abraham Diamant's balance?”, “draft a reminder for Yoel Kahana”, “create a £50 payment link for Shloime Grinfeld”, “add a task to order chargers”. Anything that makes a change is shown for you to confirm first.</div>
+    <div style="display:flex;gap:8px;align-items:flex-end;">
+      <input class="form-input" id="askInput" placeholder="Type here…" style="flex:1;" onkeydown="if(event.key==='Enter')runAssistant()">
+      <button class="btn btn-primary" id="askGo" onclick="runAssistant()">Ask</button>
+    </div>
+    <div id="askOut" style="margin-top:14px;"></div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
+  `);
+  setTimeout(() => { const i = document.getElementById('askInput'); if (i) { if (prefill) i.value = prefill; i.focus(); if (prefill) runAssistant(); } }, 40);
+}
+async function runAssistant() {
+  if (assistantBusy) return;
+  const input = document.getElementById('askInput');
+  const msg = input && input.value.trim();
+  const out = document.getElementById('askOut');
+  if (!msg) return;
+  assistantBusy = true; assistantPending = null;
+  const btn = document.getElementById('askGo'); if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  if (out) out.innerHTML = '<div style="color:var(--muted);font-size:13px;">Thinking…</div>';
+  try {
+    const r = await kcFetch('/api/assistant/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.success) { if (out) out.innerHTML = `<div style="color:var(--danger);font-size:13px;">${escHtml(j.error || 'Could not understand that.')}</div>`; return; }
+    await dispatchAssistant(j.plan, out);
+  } catch { if (out) out.innerHTML = '<div style="color:var(--danger);font-size:13px;">Could not reach the assistant.</div>'; }
+  finally { assistantBusy = false; if (btn) { btn.disabled = false; btn.textContent = 'Ask'; } }
+}
+async function dispatchAssistant(plan, out) {
+  if (!out) return;
+  if (!plan) { out.textContent = 'No answer.'; return; }
+  const reply = plan.reply ? `<div style="font-size:13px;margin-bottom:10px;">${escHtml(plan.reply)}</div>` : '';
+  const a = plan.action || 'none';
+  if (a === 'who_owes') { out.innerHTML = reply + await assistantWhoOwes(); return; }
+  if (a === 'customer_info') { out.innerHTML = reply + await assistantCustomerInfo(plan.args && plan.args.name); return; }
+  if (a === 'overdue_rentals') { out.innerHTML = reply + assistantOverdue(); return; }
+  if (a === 'todays_takings') { out.innerHTML = reply + '<div style="font-size:13px;">Opening the cash-up screen…</div>'; setTimeout(() => { closeDynamicModal(); goToTab('cashup'); }, 700); return; }
+  if (['draft_reminder', 'create_payment_link', 'add_task', 'mark_task_done'].includes(a)) { out.innerHTML = reply + await assistantConfirmCard(plan); return; }
+  out.innerHTML = reply || '<div style="font-size:13px;color:var(--muted);">I can help with balances, who owes, overdue rentals, reminders, payment links and tasks.</div>';
+}
+function assistantNameOf(id) { const c = customers.find(x => String(x.id) === String(id)); return c ? `${c.firstName || ''} ${c.lastName || ''}`.trim() : ('#' + id); }
+async function assistantWhoOwes() {
+  try {
+    const r = await kcFetch('/api/ledger');
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.success) return '<div style="color:var(--danger);font-size:13px;">Could not load balances.</div>';
+    const owers = (j.arrears || []).slice().sort((a, b) => Math.abs(Number(b.balance)) - Math.abs(Number(a.balance)));
+    if (!owers.length) return '<div style="color:var(--success);font-size:13px;">Nobody is in debt right now. 🎉</div>';
+    const total = owers.reduce((s, b) => s + Math.abs(Number(b.balance) || 0), 0);
+    const rows = owers.slice(0, 40).map((b) =>
+      `<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">
+        <button style="background:none;border:0;color:var(--accent);cursor:pointer;padding:0;text-align:start;" onclick="openCustomerById('${escHtml(String(b.customerId))}')">${escHtml(assistantNameOf(b.customerId))}</button>
+        <span style="color:var(--danger);font-weight:600;">${fmtGbp(Math.abs(Number(b.balance)))}</span>
+      </div>`).join('');
+    return `<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">${owers.length} owing · ${fmtGbp(total)} total</div><div style="max-height:280px;overflow:auto;">${rows}</div>`;
+  } catch { return '<div style="color:var(--danger);font-size:13px;">Could not load balances.</div>'; }
+}
+async function assistantCustomerInfo(name) {
+  const res = assistantResolve(name);
+  if (res.none) return `<div style="color:var(--muted);font-size:13px;">I couldn’t find a customer called “${escHtml(name || '')}”.</div>`;
+  if (res.choices) return `<div style="font-size:13px;margin-bottom:6px;">A few match — open one:</div>${assistantChooserHtml(res.choices)}`;
+  const c = res.customer;
+  let bal = null;
+  if (customerLedgerBal && customerLedgerBal.has(String(c.id))) bal = customerLedgerBal.get(String(c.id));
+  else { try { const r = await kcFetch('/api/ledger'); const j = await r.json().catch(() => ({})); if (j && j.success) { const hit = [...(j.arrears || []), ...(j.credits || [])].find((b) => String(b.customerId) === String(c.id)); if (hit) bal = Number(hit.balance); } } catch {} }
+  const owes = bal != null && bal < 0;
+  const balHtml = bal == null ? '<span style="color:var(--muted);">settled / no balance on file</span>'
+    : `<span style="color:${owes ? 'var(--danger)' : 'var(--success)'};font-weight:700;">${owes ? fmtGbp(Math.abs(bal)) + ' owed' : (bal > 0 ? fmtGbp(bal) + ' in credit' : 'settled')}</span>`;
+  return `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:13px;">
+    <div style="font-weight:600;margin-bottom:4px;">${escHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}</div>
+    <div style="margin-bottom:8px;">${balHtml}</div>
+    <button class="btn btn-outline btn-sm" onclick="openCustomerById('${escHtml(String(c.id))}')">Open customer</button>
+  </div>`;
+}
+function assistantOverdue() {
+  const od = rentals.filter((r) => r.status === 'overdue');
+  if (!od.length) return '<div style="color:var(--success);font-size:13px;">No overdue rentals. 🎉</div>';
+  const rows = od.map((r) =>
+    `<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">
+      <button style="background:none;border:0;color:var(--accent);cursor:pointer;padding:0;text-align:start;" onclick="openCustomerById('${escHtml(String(r.customerId))}')">${escHtml(assistantNameOf(r.customerId))}</button>
+      <span style="color:var(--muted);">${r.phoneNumber ? escHtml(r.phoneNumber) + ' · ' : ''}due ${r.toDate ? fmtDate(r.toDate) : '—'}</span>
+    </div>`).join('');
+  return `<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">${od.length} overdue</div><div style="max-height:280px;overflow:auto;">${rows}</div>`;
+}
+function assistantResolve(name) {
+  const q = String(name || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+  if (!q) return { none: true };
+  const scored = customers.map((c) => {
+    const full = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+    let score = 0;
+    if (full === q) score = 100;
+    else if (full.startsWith(q) || q.startsWith(full)) score = 70;
+    else if (full.includes(q) || q.split(' ').every((w) => w && full.includes(w))) score = 50;
+    return { c, score };
+  }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score);
+  if (!scored.length) return { none: true };
+  const top = scored[0];
+  const ties = scored.filter((x) => x.score === top.score);
+  if (top.score === 100 || ties.length === 1) return { customer: top.c };
+  if (ties.length > 6) return { customer: top.c };
+  return { choices: ties.map((x) => x.c) };
+}
+function assistantChooserHtml(choices) {
+  return choices.map((c) => `<button style="display:block;width:100%;text-align:start;background:none;border:1px solid var(--border);border-radius:8px;padding:6px 10px;margin-bottom:4px;color:var(--accent);cursor:pointer;" onclick="openCustomerById('${escHtml(String(c.id))}')">${escHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}</button>`).join('');
+}
+async function assistantConfirmCard(plan) {
+  const built = await assistantBuildAction(plan);
+  if (built.error) return `<div style="color:var(--danger);font-size:13px;">${built.error}</div>`;
+  if (built.choicesHtml) return built.choicesHtml;
+  assistantPending = built;
+  return `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+    <div style="font-size:13px;margin-bottom:10px;">${built.summary}</div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary btn-sm" onclick="assistantConfirm()">✓ Do it</button>
+      <button class="btn btn-outline btn-sm" onclick="assistantPending=null;var o=document.getElementById('askOut');if(o)o.innerHTML='';">Cancel</button>
+    </div>
+  </div>`;
+}
+function assistantConfirm() {
+  const p = assistantPending; assistantPending = null;
+  if (p && typeof p.run === 'function') p.run();
+}
+async function assistantBuildAction(plan) {
+  const a = plan.action; const args = plan.args || {};
+  const needsCust = (a === 'draft_reminder' || a === 'create_payment_link' || (a === 'add_task' && args.name));
+  let cust = null;
+  if (needsCust) {
+    const res = assistantResolve(args.name);
+    if (res.none) return { error: `I couldn’t find a customer called “${escHtml(args.name || '')}”.` };
+    if (res.choices) return { choicesHtml: `<div style="font-size:13px;margin-bottom:6px;">Several match “${escHtml(args.name)}” — say the surname too, or open one:</div>${assistantChooserHtml(res.choices)}` };
+    cust = res.customer;
+  }
+  const cn = cust ? `${cust.firstName || ''} ${cust.lastName || ''}`.trim() : '';
+  if (a === 'draft_reminder') {
+    return { summary: `Open a <strong>reminder draft</strong> for <strong>${escHtml(cn)}</strong>${args.note ? ` about “${escHtml(String(args.note))}”` : ''}. Nothing is sent.`,
+      run: () => { closeDynamicModal(); openDraftReminderModal(cust.id); } };
+  }
+  if (a === 'create_payment_link') {
+    if (currentStaff && currentStaff.role !== 'owner') return { error: 'Only the owner can create payment links.' };
+    const amt = Number(args.amount);
+    const hasAmt = Number.isFinite(amt) && amt > 0;
+    return { summary: `Create a <strong>Stripe payment link</strong> for <strong>${escHtml(cn)}</strong>${hasAmt ? ` for <strong>${fmtGbp(amt)}</strong>` : ''}${args.description ? ` (${escHtml(String(args.description))})` : ''}.`,
+      run: () => { closeDynamicModal(); openPaymentLinkModal(cust.id); setTimeout(() => { const el = document.getElementById('plAmount'); if (el && hasAmt) el.value = amt.toFixed(2); const de = document.getElementById('plDesc'); if (de && args.description) de.value = String(args.description).slice(0, 120); }, 150); } };
+  }
+  if (a === 'add_task') {
+    const title = String(args.title || '').trim();
+    if (!title) return { error: 'What should the task say?' };
+    return { summary: `Add a task: <strong>${escHtml(title)}</strong>${cust ? ` (linked to ${escHtml(cn)})` : ''}.`,
+      run: async () => { try { const r = await window.api.addTask({ title, customerId: cust ? cust.id : undefined }); if (r && (r.success || r.task)) { toast('Task added.', 'success'); if (currentTab === 'tasks') renderTasksTab(); const o = document.getElementById('askOut'); if (o) o.innerHTML = '<div style="color:var(--success);font-size:13px;">✓ Task added.</div>'; } else toast('Could not add task.', 'error'); } catch { toast('Could not add task.', 'error'); } } };
+  }
+  if (a === 'mark_task_done') {
+    const hint = String(args.task || '').toLowerCase().trim();
+    if (!hint) return { error: 'Which task?' };
+    let list = [];
+    try { const t = await window.api.getTasks(); if (Array.isArray(t)) list = t.filter((x) => !x.done); } catch {}
+    const matches = list.filter((x) => { const tl = String(x.title || '').toLowerCase(); return tl.includes(hint) || hint.split(' ').every((w) => w && tl.includes(w)); });
+    if (!matches.length) return { error: `I couldn’t find an open task matching “${escHtml(hint)}”.` };
+    if (matches.length > 1) return { error: `Several open tasks match “${escHtml(hint)}” — please be more specific.` };
+    const tk = matches[0];
+    return { summary: `Mark done: <strong>${escHtml(tk.title)}</strong>.`,
+      run: async () => { try { const r = await window.api.updateTask({ id: tk.id, done: true }); if (r && (r.success || r.task)) { toast('Marked done.', 'success'); if (currentTab === 'tasks') renderTasksTab(); const o = document.getElementById('askOut'); if (o) o.innerHTML = '<div style="color:var(--success);font-size:13px;">✓ Done.</div>'; } else toast('Could not update.', 'error'); } catch { toast('Could not update.', 'error'); } } };
+  }
+  return { error: 'I’m not sure how to do that yet.' };
+}
+
 const PALETTE_COMMANDS = [
   // ── Create ──
   { icon: '📱', label: 'New Rental', sub: 'create', run: () => openNewRentalModal() },
@@ -8817,6 +8992,7 @@ const PALETTE_COMMANDS = [
   { icon: '📥', label: 'Import ELID accounts', sub: 'admin', admin: true, run: () => openElidImportModal() },
   { icon: '👥', label: 'Find duplicate customers', sub: 'admin', admin: true, run: () => openDupScanModal() },
   { icon: '🧠', label: 'AI plan my day (tasks)', sub: 'tasks', run: () => openTaskTriageModal() },
+  { icon: '🤖', label: 'Ask / do anything (AI assistant)', sub: 'AI', run: () => openAssistantModal() },
   // ── Navigate ──
   // #49 — palette navigate entries read the same label map, so "Go to SIM
   // Plans" matches the sidebar and page title exactly (no more "Go to sim").
