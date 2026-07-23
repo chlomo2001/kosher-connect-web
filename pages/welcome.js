@@ -20,6 +20,16 @@ const MAPS_URL = 'https://maps.google.com/?q=421+Bury+New+Road,+Salford+M7+4ED'
 
 const BAND_IDS = ['mobile', 'travel', 'intl']
 
+// Client-side mirror of the server's message-form validation (server is the
+// real guard). A name needs a real letter (Latin or Hebrew); a contact is a
+// valid email or has ≥7 digits — so "/" or junk can't be sent.
+const nameOk = (s) => s.trim().length >= 2 && /[a-zA-Z֐-׿]/.test(s)
+const contactOk = (s) => {
+  const v = s.trim()
+  if (/@/.test(v)) return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)
+  return (v.match(/\d/g) || []).length >= 7
+}
+
 const T = {
   en: {
     dir: 'ltr', langLabel: 'EN',
@@ -82,6 +92,7 @@ const T = {
     contactLead: 'Ask a question, tell us your plan, or leave your bill details — we’ll get back to you.',
     fName: 'Your name', fContact: 'Phone or email', fMsg: 'How can we help?', fSend: 'Send message', fSending: 'Sending…',
     fOk: 'Thanks — we’ve got it and we’ll be in touch.', fErr: 'Couldn’t send — please call us on 0161 531 1386.',
+    fBadName: 'Please enter your name.', fBadContact: 'Please enter a valid phone number or email address.',
     preferCall: 'Prefer to call?', joinCta: 'New here? Leave your details →',
     address: '421 Bury New Road, Salford M7 4ED — the door left of Toy Zone (MMR Group sign), ring bell 5, one floor up.',
     hoursLabel: 'Open',
@@ -149,6 +160,7 @@ const T = {
     contactLead: 'שאלה, התוכנית שלכם, או פרטי החשבון — נחזור אליכם.',
     fName: 'השם שלכם', fContact: 'טלפון או אימייל', fMsg: 'איך נוכל לעזור?', fSend: 'שליחה', fSending: 'שולח…',
     fOk: 'תודה — קיבלנו וניצור קשר.', fErr: 'לא הצלחנו לשלוח — התקשרו אלינו 0161 531 1386.',
+    fBadName: 'נא להזין שם.', fBadContact: 'נא להזין מספר טלפון או כתובת אימייל תקינים.',
     preferCall: 'מעדיפים להתקשר?', joinCta: 'חדשים כאן? השאירו פרטים ←',
     address: '421 בורי ניו רואד, סלפורד M7 4ED — הדלת משמאל ל־Toy Zone (שלט MMR Group), לצלצל בפעמון 5, קומה ראשונה.',
     hoursLabel: 'שעות פתיחה',
@@ -185,6 +197,7 @@ export default function Welcome() {
   const [form, setForm] = useState({ name: '', contact: '', message: '' })
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState('') // '', 'ok', 'err'
+  const [errMsg, setErrMsg] = useState('')
   useEffect(() => {
     try { const saved = localStorage.getItem('kcLang'); if (saved && T[saved]) setLang(saved) } catch {}
     fetch('/api/public/info')
@@ -207,17 +220,18 @@ export default function Welcome() {
   const submit = async (e) => {
     e.preventDefault()
     if (sending) return
-    if (!form.name.trim() || !form.contact.trim()) { setSent('err'); return }
-    setSending(true); setSent('')
+    if (!nameOk(form.name)) { setSent('err'); setErrMsg(t.fBadName); return }
+    if (!contactOk(form.contact)) { setSent('err'); setErrMsg(t.fBadContact); return }
+    setSending(true); setSent(''); setErrMsg('')
     try {
       const r = await fetch('/api/public/message', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ name: form.name.trim(), contact: form.contact.trim(), message: form.message.trim() }),
       })
       const j = await r.json().catch(() => ({}))
       if (r.ok && j.success) { setSent('ok'); setForm({ name: '', contact: '', message: '' }) }
-      else setSent('err')
-    } catch { setSent('err') }
+      else { setSent('err'); setErrMsg(j.error || t.fErr) }
+    } catch { setSent('err'); setErrMsg(t.fErr) }
     finally { setSending(false) }
   }
 
@@ -345,7 +359,7 @@ export default function Welcome() {
                 {sending ? t.fSending : t.fSend}
               </button>
               {sent === 'ok' && <p className="sk-form-ok" role="status">{t.fOk}</p>}
-              {sent === 'err' && <p className="sk-form-err" role="alert">{t.fErr}</p>}
+              {sent === 'err' && <p className="sk-form-err" role="alert">{errMsg || t.fErr}</p>}
             </form>
             <p className="sk-prefer">
               {t.preferCall} <a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a> · {t.hoursLabel} {hours}

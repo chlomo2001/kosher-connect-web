@@ -9,6 +9,12 @@ import { normalizeEmail } from '../../../lib/mappers.js'
 import { phoneKey } from '../../../lib/ukPhone.mjs'
 
 const cap = (v, n) => String(v || '').trim().slice(0, n)
+// A name must carry at least one real letter (Latin or Hebrew) — blocks "/",
+// "123", punctuation-only, etc. An email needs local@domain.tld; a phone needs
+// at least 7 digits. This is the authoritative guard (the client mirrors it).
+const hasLetter = (s) => /[a-zA-Z֐-׿]/.test(s)
+const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s)
+const digitCount = (s) => (String(s).match(/\d/g) || []).length
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
@@ -20,11 +26,14 @@ export default async function handler(req, res) {
   const name = cap(b.name, 80)
   const contact = cap(b.contact, 120)
   const message = cap(b.message, 1000)
-  if (!name || !contact) {
-    return res.status(400).json({ success: false, error: 'Please give your name and a phone or email.' })
+  if (name.length < 2 || !hasLetter(name)) {
+    return res.status(400).json({ success: false, error: 'Please enter your name.' })
+  }
+  const looksEmail = /@/.test(contact)
+  if (looksEmail ? !isEmail(contact) : digitCount(contact) < 7) {
+    return res.status(400).json({ success: false, error: 'Please enter a valid phone number or email address.' })
   }
 
-  const looksEmail = /@/.test(contact)
   const email = looksEmail ? contact : ''
   const phone = looksEmail ? '' : contact
 
