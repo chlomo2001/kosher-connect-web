@@ -8816,6 +8816,7 @@ const PALETTE_COMMANDS = [
   { icon: '🔗', label: 'Match customers to ELID', sub: 'admin', admin: true, run: () => openElidMatchModal() },
   { icon: '📥', label: 'Import ELID accounts', sub: 'admin', admin: true, run: () => openElidImportModal() },
   { icon: '👥', label: 'Find duplicate customers', sub: 'admin', admin: true, run: () => openDupScanModal() },
+  { icon: '🧠', label: 'AI plan my day (tasks)', sub: 'tasks', run: () => openTaskTriageModal() },
   // ── Navigate ──
   // #49 — palette navigate entries read the same label map, so "Go to SIM
   // Plans" matches the sidebar and page title exactly (no more "Go to sim").
@@ -9215,6 +9216,66 @@ else startSvcTimerFloat();
 // date — the assistant proposes, the user disposes. Returns null when there
 // is nothing to say (no opinion, already at the suggested level, or the
 // same suggestion was rejected before).
+// AI "plan my day" — asks the server (Gemini) to rank the whole open queue,
+// then shows the plan grouped Now / Today / Soon with a reason and next step.
+// Advisory: ticking ✓ marks a task done; nothing else is changed automatically.
+async function openTaskTriageModal() {
+  showDynamicModal(`<div class="modal-title">🧠 AI plan for your day</div><div id="aiPlanBody" style="font-size:13px;color:var(--muted);">Reading your open tasks and working out the order…</div>`);
+  try {
+    const r = await kcFetch('/api/tasks/prioritize', { method: 'POST' });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.success) { const b = document.getElementById('aiPlanBody'); if (b) b.innerHTML = escHtml(j.error || 'Could not build a plan.'); return; }
+    renderTaskTriage(j);
+  } catch { const b = document.getElementById('aiPlanBody'); if (b) b.textContent = 'Could not reach the server.'; }
+}
+function renderTaskTriage(j) {
+  const buckets = [
+    { key: 'now', label: '🔴 Now', color: 'var(--danger)' },
+    { key: 'today', label: '🟡 Today', color: 'var(--warning,#b7791f)' },
+    { key: 'soon', label: '⚪ Soon', color: 'var(--muted)' },
+  ];
+  const row = (t) => `
+    <div class="triage-row" style="padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:flex-start;gap:8px;">
+        <button title="Mark done" style="background:none;border:1px solid var(--border);border-radius:6px;width:22px;height:22px;cursor:pointer;flex-shrink:0;color:var(--muted);" onclick="triageDone('${escHtml(t.id)}', this)">✓</button>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;">${escHtml(t.title)}</div>
+          ${t.reason ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;">${escHtml(t.reason)}</div>` : ''}
+          <div style="font-size:11px;margin-top:3px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            ${t.action ? `<span style="color:var(--accent);">→ ${escHtml(t.action)}</span>` : ''}
+            ${t.customerId
+              ? `<button style="background:none;border:0;color:var(--accent);cursor:pointer;padding:0;font-size:11px;" onclick="openCustomerById('${escHtml(String(t.customerId))}')">👤 ${escHtml(t.customerName || 'open customer')}</button>`
+              : (t.customerName ? `<span style="color:var(--muted);">👤 ${escHtml(t.customerName)}</span>` : '')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  const groups = buckets.map((b) => {
+    const list = (j.ranked || []).filter((t) => t.bucket === b.key);
+    if (!list.length) return '';
+    return `<div style="margin-bottom:14px;"><div class="section-divider" style="color:${b.color};">${b.label} <span style="color:var(--muted);font-weight:400;">· ${list.length}</span></div>${list.map(row).join('')}</div>`;
+  }).join('');
+  showDynamicModal(`
+    <div class="modal-title">🧠 AI plan for your day</div>
+    ${j.focus ? `<div style="background:var(--accent-wash);border:1px solid var(--primary-subdued);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:13px;"><strong>Start here:</strong> ${escHtml(j.focus)}</div>` : ''}
+    <div style="max-height:420px;overflow:auto;">${groups || '<div style="color:var(--success);font-size:13px;">Nothing open. 🎉</div>'}</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px;">An AI suggestion from your live task list — you decide. Ticking ✓ marks the task done.</div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button><button class="btn btn-primary" onclick="openTaskTriageModal()">↻ Re-plan</button></div>
+  `);
+}
+async function triageDone(id, btn) {
+  try {
+    const r = await window.api.updateTask({ id, done: true });
+    if (r && (r.success || r.task)) {
+      const rowEl = btn.closest('.triage-row');
+      if (rowEl) rowEl.style.opacity = '0.45';
+      btn.style.background = 'var(--success)'; btn.style.color = '#fff'; btn.disabled = true;
+      if (Array.isArray(tasksList)) { const tk = tasksList.find((x) => String(x.id) === String(id)); if (tk) tk.done = true; }
+      toast('Marked done.', 'success');
+    } else toast('Could not update.', 'error');
+  } catch { toast('Could not update.', 'error'); }
+}
+
 function suggestTaskPriority(t, todayISO) {
   if (t.done) return null;
   let s = null;
@@ -9415,7 +9476,10 @@ async function renderTasksTab() {
         <button class="btn btn-primary" onclick="saveNewTask()">+ Add</button>
       </div>
     </div>
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">${tkBar}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <button class="btn btn-outline" onclick="openTaskTriageModal()" title="Let AI read your whole open list and rank what to do first, and why">🧠 AI plan my day</button>
+      ${tkBar}
+    </div>
     <div class="dash-cols">
       ${lane('🔥 Now — do these first', nowLane, 'Nothing urgent. 🎉')}
       ${lane('📋 Next — when the counter is quiet', nextLane, 'Nothing queued.')}
