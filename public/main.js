@@ -3855,34 +3855,108 @@ async function openElidImportModal() {
     renderElidImport(j.accounts || []);
   } catch { const b = document.getElementById('eiBody'); if (b) b.textContent = 'Could not reach the server.'; }
 }
+// Levenshtein edit distance (small; for spelling-variant name matching).
+function elidLev(a, b) {
+  a = String(a); b = String(b);
+  const m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+// Coarse phonetic key that collapses the common Heimishe transliteration
+// variants (taitelbaum≈teitelbaum, ck≈k, tz≈ts, w≈v, ei≈ai≈i …) so the same
+// person spelled two ways still lands on the same key.
+function elidCanon(t) {
+  let x = String(t).toLowerCase().replace(/[^a-z]/g, '');
+  if (!x) return '';
+  x = x.replace(/sch/g, 'sh').replace(/ck/g, 'k').replace(/ph/g, 'f')
+    .replace(/tz/g, 'ts').replace(/th/g, 't').replace(/ch/g, 'k').replace(/sh/g, 's')
+    .replace(/w/g, 'v').replace(/y/g, 'i')
+    .replace(/ei|ie|ai|ay|ey|ee|ea/g, 'i').replace(/ou|oo|au|oi/g, 'o')
+    .replace(/(.)\1+/g, '$1');
+  return x;
+}
+// Tokens dropped before matching — titles, places, line-type words — so they
+// don't count as (or block) a name match.
+const ELID_NAME_STOP = new Set(['mr', 'mrs', 'reb', 'rav', 'harav', 'new', 'home', 'rental', 'rentals', 'phone', 'usa', 'us', 'uk', 'london', 'antwerp', 'manchester', 'mcr', 'playground', 'callingcard', 'callcard', 'zone', 'work', 'corner', 'company', 'test', 'kosher', 'connect']);
+function elidToks(s) {
+  return String(s || '').toLowerCase().split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 2 && !/^\d+$/.test(t) && !ELID_NAME_STOP.has(t));
+}
+function elidTokHit(u, c) {
+  const uc = elidCanon(u), cc = elidCanon(c);
+  if (!uc || !cc) return { hit: false, strong: false };
+  const strong = uc === cc || (Math.min(uc.length, cc.length) >= 4 && elidLev(uc, cc) <= 1);
+  const hit = strong || uc.startsWith(cc) || cc.startsWith(uc) ||
+    (Math.min(uc.length, cc.length) >= 4 && elidLev(uc, cc) <= 2);
+  return { hit, strong };
+}
+// Best fuzzy customer match for an ELID username, by token overlap. Requires two
+// matching name tokens (or one strong single-token) so a shared first name alone
+// never creates a false link. Returns { c, strong } or null.
+function elidBestMatch(username, unlinked) {
+  const uToks = elidToks(username);
+  if (!uToks.length) return null;
+  let best = null;
+  for (const x of unlinked) {
+    const cToks = elidToks(`${x.c.firstName} ${x.c.lastName}`);
+    if (!cToks.length) continue;
+    let matched = 0, strong = 0;
+    for (const ut of uToks) {
+      let hitAny = false, strongAny = false;
+      for (const ct of cToks) { const r = elidTokHit(ut, ct); if (r.hit) hitAny = true; if (r.strong) strongAny = true; }
+      if (hitAny) matched++;
+      if (strongAny) strong++;
+    }
+    const ok = (uToks.length >= 2 && matched >= 2 && strong >= 1) || (uToks.length === 1 && strong >= 1);
+    if (ok) { const score = strong * 10 + matched; if (!best || score > best.score) best = { c: x.c, score, strong }; }
+  }
+  return best;
+}
 function renderElidImport(accounts) {
   const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const linkedSet = new Set(customers.map((c) => String(c.elidUsername || '').toLowerCase()).filter(Boolean));
-  const unlinked = customers.filter((c) => !c.elidUsername).map((c) => ({ c, n: norm(`${c.firstName} ${c.lastName}`) })).filter((x) => x.n.length >= 5);
-  const linked = [], possible = [], fresh = [];
+  const unlinked = customers.filter((c) => !c.elidUsername).map((c) => ({ c, n: norm(`${c.firstName} ${c.lastName}`) })).filter((x) => x.n.length >= 3);
+  const linked = [], exact = [], fuzzy = [], fresh = [];
   for (const a of accounts) {
     if (linkedSet.has(a.username.toLowerCase())) { linked.push(a); continue; }
     const nu = norm(a.username);
     const m = unlinked.find((x) => nu === x.n || nu.startsWith(x.n) || x.n.startsWith(nu));
-    if (m) possible.push({ ...a, match: m.c }); else fresh.push(a);
+    if (m) { exact.push({ ...a, match: m.c }); continue; }
+    const fb = elidBestMatch(a.username, unlinked);
+    if (fb) fuzzy.push({ ...a, match: fb.c }); else fresh.push(a);
   }
+  const possible = exact.length + fuzzy.length;
+  const linkRow = (a, checked, hint) =>
+    `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;">
+      <input type="checkbox" class="ei-link" data-u="${escHtml(a.username)}" data-cid="${escHtml(String(a.match.id))}" ${checked ? 'checked' : ''}>
+      <span style="flex:1;"><code>${escHtml(a.username)}</code> → ${escHtml(a.match.firstName || '')} ${escHtml(a.match.lastName || '')}${hint ? ` <span style="color:var(--warning,#b7791f);font-size:11px;">${hint}</span>` : ''}</span>
+    </label>`;
+  const exactRows = exact.map((a) => linkRow(a, true, '')).join('');
+  const fuzzyRows = fuzzy.map((a) => linkRow(a, false, 'similar — check')).join('');
+  const possRows = (exactRows + fuzzyRows) || '<div style="color:var(--muted);font-size:12px;">None.</div>';
   const freshRows = fresh.map((a) =>
     `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;">
       <input type="checkbox" class="ei-new" data-u="${escHtml(a.username)}" ${a.internal ? '' : 'checked'}>
       <span style="flex:1;">${escHtml(a.username)}</span>${a.internal ? '<span style="font-size:11px;color:var(--warning,#b7791f);">internal?</span>' : ''}
     </label>`).join('') || '<div style="color:var(--muted);font-size:12px;">None — every new account is either linked or matched.</div>';
-  const possRows = possible.map((a) =>
-    `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;">
-      <input type="checkbox" class="ei-link" data-u="${escHtml(a.username)}" data-cid="${escHtml(String(a.match.id))}" checked>
-      <span style="flex:1;"><code>${escHtml(a.username)}</code> → ${escHtml(a.match.firstName || '')} ${escHtml(a.match.lastName || '')}</span>
-    </label>`).join('') || '<div style="color:var(--muted);font-size:12px;">None.</div>';
   showDynamicModal(`
     <div class="modal-title">📥 Import ELID accounts</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">${linked.length} already linked · ${possible.length} likely existing · ${fresh.length} new. Nothing happens until you press a button. Names for new customers are pulled live from ELID.</div>
-    <div class="section-divider" style="margin:6px 0;">Likely already a customer — link instead <span style="color:var(--muted);font-weight:400;">(${possible.length})</span></div>
-    <div style="max-height:140px;overflow:auto;">${possRows}</div>
-    ${possible.length ? '<button class="btn btn-outline" style="margin:8px 0 14px;" onclick="applyElidLinks()">Link ticked</button>' : ''}
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">${linked.length} already linked · ${possible} likely existing (${exact.length} same spelling + ${fuzzy.length} similar) · ${fresh.length} new. Nothing happens until you press a button. Names for new customers are pulled live from ELID.</div>
+    <div class="section-divider" style="margin:6px 0;">Likely already a customer — link instead <span style="color:var(--muted);font-weight:400;">(${possible})</span></div>
+    <div style="font-size:11.5px;color:var(--muted);margin:0 0 6px;">Exact matches are pre-ticked; “similar — check” are spelling-variant guesses left un-ticked — tick the ones that are really the same person.</div>
+    <div style="max-height:150px;overflow:auto;">${possRows}</div>
+    ${possible ? '<button class="btn btn-outline" style="margin:8px 0 14px;" onclick="applyElidLinks()">Link ticked</button>' : ''}
     <div class="section-divider" style="margin:6px 0;">New — create as customers <span style="color:var(--muted);font-weight:400;">(${fresh.length})</span></div>
+    <div style="font-size:11.5px;color:var(--muted);margin:0 0 6px;">Only tick genuine new people — untick anyone you spot who’s already a customer above.</div>
     <div style="max-height:190px;overflow:auto;">${freshRows}</div>
     <div id="eiResult" style="font-size:12.5px;margin-top:8px;"></div>
     <div class="modal-actions">
