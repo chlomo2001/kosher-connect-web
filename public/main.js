@@ -3842,6 +3842,93 @@ async function runElidMatch() {
   }
 }
 
+// Import/review ELID accounts that aren't in KC yet (owner tool). Buckets the
+// roster into already-linked, likely-existing (offer to LINK), and new (offer to
+// CREATE). Creation pulls each account's real name live from ELID, so imported
+// customers are named correctly; internal/test accounts are pre-unticked.
+async function openElidImportModal() {
+  showDynamicModal(`<div class="modal-title">📥 Import ELID accounts</div><div id="eiBody" style="font-size:13px;color:var(--muted);">Loading ELID accounts…</div>`);
+  try {
+    const r = await kcFetch('/api/elid/accounts');
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.success) { const b = document.getElementById('eiBody'); if (b) b.innerHTML = escHtml(j.error || 'Could not load.'); return; }
+    renderElidImport(j.accounts || []);
+  } catch { const b = document.getElementById('eiBody'); if (b) b.textContent = 'Could not reach the server.'; }
+}
+function renderElidImport(accounts) {
+  const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const linkedSet = new Set(customers.map((c) => String(c.elidUsername || '').toLowerCase()).filter(Boolean));
+  const unlinked = customers.filter((c) => !c.elidUsername).map((c) => ({ c, n: norm(`${c.firstName} ${c.lastName}`) })).filter((x) => x.n.length >= 5);
+  const linked = [], possible = [], fresh = [];
+  for (const a of accounts) {
+    if (linkedSet.has(a.username.toLowerCase())) { linked.push(a); continue; }
+    const nu = norm(a.username);
+    const m = unlinked.find((x) => nu === x.n || nu.startsWith(x.n) || x.n.startsWith(nu));
+    if (m) possible.push({ ...a, match: m.c }); else fresh.push(a);
+  }
+  const freshRows = fresh.map((a) =>
+    `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;">
+      <input type="checkbox" class="ei-new" data-u="${escHtml(a.username)}" ${a.internal ? '' : 'checked'}>
+      <span style="flex:1;">${escHtml(a.username)}</span>${a.internal ? '<span style="font-size:11px;color:var(--warning,#b7791f);">internal?</span>' : ''}
+    </label>`).join('') || '<div style="color:var(--muted);font-size:12px;">None — every new account is either linked or matched.</div>';
+  const possRows = possible.map((a) =>
+    `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;">
+      <input type="checkbox" class="ei-link" data-u="${escHtml(a.username)}" data-cid="${escHtml(String(a.match.id))}" checked>
+      <span style="flex:1;"><code>${escHtml(a.username)}</code> → ${escHtml(a.match.firstName || '')} ${escHtml(a.match.lastName || '')}</span>
+    </label>`).join('') || '<div style="color:var(--muted);font-size:12px;">None.</div>';
+  showDynamicModal(`
+    <div class="modal-title">📥 Import ELID accounts</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">${linked.length} already linked · ${possible.length} likely existing · ${fresh.length} new. Nothing happens until you press a button. Names for new customers are pulled live from ELID.</div>
+    <div class="section-divider" style="margin:6px 0;">Likely already a customer — link instead <span style="color:var(--muted);font-weight:400;">(${possible.length})</span></div>
+    <div style="max-height:140px;overflow:auto;">${possRows}</div>
+    ${possible.length ? '<button class="btn btn-outline" style="margin:8px 0 14px;" onclick="applyElidLinks()">Link ticked</button>' : ''}
+    <div class="section-divider" style="margin:6px 0;">New — create as customers <span style="color:var(--muted);font-weight:400;">(${fresh.length})</span></div>
+    <div style="max-height:190px;overflow:auto;">${freshRows}</div>
+    <div id="eiResult" style="font-size:12.5px;margin-top:8px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
+      <button class="btn btn-primary" id="eiCreate" onclick="applyElidCreate()">Create ticked</button>
+    </div>
+  `);
+}
+async function applyElidLinks() {
+  const boxes = [...document.querySelectorAll('.ei-link:checked')];
+  if (!boxes.length) { toast('Tick some to link first.', 'warning'); return; }
+  let n = 0;
+  for (const b of boxes) {
+    const u = b.getAttribute('data-u');
+    const cc = customers.find((x) => String(x.id) === b.getAttribute('data-cid'));
+    if (cc) { cc.elidUsername = u; try { await window.api.updateCustomer({ id: cc.id, elidUsername: u }); n++; } catch {} }
+    const lbl = b.closest('label'); if (lbl) lbl.style.opacity = '0.5';
+  }
+  toast(`Linked ${n} customer${n === 1 ? '' : 's'} to ELID.`, 'success');
+}
+async function applyElidCreate() {
+  const boxes = [...document.querySelectorAll('.ei-new:checked')];
+  if (!boxes.length) { toast('Tick some accounts to create first.', 'warning'); return; }
+  const usernames = boxes.map((b) => b.getAttribute('data-u'));
+  const btn = document.getElementById('eiCreate');
+  const out = document.getElementById('eiResult');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating…'; }
+  let created = 0; const skipped = [];
+  try {
+    for (let i = 0; i < usernames.length; i += 20) {
+      const chunk = usernames.slice(i, i + 20);
+      const r = await kcFetch('/api/elid/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usernames: chunk }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.success) { if (out) out.innerHTML = `<span style="color:var(--danger);">${escHtml(j.error || 'Import failed.')}</span>`; break; }
+      created += (j.created || []).length;
+      (j.skipped || []).forEach((s) => skipped.push(s));
+      if (out) out.textContent = `Created ${created}${skipped.length ? ` · skipped ${skipped.length}` : ''}…`;
+    }
+    if (out) out.innerHTML = `Created <strong>${created}</strong> customer${created === 1 ? '' : 's'}${skipped.length ? ` · skipped ${skipped.length}` : ''}.`;
+    try { const cs = await window.api.getAllCustomers(); if (Array.isArray(cs)) { customers.length = 0; customers.push(...cs); if (typeof renderTableRows === 'function') renderTableRows(); } } catch {}
+    toast(`Imported ${created} customer${created === 1 ? '' : 's'} from ELID.`, 'success');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Create ticked'; }
+  }
+}
+
 async function deleteCustomerDoc(custId, id) {
   if (!confirm('Delete this document? This cannot be undone.')) return;
   try {
@@ -8528,6 +8615,7 @@ const PALETTE_COMMANDS = [
   { icon: '✉️', label: 'Add email address', sub: 'admin', admin: true, run: () => openOnTab('settings', openEmailAliasModal) },
   { icon: '🤖', label: 'New automation rule', sub: 'admin', admin: true, run: () => openOnTab('settings', openAutomationModal) },
   { icon: '🔗', label: 'Match customers to ELID', sub: 'admin', admin: true, run: () => openElidMatchModal() },
+  { icon: '📥', label: 'Import ELID accounts', sub: 'admin', admin: true, run: () => openElidImportModal() },
   // ── Navigate ──
   // #49 — palette navigate entries read the same label map, so "Go to SIM
   // Plans" matches the sidebar and page title exactly (no more "Go to sim").
