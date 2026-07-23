@@ -42,8 +42,9 @@ Safe (loop-eligible), ranked value ÷ effort:
       later without losing it. (Loyverse.)
 - [x] **P1 · S** — **Maintenance/downtime block** on a phone/IMEI — DONE (this cycle).
       Edit Phone gains a 🔧 checkbox + reason; hidden from New Rental + pool picks.
-- [~] **P2 · S** — **Pinned + recently-visited** quick-nav. (Stripe.) *Recently-visited
-      half DONE (167fd9c) — last 6 opened records in the ⌘K empty state. Pinning still open.*
+- [x] **P2 · S** — **Pinned + recently-visited** quick-nav. (Stripe.) DONE —
+      recently-visited (167fd9c) + pinning (9261f40): 📌 on a Recent card pins it
+      to a "Pinned" row; localStorage, nav-only, keyboard-operable.
 - [ ] **P2 · S** — **Low-stock threshold** per accessory SKU → dashboard badge +
       list filter. (Loyverse.)
 - [ ] **P2 · S** — **Quick-create keys** in ⌘K (type P → payment, etc.). (Stripe.)
@@ -138,6 +139,7 @@ Safe (loop-eligible), ranked value ÷ effort:
 | 07-17 | Status SMS drafts per rental (✉️ on row) — lifecycle-aware text, copy + comm-log, HOLD stays (nothing sent) | ✅ 38/38 | templates in code for now |
 | 07-21 | Maintenance block on rental phones — 🔧 checkbox+reason in Edit Phone; excluded from New Rental picker, pool suggestions, dashboard available count; badge in inventory + palette | ✅ 103/103 ×2 + build + function-level assert | owner live-test pending |
 | 07-22 | ⌘K recently-viewed (167fd9c) — last 6 opened customers/phones/SIMs as tiles in the palette empty state; nav-only, localStorage, reuses quick-action styling | ✅ 113/113 ×2 + build + node --check | owner live-test pending |
+| 07-23 | ⌘K pinned favourites (9261f40) — 📌 on a Recent card pins it to a "Pinned" row atop the palette; unpin from its 📌. localStorage (kc_pinned_nav, max 8), nav-only, keyboard-operable | ✅ 113/113 ×2 + build + node --check + offline palette harness L/D | owner live-test pending |
 
 Held / owner input: family-trip sheet (£1,364 balance) needs the customer's
 name before it's entered; Canada/EU loss rates — follow T&C schedule or stay?
