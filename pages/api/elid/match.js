@@ -34,7 +34,7 @@ async function handler(req, res) {
   const linked = []
   let checked = 0
   for (const c of slice) {
-    if (c.elidUsername) continue // already linked — skip
+    if (c.elidUsername || (Array.isArray(c.elidUsernames) && c.elidUsernames.length)) continue // already linked — skip
     const cands = candidates(c)
     if (!cands.length) continue
     checked++

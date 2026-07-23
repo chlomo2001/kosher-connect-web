@@ -3719,68 +3719,114 @@ async function copyPaymentLink() {
 // the confirmed link is saved on the customer record (elidUsername, persisted
 // via legacy_extras) so it's shared across staff and auto-loads next time.
 function elidGuessUsername(c) { return `${c.firstName || ''}${c.lastName || ''}`.toLowerCase().replace(/[^a-z0-9]/g, ''); }
+// All ELID lines linked to a customer — primary (elidUsername) first, then any
+// extra lines (elidUsernames[]), deduped case-insensitively. A customer can
+// hold several ELID accounts (e.g. a main line + a calling-card).
+function elidLinesOf(c) {
+  const seen = new Set(), out = [];
+  for (const u of [c && c.elidUsername, ...((c && Array.isArray(c.elidUsernames)) ? c.elidUsernames : [])]) {
+    const v = String(u || '').trim(); if (!v) continue;
+    const k = v.toLowerCase(); if (!seen.has(k)) { seen.add(k); out.push(v); }
+  }
+  return out;
+}
+async function elidPersistLines(c) {
+  try { await window.api.updateCustomer({ id: c.id, elidUsername: c.elidUsername || '', elidUsernames: c.elidUsernames || [] }); } catch {}
+}
 function openElidModal(customerId) {
   const c = customers.find(x => x.id === customerId);
   if (!c) return;
-  const saved = c.elidUsername;
-  const guess = saved || elidGuessUsername(c);
+  const guess = elidLinesOf(c).length ? '' : elidGuessUsername(c);
+  const cid = escHtml(String(customerId));
   showDynamicModal(`
-    <div class="modal-title">📡 ELID account — ${escHtml(c.firstName)} ${escHtml(c.lastName)}</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Live balance &amp; status on the ELID telecom switch. Read-only. The username is remembered for next time.</div>
-    <div style="display:flex;gap:8px;align-items:flex-end;">
+    <div class="modal-title">📡 ELID accounts — ${escHtml(c.firstName)} ${escHtml(c.lastName)}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Live balance &amp; status on the ELID telecom switch. Read-only. A customer can have more than one line (e.g. a main line and a calling-card) — the ★ primary is summarised on the card.</div>
+    <div id="elidLines"></div>
+    <div style="display:flex;gap:8px;align-items:flex-end;margin-top:12px;">
       <div class="form-group form-full" style="flex:1;margin:0;">
-        <label class="form-label">ELID username</label>
-        <input class="form-input" id="elidUser" value="${escHtml(guess)}" placeholder="e.g. babbygrinfeld" onkeydown="if(event.key==='Enter')lookupElid('${escHtml(String(customerId))}')">
+        <label class="form-label">Add a line (ELID username)</label>
+        <input class="form-input" id="elidUser" value="${escHtml(guess)}" placeholder="e.g. babbygrinfeld" onkeydown="if(event.key==='Enter')elidAddLine('${cid}')">
       </div>
-      <button class="btn btn-primary" id="elidGo" onclick="lookupElid('${escHtml(String(customerId))}')">Look up</button>
+      <button class="btn btn-primary" id="elidGo" onclick="elidAddLine('${cid}')">Add &amp; look up</button>
     </div>
-    <div id="elidResult" style="margin-top:14px;"></div>
+    <div id="elidAddMsg" style="font-size:12.5px;margin-top:6px;"></div>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
   `);
-  if (saved) lookupElid(customerId);
+  renderElidLines(customerId);
 }
-async function lookupElid(customerId) {
+function renderElidLines(customerId) {
   const c = customers.find(x => x.id === customerId);
-  const uname = document.getElementById('elidUser')?.value.trim();
-  const out = document.getElementById('elidResult');
-  if (!uname) { toast('Enter an ELID username.', 'error'); return; }
-  const btn = document.getElementById('elidGo');
-  if (btn) { btn.disabled = true; btn.textContent = '…'; }
-  if (out) out.innerHTML = `<div style="color:var(--muted);font-size:13px;">Looking up…</div>`;
+  const wrap = document.getElementById('elidLines');
+  if (!c || !wrap) return;
+  const lines = elidLinesOf(c);
+  if (!lines.length) { wrap.innerHTML = '<div style="color:var(--muted);font-size:12.5px;">No ELID line linked yet — add one below.</div>'; return; }
+  const cid = escHtml(String(customerId));
+  wrap.innerHTML = lines.map((u, i) => `
+    <div class="elid-line" data-u="${escHtml(u)}" style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <div style="min-width:0;"><code>${escHtml(u)}</code> ${i === 0
+          ? '<span title="Primary — summarised on the customer card" style="color:var(--gold);font-size:11px;white-space:nowrap;">★ primary</span>'
+          : `<button style="font-size:11px;background:none;border:0;color:var(--accent);cursor:pointer;padding:0;" onclick="elidSetPrimary('${cid}','${escHtml(u)}')">make primary</button>`}</div>
+        <button class="card-tool" style="width:28px;height:28px;font-size:13px;" title="Unlink this line" aria-label="Unlink line" onclick="elidRemoveLine('${cid}','${escHtml(u)}')">✕</button>
+      </div>
+      <div class="elid-bal" style="margin-top:8px;font-size:13px;color:var(--muted);">Looking up…</div>
+    </div>`).join('');
+  lines.forEach(u => elidLoadLine(customerId, u));
+}
+async function elidLoadLine(customerId, u) {
+  const wrap = document.getElementById('elidLines'); if (!wrap) return;
+  const line = [...wrap.querySelectorAll('.elid-line')].find(el => el.getAttribute('data-u') === u);
+  const cell = line && line.querySelector('.elid-bal'); if (!cell) return;
   try {
-    const r = await kcFetch('/api/elid/user?username=' + encodeURIComponent(uname));
+    const r = await kcFetch('/api/elid/user?username=' + encodeURIComponent(u));
     const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.success) {
-      if (out) out.innerHTML = `<div style="color:var(--danger);font-size:13px;">${escHtml(j.error || 'Lookup failed.')}</div>`;
-      return;
-    }
+    if (!r.ok || !j.success) { cell.innerHTML = `<span style="color:var(--danger);">${escHtml(j.error || 'Lookup failed')}</span>`; return; }
     const a = j.account;
-    // Persist the confirmed link on the customer record (shared, not per-browser).
-    if (c && c.elidUsername !== uname) {
-      c.elidUsername = uname;
-      window.api.updateCustomer({ id: customerId, elidUsername: uname }).catch(() => {});
-    }
     const owes = (a.balance != null && a.balance < 0);
     const balTxt = a.balance == null ? '—' : `${owes ? '−' : ''}${fmtGbp(Math.abs(a.balance))}`;
     const balColor = a.balance == null ? 'var(--muted)' : owes ? 'var(--danger)' : 'var(--success)';
-    const row = (k, v) => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--muted);">${k}</span><span>${v}</span></div>`;
-    if (out) out.innerHTML =
-      `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
-          <strong>${escHtml(a.name || a.username || uname)}</strong>
-          <span style="font-size:11px;color:var(--muted);">ELID #${escHtml(String(a.userid || '—'))}</span>
-        </div>
-        <div style="font-size:22px;font-weight:700;color:${balColor};margin-bottom:10px;">${balTxt} <span style="font-size:12px;font-weight:400;color:var(--muted);">${a.balance == null ? '' : owes ? 'owing' : 'in credit'}</span></div>
-        ${row('Account', escHtml(a.account || '—'))}
-        ${row('Tariff', escHtml(String(a.tariffId || '—')))}
-        ${row('Status', a.blocked ? '<span style="color:var(--danger);">Blocked</span>' : a.active ? '<span style="color:var(--success);">Active</span>' : 'Inactive')}
-        ${a.agreementDate ? row('Customer since', escHtml(a.agreementDate)) : ''}
-      </div>`;
-  } catch {
-    if (out) out.innerHTML = `<div style="color:var(--danger);font-size:13px;">Could not reach ELID.</div>`;
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Look up'; }
-  }
+    const status = a.blocked ? '<span style="color:var(--danger);">Blocked</span>' : a.active ? '<span style="color:var(--success);">Active</span>' : 'Inactive';
+    cell.innerHTML = `<span style="font-size:18px;font-weight:700;color:${balColor};">${balTxt}</span> <span style="font-size:11px;color:var(--muted);">${a.balance == null ? '' : owes ? 'owing' : 'in credit'}</span> · ${status} · ${escHtml(a.account || '—')} · tariff ${escHtml(String(a.tariffId || '—'))} <span style="color:var(--muted);">· ELID #${escHtml(String(a.userid || '—'))}</span>`;
+  } catch { cell.innerHTML = `<span style="color:var(--danger);">Could not reach ELID.</span>`; }
+}
+async function elidAddLine(customerId) {
+  const c = customers.find(x => x.id === customerId); if (!c) return;
+  const input = document.getElementById('elidUser'); const uname = input && input.value.trim();
+  const msg = document.getElementById('elidAddMsg');
+  if (!uname) { toast('Enter an ELID username.', 'error'); return; }
+  const btn = document.getElementById('elidGo'); if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  if (msg) msg.textContent = '';
+  try {
+    const r = await kcFetch('/api/elid/user?username=' + encodeURIComponent(uname));
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.success) { if (msg) msg.innerHTML = `<span style="color:var(--danger);">${escHtml(j.error || 'That username was not found on ELID.')}</span>`; return; }
+    const lines = elidLinesOf(c);
+    if (lines.some(x => x.toLowerCase() === uname.toLowerCase())) { if (msg) msg.textContent = 'That line is already linked.'; }
+    else {
+      lines.push(uname);
+      c.elidUsernames = lines;
+      if (!c.elidUsername) c.elidUsername = lines[0];
+      await elidPersistLines(c);
+      if (input) input.value = '';
+    }
+    renderElidLines(customerId);
+  } finally { if (btn) { btn.disabled = false; btn.textContent = 'Add & look up'; } }
+}
+async function elidSetPrimary(customerId, u) {
+  const c = customers.find(x => x.id === customerId); if (!c) return;
+  c.elidUsername = u;
+  c.elidUsernames = elidLinesOf(c); // u now sorts first
+  await elidPersistLines(c);
+  renderElidLines(customerId);
+}
+async function elidRemoveLine(customerId, u) {
+  const c = customers.find(x => x.id === customerId); if (!c) return;
+  if (!confirm(`Unlink ELID account “${u}” from this customer? (The ELID account itself is untouched.)`)) return;
+  const remaining = elidLinesOf(c).filter(x => x.toLowerCase() !== u.toLowerCase());
+  c.elidUsernames = remaining;
+  if (!c.elidUsername || c.elidUsername.toLowerCase() === u.toLowerCase()) c.elidUsername = remaining[0] || '';
+  await elidPersistLines(c);
+  renderElidLines(customerId);
 }
 
 // Bulk-link every customer to their ELID account by name (owner tool). The
@@ -3923,8 +3969,8 @@ function elidBestMatch(username, unlinked) {
 }
 function renderElidImport(accounts) {
   const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-  const linkedSet = new Set(customers.map((c) => String(c.elidUsername || '').toLowerCase()).filter(Boolean));
-  const unlinked = customers.filter((c) => !c.elidUsername).map((c) => ({ c, n: norm(`${c.firstName} ${c.lastName}`) })).filter((x) => x.n.length >= 3);
+  const linkedSet = new Set(customers.flatMap((c) => elidLinesOf(c)).map((u) => u.toLowerCase()));
+  const unlinked = customers.filter((c) => !elidLinesOf(c).length).map((c) => ({ c, n: norm(`${c.firstName} ${c.lastName}`) })).filter((x) => x.n.length >= 3);
   const linked = [], exact = [], fuzzy = [], fresh = [];
   for (const a of accounts) {
     if (linkedSet.has(a.username.toLowerCase())) { linked.push(a); continue; }
@@ -3972,7 +4018,13 @@ async function applyElidLinks() {
   for (const b of boxes) {
     const u = b.getAttribute('data-u');
     const cc = customers.find((x) => String(x.id) === b.getAttribute('data-cid'));
-    if (cc) { cc.elidUsername = u; try { await window.api.updateCustomer({ id: cc.id, elidUsername: u }); n++; } catch {} }
+    if (cc) {
+      const lines = elidLinesOf(cc);
+      if (!lines.some((x) => x.toLowerCase() === u.toLowerCase())) lines.push(u);
+      cc.elidUsernames = lines;
+      if (!cc.elidUsername) cc.elidUsername = lines[0]; // first link becomes primary; extra lines add on
+      try { await window.api.updateCustomer({ id: cc.id, elidUsername: cc.elidUsername, elidUsernames: cc.elidUsernames }); n++; } catch {}
+    }
     const lbl = b.closest('label'); if (lbl) lbl.style.opacity = '0.5';
   }
   toast(`Linked ${n} customer${n === 1 ? '' : 's'} to ELID.`, 'success');
@@ -4001,6 +4053,48 @@ async function applyElidCreate() {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Create ticked'; }
   }
+}
+
+// Open a customer's card by id from anywhere (e.g. the duplicate scanner).
+function openCustomerById(id) {
+  closeDynamicModal();
+  goToTab('customers');
+  selectedId = id;
+  setTimeout(() => {
+    renderDetailPanel(id);
+    document.querySelectorAll('tr[data-id]').forEach((r) => r.classList.toggle('selected', r.dataset.id === id));
+  }, 60);
+}
+
+// Duplicate-customer scanner (owner tool). Fuzzy-matches the ELID-imported
+// customers against the whole book and lists likely-duplicate pairs to review.
+// Read-only — nothing merges; click a name to open that customer.
+async function openDupScanModal() {
+  showDynamicModal(`<div class="modal-title">👥 Find duplicate customers</div><div id="dupBody" style="font-size:13px;color:var(--muted);">Scanning the ELID-imported customers against the whole book…</div>`);
+  try {
+    const r = await kcFetch('/api/customers/duplicates');
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.success) { const b = document.getElementById('dupBody'); if (b) b.innerHTML = escHtml(j.error || 'Could not scan.'); return; }
+    renderDupScan(j);
+  } catch { const b = document.getElementById('dupBody'); if (b) b.textContent = 'Could not reach the server.'; }
+}
+function renderDupScan(j) {
+  const tag = (x) => `${escHtml(x.name)}`
+    + (x.imported ? ' <span style="font-size:10px;color:var(--gold);">ELID-new</span>' : '')
+    + (x.elid && x.elid.length ? ` <span style="font-size:10px;color:var(--muted);">📡${x.elid.length}</span>` : '')
+    + (x.phone ? ` <span style="font-size:10px;color:var(--muted);">${escHtml(x.phone)}</span>` : '');
+  const rows = (j.pairs || []).map((p) =>
+    `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;">
+      <button style="flex:1;text-align:start;background:none;border:0;color:var(--accent);cursor:pointer;padding:0;" onclick="openCustomerById('${escHtml(p.a.id)}')">${tag(p.a)}</button>
+      <span style="color:var(--muted);">⇄</span>
+      <button style="flex:1;text-align:start;background:none;border:0;color:var(--accent);cursor:pointer;padding:0;" onclick="openCustomerById('${escHtml(p.b.id)}')">${tag(p.b)}</button>
+    </div>`).join('') || '<div style="color:var(--success);font-size:13px;">No likely duplicates found. 🎉</div>';
+  showDynamicModal(`
+    <div class="modal-title">👥 Find duplicate customers</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">${j.count} possible duplicate pair${j.count === 1 ? '' : 's'} among the ${j.seeds} ELID-imported customers. Click a name to open that customer. Nothing merges automatically — review each pair and delete the duplicate by hand if it’s a true match.</div>
+    <div style="max-height:340px;overflow:auto;">${rows}</div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
+  `);
 }
 
 async function deleteCustomerDoc(custId, id) {
@@ -8690,6 +8784,7 @@ const PALETTE_COMMANDS = [
   { icon: '🤖', label: 'New automation rule', sub: 'admin', admin: true, run: () => openOnTab('settings', openAutomationModal) },
   { icon: '🔗', label: 'Match customers to ELID', sub: 'admin', admin: true, run: () => openElidMatchModal() },
   { icon: '📥', label: 'Import ELID accounts', sub: 'admin', admin: true, run: () => openElidImportModal() },
+  { icon: '👥', label: 'Find duplicate customers', sub: 'admin', admin: true, run: () => openDupScanModal() },
   // ── Navigate ──
   // #49 — palette navigate entries read the same label map, so "Go to SIM
   // Plans" matches the sidebar and page title exactly (no more "Go to sim").

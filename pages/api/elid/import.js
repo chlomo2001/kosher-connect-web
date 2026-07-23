@@ -18,7 +18,9 @@ async function handler(req, res) {
   if (!usernames.length) return res.status(400).json({ success: false, error: 'No accounts selected.' })
 
   const existing = await listCustomers()
-  const linked = new Set(existing.map((c) => String(c.elidUsername || '').toLowerCase()).filter(Boolean))
+  const linked = new Set(existing
+    .flatMap((c) => [c.elidUsername, ...(Array.isArray(c.elidUsernames) ? c.elidUsernames : [])])
+    .map((u) => String(u || '').toLowerCase()).filter(Boolean))
 
   const created = []
   const skipped = []
