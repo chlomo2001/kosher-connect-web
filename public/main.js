@@ -3714,16 +3714,15 @@ async function copyPaymentLink() {
 }
 
 // Per-customer ELID (telecom switch) lookup — owner-only, read-only. Shows the
-// customer's live ELID balance + account status. ELID has no link to a KC
+// customer's live ELID balance + account status. ELID has no link back to a KC
 // customer, so staff confirm the ELID username once (prefilled from the name);
-// it's remembered per-customer in localStorage so it auto-loads next time.
-const ELID_MAP_KEY = 'kc_elid_map';
-function elidMap() { try { return JSON.parse(localStorage.getItem(ELID_MAP_KEY) || '{}') || {}; } catch { return {}; } }
+// the confirmed link is saved on the customer record (elidUsername, persisted
+// via legacy_extras) so it's shared across staff and auto-loads next time.
 function elidGuessUsername(c) { return `${c.firstName || ''}${c.lastName || ''}`.toLowerCase().replace(/[^a-z0-9]/g, ''); }
 function openElidModal(customerId) {
   const c = customers.find(x => x.id === customerId);
   if (!c) return;
-  const saved = elidMap()[customerId];
+  const saved = c.elidUsername;
   const guess = saved || elidGuessUsername(c);
   showDynamicModal(`
     <div class="modal-title">📡 ELID account — ${escHtml(c.firstName)} ${escHtml(c.lastName)}</div>
@@ -3741,6 +3740,7 @@ function openElidModal(customerId) {
   if (saved) lookupElid(customerId);
 }
 async function lookupElid(customerId) {
+  const c = customers.find(x => x.id === customerId);
   const uname = document.getElementById('elidUser')?.value.trim();
   const out = document.getElementById('elidResult');
   if (!uname) { toast('Enter an ELID username.', 'error'); return; }
@@ -3755,7 +3755,11 @@ async function lookupElid(customerId) {
       return;
     }
     const a = j.account;
-    try { const m = elidMap(); m[customerId] = uname; localStorage.setItem(ELID_MAP_KEY, JSON.stringify(m)); } catch { /* private mode */ }
+    // Persist the confirmed link on the customer record (shared, not per-browser).
+    if (c && c.elidUsername !== uname) {
+      c.elidUsername = uname;
+      window.api.updateCustomer({ id: customerId, elidUsername: uname }).catch(() => {});
+    }
     const owes = (a.balance != null && a.balance < 0);
     const balTxt = a.balance == null ? '—' : `${owes ? '−' : ''}${fmtGbp(Math.abs(a.balance))}`;
     const balColor = a.balance == null ? 'var(--muted)' : owes ? 'var(--danger)' : 'var(--success)';
@@ -3776,6 +3780,65 @@ async function lookupElid(customerId) {
     if (out) out.innerHTML = `<div style="color:var(--danger);font-size:13px;">Could not reach ELID.</div>`;
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Look up'; }
+  }
+}
+
+// Bulk-link every customer to their ELID account by name (owner tool). The
+// server only links when live ELID confirms the account and the name matches,
+// so nothing is mislinked; unmatched customers are left alone. Runs in slices
+// with a progress readout and can be stopped.
+let elidMatchStop = false;
+function openElidMatchModal() {
+  elidMatchStop = false;
+  showDynamicModal(`
+    <div class="modal-title">🔗 Match customers to ELID</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Goes through every customer, guesses their ELID username from the name, and — <strong>only when ELID confirms the account and the name matches</strong> — saves the link on the customer. Read-only against ELID; nothing is mislinked and no new customers are created. Safe to stop anytime.</div>
+    <div id="emProg" style="font-size:13px;margin-bottom:8px;">Ready when you are.</div>
+    <div id="emList" style="max-height:220px;overflow:auto;font-size:12.5px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:none;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="elidMatchStop=true;closeDynamicModal()">Close</button>
+      <button class="btn btn-primary" id="emGo" onclick="runElidMatch()">Start matching</button>
+    </div>
+  `);
+}
+async function runElidMatch() {
+  const go = document.getElementById('emGo');
+  const prog = document.getElementById('emProg');
+  const list = document.getElementById('emList');
+  if (go) { go.disabled = true; go.textContent = 'Matching…'; }
+  elidMatchStop = false;
+  let offset = 0, total = 0, matched = 0;
+  const found = [];
+  try {
+    while (!elidMatchStop) {
+      let j;
+      try {
+        const r = await kcFetch('/api/elid/match', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ offset, limit: 12 }) });
+        j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.success) { if (prog) prog.textContent = j.error || 'Match failed.'; break; }
+      } catch { if (prog) prog.textContent = 'Could not reach the server.'; break; }
+      total = j.total; matched += j.matched;
+      (j.linked || []).forEach((l) => {
+        found.push(l);
+        const cc = customers.find((x) => x.id === l.id);
+        if (cc) cc.elidUsername = l.username; // reflect the new link in memory
+      });
+      offset = j.nextOffset;
+      if (prog) prog.textContent = `Checked ${Math.min(offset, total)} of ${total} · linked ${matched}`;
+      if (list && found.length) {
+        list.style.display = '';
+        list.innerHTML = found.slice(-250).map((l) =>
+          `<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px solid var(--border);">
+            <span>${escHtml(l.name)} → <code>${escHtml(l.username)}</code></span>
+            <span style="color:${l.balance != null && l.balance < 0 ? 'var(--danger)' : 'var(--muted)'};">${l.balance != null ? fmtGbp(l.balance) : ''}</span>
+          </div>`).join('');
+      }
+      if (j.done) break;
+    }
+    if (prog && !elidMatchStop) prog.textContent = `Done — linked ${matched} customer${matched === 1 ? '' : 's'} to ELID (checked ${total}).`;
+    if (elidMatchStop && prog) prog.textContent = `Stopped — linked ${matched} so far.`;
+  } finally {
+    if (go) { go.disabled = false; go.textContent = elidMatchStop ? 'Resume' : 'Run again'; }
   }
 }
 
@@ -8464,6 +8527,7 @@ const PALETTE_COMMANDS = [
   { icon: '📤', label: 'Export CSV', sub: 'admin', admin: true, run: async () => { const r = await window.api.exportCSV(); toast(r?.success ? 'CSV exported.' : (r?.error || 'Export failed.'), r?.success ? 'success' : 'error'); } },
   { icon: '✉️', label: 'Add email address', sub: 'admin', admin: true, run: () => openOnTab('settings', openEmailAliasModal) },
   { icon: '🤖', label: 'New automation rule', sub: 'admin', admin: true, run: () => openOnTab('settings', openAutomationModal) },
+  { icon: '🔗', label: 'Match customers to ELID', sub: 'admin', admin: true, run: () => openElidMatchModal() },
   // ── Navigate ──
   // #49 — palette navigate entries read the same label map, so "Go to SIM
   // Plans" matches the sidebar and page title exactly (no more "Go to sim").
