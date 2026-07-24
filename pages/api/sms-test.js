@@ -1,5 +1,5 @@
 // Settings → Messaging: "send a test SMS" — proves the SMS provider
-// connection (Textlocal or Twilio) end-to-end without touching a customer record.
+// Twilio connection end-to-end without touching a customer record.
 //
 //   POST { to }  (a phone number the OWNER types — their own, typically)
 //
@@ -20,7 +20,7 @@ async function handler(req, res) {
   if (!smsEnabled) {
     return res.status(503).json({
       success: false,
-      error: 'No SMS provider connected yet — add TEXTLOCAL_API_KEY (Textlocal) or the TWILIO_* keys in Vercel, then redeploy.',
+      error: 'Twilio isn’t connected yet — add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_MESSAGING_SERVICE_SID (or TWILIO_FROM) in Vercel, then redeploy.',
     })
   }
   const provider = smsStatus().provider || 'SMS'
