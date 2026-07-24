@@ -1,5 +1,5 @@
-// Settings → Messaging: "send a test SMS" — proves the Twilio console
-// connection end-to-end without touching a customer record.
+// Settings → Messaging: "send a test SMS" — proves the SMS provider
+// connection (Textlocal or Twilio) end-to-end without touching a customer record.
 //
 //   POST { to }  (a phone number the OWNER types — their own, typically)
 //
@@ -10,7 +10,7 @@
 // Settings-tab permission required — the same bar as seeing the card at all.
 
 import { withStaff, tabAllowedFor } from '../../lib/auth.js'
-import { smsEnabled, sendSms } from '../../lib/sms.js'
+import { smsEnabled, sendSms, smsStatus } from '../../lib/sms.js'
 
 async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
@@ -20,17 +20,18 @@ async function handler(req, res) {
   if (!smsEnabled) {
     return res.status(503).json({
       success: false,
-      error: 'Twilio isn’t connected yet — add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM (or TWILIO_MESSAGING_SERVICE_SID) in Vercel, then redeploy.',
+      error: 'No SMS provider connected yet — add TEXTLOCAL_API_KEY (Textlocal) or the TWILIO_* keys in Vercel, then redeploy.',
     })
   }
+  const provider = smsStatus().provider || 'SMS'
   const to = String(req.body?.to || '').replace(/[^\d+]/g, '')
   if (to.length < 7) return res.status(400).json({ success: false, error: 'Enter the number to text (e.g. +44 7…).' })
   try {
-    const r = await sendSms({ to, body: 'KosherConnect test — the Twilio connection works. 👍' })
-    return res.json({ success: true, ...r })
+    const r = await sendSms({ to, body: 'KosherConnect test — the SMS connection works. 👍' })
+    return res.json({ success: true, provider, ...r })
   } catch (e) {
     console.error('[api/sms-test]', e)
-    return res.status(502).json({ success: false, error: `Twilio refused the send: ${String(e.message || e).slice(0, 200)}` })
+    return res.status(502).json({ success: false, error: `${provider} refused the send: ${String(e.message || e).slice(0, 200)}` })
   }
 }
 
