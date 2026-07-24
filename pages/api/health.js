@@ -4,6 +4,7 @@
 import { db, tablesMode } from '../../lib/db.js'
 import { emailStatus } from '../../lib/email.js'
 import { smsStatus } from '../../lib/sms.js'
+import { stripeStatus } from '../../lib/stripe.js'
 import { secretsEnabled } from '../../lib/secretbox.js'
 
 export default async function handler(req, res) {
@@ -18,6 +19,7 @@ export default async function handler(req, res) {
   const base = {
     email: emailStatus(),
     sms: smsStatus(),
+    stripe: stripeStatus(),
     vault: secretsEnabled ? 'on' : 'off',
     env: process.env.VERCEL_ENV || 'local',
     project: process.env.VERCEL_PROJECT_PRODUCTION_URL || null,
