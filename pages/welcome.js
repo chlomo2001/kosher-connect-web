@@ -97,7 +97,7 @@ const T = {
     address: '421 Bury New Road, Salford M7 4ED — the door left of Toy Zone (MMR Group sign), ring bell 5, one floor up.',
     hoursLabel: 'Open',
     rights: 'All rights reserved.',
-    tradingName: 'Kosher Connect is a trading name of Hatzluche Ltd.',
+    tradingName: 'Kosher Connect is a trading name of Hatsluche Ltd.',
   },
   he: {
     dir: 'rtl', langLabel: 'HE',
@@ -165,7 +165,7 @@ const T = {
     address: '421 בורי ניו רואד, סלפורד M7 4ED — הדלת משמאל ל־Toy Zone (שלט MMR Group), לצלצל בפעמון 5, קומה ראשונה.',
     hoursLabel: 'שעות פתיחה',
     rights: 'כל הזכויות שמורות.',
-    tradingName: 'כשר קונקט הוא שם מסחרי של Hatzluche Ltd.',
+    tradingName: 'כשר קונקט הוא שם מסחרי של Hatsluche Ltd.',
   },
 }
 
@@ -175,7 +175,7 @@ const LD_JSON = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'LocalBusiness',
   name: 'Kosher Connect',
-  legalName: 'Hatzluche Ltd',
+  legalName: 'Hatsluche Ltd',
   description: 'Kosher phones, SIM plans, travel phone rentals, international numbers, Kol Torah audio and repairs. Serving the Heimishe community.',
   telephone: '+441615311386',
   email: EMAIL,

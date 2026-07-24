@@ -14,7 +14,7 @@ export function LegalShell({ title, updated, children }) {
       </main>
       <footer className="legal-foot">
         <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/refund">Refunds</a> · <a href="/welcome">Home</a>
-        <div className="legal-legal">Kosher Connect is a trading name of Hatzluche Ltd · 421 Bury New Road, Salford M7 4ED · 0161 531 1386</div>
+        <div className="legal-legal">Kosher Connect is a trading name of Hatsluche Ltd · 421 Bury New Road, Salford M7 4ED · 0161 531 1386</div>
       </footer>
     </div>
   )

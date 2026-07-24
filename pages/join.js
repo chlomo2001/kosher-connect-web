@@ -202,7 +202,7 @@ export default function Join() {
 
           <footer className="w-footer2">
             <div className="w-footer-bottom">
-              <div>© {new Date().getFullYear()} Kosher Connect. All rights reserved.<span className="w-legal"> Kosher Connect is a trading name of Hatzluche Ltd.</span></div>
+              <div>© {new Date().getFullYear()} Kosher Connect. All rights reserved.<span className="w-legal"> Kosher Connect is a trading name of Hatsluche Ltd.</span></div>
             </div>
           </footer>
         </div>
