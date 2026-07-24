@@ -1409,6 +1409,10 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .palette-quick-card:hover .pq-pin, .palette-quick-card:focus-within .pq-pin, .pq-pin:focus, .pq-pin.on { opacity: 1; }
 .pq-pin.on { filter: none; }
 .pq-pin:hover { transform: scale(1.18); }
+/* Quick-action number accelerator (press 1–9 with an empty palette search). */
+.pq-key { position: absolute; top: 4px; inset-inline-start: 6px; font-size: 9.5px; font-weight: 700;
+  line-height: 1; color: var(--muted); opacity: 0.55; font-feature-settings: "tnum"; }
+.palette-quick-card:hover .pq-key, .palette-quick-card:focus-visible .pq-key { opacity: 0.9; }
 
 /* Floating help-timer chip — persists across tabs while a session runs */
 .svc-float {

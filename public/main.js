@@ -9193,8 +9193,8 @@ function fillPaletteQuick() {
   }
   html += `<div class="palette-quick-label">Quick actions</div><div class="palette-quick-row">` +
     paletteQuickItems().map((c, i) =>
-      `<button type="button" class="palette-quick-card" onclick="paletteQuickRun(${i})">
-        <span class="pq-icon">${c.icon}</span><span class="pq-label">${escHtml(c.label.replace(/^New /, ''))}</span>
+      `<button type="button" class="palette-quick-card" onclick="paletteQuickRun(${i})"${i < 9 ? ` title="Press ${i + 1}" aria-keyshortcuts="${i + 1}"` : ''}>
+        <span class="pq-icon">${c.icon}</span><span class="pq-label">${escHtml(c.label.replace(/^New /, ''))}</span>${i < 9 ? `<span class="pq-key" aria-hidden="true">${i + 1}</span>` : ''}
       </button>`).join('') + `</div>`;
   q.innerHTML = html;
 }
@@ -9210,7 +9210,7 @@ function openPalette() {
         autocomplete="off" spellcheck="false">
       <div id="paletteQuick" class="palette-quick"></div>
       <div id="paletteList"></div>
-      <div style="padding:7px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);">↑↓ navigate · Enter open · Esc close · scan a barcode straight in</div>
+      <div style="padding:7px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);">↑↓ navigate · Enter open · 1–9 quick action · Esc close · scan a barcode straight in</div>
     </div>`;
   el.addEventListener('mousedown', e => { if (e.target === el) closePalette(); });
   document.body.appendChild(el);
@@ -9231,6 +9231,11 @@ function openPalette() {
     if (e.key === 'ArrowDown') { e.preventDefault(); paletteIndex = Math.min(paletteIndex + 1, paletteResults.length - 1); paletteRender(); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); paletteIndex = Math.max(paletteIndex - 1, 0); paletteRender(); }
     else if (e.key === 'Enter') { e.preventDefault(); paletteRun(paletteIndex); }
+    else if (!input.value.trim() && /^[1-9]$/.test(e.key)) {
+      // Empty search → the numbered Quick actions are showing; the digit fires one.
+      const items = paletteQuickItems(); const n = Number(e.key) - 1;
+      if (n < items.length) { e.preventDefault(); paletteQuickRun(n); }
+    }
     else if (e.key === 'Escape') { closePalette(); }
   });
 }
@@ -9251,6 +9256,7 @@ const KC_SHORTCUTS = [
   ['Enter / Space', 'Open the focused row, card, or dashboard drill-down'],
   ['Tab / ⇧ Tab', 'Move between fields — stays inside an open dialog'],
   ['↑ ↓ then Enter', 'In the palette: pick a result and open it'],
+  ['1 – 9', 'In the palette (empty search): run that numbered Quick action'],
   ['Scan a barcode', 'Scans straight into the palette or the till'],
 ];
 function kcIsTyping() {

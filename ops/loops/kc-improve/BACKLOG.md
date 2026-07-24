@@ -47,7 +47,8 @@ Safe (loop-eligible), ranked value ÷ effort:
       to a "Pinned" row; localStorage, nav-only, keyboard-operable.
 - [ ] **P2 · S** — **Low-stock threshold** per accessory SKU → dashboard badge +
       list filter. (Loyverse.)
-- [ ] **P2 · S** — **Quick-create keys** in ⌘K (type P → payment, etc.). (Stripe.)
+- [x] **P2 · S** — **Quick-create keys** in ⌘K — DONE. Empty-search palette shows a
+      1–9 badge on each Quick action; the digit fires it. (Stripe.)
 - [ ] **P1 · M** — **Availability conflict detection** — warn before double-booking a
       specific unit across overlapping dates. (Booqable.) *(server guard exists for
       bookings; extend to rental units.)*
@@ -140,6 +141,8 @@ Safe (loop-eligible), ranked value ÷ effort:
 | 07-21 | Maintenance block on rental phones — 🔧 checkbox+reason in Edit Phone; excluded from New Rental picker, pool suggestions, dashboard available count; badge in inventory + palette | ✅ 103/103 ×2 + build + function-level assert | owner live-test pending |
 | 07-22 | ⌘K recently-viewed (167fd9c) — last 6 opened customers/phones/SIMs as tiles in the palette empty state; nav-only, localStorage, reuses quick-action styling | ✅ 113/113 ×2 + build + node --check | owner live-test pending |
 | 07-23 | ⌘K pinned favourites (9261f40) — 📌 on a Recent card pins it to a "Pinned" row atop the palette; unpin from its 📌. localStorage (kc_pinned_nav, max 8), nav-only, keyboard-operable | ✅ 113/113 ×2 + build + node --check + offline palette harness L/D | owner live-test pending |
+
+| 07-24 | ⌘K quick-create number keys — each empty-search Quick action shows a 1–9 badge; pressing that digit (search empty) fires it. Palette-scoped, no money surface, +shortcuts-overlay entry | ✅ 113/113 ×2 + build + node --check + offline palette harness L/D | owner live-test pending |
 
 Held / owner input: family-trip sheet (£1,364 balance) needs the customer's
 name before it's entered; Canada/EU loss rates — follow T&C schedule or stay?
