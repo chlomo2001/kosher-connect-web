@@ -45,8 +45,11 @@ Safe (loop-eligible), ranked value ÷ effort:
 - [x] **P2 · S** — **Pinned + recently-visited** quick-nav. (Stripe.) DONE —
       recently-visited (167fd9c) + pinning (9261f40): 📌 on a Recent card pins it
       to a "Pinned" row; localStorage, nav-only, keyboard-operable.
-- [ ] **P2 · S** — **Low-stock threshold** per accessory SKU → dashboard badge +
-      list filter. (Loyverse.)
+- [x] **P2 · S** — **Low-stock threshold** per accessory SKU → dashboard badge +
+      list filter. (Loyverse.) DONE — the Shop tab already had the editable
+      per-SKU threshold (`lowStockAt`), banner, filter, sort + row highlight;
+      this cycle added the missing **dashboard surface**: a 📦 low-stock line in
+      "Needs attention" (rolled-up count + first 3 SKUs) that opens Shop.
 - [x] **P2 · S** — **Quick-create keys** in ⌘K — DONE. Empty-search palette shows a
       1–9 badge on each Quick action; the digit fires it. (Stripe.)
 - [ ] **P1 · M** — **Availability conflict detection** — warn before double-booking a
@@ -143,6 +146,8 @@ Safe (loop-eligible), ranked value ÷ effort:
 | 07-23 | ⌘K pinned favourites (9261f40) — 📌 on a Recent card pins it to a "Pinned" row atop the palette; unpin from its 📌. localStorage (kc_pinned_nav, max 8), nav-only, keyboard-operable | ✅ 113/113 ×2 + build + node --check + offline palette harness L/D | owner live-test pending |
 
 | 07-24 | ⌘K quick-create number keys — each empty-search Quick action shows a 1–9 badge; pressing that digit (search empty) fires it. Palette-scoped, no money surface, +shortcuts-overlay entry | ✅ 113/113 ×2 + build + node --check + offline palette harness L/D | owner live-test pending |
+
+| 07-25 | Dashboard low-stock surface — 📦 line in "Needs attention" (count + first 3 low SKUs) via a cached `/api/shop` read in dashCache; reuses the Shop tab's `lowStockAt` predicate + the existing feed renderer, opens Shop on click. Display-only, no money surface | ✅ 113/113 ×2 + build + node --check + isolated logic assertions (empty/few/many + XSS-escape) | owner live-test pending |
 
 Held / owner input: family-trip sheet (£1,364 balance) needs the customer's
 name before it's entered; Canada/EU loss rates — follow T&C schedule or stay?

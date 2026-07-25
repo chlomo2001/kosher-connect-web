@@ -9768,24 +9768,26 @@ function hebrewDateString(d) {
 // The dashboard paints INSTANTLY from what's already in memory (rentals,
 // phones, sims, bookings, repairs) plus the last-known money/tasks, then
 // repaints once the fresh ledger + tasks arrive. No blank "Loading…" wait.
-let dashCache = { money: null, tasks: null };
+let dashCache = { money: null, tasks: null, shop: null };
 
 async function renderDashboardTab() {
-  dashPaint(dashCache.money, dashCache.tasks, dashCache.money === null);
+  dashPaint(dashCache.money, dashCache.tasks, dashCache.money === null, dashCache.shop);
 
   const today = localISO();
-  const [ledgerSummary, tasksData] = await Promise.all([
+  const [ledgerSummary, tasksData, shopData] = await Promise.all([
     kcFetch('/api/ledger?since=' + today).then(r => r.ok ? r.json() : null).catch(() => null),
     window.api.getTasks().catch(() => []),
+    kcFetch('/api/shop').then(r => r.ok ? r.json() : null).catch(() => null),
   ]);
   dashCache = {
     money: ledgerSummary?.success ? ledgerSummary : dashCache.money,
     tasks: Array.isArray(tasksData) ? tasksData : (dashCache.tasks || []),
+    shop: shopData?.success ? shopData.items : dashCache.shop,
   };
-  if (currentTab === 'dashboard') dashPaint(dashCache.money, dashCache.tasks, false);
+  if (currentTab === 'dashboard') dashPaint(dashCache.money, dashCache.tasks, false, dashCache.shop);
 }
 
-function dashPaint(money, tasksList2, stillLoading) {
+function dashPaint(money, tasksList2, stillLoading, shopList) {
   const content = document.getElementById('mainContent');
   const now = new Date();
   const today = localISO(now);
@@ -9891,6 +9893,15 @@ function dashPaint(money, tasksList2, stillLoading) {
   renewals7.forEach(s => attention.push(['💳',
     `<strong>${escHtml(s.customerName || '?')}</strong> — SIM renews ${fmtDate(s.renewalDate)}`,
     () => goToTab('sim')]));
+  // Low-stock accessories/phones (display-only; the Shop tab holds the editable
+  // per-SKU threshold + the full list). One rolled-up line → opens Shop.
+  const lowStock = (shopList || []).filter(i => i.active && i.quantity <= i.lowStockAt);
+  if (lowStock.length) {
+    const names = lowStock.slice(0, 3).map(i => `${escHtml(i.model)} (${i.quantity})`).join(', ');
+    attention.push(['📦',
+      `<strong>${lowStock.length} item${lowStock.length === 1 ? '' : 's'} low on stock</strong> — ${names}${lowStock.length > 3 ? ` + ${lowStock.length - 3} more` : ''}`,
+      () => goToTab('shop')]);
+  }
   highTasks.slice(0, 5).forEach(t => attention.push(['❗', escHtml(t.title), () => goToTab('tasks')]));
 
   const shown = attention.slice(0, 10);
