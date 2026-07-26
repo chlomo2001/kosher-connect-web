@@ -552,7 +552,7 @@ const SKY_CSS = `
   :root[data-theme="dark"] .sk-nav-phone:hover strong{color:var(--sk-sky-bright)}
 
   /* buttons */
-  .sk-btn{display:inline-flex;align-items:center;justify-content:center;font-weight:700;
+  .sk-btn{display:inline-flex;align-items:center;justify-content:center;gap:.35em;font-weight:700;
     border-radius:999px;cursor:pointer;transition:transform .12s ease,filter .12s ease;white-space:nowrap;
     border:0;font-family:inherit}
   .sk-btn:hover{transform:translateY(-1px)}
