@@ -38,8 +38,12 @@ Safe (loop-eligible), ranked value ÷ effort:
       "Undone" revert instead of a confirm dialog. (Superhuman/Linear pattern.)
 - [x] **P1 · S** — **Shift+? shortcuts overlay** — DONE (39de3ef). Cheat-sheet of the
       active keys; pairs with ⌘K. (Linear.)
-- [ ] **P1 · S** — **Park/hold an open till sale** — suspend a named basket, resume
-      later without losing it. (Loyverse.)
+- [x] **P1 · S** — **Park/hold an open till sale** — suspend a named basket, resume
+      later without losing it. (Loyverse.) DONE — "⏸ Park sale" snapshots the
+      basket + customer/method/paid to localStorage (`kc_parked_sales`, cap 20)
+      and clears the till; a "⏸ Parked (N)" header button opens a popover to
+      Resume or discard. Resuming auto-holds the current basket first (no loss).
+      Strictly pre-charge — never touches saveSale/ledger/stock.
 - [x] **P1 · S** — **Maintenance/downtime block** on a phone/IMEI — DONE (this cycle).
       Edit Phone gains a 🔧 checkbox + reason; hidden from New Rental + pool picks.
 - [x] **P2 · S** — **Pinned + recently-visited** quick-nav. (Stripe.) DONE —
@@ -148,6 +152,8 @@ Safe (loop-eligible), ranked value ÷ effort:
 | 07-24 | ⌘K quick-create number keys — each empty-search Quick action shows a 1–9 badge; pressing that digit (search empty) fires it. Palette-scoped, no money surface, +shortcuts-overlay entry | ✅ 113/113 ×2 + build + node --check + offline palette harness L/D | owner live-test pending |
 
 | 07-25 | Dashboard low-stock surface — 📦 line in "Needs attention" (count + first 3 low SKUs) via a cached `/api/shop` read in dashCache; reuses the Shop tab's `lowStockAt` predicate + the existing feed renderer, opens Shop on click. Display-only, no money surface | ✅ 113/113 ×2 + build + node --check + isolated logic assertions (empty/few/many + XSS-escape) | owner live-test pending |
+
+| 07-26 | Park/hold an open till sale — "⏸ Park sale" holds the basket (+customer/method/paid) to localStorage (cap 20) & clears the till; "⏸ Parked (N)" header popover resumes/discards; resume auto-holds the current basket first (no loss). Strictly pre-charge — no saveSale/ledger/stock touch | ✅ 113/113 ×2 + build + node --check + isolated hold-queue state-machine assertions (no-loss resume, newest-first, 20-cap, unique ids, discard) | owner live-test pending |
 
 Held / owner input: family-trip sheet (£1,364 balance) needs the customer's
 name before it's entered; Canada/EU loss rates — follow T&C schedule or stay?

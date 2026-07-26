@@ -7641,11 +7641,15 @@ function renderPosView() {
   const customerOptions = customers.map(c =>
     `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)}</option>`).join('');
   const cats = [...new Set(shopItems.filter(i => i.active && i.quantity > 0).map(i => i.category))];
+  const parkedN = posParkedCount();
   content.innerHTML = `
     <div class="pos-shell">
+      <div id="posParkedMenu" hidden></div>
       <div class="pos-main">
         <div style="display:flex;gap:8px;align-items:center;">
           <button class="btn btn-outline" onclick="closePosView()" style="white-space:nowrap;">← Exit till</button>
+          <button id="posParkedBtn" class="btn btn-outline" onclick="posToggleParked()" title="Resume a held sale"
+            style="white-space:nowrap;${parkedN ? '' : 'display:none;'}">⏸ Parked (<span id="posParkedN">${parkedN}</span>)</button>
           <input class="form-input pos-scan" id="posScan" placeholder="🔍 Scan a barcode, or type to search…"
             autocomplete="off" oninput="posRenderTiles()"
             onkeydown="if(event.key==='Enter'){event.preventDefault();posScanEnter();}">
@@ -7677,6 +7681,8 @@ function renderPosView() {
           <div id="posTender"></div>
           <div class="pos-total-row"><span>TOTAL</span><strong id="posTotal">£0.00</strong></div>
           <button class="btn btn-primary pos-charge" onclick="saveSale()">💷 Charge</button>
+          <button class="btn btn-outline" onclick="posParkSale()" style="width:100%;margin-top:8px;"
+            title="Hold this sale to serve someone else, then resume it later">⏸ Park sale</button>
         </div>
       </div>
     </div>`;
@@ -7936,6 +7942,126 @@ function posShowLastSale() {
         onclick="emailSaleReceipt(this)" ${posLastSale.emailed ? 'disabled' : ''}>
         ${posLastSale.emailed ? '✉️ Receipt sent' : '✉️ Email receipt'}</button>` : ''}
     </div>`;
+}
+
+// ── Park / hold an open sale ─────────────────────────────────────────────
+// Suspend an in-progress till sale so the cashier can serve someone else, then
+// resume it — the Loyverse "hold ticket" pattern. Purely PRE-charge: it snapshots
+// the basket + selections to localStorage; nothing is charged, no ledger/stock
+// write happens until the resumed sale hits Charge (saveSale), which keeps its own
+// server-side atomic stock guard. Parked sales survive Exit till + reload.
+const POS_PARKED_KEY = 'kc_parked_sales';
+function posGetParked() {
+  try { const a = JSON.parse(localStorage.getItem(POS_PARKED_KEY) || '[]'); return Array.isArray(a) ? a : []; }
+  catch { return []; }
+}
+function posSetParked(a) {
+  try { localStorage.setItem(POS_PARKED_KEY, JSON.stringify(a || [])); } catch {}
+}
+function posParkedCount() { return posGetParked().length; }
+function posSyncParkedButton() {
+  const n = posParkedCount();
+  const span = document.getElementById('posParkedN'); if (span) span.textContent = n;
+  const btn = document.getElementById('posParkedBtn'); if (btn) btn.style.display = n ? '' : 'none';
+}
+
+// Snapshot the current sale and clear the till for the next customer.
+// silent=true is used when auto-holding the current sale before resuming another,
+// so nothing is ever lost — no toast, no menu, but the same reset.
+function posParkSale(silent) {
+  if (!posBasket.length) { if (!silent) toast('Nothing to park — the basket is empty.', 'warning'); return; }
+  const custEl = document.getElementById('posCustomer');
+  const custId = custEl ? custEl.value : 'walkin';
+  let custName = 'Walk-in';
+  if (custId && custId !== 'walkin') {
+    const c = customers.find(x => String(x.id) === String(custId));
+    if (c) custName = `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Customer';
+  }
+  const paidEl = document.getElementById('posPaid');
+  const entry = {
+    id: 'pk_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    at: Date.now(),
+    customerId: custId,
+    customerName: custName,
+    method: posMethod,
+    paidNow: paidEl ? !!paidEl.checked : true,
+    basket: posBasket.map(l => ({ itemId: l.itemId, qty: l.qty, imei: l.imei || '' })),
+    total: posTotalNow(),
+    count: posBasket.reduce((s, l) => s + l.qty, 0),
+  };
+  posSetParked([entry, ...posGetParked()].slice(0, 20)); // cap the hold queue
+  // Reset the current sale in place (don't rebuild the whole view — that would
+  // drop an in-progress customer selection when resuming/discarding elsewhere).
+  posBasket = []; posWallet = 0; posLastSale = null;
+  if (custEl) custEl.value = 'walkin';
+  if (paidEl) paidEl.checked = true;
+  posRenderBasket(); posShowLastSale(); posRenderTender(); posSyncParkedButton();
+  if (!silent) {
+    const menu = document.getElementById('posParkedMenu'); if (menu) { menu.hidden = true; menu.innerHTML = ''; }
+    toast(`Sale parked — ${custName}, ${fmtGbp(entry.total)}.`, 'success');
+    document.getElementById('posScan')?.focus();
+  }
+}
+
+// Load a parked sale back into the till. The current basket (if any) is parked
+// first, so switching between customers never loses a basket.
+function posResumeSale(id) {
+  const target = posGetParked().find(p => p.id === id);
+  if (!target) { posRenderParkedMenu(); return; }
+  if (posBasket.length) posParkSale(true);          // hold the current one first
+  posSetParked(posGetParked().filter(p => p.id !== id));
+  posBasket = (target.basket || []).map(l => ({ itemId: l.itemId, qty: l.qty, imei: l.imei || '' }));
+  posMethod = target.method || 'cash';
+  posWallet = 0; posLastSale = null;
+  const custEl = document.getElementById('posCustomer'); if (custEl) custEl.value = target.customerId || 'walkin';
+  const paidEl = document.getElementById('posPaid'); if (paidEl) paidEl.checked = target.paidNow !== false;
+  const methodsEl = document.getElementById('posMethods'); if (methodsEl) methodsEl.innerHTML = posMethodsHtml();
+  posRenderBasket(); posShowLastSale(); posRenderTender(); posSyncParkedButton();
+  const menu = document.getElementById('posParkedMenu'); if (menu) { menu.hidden = true; menu.innerHTML = ''; }
+  toast(`Sale resumed — ${target.customerName || 'Walk-in'}.`, 'success');
+  document.getElementById('posScan')?.focus();
+}
+
+function posDiscardParked(id) {
+  posSetParked(posGetParked().filter(p => p.id !== id));
+  posSyncParkedButton();
+  posRenderParkedMenu(); // re-render (auto-hides when the queue empties)
+}
+
+function posToggleParked() {
+  const el = document.getElementById('posParkedMenu');
+  if (!el) return;
+  if (!el.hidden) { el.hidden = true; el.innerHTML = ''; return; }
+  posRenderParkedMenu();
+}
+
+function posRenderParkedMenu() {
+  const el = document.getElementById('posParkedMenu');
+  if (!el) return;
+  const parked = posGetParked();
+  if (!parked.length) { el.hidden = true; el.innerHTML = ''; return; }
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const rows = parked.map(p => {
+    const d = new Date(p.at || Date.now());
+    const hm = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--border);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(p.customerName || 'Walk-in')}</div>
+          <div style="font-size:11px;color:var(--muted);">${p.count} item${p.count === 1 ? '' : 's'} · ${fmtGbp(p.total || 0)} · held ${hm}</div>
+        </div>
+        <button class="btn btn-primary" style="padding:6px 12px;" onclick="posResumeSale('${p.id}')">Resume</button>
+        <button class="action-btn" style="min-width:36px;min-height:36px;color:var(--danger);" title="Discard this held sale" onclick="posDiscardParked('${p.id}')">✕</button>
+      </div>`;
+  }).join('');
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px;">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);">Parked sales</span>
+      <button class="action-btn" style="min-width:32px;min-height:32px;" title="Close" onclick="posToggleParked()">✕</button>
+    </div>
+    ${rows}`;
+  el.style.cssText = 'position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:1000;width:min(440px,92vw);background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.28);max-height:70vh;overflow:auto;';
+  el.hidden = false;
 }
 
 async function emailSaleReceipt(btn) {
