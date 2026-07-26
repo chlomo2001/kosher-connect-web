@@ -17,6 +17,8 @@ const PHONE_TEL = 'tel:+441615311386'
 const PHONE_SHOWN = '0161 531 1386' // shop's local form; tel: link stays +44
 const EMAIL = 'admin@kosher-connect.com'
 const MAPS_URL = 'https://maps.google.com/?q=421+Bury+New+Road,+Salford+M7+4ED'
+// Keyless Google Maps embed — the iframe endpoint needs no API key.
+const MAPS_EMBED = 'https://www.google.com/maps?q=421+Bury+New+Road,+Salford+M7+4ED&z=16&output=embed'
 
 const BAND_IDS = ['mobile', 'travel', 'intl']
 
@@ -94,7 +96,13 @@ const T = {
     fOk: 'Thanks — we’ve got it and we’ll be in touch.', fErr: 'Couldn’t send — please call us on 0161 531 1386.',
     fBadName: 'Please enter your name.', fBadContact: 'Please enter a valid phone number or email address.',
     preferCall: 'Prefer to call?', joinCta: 'New here? Leave your details →',
-    address: '421 Bury New Road, Salford M7 4ED — the door left of Toy Zone (MMR Group sign), ring bell 5, on level 2.',
+    visitTitle: 'Come and see us',
+    openMaps: 'Open in Google Maps',
+    addressLabel: 'Address',
+    addressLine: '421 Bury New Road, Salford M7 4ED',
+    findUs: 'The door left of Toy Zone (MMR Group sign) — ring bell 5, we’re on level 2.',
+    phoneLabel: 'Phone', emailLabel: 'Email',
+    footServices: 'Services', footAccount: 'Your account', footLegal: 'Information',
     hoursLabel: 'Open',
     rights: 'All rights reserved.',
     tradingName: 'Kosher Connect is a trading name of Hatsluche Ltd.',
@@ -165,7 +173,13 @@ const T = {
     fOk: 'תודה — קיבלנו וניצור קשר.', fErr: 'לא הצלחנו לשלוח — התקשרו אלינו 0161 531 1386.',
     fBadName: 'נא להזין שם.', fBadContact: 'נא להזין מספר טלפון או כתובת אימייל תקינים.',
     preferCall: 'מעדיפים להתקשר?', joinCta: 'חדשים כאן? השאירו פרטים ←',
-    address: '421 בורי ניו רואד, סלפורד M7 4ED — הדלת משמאל ל־Toy Zone (שלט MMR Group), לצלצל בפעמון 5, קומה 2.',
+    visitTitle: 'בואו לבקר אותנו',
+    openMaps: 'פתיחה בגוגל מפות',
+    addressLabel: 'כתובת',
+    addressLine: '421 Bury New Road, Salford M7 4ED',
+    findUs: 'הדלת משמאל ל־Toy Zone (שלט MMR Group) — לצלצל בפעמון 5, אנחנו בקומה 2.',
+    phoneLabel: 'טלפון', emailLabel: 'אימייל',
+    footServices: 'שירותים', footAccount: 'החשבון שלכם', footLegal: 'מידע',
     hoursLabel: 'שעות פתיחה',
     rights: 'כל הזכויות שמורות.',
     tradingName: 'כשר קונקט הוא שם מסחרי של Hatsluche Ltd.',
@@ -176,6 +190,13 @@ const T = {
 }
 
 const MORE_ICONS = { wrench: WrenchIcon, bag: BagIcon, phone: FlipPhoneIcon, music: MusicIcon, plane: PlaneIcon, chat: ChatIcon }
+
+// kcIcons has no clock — small local one for the opening-hours row.
+const ClockIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+  </svg>
+)
 
 const LD_JSON = JSON.stringify({
   '@context': 'https://schema.org',
@@ -273,7 +294,7 @@ export default function Welcome() {
               <a href="#travel" className="sk-navlink">{t.nav.travel}</a>
               <a href="#intl" className="sk-navlink">{t.nav.intl}</a>
               <a href="#services" className="sk-navlink">{t.nav.repairs}</a>
-              <a href="#contact" className="sk-navlink">{t.nav.visit}</a>
+              <a href="#visit" className="sk-navlink">{t.nav.visit}</a>
               <div className="sk-lang" role="group" aria-label="Language">
                 {['en', 'he'].map((l) => (
                   <button key={l} type="button" lang={l === 'en' ? 'en' : l}
@@ -293,7 +314,10 @@ export default function Welcome() {
           <div className="sk-paid" role="status">
             <div className="sk-wrap sk-paid-in">
               <span className="sk-paid-tick" aria-hidden="true">✓</span>
-              <span><strong>{t.paidTitle}</strong> {t.paidBody}</span>
+              <span className="sk-paid-txt">
+                <strong>{t.paidTitle}</strong>
+                <span>{t.paidBody}</span>
+              </span>
               <button type="button" className="sk-paid-x" onClick={dismissPaid} aria-label={t.paidClose}>×</button>
             </div>
           </div>
@@ -382,35 +406,83 @@ export default function Welcome() {
               {sent === 'err' && <p className="sk-form-err" role="alert">{errMsg || t.fErr}</p>}
             </form>
             <p className="sk-prefer">
-              {t.preferCall} <a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a> · {t.hoursLabel} {hours}
+              {t.preferCall} <a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a>
               &nbsp;·&nbsp;<a className="sk-join" href="/join">{t.joinCta}</a>
             </p>
-            <p className="sk-addr">
-              <a href={MAPS_URL} target="_blank" rel="noopener noreferrer">{t.address}</a>
-            </p>
+          </div>
+        </section>
+
+        <section className="sk-visit" id="visit">
+          <div className="sk-wrap sk-reveal">
+            <span className="sk-eyebrow">{t.nav.visit}</span>
+            <h2>{t.visitTitle}</h2>
+            <div className="sk-visit-grid">
+              <div className="sk-map-card">
+                <iframe
+                  src={`${MAPS_EMBED}&hl=${lang === 'he' ? 'iw' : 'en'}`}
+                  title={t.visitTitle} loading="lazy" allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade" />
+                <a className="sk-btn sk-btn-sky sk-btn-sm sk-map-open" href={MAPS_URL}
+                  target="_blank" rel="noopener noreferrer">{t.openMaps} ↗</a>
+              </div>
+              <div className="sk-visit-info">
+                <div className="sk-visit-row">
+                  <span className="sk-visit-ico" aria-hidden="true"><PinIcon /></span>
+                  <div>
+                    <strong>{t.addressLabel}</strong>
+                    <p dir="ltr">{t.addressLine}</p>
+                    <p>{t.findUs}</p>
+                  </div>
+                </div>
+                <div className="sk-visit-row">
+                  <span className="sk-visit-ico" aria-hidden="true"><ClockIcon /></span>
+                  <div><strong>{t.hoursLabel}</strong><p>{hours}</p></div>
+                </div>
+                <div className="sk-visit-row">
+                  <span className="sk-visit-ico" aria-hidden="true"><PhoneCallIcon /></span>
+                  <div><strong>{t.phoneLabel}</strong><p><a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a></p></div>
+                </div>
+                <div className="sk-visit-row">
+                  <span className="sk-visit-ico" aria-hidden="true"><MailIcon /></span>
+                  <div><strong>{t.emailLabel}</strong><p><a href={`mailto:${EMAIL}`} dir="ltr">{EMAIL}</a></p></div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
         <footer className="sk-foot">
           <div className="sk-wrap">
-            <div className="sk-foot-top">
-              <img className="sk-logo sk-foot-logo" src="/logo-full.png" alt="Kosher Connect" />
-              <nav className="sk-foot-links" aria-label="Footer">
+            <div className="sk-foot-grid">
+              <div className="sk-foot-brand">
+                <img className="sk-logo sk-foot-logo" src="/logo-full.png" alt="Kosher Connect" />
+                <p dir="ltr">{t.addressLine}</p>
+                <p><a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a></p>
+                <p><a href={`mailto:${EMAIL}`} dir="ltr">{EMAIL}</a></p>
+              </div>
+              <nav className="sk-foot-col" aria-label={t.footServices}>
+                <strong>{t.footServices}</strong>
                 <a href="#mobile">{t.nav.mobile}</a>
                 <a href="#travel">{t.nav.travel}</a>
                 <a href="#intl">{t.nav.intl}</a>
-                <a href="#contact">{t.nav.visit}</a>
+                <a href="#services">{t.nav.repairs}</a>
+              </nav>
+              <nav className="sk-foot-col" aria-label={t.footAccount}>
+                <strong>{t.footAccount}</strong>
                 <a href="/join">{t.nav.join}</a>
                 <a href="/portal">{t.nav.account}</a>
                 <a href="/login">{t.nav.signin}</a>
+              </nav>
+              <nav className="sk-foot-col" aria-label={t.footLegal}>
+                <strong>{t.footLegal}</strong>
+                <a href="#visit">{t.nav.visit}</a>
                 <a href="/privacy">Privacy</a>
                 <a href="/terms">Terms</a>
                 <a href="/refund">Refunds</a>
               </nav>
             </div>
             <p className="sk-foot-legal">
-              © {new Date().getFullYear()} {t.brandName}. {t.rights} {t.tradingName}<br />
-              421 Bury New Road, Salford M7 4ED · <a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a> · <a href={`mailto:${EMAIL}`} dir="ltr">{EMAIL}</a>
+              © {new Date().getFullYear()} {t.brandName}. {t.rights} {t.tradingName}
             </p>
           </div>
         </footer>
@@ -455,9 +527,12 @@ const SKY_CSS = `
   .sk-paid{background:#e8f6ee;border-bottom:1px solid #bfe5cd;color:#14532d}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-paid{background:#0e2b1c;border-bottom-color:#1e5c3a;color:#c7f0d8}}
   :root[data-theme="dark"] .sk-paid{background:#0e2b1c;border-bottom-color:#1e5c3a;color:#c7f0d8}
-  .sk-paid-in{display:flex;align-items:center;gap:10px;padding:11px 24px;font-size:14.5px}
-  .sk-paid-tick{flex:none;width:20px;height:20px;border-radius:50%;background:#1a9a50;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800}
-  .sk-paid-x{margin-inline-start:auto;background:none;border:0;color:inherit;font-size:20px;line-height:1;cursor:pointer;opacity:.7;padding:2px 6px}
+  .sk-paid-in{display:flex;align-items:center;gap:16px;padding:20px 24px}
+  .sk-paid-tick{flex:none;width:40px;height:40px;border-radius:50%;background:#1a9a50;color:#fff;display:grid;place-items:center;font-size:20px;font-weight:800}
+  .sk-paid-txt{display:flex;flex-direction:column;gap:3px}
+  .sk-paid-txt strong{font-family:var(--sk-fdisp);font-size:19.5px;letter-spacing:-.015em;line-height:1.2}
+  .sk-paid-txt > span{font-size:15px;opacity:.92}
+  .sk-paid-x{margin-inline-start:auto;background:none;border:0;color:inherit;font-size:26px;line-height:1;cursor:pointer;opacity:.7;padding:2px 8px}
   .sk-paid-x:hover{opacity:1}
   .sk-nav{display:flex;align-items:center;justify-content:space-between;height:66px;gap:14px}
   .sk-logo{height:30px;width:auto;display:block}
@@ -569,25 +644,46 @@ const SKY_CSS = `
   .sk-prefer{color:var(--sk-muted);font-size:14px;margin:24px auto 0;max-width:60ch}
   .sk-prefer a,.sk-join{color:var(--sk-sky);font-weight:700}
   :root[data-theme="dark"] .sk-prefer a,:root[data-theme="dark"] .sk-join{color:var(--sk-sky-bright)}
-  .sk-addr{color:var(--sk-muted);font-size:13px;margin:12px auto 0;max-width:58ch}
-  .sk-addr a{color:inherit;border-bottom:1px dotted var(--sk-muted)}
 
-  /* footer */
-  .sk-foot{background:var(--sk-band);border-top:1px solid var(--sk-line);padding:44px 0 40px}
-  .sk-foot-top{display:flex;flex-wrap:wrap;gap:22px;justify-content:space-between;align-items:center}
-  .sk-foot-logo{height:34px}
-  .sk-foot-links{display:flex;gap:18px;flex-wrap:wrap}
-  .sk-foot-links a{color:var(--sk-muted);font-size:14px}
-  .sk-foot-links a:hover{color:var(--sk-text)}
-  .sk-foot-legal{color:var(--sk-muted);font-size:13px;margin:22px 0 0;line-height:1.7}
-  .sk-foot-legal a{color:var(--sk-muted)}
-  .sk-foot-legal a:hover{color:var(--sk-text)}
+  /* visit — live map card + shop details */
+  .sk-visit{padding:70px 0 76px;background:var(--sk-band);text-align:center}
+  .sk-visit h2{font-size:clamp(24px,3.6vw,34px)}
+  .sk-visit-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:20px;margin-top:32px;text-align:start}
+  .sk-map-card{position:relative;border:1px solid var(--sk-line);border-radius:16px;overflow:hidden;
+    background:var(--sk-band-alt);display:flex;min-height:380px}
+  .sk-map-card iframe{border:0;width:100%;min-height:380px;flex:1;display:block}
+  .sk-map-open{position:absolute;bottom:14px;inset-inline-start:14px;box-shadow:0 4px 14px rgba(7,22,52,.35)}
+  .sk-visit-info{border:1px solid var(--sk-line);border-radius:16px;background:var(--sk-band-alt);
+    padding:26px 24px;display:flex;flex-direction:column;gap:20px;justify-content:center}
+  .sk-visit-row{display:flex;gap:12px}
+  .sk-visit-ico{flex:none;width:20px;height:20px;color:var(--sk-sky);margin-top:3px}
+  :root[data-theme="dark"] .sk-visit-ico{color:var(--sk-sky-bright)}
+  .sk-visit-ico svg{width:100%;height:100%}
+  .sk-visit-row strong{display:block;font-size:14.5px;margin-bottom:2px}
+  .sk-visit-row p{margin:0;color:var(--sk-muted);font-size:14px;line-height:1.55}
+  .sk-visit-row a{color:var(--sk-sky);font-weight:600}
+  :root[data-theme="dark"] .sk-visit-row a{color:var(--sk-sky-bright)}
+
+  /* footer — labelled columns */
+  .sk-foot{background:var(--sk-band);border-top:1px solid var(--sk-line);padding:48px 0 40px}
+  .sk-foot-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:26px;align-items:start;text-align:start}
+  .sk-foot-logo{height:32px;margin-bottom:10px}
+  .sk-foot-brand p{margin:6px 0 0;color:var(--sk-muted);font-size:13.5px}
+  .sk-foot-brand a{color:var(--sk-muted)}
+  .sk-foot-brand a:hover{color:var(--sk-text)}
+  .sk-foot-col{display:flex;flex-direction:column;gap:9px}
+  .sk-foot-col strong{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--sk-text);margin-bottom:2px}
+  .sk-foot-col a{color:var(--sk-muted);font-size:14px}
+  .sk-foot-col a:hover{color:var(--sk-text)}
+  .sk-foot-legal{color:var(--sk-muted);font-size:13px;margin:30px 0 0;padding-top:18px;
+    border-top:1px solid var(--sk-line);line-height:1.7}
 
   /* reveal */
   .sk-reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
   .sk-reveal.in{opacity:1;transform:none}
   @media (prefers-reduced-motion:reduce){.sk-reveal{opacity:1;transform:none;transition:none}}
 
-  @media (max-width:960px){ .sk-navlink{display:none} .sk-nav-phone{display:none} }
-  @media (max-width:820px){ .sk-grid{grid-template-columns:1fr} }
+  @media (max-width:960px){ .sk-navlink{display:none} .sk-nav-phone{display:none} .sk-foot-grid{grid-template-columns:1fr 1fr} }
+  @media (max-width:820px){ .sk-grid{grid-template-columns:1fr} .sk-visit-grid{grid-template-columns:1fr} .sk-map-card{min-height:300px} .sk-map-card iframe{min-height:300px} }
 `
