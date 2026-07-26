@@ -27,7 +27,7 @@ async function handler(req, res) {
   if (amt > 5000) return res.status(400).json({ success: false, error: 'That amount is too large.' })
 
   const rows = await db.select('customers',
-    `select=id,stripe_customer_id,email,first_name,last_name&legacy_id=eq.${encodeURIComponent(String(customerId))}`)
+    `select=id,stripe_customer_id,email_raw,email_normalized,first_name,last_name&legacy_id=eq.${encodeURIComponent(String(customerId))}`)
   const c = rows[0]
   if (!c) return res.status(404).json({ success: false, error: 'Customer not found.' })
 
@@ -37,7 +37,7 @@ async function handler(req, res) {
     // Ensure a Stripe customer so the saved card (setup_future_usage) attaches to
     // the right person; persist the id so we don't remint it next time.
     const stripeCustomerId = await getOrCreateCustomer({
-      existingId: c.stripe_customer_id, email: c.email, name, appCustomerId: c.id,
+      existingId: c.stripe_customer_id, email: c.email_raw || c.email_normalized, name, appCustomerId: c.id,
     })
     if (stripeCustomerId && stripeCustomerId !== c.stripe_customer_id) {
       await db.update('customers', `id=eq.${c.id}`, { stripe_customer_id: stripeCustomerId })
