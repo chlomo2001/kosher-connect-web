@@ -577,16 +577,16 @@ const SKY_CSS = `
       radial-gradient(1.3px 1.3px at 36% 82%,#cfe0f6 40%,transparent 41%),
       radial-gradient(1.2px 1.2px at 70% 78%,#bcd6f2 40%,transparent 41%),
       radial-gradient(1.4px 1.4px at 55% 30%,#eaf2ff 40%,transparent 41%)}
-  .sk-hero .sk-wrap{position:relative}
+  .sk-hero .sk-wrap{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center}
   .sk-hero .sk-eyebrow{color:#7db8e6}
-  .sk-hero h1{font-size:clamp(38px,7vw,74px);max-width:15ch;color:#fff;letter-spacing:-.035em;line-height:1.0}
-  .sk-hero-body{color:#c4d4ee;max-width:47ch;margin:22px 0 0;font-size:clamp(16.5px,2.2vw,20px)}
+  .sk-hero h1{font-size:clamp(38px,7vw,74px);max-width:16ch;color:#fff;letter-spacing:-.035em;line-height:1.0}
+  .sk-hero-body{color:#c4d4ee;max-width:47ch;margin:22px auto 0;font-size:clamp(16.5px,2.2vw,20px)}
   .sk-pill{display:inline-block;margin-top:22px;border:1px solid rgba(255,255,255,.22);
     border-radius:999px;padding:9px 18px;font-size:13.5px;font-weight:600;color:#cfe0f6;background:rgba(255,255,255,.05)}
-  .sk-hero-cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+  .sk-hero-cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px;justify-content:center}
   .sk-hero .sk-btn-ghost{color:#fff;border-color:rgba(255,255,255,.5)}
   .sk-hero .sk-btn-ghost:hover{background:rgba(255,255,255,.08)}
-  .sk-hero-sub{color:#9fb4d6;max-width:46ch;margin:24px 0 0;font-size:15px}
+  .sk-hero-sub{color:#9fb4d6;max-width:46ch;margin:24px auto 0;font-size:15px}
 
   /* feature bands — centred, text only */
   .sk-band{padding:70px 0;border-bottom:1px solid var(--sk-line)}
