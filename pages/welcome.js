@@ -98,6 +98,9 @@ const T = {
     hoursLabel: 'Open',
     rights: 'All rights reserved.',
     tradingName: 'Kosher Connect is a trading name of Hatsluche Ltd.',
+    paidTitle: 'Payment received — thank you!',
+    paidBody: 'Your payment went through and will show on your account shortly.',
+    paidClose: 'Dismiss',
   },
   he: {
     dir: 'rtl', langLabel: 'HE',
@@ -166,6 +169,9 @@ const T = {
     hoursLabel: 'שעות פתיחה',
     rights: 'כל הזכויות שמורות.',
     tradingName: 'כשר קונקט הוא שם מסחרי של Hatsluche Ltd.',
+    paidTitle: 'התשלום התקבל — תודה רבה!',
+    paidBody: 'התשלום עבר בהצלחה ויופיע בחשבונכם בקרוב.',
+    paidClose: 'סגירה',
   },
 }
 
@@ -198,14 +204,18 @@ export default function Welcome() {
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState('') // '', 'ok', 'err'
   const [errMsg, setErrMsg] = useState('')
+  const [paid, setPaid] = useState(false) // Stripe Checkout success lands on /welcome?paid=1
   useEffect(() => {
     try { const saved = localStorage.getItem('kcLang'); if (saved && T[saved]) setLang(saved) } catch {}
+    try { if (new URLSearchParams(window.location.search).get('paid') === '1') setPaid(true) } catch {}
     fetch('/api/public/info')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d?.openingHours) setHours(d.openingHours) })
       .catch(() => {})
   }, [])
   const pick = (l) => { setLang(l); try { localStorage.setItem('kcLang', l) } catch {} }
+  // Strip ?paid=1 on dismiss so a refresh or shared link doesn't re-announce it.
+  const dismissPaid = () => { setPaid(false); try { window.history.replaceState(null, '', window.location.pathname) } catch {} }
   const t = T[lang]
 
   useEffect(() => {
@@ -278,6 +288,16 @@ export default function Welcome() {
             </nav>
           </div>
         </header>
+
+        {paid && (
+          <div className="sk-paid" role="status">
+            <div className="sk-wrap sk-paid-in">
+              <span className="sk-paid-tick" aria-hidden="true">✓</span>
+              <span><strong>{t.paidTitle}</strong> {t.paidBody}</span>
+              <button type="button" className="sk-paid-x" onClick={dismissPaid} aria-label={t.paidClose}>×</button>
+            </div>
+          </div>
+        )}
 
         <section className="sk-hero" id="top">
           <div className="sk-hero-stars" aria-hidden="true" />
@@ -432,6 +452,13 @@ const SKY_CSS = `
   /* nav */
   .sk-nav-wrap{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--sk-paper) 88%,transparent);
     backdrop-filter:saturate(150%) blur(12px);border-bottom:1px solid var(--sk-line)}
+  .sk-paid{background:#e8f6ee;border-bottom:1px solid #bfe5cd;color:#14532d}
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-paid{background:#0e2b1c;border-bottom-color:#1e5c3a;color:#c7f0d8}}
+  :root[data-theme="dark"] .sk-paid{background:#0e2b1c;border-bottom-color:#1e5c3a;color:#c7f0d8}
+  .sk-paid-in{display:flex;align-items:center;gap:10px;padding:11px 24px;font-size:14.5px}
+  .sk-paid-tick{flex:none;width:20px;height:20px;border-radius:50%;background:#1a9a50;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800}
+  .sk-paid-x{margin-inline-start:auto;background:none;border:0;color:inherit;font-size:20px;line-height:1;cursor:pointer;opacity:.7;padding:2px 6px}
+  .sk-paid-x:hover{opacity:1}
   .sk-nav{display:flex;align-items:center;justify-content:space-between;height:66px;gap:14px}
   .sk-logo{height:30px;width:auto;display:block}
   :root[data-theme="dark"] .sk-logo{filter:brightness(0) invert(1)}
