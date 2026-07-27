@@ -44,6 +44,7 @@ const P = {
     statement: 'Recent activity', noStatement: 'No activity yet.',
     docs: 'Documents', noDocs: 'Nothing shared with you yet.',
     download: 'Download', upload: 'Send us a document', uploading: 'Uploading…',
+    docSend: 'Send this file',
     upSent: 'Sent — we’ll review it shortly.', upFailed: 'Upload failed.',
     pendingReview: 'Awaiting review', received: 'Received',
     reqTitle: 'Need something?',
@@ -92,6 +93,7 @@ const P = {
     statement: 'תנועות אחרונות', noStatement: 'עוד אין תנועות להצגה.',
     docs: 'מסמכים', noDocs: 'עוד לא שותפו איתכם מסמכים.',
     download: 'הורדה', upload: 'שליחת מסמך אלינו', uploading: 'המסמך בדרך…',
+    docSend: 'שליחת הקובץ',
     upSent: 'הגיע אלינו — נעבור עליו בקרוב.', upFailed: 'ההעלאה לא הצליחה. נסו שוב.',
     pendingReview: 'ממתין לבדיקה', received: 'התקבל',
     reqTitle: 'צריכים משהו?',
@@ -117,12 +119,22 @@ function loadStripeJs() {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined') return reject(new Error('no window'))
     if (window.Stripe) return resolve(window.Stripe)
+    // Reject with an empty message so callers fall back to their localized
+    // "could not load the form" copy instead of an English string.
+    const timer = setTimeout(() => reject(new Error('')), 15000)
     const s = document.createElement('script')
     s.src = 'https://js.stripe.com/v3/'
-    s.onload = () => resolve(window.Stripe)
-    s.onerror = () => reject(new Error('Could not load the payment form.'))
+    s.onload = () => { clearTimeout(timer); resolve(window.Stripe) }
+    s.onerror = () => { clearTimeout(timer); reject(new Error('')) }
     document.head.appendChild(s)
   })
+}
+
+// fetch that gives up instead of leaving a button stuck on "Starting…" forever.
+function fetchT(url, opts, ms = 20000) {
+  const c = new AbortController()
+  const t = setTimeout(() => c.abort(), ms)
+  return fetch(url, { ...opts, signal: c.signal }).finally(() => clearTimeout(t))
 }
 
 export default function Portal({ supabaseUrl, googleEnabled }) {
@@ -168,6 +180,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   const [docs, setDocs] = useState(null)
   const [docBusy, setDocBusy] = useState(false)
   const [docMsg, setDocMsg] = useState('')
+  const [pendingDoc, setPendingDoc] = useState(null) // staged file awaiting explicit send
   const [reqText, setReqText] = useState('')
   const [reqBusy, setReqBusy] = useState(false)
   const [reqMsg, setReqMsg] = useState('')
@@ -233,9 +246,20 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   }
 
   // ── Documents actions ──────────────────────────────────────────────────────
-  async function onPickFile(e) {
+  // Picking a file only STAGES it — nothing uploads until the customer
+  // explicitly presses send (owner feedback 28 Jul: it sent without a confirm).
+  function onPickFile(e) {
     const file = e.target.files && e.target.files[0]
     if (!file) return
+    setDocMsg(''); setPendingDoc(file)
+  }
+  function cancelUpload() {
+    setPendingDoc(null); setDocMsg('')
+    if (fileRef.current) fileRef.current.value = ''
+  }
+  async function confirmUpload() {
+    const file = pendingDoc
+    if (!file || docBusy) return
     setDocMsg(''); setDocBusy(true)
     try {
       const dataBase64 = await new Promise((resolve, reject) => {
@@ -251,7 +275,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       })
       const d = await r.json()
       if (!d.success) setDocMsg(d.error || L.upFailed)
-      else { setDocMsg(L.upSent); loadDocs() }
+      else { setDocMsg(L.upSent); setPendingDoc(null); loadDocs() }
     } catch { setDocMsg(L.upFailed) }
     finally { setDocBusy(false); if (fileRef.current) fileRef.current.value = '' }
   }
@@ -285,13 +309,14 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   async function startPay() {
     setPayMsg(''); setPayBusy(true)
     try {
-      const r = await fetch('/api/portal/pay', {
+      const r = await fetchT('/api/portal/pay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
         body: JSON.stringify({}),
       })
       const d = await r.json()
-      if (!d.success) { setPayMsg(d.error || L.payStartFail); setPayBusy(false); return }
+      // A success without a client secret would otherwise hang the form forever.
+      if (!d.success || !d.clientSecret) { setPayMsg(d.error || L.payStartFail); setPayBusy(false); return }
       setPay({ clientSecret: d.clientSecret, publishableKey: d.publishableKey, amount: d.amount })
     } catch { setPayMsg(L.payStartFail); setPayBusy(false) }
   }
@@ -330,13 +355,13 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   async function startSaveCard() {
     setSaveMsg(''); setSaveBusy(true)
     try {
-      const r = await fetch('/api/portal/save-card', {
+      const r = await fetchT('/api/portal/save-card', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
         body: JSON.stringify({}),
       })
       const d = await r.json()
-      if (!d.success) { setSaveMsg(d.error || L.couldNotStart); setSaveBusy(false); return }
+      if (!d.success || !d.clientSecret) { setSaveMsg(d.error || L.couldNotStart); setSaveBusy(false); return }
       setSaveCard({ clientSecret: d.clientSecret, publishableKey: d.publishableKey })
     } catch { setSaveMsg(L.couldNotStart); setSaveBusy(false) }
   }
@@ -426,173 +451,190 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     return (
       <>
         <Head><title>{L.title}</title></Head>
-        <div className="login-shell">
-          <div className="login-mesh" aria-hidden="true" />
-          <AuthBackdrop />
-          <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
-          {langBtn}
-          <div className="login-card portal-card" dir={dir}>
-            <div className="p-head">
-              <div>
-                <div className="login-title" style={{ fontSize: 22 }}>
-                  {greeting}{account.customer?.firstName ? `, ${account.customer.firstName}` : ''}
-                </div>
-                <div className="login-sub">{L.account}</div>
-              </div>
-              <button className="btn btn-outline" onClick={signOut} style={{ fontSize: 12, padding: '6px 12px', flexShrink: 0 }}>{L.signout}</button>
+        <div className="pd-shell" dir={dir}>
+          <header className="pd-top">
+            <img className="pd-logo" src="/logo-full-tight.png" alt="Kosher Connect" />
+            <div className="pd-top-actions">
+              <button type="button" className="pd-chip" onClick={flipLang} lang={isHe ? 'en' : 'he'}
+                title={isHe ? 'Switch to English' : 'לעבור לעברית'}>{isHe ? 'English' : 'עברית'}</button>
+              <ThemeToggle />
+              <button className="btn btn-outline" onClick={signOut}
+                style={{ fontSize: 12.5, padding: '7px 14px', flexShrink: 0 }}>{L.signout}</button>
+            </div>
+          </header>
+
+          <main className="pd-main">
+            <div className="pd-greet">
+              <h1>{greeting}{account.customer?.firstName ? `, ${account.customer.firstName}` : ''}</h1>
+              <div className="pd-greet-sub">{L.account}</div>
             </div>
 
-            <div className={`p-balance ${owes ? 'owe' : 'credit'}`}>
-              <div className="p-balance-label">{L.wallet}</div>
-              <div className="p-balance-num">
-                {owes ? L.youOwe(fmtGbp(Math.abs(account.balance))) : account.balance > 0 ? L.inCredit(fmtGbp(account.balance)) : fmtGbp(0)}
-              </div>
-              {paid && <div role="status" className="p-paid">{L.paidNote}</div>}
-              {owes && !pay && (
-                <button className="btn btn-primary" onClick={startPay} disabled={payBusy}
-                  style={{ marginTop: 12, width: '100%', padding: '10px 16px' }}>
-                  {payBusy ? L.starting : L.payBtn(fmtGbp(Math.abs(account.balance)))}
-                </button>
-              )}
-              {payMsg && <div role="alert" className="p-payerr">{payMsg}</div>}
-              {pay && (
-                <div style={{ marginTop: 12 }}>
-                  <div id="kc-pay-element" />
-                  <button className="btn btn-primary" onClick={confirmPay} disabled={payBusy}
-                    style={{ marginTop: 12, width: '100%', padding: '10px 16px' }}>
-                    {payBusy ? L.processing : L.pay(fmtGbp(pay.amount))}
+            <div className="pd-grid">
+              <section className={`pd-card pd-span2 p-balance pd-hero ${owes ? 'owe' : 'credit'}`}>
+                <div className="p-balance-label">{L.wallet}</div>
+                <div className="p-balance-num pd-hero-num">
+                  {owes ? L.youOwe(fmtGbp(Math.abs(account.balance))) : account.balance > 0 ? L.inCredit(fmtGbp(account.balance)) : fmtGbp(0)}
+                </div>
+                {paid && <div role="status" className="p-paid">{L.paidNote}</div>}
+                {owes && !pay && (
+                  <button className="btn btn-primary" onClick={startPay} disabled={payBusy}
+                    style={{ marginTop: 14, padding: '10px 22px' }}>
+                    {payBusy ? L.starting : L.payBtn(fmtGbp(Math.abs(account.balance)))}
                   </button>
-                  <button className="btn btn-outline" onClick={() => { setPay(null); stripeRef.current = null }}
-                    style={{ marginTop: 8, width: '100%', padding: '8px 16px', fontSize: 13 }}>{L.cancel}</button>
-                </div>
-              )}
-            </div>
-
-            {/* Mini statement — the customer's own last few wallet lines. */}
-            <div className="p-section">
-              <div className="p-kicker"><TicketIcon /> {L.statement}</div>
-              {(account.statement || []).length === 0
-                ? <div className="p-empty">{L.noStatement}</div>
-                : account.statement.map((e, i) => (
-                  <div className="p-row" key={i}>
-                    <div className="p-row-main">
-                      <div className="p-row-title">{e.description || (e.amount >= 0 ? L.received : '—')}</div>
-                      <div className="p-row-sub">{fmtDate(e.at)}</div>
-                    </div>
-                    <span className={`p-amt ${e.amount >= 0 ? 'p-amt-pos' : ''}`} dir="ltr">
-                      {e.amount >= 0 ? '+' : '−'}{fmtGbp(Math.abs(e.amount))}
-                    </span>
+                )}
+                {payMsg && <div role="alert" className="p-payerr">{payMsg}</div>}
+                {pay && (
+                  <div style={{ marginTop: 12, maxWidth: 480 }}>
+                    <div id="kc-pay-element" />
+                    <button className="btn btn-primary" onClick={confirmPay} disabled={payBusy}
+                      style={{ marginTop: 12, width: '100%', padding: '10px 16px' }}>
+                      {payBusy ? L.processing : L.pay(fmtGbp(pay.amount))}
+                    </button>
+                    <button className="btn btn-outline" onClick={() => { setPay(null); stripeRef.current = null }}
+                      style={{ marginTop: 8, width: '100%', padding: '8px 16px', fontSize: 13 }}>{L.cancel}</button>
                   </div>
-                ))}
-            </div>
+                )}
+              </section>
 
-            {/* Payment method — save a card for future payments */}
-            <div className="p-section">
-              <div className="p-kicker"><CardIcon /> {L.pmTitle}</div>
-              {(account.cardOnFile || cardSaved) ? (
-                <div className="p-empty">{L.cardOnFile}</div>
-              ) : saveCard ? (
-                <div>
-                  <div id="kc-savecard-element" />
-                  <button className="btn btn-primary" onClick={confirmSaveCard} disabled={saveBusy}
-                    style={{ marginTop: 12, width: '100%', padding: '10px 16px' }}>{saveBusy ? L.saving : L.saveCard}</button>
-                  <button className="btn btn-outline" onClick={() => { setSaveCard(null); setupRef.current = null }}
-                    style={{ marginTop: 8, width: '100%', padding: '8px 16px', fontSize: 13 }}>{L.cancel}</button>
-                </div>
-              ) : (
-                <button className="btn btn-outline" onClick={startSaveCard} disabled={saveBusy}
-                  style={{ fontSize: 13, padding: '8px 14px' }}>{saveBusy ? L.starting : L.saveCardStart}</button>
-              )}
-              {saveMsg && <div role="status" className="p-msg">{saveMsg}</div>}
-            </div>
-
-            <div className="p-section">
-              <div className="p-kicker"><FlipPhoneIcon /> {L.rentals}</div>
-              {activeRentals.length === 0
-                ? <div className="p-empty">{L.noRentals}</div>
-                : activeRentals.map((r, i) => (
-                  <div className="p-row" key={i}>
-                    <div className="p-row-main">
-                      <div className="p-row-title"><bdi dir="ltr">{formatPhoneDisplay(r.phoneNumber) || L.phoneFallback}</bdi> · {r.country}</div>
-                      <div className="p-row-sub"><bdi dir="ltr">{fmtDate(r.fromDate)} {isHe ? '←' : '→'} {fmtDate(r.toDate)}</bdi>{daysLeft(r)}</div>
-                    </div>
-                    <span className={`p-badge ${stClass(r.status)}`}>{stLabel(r.status)}</span>
-                  </div>
-                ))}
-            </div>
-
-            <div className="p-section">
-              <div className="p-kicker"><PlaneIcon /> {L.flights}</div>
-              {upcoming.length === 0
-                ? <div className="p-empty">{L.noFlights}</div>
-                : upcoming.map((b, i) => (
-                  <div className="p-row" key={i}>
-                    <div className="p-row-main">
-                      <div className="p-row-title">{b.route || L.flightFallback}{b.airline ? ` · ${b.airline}` : ''}</div>
-                      {b.travelDate ? <div className="p-row-sub">{fmtDate(b.travelDate)}</div> : null}
-                    </div>
-                    <span className={`p-badge ${stClass(b.status)}`}>{stLabel(b.status)}</span>
-                  </div>
-                ))}
-            </div>
-
-            {/* Documents */}
-            <div className="p-section">
-              <div className="p-kicker"><DocIcon /> {L.docs}</div>
-              {staffDocs.length === 0
-                ? <div className="p-empty">{L.noDocs}</div>
-                : staffDocs.map((d) => (
-                  <div className="p-row" key={d.id}>
-                    <div className="p-row-main"><div className="p-row-title">{d.filename}</div></div>
-                    <button className="btn btn-outline" onClick={() => downloadDoc(d.id)} style={{ fontSize: 12, padding: '4px 10px', flexShrink: 0 }}>{L.download}</button>
-                  </div>
-                ))}
-
-              <div style={{ marginTop: 12 }}>
-                <input ref={fileRef} type="file"
-                  accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
-                  onChange={onPickFile} style={{ display: 'none' }} />
-                <button className="btn btn-outline" onClick={() => fileRef.current && fileRef.current.click()} disabled={docBusy}
-                  style={{ fontSize: 13, padding: '8px 14px' }}>
-                  {docBusy ? L.uploading : L.upload}
-                </button>
-                {docMsg && <span role="status" className="p-msg" style={{ marginInlineStart: 10 }}>{docMsg}</span>}
-              </div>
-
-              {myUploads.length > 0 && (
-                <div style={{ marginTop: 10 }}>
-                  {myUploads.map((d) => (
-                    <div className="p-row" key={d.id}>
-                      <div className="p-row-main"><div className="p-row-sub">{d.filename}</div></div>
-                      <span className={`p-badge ${d.status === 'pending' ? 'p-badge-warn' : d.status === 'published' ? 'p-badge-ok' : 'p-badge-muted'}`}>
-                        {d.status === 'pending' ? L.pendingReview : d.status === 'published' ? L.received : d.status}
+              {/* Mini statement — the customer's own last few wallet lines. */}
+              <section className="pd-card">
+                <div className="p-kicker"><TicketIcon /> {L.statement}</div>
+                {(account.statement || []).length === 0
+                  ? <div className="p-empty">{L.noStatement}</div>
+                  : account.statement.map((e, i) => (
+                    <div className="p-row" key={i}>
+                      <div className="p-row-main">
+                        <div className="p-row-title">{e.description || (e.amount >= 0 ? L.received : '—')}</div>
+                        <div className="p-row-sub">{fmtDate(e.at)}</div>
+                      </div>
+                      <span className={`p-amt ${e.amount >= 0 ? 'p-amt-pos' : ''}`} dir="ltr">
+                        {e.amount >= 0 ? '+' : '−'}{fmtGbp(Math.abs(e.amount))}
                       </span>
                     </div>
                   ))}
+              </section>
+
+              {/* Payment method — save a card for future payments */}
+              <section className="pd-card">
+                <div className="p-kicker"><CardIcon /> {L.pmTitle}</div>
+                {(account.cardOnFile || cardSaved) ? (
+                  <div className="p-empty">{L.cardOnFile}</div>
+                ) : saveCard ? (
+                  <div>
+                    <div id="kc-savecard-element" />
+                    <button className="btn btn-primary" onClick={confirmSaveCard} disabled={saveBusy}
+                      style={{ marginTop: 12, width: '100%', padding: '10px 16px' }}>{saveBusy ? L.saving : L.saveCard}</button>
+                    <button className="btn btn-outline" onClick={() => { setSaveCard(null); setupRef.current = null }}
+                      style={{ marginTop: 8, width: '100%', padding: '8px 16px', fontSize: 13 }}>{L.cancel}</button>
+                  </div>
+                ) : (
+                  <button className="btn btn-outline" onClick={startSaveCard} disabled={saveBusy}
+                    style={{ fontSize: 13, padding: '8px 14px' }}>{saveBusy ? L.starting : L.saveCardStart}</button>
+                )}
+                {saveMsg && <div role="status" className="p-msg">{saveMsg}</div>}
+              </section>
+
+              <section className="pd-card">
+                <div className="p-kicker"><FlipPhoneIcon /> {L.rentals}</div>
+                {activeRentals.length === 0
+                  ? <div className="p-empty">{L.noRentals}</div>
+                  : activeRentals.map((r, i) => (
+                    <div className="p-row" key={i}>
+                      <div className="p-row-main">
+                        <div className="p-row-title"><bdi dir="ltr">{formatPhoneDisplay(r.phoneNumber) || L.phoneFallback}</bdi> · {r.country}</div>
+                        <div className="p-row-sub"><bdi dir="ltr">{fmtDate(r.fromDate)} {isHe ? '←' : '→'} {fmtDate(r.toDate)}</bdi>{daysLeft(r)}</div>
+                      </div>
+                      <span className={`p-badge ${stClass(r.status)}`}>{stLabel(r.status)}</span>
+                    </div>
+                  ))}
+              </section>
+
+              <section className="pd-card">
+                <div className="p-kicker"><PlaneIcon /> {L.flights}</div>
+                {upcoming.length === 0
+                  ? <div className="p-empty">{L.noFlights}</div>
+                  : upcoming.map((b, i) => (
+                    <div className="p-row" key={i}>
+                      <div className="p-row-main">
+                        <div className="p-row-title">{b.route || L.flightFallback}{b.airline ? ` · ${b.airline}` : ''}</div>
+                        {b.travelDate ? <div className="p-row-sub">{fmtDate(b.travelDate)}</div> : null}
+                      </div>
+                      <span className={`p-badge ${stClass(b.status)}`}>{stLabel(b.status)}</span>
+                    </div>
+                  ))}
+              </section>
+
+              {/* Documents */}
+              <section className="pd-card pd-span2">
+                <div className="p-kicker"><DocIcon /> {L.docs}</div>
+                {staffDocs.length === 0
+                  ? <div className="p-empty">{L.noDocs}</div>
+                  : staffDocs.map((d) => (
+                    <div className="p-row" key={d.id}>
+                      <div className="p-row-main"><div className="p-row-title">{d.filename}</div></div>
+                      <button className="btn btn-outline" onClick={() => downloadDoc(d.id)} style={{ fontSize: 12, padding: '4px 10px', flexShrink: 0 }}>{L.download}</button>
+                    </div>
+                  ))}
+
+                <div style={{ marginTop: 12 }}>
+                  <input ref={fileRef} type="file"
+                    accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                    onChange={onPickFile} style={{ display: 'none' }} />
+                  {!pendingDoc ? (
+                    <button className="btn btn-outline" onClick={() => fileRef.current && fileRef.current.click()} disabled={docBusy}
+                      style={{ fontSize: 13, padding: '8px 14px' }}>{L.upload}</button>
+                  ) : (
+                    <div className="pd-upconfirm">
+                      <span className="p-row-title" style={{ flex: '1 1 auto', minWidth: 0 }}>
+                        {pendingDoc.name}
+                        <span className="p-row-sub" style={{ display: 'inline', marginInlineStart: 8 }}>
+                          {Math.max(1, Math.round(pendingDoc.size / 1024))} KB
+                        </span>
+                      </span>
+                      <button className="btn btn-primary" onClick={confirmUpload} disabled={docBusy}
+                        style={{ fontSize: 13, padding: '8px 14px' }}>{docBusy ? L.uploading : L.docSend}</button>
+                      <button className="btn btn-outline" onClick={cancelUpload} disabled={docBusy}
+                        style={{ fontSize: 13, padding: '8px 14px' }}>{L.cancel}</button>
+                    </div>
+                  )}
+                  {docMsg && <span role="status" className="p-msg" style={{ marginInlineStart: 10 }}>{docMsg}</span>}
                 </div>
-              )}
+
+                {myUploads.length > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    {myUploads.map((d) => (
+                      <div className="p-row" key={d.id}>
+                        <div className="p-row-main"><div className="p-row-sub">{d.filename}</div></div>
+                        <span className={`p-badge ${d.status === 'pending' ? 'p-badge-warn' : d.status === 'published' ? 'p-badge-ok' : 'p-badge-muted'}`}>
+                          {d.status === 'pending' ? L.pendingReview : d.status === 'published' ? L.received : d.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="pd-card pd-span2">
+                <div className="p-kicker">💬 {L.reqTitle}</div>
+                <div className="p-empty" style={{ marginBottom: 8 }}>{L.reqHint}</div>
+                <textarea className="form-input" rows={3} value={reqText} maxLength={500}
+                  onChange={(e) => setReqText(e.target.value)} placeholder={L.reqPlaceholder}
+                  style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit', fontSize: 14 }} />
+                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <button className="btn btn-primary" onClick={sendRequest} disabled={reqBusy || !reqText.trim()}
+                    style={{ fontSize: 13, padding: '8px 16px' }}>{reqBusy ? L.reqSending : L.reqSend}</button>
+                  {reqMsg && <span role="status" className="p-msg">{reqMsg}</span>}
+                </div>
+              </section>
             </div>
 
-            <div className="p-section">
-              <div className="p-kicker">💬 {L.reqTitle}</div>
-              <div className="p-empty" style={{ marginBottom: 8 }}>{L.reqHint}</div>
-              <textarea className="form-input" rows={3} value={reqText} maxLength={500}
-                onChange={(e) => setReqText(e.target.value)} placeholder={L.reqPlaceholder}
-                style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit', fontSize: 14 }} />
-              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <button className="btn btn-primary" onClick={sendRequest} disabled={reqBusy || !reqText.trim()}
-                  style={{ fontSize: 13, padding: '8px 16px' }}>{reqBusy ? L.reqSending : L.reqSend}</button>
-                {reqMsg && <span role="status" className="p-msg">{reqMsg}</span>}
-              </div>
-            </div>
-
-            <div className="p-foot">
+            <footer className="pd-foot">
               {L.qShort}{' '}
               <a href="tel:+441615311386" dir="ltr">{formatPhoneDisplay('01615311386')}</a>
               {' · '}
               <a href="mailto:admin@kosher-connect.com" dir="ltr">admin@kosher-connect.com</a>
-            </div>
-          </div>
+            </footer>
+          </main>
         </div>
       </>
     )
