@@ -2718,15 +2718,28 @@ async function deleteRental(id) {
 }
 
 async function deletePhone(id) {
-  const p = phones.find(x => x.id === id);
-  if (p && p.status === 'rented') { toast('Cannot delete a phone that is currently rented.', 'error'); return; }
-  const confirmed = await window.api.confirmDelete('Delete this phone from inventory?');
-  if (!confirmed) return;
-  phones = phones.filter(x => x.id !== id);
-  const res = await savePhones(phones, [id]);
+  const idx = phones.findIndex(x => x.id === id);
+  const p = phones[idx];
+  if (!p) return;
+  if (p.status === 'rented') { toast('Cannot delete a phone that is currently rented.', 'error'); return; }
+  // Undo-toast instead of a confirm dialog: the row disappears immediately,
+  // but the server delete is held for the undo window (kcUndoable).
+  phones.splice(idx, 1);
   renderRentalsTab();
-  if (res && res.success === false) return; // reportSave already warned
-  toast('Phone removed.', 'warning');
+  kcUndoable({
+    label: `Phone ${p.model || p.imei || ''} removed.`.replace('  ', ' '),
+    restore: () => {
+      phones.splice(Math.min(idx, phones.length), 0, p);
+      if (currentTab === 'rentals') renderRentalsTab();
+    },
+    commit: async () => {
+      const res = await savePhones(phones, [id]);
+      if (res && res.success === false) { // reportSave already warned — put it back
+        phones.splice(Math.min(idx, phones.length), 0, p);
+        if (currentTab === 'rentals') renderRentalsTab();
+      }
+    },
+  });
 }
 
 // ══ DYNAMIC MODAL (shared) ══
@@ -3628,7 +3641,7 @@ function renderDocsSection(custId, docs) {
   const others = docs.filter(d => !(d.source === 'customer' && d.status === 'pending'));
   const dl = (id) => `window.open('/api/documents/download?id=${encodeURIComponent(id)}','_blank')`;
   const row = (d) => `
-    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
+    <div id="doc-row-${escHtml(d.id)}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
       <span style="flex:1;">${escHtml(d.filename)}
         <span style="color:var(--muted);font-size:11px;"> · ${d.source === 'customer' ? 'from customer' : 'shared'}${d.status !== 'published' ? ` · ${escHtml(d.status)}` : ''}</span></span>
       <button class="action-btn" title="Download" onclick="${dl(d.id)}">⬇︎</button>
@@ -4204,13 +4217,21 @@ async function mergeElidDup(fromId, toId) {
 }
 
 async function deleteCustomerDoc(custId, id) {
-  if (!confirm('Delete this document? This cannot be undone.')) return;
-  try {
-    const r = await kcFetch(`/api/documents?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-    const d = await r.json();
-    if (d.success) { toast('Deleted.', 'success'); loadDocsSection(custId); }
-    else toast(d.error || 'Failed.', 'error');
-  } catch { toast('Failed.', 'error'); }
+  // Undo-toast instead of a confirm dialog: hide the row immediately, hold the
+  // server delete for the undo window (kcUndoable).
+  const row = document.getElementById(`doc-row-${id}`);
+  if (row) row.style.display = 'none';
+  kcUndoable({
+    label: 'Document deleted.',
+    restore: () => { if (row) row.style.display = ''; },
+    commit: async () => {
+      try {
+        const r = await kcFetch(`/api/documents?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+        const d = await r.json();
+        if (!d.success) { toast(d.error || 'Delete failed.', 'error'); loadDocsSection(custId); }
+      } catch { toast('Delete failed.', 'error'); loadDocsSection(custId); }
+    },
+  });
 }
 
 function closeCustomerCard() {
@@ -5976,6 +5997,52 @@ function toast(msg, type = 'success') {
     setTimeout(() => el.remove(), 3000);
   }
   container.appendChild(el);
+}
+
+// ── Undo toast (Gmail pattern) ──
+// One pending destructive action at a time: the UI updates optimistically and
+// the server call is HELD for a few seconds while a toast offers Undo. Undo →
+// restore() puts the row back and nothing was ever sent. Timeout, starting a
+// second undoable action, or leaving the page → commit() runs for real.
+let kcUndoPending = null; // { timer, commit, el }
+function kcUndoFlush() {
+  const p = kcUndoPending;
+  if (!p) return;
+  kcUndoPending = null;
+  clearTimeout(p.timer);
+  if (p.el) p.el.remove();
+  try { p.commit(); } catch { /* commit paths surface their own errors */ }
+}
+window.addEventListener('pagehide', kcUndoFlush);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') kcUndoFlush();
+});
+
+function kcUndoable({ label, commit, restore, seconds = 6 }) {
+  kcUndoFlush(); // at most one pending — a second action commits the first
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = 'toast toast-warning kc-undo-toast';
+  el.setAttribute('role', 'status');
+  const txt = document.createElement('span');
+  txt.textContent = label;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'kc-undo-btn';
+  btn.textContent = 'Undo';
+  el.appendChild(txt);
+  el.appendChild(btn);
+  container.appendChild(el);
+  const timer = setTimeout(kcUndoFlush, seconds * 1000);
+  kcUndoPending = { timer, commit, el };
+  btn.addEventListener('click', () => {
+    if (kcUndoPending && kcUndoPending.el === el) {
+      clearTimeout(kcUndoPending.timer);
+      kcUndoPending = null;
+    }
+    el.remove();
+    try { restore(); } catch { /* view re-renders on next action */ }
+  });
 }
 
 // ─────────────────────────────────────────────

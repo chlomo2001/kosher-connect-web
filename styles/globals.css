@@ -895,6 +895,15 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .toast-success { background: var(--brand-dark); color: #fff; }
 .toast-error { background: var(--danger); color: #fff; }
 .toast-warning { background: var(--canvas-cream); color: var(--gold); border: 1px solid #e5d3b0; }
+/* Undo toast — a destructive action held for a few seconds with an Undo button. */
+.kc-undo-toast { display: flex; align-items: center; gap: 14px; }
+.kc-undo-btn {
+  border: 0; background: none; cursor: pointer; font: inherit;
+  font-weight: 700; color: var(--accent); padding: 2px 4px;
+  text-decoration: underline; text-underline-offset: 2px; white-space: nowrap;
+}
+.kc-undo-btn:hover { filter: brightness(1.15); }
+.kc-undo-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Till mode: feedback must read from across the counter, like a real POS
    customer display — bigger type, wider card, clear of the tender panel. */

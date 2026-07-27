@@ -34,7 +34,9 @@ no money/auth surface → eligible for the autonomous loop.** ⚠ = touches mone
 consent/comms → human-in-the-loop only.
 
 Safe (loop-eligible), ranked value ÷ effort:
-- [ ] **P1 · S** — **Undo toast** on destructive actions (delete/void/status): 5–8s
+- [x] **P1 · S** — **Undo toast** on destructive actions (delete/void/status): 5–8s
+      *Shipped 07-27 for phone-inventory + customer-document deletes; other
+      delete paths can adopt `kcUndoable` one by one.*
       "Undone" revert instead of a confirm dialog. (Superhuman/Linear pattern.)
 - [x] **P1 · S** — **Shift+? shortcuts overlay** — DONE (39de3ef). Cheat-sheet of the
       active keys; pairs with ⌘K. (Linear.)
@@ -153,6 +155,7 @@ Safe (loop-eligible), ranked value ÷ effort:
 
 | 07-25 | Dashboard low-stock surface — 📦 line in "Needs attention" (count + first 3 low SKUs) via a cached `/api/shop` read in dashCache; reuses the Shop tab's `lowStockAt` predicate + the existing feed renderer, opens Shop on click. Display-only, no money surface | ✅ 113/113 ×2 + build + node --check + isolated logic assertions (empty/few/many + XSS-escape) | owner live-test pending |
 
+| 07-27 | Undo toast (Gmail pattern) — `kcUndoable({label,commit,restore})`: row disappears immediately, server delete held 6s behind an Undo toast; timeout/second-action/page-hide commits, Undo restores with nothing sent. Wired into phone-inventory delete (replaces confirm) + customer-document delete; one pending action at a time | ✅ 113/113 ×2 + build + node --check + isolated state-machine assertions (undo≠commit, single flush, second-action flush, double-flush no-op) | owner live-test pending |
 | 07-27 | Saved views — "☆ Save view" beside every kcFilterSort bar snapshots the current filter/sort (incl. dimension bars) as a named chip; chips apply on click, highlight when active, × deletes. localStorage `kc_saved_views` (cap 6/tab), applies via the normal re-validation so stale presets fall back safely. All 9 list tabs get it for free | ✅ 113/113 ×2 + build + node --check + offline chip harness L/D | owner live-test pending |
 | 07-26 | Park/hold an open till sale — "⏸ Park sale" holds the basket (+customer/method/paid) to localStorage (cap 20) & clears the till; "⏸ Parked (N)" header popover resumes/discards; resume auto-holds the current basket first (no loss). Strictly pre-charge — no saveSale/ledger/stock touch | ✅ 113/113 ×2 + build + node --check + isolated hold-queue state-machine assertions (no-loss resume, newest-first, 20-cap, unique ids, discard) | owner live-test pending |
 
