@@ -109,6 +109,7 @@ const T = {
     paidTitle: 'Payment received — thank you!',
     paidBody: 'Your payment went through and will show on your account shortly.',
     paidClose: 'Dismiss',
+    backTop: 'Back to top',
   },
   he: {
     dir: 'rtl', langLabel: 'HE',
@@ -186,6 +187,7 @@ const T = {
     paidTitle: 'התשלום התקבל — תודה רבה!',
     paidBody: 'התשלום עבר בהצלחה ויופיע בחשבונכם בקרוב.',
     paidClose: 'סגירה',
+    backTop: 'חזרה למעלה',
   },
 }
 
@@ -226,6 +228,7 @@ export default function Welcome() {
   const [sent, setSent] = useState('') // '', 'ok', 'err'
   const [errMsg, setErrMsg] = useState('')
   const [paid, setPaid] = useState(false) // Stripe Checkout success lands on /welcome?paid=1
+  const [showTop, setShowTop] = useState(false)
   useEffect(() => {
     try { const saved = localStorage.getItem('kcLang'); if (saved && T[saved]) setLang(saved) } catch {}
     try { if (new URLSearchParams(window.location.search).get('paid') === '1') setPaid(true) } catch {}
@@ -233,6 +236,12 @@ export default function Welcome() {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d?.openingHours) setHours(d.openingHours) })
       .catch(() => {})
+  }, [])
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 700)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
   const pick = (l) => { setLang(l); try { localStorage.setItem('kcLang', l) } catch {} }
   // Strip ?paid=1 on dismiss so a refresh or shared link doesn't re-announce it.
@@ -485,6 +494,14 @@ export default function Welcome() {
             </p>
           </div>
         </footer>
+
+        <button type="button" className={`sk-top ${showTop ? 'show' : ''}`}
+          onClick={() => window.scrollTo({ top: 0 })} aria-label={t.backTop} title={t.backTop}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" stroke="currentColor" strokeWidth="1.8"
+              strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
       </div>
     </>
   )
@@ -557,6 +574,16 @@ const SKY_CSS = `
   .sk-nav-phone span{font-size:11px;color:var(--sk-muted);font-weight:600}
   .sk-nav-phone:hover strong{color:var(--sk-sky)}
   :root[data-theme="dark"] .sk-nav-phone:hover strong{color:var(--sk-sky-bright)}
+
+  /* back to top */
+  .sk-top{position:fixed;bottom:22px;inset-inline-end:22px;z-index:40;width:44px;height:44px;
+    border-radius:50%;border:1px solid var(--sk-line);background:var(--sk-paper);color:var(--sk-text);
+    display:grid;place-items:center;cursor:pointer;box-shadow:0 4px 16px rgba(10,21,38,.14);
+    opacity:0;visibility:hidden;transform:translateY(8px);
+    transition:opacity .2s ease,transform .2s ease,visibility 0s .2s}
+  .sk-top.show{opacity:1;visibility:visible;transform:none;transition:opacity .2s ease,transform .2s ease}
+  .sk-top:hover{color:var(--sk-sky);border-color:var(--sk-sky)}
+  :root[data-theme="dark"] .sk-top:hover{color:var(--sk-sky-bright);border-color:var(--sk-sky-bright)}
 
   /* buttons */
   .sk-btn{display:inline-flex;align-items:center;justify-content:center;gap:.35em;font-weight:700;
