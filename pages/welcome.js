@@ -496,7 +496,7 @@ const SKY_CSS = `
     --sk-ink:#0d1526; --sk-sky:#07639e; --sk-sky-bright:#2f95d8; --sk-gold:#c19161;
     --sk-text:#0d1526; --sk-muted:#566079; --sk-line:#dbe3f0;
     --sk-paper:#ffffff; --sk-canvas:#f4f7fc; --sk-band:#ffffff; --sk-band-alt:#eef2fb;
-    --sk-maxw:1180px;
+    --sk-maxw:1320px; /* Sky-scale desktop container (owner comparison, 27 Jul) */
     --sk-fdisp:"Helvetica Neue",Arial,system-ui,-apple-system,"Segoe UI",sans-serif;
     --sk-fbody:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
   }
