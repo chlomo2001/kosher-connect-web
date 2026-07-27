@@ -688,6 +688,34 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 /* Shared compact filter/sort selects (feature #4) — the two-dropdown control
    every list tab carries, matching the Customers-tab styling. */
 .kc-fs-sel { width: auto; min-width: 150px; padding: 6px 10px; font-size: 13px; min-height: 0; }
+/* Saved views — named filter+sort presets shown as chips beside the selects. */
+.kc-view-chip {
+  display: inline-flex; align-items: center;
+  background: var(--surface); border: 1px solid var(--border-input);
+  border-radius: 999px; overflow: hidden;
+}
+.kc-view-chip .kc-view-apply {
+  border: 0; background: none; color: var(--text); cursor: pointer;
+  font: inherit; font-size: 12.5px; font-weight: 500; padding: 5px 4px 5px 12px;
+  max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.kc-view-chip .kc-view-del {
+  border: 0; background: none; color: var(--muted); cursor: pointer;
+  font-size: 14px; line-height: 1; padding: 5px 9px 5px 4px;
+}
+.kc-view-chip .kc-view-del:hover { color: var(--danger); }
+.kc-view-chip.on { background: var(--accent); border-color: var(--accent); }
+.kc-view-chip.on .kc-view-apply { color: #fff; }
+.kc-view-chip.on .kc-view-del { color: rgba(255, 255, 255, 0.75); }
+.kc-view-chip.on .kc-view-del:hover { color: #fff; }
+.kc-view-save {
+  border: 1px dashed var(--border-input); background: none; color: var(--muted);
+  border-radius: 999px; cursor: pointer; font: inherit; font-size: 12.5px;
+  font-weight: 500; padding: 5px 12px; white-space: nowrap;
+}
+.kc-view-save:hover { color: var(--accent); border-color: var(--accent); }
+.kc-view-chip .kc-view-apply:focus-visible, .kc-view-chip .kc-view-del:focus-visible,
+.kc-view-save:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0, 96, 168, 0.12); }
 .form-input.error { border-color: var(--danger); }
 .form-input::placeholder { color: var(--muted); }

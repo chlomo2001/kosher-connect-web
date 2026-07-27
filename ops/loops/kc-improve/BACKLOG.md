@@ -61,8 +61,8 @@ Safe (loop-eligible), ranked value ÷ effort:
       bookings; extend to rental units.)*
 - [ ] **P1 · M** — **Barcode/QR check-out ↔ return** — one scan flips rental status.
       (Booqable.) *(reuses the existing IMEI scanner.)*
-- [ ] **P1 · M** — **Saved views** — named filters per module (overdue rentals,
-      unpaid statements, SIMs expiring 7d). (Linear.)
+- [x] **P1 · M** — **Saved views** — named filters per module (overdue rentals,
+      unpaid statements, SIMs expiring 7d). (Linear.) *Shipped 07-27.*
 - [ ] **P2 · M** — **Per-SIM usage bar** (data left / days / expiry) in the portal.
       (Airalo.) *(display-only; the data feed is the work.)*
 - [ ] **P2 · M** — **Customer-360 detail page** w/ an activity-log tab. (Stripe.)
@@ -153,6 +153,7 @@ Safe (loop-eligible), ranked value ÷ effort:
 
 | 07-25 | Dashboard low-stock surface — 📦 line in "Needs attention" (count + first 3 low SKUs) via a cached `/api/shop` read in dashCache; reuses the Shop tab's `lowStockAt` predicate + the existing feed renderer, opens Shop on click. Display-only, no money surface | ✅ 113/113 ×2 + build + node --check + isolated logic assertions (empty/few/many + XSS-escape) | owner live-test pending |
 
+| 07-27 | Saved views — "☆ Save view" beside every kcFilterSort bar snapshots the current filter/sort (incl. dimension bars) as a named chip; chips apply on click, highlight when active, × deletes. localStorage `kc_saved_views` (cap 6/tab), applies via the normal re-validation so stale presets fall back safely. All 9 list tabs get it for free | ✅ 113/113 ×2 + build + node --check + offline chip harness L/D | owner live-test pending |
 | 07-26 | Park/hold an open till sale — "⏸ Park sale" holds the basket (+customer/method/paid) to localStorage (cap 20) & clears the till; "⏸ Parked (N)" header popover resumes/discards; resume auto-holds the current basket first (no loss). Strictly pre-charge — no saveSale/ledger/stock touch | ✅ 113/113 ×2 + build + node --check + isolated hold-queue state-machine assertions (no-loss resume, newest-first, 20-cap, unique ids, discard) | owner live-test pending |
 
 Held / owner input: family-trip sheet (£1,364 balance) needs the customer's

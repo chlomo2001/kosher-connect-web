@@ -2877,12 +2877,87 @@ function kcFilterSort(key, filters, sorts, render) {
         onchange="kcViewSetDim('${key}','${d.dim}',this.value)">${opts(d.options, st.dims[d.dim])}</select>`).join('')
     : (filters.length > 1 ? `<select class="form-input kc-fs-sel" title="Filter"
         onchange="kcViewSet('${key}','filter',this.value)">${opts(filters, st.filter)}</select>` : '');
+  const views = kcSavedViews(key);
+  const viewChips = views.map((v, i) => `
+      <span class="kc-view-chip ${kcViewMatches(key, v) ? 'on' : ''}">
+        <button type="button" class="kc-view-apply" title="Apply this view"
+          onclick="kcViewApplySaved('${key}',${i})">${escHtml(v.name)}</button>
+        <button type="button" class="kc-view-del" title="Delete this view"
+          aria-label="Delete view ${escHtml(v.name)}"
+          onclick="kcViewDeleteSaved('${key}',${i},event)">×</button>
+      </span>`).join('');
   return `
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       ${filterSelects}
       <select class="form-input kc-fs-sel" title="Sort by"
         onchange="kcViewSet('${key}','sort',this.value)">${opts(sorts, st.sort)}</select>
+      ${viewChips}
+      <button type="button" class="kc-view-save" title="Save the current filter &amp; sort as a named view"
+        onclick="kcViewSaveCurrent('${key}')">☆ Save view</button>
     </div>`;
+}
+
+// Saved views — named filter+sort presets per list tab (Linear/Notion pattern).
+// Pure view state in localStorage (kc_saved_views: { tabKey: [{name, filter,
+// sort, dims}] }), capped at 6 per tab. Applying one goes through the normal
+// kcFilterSort re-validation, so a preset that references a since-removed
+// option safely falls back to the default.
+const SAVED_VIEWS_KEY = 'kc_saved_views';
+function kcSavedViews(key) {
+  try {
+    const all = JSON.parse(localStorage.getItem(SAVED_VIEWS_KEY) || '{}');
+    return Array.isArray(all[key]) ? all[key] : [];
+  } catch { return []; }
+}
+function kcSavedViewsSet(key, list) {
+  try {
+    const all = JSON.parse(localStorage.getItem(SAVED_VIEWS_KEY) || '{}');
+    all[key] = list;
+    localStorage.setItem(SAVED_VIEWS_KEY, JSON.stringify(all));
+  } catch { /* private mode / full */ }
+}
+function kcViewSnapshot(key) {
+  const st = kcView(key);
+  return { filter: st.filter || '', sort: st.sort || '', dims: st.dims ? { ...st.dims } : null };
+}
+function kcViewMatches(key, v) {
+  const cur = kcViewSnapshot(key);
+  if ((v.sort || '') !== cur.sort) return false;
+  if (v.dims || cur.dims) {
+    const a = v.dims || {}, b = cur.dims || {};
+    for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+      if ((a[k] || '') !== (b[k] || '')) return false;
+    }
+    return true;
+  }
+  return (v.filter || '') === cur.filter;
+}
+function kcViewSaveCurrent(key) {
+  const name = (prompt('Name this view (e.g. "Overdue", "This week"):') || '').trim().slice(0, 24);
+  if (!name) return;
+  const list = kcSavedViews(key).filter(v => v.name !== name); // same name = overwrite
+  list.unshift({ name, ...kcViewSnapshot(key) });
+  kcSavedViewsSet(key, list.slice(0, 6));
+  const cfg = kcViewCfg[key];
+  if (cfg && cfg.render) cfg.render();
+}
+function kcViewApplySaved(key, i) {
+  const v = kcSavedViews(key)[i];
+  if (!v) return;
+  const st = kcView(key);
+  if (v.sort) st.sort = v.sort;
+  if (v.dims) st.dims = { ...v.dims };
+  else st.filter = v.filter || '';
+  const cfg = kcViewCfg[key];
+  if (cfg && cfg.render) cfg.render();
+}
+function kcViewDeleteSaved(key, i, ev) {
+  if (ev) ev.stopPropagation();
+  const list = kcSavedViews(key);
+  list.splice(i, 1);
+  kcSavedViewsSet(key, list);
+  const cfg = kcViewCfg[key];
+  if (cfg && cfg.render) cfg.render();
 }
 
 function kcViewSet(key, kind, value) {
