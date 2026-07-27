@@ -9812,6 +9812,43 @@ async function setTaskPriority(id, priority) {
   if (await patchTask({ id, priority })) renderTasksTab();
 }
 
+// Natural-language date for the snooze/remind prompts. Accepts:
+//   2026-08-03 · 3/8 or 03/08/2026 (UK day-first; past d/m rolls to next year)
+//   today · tomorrow · 3d / 3 days · 2w / 2 weeks · next week · next month
+//   weekday names or 3-letter prefixes ("sunday", "sun" → the NEXT one).
+// Returns YYYY-MM-DD, or null when it can't tell.
+function kcParseWhen(input, todayISO) {
+  const s = String(input || '').trim().toLowerCase();
+  if (!s) return null;
+  const today = todayISO || localISO();
+  const base = parseLocalDate(today);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+  if (m) {
+    const yr = m[3] ? Number(m[3].length === 2 ? '20' + m[3] : m[3]) : base.getFullYear();
+    const d = new Date(base);
+    d.setFullYear(yr, Number(m[2]) - 1, Number(m[1]));
+    if (!m[3] && localISO(d) <= today) d.setFullYear(yr + 1);
+    return localISO(d);
+  }
+  if (s === 'today') return today;
+  if (s === 'tomorrow' || s === 'tmrw') { base.setDate(base.getDate() + 1); return localISO(base); }
+  if (s === 'next week') { base.setDate(base.getDate() + 7); return localISO(base); }
+  if (s === 'next month') { base.setMonth(base.getMonth() + 1); return localISO(base); }
+  m = s.match(/^(?:in\s+)?(\d{1,3})\s*(?:d|day|days)$/);
+  if (m) { base.setDate(base.getDate() + Number(m[1])); return localISO(base); }
+  m = s.match(/^(?:in\s+)?(\d{1,2})\s*(?:w|wk|week|weeks)$/);
+  if (m) { base.setDate(base.getDate() + Number(m[1]) * 7); return localISO(base); }
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const di = days.findIndex(d => d === s || d.slice(0, 3) === s);
+  if (di >= 0) {
+    const delta = ((di - base.getDay()) + 7) % 7 || 7; // always in the future
+    base.setDate(base.getDate() + delta);
+    return localISO(base);
+  }
+  return null;
+}
+
 async function snoozeTask(id, choice) {
   if (!choice) return;
   let until = null;
@@ -9820,9 +9857,11 @@ async function snoozeTask(id, choice) {
   if (choice === '3days')     { base.setDate(base.getDate() + 3); until = localISO(base); }
   if (choice === 'nextweek')  { base.setDate(base.getDate() + 7); until = localISO(base); }
   if (choice === 'pick') {
-    const d = prompt('Snooze until (YYYY-MM-DD):', localISO(new Date(Date.now() + 14 * 86400000)));
-    if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
-    until = d;
+    const d = prompt('Snooze until — a date (2026-08-03, 3/8) or “tomorrow”, “sunday”, “3d”, “next week”:',
+      localISO(new Date(Date.now() + 14 * 86400000)));
+    if (d == null || !String(d).trim()) return;
+    until = kcParseWhen(d);
+    if (!until) { toast('Couldn’t read that date — try 2026-08-03, 3/8, “tomorrow” or “sunday”.', 'error'); return; }
   }
   if (choice === 'wake') until = '';
   if (await patchTask({ id, snoozedUntil: until })) {

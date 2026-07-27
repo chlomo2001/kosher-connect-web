@@ -71,7 +71,9 @@ Safe (loop-eligible), ranked value ÷ effort:
       (Airalo.) *(display-only; the data feed is the work.)*
 - [ ] **P2 · M** — **Customer-360 detail page** w/ an activity-log tab. (Stripe.)
 - [ ] **P2 · M** — **⌘K acts on the current selection** (verbs, not just nav). (Linear.)
-- [ ] **P3 · M** — **NL snooze** ("remind me tomorrow 9am") on bookings/customers.
+- [x] **P3 · M** — **NL snooze** ("remind me tomorrow 9am") on bookings/customers.
+      *Shipped 07-27 (date-level) for the task snooze picker via `kcParseWhen`;
+      time-of-day + the ⏰ remind modal can adopt the parser later.*
 
 ⚠ Money / consent / comms — human-reviewed, NOT loop-autofixed:
 - [ ] **P1 · M** ⚠ — **Idempotency key on every charge/ledger write** (client-generated)
@@ -157,6 +159,7 @@ Safe (loop-eligible), ranked value ÷ effort:
 
 | 07-25 | Dashboard low-stock surface — 📦 line in "Needs attention" (count + first 3 low SKUs) via a cached `/api/shop` read in dashCache; reuses the Shop tab's `lowStockAt` predicate + the existing feed renderer, opens Shop on click. Display-only, no money surface | ✅ 113/113 ×2 + build + node --check + isolated logic assertions (empty/few/many + XSS-escape) | owner live-test pending |
 
+| 07-27 | NL snooze dates — task snooze "pick" prompt now takes natural language via `kcParseWhen`: ISO, UK d/m (past → next year), today/tomorrow, Nd/Nw, next week/month, weekday names or 3-letter prefixes (always the NEXT one); bad input gets a helpful error toast instead of silently dropping | ✅ 113/113 ×2 + build + node --check + 15 parser assertions | owner live-test pending |
 | 07-27 | Manage-Rental conflict pre-warn — changing mgFrom/mgTo runs `phoneConflicts` (excluding the rental itself) and shows an inline red role=alert box naming the clashing booking (dates + customer) before save; server overlap guard stays authoritative. New Rental already filtered its picker by dates — this closes the Manage gap | ✅ 113/113 ×2 + build + node --check + isolated overlap assertions (extension clashes, own-window clean) | owner live-test pending |
 | 07-27 | Undo toast (Gmail pattern) — `kcUndoable({label,commit,restore})`: row disappears immediately, server delete held 6s behind an Undo toast; timeout/second-action/page-hide commits, Undo restores with nothing sent. Wired into phone-inventory delete (replaces confirm) + customer-document delete; one pending action at a time | ✅ 113/113 ×2 + build + node --check + isolated state-machine assertions (undo≠commit, single flush, second-action flush, double-flush no-op) | owner live-test pending |
 | 07-27 | Saved views — "☆ Save view" beside every kcFilterSort bar snapshots the current filter/sort (incl. dimension bars) as a named chip; chips apply on click, highlight when active, × deletes. localStorage `kc_saved_views` (cap 6/tab), applies via the normal re-validation so stale presets fall back safely. All 9 list tabs get it for free | ✅ 113/113 ×2 + build + node --check + offline chip harness L/D | owner live-test pending |
