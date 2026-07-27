@@ -1625,7 +1625,7 @@ td.cal-active.cal-shabbat { background: var(--accent); }
   position: sticky; top: 12px; z-index: 20;
 }
 .w-brand { display: flex; align-items: center; gap: 14px; min-width: 240px; }
-.w-brand img { height: 44px; width: auto; display: block; }
+.w-brand img { height: 32px; width: auto; display: block; }
 .w-brand h1 { font-size: 18px; margin: 0; line-height: 1.1; color: var(--text); letter-spacing: 0.2px; }
 .w-brand p { margin: 3px 0 0; font-size: 12.5px; color: var(--muted); }
 .w-pills { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
@@ -2009,7 +2009,7 @@ html { scroll-behavior: smooth; }
 @media (max-width: 640px) {
   .w-topbar { padding: 10px 14px; gap: 10px; }
   .w-brand { min-width: 0; gap: 10px; }
-  .w-brand img { height: 34px; }
+  .w-brand img { height: 26px; }
   .w-brand p { display: none; }
   .w-pills a.w-anchor { display: none; }
   .w-pills { gap: 6px; }

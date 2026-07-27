@@ -44,7 +44,7 @@ export default function PhoneGuide() {
         <div className="w-wrap" dir="ltr" lang="en">
           <div className="w-topbar">
             <div className="w-brand">
-              <img src="/logo-full.png" alt="Kosher Connect" />
+              <img src="/logo-full-tight.png" alt="Kosher Connect" />
               <div>
                 <h1>Kosher Connect</h1>
                 <p>The phone guide</p>

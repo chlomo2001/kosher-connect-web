@@ -77,7 +77,7 @@ export default function Login({ supabaseUrl, googleEnabled }) {
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         <form className="login-card" onSubmit={ticket ? submitCode : submit}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <img src="/logo-full.png" alt="KosherConnect" style={{ height: 72, marginBottom: 10 }} />
+            <img src="/logo-full-tight.png" alt="KosherConnect" style={{ height: 44, marginBottom: 12 }} />
             <div className="login-title">Welcome back</div>
             <div className="login-sub">{ticket ? 'Check your email for your code' : 'Sign in to KosherConnect'}</div>
             <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8, letterSpacing: '0.02em', lineHeight: 1.5 }}>
