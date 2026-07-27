@@ -287,7 +287,7 @@ export default function Welcome() {
         <header className="sk-nav-wrap">
           <div className="sk-wrap sk-nav">
             <a className="sk-brand" href="#top">
-              <img className="sk-logo" src="/logo-full.png" alt="Kosher Connect" />
+              <img className="sk-logo" src="/logo-full-tight.png" alt="Kosher Connect" />
             </a>
             <nav className="sk-nav-links" aria-label="Site">
               <a href="#mobile" className="sk-navlink">{t.nav.mobile}</a>
@@ -455,7 +455,7 @@ export default function Welcome() {
           <div className="sk-wrap">
             <div className="sk-foot-grid">
               <div className="sk-foot-brand">
-                <img className="sk-logo sk-foot-logo" src="/logo-full.png" alt="Kosher Connect" />
+                <img className="sk-logo sk-foot-logo" src="/logo-full-tight.png" alt="Kosher Connect" />
                 <p dir="ltr">{t.addressLine}</p>
                 <p><a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a></p>
                 <p><a href={`mailto:${EMAIL}`} dir="ltr">{EMAIL}</a></p>
@@ -535,7 +535,9 @@ const SKY_CSS = `
   .sk-paid-x{margin-inline-start:auto;background:none;border:0;color:inherit;font-size:26px;line-height:1;cursor:pointer;opacity:.7;padding:2px 8px}
   .sk-paid-x:hover{opacity:1}
   .sk-nav{display:flex;align-items:center;justify-content:space-between;height:66px;gap:14px}
-  .sk-logo{height:30px;width:auto;display:block}
+  /* logo-full-tight.png is the artwork with its transparent padding cropped off —
+     the original canvas is ~2/3 empty, which made the mark render ~11px tall. */
+  .sk-logo{height:32px;width:auto;display:block}
   :root[data-theme="dark"] .sk-logo{filter:brightness(0) invert(1)}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-logo{filter:brightness(0) invert(1)}}
   .sk-nav-links{display:flex;align-items:center;gap:20px}
@@ -667,7 +669,7 @@ const SKY_CSS = `
   /* footer — labelled columns */
   .sk-foot{background:var(--sk-band);border-top:1px solid var(--sk-line);padding:48px 0 40px}
   .sk-foot-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:26px;align-items:start;text-align:start}
-  .sk-foot-logo{height:32px;margin-bottom:10px}
+  .sk-foot-logo{height:36px;margin-bottom:12px}
   .sk-foot-brand p{margin:6px 0 0;color:var(--sk-muted);font-size:13.5px}
   .sk-foot-brand a{color:var(--sk-muted)}
   .sk-foot-brand a:hover{color:var(--sk-text)}
