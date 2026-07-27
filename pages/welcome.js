@@ -685,5 +685,7 @@ const SKY_CSS = `
   @media (prefers-reduced-motion:reduce){.sk-reveal{opacity:1;transform:none;transition:none}}
 
   @media (max-width:960px){ .sk-navlink{display:none} .sk-nav-phone{display:none} .sk-foot-grid{grid-template-columns:1fr 1fr} }
+  /* Keep the nav's CTA clear of the fixed theme toggle on phones. */
+  @media (max-width:640px){ .sk-nav{padding-inline-end:46px} }
   @media (max-width:820px){ .sk-grid{grid-template-columns:1fr} .sk-visit-grid{grid-template-columns:1fr} .sk-map-card{min-height:300px} .sk-map-card iframe{min-height:300px} }
 `
