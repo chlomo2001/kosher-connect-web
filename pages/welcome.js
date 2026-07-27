@@ -338,7 +338,6 @@ export default function Welcome() {
           </div>
         </section>
 
-        <div id="services" />
         {t.bands.map((b, i) => (
           <section className={`sk-band ${i % 2 ? 'sk-band-tint' : ''}`} id={BAND_IDS[i]} key={`${lang}-b${i}`}>
             <div className="sk-wrap sk-band-inner sk-reveal">
@@ -353,7 +352,7 @@ export default function Welcome() {
           </section>
         ))}
 
-        <section className="sk-also">
+        <section className="sk-also" id="services">
           <div className="sk-wrap">
             <h2 className="sk-reveal">{t.moreTitle}</h2>
             <p className="sk-also-lead sk-reveal">{t.moreLead}</p>
@@ -508,8 +507,14 @@ const SKY_CSS = `
     --sk-text:#eaf0fb; --sk-muted:#9aa6c4; --sk-line:#26305c;
     --sk-paper:#0c1330; --sk-canvas:#080d24; --sk-band:#0b1230; --sk-band-alt:#080d24;
   }
-  html,body{height:auto;overflow-x:hidden;overflow-y:auto}
+  /* overflow-x must live on <html> only: any overflow value on <body> turns it
+     into its own scroll container, which silently disables the sticky nav. */
+  html{height:auto;overflow-x:hidden;overflow-y:auto}
+  body{height:auto;overflow:visible}
   #__next{display:block;height:auto;overflow:visible}
+  /* The sticky nav is 66px tall — keep anchor targets clear of it. */
+  .sk [id]{scroll-margin-top:78px}
+  @media (prefers-reduced-motion:no-preference){ html{scroll-behavior:smooth} }
   .sk *{box-sizing:border-box}
   .sk{background:var(--sk-paper);color:var(--sk-text);font-family:var(--sk-fbody);
     font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
