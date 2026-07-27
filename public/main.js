@@ -2389,14 +2389,15 @@ function openManageRentalModal(rentalId) {
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">From Date</label>
-        <input class="form-input" type="date" id="mgFrom" value="${r.fromDate}" onchange="mgUpdateCalc()">
+        <input class="form-input" type="date" id="mgFrom" value="${r.fromDate}" onchange="mgUpdateCalc(); mgCheckConflict('${escJs(r.id)}')">
         <div class="hebrew-date-label" id="mgFromHeb"></div>
       </div>
       <div class="form-group">
         <label class="form-label">To Date (inclusive)</label>
-        <input class="form-input" type="date" id="mgTo" value="${r.toDate}" onchange="mgUpdateCalc()">
+        <input class="form-input" type="date" id="mgTo" value="${r.toDate}" onchange="mgUpdateCalc(); mgCheckConflict('${escJs(r.id)}')">
         <div class="hebrew-date-label" id="mgToHeb"></div>
       </div>
+      <div class="form-group form-full" id="mgConflictWarn" role="alert" style="display:none;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.35);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--danger);"></div>
       <div class="form-group form-full" id="mgCalcBox">
         <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;">
           <div id="mgCalcText"></div>
@@ -2493,6 +2494,30 @@ function openManageRentalModal(rentalId) {
   showHebrewDate('mgFrom','mgFromHeb');
   showHebrewDate('mgTo','mgToHeb');
   mgUpdateCalc();
+}
+
+// Availability pre-warn in Manage Rental: extending/shifting the dates can
+// collide with ANOTHER rental (or future reservation) of the same handset.
+// Warn inline, don't block — the server-side overlap guard stays authoritative.
+function mgCheckConflict(rentalId) {
+  const el = document.getElementById('mgConflictWarn');
+  const r = rentals.find(x => x.id === rentalId);
+  if (!el || !r) return;
+  const from = document.getElementById('mgFrom')?.value;
+  const to = document.getElementById('mgTo')?.value;
+  let clash = null;
+  if (from && to && to >= from && r.phoneId) {
+    clash = phoneConflicts(rentals, r.phoneId, from, to, localISO(), r.id)[0];
+  }
+  if (clash) {
+    el.style.display = 'block';
+    el.textContent = `⚠ This phone is also booked ${fmtDate(clash.fromDate)} → ${fmtDate(clash.toDate)}`
+      + (clash.customerName ? ` for ${clash.customerName}` : '')
+      + '. Saving these dates would double-book it.';
+  } else {
+    el.style.display = 'none';
+    el.textContent = '';
+  }
 }
 
 function mgUpdateCalc() {

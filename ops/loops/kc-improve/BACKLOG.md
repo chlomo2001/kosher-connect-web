@@ -58,7 +58,9 @@ Safe (loop-eligible), ranked value ÷ effort:
       "Needs attention" (rolled-up count + first 3 SKUs) that opens Shop.
 - [x] **P2 · S** — **Quick-create keys** in ⌘K — DONE. Empty-search palette shows a
       1–9 badge on each Quick action; the digit fires it. (Stripe.)
-- [ ] **P1 · M** — **Availability conflict detection** — warn before double-booking a
+- [x] **P1 · M** — **Availability conflict detection** — warn before double-booking a
+      *Shipped 07-27: New Rental was already date-aware; added the missing
+      inline pre-warn to Manage Rental date edits.*
       specific unit across overlapping dates. (Booqable.) *(server guard exists for
       bookings; extend to rental units.)*
 - [ ] **P1 · M** — **Barcode/QR check-out ↔ return** — one scan flips rental status.
@@ -155,6 +157,7 @@ Safe (loop-eligible), ranked value ÷ effort:
 
 | 07-25 | Dashboard low-stock surface — 📦 line in "Needs attention" (count + first 3 low SKUs) via a cached `/api/shop` read in dashCache; reuses the Shop tab's `lowStockAt` predicate + the existing feed renderer, opens Shop on click. Display-only, no money surface | ✅ 113/113 ×2 + build + node --check + isolated logic assertions (empty/few/many + XSS-escape) | owner live-test pending |
 
+| 07-27 | Manage-Rental conflict pre-warn — changing mgFrom/mgTo runs `phoneConflicts` (excluding the rental itself) and shows an inline red role=alert box naming the clashing booking (dates + customer) before save; server overlap guard stays authoritative. New Rental already filtered its picker by dates — this closes the Manage gap | ✅ 113/113 ×2 + build + node --check + isolated overlap assertions (extension clashes, own-window clean) | owner live-test pending |
 | 07-27 | Undo toast (Gmail pattern) — `kcUndoable({label,commit,restore})`: row disappears immediately, server delete held 6s behind an Undo toast; timeout/second-action/page-hide commits, Undo restores with nothing sent. Wired into phone-inventory delete (replaces confirm) + customer-document delete; one pending action at a time | ✅ 113/113 ×2 + build + node --check + isolated state-machine assertions (undo≠commit, single flush, second-action flush, double-flush no-op) | owner live-test pending |
 | 07-27 | Saved views — "☆ Save view" beside every kcFilterSort bar snapshots the current filter/sort (incl. dimension bars) as a named chip; chips apply on click, highlight when active, × deletes. localStorage `kc_saved_views` (cap 6/tab), applies via the normal re-validation so stale presets fall back safely. All 9 list tabs get it for free | ✅ 113/113 ×2 + build + node --check + offline chip harness L/D | owner live-test pending |
 | 07-26 | Park/hold an open till sale — "⏸ Park sale" holds the basket (+customer/method/paid) to localStorage (cap 20) & clears the till; "⏸ Parked (N)" header popover resumes/discards; resume auto-holds the current basket first (no loss). Strictly pre-charge — no saveSale/ledger/stock touch | ✅ 113/113 ×2 + build + node --check + isolated hold-queue state-machine assertions (no-loss resume, newest-first, 20-cap, unique ids, discard) | owner live-test pending |
