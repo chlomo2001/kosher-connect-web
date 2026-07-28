@@ -333,6 +333,9 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
         const stripe = Stripe(pay.publishableKey)
         const elements = stripe.elements({ clientSecret: pay.clientSecret })
         const el = elements.create('payment')
+        // Stripe reports a bad key / mode mismatch via this event, not a throw —
+        // without it the form fails as a silent empty box.
+        el.on('loaderror', (ev) => { if (!cancelled) setPayMsg(ev?.error?.message || L.payFormFail) })
         el.mount('#kc-pay-element')
         stripeRef.current = { stripe, elements }
         setPayBusy(false)
@@ -377,6 +380,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
         const stripe = Stripe(saveCard.publishableKey)
         const elements = stripe.elements({ clientSecret: saveCard.clientSecret })
         const el = elements.create('payment')
+        el.on('loaderror', (ev) => { if (!cancelled) setSaveMsg(ev?.error?.message || L.couldNotLoadForm) })
         el.mount('#kc-savecard-element')
         setupRef.current = { stripe, elements }
         setSaveBusy(false)

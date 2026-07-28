@@ -4,7 +4,7 @@
 // payment method on the customer. Dormant until Stripe keys are set.
 import { db, tablesMode } from '../../../lib/db.js'
 import { resolvePortalCustomer } from '../../../lib/portal.js'
-import { stripeEnabled, webhookConfigured, publishableKey, getOrCreateCustomer, createSetupIntent } from '../../../lib/stripe.js'
+import { stripeEnabled, webhookConfigured, keysMatch, publishableKey, getOrCreateCustomer, createSetupIntent } from '../../../lib/stripe.js'
 
 export default async function handler(req, res) {
   if (process.env.PORTAL_ENABLED !== '1') return res.status(404).json({ success: false, error: 'Not found.' })
@@ -14,6 +14,9 @@ export default async function handler(req, res) {
   // The saved card is recorded only by the setup_intent.succeeded webhook; without
   // it the card would authorise at Stripe but never attach to the customer. (audit C7)
   if (!webhookConfigured) return res.status(503).json({ success: false, error: 'Card payments aren’t fully set up yet — please pay in store.' })
+  // Mismatched key modes make the browser form fail silently (empty box), so
+  // refuse here with a real error instead. /api/health shows keysMatch:false.
+  if (!keysMatch) return res.status(503).json({ success: false, error: 'Card payments are temporarily unavailable — please contact us.' })
 
   const base = await resolvePortalCustomer(req)
   if (!base) return res.status(401).json({ success: false, error: 'Please sign in again.' })
