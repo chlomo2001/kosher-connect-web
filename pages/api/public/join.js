@@ -12,11 +12,20 @@
 import { db, tablesMode } from '../../../lib/db.js'
 import { normalizeEmail } from '../../../lib/mappers.js'
 import { phoneKey } from '../../../lib/ukPhone.mjs'
+import { rateLimit } from '../../../lib/rateLimit.js'
 
 const cap = (v, n) => String(v || '').trim().slice(0, n)
 
+// "Best way to reach you" chips on /join — anything else is dropped.
+const PREFERRED_CONTACT = { call: 'Call', text: 'Text message', whatsapp: 'WhatsApp', email: 'Email' }
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
+  // The dedup key is the visitor's own phone/email — a script varying digits
+  // makes one open task each. Throttle before it can bury the staff queue.
+  if (!rateLimit(req, { burst: 5, perMinute: 2 })) {
+    return res.status(429).json({ success: false, error: 'Too many requests — please wait a minute, or call 0161 531 1386.' })
+  }
   const b = req.body || {}
 
   // Honeypot: real visitors never see the "company" field. Pretend success.
@@ -28,6 +37,7 @@ export default async function handler(req, res) {
   const email = cap(b.email, 120)
   const address = cap(b.address, 200)
   const message = cap(b.message, 1000)
+  const preferredContact = PREFERRED_CONTACT[cap(b.preferredContact, 20).toLowerCase()] || ''
   if (!firstName || !phone) {
     return res.status(400).json({ success: false, error: 'Name and phone are required.' })
   }
@@ -67,6 +77,7 @@ export default async function handler(req, res) {
       const notes = [
         `Phone: ${phone}`,
         email ? `Email: ${email}` : null,
+        preferredContact ? `Prefers: ${preferredContact}` : null,
         address ? `Address: ${address}` : null,
         message ? `Asked for: ${message}` : null,
         match

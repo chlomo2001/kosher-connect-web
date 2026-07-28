@@ -22,7 +22,9 @@ const T = {
     title: 'Join Kosher Connect',
     lead: 'Leave your details and what you’re after — a phone, a SIM, a trip, anything — and we’ll come back to you. No obligation, and you’ll get a straight answer.',
     firstName: 'First name', lastName: 'Last name (optional)',
-    phone: 'Phone', email: 'Email (optional)',
+    phone: 'Phone', email: 'Email (optional — unlocks your online account)',
+    reach: 'Best way to reach you (optional)',
+    reachOpts: { call: 'Call', text: 'Text message', whatsapp: 'WhatsApp', email: 'Email' },
     address: 'Address (optional)', addressPh: 'Start typing your address…',
     message: 'How can we help?',
     msgPlaceholder: 'e.g. a kosher phone for my son · a SIM that matches how I actually use it · a rental for a simcha in Israel',
@@ -33,6 +35,7 @@ const T = {
     doneBody: 'We’ll come back to you shortly.',
     doneCall: 'Prefer to talk? Call',
     doneVisit: 'or pop into the shop — 421 Bury New Road, Salford M7 4ED.',
+    donePortal: 'Once you’re set up you can see your balance and services any time at',
   },
   he: {
     dir: 'rtl',
@@ -43,7 +46,9 @@ const T = {
     title: 'מצטרפים לכשר קונקט',
     lead: 'השאירו פרטים וספרו מה אתם מחפשים — טלפון, סים, נסיעה, כל דבר — ונחזור אליכם. בלי שום התחייבות, ועם תשובה ישרה.',
     firstName: 'שם פרטי', lastName: 'שם משפחה (לא חובה)',
-    phone: 'טלפון', email: 'אימייל (לא חובה)',
+    phone: 'טלפון', email: 'אימייל (לא חובה — פותח לכם גישה לחשבון אונליין)',
+    reach: 'איך הכי נוח לחזור אליכם? (לא חובה)',
+    reachOpts: { call: 'שיחת טלפון', text: 'הודעת טקסט', whatsapp: 'וואטסאפ', email: 'אימייל' },
     address: 'כתובת (לא חובה)', addressPh: 'התחילו להקליד את הכתובת…',
     message: 'איך נוכל לעזור?',
     msgPlaceholder: 'למשל: טלפון כשר לבחור · סים שמתאים לשימוש האמיתי · השכרה לשמחה בארץ ישראל',
@@ -54,6 +59,7 @@ const T = {
     doneBody: 'נחזור אליכם בקרוב.',
     doneCall: 'מעדיפים לדבר? התקשרו',
     doneVisit: 'או קפצו לחנות — 421 Bury New Road, Salford M7 4ED.',
+    donePortal: 'אחרי שנקים לכם את החשבון תוכלו לראות את היתרה והשירותים שלכם בכל שעה דרך',
   },
 }
 
@@ -70,7 +76,7 @@ export default function Join() {
     try { localStorage.setItem('kcLang', n) } catch { /* not persisted */ }
   }
 
-  const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', email: '', address: '', message: '', company: '' })
+  const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', email: '', preferredContact: '', address: '', message: '', company: '' })
   const [busy, setBusy] = useState(false)
   const [errs, setErrs] = useState({})
   const [failMsg, setFailMsg] = useState('')
@@ -163,6 +169,7 @@ export default function Join() {
                 <h4>✓ {t.doneTitle}</h4>
                 <p>{t.doneBody}</p>
                 <p>{t.doneCall} <a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a> {t.doneVisit}</p>
+                <p>{t.donePortal} <a href="/portal">{t.account}</a>.</p>
               </div>
             ) : (
               <form className="w-card jn-card" onSubmit={submit} noValidate>
@@ -171,6 +178,28 @@ export default function Join() {
                   {field('lastName', t.lastName)}
                   {field('phone', t.phone, 'tel', { dir: 'ltr', inputMode: 'tel' })}
                   {field('email', t.email, 'email', { dir: 'ltr', inputMode: 'email' })}
+                  <div className="form-group form-full">
+                    <span className="form-label" id="jn-reach-label">{t.reach}</span>
+                    <div role="radiogroup" aria-labelledby="jn-reach-label"
+                      style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                      {['call', 'text', 'whatsapp', 'email'].map((k) => {
+                        const on = form.preferredContact === k
+                        return (
+                          <button key={k} type="button" role="radio" aria-checked={on}
+                            onClick={() => setForm((f) => ({ ...f, preferredContact: on ? '' : k }))}
+                            style={{
+                              border: `1px solid ${on ? 'var(--accent)' : 'var(--border-input)'}`,
+                              background: on ? 'var(--accent)' : 'var(--surface)',
+                              color: on ? '#fff' : 'var(--text)',
+                              borderRadius: 999, padding: '7px 14px', fontSize: 13,
+                              fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer',
+                            }}>
+                            {t.reachOpts[k]}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
                   <div className="form-group form-full">
                     <label className="form-label" htmlFor="jn-address">{t.address}</label>
                     <input className="form-input" id="jn-address" ref={addrRef} type="text"

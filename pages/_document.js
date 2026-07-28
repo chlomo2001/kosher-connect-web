@@ -6,7 +6,8 @@ export default function Document() {
       <Head>
         <link rel="icon" type="image/png" href="/logo.png" />
         <link rel="apple-touch-icon" href="/logo.png" />
-        <meta name="theme-color" content="#1c1e54" />
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f3ea" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0d11" />
         {/* Apply the saved theme before first paint — no flash of light. */}
         <script
           dangerouslySetInnerHTML={{

@@ -49,21 +49,25 @@ const T = {
         title: 'Kosher SIM plans, matched to how you really use your phone',
         accent: 'Pay less', sub: 'the right plan for how you really use your phone',
         body: 'Most people are quietly on the wrong SIM and overpaying every month. Bring in your latest bill and we’ll match the plan to what you really need — international minutes and all. No long contract you can’t follow, no company in the middle, no small print.',
-        chips: ['Keep your number', 'Keep your phone', 'We do the switch for you'], cta: 'Bring us your bill',
+        chips: ['Keep your number', 'Keep your phone', 'We do the switch for you'],
+        price: '£20 one-off setup · £5 per service after that', cta: 'Bring us your bill',
       },
       {
         eyebrow: 'Travel phones',
         title: 'A kosher phone, sorted before you travel',
         accent: 'Shabbos & Yom Tov', sub: 'never charged — you pay only for the days you use',
         body: 'Off to the USA, Canada, Europe or Eretz Yisroel? Rent a kosher phone, set up with you in the shop before you go — so there’s nothing to arrange at a foreign airport. You pay only for the days you actually use it, and Shabbos and Yom Tov are never charged.',
-        chips: ['Set up before you travel', 'Only pay for days used', 'Shabbos never charged'], cta: 'Plan your trip',
+        note: 'We can book your flights as well — one trip, one place.',
+        chips: ['Set up before you travel', 'Only pay for days used', 'Shabbos never charged'],
+        price: '£3 a day · never more than £45 a month · Shabbos & Yom Tov never charged', cta: 'Plan your trip',
       },
       {
         eyebrow: 'International numbers',
         title: 'An Israeli or USA number that rings on your UK phone',
         accent: 'Same day', sub: 'an Israeli or USA number, ringing on your own phone',
         body: 'Family in Israel? Business in the States? Get a local number that rings straight through to the phone already in your pocket — no second handset, and no roaming charges for the people calling you.',
-        chips: ['Rings on your own phone', 'Israeli or USA number', 'No roaming for callers'], cta: 'Get your number',
+        chips: ['Rings on your own phone', 'Israeli or USA number', 'No roaming for callers'],
+        price: '£1 a day · from £5', cta: 'Get your number',
       },
     ],
     moreTitle: 'More at Kosher Connect',
@@ -96,6 +100,7 @@ const T = {
     fOk: 'Thanks — we’ve got it and we’ll be in touch.', fErr: 'Couldn’t send — please call us on 0161 531 1386.',
     fBadName: 'Please enter your name.', fBadContact: 'Please enter a valid phone number or email address.',
     preferCall: 'Prefer to call?', joinCta: 'New here? Leave your details →',
+    waLabel: 'WhatsApp us', waText: 'Hello Kosher Connect — I’d like to ask about…',
     visitTitle: 'Come and see us',
     openMaps: 'Open in Google Maps',
     addressLabel: 'Address',
@@ -127,21 +132,25 @@ const T = {
         title: 'חבילה כשרה שנתפרת בדיוק לפי השימוש שלכם',
         accent: 'משלמים פחות', sub: 'החבילה הנכונה, לפי מה שאתם באמת צריכים',
         body: 'כמעט כולם מחזיקים חבילה גדולה מדי או קטנה מדי — ומשלמים על זה כל חודש. תביאו את החשבונית האחרונה, נעבור עליה ביחד ונתאים לכם חבילה, כולל דקות לחו״ל. בלי התחייבות, בלי חברה באמצע, בלי אותיות קטנות.',
-        chips: ['שומרים על המספר', 'נשארים עם אותו מכשיר', 'המעבר — עלינו'], cta: 'תביאו לנו את החשבונית',
+        chips: ['שומרים על המספר', 'נשארים עם אותו מכשיר', 'המעבר — עלינו'],
+        price: '‎£20‎ הקמה חד־פעמית · ‎£5‎ לכל שירות לאחר מכן', cta: 'תביאו לנו את החשבונית',
       },
       {
         eyebrow: 'טלפון לחו״ל',
         title: 'טסים? הטלפון הכשר כבר מחכה לכם מוכן',
         accent: 'שבת ויום טוב', sub: 'בחינם — משלמים רק על ימים שהשתמשתם',
         body: 'טסים לארה״ב, קנדה, אירופה או לארץ? שוכרים אצלנו טלפון כשר, ומגדירים אותו איתכם בחנות עוד לפני הטיסה — בלי להסתבך בשדה תעופה. משלמים רק על הימים שבפועל השתמשתם, ושבת ויום טוב — בחינם, תמיד.',
-        chips: ['מוכן לפני הטיסה', 'תשלום לפי ימי שימוש', 'שבת ויו״ט בחינם'], cta: 'דברו איתנו לפני הטיסה',
+        note: 'ואפשר להזמין אצלנו גם את הטיסות — נסיעה אחת, הכול במקום אחד.',
+        chips: ['מוכן לפני הטיסה', 'תשלום לפי ימי שימוש', 'שבת ויו״ט בחינם'],
+        price: '‎£3‎ ליום · אף פעם לא יותר מ־‎£45‎ לחודש · שבת ויום טוב בחינם, תמיד', cta: 'דברו איתנו לפני הטיסה',
       },
       {
         eyebrow: 'מספרים בינלאומיים',
         title: 'מספר ישראלי או אמריקאי — מצלצל אצלכם בנייד',
         accent: 'באותו היום', sub: 'המספר מקומי, הטלפון — שלכם',
         body: 'המשפחה בארץ? עסקים באמריקה? מקבלים מספר מקומי שמצלצל ישר לנייד שכבר יש לכם — בלי מכשיר נוסף, ומי שמתקשר אליכם משלם שיחה מקומית רגילה, בלי רומינג.',
-        chips: ['מצלצל בנייד שלכם', 'מספר ישראלי או אמריקאי', 'שיחה מקומית למתקשרים'], cta: 'להזמנת מספר',
+        chips: ['מצלצל בנייד שלכם', 'מספר ישראלי או אמריקאי', 'שיחה מקומית למתקשרים'],
+        price: '‎£1‎ ליום · החל מ־‎£5‎', cta: 'להזמנת מספר',
       },
     ],
     moreTitle: 'עוד אצלנו בכשר קונקט',
@@ -174,6 +183,7 @@ const T = {
     fOk: 'תודה! ההודעה אצלנו — נחזור אליכם בהקדם.', fErr: 'ההודעה לא נשלחה — התקשרו אלינו: 0161 531 1386.',
     fBadName: 'נא להזין שם.', fBadContact: 'נא להזין מספר טלפון או כתובת מייל תקינים.',
     preferCall: 'מעדיפים להתקשר?', joinCta: 'חדשים אצלנו? השאירו פרטים ←',
+    waLabel: 'כתבו לנו בוואטסאפ', waText: 'שלום כשר קונקט — רציתי לשאול לגבי…',
     visitTitle: 'מחכים לכם בחנות',
     openMaps: 'לניווט בגוגל מפות',
     addressLabel: 'כתובת',
@@ -208,7 +218,7 @@ const LD_JSON = JSON.stringify({
   description: 'Kosher phones, SIM plans, travel phone rentals, international numbers, Kol Torah audio and repairs. Serving the Heimishe community.',
   telephone: '+441615311386',
   email: EMAIL,
-  url: 'https://kosher-connect.com/welcome',
+  url: 'https://app.kosher-connect.com/welcome',
   address: {
     '@type': 'PostalAddress',
     streetAddress: '421 Bury New Road, Level 2',
@@ -266,6 +276,7 @@ export default function Welcome() {
   // Strip ?paid=1 on dismiss so a refresh or shared link doesn't re-announce it.
   const dismissPaid = () => { setPaid(false); try { window.history.replaceState(null, '', window.location.pathname) } catch {} }
   const t = T[lang]
+  const waHref = `https://wa.me/441615311386?text=${encodeURIComponent(t.waText)}`
 
   useEffect(() => {
     const els = document.querySelectorAll('.sk-reveal:not(.in)')
@@ -297,14 +308,17 @@ export default function Welcome() {
   return (
     <>
       <Head>
-        <title>Kosher Connect — Kosher phones, SIM plans, travel, repairs & international numbers</title>
+        <title>Kosher Connect — kosher phones, SIMs & travel rentals in Manchester</title>
         <meta name="description" content="Kosher Connect - Kosher phones, SIM plans, travel phones, repairs, and international numbers. Serving the Heimishe community from Manchester." />
+        <link rel="canonical" href="https://app.kosher-connect.com/welcome" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Kosher Connect" />
         <meta property="og:title" content="Kosher Connect — Your phone bill, halved" />
         <meta property="og:description" content="Kosher phones, SIM plans, travel rentals, international numbers, Kol Torah audio and repairs — under one roof in Manchester." />
-        <meta property="og:url" content="https://kosher-connect.com/welcome" />
-        <meta property="og:image" content="https://kosher-connect.com/logo-full.png" />
+        <meta property="og:url" content="https://app.kosher-connect.com/welcome" />
+        <meta property="og:image" content="https://app.kosher-connect.com/logo-full.png" />
+        <meta property="og:image:width" content="1080" />
+        <meta property="og:image:height" content="509" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: LD_JSON }} />
       </Head>
@@ -333,6 +347,7 @@ export default function Welcome() {
               <a href={PHONE_TEL} className="sk-nav-phone" dir="ltr" aria-label="Call Kosher Connect">
                 <strong>{PHONE_SHOWN}</strong><span>{hours}</span>
               </a>
+              <a href="/portal" className="sk-btn sk-btn-ghost sk-btn-sm">{t.nav.account}</a>
               <a href="#contact" className="sk-btn sk-btn-sky sk-btn-sm">{t.nav.message}</a>
             </nav>
           </div>
@@ -344,6 +359,7 @@ export default function Welcome() {
             <a href="#intl">{t.nav.intl}</a>
             <a href="#services">{t.nav.repairs}</a>
             <a href="#visit">{t.nav.visit}</a>
+            <a href="/portal">{t.nav.account}</a>
           </nav>
         </header>
 
@@ -383,7 +399,9 @@ export default function Welcome() {
               <div className="sk-accent">{b.accent}</div>
               <div className="sk-subline">{b.sub}</div>
               <p className="sk-band-body">{b.body}</p>
+              {b.note && <p className="sk-band-note">{b.note}</p>}
               <div className="sk-chips">{b.chips.map((c, j) => <span key={j}>✓ {c}</span>)}</div>
+              {b.price && <div className="sk-band-price">{b.price}</div>}
               <a className="sk-btn sk-btn-sky sk-btn-lg" href="#contact">{b.cta}</a>
             </div>
           </section>
@@ -443,6 +461,7 @@ export default function Welcome() {
             </form>
             <p className="sk-prefer">
               {t.preferCall} <a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a>
+              &nbsp;·&nbsp;<a href={waHref} target="_blank" rel="noopener noreferrer">{t.waLabel}</a>
               &nbsp;·&nbsp;<a className="sk-join" href="/join">{t.joinCta}</a>
             </p>
           </div>
@@ -494,6 +513,7 @@ export default function Welcome() {
                 <img className="sk-logo sk-foot-logo" src="/logo-full-tight.png" alt="Kosher Connect" />
                 <p dir="ltr">{t.addressLine}</p>
                 <p><a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a></p>
+                <p><a href={waHref} target="_blank" rel="noopener noreferrer">{t.waLabel}</a></p>
                 <p><a href={`mailto:${EMAIL}`} dir="ltr">{EMAIL}</a></p>
               </div>
               <nav className="sk-foot-col" aria-label={t.footServices}>
@@ -541,8 +561,8 @@ const SKY_CSS = `
     --sk-text:#0d1526; --sk-muted:#566079; --sk-line:#dbe3f0;
     --sk-paper:#ffffff; --sk-canvas:#f4f7fc; --sk-band:#ffffff; --sk-band-alt:#eef2fb;
     --sk-maxw:1320px; /* Sky-scale desktop container (owner comparison, 27 Jul) */
-    --sk-fdisp:"Helvetica Neue",Arial,system-ui,-apple-system,"Segoe UI",sans-serif;
-    --sk-fbody:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --sk-fdisp:"Heebo KC","Helvetica Neue",Arial,system-ui,-apple-system,"Segoe UI",sans-serif;
+    --sk-fbody:"Heebo KC",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
   }
   @media (prefers-color-scheme:dark){:root:not([data-theme]){
     --sk-text:#eaf0fb; --sk-muted:#9aa6c4; --sk-line:#26305c;
@@ -664,6 +684,8 @@ const SKY_CSS = `
   :root[data-theme="dark"] .sk-accent{color:var(--sk-sky-bright)}
   .sk-subline{color:var(--sk-gold);font-size:14.5px;margin-top:8px;font-style:italic}
   .sk-band-body{color:var(--sk-muted);margin:18px 0 0;font-size:16.5px;max-width:60ch}
+  .sk-band-note{color:var(--sk-muted);margin:10px 0 0;font-size:15px;font-weight:600;max-width:60ch}
+  .sk-band-price{color:var(--sk-muted);margin:12px 0 0;font-size:13.5px}
   .sk-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:22px 0 0}
   .sk-chips span{background:var(--sk-band);border:1px solid var(--sk-line);border-radius:999px;
     padding:7px 14px;font-size:13.5px;font-weight:600;color:var(--sk-text)}

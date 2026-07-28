@@ -24,6 +24,9 @@ const lines = (s) => String(s || '').split('\n').map((l) => l.trim().replace(/^[
 
 export default function PhoneGuide() {
   const [models, setModels] = useState(null)
+  // The lead only promises pros and cons once at least one model actually has
+  // them — until the owner writes them, the promise stays off the page.
+  const hasVerdicts = (models || []).some((m) => lines(m.pros).length > 0 || lines(m.cons).length > 0)
 
   useEffect(() => {
     fetch('/api/public/phone-guide')
@@ -36,7 +39,8 @@ export default function PhoneGuide() {
     <>
       <Head>
         <title>Phone guide — Kosher Connect</title>
-        <meta name="description" content="Every kosher handset we sell, compared honestly: price, dual SIM, Yiddish text, touch-screen and texting options — with straight pros and cons." />
+        <meta name="description" content="Every kosher handset we sell, compared honestly: price, dual SIM, Yiddish text, touch-screen and texting options — straight answers from the counter." />
+        <link rel="canonical" href="https://app.kosher-connect.com/phone-guide" />
       </Head>
       <div className="welcome-shell">
         <AuthBackdrop />
@@ -61,7 +65,7 @@ export default function PhoneGuide() {
             <h3 className="w-show">Which kosher phone is right for you?</h3>
             <p className="w-lead">
               Every handset below is one we sell, set up and stand behind. The specs answer
-              what people actually ask in the shop; the pros and cons are our honest take —
+              what people actually ask in the shop{hasVerdicts && '; the pros and cons are our honest take'} —
               and if the right phone for you is the cheapest one on the list, that&rsquo;s the
               one we&rsquo;ll recommend.
             </p>

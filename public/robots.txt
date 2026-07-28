@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /welcome
+Allow: /join
+Allow: /phone-guide
+Allow: /terms
+Allow: /privacy
+Allow: /refund
+Disallow: /
+
+Sitemap: https://app.kosher-connect.com/sitemap.xml
