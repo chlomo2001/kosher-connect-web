@@ -217,6 +217,36 @@ function fmtPhone(raw) {
   return cc + ' ' + rest;
 }
 
+// WhatsApp deep link for a customer's phone. Only builds a wa.me URL — staff
+// press send inside WhatsApp themselves, so this stays within the app's
+// nothing-is-auto-sent discipline. Returns '' when there's no usable phone.
+function waPhoneDigits(phone) {
+  const s = String(phone == null ? '' : phone).trim();
+  let d = s.replace(/\D/g, '');
+  if (!d) return '';
+  if (d.startsWith('00')) d = d.slice(2);
+  else if (d.startsWith('0')) d = '44' + d.slice(1); // UK local format
+  else if (!s.startsWith('+') && d.length <= 10) d = '44' + d; // no country code
+  return d;
+}
+function waLink(customer, text) {
+  const digits = waPhoneDigits(customer && customer.phone);
+  if (!digits) return '';
+  return `https://wa.me/${digits}${text ? '?text=' + encodeURIComponent(text) : ''}`;
+}
+
+// Phone search that survives formatting: "07871 385566" must find a customer
+// stored as "+44 7871385566". Engages only when the query holds 3+ digits;
+// callers keep their name/email matching and OR this in.
+function phoneDigitsMatch(query, customer) {
+  const qd = String(query || '').replace(/\D/g, '');
+  if (qd.length < 3 || !customer) return false;
+  const hay = String(customer.phone || '').replace(/\D/g, '');
+  if (!hay) return false;
+  if (hay.includes(qd)) return true;
+  return qd.startsWith('0') && hay.includes('44' + qd.slice(1));
+}
+
 // The master customers array stays sorted A–Z (first name, then surname) at
 // all times: every picker in the app — rentals, bookings, SIMs, repairs,
 // services, POS, VN, Kol Torah, tasks — renders straight off this array, so
@@ -637,7 +667,8 @@ function filterCustomerDropdown() {
   const matches = customers.filter(c =>
     (`${c.firstName} ${c.lastName}`).toLowerCase().includes(term) ||
     (c.phone || '').toLowerCase().includes(term) ||
-    (c.email || '').toLowerCase().includes(term)
+    (c.email || '').toLowerCase().includes(term) ||
+    phoneDigitsMatch(term, c)
   ).slice(0, 10);
 
   if (matches.length === 0) {
@@ -1267,8 +1298,21 @@ function nrToggleGiven(item) {
   const el = document.getElementById('nrGiven_' + item);
   if (!el) return;
   el.dataset.given = el.dataset.given === '1' ? '0' : '1';
+  el.dataset.touched = '1'; // a manual choice wins over date-driven defaults
   // A USA phone without a SIM prices on the cheaper no-SIM row.
   if (item === 'sim') updateRentalCalc();
+}
+// A walk-in (From = today or earlier) hands the phone + charger over now, so
+// they default to given; a future From is a reservation (mirrors the
+// isReservation rule at save) and nothing has been handed over yet. Toggles
+// the user has touched are left alone.
+function nrSetGivenDefaults() {
+  const from = document.getElementById('rFrom')?.value || localISO();
+  const given = from <= localISO() ? '1' : '0';
+  for (const item of ['phone', 'charger']) {
+    const el = document.getElementById('nrGiven_' + item);
+    if (el && el.dataset.touched !== '1') el.dataset.given = given;
+  }
 }
 
 function renderRentalsTab() {
@@ -1666,7 +1710,7 @@ function openNewRentalModal(preselectCustomerId = null) {
 
       <div class="form-group">
         <label class="form-label">From Date *</label>
-        <input class="form-input" type="date" id="rFrom" onchange="refreshRentalPhoneOptions(); updateRentalCalc(); showHebrewDate('rFrom','rFromHeb')">
+        <input class="form-input" type="date" id="rFrom" onchange="refreshRentalPhoneOptions(); updateRentalCalc(); nrSetGivenDefaults(); showHebrewDate('rFrom','rFromHeb')">
         <div class="hebrew-date-label" id="rFromHeb"></div>
       </div>
       <div class="form-group">
@@ -1800,6 +1844,7 @@ function openNewRentalModal(preselectCustomerId = null) {
   const next7 = localISO(new Date(Date.now() + 7*86400000));
   document.getElementById('rFrom').value = today;
   document.getElementById('rTo').value   = next7;
+  nrSetGivenDefaults();
   updateRentalCalc();
   showHebrewDate('rFrom','rFromHeb');
   showHebrewDate('rTo','rToHeb');
@@ -3459,7 +3504,7 @@ function renderDetailPanel(id) {
   const allActiveServices = [
     ...cActiveRentals.map(r => ({ type: 'rental', label: `Rental ${r.country === 'USA' ? '🇺🇸' : r.country === 'UK' ? '🇬🇧' : r.country === 'Israel' ? '🇮🇱' : '🌍'}${r.depositHeld > 0 ? ' · 🔒£' + Number(r.depositHeld).toFixed(0) : ''}${r.termsAck ? ' · ✍️' : ''}` })),
     ...cUpcoming.map(b => ({ type: 'booking', label: `✈️ ${b.route}${b.travelDate ? ' · ' + fmtDate(b.travelDate) : ''}` })),
-    ...cSims.map(s => ({ type: 'sim', label: `SIM · ${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}` })),
+    ...cSims.map(s => ({ type: 'sim', simId: s.id, label: `SIM · ${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}` })),
     ...cVNs.map(v => ({ type: 'vn', label: `VN ${fmtPhone(v.number || '')}` })),
     ...cOpenRepairs.map(r => ({ type: 'repair', label: `🔧 Repair — ${r.status}` })),
     // Recent one-off online/print services (last 90 days, newest first).
@@ -3472,7 +3517,10 @@ function renderDetailPanel(id) {
   ];
   const servicesHTML = allActiveServices.length === 0
     ? `<span style="color:var(--muted);font-size:13px;">No active services yet — add one from “New Service” below.</span>`
-    : allActiveServices.map(s => `<span class="badge badge-${s.type}" style="font-size:12px;padding:5px 12px;">${escHtml(s.label)}</span>`).join('');
+    : allActiveServices.map(s => s.simId
+        // SIM badges open the manage modal (it stacks above this card overlay).
+        ? `<button class="badge badge-${s.type}" style="font-size:12px;padding:5px 12px;border:0;cursor:pointer;font-family:inherit;" onclick="openManageSimModal('${escHtml(String(s.simId))}')" title="Open this SIM plan">${escHtml(s.label)}</button>`
+        : `<span class="badge badge-${s.type}" style="font-size:12px;padding:5px 12px;">${escHtml(s.label)}</span>`).join('');
 
   // ── Trip bundle: the next flight as a unit — flight + phone + SIM + VN,
   // with what's missing flagged (travel-agent pattern).
@@ -3558,7 +3606,7 @@ function renderDetailPanel(id) {
         <div class="avatar">${initials}</div>
         <div style="flex:1;">
           <div class="detail-name">${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:16px;">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
-          <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
+          <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${waLink(c, '') ? ` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
         </div>
         <div class="card-tools">
           <button class="card-tool" onclick="openDraftReminderModal('${c.id}')" title="Draft a reminder message (does not send)" aria-label="Draft reminder">✉️</button>
@@ -3788,6 +3836,7 @@ function openPaymentLinkModal(custId) {
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
       <button class="btn btn-outline" id="plGo" onclick="createPaymentLink('${escHtml(String(custId))}')">Create link</button>
+      ${waLink(c, '') ? `<button class="btn btn-outline" id="plWa" style="display:none;" onclick="waPaymentLink('${escHtml(String(custId))}')">💬 Open in WhatsApp</button>` : ''}
       <button class="btn btn-primary" id="plCopy" style="display:none;" onclick="copyPaymentLink()">📋 Copy link</button>
     </div>
   `);
@@ -3810,6 +3859,7 @@ async function createPaymentLink(custId) {
     const out = document.getElementById('plResult'); if (out) out.value = j.url;
     const wrap = document.getElementById('plResultWrap'); if (wrap) wrap.style.display = '';
     const copy = document.getElementById('plCopy'); if (copy) copy.style.display = '';
+    const wa = document.getElementById('plWa'); if (wa) wa.style.display = '';
     if (btn) btn.textContent = 'New link';
     recordComm(custId, { type: 'note', text: `Payment link created — ${fmtGbp(amount)}` });
   } catch {
@@ -3824,6 +3874,17 @@ async function copyPaymentLink() {
   if (!url) return;
   try { await navigator.clipboard.writeText(url); toast('Link copied — send it to the customer.', 'success'); }
   catch { toast('Select the link and copy it manually.', 'warning'); }
+}
+function waPaymentLink(custId) {
+  const c = customers.find(x => x.id === custId);
+  const link = document.getElementById('plResult')?.value || '';
+  if (!c || !link) return;
+  const desc = document.getElementById('plDesc')?.value.trim() || '';
+  const text = `Hi ${c.firstName || 'there'}, here is your Kosher Connect payment link${desc ? ' for ' + desc : ''}: ${link}`;
+  const url = waLink(c, text);
+  if (!url) { toast('No usable phone number for WhatsApp.', 'warning'); return; }
+  window.open(url, '_blank');
+  recordComm(custId, { type: 'message', text: 'Payment link opened in WhatsApp' });
 }
 
 // Per-customer ELID (telecom switch) lookup — owner-only, read-only. Shows the
@@ -4536,6 +4597,7 @@ function openDraftReminderModal(customerId) {
     <textarea class="form-input" id="drText" rows="9" style="font-family:inherit;">${escHtml(draft)}</textarea>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
+      ${waLink(c, '') ? `<button class="btn btn-outline" onclick="waReminderDraft('${escHtml(String(customerId))}')">💬 Open in WhatsApp</button>` : ''}
       <button class="btn btn-primary" onclick="copyReminderDraft('${escHtml(String(customerId))}')">📋 Copy message</button>
     </div>
   `);
@@ -4547,6 +4609,25 @@ async function copyReminderDraft(customerId) {
   // Log that a reminder was drafted/copied, so the timeline shows the contact.
   recordComm(customerId, { type: 'message', text: 'Reminder drafted & copied' });
   closeDynamicModal();
+}
+function waReminderDraft(customerId) {
+  const c = customers.find(x => x.id === customerId);
+  const text = document.getElementById('drText')?.value || '';
+  const url = c && waLink(c, text);
+  if (!url) { toast('No usable phone number for WhatsApp.', 'warning'); return; }
+  window.open(url, '_blank');
+  recordComm(customerId, { type: 'message', text: 'Reminder drafted — opened in WhatsApp' });
+  closeDynamicModal();
+}
+// One-tap chase from a task card: the standard reminder draft (balance owed,
+// overdue phone…) straight into a WhatsApp compose window.
+function waChaseCustomer(customerId) {
+  const c = customers.find(x => x.id === customerId);
+  if (!c) return;
+  const url = waLink(c, buildReminderDraft(c));
+  if (!url) { toast('No usable phone number for WhatsApp.', 'warning'); return; }
+  window.open(url, '_blank');
+  recordComm(customerId, { type: 'message', text: 'Chase message opened in WhatsApp' });
 }
 
 // AI reply drafter — staff paste what a customer wrote; Gemini drafts a reply in
@@ -4683,6 +4764,7 @@ function buildRentalSms(r) {
 function openRentalSmsModal(rentalId) {
   const r = rentals.find(x => x.id === rentalId);
   if (!r) return;
+  const waC = customers.find(x => x.id === r.customerId) || { phone: r.customerPhone };
   showDynamicModal(`
     <div class="modal-title">✉️ Status SMS — ${escHtml(r.customerName || '')}</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
@@ -4692,6 +4774,7 @@ function openRentalSmsModal(rentalId) {
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
       <button class="btn btn-outline" onclick="sendRentalSms('${escHtml(String(rentalId))}')">📤 Send SMS</button>
+      ${waLink(waC, '') ? `<button class="btn btn-outline" onclick="waRentalSms('${escHtml(String(rentalId))}')">💬 Open in WhatsApp</button>` : ''}
       <button class="btn btn-primary" onclick="copyRentalSms('${escHtml(String(rentalId))}')">📋 Copy message</button>
     </div>
   `);
@@ -4717,6 +4800,17 @@ async function copyRentalSms(rentalId) {
   try { await navigator.clipboard.writeText(text); toast('SMS copied — paste it into your messaging app.', 'success'); }
   catch { toast('Select the text and copy it manually.', 'warning'); return; }
   if (r?.customerId) recordComm(r.customerId, { type: 'message', text: `Status SMS drafted & copied (${getComputedStatus(r)})` });
+  closeDynamicModal();
+}
+function waRentalSms(rentalId) {
+  const r = rentals.find(x => x.id === rentalId);
+  if (!r) return;
+  const text = document.getElementById('rsmsText')?.value || '';
+  const c = customers.find(x => x.id === r.customerId) || { phone: r.customerPhone };
+  const url = waLink(c, text);
+  if (!url) { toast('No usable phone number for WhatsApp.', 'warning'); return; }
+  window.open(url, '_blank');
+  if (r.customerId) recordComm(r.customerId, { type: 'message', text: `Status SMS opened in WhatsApp (${getComputedStatus(r)})` });
   closeDynamicModal();
 }
 
@@ -5050,6 +5144,9 @@ function setupSearch() {
   document.getElementById('searchBox').addEventListener('input', e => {
     searchTerm = e.target.value.trim().toLowerCase();
     applySearch();
+    // On any other tab the term would land nowhere visible — jump to the
+    // Customers list, which is what this box filters.
+    if (searchTerm && currentTab !== 'customers') { goToTab('customers'); return; }
     renderTableRows();
   });
 }
@@ -5063,7 +5160,8 @@ function applySearch() {
     const fullName = `${c.firstName} ${c.lastName}`.toLowerCase();
     return fullName.includes(searchTerm)
       || (c.phone || '').toLowerCase().includes(searchTerm)
-      || (c.email || '').toLowerCase().includes(searchTerm);
+      || (c.email || '').toLowerCase().includes(searchTerm)
+      || phoneDigitsMatch(searchTerm, c);
   });
 }
 
@@ -5156,6 +5254,7 @@ function openEditModal(id) {
   if (aeEl) aeEl.value = c.accountEmail || '';
   document.getElementById('fAddress').value = c.address || '';
   { const n = document.getElementById('fNotes'); if (n) n.value = c.notes || ''; }
+  { const hw = document.getElementById('fHasWhatsapp'); if (hw) hw.checked = !!c.hasWhatsapp; }
   document.getElementById('fPassportOnFile').checked = !!c.passportOnFile;
   showModal();
 }
@@ -5186,6 +5285,7 @@ function clearModal() {
     el.classList.remove('error');
   });
   const pf = document.getElementById('fPassportOnFile'); if (pf) pf.checked = false;
+  const hw = document.getElementById('fHasWhatsapp'); if (hw) hw.checked = false;
   const ae = document.getElementById('fAccountEmail'); if (ae) ae.value = '';
   const nt = document.getElementById('fNotes'); if (nt) nt.value = '';
   document.getElementById('fCountryCode').value = '+44';
@@ -5296,6 +5396,7 @@ async function saveCustomer() {
 
   const payload = { firstName, lastName, phone: fullPhone, email: contactEmail, address, notes,
     accountEmail,
+    hasWhatsapp: !!document.getElementById('fHasWhatsapp')?.checked,
     passportOnFile: document.getElementById('fPassportOnFile').checked };
 
   if (editId) {
@@ -5502,7 +5603,8 @@ function renderSimRows() {
       !(s.customerName || '').toLowerCase().includes(term) &&
       !(s.simNumber    || '').toLowerCase().includes(term) &&
       !(s.provider     || '').toLowerCase().includes(term) &&
-      !(s.iccid        || '').toLowerCase().includes(term)) return false;
+      !(s.iccid        || '').toLowerCase().includes(term) &&
+      !phoneDigitsMatch(term, customers.find(c => c.id === s.customerId))) return false;
     if (simFilterPay === 'direct' && s.paymentType !== 'direct') return false;
     if (simFilterPay === 'through-me' && s.paymentType === 'direct') return false;
     if (simFilterStatus === 'active' && s.status !== 'active') return false;
@@ -5760,7 +5862,8 @@ function openManageSimModal(id) {
           <label style="font-size:11px;color:var(--muted);font-weight:600;">Type</label>
           <select class="form-input" id="simChargeType" onchange="onSimChargeTypeChange('${id}')" style="font-size:13px;">
             <option value="activation">🟢 Initial Setup — £${simChargePrice('activation')}</option>
-            <option value="service">🔧 Service (roaming/swap/reactivation) — £${simChargePrice('service')}</option>
+            <!-- Service is the default: setup was already charged when the SIM was created. -->
+            <option value="service" selected>🔧 Service (roaming/swap/reactivation) — £${simChargePrice('service')}</option>
             <option value="sim-replacement">📦 SIM Replacement — £${simChargePrice('sim-replacement')}</option>
             <option value="monthly">${s.paymentType !== 'direct' && s.simMonthlyCost ? `📅 Monthly DD — ${fmtGbp(ddMonthlyAmount(s.simMonthlyCost))}` : '📅 Monthly Subscription'}</option>
             <option value="annual">📅 Annual Subscription — £${simChargePrice('annual')}</option>
@@ -5770,11 +5873,20 @@ function openManageSimModal(id) {
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;width:80px;">
           <label style="font-size:11px;color:var(--muted);font-weight:600;">Amount £</label>
-          <input class="form-input" id="simChargeAmount" type="number" value="${simChargePrice('activation')}" min="0" step="0.5" style="font-size:13px;">
+          <input class="form-input" id="simChargeAmount" type="number" value="${simChargePrice('service')}" min="0" step="0.5" style="font-size:13px;">
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;flex:2;min-width:140px;">
           <label style="font-size:11px;color:var(--muted);font-weight:600;">Note (optional)</label>
           <input class="form-input" id="simChargeNote" type="text" placeholder="e.g. SIM swapped to new number" style="font-size:13px;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;width:150px;">
+          <label style="font-size:11px;color:var(--muted);font-weight:600;">Paid now?</label>
+          <select class="form-input" id="simChargePay" style="font-size:13px;">
+            <option value="account">On account</option>
+            <option value="cash">💵 Cash</option>
+            <option value="card">💳 Card</option>
+            <option value="bank_transfer">🏦 Bank transfer</option>
+          </select>
         </div>
         <button class="btn btn-primary btn-sm" onclick="addSimCharge('${id}')">+ Add</button>
       </div>
@@ -5855,12 +5967,14 @@ async function addSimCharge(simId) {
   const amount = parseFloat(document.getElementById('simChargeAmount').value) || 0;
   if (amount <= 0) { toast('Amount must be greater than £0', 'error'); return; }
   const note   = document.getElementById('simChargeNote').value.trim();
+  const payMethod = document.getElementById('simChargePay')?.value || 'account';
+  const payLabel = { cash: 'cash', card: 'card', bank_transfer: 'bank transfer' }[payMethod] || '';
   const menuItem = type.startsWith('menu:') ? simMenu.find(x => String(x.id) === type.slice(5)) : null;
   const baseDesc = menuItem?.name || SIM_CHARGE_DESCS[type] || 'Custom charge';
   const desc   = note ? `${baseDesc} — ${note}` : baseDesc;
   if (!(await kcConfirm({
     title: 'Confirm SIM charge',
-    body: `<strong>${escHtml(s.customerName || 'Customer')}</strong><br>${escHtml(desc)}`,
+    body: `<strong>${escHtml(s.customerName || 'Customer')}</strong><br>${escHtml(desc)}${payLabel ? `<br>Paid now — ${payLabel}` : ''}`,
     amount,
     okLabel: 'Add charge',
   }))) return;
@@ -5878,11 +5992,18 @@ async function addSimCharge(simId) {
   }
   saveSims(sims);
   // Post the charge to the wallet ledger (SIM money now shows in the balance
-  // and arrears). Debit only — settled later by a wallet payment.
+  // and arrears). "Paid now" then posts the matching payment — same mechanism
+  // as the rental/repair flows — so the two rows net out at the counter.
   window.api.chargeSim({ simId: s.id, customerId: s.customerId, historyId, amount, description: desc })
-    .then(res => { if (!res?.success) toast(res?.error || 'Charge saved, but not billed to the wallet.', 'error'); })
+    .then(res => {
+      if (!res?.success) { toast(res?.error || 'Charge saved, but not billed to the wallet.', 'error'); return; }
+      if (payMethod !== 'account') {
+        return window.api.addLedgerEntry({ customerId: s.customerId, kind: 'payment', amount, method: payMethod, note: `Paid at counter — ${desc}`, clientRef: kcRef() })
+          .then(pr => { if (!pr?.success) toast(pr?.error || 'Charge billed, but the payment was not recorded.', 'error'); });
+      }
+    })
     .catch(() => toast('Charge saved, but not billed to the wallet.', 'error'));
-  toast(`Charge of ${fmtGbp(amount)} added ✅`, 'success');
+  toast(`Charge of ${fmtGbp(amount)} added${payMethod !== 'account' ? ` — settled by ${payLabel}` : ''} ✅`, 'success');
   openManageSimModal(simId);
 }
 
@@ -6944,6 +7065,7 @@ async function renderRepairsTab() {
         <td>${r.openedAt ? fmtDate(r.openedAt) : '—'}</td>
         <td>${repairStatusBadge(r.status)}</td>
         <td style="white-space:nowrap;">
+          ${r.status === 'Ready' ? `<button class="action-btn" onclick="openRepairSmsModal('${escHtml(r.id)}')" title="Ready-to-collect message">💬</button>` : ''}
           <button class="action-btn" onclick="openRemindModal('repair','${escHtml(r.id)}')" title="Remind me">⏰</button>
           <select class="form-input" style="width:120px;padding:5px 8px;font-size:12px;"
             onchange="changeRepairStatus('${escHtml(r.id)}', this.value)">
@@ -7090,6 +7212,51 @@ async function changeRepairStatus(id, status) {
   if (!res.success) { toast(res.error || 'Could not update status.', 'error'); renderRepairsTab(); return; }
   toast(`Repair marked ${status}.`, 'success');
   renderRepairsTab();
+  // Ready = time to tell the customer — draft the collect message straight away.
+  if (status === 'Ready') openRepairSmsModal(id);
+}
+
+// Ready-to-collect message for a repair, drafted not sent (same HOLD
+// discipline as the rental status SMS: staff copy it or open WhatsApp and
+// press send themselves).
+function buildRepairSms(r) {
+  const first = (r.customerName || '').split(' ')[0] || 'there';
+  const total = r.total || 0;
+  return `Hi ${first}, Kosher Connect: your ${r.device || 'phone'} is repaired and ready to collect.${total > 0.005 ? ` ${fmtGbp(total)} on collection.` : ''} 0161 531 1386`;
+}
+function openRepairSmsModal(repairId) {
+  const r = repairs.find(x => x.id === repairId);
+  if (!r) return;
+  const c = customers.find(x => x.id === r.customerId);
+  showDynamicModal(`
+    <div class="modal-title">✉️ Ready to collect — ${escHtml(r.customerName || '')}</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Edit it, then copy or open WhatsApp — <strong>nothing is sent</strong> from here.</div>
+    <textarea class="form-input" id="rpsmsText" rows="4" style="font-family:inherit;">${escHtml(buildRepairSms(r))}</textarea>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
+      ${c && waLink(c, '') ? `<button class="btn btn-outline" onclick="waRepairSms('${escHtml(String(repairId))}')">💬 Open in WhatsApp</button>` : ''}
+      <button class="btn btn-primary" onclick="copyRepairSms('${escHtml(String(repairId))}')">📋 Copy message</button>
+    </div>
+  `);
+}
+async function copyRepairSms(repairId) {
+  const r = repairs.find(x => x.id === repairId);
+  const text = document.getElementById('rpsmsText')?.value || '';
+  try { await navigator.clipboard.writeText(text); toast('Message copied — paste it into your messaging app.', 'success'); }
+  catch { toast('Select the text and copy it manually.', 'warning'); return; }
+  if (r?.customerId) recordComm(r.customerId, { type: 'message', text: 'Repair-ready message drafted & copied' });
+  closeDynamicModal();
+}
+function waRepairSms(repairId) {
+  const r = repairs.find(x => x.id === repairId);
+  if (!r) return;
+  const text = document.getElementById('rpsmsText')?.value || '';
+  const c = customers.find(x => x.id === r.customerId);
+  const url = c && waLink(c, text);
+  if (!url) { toast('No usable phone number for WhatsApp.', 'warning'); return; }
+  window.open(url, '_blank');
+  if (r.customerId) recordComm(r.customerId, { type: 'message', text: 'Repair-ready message opened in WhatsApp' });
+  closeDynamicModal();
 }
 
 function openCollectRepairModal(id) {
@@ -9329,6 +9496,7 @@ function paletteSearch(q) {
     const name = `${c.firstName} ${c.lastName}`;
     if (name.toLowerCase().includes(needle) ||
         (digits.length >= 4 && (c.phone || '').replace(/\D/g, '').includes(digits)) ||
+        phoneDigitsMatch(needle, c) ||
         (c.email || '').toLowerCase().includes(needle)) {
       out.push({ icon: '👤', label: name, sub: fmtPhone(c.phone || '') || c.email || 'customer',
         kind: 'customer', id: c.id, run: () => goToTab('customers', { customerId: c.id }) });
@@ -9915,6 +10083,8 @@ async function renderTasksTab() {
     // #62 — a chase task you can act on in place: deep-link the customer and,
     // for money tasks, drop the payment modal right onto the card.
     const isMoneyTask = t.customerId && /£|owes|balance|arrears|\bpay\b/i.test(t.title || '');
+    const isChaseTask = isMoneyTask || (t.customerId && /^(BALANCE|OVERDUE)-/.test(t.reference || ''));
+    const chaseCust = isChaseTask ? customers.find(c => c.id === t.customerId) : null;
     const custLabel = t.customerName
       ? (t.customerId
           ? `<span class="dash-link" style="color:var(--accent);cursor:pointer;" onclick="goToTab('customers',{customerId:'${escHtml(String(t.customerId))}'})">👤 ${escHtml(t.customerName)}</span> · `
@@ -9938,6 +10108,7 @@ async function renderTasksTab() {
       <div class="task-actions">
         ${/^New signup:/i.test(t.title || '') && !t.customerId ? `<button class="btn btn-primary btn-sm" style="font-size:11px;padding:3px 10px;" onclick="addCustomerFromTask('${escHtml(t.id)}')">➕ Add as customer</button>` : ''}
         ${isMoneyTask ? `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openWalletModal('${escHtml(String(t.customerId))}')">💰 Record</button>` : ''}
+        ${chaseCust && waLink(chaseCust, '') ? `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="waChaseCustomer('${escHtml(String(t.customerId))}')" title="Open a chase message in WhatsApp">💬 WhatsApp</button>` : ''}
         <select class="task-mini" onchange="setTaskPriority('${escHtml(t.id)}', this.value)" title="Priority">
           ${['High', 'Normal', 'Low'].map(p => `<option value="${p}" ${t.priority === p ? 'selected' : ''}>${p === 'High' ? '🔥 Now' : p === 'Normal' ? '📋 Next' : '🌙 Later'}</option>`).join('')}
         </select>

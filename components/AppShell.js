@@ -57,8 +57,9 @@ export default function AppShell({ initialTab = 'dashboard' }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>KosherConnect – Customer Management</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </Head>
@@ -196,6 +197,10 @@ export default function AppShell({ initialTab = 'dashboard' }) {
               </div>
               <span className="form-error" id="errPhone">Required</span>
               <div className="form-warning" id="warnPhone">⚠️ This phone number already exists for another customer.</div>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 6, fontWeight: 400 }}>
+                <input type="checkbox" id="fHasWhatsapp" style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+                💬 Has WhatsApp
+              </label>
             </div>
 
             <div className="form-group">
