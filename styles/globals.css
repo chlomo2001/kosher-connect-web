@@ -2120,3 +2120,13 @@ html { scroll-behavior: smooth; }
 }
 .pd-foot a { color: var(--accent); text-decoration: none; }
 .pd-foot a:hover { text-decoration: underline; }
+/* Loading skeleton — shimmering placeholders in the dashboard's own layout. */
+.pd-skel {
+  height: 13px; border-radius: 6px; margin: 9px 0;
+  background: linear-gradient(90deg, var(--border) 25%, var(--bg-secondary) 45%, var(--border) 65%);
+  background-size: 200% 100%; animation: pdShimmer 1.3s linear infinite;
+}
+.pd-skel-big { height: 34px; width: 52%; }
+.pd-skel-title { height: 22px; width: 240px; max-width: 60%; margin: 0 0 20px; }
+@keyframes pdShimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .pd-skel { animation: none; } }

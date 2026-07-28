@@ -419,14 +419,33 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
 
   // ── Signed-in read-only account view ──────────────────────────────────────
   if (loading) {
+    // Skeleton of the signed-in dashboard, so the page doesn't flash a
+    // login-style card and then jump to a completely different layout.
     return (
       <>
         <Head><title>{L.title}</title></Head>
-        <div className="login-shell"><div className="login-mesh" aria-hidden="true" />
-          <AuthBackdrop />
-          <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
-          {langBtn}
-          <div className="login-card" dir={dir} style={{ textAlign: 'center' }}>{L.loading}</div>
+        <div className="pd-shell" dir={dir}>
+          <header className="pd-top">
+            <img className="pd-logo" src="/logo-full-tight.png" alt="Kosher Connect" />
+          </header>
+          <main className="pd-main" aria-busy="true" aria-label={L.loading}>
+            <div className="pd-skel pd-skel-title" />
+            <div className="pd-grid" aria-hidden="true">
+              <div className="pd-card pd-span2 pd-hero">
+                <div className="pd-skel" style={{ width: '30%' }} />
+                <div className="pd-skel pd-skel-big" />
+              </div>
+              <div className="pd-card">
+                <div className="pd-skel" style={{ width: '55%' }} />
+                <div className="pd-skel" />
+                <div className="pd-skel" style={{ width: '72%' }} />
+              </div>
+              <div className="pd-card">
+                <div className="pd-skel" style={{ width: '48%' }} />
+                <div className="pd-skel" style={{ width: '64%' }} />
+              </div>
+            </div>
+          </main>
         </div>
       </>
     )
