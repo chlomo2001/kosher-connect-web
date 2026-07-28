@@ -1585,6 +1585,9 @@ td.cal-active.cal-shabbat { background: var(--accent); }
    UNSCROLLABLE — everything below the first viewport was unreachable. */
 .welcome-shell { position: relative; height: 100vh; width: 100%; overflow-y: auto; background: var(--bg); scroll-behavior: smooth; }
 .welcome-shell .login-fx { position: fixed; inset: 0; }
+/* Phones (/join, /phone-guide): the globe's line-work otherwise runs straight
+   through the body text on the narrow column — fade it to a hint. */
+@media (max-width: 640px) { .welcome-shell .login-fx { opacity: 0.3; } }
 /* Anchor jumps must land BELOW the sticky glass topbar, with the section
    heading clearly at the top of the view — not buried under the bar. */
 .welcome-shell section[id] { scroll-margin-top: 106px; }
