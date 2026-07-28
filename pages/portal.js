@@ -63,6 +63,7 @@ const P = {
     or: 'or', google: 'Continue with Google',
     greeting: (h) => (h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'),
     title: 'My KosherConnect', phoneFallback: 'Phone', flightFallback: 'Flight',
+    backToSite: 'Back to kosher-connect.com',
   },
   // Rewritten to read as written-in-Hebrew, in the same voice as the Hebrew
   // welcome page: warm, respectful plural, plain words — not translated English.
@@ -112,6 +113,7 @@ const P = {
     or: 'או', google: 'כניסה עם Google',
     greeting: (h) => (h < 12 ? 'בוקר טוב' : h < 18 ? 'צהריים טובים' : 'ערב טוב'),
     title: 'כשר קונקט שלי', phoneFallback: 'טלפון', flightFallback: 'טיסה',
+    backToSite: 'חזרה לאתר כשר קונקט',
   },
 }
 
@@ -702,6 +704,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
               )}
             </>
           )}
+          <a className="p-backlink" href="/welcome">{L.backToSite}</a>
         </form>
       </div>
     </>
