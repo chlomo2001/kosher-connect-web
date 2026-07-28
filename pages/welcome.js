@@ -50,16 +50,16 @@ const T = {
         accent: 'Pay less', sub: 'the right plan for how you really use your phone',
         body: 'Most people are quietly on the wrong SIM and overpaying every month. Bring in your latest bill and we’ll match the plan to what you really need — international minutes and all. No long contract you can’t follow, no company in the middle, no small print.',
         chips: ['Keep your number', 'Keep your phone', 'We do the switch for you'],
-        price: '£20 one-off setup · £5 per service after that', cta: 'Bring us your bill',
+        price: '£20 setup · then £20 a year · services £5 (free for USA & Canada SIMs)', cta: 'Bring us your bill',
       },
       {
         eyebrow: 'Travel phones',
         title: 'A kosher phone, sorted before you travel',
-        accent: 'Shabbos & Yom Tov', sub: 'never charged — you pay only for the days you use',
-        body: 'Off to the USA, Canada, Europe or Eretz Yisroel? Rent a kosher phone, set up with you in the shop before you go — so there’s nothing to arrange at a foreign airport. You pay only for the days you actually use it, and Shabbos and Yom Tov are never charged.',
+        accent: 'Shabbos & Yom Tov', sub: 'never charged — priced by the day, not the trip',
+        body: 'Off to the USA, Canada, Europe or Eretz Yisroel? Rent a kosher phone, set up with you in the shop before you go — so there’s nothing to arrange at a foreign airport. You pay by the day (minimum £20), and Shabbos and Yom Tov are never charged.',
         note: 'We can book your flights as well — one trip, one place.',
-        chips: ['Set up before you travel', 'Only pay for days used', 'Shabbos never charged'],
-        price: '£3 a day · never more than £45 a month · Shabbos & Yom Tov never charged', cta: 'Plan your trip',
+        chips: ['Set up before you travel', 'Priced by the day', 'Shabbos never charged'],
+        price: '£3 a day · minimum £20 · capped £45–£50 a month · Shabbos & Yom Tov never charged', cta: 'Plan your trip',
       },
       {
         eyebrow: 'International numbers',
@@ -67,7 +67,7 @@ const T = {
         accent: 'Same day', sub: 'an Israeli or USA number, ringing on your own phone',
         body: 'Family in Israel? Business in the States? Get a local number that rings straight through to the phone already in your pocket — no second handset, and no roaming charges for the people calling you.',
         chips: ['Rings on your own phone', 'Israeli or USA number', 'No roaming for callers'],
-        price: '£1 a day · from £5', cta: 'Get your number',
+        price: 'from £10 a month', cta: 'Get your number',
       },
     ],
     moreTitle: 'More at Kosher Connect',
@@ -133,16 +133,16 @@ const T = {
         accent: 'משלמים פחות', sub: 'החבילה הנכונה, לפי מה שאתם באמת צריכים',
         body: 'כמעט כולם מחזיקים חבילה גדולה מדי או קטנה מדי — ומשלמים על זה כל חודש. תביאו את החשבונית האחרונה, נעבור עליה ביחד ונתאים לכם חבילה, כולל דקות לחו״ל. בלי התחייבות, בלי חברה באמצע, בלי אותיות קטנות.',
         chips: ['שומרים על המספר', 'נשארים עם אותו מכשיר', 'המעבר — עלינו'],
-        price: '‎£20‎ הקמה חד־פעמית · ‎£5‎ לכל שירות לאחר מכן', cta: 'תביאו לנו את החשבונית',
+        price: '‎£20‎ הקמה · ‎£20‎ לשנה · ‎£5‎ לשירות (חינם לסים של ארה״ב וקנדה)', cta: 'תביאו לנו את החשבונית',
       },
       {
         eyebrow: 'טלפון לחו״ל',
         title: 'טסים? הטלפון הכשר כבר מחכה לכם מוכן',
-        accent: 'שבת ויום טוב', sub: 'בחינם — משלמים רק על ימים שהשתמשתם',
-        body: 'טסים לארה״ב, קנדה, אירופה או לארץ? שוכרים אצלנו טלפון כשר, ומגדירים אותו איתכם בחנות עוד לפני הטיסה — בלי להסתבך בשדה תעופה. משלמים רק על הימים שבפועל השתמשתם, ושבת ויום טוב — בחינם, תמיד.',
+        accent: 'שבת ויום טוב', sub: 'בחינם — התשלום לפי יום, לא לפי נסיעה',
+        body: 'טסים לארה״ב, קנדה, אירופה או לארץ? שוכרים אצלנו טלפון כשר, ומגדירים אותו איתכם בחנות עוד לפני הטיסה — בלי להסתבך בשדה תעופה. משלמים לפי יום (מינימום ‎£20‎), ושבת ויום טוב — בחינם, תמיד.',
         note: 'ואפשר להזמין אצלנו גם את הטיסות — נסיעה אחת, הכול במקום אחד.',
-        chips: ['מוכן לפני הטיסה', 'תשלום לפי ימי שימוש', 'שבת ויו״ט בחינם'],
-        price: '‎£3‎ ליום · אף פעם לא יותר מ־‎£45‎ לחודש · שבת ויום טוב בחינם, תמיד', cta: 'דברו איתנו לפני הטיסה',
+        chips: ['מוכן לפני הטיסה', 'תמחור לפי יום', 'שבת ויו״ט בחינם'],
+        price: '‎£3‎ ליום · מינימום ‎£20‎ · תקרה חודשית ‎£45–£50‎ · שבת ויום טוב בחינם, תמיד', cta: 'דברו איתנו לפני הטיסה',
       },
       {
         eyebrow: 'מספרים בינלאומיים',
@@ -150,7 +150,7 @@ const T = {
         accent: 'באותו היום', sub: 'המספר מקומי, הטלפון — שלכם',
         body: 'המשפחה בארץ? עסקים באמריקה? מקבלים מספר מקומי שמצלצל ישר לנייד שכבר יש לכם — בלי מכשיר נוסף, ומי שמתקשר אליכם משלם שיחה מקומית רגילה, בלי רומינג.',
         chips: ['מצלצל בנייד שלכם', 'מספר ישראלי או אמריקאי', 'שיחה מקומית למתקשרים'],
-        price: '‎£1‎ ליום · החל מ־‎£5‎', cta: 'להזמנת מספר',
+        price: 'החל מ־‎£10‎ לחודש', cta: 'להזמנת מספר',
       },
     ],
     moreTitle: 'עוד אצלנו בכשר קונקט',
@@ -227,6 +227,9 @@ const LD_JSON = JSON.stringify({
     postalCode: 'M7 4ED',
     addressCountry: 'GB',
   },
+  // Must be kept in step with the settings key `opening_hours` (the visible
+  // page text is settings-driven; this schema copy is static and only a
+  // deploy updates it).
   openingHours: ['Su 14:00-18:30', 'Mo-Th 14:00-18:30'],
 })
 

@@ -6,6 +6,7 @@ import { emailStatus } from '../../lib/email.js'
 import { smsStatus } from '../../lib/sms.js'
 import { stripeStatus } from '../../lib/stripe.js'
 import { secretsEnabled } from '../../lib/secretbox.js'
+import { geminiEnabled } from '../../lib/gemini.js'
 
 export default async function handler(req, res) {
   // `email`/`sms` report whether each channel is configured and its send mode
@@ -20,6 +21,9 @@ export default async function handler(req, res) {
     email: emailStatus(),
     sms: smsStatus(),
     stripe: stripeStatus(),
+    // Four features share this one key (assistant, prioritiser, AI reply,
+    // OCR) — the probe must say whether the AI layer is armed at all.
+    ai: { configured: geminiEnabled },
     vault: secretsEnabled ? 'on' : 'off',
     env: process.env.VERCEL_ENV || 'local',
     project: process.env.VERCEL_PROJECT_PRODUCTION_URL || null,

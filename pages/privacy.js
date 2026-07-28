@@ -12,7 +12,7 @@ export default function Privacy() {
       <Head><title>Privacy Policy · Kosher Connect</title>
         <meta name="robots" content="index" /></Head>
       <style dangerouslySetInnerHTML={{ __html: LEGAL_CSS }} />
-      <LegalShell title="Privacy Policy" updated="21 July 2026">
+      <LegalShell title="Privacy Policy" updated="28 July 2026">
         <p>This policy explains what personal information Kosher Connect collects, why, and your rights over it.
           Kosher Connect is a trading name of <strong>Hatsluche Ltd</strong> (“we”, “us”), 421 Bury New Road,
           Salford M7 4ED, United Kingdom.</p>
@@ -56,7 +56,7 @@ export default function Privacy() {
         <p>Kosher Connect (Hatsluche Ltd)<br />
           421 Bury New Road, Salford M7 4ED<br />
           Phone: <a href="tel:+441615311386">0161 531 1386</a><br />
-          Email: <a href="mailto:info@kosher-connect.com">info@kosher-connect.com</a></p>
+          Email: <a href="mailto:admin@kosher-connect.com">admin@kosher-connect.com</a></p>
       </LegalShell>
     </>
   )

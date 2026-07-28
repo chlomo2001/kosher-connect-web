@@ -11,7 +11,7 @@ export default function Terms() {
       <Head><title>Terms of Service · Kosher Connect</title>
         <meta name="robots" content="index" /></Head>
       <style dangerouslySetInnerHTML={{ __html: LEGAL_CSS }} />
-      <LegalShell title="Terms of Service" updated="21 July 2026">
+      <LegalShell title="Terms of Service" updated="28 July 2026">
         <p>These terms cover your use of Kosher Connect’s services and website. Kosher Connect is a trading name of
           <strong> Hatsluche Ltd</strong>, 421 Bury New Road, Salford M7 4ED. By using our services you agree to them.</p>
 
@@ -22,7 +22,7 @@ export default function Terms() {
         <p>If you use the online portal, keep your sign-in link private — it’s personal to you. Please keep your contact details accurate so we can reach you about your services. Tell us straight away if you think someone else has access to your account.</p>
 
         <h2>3. Prices and payment</h2>
-        <p>Prices are as quoted in the shop or on your account. Your balance is tracked in your account wallet; you can pay by cash or card, or top up in advance. Rentals may require a deposit. Payments already made for a service are non-refundable except where the law requires or as we agree.</p>
+        <p>Prices are as quoted in the shop or on your account. Your balance is tracked in your account wallet; you can pay by cash, card or bank transfer (please quote the payment reference we give you so it reaches your account), or top up in advance. Rentals may require a deposit. Payments already made for a service are non-refundable except where the law requires or as we agree.</p>
 
         <h2>4. Rentals</h2>
         <p>Rented phones remain our property. Please look after the handset and return it on time and in good condition. Late returns and damage may be charged in line with the rates shown when you collect the phone. A deposit, where taken, is returned once the phone is back and checked.</p>

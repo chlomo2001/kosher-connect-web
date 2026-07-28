@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   serviceOrderTotal, phoneDiscountApplies, simDiscountApplies,
-  advanceOneMonth, cashExpected, ledgerSignFor, money, settleSale,
+  advanceOneMonth, advancePastDate, cashExpected, ledgerSignFor, money, settleSale,
 } from '../lib/money.mjs'
 
 test('serviceOrderTotal — tiered "first / N or more"', () => {
@@ -54,6 +54,20 @@ test('advanceOneMonth — clamps to month end, never overflows', () => {
   assert.equal(advanceOneMonth('2026-03-31'), '2026-04-30') // 31 → 30
   assert.equal(advanceOneMonth('2026-12-31'), '2027-01-31') // year rollover
   assert.equal(advanceOneMonth('2026-02-28'), '2026-03-28')
+})
+
+test('advancePastDate — rolls a lapsed renewal to the floor, bounded, anchor kept', () => {
+  // Already at/after the floor: unchanged.
+  assert.equal(advancePastDate('2026-08-01', '2026-07-25'), '2026-08-01')
+  // Behind the floor: hops monthly until it clears it (20 Jul is still short
+  // of the 25 Jul floor, so it lands on 20 Aug).
+  assert.equal(advancePastDate('2026-06-20', '2026-07-25'), '2026-08-20')
+  // Month-end anchor survives the February squeeze (31 → 28 → back to 31).
+  assert.equal(advancePastDate('2026-01-31', '2026-03-15'), '2026-03-31')
+  // Years behind: the 24-step cap stops a cron from looping unbounded.
+  assert.equal(advancePastDate('2020-01-15', '2026-07-25'), '2022-01-15')
+  // Garbage in, garbage back — never throws inside the sweep.
+  assert.equal(advancePastDate('not-a-date', '2026-07-25'), 'not-a-date')
 })
 
 test('advanceOneMonth — an immutable anchor day stops (and recovers) month-end drift (audit C15)', () => {

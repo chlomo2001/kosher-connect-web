@@ -18,7 +18,7 @@
 
 import { db, tablesMode } from '../../../lib/db.js'
 import { resolveStaff } from '../../../lib/auth.js'
-import { advanceOneMonth } from '../../../lib/money.mjs'
+import { advanceOneMonth, advancePastDate } from '../../../lib/money.mjs'
 import { requirementFor, coverageStatus, KNOWN_DESTINATIONS } from '../../../lib/travelRules.mjs'
 import { loadTravelRules } from '../../../lib/travelRulesDb.js'
 
@@ -464,6 +464,32 @@ async function handler(req, res) {
       }
     }
     counts.flightsClosed = flightsClosed
+    })
+
+    await section('sim-renewal-advance', async () => {
+    // ── 4a. Roll lapsed SIM renewal dates forward (monthly cycle) ──
+    // A renewal date is useless the day after it passes: without this the
+    // whole renewal stack (SIMDUE tasks, banners, drafts) goes dark again one
+    // cycle after the owner fills the dates in. 3-day grace so the SIMDUE
+    // "check payment goes through" task survives the renewal itself.
+    const lapsed = await db.select(
+      'sims',
+      `select=id,next_renewal_date,legacy_extras&status=eq.active&next_renewal_date=lt.${localDate(-3)}`
+    )
+    let advanced = 0
+    for (const s of lapsed) {
+      const next = advancePastDate(s.next_renewal_date, localDate(-3))
+      if (next === s.next_renewal_date) continue
+      // Patch BOTH the typed column and legacy_extras.renewalDate: sims persist
+      // by whole-array upsert from the app object (simToRow), so a typed-only
+      // patch would be silently reverted on the next admin SIM save.
+      await db.update('sims', `id=eq.${enc(s.id)}`, {
+        next_renewal_date: next,
+        legacy_extras: { ...(s.legacy_extras || {}), renewalDate: next },
+      })
+      advanced++
+    }
+    counts.simRenewalsAdvanced = advanced
     })
 
     await section('sim-renewals', async () => {
