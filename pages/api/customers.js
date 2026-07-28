@@ -1,6 +1,6 @@
 import { withTab } from '../../lib/auth.js'
 import { tablesMode } from '../../lib/db'
-import { listCustomers, upsertCustomer, deleteCustomer } from '../../lib/tableStore'
+import { listCustomers, getCustomer, upsertCustomer, deleteCustomer } from '../../lib/tableStore'
 
 // #80 — the relational tables are the ONLY data layer now. The old
 // loadData/saveData file-store fallback was a broken, never-exercised path
@@ -30,8 +30,8 @@ async function handler(req, res) {
 
     if (req.method === 'PUT') {
       const updated = req.body
-      const customers = await listCustomers()
-      const existing = customers.find((c) => c.id === updated.id)
+      // Single-row read: editing one customer must not pay a whole-table scan.
+      const existing = await getCustomer(updated.id)
       if (!existing) return res.status(404).json({ success: false, error: 'Not found' })
       const merged = { ...existing, ...updated }
       await upsertCustomer(merged)

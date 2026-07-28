@@ -7,6 +7,7 @@
 import { db, tablesMode } from '../../../lib/db.js'
 import { normalizeEmail } from '../../../lib/mappers.js'
 import { phoneKey } from '../../../lib/ukPhone.mjs'
+import { rateLimit } from '../../../lib/rateLimit.js'
 
 const cap = (v, n) => String(v || '').trim().slice(0, n)
 // A name must carry at least one real letter (Latin or Hebrew) — blocks "/",
@@ -18,6 +19,10 @@ const digitCount = (s) => (String(s).match(/\d/g) || []).length
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
+  // Same task-queue-flood exposure as /join: throttle per IP.
+  if (!rateLimit(req, { burst: 5, perMinute: 2 })) {
+    return res.status(429).json({ success: false, error: 'Too many requests — please wait a minute, or call 0161 531 1386.' })
+  }
   const b = req.body || {}
 
   // Honeypot: real visitors never see the "company" field.

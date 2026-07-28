@@ -8,12 +8,18 @@
 import { sendMagicLink } from '../../../lib/auth.js'
 import { tablesMode } from '../../../lib/db.js'
 import { normalizeEmail } from '../../../lib/mappers.js'
+import { rateLimit } from '../../../lib/rateLimit.js'
 
 export default async function handler(req, res) {
   if (process.env.PORTAL_ENABLED !== '1') {
     return res.status(404).json({ success: false, error: 'Not found.' })
   }
   if (req.method !== 'POST') return res.status(405).end()
+  // Every call sends a Supabase OTP email — the same OTP pool staff 2FA codes
+  // draw from. Unthrottled, an outsider could drain it and lock staff out.
+  if (!rateLimit(req, { burst: 5, perMinute: 1 })) {
+    return res.status(429).json({ success: false, error: 'Too many requests — please wait a minute and try again.' })
+  }
   if (!tablesMode) return res.status(503).json({ success: false, error: 'Portal unavailable.' })
 
   const norm = normalizeEmail(req.body?.email)

@@ -37,14 +37,18 @@ export default async function handler(req, res) {
   }
   if (!cust) {
     // No unambiguous match for this signed-in email: succeed, but show nothing.
-    return res.json({ success: true, customer: null, balance: 0, rentals: [], bookings: [], statement: [] })
+    return res.json({ success: true, customer: null, balance: 0, rentals: [], bookings: [], sims: [], statement: [] })
   }
   const extras = cust.legacy_extras || {}
 
-  const [balRows, rentalRows, bookingRows, ledgerRows] = await Promise.all([
+  const [balRows, rentalRows, bookingRows, simRows, ledgerRows] = await Promise.all([
     db.select('customer_balances', `customer_id=eq.${cust.id}`),
     db.select('rentals', `select=legacy_extras&customer_id=eq.${cust.id}&order=created_at.desc`),
     db.select('bookings', `select=route,airline,booking_reference,travel_date,status&customer_id=eq.${cust.id}&order=travel_date.desc`),
+    // SIM plans: 88% of customers have one — without this card the portal
+    // looks empty/broken to the typical customer. Safe columns only: never
+    // the alias email or anything credential-adjacent.
+    db.select('sims', `select=provider,tier,status,next_renewal_date&customer_id=eq.${cust.id}&order=created_at.asc`),
     // Mini statement: the customer's own last few wallet lines — date,
     // description and amount only (no references, no staff ids).
     db.select('ledger', `select=created_at,description,amount,entry_type&customer_id=eq.${cust.id}&order=created_at.desc&limit=6`),
@@ -68,6 +72,13 @@ export default async function handler(req, res) {
     status: b.status || '',
   }))
 
+  const sims = simRows.map((s) => ({
+    provider: s.provider || '',
+    tier: s.tier || '',
+    status: s.status || '',
+    renewalDate: s.next_renewal_date || '',
+  }))
+
   const statement = ledgerRows.map((e) => ({
     at: e.created_at,
     description: e.description || '',
@@ -81,7 +92,10 @@ export default async function handler(req, res) {
     balance,
     rentals,
     bookings,
+    sims,
     statement,
     cardOnFile: !!cust.stripe_pm_id,
+    // Bank-transfer matching reference (94% of payments arrive this way).
+    payRef: extras.id ? `KC-${extras.id}` : '',
   })
 }

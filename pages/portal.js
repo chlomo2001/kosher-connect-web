@@ -12,7 +12,7 @@ import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
 import { formatPhoneDisplay } from '../lib/ukPhone.mjs'
 import AuthBackdrop from '../components/AuthBackdrop'
-import { CardIcon, FlipPhoneIcon, PlaneIcon, DocIcon, TicketIcon } from '../components/kcIcons'
+import { CardIcon, FlipPhoneIcon, PlaneIcon, DocIcon, TicketIcon, SimIcon, ChatIcon } from '../components/kcIcons'
 
 // Portal copy in English + lashon hakodesh — some customers are Israelis who
 // don't know English. Shares the 'kcLang' preference with /welcome.
@@ -20,7 +20,7 @@ const P = {
   en: {
     locale: 'en-GB',
     loading: 'Loading your account…',
-    account: 'Your KosherConnect account',
+    account: 'Your Kosher Connect account',
     signout: 'Sign out',
     wallet: 'Wallet balance',
     youOwe: (v) => `You owe ${v}`,
@@ -41,6 +41,12 @@ const P = {
     couldNotSaveCard: 'Could not save the card.',
     rentals: 'Rentals', noRentals: 'No active rentals.',
     flights: 'Flights', noFlights: 'No upcoming flights.',
+    simPlan: 'My SIM plan', noSims: 'No SIM plan with us yet.',
+    renews: (d) => `Renews ${d}`,
+    bankRef: (ref) => `Paying by bank transfer? Please use the reference ${ref} so we can match your payment.`,
+    noMatchTitle: 'We couldn’t match this email to an account',
+    noMatchBody: 'You’re signed in, but this email address isn’t linked to a Kosher Connect account yet. If you’re a customer, we may have a different email (or none) on file — call us and we’ll link it up in a minute.',
+    tryAnother: 'Try a different email',
     statement: 'Recent activity', noStatement: 'No activity yet.',
     docs: 'Documents', noDocs: 'Nothing shared with you yet.',
     download: 'Download', upload: 'Send us a document', uploading: 'Uploading…',
@@ -59,10 +65,11 @@ const P = {
     daysLeft: (n) => (n === 0 ? 'returns today' : n === 1 ? 'returns tomorrow' : `${n} days left`),
     subSignedOut: (g) => `${g}! See your rentals, bookings and balance`,
     yourEmail: 'Your email', emailLink: 'Email me a sign-in link', sending: 'Sending…',
-    sent: '📬 If that email belongs to a KosherConnect customer, a sign-in link is on its way. You can close this page.',
+    noEmailHelp: 'No email address? Call us on', noEmailHelp2: 'and we’ll sort your account in the shop.',
+    sent: '📬 If that email belongs to a Kosher Connect customer, a sign-in link is on its way. You can close this page.',
     or: 'or', google: 'Continue with Google',
     greeting: (h) => (h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'),
-    title: 'My KosherConnect', phoneFallback: 'Phone', flightFallback: 'Flight',
+    title: 'My Kosher Connect', phoneFallback: 'Phone', flightFallback: 'Flight',
     backToSite: 'Back to kosher-connect.com',
   },
   // Rewritten to read as written-in-Hebrew, in the same voice as the Hebrew
@@ -91,6 +98,12 @@ const P = {
     couldNotSaveCard: 'הכרטיס לא נשמר. נסו שוב.',
     rentals: 'השכרות', noRentals: 'אין כרגע השכרות פעילות.',
     flights: 'טיסות', noFlights: 'אין טיסות קרובות ביומן.',
+    simPlan: 'חבילת הסים שלי', noSims: 'עוד אין חבילת סים אצלנו.',
+    renews: (d) => `מתחדשת ב־${d}`,
+    bankRef: (ref) => `משלמים בהעברה בנקאית? נא לציין את האסמכתא ${ref} כדי שנוכל לשייך את התשלום.`,
+    noMatchTitle: 'לא הצלחנו לשייך את המייל הזה לחשבון',
+    noMatchBody: 'נכנסתם בהצלחה, אבל כתובת המייל הזו עדיין לא מקושרת לחשבון בכשר קונקט. ייתכן שרשומה אצלנו כתובת אחרת (או שאין בכלל) — התקשרו אלינו ונקשר את החשבון תוך דקה.',
+    tryAnother: 'לנסות כתובת מייל אחרת',
     statement: 'תנועות אחרונות', noStatement: 'עוד אין תנועות להצגה.',
     docs: 'מסמכים', noDocs: 'עוד לא שותפו איתכם מסמכים.',
     download: 'הורדה', upload: 'שליחת מסמך אלינו', uploading: 'המסמך בדרך…',
@@ -109,6 +122,7 @@ const P = {
     daysLeft: (n) => (n === 0 ? 'חוזר היום' : n === 1 ? 'חוזר מחר' : `נותרו ${n} ימים`),
     subSignedOut: (g) => `${g}! כל ההשכרות, ההזמנות והיתרה שלכם — במקום אחד`,
     yourEmail: 'כתובת המייל שלכם', emailLink: 'שלחו לי קישור כניסה', sending: 'שולחים…',
+    noEmailHelp: 'אין לכם כתובת מייל? התקשרו אלינו:', noEmailHelp2: 'ונסדר לכם גישה בחנות.',
     sent: '📬 אם הכתובת שייכת ללקוח של כשר קונקט — קישור הכניסה כבר בדרך אליכם. אפשר לסגור את העמוד.',
     or: 'או', google: 'כניסה עם Google',
     greeting: (h) => (h < 12 ? 'בוקר טוב' : h < 18 ? 'צהריים טובים' : 'ערב טוב'),
@@ -213,15 +227,47 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       .finally(() => setLoading(false))
   }, [])
 
+  // Exchange the stored refresh token for a fresh access token (server proxy —
+  // the anon key never ships to the browser). On failure, fall back to the
+  // signed-out card; the stale refresh token is cleared so we don't loop.
+  const refreshSession = useCallback((rt) => {
+    setLoading(true)
+    fetch('/api/portal/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: rt }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && d.success && d.access_token) {
+          sessionStorage.setItem('kc_portal_token', d.access_token)
+          if (d.refresh_token) localStorage.setItem('kc_portal_refresh', d.refresh_token)
+          return loadAccount(d.access_token)
+        }
+        localStorage.removeItem('kc_portal_refresh')
+        setLoading(false)
+      })
+      .catch(() => { localStorage.removeItem('kc_portal_refresh'); setLoading(false) })
+  }, [loadAccount])
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    // Supabase's magic-link redirect delivers a refresh_token too — keeping it
+    // means the session survives tab close and the ~1h access-token expiry,
+    // instead of costing a freshly emailed link on every single visit.
+    const ref = hash.get('refresh_token')
+    if (ref) localStorage.setItem('kc_portal_refresh', ref)
     const tok = hash.get('access_token') || sessionStorage.getItem('kc_portal_token')
-    if (!tok) return
-    sessionStorage.setItem('kc_portal_token', tok)
     if (window.location.hash) window.history.replaceState(null, '', window.location.pathname)
-    loadAccount(tok)
-  }, [loadAccount])
+    if (tok) {
+      sessionStorage.setItem('kc_portal_token', tok)
+      loadAccount(tok)
+      return
+    }
+    const stored = localStorage.getItem('kc_portal_refresh')
+    if (stored) refreshSession(stored)
+  }, [loadAccount, refreshSession])
 
   // Load documents once signed in.
   const loadDocs = useCallback(() => {
@@ -235,7 +281,10 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   useEffect(() => { if (account) loadDocs() }, [account, loadDocs])
 
   function signOut() {
-    if (typeof window !== 'undefined') sessionStorage.removeItem('kc_portal_token')
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('kc_portal_token')
+      localStorage.removeItem('kc_portal_refresh')
+    }
     setAccount(null); setDocs(null); setPay(null); setPaid(false)
     setSaveCard(null); setCardSaved(false); setupRef.current = null
   }
@@ -456,6 +505,35 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       </>
     )
   }
+  // Signed in but not matched to a customer record: never render the
+  // convincing-but-fake £0.00 dashboard (a customer whose on-file email
+  // differs would be silently told they owe nothing). Hand them to a human.
+  if (account && !account.customer) {
+    return (
+      <>
+        <Head><title>{L.title}</title></Head>
+        <div className="login-shell">
+          <div className="login-mesh" aria-hidden="true" />
+          <AuthBackdrop />
+          <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
+          {langBtn}
+          <div className="login-card" dir={dir}>
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <img src="/logo-full-tight.png" alt="Kosher Connect" style={{ height: 44, marginBottom: 12 }} />
+              <div className="login-title" style={{ fontSize: 22 }}>{L.noMatchTitle}</div>
+            </div>
+            <div style={{ fontSize: 14, lineHeight: 1.55 }}>{L.noMatchBody}</div>
+            <div style={{ marginTop: 14, textAlign: 'center' }}>
+              <a href="tel:+441615311386" dir="ltr" style={{ fontWeight: 600 }}>{formatPhoneDisplay('01615311386')}</a>
+            </div>
+            <button className="btn btn-outline" onClick={signOut}
+              style={{ width: '100%', marginTop: 16, padding: '10px 16px' }}>{L.tryAnother}</button>
+            <a className="p-backlink" href="/welcome">{L.backToSite}</a>
+          </div>
+        </div>
+      </>
+    )
+  }
   if (account) {
     const owes = account.balance < 0
     const activeRentals = (account.rentals || []).filter((r) => r.status !== 'returned' && r.status !== 'cancelled')
@@ -506,6 +584,11 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                     style={{ marginTop: 14, padding: '10px 22px' }}>
                     {payBusy ? L.starting : L.payBtn(fmtGbp(Math.abs(account.balance)))}
                   </button>
+                )}
+                {/* 94% of money arrives by bank transfer — tell the payer which
+                    reference to use so it can be matched without detective work. */}
+                {owes && account.payRef && !pay && (
+                  <div className="p-row-sub" style={{ marginTop: 10 }}>{L.bankRef(account.payRef)}</div>
                 )}
                 {payMsg && <div role="alert" className="p-payerr">{payMsg}</div>}
                 {pay && (
@@ -570,6 +653,23 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                         <div className="p-row-sub"><bdi dir="ltr">{fmtDate(r.fromDate)} {isHe ? '←' : '→'} {fmtDate(r.toDate)}</bdi>{daysLeft(r)}</div>
                       </div>
                       <span className={`p-badge ${stClass(r.status)}`}>{stLabel(r.status)}</span>
+                    </div>
+                  ))}
+              </section>
+
+              {/* SIM plan — 88% of customers have one; without this card the
+                  portal reads as empty/broken to the typical customer. */}
+              <section className="pd-card">
+                <div className="p-kicker"><SimIcon /> {L.simPlan}</div>
+                {(account.sims || []).length === 0
+                  ? <div className="p-empty">{L.noSims}</div>
+                  : account.sims.map((s, i) => (
+                    <div className="p-row" key={i}>
+                      <div className="p-row-main">
+                        <div className="p-row-title">{s.provider || 'SIM'}{s.tier ? ` · ${s.tier}` : ''}</div>
+                        {s.renewalDate ? <div className="p-row-sub">{L.renews(fmtDate(s.renewalDate))}</div> : null}
+                      </div>
+                      <span className={`p-badge ${stClass(s.status)}`}>{stLabel(s.status)}</span>
                     </div>
                   ))}
               </section>
@@ -640,7 +740,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
               </section>
 
               <section className="pd-card pd-span2">
-                <div className="p-kicker">💬 {L.reqTitle}</div>
+                <div className="p-kicker"><ChatIcon /> {L.reqTitle}</div>
                 <div className="p-empty" style={{ marginBottom: 8 }}>{L.reqHint}</div>
                 <textarea className="form-input" rows={3} value={reqText} maxLength={500}
                   onChange={(e) => setReqText(e.target.value)} placeholder={L.reqPlaceholder}
@@ -695,6 +795,10 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                 {busy ? L.sending : L.emailLink}
               </button>
               <div className="p-reassure">{L.reassure}</div>
+              {/* 94% of customers have no email on file — never dead-end them. */}
+              <div className="p-reassure" style={{ marginTop: 6 }}>
+                {L.noEmailHelp} <a href="tel:+441615311386" dir="ltr" style={{ whiteSpace: 'nowrap' }}>0161 531 1386</a> {L.noEmailHelp2}
+              </div>
               {googleEnabled && (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0', color: 'var(--muted)', fontSize: 12 }}>

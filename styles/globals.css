@@ -153,7 +153,7 @@ html { color-scheme: light; }
 :root[data-theme="dark"] .badge-repair  { background: rgba(249,115,22,0.16); color: #fdba74; }
 :root[data-theme="dark"] .badge-active  { background: rgba(52,211,153,0.16); color: #6ee7b7; }
 :root[data-theme="dark"] .badge-vn      { background: rgba(167,139,250,0.16); color: #c4b5fd; }
-:root[data-theme="dark"] .badge-rental  { background: rgba(139,132,255,0.16); color: #b8b2ff; }
+:root[data-theme="dark"] .badge-rental  { background: rgba(87,166,230,0.16); color: #7db8e8; }
 
 html, body { height: 100%; }
 
@@ -997,7 +997,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .copy-val:hover { background-color: var(--accent-wash); border-bottom-style: solid; }
 .copy-val:active { background-color: var(--primary-subdued); }
 :root[data-theme="dark"] .copy-val {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238b84ff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2357a6e6' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
 }
 
 /* SPLIT LAYOUT for Rentals */
@@ -1963,7 +1963,9 @@ html { scroll-behavior: smooth; }
 .welcome-shell .w-wrap[dir="rtl"],
 .welcome-shell .w-wrap[dir="rtl"] :is(button, input, select, textarea),
 .login-card[dir="rtl"],
-.login-card[dir="rtl"] :is(button, input, select, textarea) {
+.login-card[dir="rtl"] :is(button, input, select, textarea),
+.pd-shell[dir="rtl"],
+.pd-shell[dir="rtl"] :is(button, input, select, textarea) {
   font-family: 'Heebo KC', 'Inter', system-ui, -apple-system, sans-serif;
 }
 
@@ -2091,7 +2093,7 @@ html { scroll-behavior: smooth; }
    The signed-OUT view keeps the login card; once signed in the portal is a
    proper account page: top bar, greeting, and a responsive card grid. */
 /* body/#__next are flex containers (login centering) — stretch to full width. */
-.pd-shell { flex: 1 1 auto; width: 100%; min-height: 100vh; background: var(--bg-secondary); color: var(--text); }
+.pd-shell { flex: 1 1 auto; width: 100%; min-height: 100vh; background: var(--bg); color: var(--text); }
 .pd-top {
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -2107,7 +2109,7 @@ html { scroll-behavior: smooth; }
 .pd-chip:hover { border-color: var(--accent); color: var(--accent); }
 .pd-main { max-width: 1000px; margin: 0 auto; padding: 26px 20px 44px; }
 .pd-greet { margin-bottom: 18px; }
-.pd-greet h1 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.3px; }
+.pd-greet h1 { margin: 0; font-size: 24px; font-weight: 300; letter-spacing: -0.26px; }
 .pd-greet-sub { margin-top: 3px; font-size: 13.5px; color: var(--muted); }
 .pd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
 .pd-card {

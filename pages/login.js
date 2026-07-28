@@ -70,16 +70,16 @@ export default function Login({ supabaseUrl, googleEnabled }) {
 
   return (
     <>
-      <Head><title>Sign in · KosherConnect</title></Head>
+      <Head><title>Sign in · Kosher Connect</title></Head>
       <div className="login-shell">
         <div className="login-mesh" aria-hidden="true" />
         <AuthBackdrop />
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         <form className="login-card" onSubmit={ticket ? submitCode : submit}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <img src="/logo-full-tight.png" alt="KosherConnect" style={{ height: 44, marginBottom: 12 }} />
+            <img src="/logo-full-tight.png" alt="Kosher Connect" style={{ height: 44, marginBottom: 12 }} />
             <div className="login-title">Welcome back</div>
-            <div className="login-sub">{ticket ? 'Check your email for your code' : 'Sign in to KosherConnect'}</div>
+            <div className="login-sub">{ticket ? 'Check your email for your code' : 'Sign in to Kosher Connect'}</div>
             <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8, letterSpacing: '0.02em', lineHeight: 1.5 }}>
               {/* Deliberate two-line lockup: the full list never fits the card
                   on one line, so break it where it balances — never mid-phrase

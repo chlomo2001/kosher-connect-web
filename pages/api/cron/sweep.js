@@ -249,19 +249,27 @@ async function handler(req, res) {
     debtors = await allDebtorBalances()
     const debtorIds = new Set(debtors.map(b => b.customer_id))
     const ids = [...debtorIds]
-    // Names for just the debtors — a bounded id-set read, not the full table.
+    // Names + contact fields for just the debtors — a bounded id-set read, not
+    // the full table. Contact fields feed the unreachable-debtor flag below.
     custRows = ids.length
-      ? await db.select('customers', `select=id,first_name,last_name&id=in.(${ids.map(enc).join(',')})`)
+      ? await db.select('customers', `select=id,first_name,last_name,phone_number,email_normalized&id=in.(${ids.map(enc).join(',')})`)
       : []
     names = new Map(custRows.map(c => [c.id, `${c.first_name || ''} ${c.last_name || ''}`.trim()]))
+    // A debtor with neither phone nor email can't be chased by ANY channel —
+    // flag it on the task so staff learn at a glance, not after opening the
+    // card, and each shop visit becomes the moment the number gets captured.
+    const unreachable = new Set(
+      custRows.filter(c => !c.phone_number && !c.email_normalized).map(c => c.id)
+    )
     let balCreated = 0, balClosed = 0
     for (const b of debtors) {
       const bal = Number(b.balance)
+      const noContact = unreachable.has(b.customer_id)
       await upsertOpenTask({
         reference: `BALANCE-${b.customer_id}`,
-        title: `Outstanding balance — ${names.get(b.customer_id) || '?'} — £${Math.abs(bal).toFixed(2)}`,
+        title: `Outstanding balance — ${names.get(b.customer_id) || '?'} — £${Math.abs(bal).toFixed(2)}${noContact ? ' — ⚠ no contact details' : ''}`,
         customerUuid: b.customer_id,
-        notes: `Negative wallet balance £${Math.abs(bal).toFixed(2)}.`,
+        notes: `Negative wallet balance £${Math.abs(bal).toFixed(2)}.${noContact ? ' No phone or email on file — capture a phone number at the next visit.' : ''}`,
       })
       balCreated++
     }
