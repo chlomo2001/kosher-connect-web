@@ -243,6 +243,25 @@ export default function Welcome() {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  // Scrollspy: light up the nav link of the section currently on screen.
+  useEffect(() => {
+    const ids = ['mobile', 'travel', 'intl', 'services', 'visit']
+    const secs = ids.map((id) => document.getElementById(id)).filter(Boolean)
+    const mark = (id) => {
+      document.querySelectorAll('.sk-navlink, .sk-mobnav a').forEach((a) => {
+        a.classList.toggle('on', a.getAttribute('href') === `#${id}`)
+      })
+    }
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) mark(e.target.id) })
+    }, { rootMargin: '-45% 0px -50% 0px' })
+    secs.forEach((s) => obs.observe(s))
+    // Above the first section (hero) nothing should be lit.
+    const clearAtTop = () => { if (window.scrollY < 300) mark('') }
+    window.addEventListener('scroll', clearAtTop, { passive: true })
+    return () => { obs.disconnect(); window.removeEventListener('scroll', clearAtTop) }
+  }, [lang])
   const pick = (l) => { setLang(l); try { localStorage.setItem('kcLang', l) } catch {} }
   // Strip ?paid=1 on dismiss so a refresh or shared link doesn't re-announce it.
   const dismissPaid = () => { setPaid(false); try { window.history.replaceState(null, '', window.location.pathname) } catch {} }
@@ -317,6 +336,15 @@ export default function Welcome() {
               <a href="#contact" className="sk-btn sk-btn-sky sk-btn-sm">{t.nav.message}</a>
             </nav>
           </div>
+          {/* Phones lose the top nav links entirely (<=960px) — give them a
+              swipeable chip strip so the sections stay one tap away. */}
+          <nav className="sk-mobnav" aria-label="Site sections">
+            <a href="#mobile">{t.nav.mobile}</a>
+            <a href="#travel">{t.nav.travel}</a>
+            <a href="#intl">{t.nav.intl}</a>
+            <a href="#services">{t.nav.repairs}</a>
+            <a href="#visit">{t.nav.visit}</a>
+          </nav>
         </header>
 
         {paid && (
@@ -563,8 +591,12 @@ const SKY_CSS = `
   :root[data-theme="dark"] .sk-logo{filter:brightness(0) invert(1)}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-logo{filter:brightness(0) invert(1)}}
   .sk-nav-links{display:flex;align-items:center;gap:20px}
-  .sk-navlink{color:var(--sk-muted);font-weight:600;font-size:14.5px;white-space:nowrap}
+  .sk-navlink{color:var(--sk-muted);font-weight:600;font-size:14.5px;white-space:nowrap;
+    border-bottom:2px solid transparent;padding-bottom:2px}
   .sk-navlink:hover{color:var(--sk-text)}
+  .sk-navlink.on{color:var(--sk-sky);border-bottom-color:var(--sk-sky)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-navlink.on{color:var(--sk-sky-bright);border-bottom-color:var(--sk-sky-bright)}}
+  :root[data-theme="dark"] .sk-navlink.on{color:var(--sk-sky-bright);border-bottom-color:var(--sk-sky-bright)}
   .sk-lang{display:inline-flex;border:1px solid var(--sk-line);border-radius:999px;overflow:hidden}
   .sk-lang button{border:0;background:transparent;color:var(--sk-muted);font-weight:700;font-size:12.5px;
     padding:5px 11px;cursor:pointer}
@@ -719,7 +751,20 @@ const SKY_CSS = `
   @media (prefers-reduced-motion:reduce){.sk-reveal{opacity:1;transform:none;transition:none}}
 
   @media (max-width:960px){ .sk-navlink{display:none} .sk-nav-phone{display:none} .sk-foot-grid{grid-template-columns:1fr 1fr} }
+  /* Mobile section chips (hidden on desktop, where the nav links exist) */
+  .sk-mobnav{display:none}
+  @media (max-width:960px){
+    .sk-mobnav{display:flex;gap:8px;overflow-x:auto;padding:0 16px 10px;
+      -webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .sk-mobnav::-webkit-scrollbar{display:none}
+    .sk-mobnav a{flex:none;font-size:13px;font-weight:600;color:var(--sk-muted);
+      border:1px solid var(--sk-line);border-radius:999px;padding:6px 12px;line-height:1.2}
+    .sk-mobnav a.on{color:var(--sk-sky);border-color:var(--sk-sky)}
+    :root[data-theme="dark"] .sk-mobnav a.on{color:var(--sk-sky-bright);border-color:var(--sk-sky-bright)}
+    /* Taller sticky header on phones (bar + chips) — keep anchors clear of it. */
+    .sk [id]{scroll-margin-top:122px}
+  }
   /* Keep the nav's CTA clear of the fixed theme toggle on phones. */
-  @media (max-width:640px){ .sk-nav{padding-inline-end:46px} }
+  @media (max-width:640px){ .sk-nav{padding-inline-end:60px} }
   @media (max-width:820px){ .sk-grid{grid-template-columns:1fr} .sk-visit-grid{grid-template-columns:1fr} .sk-map-card{min-height:300px} .sk-map-card iframe{min-height:300px} }
 `
