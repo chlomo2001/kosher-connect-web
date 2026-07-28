@@ -502,8 +502,9 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
      search stretching to whatever width is left. */
   .topbar { flex-wrap: wrap; gap: 10px; margin: 10px 10px 0; padding: 10px 14px; }
   .page-title { font-size: 20px; }
-  .topbar-actions { flex: 1 1 100%; }
-  .search-box { flex: 1; min-width: 0; width: auto; }
+  /* Wrap, or the Ask/Ctrl-K buttons push off the right edge on phones. */
+  .topbar-actions { flex: 1 1 100%; flex-wrap: wrap; }
+  .search-box { flex: 1 1 100%; min-width: 0; width: auto; }
   .content { padding: 16px 14px; }
 }
 

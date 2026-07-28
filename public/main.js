@@ -5086,6 +5086,18 @@ function setupTopbarButtons() {
     b.addEventListener('click', openPalette);
     btnNew.parentElement.insertBefore(b, btnNew);
   }
+  // The AI assistant gets its own visible button — a palette-only entry meant
+  // knowing Ctrl+K was the price of admission.
+  if (btnNew && !document.getElementById('btnAssistant')) {
+    const a = document.createElement('button');
+    a.id = 'btnAssistant';
+    a.className = 'btn btn-outline';
+    a.style.cssText = 'font-size:12px;padding:8px 12px;margin-right:8px;';
+    a.title = 'Ask Kosher Connect — questions or actions, in plain words';
+    a.innerHTML = '🤖 Ask';
+    a.addEventListener('click', () => openAssistantModal());
+    btnNew.parentElement.insertBefore(a, document.getElementById('btnPalette'));
+  }
 }
 
 // ─────────────────────────────────────────────
