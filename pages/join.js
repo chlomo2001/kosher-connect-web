@@ -180,20 +180,13 @@ export default function Join() {
                   {field('email', t.email, 'email', { dir: 'ltr', inputMode: 'email' })}
                   <div className="form-group form-full">
                     <span className="form-label" id="jn-reach-label">{t.reach}</span>
-                    <div role="radiogroup" aria-labelledby="jn-reach-label"
-                      style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                    <div role="radiogroup" aria-labelledby="jn-reach-label" className="jn-chips">
                       {['call', 'text', 'whatsapp', 'email'].map((k) => {
                         const on = form.preferredContact === k
                         return (
                           <button key={k} type="button" role="radio" aria-checked={on}
-                            onClick={() => setForm((f) => ({ ...f, preferredContact: on ? '' : k }))}
-                            style={{
-                              border: `1px solid ${on ? 'var(--accent)' : 'var(--border-input)'}`,
-                              background: on ? 'var(--accent)' : 'var(--surface)',
-                              color: on ? '#fff' : 'var(--text)',
-                              borderRadius: 999, padding: '7px 14px', fontSize: 13,
-                              fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer',
-                            }}>
+                            className="jn-chip"
+                            onClick={() => setForm((f) => ({ ...f, preferredContact: on ? '' : k }))}>
                             {t.reachOpts[k]}
                           </button>
                         )
