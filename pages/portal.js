@@ -43,7 +43,7 @@ const P = {
     flights: 'Flights', noFlights: 'No upcoming flights.',
     simPlan: 'My SIM plan', noSims: 'No SIM plan with us yet.',
     renews: (d) => `Renews ${d}`,
-    bankRef: (ref) => `Paying by bank transfer? Please use the reference ${ref} so we can match your payment.`,
+    bankRef1: 'Paying by bank transfer? Please use the reference', bankRef2: 'so we can match your payment.',
     noMatchTitle: 'We couldn’t match this email to an account',
     noMatchBody: 'You’re signed in, but this email address isn’t linked to a Kosher Connect account yet. If you’re a customer, we may have a different email (or none) on file — call us and we’ll link it up in a minute.',
     tryAnother: 'Try a different email',
@@ -100,7 +100,7 @@ const P = {
     flights: 'טיסות', noFlights: 'אין טיסות קרובות ביומן.',
     simPlan: 'חבילת הסים שלי', noSims: 'עוד אין חבילת סים אצלנו.',
     renews: (d) => `מתחדשת ב־${d}`,
-    bankRef: (ref) => `משלמים בהעברה בנקאית? נא לציין את האסמכתא ${ref} כדי שנוכל לשייך את התשלום.`,
+    bankRef1: 'משלמים בהעברה בנקאית? נא לציין את האסמכתא', bankRef2: 'כדי שנוכל לשייך את התשלום.',
     noMatchTitle: 'לא הצלחנו לשייך את המייל הזה לחשבון',
     noMatchBody: 'נכנסתם בהצלחה, אבל כתובת המייל הזו עדיין לא מקושרת לחשבון בכשר קונקט. ייתכן שרשומה אצלנו כתובת אחרת (או שאין בכלל) — התקשרו אלינו ונקשר את החשבון תוך דקה.',
     tryAnother: 'לנסות כתובת מייל אחרת',
@@ -586,9 +586,15 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                   </button>
                 )}
                 {/* 94% of money arrives by bank transfer — tell the payer which
-                    reference to use so it can be matched without detective work. */}
+                    reference to use so it can be matched without detective work.
+                    The ref is a directional-isolated, unbreakable run: inside
+                    Hebrew text it otherwise splits and reorders across lines. */}
                 {owes && account.payRef && !pay && (
-                  <div className="p-row-sub" style={{ marginTop: 10 }}>{L.bankRef(account.payRef)}</div>
+                  <div className="p-row-sub" style={{ marginTop: 10 }}>
+                    {L.bankRef1}{' '}
+                    <bdi dir="ltr" style={{ whiteSpace: 'nowrap', fontWeight: 600 }}>{account.payRef}</bdi>
+                    {' '}{L.bankRef2}
+                  </div>
                 )}
                 {payMsg && <div role="alert" className="p-payerr">{payMsg}</div>}
                 {pay && (
@@ -612,7 +618,9 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                   : account.statement.map((e, i) => (
                     <div className="p-row" key={i}>
                       <div className="p-row-main">
-                        <div className="p-row-title">{e.description || (e.amount >= 0 ? L.received : '—')}</div>
+                        {/* Ledger descriptions are English; in an RTL context an
+                            unisolated run gets its word order shuffled. */}
+                        <div className="p-row-title"><bdi>{e.description || (e.amount >= 0 ? L.received : '—')}</bdi></div>
                         <div className="p-row-sub">{fmtDate(e.at)}</div>
                       </div>
                       <span className={`p-amt ${e.amount >= 0 ? 'p-amt-pos' : ''}`} dir="ltr">
@@ -666,7 +674,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                   : account.sims.map((s, i) => (
                     <div className="p-row" key={i}>
                       <div className="p-row-main">
-                        <div className="p-row-title">{s.provider || 'SIM'}{s.tier ? ` · ${s.tier}` : ''}</div>
+                        <div className="p-row-title"><bdi dir="ltr">{s.provider || 'SIM'}{s.tier ? ` · ${s.tier}` : ''}</bdi></div>
                         {s.renewalDate ? <div className="p-row-sub">{L.renews(fmtDate(s.renewalDate))}</div> : null}
                       </div>
                       <span className={`p-badge ${stClass(s.status)}`}>{stLabel(s.status)}</span>
@@ -681,7 +689,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                   : upcoming.map((b, i) => (
                     <div className="p-row" key={i}>
                       <div className="p-row-main">
-                        <div className="p-row-title">{b.route || L.flightFallback}{b.airline ? ` · ${b.airline}` : ''}</div>
+                        <div className="p-row-title"><bdi dir="ltr">{b.route || L.flightFallback}{b.airline ? ` · ${b.airline}` : ''}</bdi></div>
                         {b.travelDate ? <div className="p-row-sub">{fmtDate(b.travelDate)}</div> : null}
                       </div>
                       <span className={`p-badge ${stClass(b.status)}`}>{stLabel(b.status)}</span>
