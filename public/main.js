@@ -1887,7 +1887,17 @@ function updateVNPrice() {
   const to    = document.getElementById('rTo')?.value;
   const selPhone = document.getElementById('rPhone');
   const phone = selPhone ? phones.find(p => p.id === selPhone.value) : null;
-  priceEl.value = calcVNPrice(vnSub, from, to, phone?.country || 'USA', phone?.ukPlan || 'standard');
+  const country = phone?.country || 'USA';
+  const ukPlan  = phone?.ukPlan || 'standard';
+  // Option labels carry the per-country figures (£7/£15 Israel & UK, £5/£10
+  // elsewhere) so the dropdown never contradicts the computed price.
+  const sub = document.getElementById('rVNSub');
+  if (sub && sub.options.length >= 2) {
+    const rate = rateFor(country, ukPlan);
+    sub.options[0].textContent = `Weekly (£${rate.vnWeekly ?? settingNum('vn_weekly', 5)}/week)`;
+    sub.options[1].textContent = `Monthly / 30 days (£${rate.vnPer30Days ?? settingNum('vn_per_30_days', 10)})`;
+  }
+  priceEl.value = calcVNPrice(vnSub, from, to, country, ukPlan);
 }
 
 let rLastTotal = 0; // #25 — the live rental total, so the payment row can pre-fill it
@@ -2221,7 +2231,7 @@ function openManagePhonesModal() {
         <label class="form-label">UK Plan Type</label>
         <select class="form-input" id="pUKPlan">
           <option value="standard">Standard (UK minutes) – £2/day</option>
-          <option value="unlimited">Unlimited International – £2.50/day</option>
+          <option value="unlimited">Unlimited International – £2/day</option>
         </select>
       </div>
       <div class="form-group">

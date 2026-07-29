@@ -32,8 +32,10 @@ Start empty — seed config, the service menu, and the holiday calendar only.
    a per-item `lost_charge` — booleans can't hold it, and the itemised
    breakdown, reversible lost charges, and `returned_incomplete` display all
    depend on it. A CHECK ensures a `lost_charge` only exists on a `lost` item.
-2. **`damage_rates.sim_missing` added** (£10 everywhere). BUSINESS_RULES §1.6
-   prices a lost SIM; the old `.gs` engine forgot it — the schema must not.
+2. **`damage_rates.sim_missing` added.** BUSINESS_RULES §1.6 prices a lost
+   SIM (17 Jul T&C: £20, Israel up to £50 at staff discretion; legacy £10
+   remains only for Canada/EU pending owner confirmation); the old `.gs`
+   engine forgot it — the schema must not.
 3. **Ledger sign is a CHECK constraint, not a comment.** Money-in types
    (`top_up`, `payment`, `refund`, `rental_void`) must be positive; every
    charge type negative; `rental_adjustment`/`manual_adjustment` either way but
@@ -67,7 +69,7 @@ Start empty — seed config, the service menu, and the holiday calendar only.
 charge = min( max(chargeable_days × rate, min_charge),
               cap × max(1, ceil(calendar_days / cap_period_days)) )
         → discount (percent | fixed) off the rental portion only
-        → + VN add-on (weekly £5/wk, or £10 flat per 30 days)
+        → + VN add-on (per-country: weekly £5–£7/wk, or £10–£15 flat per 30 days)
 ```
 
 Two day-counts: **chargeable** days (exclude Saturdays + `holidays` rows for

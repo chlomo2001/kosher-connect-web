@@ -121,7 +121,7 @@ All SIM fees are driven by Settings keys (editable in the Settings tab):
 | Annual fee | £20 | `sim_annual_fee` |
 | Service | £5 | `sim_service_fee` |
 | Replacement (after free allowance of 2) | £10 | `sim_replacement_fee` |
-| Monthly DD (through-me plans) | provider cost + max(10%, £2) | `collect_later_late_pct`, `collect_later_late_min` |
+| Monthly DD (through-me plans) | provider cost + max(10%, £2) | `sim_dd_surcharge_pct`, `sim_dd_surcharge_min` |
 
 After-sale service is **free for USA and Canada SIMs** (customer price list) —
 zero the amount in the charge modal for those. UK SIMs pay the £5.
@@ -155,9 +155,10 @@ reactivation on request.
 
 ### 2.1 Virtual Number clarification
 
-The weekly virtual number add-on is **£5 per week of the rental** (weeks =
-total calendar days ÷ 7, rounded up, minimum 1 week) — not a flat £5.
-The 30-day option stays £10 flat.
+The weekly virtual number add-on is **charged per week of the rental** (weeks =
+total calendar days ÷ 7, rounded up, minimum 1 week) — not a flat fee.
+The 30-day option stays flat. Prices are per country (§1.3): £5/wk · £10/30d
+for USA, Canada and EU; £7/wk · £15/30d for Israel and UK.
 
 ---
 
