@@ -4436,6 +4436,24 @@ async function emailLedgerReceipt(btn, customerId, idx) {
   const body = e.type === 'payment' || e.type === 'top_up'
     ? { kind: 'payment', customerId, amount: abs, method: e.method || null, note: e.description || null, balance: cached.balance }
     : { kind: 'sale', customerId, lines: [{ name: e.description || 'Purchase', qty: 1, total: abs }], total: abs, method: e.method || null };
+  // Confirm before sending. This leaves the building the moment it is clicked
+  // and cannot be recalled, so it gets the same "are you sure?" as anything
+  // that touches a customer's money — and it names the recipient, because the
+  // mistake worth catching is the right receipt sent to the wrong person.
+  const cust = customers.find(x => x.id === customerId);
+  const to = (cust && cust.email) || '';
+  // isOwnAccountEmail: some rows carry OUR provider login (Lebara etc.) in the
+  // email field rather than the customer's own address. Sending a customer
+  // receipt there mails it to the shop, so say so plainly in the dialog.
+  const ours = to && isOwnAccountEmail(to);
+  if (!(await kcConfirm({
+    title: '✉️ Email this receipt?',
+    body: `Sends a receipt for <strong>${escHtml(e.description || e.type)}</strong> to ${
+      to ? `<strong>${escHtml(to)}</strong>` : 'the address on this customer’s record'
+    }.${ours ? ' <strong style="color:var(--gold);">That is a shop account login, not the customer’s own address.</strong>' : ''} An email cannot be unsent.`,
+    okLabel: 'Send receipt',
+    amount: abs,
+  }))) return;
   if (btn) { btn.disabled = true; btn.textContent = '…'; }
   const res = await kcFetch('/api/email', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),

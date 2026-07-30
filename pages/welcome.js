@@ -759,7 +759,11 @@ const SKY_CSS = `
   .sk-map-card{position:relative;border:1px solid var(--sk-line);border-radius:16px;overflow:hidden;
     background:var(--sk-band-alt);display:flex;min-height:380px}
   .sk-map-card iframe{border:0;width:100%;min-height:380px;flex:1;display:block}
-  .sk-map-open{position:absolute;bottom:14px;inset-inline-start:14px;box-shadow:0 4px 14px rgba(7,22,52,.35)}
+  /* Top corner, not bottom-left: Google's embed puts its logo and the place
+     thumbnail bottom-left and the "Map data / Terms" attribution bottom-right,
+     and the button sat squarely on top of them — hiding attribution we are
+     required to leave visible. The top edge is clear in this embed. */
+  .sk-map-open{position:absolute;top:14px;inset-inline-end:14px;box-shadow:0 4px 14px rgba(7,22,52,.35)}
   .sk-visit-info{border:1px solid var(--sk-line);border-radius:16px;background:var(--sk-band-alt);
     padding:26px 24px;display:flex;flex-direction:column;gap:20px;justify-content:center}
   .sk-visit-row{display:flex;gap:12px}
