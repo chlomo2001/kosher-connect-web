@@ -71,12 +71,29 @@ version-controlled at **`docs/email-templates/magic-link.html`**: same wordmark,
 navy→gold keyline, message card and business footer as our receipts, plus the
 six-digit fallback code.
 
-1. Supabase → project **Kc-Live** → Authentication → Emails → **Magic Link**.
-2. Subject: `Your Kosher Connect sign-in link`
-3. Message body: paste the whole contents of
-   `docs/email-templates/magic-link.html`. Leave `{{ .ConfirmationURL }}` and
-   `{{ .Token }}` exactly as they are — Supabase fills those in.
-4. Send yourself one from the portal and check it in Gmail on the phone.
+> **The paste is blocked until custom SMTP is on.** The Magic Link screen shows
+> "Set up custom SMTP to edit templates", and the Subject and Body fields are
+> read-only while the project is on Supabase's shared sender. So the order is
+> forced: SMTP first, template second. Checked 30/07/2026 — the banner was
+> showing, which also confirms nothing had been half-saved on the SMTP screen.
+>
+> Do the SMTP work in the same sitting as section 1: both need DNS records at
+> Squarespace, and Resend's domain verification is the long pole in both.
+
+**Order of operations**
+
+1. Verify the sending domain in **Resend** (DNS records at Squarespace).
+2. Supabase → **Kc-Live** → Authentication → Emails → **SMTP Settings**. Fill
+   every field and save once — see the all-or-nothing warning below.
+3. **Raise the rate limit.** Supabase caps a newly configured custom SMTP at
+   **30 messages an hour** to protect the sender's reputation, and it does not
+   lift by itself. Authentication → **Rate Limits**. Skipping this trades one
+   throttle for another.
+4. Now the template unlocks: Authentication → Emails → **Magic Link**.
+   Subject: `Your Kosher Connect sign-in link`. Body: paste the whole contents
+   of `docs/email-templates/magic-link.html`. Leave `{{ .ConfirmationURL }}`
+   and `{{ .Token }}` exactly as they are — Supabase fills those in.
+5. Send yourself one from the portal and check it in Gmail on the phone.
 
 **Two things worth checking while you're in there:**
 
@@ -93,6 +110,13 @@ six-digit fallback code.
   and `sendMagicLink` both hit the same endpoint), so an empty custom SMTP
   config locks staff out of the app, including the owner. Either fill in all
   four fields in one go, or leave the toggle off until you have them.
+
+  Re-verified 30/07/2026, because it is the one thing on this page worth being
+  sure about: `pages/api/auth/login.js` sends the staff second factor with
+  `sendEmailOtp` whenever `staff2faEnabled()` is true, and that is
+  `process.env.STAFF_2FA !== '0'` — on unless someone has deliberately turned
+  it off. Password alone does not get anyone in. There is no back door here
+  and no "customers only" version of this failure.
 
   Two field notes: **Sender email address** wants a real address
   (`no-reply@mail.kosher-connect.com`), not a bare hostname — `auth.kosher-
