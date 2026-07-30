@@ -382,6 +382,13 @@ function reconcilePhoneStatuses() {
   const activePhoneIds = new Set(
     rentals.filter(r => r.status === 'active' || r.status === 'overdue').map(r => r.phoneId)
   );
+  // A line imported from the rental sheet is 'rented' because the sheet said
+  // so: the rental itself predates the app and has NO record here. Without
+  // this guard the loop below reads "rented but no active rental" as "must
+  // have been returned" and frees the phone — on the 114-line import that is
+  // 77 phones marked available on first page load, saved, in one pass, with
+  // no way to tell which. Only lines the app itself tracks get reconciled.
+  const tracked = new Set(rentals.map(r => r.phoneId));
   let changed = false;
   phones.forEach(p => {
     const shouldBeRented = activePhoneIds.has(p.id);
@@ -389,6 +396,7 @@ function reconcilePhoneStatuses() {
       p.status = 'rented';
       changed = true;
     } else if (!shouldBeRented && p.status === 'rented') {
+      if (p.importSource && !tracked.has(p.id)) return;   // held off-system
       p.status = 'available';
       changed = true;
     }
@@ -1328,6 +1336,9 @@ function renderRentalsTab() {
   const availablePhones = phones.filter(p => p.status === 'available' && !p.maintenance).length;
   const returningToday  = rentals.filter(r => r.status === 'active' && r.toDate === today0).length;
   const outstandingDebt = rentals.reduce((s, r) => s + rentalDebt(r), 0);
+  // Only shown once there is something to review, so the card doesn't sit at
+  // zero forever after the import is worked through.
+  const needsReviewCount = reviewQueue().length;
 
   // B5 — the last tab predating the shared control: balance + status are now
   // kcFilterSort dimensions, so Rentals reads like every other list tab.
@@ -1369,6 +1380,14 @@ function renderRentalsTab() {
         <div class="stat-value ${returningToday > 0 ? 'gold' : 'purple'}">${returningToday}</div>
         <div class="stat-sub">Expected back</div>
       </div>
+      ${needsReviewCount > 0 ? `
+      <div class="stat-card" role="button" tabindex="0" style="cursor:pointer;"
+        onclick="openReviewQueueModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openReviewQueueModal()}"
+        title="Lines the imported sheet couldn't tell us for certain">
+        <div class="stat-label">Needs a look</div>
+        <div class="stat-value gold">${needsReviewCount}</div>
+        <div class="stat-sub">From the imported sheet</div>
+      </div>` : ''}
       <div class="stat-card">
         <div class="stat-label">Outstanding Debt</div>
         <div class="stat-value" style="color:${outstandingDebt>0?'var(--danger)':'var(--success)'};">${fmtGbp(outstandingDebt)}</div>
@@ -1660,10 +1679,14 @@ function renderPhoneRows() {
 function phoneOptionsFor(from, to) {
   const today = localISO();
   // A phone under maintenance is never offerable, whatever the dates say.
-  const inService = phones.filter(p => !p.maintenance);
+  // "Not rented" is not the same as "rentable". A permanent line is in a
+  // customer's pocket by arrangement, a not_working one is broken, and an
+  // unknown one hasn't been read yet — none of them have a rental record, so
+  // the conflict check alone would happily offer all three out.
+  const inService = phones.filter(p => !p.maintenance && p.status === 'available');
   const list = (from && to && to >= from)
     ? inService.filter(p => phoneConflicts(rentals, p.id, from, to, today).length === 0)
-    : inService.filter(p => p.status !== 'rented');
+    : inService;
   return list
     .map(p => `<option value="${p.id}">${escHtml(fmtPhone(p.number))} · ${escHtml(p.country)} · ${escHtml(p.company||'')} ${p.pool ? '(Pool: '+escHtml(p.pool)+')' : ''}</option>`)
     .join('');
@@ -2314,6 +2337,155 @@ function saveNewPhone() {
   toast(`Phone ${number} added! ✅`, 'success');
   closeDynamicModal();
   renderRentalsTab();
+}
+
+// ── Needs-review queue ───────────────────────────────────────────────────
+// Where the rental-pool import puts everything it could not read confidently
+// (docs/RENTAL-POOL-MIGRATION.md). The importer never rejects a row, so the
+// cleanup happens HERE — in the app, next to the customer records that can
+// actually resolve it — instead of in a spreadsheet before the migration.
+//
+// Mirror of REVIEW_LABEL in lib/rentalPoolImport.mjs. main.js is a plain
+// browser script and cannot import it; test/rentalPoolImport.test.mjs asserts
+// the two stay identical. Change both together.
+const REVIEW_LABELS = {
+  'holder-uncertain': 'Who has this was recorded with a question mark',
+  'holder-missing': 'Marked rented but nobody is named',
+  'due-date-missing': 'Marked rented with no return date',
+  'due-date-past': 'Return date has already passed',
+  'status-unknown': 'Status was not a word we recognise',
+  'number-ambiguous': 'Phone number has no country code',
+  'iccid-unclear': 'SIM number column held something else',
+  'imei-unclear': 'IMEI column held something else',
+  'account-unclear': 'Provider account is not an email address',
+  'note-unparsed': 'A note we could not file anywhere',
+  'carrier-unknown': 'Carrier is not one we know',
+};
+
+function reviewQueue() {
+  return phones.filter(p => p.needsReview && (p.reviewReasons || []).length);
+}
+
+let reviewFilter = 'all';
+
+function openReviewQueueModal(filter = 'all') {
+  reviewFilter = filter;
+  showDynamicModal(`
+    <div class="modal-title">🔍 Lines needing a look</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">
+      Imported from the rental sheet. Nothing here is wrong — it's what the sheet
+      couldn't tell us for certain. Work through it whenever; the pool is usable
+      meanwhile.
+    </div>
+    <div id="reviewBody"></div>
+  `);
+  renderReviewQueue();
+}
+
+function renderReviewQueue() {
+  const el = document.getElementById('reviewBody');
+  if (!el) return;
+  const all = reviewQueue();
+  if (!all.length) {
+    el.innerHTML = `<div style="padding:28px;text-align:center;color:var(--muted);">
+      Nothing left to review. 🎉</div>`;
+    return;
+  }
+  // Count by reason across the whole queue, not the filtered view — the chips
+  // have to keep showing what's left behind the one you're looking at.
+  const counts = {};
+  for (const p of all) for (const r of p.reviewReasons) counts[r] = (counts[r] || 0) + 1;
+  const shown = reviewFilter === 'all' ? all : all.filter(p => p.reviewReasons.includes(reviewFilter));
+
+  const chip = (val, label, n) => `<button class="btn ${reviewFilter === val ? 'btn-primary' : 'btn-outline'}"
+    style="font-size:12px;padding:5px 12px;" onclick="reviewFilter='${val}';renderReviewQueue()">${escHtml(label)} (${n})</button>`;
+
+  el.innerHTML = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+      ${chip('all', 'Everything', all.length)}
+      ${Object.entries(counts).sort((a, b) => b[1] - a[1])
+        .map(([r, n]) => chip(r, REVIEW_LABELS[r] || r, n)).join('')}
+    </div>
+    <div style="max-height:52vh;overflow:auto;display:flex;flex-direction:column;gap:8px;">
+      ${shown.map(reviewRowHtml).join('')}
+    </div>`;
+}
+
+function reviewRowHtml(p) {
+  const who = p.heldByNote || p.lastHeldByNote || '';
+  const raw = (p.importSource && p.importSource.raw || []).filter(Boolean).join(' · ');
+  return `
+    <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline;">
+        <div>
+          <strong style="font-size:15px;">${escHtml(fmtPhone(p.number || '—'))}</strong>
+          <span style="color:var(--muted);font-size:12.5px;">
+            ${escHtml(p.company || '')}${p.subBrand ? ' · ' + escHtml(p.subBrand) : ''}
+            ${p.country ? ' · ' + escHtml(p.country) : ''}
+            ${p.assetTag ? ' · ' + escHtml(p.assetTag) : ''}
+          </span>
+        </div>
+        <span class="badge badge-${p.status === 'rented' ? 'rental' : 'sim'}">${escHtml(p.status)}</span>
+      </div>
+      ${who ? `<div style="font-size:13px;margin-top:5px;">
+        ${p.heldByNote ? 'With' : 'Last with'}: <strong>${escHtml(who)}</strong>
+        ${p.holderUncertain ? '<span style="color:var(--gold);"> (not certain)</span>' : ''}
+        ${p.dueDate ? ` · due <strong>${escHtml(p.dueDate)}</strong>` : ''}
+      </div>` : ''}
+      <div style="margin-top:7px;display:flex;gap:5px;flex-wrap:wrap;">
+        ${p.reviewReasons.map(r => `<span class="badge badge-warning" style="font-size:11px;">${escHtml(REVIEW_LABELS[r] || r)}</span>`).join('')}
+      </div>
+      ${p.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">${escHtml(p.notes)}</div>` : ''}
+      <details style="margin-top:6px;"><summary style="font-size:11.5px;color:var(--muted);cursor:pointer;">Original sheet row ${p.importSource ? p.importSource.row : ''}</summary>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:4px;word-break:break-word;">${escHtml(raw)}</div>
+      </details>
+      <div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap;">
+        ${p.status === 'rented' || p.status === 'permanent'
+          ? `<button class="btn btn-outline" style="font-size:12px;padding:4px 11px;" onclick="reviewMarkBack('${escHtml(p.id)}')">📥 It's back</button>` : ''}
+        <button class="btn btn-outline" style="font-size:12px;padding:4px 11px;" onclick="reviewOpenPhone('${escHtml(p.id)}')">✏️ Edit line</button>
+        <button class="btn btn-outline" style="font-size:12px;padding:4px 11px;" onclick="reviewDismiss('${escHtml(p.id)}')">✓ Looks right</button>
+      </div>
+    </div>`;
+}
+
+// "It's back" is the one-tap answer to the biggest group in the queue: a line
+// the sheet still calls rented, whose return date passed months ago. Frees the
+// phone, keeps the holder as history.
+async function reviewMarkBack(phoneId) {
+  const p = phones.find(x => x.id === phoneId);
+  if (!p) return;
+  p.lastHeldByNote = p.heldByNote || p.lastHeldByNote || '';
+  p.heldByNote = '';
+  p.status = 'available';
+  p.dueDate = null;
+  clearReviewFlags(p, ['due-date-past', 'due-date-missing', 'holder-missing', 'holder-uncertain']);
+  await savePhones(phones);
+  renderReviewQueue();
+  renderRentalsTab();
+  toast(`${fmtPhone(p.number)} is back in stock.`, 'success');
+}
+
+// Dismissing says "the sheet was right, I've read it" — it clears the flags
+// without touching the data. Deliberately not a bulk action: the whole point
+// of the queue is that a person looked at each one.
+async function reviewDismiss(phoneId) {
+  const p = phones.find(x => x.id === phoneId);
+  if (!p) return;
+  p.needsReview = false;
+  p.reviewReasons = [];
+  await savePhones(phones);
+  renderReviewQueue();
+  renderRentalsTab();
+}
+
+function reviewOpenPhone(phoneId) {
+  closeDynamicModal();
+  openEditPhoneModal(phoneId);
+}
+
+function clearReviewFlags(p, codes) {
+  p.reviewReasons = (p.reviewReasons || []).filter(r => !codes.includes(r));
+  p.needsReview = p.reviewReasons.length > 0;
 }
 
 function openEditPhoneModal(phoneId) {

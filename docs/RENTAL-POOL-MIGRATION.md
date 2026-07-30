@@ -86,6 +86,42 @@ clean. That moves the cleanup *before* the migration, back into Excel, alone,
 with none of the app's data to help him — which is how a migration becomes
 something you never quite get round to finishing.
 
+## What was built (30/07/2026)
+
+* **`lib/rentalPoolImport.mjs`** — the parser. Pure, no clock, no I/O, so every
+  leniency rule is testable. `test/rentalPoolImport.test.mjs` drives it from the
+  actual cell values in the sheet (`Pemenant`, `?Erenfeld`, `sim?` in the IMEI
+  column) rather than tidy invented ones.
+* **`scripts/import-rental-pool.mjs`** — reads the sheet, prints the summary,
+  and only writes with `--apply`. Dry run is the default.
+* **The review queue** — a "Needs a look" card on Rentals opens a list grouped
+  by reason, each row showing the line, why it was flagged, and the original
+  sheet row verbatim. `It's back` frees a line and keeps the holder as history;
+  `Looks right` clears the flags without touching the data.
+
+Dry run against the real sheet, 30/07/2026:
+
+| | |
+|---|---|
+| Lines read | 114, no duplicate numbers |
+| Status | 77 rented · 24 available · 9 permanent · 2 not working · 2 unknown |
+| Clean, no questions | **38** |
+| Needing a look | **76** — 43 overdue, 15 uncertain holder, 13 undated, 7 IMEI-column oddities, and a tail |
+
+Two bugs in the app itself surfaced while wiring this up, both of which the
+import would have triggered on day one:
+
+* `phoneOptionsFor` offered any line that was not `rented`, so permanent,
+  broken and unknown lines would all have appeared as rentable stock.
+* `reconcilePhoneStatuses` reads "rented with no active rental record" as
+  "must have been returned" and frees the phone. Imported lines are rented
+  because the *sheet* says so — the rental predates the app entirely — so the
+  first page load would have marked **77 phones available** and saved it.
+  Lines carrying an `importSource` and no rental record are now left alone.
+
+`lib/mappers.js` also silently rewrote any status it did not recognise to
+`available`; unknown values now land on `unknown`, which is visible.
+
 ## State of the app today
 
 `lines` holds **6** rows, 4 with no number at all: the placeholder seed from the
