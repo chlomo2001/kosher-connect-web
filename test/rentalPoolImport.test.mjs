@@ -146,6 +146,24 @@ test('id fields: length decides, and prose is preserved instead of written into 
   assert.equal(parseIdField('359370792455705', { min: 14, max: 16 }).value, '359370792455705')
 })
 
+test('id fields: an Excel-numeric IMEI does not gain a digit from its ".0"', () => {
+  // Excel stores these as numbers, so the cell reads "359370792455705.0".
+  // Naively stripping non-digits promotes the decimal zero to a real one and
+  // turns a valid 15-digit IMEI into a 16-digit number belonging to nobody.
+  const r = parseIdField('359370792455705.0', { min: 14, max: 16 })
+  assert.equal(r.value, '359370792455705')
+  assert.equal(r.value.length, 15)
+  assert.equal(parseIdField('351889728400632.0', { min: 14, max: 16 }).value, '351889728400632')
+  assert.equal(parsePoolDetails('356601718319432.0').imei, '356601718319432')
+})
+
+test('id fields: scientific notation is flagged, never turned into a short fake id', () => {
+  const r = parseIdField('8.9012E+19', { min: 18, max: 22 })
+  assert.equal(r.value, '')
+  assert.equal(r.clear, false)
+  assert.equal(r.leftover, '8.9012E+19')
+})
+
 test('account column: "Default" and bare numbers are not email addresses', () => {
   assert.equal(parseAccountEmail('elimel.echgrunnfeld@gmail.com').email, 'elimel.echgrunnfeld@gmail.com')
   assert.equal(parseAccountEmail('Default').clear, false)
