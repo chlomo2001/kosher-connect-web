@@ -3796,15 +3796,27 @@ function renderDetailPanel(id) {
           <div class="detail-name">${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:16px;">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
           <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${waLink(c, '') ? ` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
         </div>
+        <!-- Grouped by what the button DOES, not by the order they were added.
+             Nine identical squares in a row made the operator read every icon
+             every time; three small families are scannable. Reach them (talk
+             to the customer) · Money (take payment) · Manage (my own admin).
+             The groups are labelled for screen readers too, which a flat row
+             could not be. -->
         <div class="card-tools">
-          <button class="card-tool" onclick="openDraftReminderModal('${c.id}')" title="Draft a reminder message (does not send)" aria-label="Draft reminder">✉️</button>
-          <button class="card-tool" onclick="openAiReplyModal('${c.id}')" title="Draft an AI reply to a customer message (does not send)" aria-label="AI reply">💬</button>
-          <button class="card-tool" onclick="openLogCommModal('${c.id}')" title="Log a call or note" aria-label="Log call or note">📞</button>
-          <button class="card-tool" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer" aria-label="Set reminder">⏰</button>
-          <button class="card-tool" onclick="chargeCardOnFile('${c.id}')" title="Charge the customer's saved card on file (Stripe)" aria-label="Charge saved card">💳</button>
-          <button class="card-tool" onclick="openPaymentLinkModal('${c.id}')" title="Create a Stripe payment link tagged to this customer" aria-label="Create payment link">🔗</button>
-          ${(!currentStaff || currentStaff.role === 'owner') ? `<button class="card-tool" onclick="openElidModal('${c.id}')" title="Look up this customer's ELID (telecom) balance & status" aria-label="ELID lookup">📡</button>` : ''}
-          <button class="card-tool" onclick="openEditModal('${c.id}')" title="Edit customer" aria-label="Edit customer">✏️</button>
+          <span class="card-tool-group" role="group" aria-label="Contact this customer">
+            <button class="card-tool" onclick="openDraftReminderModal('${c.id}')" title="Draft a reminder message (does not send)" aria-label="Draft reminder">✉️</button>
+            <button class="card-tool" onclick="openAiReplyModal('${c.id}')" title="Draft an AI reply to a customer message (does not send)" aria-label="AI reply">💬</button>
+            <button class="card-tool" onclick="openLogCommModal('${c.id}')" title="Log a call or note" aria-label="Log call or note">📞</button>
+          </span>
+          <span class="card-tool-group" role="group" aria-label="Money">
+            <button class="card-tool" onclick="chargeCardOnFile('${c.id}')" title="Charge the customer's saved card on file (Stripe)" aria-label="Charge saved card">💳</button>
+            <button class="card-tool" onclick="openPaymentLinkModal('${c.id}')" title="Create a Stripe payment link tagged to this customer" aria-label="Create payment link">🔗</button>
+          </span>
+          <span class="card-tool-group" role="group" aria-label="Manage">
+            <button class="card-tool" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer" aria-label="Set reminder">⏰</button>
+            ${(!currentStaff || currentStaff.role === 'owner') ? `<button class="card-tool" onclick="openElidModal('${c.id}')" title="Look up this customer's ELID (telecom) balance & status" aria-label="ELID lookup">📡</button>` : ''}
+            <button class="card-tool" onclick="openEditModal('${c.id}')" title="Edit customer" aria-label="Edit customer">✏️</button>
+          </span>
           <button class="card-close" onclick="dismissCustomerCard()" title="Close" aria-label="Close">✕</button>
         </div>
       </div>
@@ -11357,7 +11369,7 @@ async function renderSettingsTab() {
           <tr>
             <td><strong>${escHtml(m.name)}</strong><div style="font-size:11px;color:var(--muted);">order ${m.sortOrder}${m.notes ? ' · ' + escHtml(m.notes.slice(0, 50)) : ''}</div></td>
             <td style="font-feature-settings:'tnum';">${m.price != null ? fmtGbp(m.price) : '—'}</td>
-            <td style="font-size:11.5px;color:var(--muted);max-width:260px;">${escHtml(['Dual SIM: ' + (m.dualSim || '—'), 'Yiddish: ' + (m.yiddishText || '—'), 'Touch: ' + (m.touchScreen || '—'), 'Text: ' + (m.texting || '—')].join(' · '))}</td>
+            <td style="font-size:11.5px;color:var(--muted);max-width:260px;">${escHtml(['Dual SIM: ' + (m.dualSim || '—'), 'Hebrew: ' + (m.yiddishText || '—'), 'Touch: ' + (m.touchScreen || '—'), 'Text: ' + (m.texting || '—')].join(' · '))}</td>
             <td style="font-size:11.5px;">${m.pros || m.cons ? '✍️ written' : '<span style="color:var(--muted);">not written yet</span>'}</td>
             <td style="white-space:nowrap;">
               <button class="action-btn" onclick="openPhoneModelModal('${escHtml(m.id)}')">✏️</button>
@@ -11745,7 +11757,7 @@ function openPhoneModelModal(id = null) {
         <input class="form-input" id="pmDual" value="${escHtml(m?.dualSim || '')}" placeholder="Yes / No / Yes (second SIM is 2G)">
       </div>
       <div class="form-group">
-        <label class="form-label">Yiddish text</label>
+        <label class="form-label">Hebrew text</label>
         <input class="form-input" id="pmYiddish" value="${escHtml(m?.yiddishText || '')}" placeholder="Yes / No">
       </div>
       <div class="form-group">

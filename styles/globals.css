@@ -826,6 +826,17 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
    pills that overflowed the header and clipped "Edit" → "Ed". Labels moved to
    tooltips; the row wraps instead of truncating. */
 .card-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+/* Tools are grouped by job (contact · money · manage). Tight inside a group,
+   a hairline and real air between groups — so the row reads as three short
+   words instead of nine unrelated glyphs. The divider is drawn between
+   groups only, never leading, so a wrapped row never starts with a stray rule. */
+.card-tool-group { display: inline-flex; align-items: center; gap: 4px; }
+.card-tool-group + .card-tool-group {
+  margin-inline-start: 8px; padding-inline-start: 8px;
+  border-inline-start: 1px solid var(--border);
+}
+/* The ✕ is not a tool — it closes the card. Push it clear of the last group. */
+.card-tools .card-close { margin-inline-start: 10px; }
 .card-tool {
   width: 34px; height: 34px; padding: 0; flex: 0 0 auto;
   display: inline-flex; align-items: center; justify-content: center;

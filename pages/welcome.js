@@ -698,10 +698,17 @@ const SKY_CSS = `
   .sk-band-tint{background:var(--sk-band-alt)}
   .sk-band-inner{max-width:760px;margin:0 auto;text-align:center;display:flex;flex-direction:column;align-items:center}
   .sk-band-inner h2{font-size:clamp(26px,4vw,38px);line-height:1.08}
-  .sk-accent{font-family:var(--sk-fdisp);font-weight:800;font-size:clamp(24px,3.6vw,34px);
-    color:var(--sk-sky);letter-spacing:-.02em;margin-top:4px}
+  /* The accent and the subline are ONE sentence broken over two lines
+     ("Shabbos & Yom Tov / never charged — priced by the day"). At 34px against
+     14.5px the eye took the accent as a finished headline and never travelled
+     to the line that says what about it — so the claim read as a fragment.
+     Closing the ratio from 2.3× to ~1.6×, and tightening the gap, binds them
+     back into one phrase. The accent also stops competing with the h2 above. */
+  .sk-accent{font-family:var(--sk-fdisp);font-weight:800;font-size:clamp(21px,3vw,28px);
+    color:var(--sk-sky);letter-spacing:-.02em;margin-top:4px;line-height:1.15}
   :root[data-theme="dark"] .sk-accent{color:var(--sk-sky-bright)}
-  .sk-subline{color:var(--sk-gold);font-size:14.5px;margin-top:8px;font-style:italic}
+  .sk-subline{color:var(--sk-gold);font-size:17px;font-weight:600;margin-top:5px;
+    font-style:italic;line-height:1.35}
   .sk-band-body{color:var(--sk-muted);margin:18px 0 0;font-size:16.5px;max-width:60ch}
   .sk-band-note{color:var(--sk-muted);margin:10px 0 0;font-size:15px;font-weight:600;max-width:60ch}
   .sk-band-price{color:var(--sk-muted);margin:12px 0 0;font-size:13.5px}

@@ -5,7 +5,7 @@ import AuthBackdrop from '../components/AuthBackdrop'
 import { FlipPhoneIcon } from '../components/kcIcons'
 
 // The public phone guide — every handset the shop stands behind, with price,
-// the spec facts customers actually ask about (dual SIM? Yiddish text?
+// the spec facts customers actually ask about (dual SIM? Hebrew text?
 // touch-screen? texting?) and the owner's own pros/cons per model.
 // Content comes from the phone_models table, edited in Settings → Phone guide;
 // nothing on this page requires a code change to update.
@@ -27,7 +27,7 @@ const T = {
     lead2: ' — and if the right phone for you is the cheapest one on the list, that’s the one we’ll recommend.',
     loading: 'Loading the guide…',
     empty1: 'The guide is being written — call us on', empty2: 'and we’ll talk you through the options.',
-    specs: { dualSim: 'Dual SIM', yiddishText: 'Yiddish text', touchScreen: 'Touch-screen', texting: 'Texting' },
+    specs: { dualSim: 'Dual SIM', yiddishText: 'Hebrew text', touchScreen: 'Touch-screen', texting: 'Texting' },
     askInShop: 'Ask in shop',
     prosAria: "What's good", consAria: 'Worth knowing',
     foot1: 'OTP texting means the phone can receive texts from the bank only — nothing else gets through.',
@@ -45,7 +45,7 @@ const T = {
     lead2: ' — ואם הטלפון הנכון עבורכם הוא דווקא הזול ביותר ברשימה, עליו נמליץ.',
     loading: 'המדריך נטען…',
     empty1: 'המדריך עוד נכתב — התקשרו אלינו:', empty2: 'ונעבור איתכם על האפשרויות.',
-    specs: { dualSim: 'שני כרטיסי סים', yiddishText: 'טקסט ביידיש', touchScreen: 'מסך מגע', texting: 'הודעות' },
+    specs: { dualSim: 'שני כרטיסי סים', yiddishText: 'טקסט בעברית', touchScreen: 'מסך מגע', texting: 'הודעות' },
     askInShop: 'שאלו בחנות',
     prosAria: 'מה טוב', consAria: 'כדאי לדעת',
     foot1: 'טקסט OTP פירושו שהטלפון מקבל הודעות מהבנק בלבד — שום דבר אחר לא עובר.',
@@ -54,6 +54,11 @@ const T = {
   },
 }
 
+// `yiddishText` is a legacy field name (and `phone_models.yiddish_text` in the
+// database). The spec it records is whether the handset displays the ALEPH
+// BEIS — Hebrew characters — not whether it speaks Yiddish, so every label a
+// person reads now says Hebrew. Renaming the column is a migration for its own
+// day; until then the labels above are the truth and this key is just plumbing.
 const SPEC_KEYS = ['dualSim', 'yiddishText', 'touchScreen', 'texting']
 
 const lines = (s) => String(s || '').split('\n').map((l) => l.trim().replace(/^[-•]\s*/, '')).filter(Boolean)
@@ -87,7 +92,7 @@ export default function PhoneGuide() {
     <>
       <Head>
         <title>Phone guide — Kosher Connect</title>
-        <meta name="description" content="Every kosher handset we sell, compared honestly: price, dual SIM, Yiddish text, touch-screen and texting options — straight answers from the counter." />
+        <meta name="description" content="Every kosher handset we sell, compared honestly: price, dual SIM, Hebrew text, touch-screen and texting options — straight answers from the counter." />
         <link rel="canonical" href="https://app.kosher-connect.com/phone-guide" />
       </Head>
       <div className="welcome-shell">
