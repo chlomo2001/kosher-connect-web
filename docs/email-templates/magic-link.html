@@ -1,0 +1,59 @@
+<!-- Kosher Connect — Supabase "Magic Link" email template.
+     Paste into Supabase → Authentication → Emails → Magic Link → Message body.
+     Subject: Your Kosher Connect sign-in link
+     Mirrors lib/email.js brandShell(): wordmark, navy→gold keyline, message
+     card, business footer. Table-based with inline styles — the only layout
+     language every mail client still respects.
+     Supabase fills {{ .ConfirmationURL }} (the one-time link) and
+     {{ .Token }} (the same code as six digits, for anyone whose mail client
+     mangles links). Both expire together. -->
+<!doctype html>
+<html>
+<body style="margin:0;background:#f2f4f7;padding:28px 12px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f2430">
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all">Your one-time sign-in link for Kosher Connect — it expires in one hour.</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+    <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%">
+      <tr><td style="padding:0 6px 14px" align="center">
+        <img src="https://app.kosher-connect.com/logo-full-tight.png" alt="Kosher Connect" width="168" style="display:block;height:auto;max-width:168px">
+      </td></tr>
+      <tr><td>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e8ecf1">
+          <tr><td style="background:#0a2540;padding:0;font-size:0;line-height:0;height:4px">
+            <div style="height:4px;background:linear-gradient(90deg,#0a2540,#d49e60);"></div></td></tr>
+          <tr><td style="padding:26px 32px 6px;font-size:19px;font-weight:600;color:#0a2540;letter-spacing:-0.2px">Your sign-in link</td></tr>
+          <tr><td style="padding:0 32px 10px">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.55">
+              <tr><td style="padding:6px 0 14px">
+                Tap the button below and you’ll be signed in to your Kosher Connect account. There is no password to remember.
+              </td></tr>
+              <tr><td align="center" style="padding:6px 0 18px">
+                <a href="{{ .ConfirmationURL }}"
+                   style="display:inline-block;background:#0a2540;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:13px 30px;border-radius:9px">
+                  Sign in to Kosher Connect
+                </a>
+              </td></tr>
+              <tr><td style="padding:0 0 14px;font-size:13px;color:#64748b;line-height:1.6">
+                Button not working? Use this code instead:
+                <span style="display:inline-block;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:17px;letter-spacing:3px;color:#0a2540;background:#f2f4f7;border:1px solid #e8ecf1;border-radius:7px;padding:5px 11px;margin-top:6px">{{ .Token }}</span>
+              </td></tr>
+              <tr><td style="padding:0 0 6px;font-size:13px;color:#64748b;line-height:1.6">
+                The link and the code both stop working in one hour, and each can only be used once.
+              </td></tr>
+            </table>
+          </td></tr>
+          <tr><td style="padding:14px 32px 24px;font-size:12px;color:#94a3b8;line-height:1.6;border-top:1px solid #e8ecf1">
+            If you didn’t ask to sign in, you can ignore this email — nobody can get into your account without the link above. Any questions, simply reply or give us a ring.
+          </td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:18px 10px 0;text-align:center;font-size:12px;color:#94a3b8;line-height:1.7">
+        <strong style="color:#64748b">Kosher Connect</strong> · Kosher phones, SIM plans, travel rentals &amp; Kol Torah audio<br>
+        421 Bury New Road, Salford M7 4ED (door left of Toy Zone, first floor up)<br>
+        <a href="tel:+441615311386" style="color:#64748b;text-decoration:none">+44 161 531 1386</a> ·
+        <a href="mailto:admin@kosher-connect.com" style="color:#64748b;text-decoration:none">admin@kosher-connect.com</a><br>
+        <span style="font-size:11px">Kosher Connect is a trading name of Hatsluche Ltd.</span>
+      </td></tr>
+    </table>
+  </td></tr></table>
+</body>
+</html>
