@@ -149,7 +149,7 @@ export default function TransferWizard() {
 
   return (
     <>
-      <Head><title>Phone-to-phone transfer · KosherConnect</title></Head>
+      <Head><title>Phone-to-phone transfer · Kosher Connect</title></Head>
       <div className="tool-shell">
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         <div className="tool-wrap">

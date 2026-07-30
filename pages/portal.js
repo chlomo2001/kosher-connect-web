@@ -783,7 +783,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
         {langBtn}
         <form className="login-card" dir={dir} onSubmit={submit}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <img src="/logo-full-tight.png" alt="KosherConnect" style={{ height: 44, marginBottom: 12 }} />
+            <img src="/logo-full-tight.png" alt="Kosher Connect" style={{ height: 44, marginBottom: 12 }} />
             <div className="login-title">{L.title}</div>
             <div className="login-sub">{L.subSignedOut(greeting)}</div>
           </div>

@@ -27,7 +27,7 @@ async function handler(req, res) {
   const to = String(req.body?.to || '').replace(/[^\d+]/g, '')
   if (to.length < 7) return res.status(400).json({ success: false, error: 'Enter the number to text (e.g. +44 7…).' })
   try {
-    const r = await sendSms({ to, body: 'KosherConnect test — the SMS connection works. 👍' })
+    const r = await sendSms({ to, body: 'Kosher Connect test — the SMS connection works. 👍' })
     return res.json({ success: true, provider, ...r })
   } catch (e) {
     console.error('[api/sms-test]', e)

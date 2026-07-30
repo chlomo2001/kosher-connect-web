@@ -142,7 +142,7 @@ export default function ContactsConverter() {
 
   return (
     <>
-      <Head><title>Contacts Converter · KosherConnect</title></Head>
+      <Head><title>Contacts Converter · Kosher Connect</title></Head>
       <div className="tool-shell">
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         <div className="tool-wrap">

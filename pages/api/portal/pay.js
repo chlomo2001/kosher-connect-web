@@ -50,7 +50,7 @@ export default async function handler(req, res) {
   const pi = await createPaymentIntent({
     amountPence: Math.round(amount * 100), currency: 'gbp',
     customerId: stripeCustomerId, appCustomerId: cust.id, reference,
-    description: `KosherConnect — payment from ${name || 'customer'}`,
+    description: `Kosher Connect — payment from ${name || 'customer'}`,
   })
   return res.json({ success: true, clientSecret: pi.client_secret, publishableKey, amount })
 }

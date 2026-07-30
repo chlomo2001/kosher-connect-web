@@ -217,6 +217,11 @@ function fmtPhone(raw) {
   return cc + ' ' + rest;
 }
 
+// Mirror of WHATSAPP_ENABLED in lib/flags.js — main.js is a plain script and
+// cannot import it. Change both together. Off = waLink() returns '' , which
+// removes every "Open in WhatsApp" button (they are all guarded on it).
+const WHATSAPP_ENABLED = false;
+
 // WhatsApp deep link for a customer's phone. Only builds a wa.me URL — staff
 // press send inside WhatsApp themselves, so this stays within the app's
 // nothing-is-auto-sent discipline. Returns '' when there's no usable phone.
@@ -230,6 +235,7 @@ function waPhoneDigits(phone) {
   return d;
 }
 function waLink(customer, text) {
+  if (!WHATSAPP_ENABLED) return '';
   const digits = waPhoneDigits(customer && customer.phone);
   if (!digits) return '';
   return `https://wa.me/${digits}${text ? '?text=' + encodeURIComponent(text) : ''}`;
@@ -4549,7 +4555,7 @@ function openLogCommModal(customerId) {
         <select class="form-input" id="clType">
           <option value="call_in">📞 Call — incoming</option>
           <option value="call_out">📲 Call — outgoing</option>
-          <option value="message">💬 Message (WhatsApp / SMS)</option>
+          <option value="message">💬 Message${WHATSAPP_ENABLED ? ' (WhatsApp / SMS)' : ' (SMS)'}</option>
           <option value="note">📝 Note</option>
         </select>
       </div>
@@ -4594,7 +4600,7 @@ function buildReminderDraft(c) {
     lines.push(`Reminder: your flight ${b.route || ''} is on ${fmtDate(b.travelDate)}.`); any = true;
   }
   if (!any) lines.push(`Just checking in — let us know if you need anything.`);
-  lines.push('', 'Thank you,', 'KosherConnect');
+  lines.push('', 'Thank you,', 'Kosher Connect');
   return lines.join('\n');
 }
 function openDraftReminderModal(customerId) {
@@ -4673,7 +4679,7 @@ function openAiReplyModal(customerId) {
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Paste what the customer wrote and the AI drafts a reply in the shop's voice, using their account facts. <strong>Nothing is sent</strong> — read it, edit it, then copy. Don't paste passport/ID numbers (the text goes to Google).</div>
     <div class="form-group form-full">
       <label class="form-label">Customer's message</label>
-      <textarea class="form-input" id="airIn" rows="4" placeholder="Paste the WhatsApp / SMS / email the customer sent…"></textarea>
+      <textarea class="form-input" id="airIn" rows="4" placeholder="Paste the ${WHATSAPP_ENABLED ? 'WhatsApp / ' : ''}SMS or email the customer sent…"></textarea>
     </div>
     <div class="form-grid" style="margin:4px 0 2px;">
       <div class="form-group">
@@ -4769,7 +4775,7 @@ function buildRentalSms(r) {
   } else {
     body = `your rental of ${r.phoneNumber || 'the phone'} runs until ${fmtDate(r.toDate)}.${owedLine}`;
   }
-  return `Hi ${first}, ${body}\n— KosherConnect`;
+  return `Hi ${first}, ${body}\n— Kosher Connect`;
 }
 function openRentalSmsModal(rentalId) {
   const r = rentals.find(x => x.id === rentalId);
@@ -5406,7 +5412,12 @@ async function saveCustomer() {
 
   const payload = { firstName, lastName, phone: fullPhone, email: contactEmail, address, notes,
     accountEmail,
-    hasWhatsapp: !!document.getElementById('fHasWhatsapp')?.checked,
+    // Only sent when the field is on screen — the PUT merges over the stored
+    // row, so omitting it while the WhatsApp channel is off preserves whatever
+    // was already recorded instead of silently clearing it.
+    ...(document.getElementById('fHasWhatsapp')
+      ? { hasWhatsapp: document.getElementById('fHasWhatsapp').checked }
+      : {}),
     passportOnFile: document.getElementById('fPassportOnFile').checked };
 
   if (editId) {
@@ -7240,7 +7251,7 @@ function openRepairSmsModal(repairId) {
   const c = customers.find(x => x.id === r.customerId);
   showDynamicModal(`
     <div class="modal-title">✉️ Ready to collect — ${escHtml(r.customerName || '')}</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Edit it, then copy or open WhatsApp — <strong>nothing is sent</strong> from here.</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Edit it, then ${WHATSAPP_ENABLED ? 'copy or open WhatsApp' : 'copy it into your messages'} — <strong>nothing is sent</strong> from here.</div>
     <textarea class="form-input" id="rpsmsText" rows="4" style="font-family:inherit;">${escHtml(buildRepairSms(r))}</textarea>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
@@ -9081,7 +9092,7 @@ function checkLocalReminders() {
   for (const r of due) {
     toast(`⏰ REMINDER: ${r.label}`, 'warning');
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('KosherConnect — reminder', { body: r.label, icon: '/logo.png' });
+      new Notification('Kosher Connect — reminder', { body: r.label, icon: '/logo.png' });
     }
   }
 }

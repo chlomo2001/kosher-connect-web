@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import Script from 'next/script'
 import { Fragment } from 'react'
+import { WHATSAPP_ENABLED } from '../lib/flags'
 
 /* Monochrome line icons (Feather-style, 20px, 1.6 stroke, currentColor) —
    they inherit the nav item's colour, so they light up on hover/active
@@ -55,7 +56,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
       <Head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>KosherConnect – Customer Management</title>
+        <title>Kosher Connect – Customer Management</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -68,7 +69,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
           renders, then fades out (removed by initApp / the safety timeout). */}
       <div id="kcBoot" className="kc-boot">
         <span className="kc-logo-loader kc-boot-mark"><img src="/logo.png" alt="" width="56" height="56" /></span>
-        <div className="kc-boot-title">KosherConnect</div>
+        <div className="kc-boot-title">Kosher Connect</div>
         <div className="kc-boot-sub">Loading your business…</div>
       </div>
 
@@ -76,8 +77,8 @@ export default function AppShell({ initialTab = 'dashboard' }) {
           driven by the topbar burger; the scrim below catches outside taps. */}
       <div className="sidebar" id="appSidebar">
         <div className="logo">
-          <img src="/logo.png" alt="KosherConnect" style={{ background: '#fff', padding: 5 }} />
-          <div className="logo-title">KosherConnect</div>
+          <img src="/logo.png" alt="Kosher Connect" style={{ background: '#fff', padding: 5 }} />
+          <div className="logo-title">Kosher Connect</div>
           <div className="logo-sub">Business Management System</div>
         </div>
 
@@ -116,7 +117,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
           <div className="sidebar-user" id="sidebarUser" hidden />
           <a className="sb-row" href="#" onClick={(e) => { e.preventDefault(); fetch('/api/auth/logout', { method: 'POST' }).then(() => { window.location.href = '/login' }) }}>
             <span className="nav-icon">{ICONS.signout}</span> Sign out</a>
-          <div className="sb-version">Version 1.0 · KosherConnect</div>
+          <div className="sb-version">Version 1.0 · Kosher Connect</div>
         </div>
       </div>
 
@@ -197,10 +198,12 @@ export default function AppShell({ initialTab = 'dashboard' }) {
               </div>
               <span className="form-error" id="errPhone">Required</span>
               <div className="form-warning" id="warnPhone">⚠️ This phone number already exists for another customer.</div>
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 6, fontWeight: 400 }}>
-                <input type="checkbox" id="fHasWhatsapp" style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
-                💬 Has WhatsApp
-              </label>
+              {WHATSAPP_ENABLED && (
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 6, fontWeight: 400 }}>
+                  <input type="checkbox" id="fHasWhatsapp" style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+                  💬 Has WhatsApp
+                </label>
+              )}
             </div>
 
             <div className="form-group">

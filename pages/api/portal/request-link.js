@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   if (!tablesMode) return res.status(503).json({ success: false, error: 'Portal unavailable.' })
 
   const norm = normalizeEmail(req.body?.email)
-  const generic = { success: true, message: 'If that email belongs to a KosherConnect customer, a sign-in link is on its way.' }
+  const generic = { success: true, message: 'If that email belongs to a Kosher Connect customer, a sign-in link is on its way.' }
   if (!norm) return res.json(generic)
 
   // Always issue the link so response timing can't reveal whether the email is a

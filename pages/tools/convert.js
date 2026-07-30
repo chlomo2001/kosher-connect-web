@@ -173,7 +173,7 @@ export default function Converter() {
 
   return (
     <>
-      <Head><title>File Converter · KosherConnect</title></Head>
+      <Head><title>File Converter · Kosher Connect</title></Head>
       <div className="tool-shell">
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         <div className="tool-wrap">

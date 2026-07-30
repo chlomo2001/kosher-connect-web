@@ -3,6 +3,7 @@ import Head from 'next/head'
 import Script from 'next/script'
 import ThemeToggle from '../components/ThemeToggle'
 import AuthBackdrop from '../components/AuthBackdrop'
+import { WHATSAPP_ENABLED } from '../lib/flags'
 
 // Public "Join Kosher Connect" — the native replacement for the owner's Google
 // signup form. Name + phone (+ optional email and a free-text ask) land as an
@@ -181,7 +182,7 @@ export default function Join() {
                   <div className="form-group form-full">
                     <span className="form-label" id="jn-reach-label">{t.reach}</span>
                     <div role="radiogroup" aria-labelledby="jn-reach-label" className="jn-chips">
-                      {['call', 'text', 'whatsapp', 'email'].map((k) => {
+                      {['call', 'text', 'whatsapp', 'email'].filter((k) => k !== 'whatsapp' || WHATSAPP_ENABLED).map((k) => {
                         const on = form.preferredContact === k
                         return (
                           <button key={k} type="button" role="radio" aria-checked={on}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
+import { WHATSAPP_ENABLED } from '../lib/flags'
 import {
   PlaneIcon, FlipPhoneIcon, MusicIcon, WrenchIcon, BagIcon, ChatIcon,
   PhoneCallIcon, MailIcon, PinIcon,
@@ -332,7 +333,7 @@ export default function Welcome() {
         <header className="sk-nav-wrap">
           <div className="sk-wrap sk-nav">
             <a className="sk-brand" href="#top">
-              <img className="sk-logo" src="/logo-full-tight.png" alt="Kosher Connect" />
+              <span className="sk-logo" role="img" aria-label={t.brandName} />
             </a>
             <nav className="sk-nav-links" aria-label="Site">
               <a href="#mobile" className="sk-navlink">{t.nav.mobile}</a>
@@ -464,7 +465,9 @@ export default function Welcome() {
             </form>
             <p className="sk-prefer">
               {t.preferCall} <a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a>
-              &nbsp;·&nbsp;<a href={waHref} target="_blank" rel="noopener noreferrer">{t.waLabel}</a>
+              {WHATSAPP_ENABLED && (
+                <>&nbsp;·&nbsp;<a href={waHref} target="_blank" rel="noopener noreferrer">{t.waLabel}</a></>
+              )}
               &nbsp;·&nbsp;<a className="sk-join" href="/join">{t.joinCta}</a>
             </p>
           </div>
@@ -513,10 +516,12 @@ export default function Welcome() {
           <div className="sk-wrap">
             <div className="sk-foot-grid">
               <div className="sk-foot-brand">
-                <img className="sk-logo sk-foot-logo" src="/logo-full-tight.png" alt="Kosher Connect" />
+                <span className="sk-logo sk-foot-logo" role="img" aria-label={t.brandName} />
                 <p dir="ltr">{t.addressLine}</p>
                 <p><a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a></p>
-                <p><a href={waHref} target="_blank" rel="noopener noreferrer">{t.waLabel}</a></p>
+                {WHATSAPP_ENABLED && (
+                  <p><a href={waHref} target="_blank" rel="noopener noreferrer">{t.waLabel}</a></p>
+                )}
                 <p><a href={`mailto:${EMAIL}`} dir="ltr">{EMAIL}</a></p>
               </div>
               <nav className="sk-foot-col" aria-label={t.footServices}>
@@ -610,9 +615,15 @@ const SKY_CSS = `
   .sk-nav{display:flex;align-items:center;justify-content:space-between;height:66px;gap:14px}
   /* logo-full-tight.png is the artwork with its transparent padding cropped off —
      the original canvas is ~2/3 empty, which made the mark render ~11px tall. */
-  .sk-logo{height:32px;width:auto;display:block}
-  :root[data-theme="dark"] .sk-logo{filter:brightness(0) invert(1)}
-  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-logo{filter:brightness(0) invert(1)}}
+  /* Dark mode gets its own artwork rather than a filter: brightness(0)+invert
+     flattened the whole mark to one flat white, losing the gold and the blue.
+     -dark.png keeps the gold and lifts only the navy wordmark to near-white,
+     so the brand still reads as the brand on the dark canvas. Background-image
+     (not two <img>s) so only the theme's own file is ever fetched. */
+  .sk-logo{height:32px;aspect-ratio:825/196;display:block;
+    background:url(/logo-full-tight.png) center/contain no-repeat}
+  :root[data-theme="dark"] .sk-logo{background-image:url(/logo-full-tight-dark.png)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-logo{background-image:url(/logo-full-tight-dark.png)}}
   .sk-nav-links{display:flex;align-items:center;gap:20px}
   .sk-navlink{color:var(--sk-muted);font-weight:600;font-size:14.5px;white-space:nowrap;
     border-bottom:2px solid transparent;padding-bottom:2px}

@@ -2113,7 +2113,17 @@ html { scroll-behavior: smooth; }
   padding: 12px 22px; background: var(--surface); border-bottom: 1px solid var(--border);
 }
 .pd-logo { height: 26px; width: auto; display: block; }
-:root[data-theme="dark"] .pd-logo { filter: brightness(0) invert(1); }
+
+/* Dark mode swaps in the dark artwork instead of filtering the light one:
+   brightness(0)+invert(1) flattened the whole mark to a single flat white,
+   throwing away the gold and the blue. -dark.png keeps the gold and lifts
+   only the navy wordmark, and is the same pixel size so nothing shifts.
+   Scoped to the portal bar deliberately — the login/join/guide cards stay
+   cream in every theme, so they must keep the light artwork. */
+:root[data-theme="dark"] .pd-logo { content: url(/logo-full-tight-dark.png); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .pd-logo { content: url(/logo-full-tight-dark.png); }
+}
 .pd-top-actions { display: flex; align-items: center; gap: 10px; }
 .pd-chip {
   border: 1px solid var(--border); background: var(--surface); color: var(--text);

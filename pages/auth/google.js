@@ -34,13 +34,13 @@ export default function GoogleAuth() {
 
   return (
     <>
-      <Head><title>Signing in · KosherConnect</title></Head>
+      <Head><title>Signing in · Kosher Connect</title></Head>
       <div className="login-shell">
         <div className="login-mesh" aria-hidden="true" />
         <AuthBackdrop />
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         <div className="login-card" style={{ textAlign: 'center' }}>
-          <img src="/logo-full-tight.png" alt="KosherConnect" style={{ height: 40, marginBottom: 14 }} />
+          <img src="/logo-full-tight.png" alt="Kosher Connect" style={{ height: 40, marginBottom: 14 }} />
           {error ? (
             <>
               <div style={{ color: 'var(--danger)', fontSize: 14, marginBottom: 16, lineHeight: 1.5 }}>{error}</div>
