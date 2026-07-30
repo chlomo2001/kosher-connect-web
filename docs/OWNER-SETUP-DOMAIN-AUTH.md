@@ -25,28 +25,41 @@ another account.
 is live on them, repointing the DNS takes it down. That is the one genuinely
 irreversible-feeling step here, so it wants a decision, not a default.
 
-**Decide what the main domain should serve.** Two sane options:
+**Decision (owner, 30/07/2026): serve the shop site directly.** The main domain
+shows the public welcome page; `app.kosher-connect.com` stays the staff app.
 
-* **Redirect** — `kosher-connect.com` and `www` both 301 to
-  `app.kosher-connect.com`. One site, one set of URLs, no SEO split. Simplest.
-* **Serve the shop site directly** — the main domain shows the public welcome
-  page, `app.` stays the staff app. Nicer for customers ("kosher-connect.com"
-  on a business card), and it is what most shops do.
+**The code side is already done and live on the dev branch** (`middleware.js`):
+one Vercel project answers all three hostnames, and the split is made by the
+`Host` header — `/` on `kosher-connect.com` and `www` is *rewritten* to
+`/welcome`, so the customer keeps seeing `kosher-connect.com` in the address
+bar rather than being bounced to `/welcome`. `app.` is untouched and still
+gives staff the dashboard. Every other path (`/join`, `/portal`, `/login`, the
+APIs) behaves identically on all three names.
 
-**Steps once decided:**
+That change is inert until the DNS moves — no request with those Host headers
+reaches us today — so it is safe to ship first and point the domain later.
 
-1. Vercel → project `kosher-connect-web` → Settings → Domains → **Add**
+**Steps (owner):**
+
+1. Open `https://kosher-connect.com` and `https://www.kosher-connect.com` in a
+   browser and note what is there. Repointing DNS takes whatever it is offline.
+   This is the only step that is awkward to undo, so look before moving.
+2. Vercel → project `kosher-connect-web` → Settings → Domains → **Add**
    `kosher-connect.com`, then `www.kosher-connect.com`.
-2. Vercel then shows the exact records to create — an `A` record for the apex
+3. Vercel then shows the exact records to create — an `A` record for the apex
    and a `CNAME` for `www`. Use the values Vercel shows on the day; they differ
    per account and change over time, so don't copy them from anywhere else.
-3. At the registrar (wherever kosher-connect.com's DNS is hosted), replace the
-   existing apex `A` record (currently 75.2.60.5) and the `www` record with
-   Vercel's values.
-4. Leave the `MX` records alone — those carry the email. Only touch `A`/`CNAME`
-   for the apex and `www`.
-5. Wait for Vercel to show both as Valid (usually minutes, up to a few hours),
-   then check the site loads on all three hostnames.
+4. At the registrar (wherever kosher-connect.com's DNS is hosted), replace the
+   existing apex `A` record (currently 75.2.60.5) and the `www` record
+   (currently AWS) with Vercel's values.
+5. Leave the `MX` records alone — those carry the email. Only touch `A`/`CNAME`
+   for the apex and `www`. Same for any `TXT` record: SPF/DKIM live there.
+6. Wait for Vercel to show both as Valid (usually minutes, up to a few hours),
+   then check: `kosher-connect.com` shows the shop page with the main domain
+   still in the address bar, and `app.kosher-connect.com` still signs staff in.
+
+If Vercel offers to redirect `www` → apex when you add it, say yes — it keeps
+one canonical address for Google. The middleware handles either way.
 
 ---
 
@@ -67,11 +80,26 @@ six-digit fallback code.
 
 **Two things worth checking while you're in there:**
 
-* **Who it comes from.** Under Project Settings → Authentication → SMTP. On
+* **Who it comes from.** Under Authentication → Emails → **SMTP Settings**. On
   Supabase's built-in mailer the sender is a Supabase address and sends are
   rate-limited to a handful an hour — fine for a trickle, not for a busy day.
   Pointing it at our own sending domain makes the From line read Kosher Connect
   and lifts the limit.
+
+  **Do not save that screen half-filled.** Custom SMTP is all-or-nothing: with
+  the toggle on and the Host/Username/Password blank, Supabase stops sending
+  auth email entirely. That is not just customer magic links — the staff
+  second-factor code comes down the same pipe (`lib/auth.js` `sendEmailOtp`
+  and `sendMagicLink` both hit the same endpoint), so an empty custom SMTP
+  config locks staff out of the app, including the owner. Either fill in all
+  four fields in one go, or leave the toggle off until you have them.
+
+  Two field notes: **Sender email address** wants a real address
+  (`no-reply@mail.kosher-connect.com`), not a bare hostname — `auth.kosher-
+  connect.com` is the *auth custom domain* from section 3, a different thing.
+  And the host/credentials should be the Resend SMTP ones, matching the
+  `MAIL_FROM` domain already used by `lib/email.js`, so both mailers sign as
+  the same sender and neither gets treated as spoofing the other.
 * **Where the button points.** Until section 3 is done the link's host is
   `xsrtdwwzxdmnjdtjcdzd.supabase.co`, which looks like a phishing link to a
   careful customer, however smart the email looks.
