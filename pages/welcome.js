@@ -657,9 +657,14 @@ const SKY_CSS = `
     border:0;font-family:inherit}
   .sk-btn:hover{transform:translateY(-1px)}
   .sk-btn:disabled{opacity:.6;cursor:default;transform:none}
-  .sk-btn-sky{background:var(--sk-sky);color:#fff}
-  .sk-btn-sky:hover{filter:brightness(1.08)}
-  .sk-btn-ghost{background:transparent;color:var(--sk-sky);border:1.5px solid var(--sk-sky)}
+  /* Scoped under .sk on purpose. The "a{color:inherit}" rule above is (0,1,1)
+     and a bare .sk-btn-sky is only (0,1,0) — so every button that is an <a>
+     lost its colour to the page ink and painted near-black on the blue pill
+     (the form's <button>, untouched by that rule, stayed white: same class,
+     two colours). .sk .sk-btn-* is (0,2,0) and wins. Keep the .sk prefix. */
+  .sk .sk-btn-sky{background:var(--sk-sky);color:#fff}
+  .sk .sk-btn-sky:hover{filter:brightness(1.08)}
+  .sk .sk-btn-ghost{background:transparent;color:var(--sk-sky);border:1.5px solid var(--sk-sky)}
   .sk-btn-sm{padding:9px 17px;font-size:14px}
   .sk-btn-lg{padding:13px 26px;font-size:15.5px}
 
@@ -744,7 +749,7 @@ const SKY_CSS = `
   .sk-form-err{color:var(--sk-gold);font-size:14px;margin:2px 0 0;font-weight:600}
   :root[data-theme="dark"] .sk-form-ok{color:#5fd08a}
   .sk-prefer{color:var(--sk-muted);font-size:14px;margin:24px auto 0;max-width:60ch}
-  .sk-prefer a,.sk-join{color:var(--sk-sky);font-weight:700}
+  .sk-prefer a,.sk .sk-join{color:var(--sk-sky);font-weight:700}
   :root[data-theme="dark"] .sk-prefer a,:root[data-theme="dark"] .sk-join{color:var(--sk-sky-bright)}
 
   /* visit — live map card + shop details */

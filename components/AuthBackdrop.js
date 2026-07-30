@@ -3,8 +3,8 @@ import WORLD from './worldOutline'
 
 // Branded auth background — a slowly-rotating wireframe globe with real
 // continent outlines as the centrepiece, a soft sunburst halo of light behind
-// it, and intercontinental arcs (flights + provider links) connecting hub
-// cities around the world. Live <canvas>, a few KB, crisp at any DPR.
+// it, and intercontinental network arcs connecting hub cities around the world.
+// Live <canvas>, a few KB, crisp at any DPR.
 //
 // • Colours are BASED ON THE LOGO: azure blue (#0060a8) + warm gold (#c09060)
 //   drive the atmosphere, coastlines and connections.
@@ -30,17 +30,20 @@ const CITIES = [
   [-118.2, 34], [-46.6, -23.5], [151.2, -33.9], [28, -26.2], [72.8, 19],
   [2.3, 48.9], [116.4, 39.9], [37.6, 55.7], [103.8, 1.35],
 ]
-// Flight routes [i, j] — carry a little plane, drawn airport-to-airport (from
-// the ground node, no signal pulse). A distinct set from the signal network.
-const FLIGHTS = [
-  [0, 1], [1, 3], [3, 4], [5, 0], [3, 7], [9, 13], [2, 10], [4, 7],
-]
 // Signal links [i, j, kind] — carry a travelling pulse, drawn tower-to-tower
 // (tip-to-tip, off the mast top). kind: 0 = data, 1 = gold "best route",
 // 2 = AUDIO (Kol Torah — Tel Aviv → London carries music notes, not dots).
+//
+// The scene used to also run a separate FLIGHTS set: dashed airport-to-airport
+// bows with a little aeroplane tracing each one. Removed 30/07/2026 — the
+// public pages shouldn't read as a travel agency (the flight desk is a private,
+// word-of-mouth service). The four routes worth keeping for network density
+// were folded in below as ordinary data links, so the globe still looks busy
+// without a single plane on it. Anything plane-shaped stays out of this file.
 const SIGNALS = [
   [2, 3, 1], [2, 1, 2], [3, 9, 0], [13, 11, 0], [8, 2, 1], [12, 1, 0],
   [4, 13, 0], [6, 0, 0], [11, 4, 0], [5, 6, 0], [1, 10, 0],
+  [0, 1, 0], [5, 0, 0], [3, 7, 0], [4, 7, 0],
 ]
 
 export default function AuthBackdrop() {
@@ -79,10 +82,6 @@ export default function AuthBackdrop() {
       r: 0.7 + Math.random() * 0.7, lp: Math.random() * 6.283,
       tp: Math.random() * 6.283, ds: 0.5 + Math.random() * 0.8,
     }))
-    // Small aeroplane outline (nose at +x), a half-silhouette mirrored.
-    const PH = [[1, 0], [0.2, 0.1], [-0.05, 0.52], [-0.22, 0.52], [-0.27, 0.13], [-0.62, 0.13], [-0.74, 0.42], [-0.86, 0.42], [-0.9, 0]]
-    const PLANE = PH.concat(PH.slice(1, -1).reverse().map(([x, y]) => [x, -y]))
-
     let W = 0, H = 0
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
@@ -323,38 +322,7 @@ export default function AuthBackdrop() {
         y: (1 - u) * (1 - u) * a.y + 2 * (1 - u) * u * cy + u * u * b.y,
       })
 
-      // 7) Flight routes — AIRPORT to AIRPORT (ground node to ground node): a
-      //    dashed bow with a little plane tracing it. No signal pulse here.
-      const flightCol = mix(cur.line, WHITE, dk ? 0.6 : 0.2)   // pale silver contrail — NOT gold
-      FLIGHTS.forEach(([i, j], li) => {
-        const a = proj[i], b = proj[j]
-        if (!a || !b || !a.vis || !b.vis) return
-        const { cx, cy } = arcCtrl(a, b)
-        ctx.setLineDash([5, 7]); ctx.strokeStyle = rgba(flightCol, dk ? 0.36 : 0.3); ctx.lineWidth = 1
-        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(cx, cy, b.x, b.y); ctx.stroke()
-        ctx.setLineDash([])
-        const u = ((t * 0.00009 + li * 0.17) % 1 + 1) % 1, pt = bez(a, cx, cy, b, u)
-        const dxdu = 2 * (1 - u) * (cx - a.x) + 2 * u * (b.x - cx)
-        const dydu = 2 * (1 - u) * (cy - a.y) + 2 * u * (b.y - cy)
-        const sp = 6.5
-        ctx.save(); ctx.translate(pt.x, pt.y); ctx.rotate(Math.atan2(dydu, dxdu)); ctx.scale(sp, sp)
-        ctx.lineWidth = 1 / sp; ctx.strokeStyle = rgba(flightCol, dk ? 0.9 : 0.7)
-        ctx.beginPath(); PLANE.forEach(([qx, qy], k) => (k ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy)))
-        ctx.closePath(); ctx.stroke(); ctx.restore()
-        // Touchdown: as the plane arrives, a gold ring blooms at the
-        // destination hub — landing IS connection (the rental phone / SIM is
-        // waiting the moment you step off). The travel line and the phone
-        // line as one system, not two icons.
-        const land = u > 0.8 ? (u - 0.8) / 0.2 : 0
-        if (land > 0) {
-          ctx.strokeStyle = rgba(GOLD, (dk ? 0.75 : 0.6) * (1 - land)); ctx.lineWidth = 1.2
-          ctx.beginPath(); ctx.arc(b.x, b.y, 2 + land * mast * 0.9, 0, 6.2832); ctx.stroke()
-          ctx.fillStyle = rgba(GOLD, (dk ? 0.9 : 0.75) * (1 - land * 0.4))
-          ctx.beginPath(); ctx.arc(b.x, b.y, 1.8, 0, 6.2832); ctx.fill()
-        }
-      })
-
-      // 8) Signal network — TOWER-TOP to TOWER-TOP (tip to tip): a bow carrying
+      // 7) Signal network — TOWER-TOP to TOWER-TOP (tip to tip): a bow carrying
       //    a travelling pulse. No plane. Gold links = "best route"; the AUDIO
       //    link broadcasts Kol Torah — tiny quavers travel it instead of dots.
       SIGNALS.forEach(([i, j, kind], li) => {
@@ -397,7 +365,7 @@ export default function AuthBackdrop() {
         }
       })
 
-      // 9) Faint logo watermark, top-left. Static — it just holds the corner
+      // 8) Faint logo watermark, top-left. Static — it just holds the corner
       //    quietly while the scene moves around it.
       if (logoReady) {
         const lw = Math.min(W, H) * 0.13, lh = lw * (logo.height / logo.width), pad = Math.min(W, H) * 0.05
