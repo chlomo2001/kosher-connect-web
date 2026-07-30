@@ -620,7 +620,7 @@ const SKY_CSS = `
      -dark.png keeps the gold and lifts only the navy wordmark to near-white,
      so the brand still reads as the brand on the dark canvas. Background-image
      (not two <img>s) so only the theme's own file is ever fetched. */
-  .sk-logo{height:32px;aspect-ratio:825/196;display:block;
+  .sk-logo{height:32px;aspect-ratio:825/196;width:fit-content;display:block;
     background:url(/logo-full-tight.png) center/contain no-repeat}
   :root[data-theme="dark"] .sk-logo{background-image:url(/logo-full-tight-dark.png)}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-logo{background-image:url(/logo-full-tight-dark.png)}}

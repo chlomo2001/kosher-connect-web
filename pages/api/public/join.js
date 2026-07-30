@@ -13,11 +13,20 @@ import { db, tablesMode } from '../../../lib/db.js'
 import { normalizeEmail } from '../../../lib/mappers.js'
 import { phoneKey } from '../../../lib/ukPhone.mjs'
 import { rateLimit } from '../../../lib/rateLimit.js'
+import { WHATSAPP_ENABLED } from '../../../lib/flags.js'
 
 const cap = (v, n) => String(v || '').trim().slice(0, n)
 
-// "Best way to reach you" chips on /join — anything else is dropped.
-const PREFERRED_CONTACT = { call: 'Call', text: 'Text message', whatsapp: 'WhatsApp', email: 'Email' }
+// "Best way to reach you" chips on /join — anything else is dropped. WhatsApp
+// is only accepted while the channel is on; with it off the chip isn't offered,
+// so a request still carrying it is stale or hand-made and must not queue a
+// staff task telling them to reach the customer a way we've stopped using.
+const PREFERRED_CONTACT = {
+  call: 'Call',
+  text: 'Text message',
+  email: 'Email',
+  ...(WHATSAPP_ENABLED ? { whatsapp: 'WhatsApp' } : {}),
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()

@@ -2118,12 +2118,24 @@ html { scroll-behavior: smooth; }
    brightness(0)+invert(1) flattened the whole mark to a single flat white,
    throwing away the gold and the blue. -dark.png keeps the gold and lifts
    only the navy wordmark, and is the same pixel size so nothing shifts.
-   Scoped to the portal bar deliberately — the login/join/guide cards stay
-   cream in every theme, so they must keep the light artwork. */
-:root[data-theme="dark"] .pd-logo { content: url(/logo-full-tight-dark.png); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) .pd-logo { content: url(/logo-full-tight-dark.png); }
-}
+   Keyed on [data-theme="dark"] ONLY, never on prefers-color-scheme: this
+   stylesheet has no OS-dark palette at all (every dark token lives under
+   :root[data-theme="dark"], and html pins color-scheme: light), so an
+   OS-preference rule here would swap in the near-white artwork while the panel
+   behind it stayed light — the very bug this replaces, inverted. /welcome is
+   different: it ships its own prefers-color-scheme palette, so its logo rule
+   matches on both.
+
+   Every panel that carries the wordmark goes dark together under that
+   attribute — the portal bar (.pd-top), the login card (.login-card) and the
+   join/guide topbar (.w-topbar) are all var(--surface) or the dark glass — so
+   this matches the wordmark wherever it is rendered rather than one class.
+   Firefox ignores `content` on <img>; there it keeps the light artwork, which
+   is what it does today. Dark-theme loads fetch both files (`content` repaints
+   the box but cannot cancel the src) — ~40KB extra, once, since next.config.js
+   caches both immutably. /welcome avoids that with a background-image because
+   it has no <img> to begin with. */
+:root[data-theme="dark"] img[src="/logo-full-tight.png"] { content: url(/logo-full-tight-dark.png); }
 .pd-top-actions { display: flex; align-items: center; gap: 10px; }
 .pd-chip {
   border: 1px solid var(--border); background: var(--surface); color: var(--text);
