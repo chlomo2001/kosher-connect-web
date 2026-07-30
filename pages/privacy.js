@@ -56,7 +56,7 @@ export default function Privacy() {
         <p>Kosher Connect (Hatsluche Ltd)<br />
           421 Bury New Road, Salford M7 4ED<br />
           Phone: <a href="tel:+441615311386">0161 531 1386</a><br />
-          Email: <a href="mailto:admin@kosher-connect.com">admin@kosher-connect.com</a></p>
+          Email: <a href="mailto:support@kosher-connect.com">support@kosher-connect.com</a></p>
       </LegalShell>
     </>
   )

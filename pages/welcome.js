@@ -16,7 +16,10 @@ import {
 
 const PHONE_TEL = 'tel:+441615311386'
 const PHONE_SHOWN = '0161 531 1386' // shop's local form; tel: link stays +44
-const EMAIL = 'admin@kosher-connect.com'
+// support@, not admin@: this is the address a customer writes to. "admin"
+// names an internal role and reads as the wrong door. Delivery is identical —
+// the domain catches every address — so the choice is purely what it signals.
+const EMAIL = 'support@kosher-connect.com'
 const MAPS_URL = 'https://maps.google.com/?q=421+Bury+New+Road,+Salford+M7+4ED'
 // Keyless Google Maps embed — the iframe endpoint needs no API key.
 const MAPS_EMBED = 'https://www.google.com/maps?q=421+Bury+New+Road,+Salford+M7+4ED&z=16&output=embed'

@@ -35,10 +35,27 @@ scopes, and it works the same for any sender we add later. Cost is nil — we
 already own the domain and already run Forward Email. Roughly a day's work for
 the endpoint plus the Lebara parser; about an hour per additional sender.
 
-**Things it needs to get right:**
+**"If the domain catches everything, why forward at all?"** Because none of this
+mail is addressed to us. Lebara, the airlines and the rest send to whatever
+address is on the account, and that is the shop's Gmail. Nothing they send
+reaches `kosher-connect.com` today, catch-all or no catch-all — the forward is
+what puts it on a path the app can watch.
 
-* Gmail makes you confirm a forwarding address once (it emails a code to it) —
-  so the first step is a real mailbox/alias at `feed@kosher-connect.com`.
+What the catch-all *does* save is the setup: `feed@kosher-connect.com` already
+delivers, so there is no alias to create. The only requirement is that mail to
+it lands somewhere a person can open, because Gmail confirms a new forwarding
+address by emailing a code to it.
+
+**The version with no forwarding at all** is to change the contact address on
+each provider account to a per-provider address here — `lebara@`, `wizz@`,
+`elal@` — which the catch-all already accepts. Then the mail arrives at our
+domain in the first place and Gmail leaves the picture. It's the cleaner end
+state and it makes the sender obvious from the recipient, but it touches live
+accounts: that address is also where password resets and one-time codes go, so
+it wants doing one provider at a time, deliberately, not as part of this. Worth
+starting with a provider that matters least.
+
+**Things it needs to get right:**
 * The endpoint must verify the provider's webhook signature and only accept mail
   that our own filter forwarded. An open inbound endpoint is a way to feed the
   app forged "your renewal date is…" emails.

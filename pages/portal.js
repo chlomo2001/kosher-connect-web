@@ -765,7 +765,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
               {L.qShort}{' '}
               <a href="tel:+441615311386" dir="ltr">{formatPhoneDisplay('01615311386')}</a>
               {' · '}
-              <a href="mailto:admin@kosher-connect.com" dir="ltr">admin@kosher-connect.com</a>
+              <a href="mailto:support@kosher-connect.com" dir="ltr">support@kosher-connect.com</a>
             </footer>
           </main>
         </div>
