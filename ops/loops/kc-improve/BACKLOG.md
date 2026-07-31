@@ -139,8 +139,17 @@ Safe (loop-eligible), ranked value ÷ effort:
       migration (`20260514103821`) vs staging's **40** — a full history
       reconcile is needed (confirm actual schema, then mark migrations applied
       without re-running). Careful one-shot job; do with owner, don't auto-run.
-- [ ] **P1 · S** — **Vercel auto-deploy stalled** after `11630e2` — pushes aren't
-      building; unblock the GitHub→Vercel integration (or Redeploy from dashboard).
+- [x] **P1 · S** — **Vercel auto-deploy stalled** after `11630e2` — **stale, not a
+      fault.** Checked 07-31 against the Vercel API: the GitHub integration is
+      healthy and has never stopped. Every push to the dev branch since 30 Jul
+      built green (14 consecutive previews, `55f6832` → `bfdbc22`, all READY),
+      and `11630e2` is an ancestor of `main`, well behind the deploys that
+      followed it. Production last built `84ef4f2` on 30 Jul 22:32 — which *is*
+      `origin/main`'s HEAD, so production is exactly up to date with main. The
+      appearance of a stall was the dev branch running 14 commits ahead of a
+      `main` nothing had been merged into: previews were building all along,
+      production simply had nothing new to build. Nothing to unblock; shipping
+      is an `--ff-only` merge away, on the owner's word.
 
 ## Log (append: date · item · gate · accepted?)
 | date | item | gate | accepted? |
