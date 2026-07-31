@@ -131,6 +131,29 @@ Safe (loop-eligible), ranked value ÷ effort:
       titles catalogue? per-shul stock/consignment? CD→MP3/SD conversion jobs?
       takings per shul? payments? Then scope → build.
 
+## Bank reconciliation (open banking)
+Read-only half built and shipped 07-31 — `docs/OPEN-BANKING.md` for the
+reasoning. A bank feed is a **reconciliation source, not a posting source**:
+transactions land raw, a matcher proposes, a human confirms. `shouldAutoPost()`
+returns false unconditionally and is tested, so removing that guard has to be
+deliberate.
+- [ ] **P1 · S** 🔒 — **Open a business bank account.** The blocker, and it is
+      not technical. The shop's money runs through Shloime's personal account
+      (owner, 07-31), so a live feed would pull his personal transactions into
+      KC's database — a privacy problem no filtering fixes, because the
+      filtering happens after the data is stored. **Do not connect a feed until
+      the shop has its own account.**
+- [ ] **P2 · S** — **Apply `20260731180000_bank_transactions.sql`.** Written,
+      not applied anywhere. No hurry until something fills it.
+- [ ] **P2 · M** — **Statement upload screen.** `lib/bankCsv.mjs` parses and is
+      driveable from a script; the screen wants a real statement in front of it.
+- [ ] **P3 · M** — **Provider client** (GoCardless Bank Account Data — free UK
+      account-information tier; you connect under their FCA licence, not your
+      own). Budget for **90-day consent expiry**: someone re-authenticates
+      quarterly, and it should be a named job. Untestable without credentials.
+- [ ] **P3 · M** — **Triage UI** for proposed matches. Design it against real
+      transactions, not imagined ones.
+
 ## Ops / go-live blockers (not features, but gate Phase-2 shipping)
 - [x] **P1 · S** — **Apply pending migrations on deploy**: `20260716140000`
       (ivr_platforms) and `20260715160000` (customer documents) — **stale.**
