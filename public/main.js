@@ -1400,6 +1400,12 @@ function renderRentalsTab() {
       <button class="btn btn-outline" onclick="openManagePhonesModal()">⚙️ Manage Phones</button>
       <button class="btn ${rentalView === 'calendar' ? 'btn-primary' : 'btn-outline'}"
         onclick="rentalView = rentalView === 'calendar' ? 'list' : 'calendar'; renderRentalsTab();">📅 Availability</button>
+      <input class="search-box" style="width:280px;" type="text" id="rentalScan"
+        inputmode="numeric" autocomplete="off"
+        placeholder="📷 Scan IMEI — out or back"
+        title="Scan the handset: if it's out it comes back, if it's free it goes out"
+        aria-label="Scan a handset IMEI to check it out or return it"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();kcRentalScanEnter()}">
       <input class="search-box" style="width:280px;" type="text" id="rentalSearch"
         placeholder="Search customer or phone…"
         value="${rentalSearchTerm}"
@@ -1726,7 +1732,82 @@ function refreshRentalPhoneOptions() {
   }
 }
 
-function openNewRentalModal(preselectCustomerId = null) {
+// ── Scan to check out / return ────────────────────────────────────────────
+// One scan of the handset decides which half of the rental cycle you are in:
+// a phone that is out comes back, a phone that is free goes out.
+//
+// This mirrors lib/rentalScan.mjs::resolveRentalScan exactly (that module is
+// the canonical, unit-tested statement of the decision — see
+// test/rentalScan.test.mjs). Kept as a mirror here only because the browser
+// has no bundler to import the module. Change both together.
+//
+// The scan never writes. A return carries a late fee and possible lost-item
+// charges, so 'return' only lands the operator on Manage Rental with the
+// Returned toggle flipped and the charge breakdown in front of them — the
+// Save is still theirs.
+function kcRentalScanResolve(raw, phoneList = [], rentalList = []) {
+  const q = String(raw || '').trim();
+  if (!q) return { action: 'none', message: '' };
+  const digits = q.replace(/\D/g, '');
+  const tail = s => String(s || '').replace(/\D/g, '').slice(-10);
+
+  // IMEI is the barcode printed on the handset, so it wins. The number is the
+  // fallback for a phone whose IMEI was never recorded. Both compare on the
+  // last 10 digits, so 07…, 447… and 00447… all meet — the same rule the
+  // Gmail sweep used. The 6/9-digit floors stop a short stray scan matching.
+  const phone = (digits.length >= 6 && phoneList.find(p => tail(p.imei) && tail(p.imei) === tail(digits)))
+    || (digits.length >= 9 && phoneList.find(p => tail(p.number) && tail(p.number) === tail(digits)))
+    || null;
+  if (!phone) return { action: 'none', message: `Nothing matches “${q}”. Scan the IMEI on the handset, or type the number.` };
+
+  const label = [phone.model, phone.number].filter(Boolean).join(' · ') || phone.imei || 'phone';
+  // An open rental wins over every other state. A phone that is out is out,
+  // even if its inventory row drifted — the customer is standing there with it.
+  const open = rentalList.find(r => r.phoneId === phone.id && r.status !== 'returned');
+  if (open) {
+    return {
+      action: 'return', phoneId: phone.id, rentalId: open.id,
+      message: `${label} — back from ${open.customerName || 'the customer'}. Check the charges, then save.`,
+    };
+  }
+  if (phone.maintenance) {
+    return {
+      action: 'blocked', phoneId: phone.id,
+      message: `${label} is on maintenance hold${phone.maintenanceReason ? ` (${phone.maintenanceReason})` : ''} — clear the hold before renting it out.`,
+    };
+  }
+  if (phone.status && phone.status !== 'available') {
+    return { action: 'blocked', phoneId: phone.id, message: `${label} is marked ${phone.status}, not available to rent.` };
+  }
+  return { action: 'checkout', phoneId: phone.id, message: `${label} is free — starting a new rental.` };
+}
+
+function kcRentalScanEnter() {
+  const el = document.getElementById('rentalScan');
+  if (!el) return;
+  const res = kcRentalScanResolve(el.value, phones, rentals);
+  if (res.action === 'none') { if (res.message) toast(res.message, 'warning'); return; }
+  if (res.action === 'blocked') { toast(res.message, 'warning'); el.value = ''; return; }
+  el.value = '';
+
+  if (res.action === 'checkout') { openNewRentalModal(null, res.phoneId); toast(res.message, 'success'); return; }
+
+  openManageRentalModal(res.rentalId);
+  // The modal is built synchronously above, so its controls are here now.
+  const hidden = document.getElementById('mgReturned');
+  if (hidden && hidden.value !== '1') toggleReturned();
+  const anchor = document.getElementById('mgReturnedToggle')?.closest('.form-group');
+  if (anchor) {
+    const note = document.createElement('div');
+    note.setAttribute('role', 'status');
+    note.style.cssText = 'margin-top:8px;font-size:12px;color:var(--muted);background:var(--bg-secondary);border-radius:6px;padding:7px 9px;';
+    note.textContent = '📷 Scanned in — marked returned for you. Check the charges below before saving.';
+    anchor.appendChild(note);
+  }
+  toast(res.message, 'success');
+}
+
+function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null) {
   const availablePhoneOptions = phoneOptionsFor(null, null);
 
   showDynamicModal(`
@@ -1890,6 +1971,18 @@ function openNewRentalModal(preselectCustomerId = null) {
   const next7 = localISO(new Date(Date.now() + 7*86400000));
   document.getElementById('rFrom').value = today;
   document.getElementById('rTo').value   = next7;
+  // Arrived by scan: the handset is in the operator's hand, so pick it. Only if
+  // the date-filtered picker actually offers it — a phone booked out over these
+  // dates must stay unpickable, scan or no scan.
+  if (preselectPhoneId) {
+    const sel = document.getElementById('rPhone');
+    if (sel && [...sel.options].some(o => o.value === preselectPhoneId)) {
+      sel.value = preselectPhoneId;
+      updateRentalPhoneInfo();
+    } else {
+      toast('That phone is not free for these dates — pick the dates first.', 'warning');
+    }
+  }
   nrSetGivenDefaults();
   updateRentalCalc();
   showHebrewDate('rFrom','rFromHeb');
