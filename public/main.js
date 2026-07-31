@@ -1538,9 +1538,9 @@ function availabilityCalendarHtml() {
   return `
     <div class="table-card" style="margin-bottom:20px;padding-bottom:10px;">
       <div style="display:flex;align-items:center;gap:12px;padding:12px 14px 4px;">
-        <button class="btn btn-outline btn-sm" onclick="calShift(-1)">←</button>
+        <button class="btn btn-outline btn-sm" aria-label="Previous month" onclick="calShift(-1)">←</button>
         <strong style="min-width:150px;text-align:center;">${monthName}</strong>
-        <button class="btn btn-outline btn-sm" onclick="calShift(1)">→</button>
+        <button class="btn btn-outline btn-sm" aria-label="Next month" onclick="calShift(1)">→</button>
         <span style="margin-left:auto;font-size:11px;color:var(--muted);">
           <span class="cal-key cal-active"></span> out
           <span class="cal-key cal-booked"></span> reserved (striped)
@@ -6112,7 +6112,7 @@ function openManageSimModal(id) {
           <span class="history-date">${escHtml(h.date || '')}</span>
           <span class="history-amount">${h.amount > 0 ? '£'+h.amount : '—'}</span>
           <button class="action-btn danger" style="margin-left:8px;padding:3px 8px;font-size:11px;"
-            onclick="deleteSimCharge('${id}','${h.id}')">✕</button>
+            aria-label="Delete this charge" onclick="deleteSimCharge('${id}','${h.id}')">✕</button>
         </div>`).join('');
 
   showDynamicModal(`
@@ -8083,7 +8083,7 @@ async function renderShopTab() {
         <td style="font-weight:700;${i.quantity <= i.lowStockAt ? 'color:var(--danger);' : ''}">${i.quantity}</td>
         <td style="white-space:nowrap;">
           <button class="action-btn" onclick="openSaleModal('${i.id}')">💷 Sell</button>
-          <button class="action-btn" onclick="openStockItemModal('${i.id}')">✏️</button>
+          <button class="action-btn" aria-label="Edit ${escHtml(i.name || 'item')}" onclick="openStockItemModal('${i.id}')">✏️</button>
         </td>
       </tr>`).join('');
 
@@ -8540,11 +8540,11 @@ function posRenderBasket() {
             ${i.category === 'phone' ? `<input class="form-input" placeholder="IMEI (scan)" value="${escHtml(l.imei)}"
               oninput="posImei('${i.id}', this.value)" style="width:100%;min-height:0;padding:4px 8px;font-size:11px;margin-top:3px;">` : ''}
           </div>
-          <button class="action-btn" style="min-width:40px;min-height:40px;font-size:18px;line-height:1;" onclick="posQty('${i.id}',-1)">−</button>
+          <button class="action-btn" style="min-width:40px;min-height:40px;font-size:18px;line-height:1;" aria-label="One fewer ${escHtml(i.name || 'item')}" onclick="posQty('${i.id}',-1)">−</button>
           <strong style="min-width:26px;text-align:center;font-size:16px;">${l.qty}</strong>
-          <button class="action-btn" style="min-width:40px;min-height:40px;font-size:18px;line-height:1;" onclick="posQty('${i.id}',1)">+</button>
+          <button class="action-btn" style="min-width:40px;min-height:40px;font-size:18px;line-height:1;" aria-label="One more ${escHtml(i.name || 'item')}" onclick="posQty('${i.id}',1)">+</button>
           <strong style="min-width:58px;text-align:right;font-feature-settings:'tnum';">${fmtGbp(lineTotal)}</strong>
-          <button class="action-btn" style="min-width:40px;min-height:40px;color:var(--danger);font-size:16px;" title="Void line"
+          <button class="action-btn" style="min-width:40px;min-height:40px;color:var(--danger);font-size:16px;" title="Void line" aria-label="Remove ${escHtml(i.name || 'item')} from the sale"
             onclick="posQty('${i.id}',-999)">✕</button>
         </div>`;
       }).join('');
@@ -9038,7 +9038,7 @@ async function renderKolTorahTab() {
       <td><input class="form-input" id="ktT_speaker_${t.id}" value="${escHtml(t.speaker || '')}" style="min-width:130px;min-height:0;padding:5px 8px;font-size:12px;"></td>
       <td><input class="form-input" id="ktT_price_${t.id}" type="number" min="0" step="0.01" value="${t.price.toFixed(2)}" style="width:84px;min-height:0;padding:5px 8px;font-size:12px;"></td>
       <td><input type="checkbox" id="ktT_active_${t.id}" ${t.active ? 'checked' : ''} style="accent-color:var(--accent);cursor:pointer;"></td>
-      <td><button class="btn btn-outline" style="font-size:12px;padding:5px 10px;" onclick="ktSaveTitle('${t.id}')">💾</button></td>
+      <td><button class="btn btn-outline" style="font-size:12px;padding:5px 10px;" aria-label="Save title" onclick="ktSaveTitle('${t.id}')">💾</button></td>
     </tr>`).join('');
 
   content.innerHTML = `
@@ -10819,7 +10819,7 @@ async function renderVirtualTab() {
             onclick="toggleVNStatus('${escHtml(v.id)}', '${v.status === 'Active' ? 'Inactive' : 'Active'}')">
             ${v.status === 'Active' ? '⏸ Deactivate' : '▶ Activate'}</button>
           <button class="action-btn danger" style="font-size:11px;padding:4px 10px;"
-            onclick="deleteVN('${escHtml(v.id)}', '${escHtml(v.number)}')">✕</button>
+            aria-label="Delete this number" onclick="deleteVN('${escHtml(v.id)}', '${escHtml(v.number)}')">✕</button>
         </td>
       </tr>`).join('');
 
@@ -11109,8 +11109,8 @@ async function renderSettingsTab() {
             <td style="font-size:12px;">📋 task <span class="badge badge-${r.priority === 'high' ? 'rental' : 'sim'}" style="font-size:10px;">${escHtml(r.priority)}</span></td>
             <td><label style="font-size:12px;cursor:pointer;"><input type="checkbox" ${r.enabled ? 'checked' : ''} onchange="toggleAutomation('${escHtml(r.id)}', this.checked)" style="accent-color:var(--accent);"> on</label></td>
             <td style="white-space:nowrap;">
-              <button class="action-btn" onclick="openAutomationModal('${escHtml(r.id)}')">✏️</button>
-              <button class="action-btn danger" onclick="deleteAutomation('${escHtml(r.id)}')">✕</button>
+              <button class="action-btn" aria-label="Edit this rule" onclick="openAutomationModal('${escHtml(r.id)}')">✏️</button>
+              <button class="action-btn danger" aria-label="Delete this rule" onclick="deleteAutomation('${escHtml(r.id)}')">✕</button>
             </td>
           </tr>`).join('')}
       </tbody></table>
@@ -11136,7 +11136,7 @@ async function renderSettingsTab() {
               <button class="action-btn" title="Edit forwarding / purpose" onclick="openEmailAliasModal('${escHtml(a.id)}')">✏️</button>
               <button class="action-btn" title="Generate SMTP password (for sending as this address)"
                 onclick="generateAliasPassword('${escHtml(a.id)}', '${escHtml(a.address)}')">🔑</button>
-              <button class="action-btn danger" onclick="deleteEmailAlias('${escHtml(a.id)}', '${escHtml(a.address)}')">✕</button>
+              <button class="action-btn danger" aria-label="Delete ${escHtml(a.address)}" onclick="deleteEmailAlias('${escHtml(a.id)}', '${escHtml(a.address)}')">✕</button>
             </td>
           </tr>`).join('')}
       </tbody></table>
@@ -11159,7 +11159,7 @@ async function renderSettingsTab() {
       <td>${num(`rr_vnw_${r.countryCode}`, r.vnWeekly ?? '')}</td>
       <td>${num(`rr_vnm_${r.countryCode}`, r.vnPer30Days ?? '')}</td>
       <td style="white-space:nowrap;"><button class="btn btn-outline" style="font-size:12px;padding:5px 12px;"
-        onclick="saveRentalRate('${escHtml(r.countryCode)}')">💾</button>
+        aria-label="Save this rate" onclick="saveRentalRate('${escHtml(r.countryCode)}')">💾</button>
         <button class="action-btn danger" style="font-size:11px;" title="Remove country"
         onclick="deleteRateRow('rental_rates','${escHtml(r.countryCode)}')">✕</button></td>
     </tr>`).join('') + `
@@ -11179,7 +11179,7 @@ async function renderSettingsTab() {
       <td>${num(`dr_charger_${d.countryCode}`, d.chargerMissing)}</td>
       <td>${num(`dr_sim_${d.countryCode}`, d.simMissing)}</td>
       <td style="white-space:nowrap;"><button class="btn btn-outline" style="font-size:12px;padding:5px 12px;"
-        onclick="saveDamageRate('${escHtml(d.countryCode)}')">💾</button>
+        aria-label="Save this rate" onclick="saveDamageRate('${escHtml(d.countryCode)}')">💾</button>
         <button class="action-btn danger" style="font-size:11px;" title="Remove country"
         onclick="deleteRateRow('damage_rates','${escHtml(d.countryCode)}')">✕</button></td>
     </tr>`).join('') + `
@@ -11297,8 +11297,8 @@ async function renderSettingsTab() {
             </select></td>
             <td><input type="checkbox" id="ec_active_${c.id}" ${c.active ? 'checked' : ''} style="accent-color:var(--accent);cursor:pointer;"></td>
             <td style="white-space:nowrap;">
-              <button class="btn btn-outline" style="font-size:12px;padding:5px 10px;" onclick="saveExtraCharge('${escHtml(c.id)}')">💾</button>
-              <button class="action-btn danger" style="font-size:11px;" onclick="deleteExtraCharge('${escHtml(c.id)}')">✕</button>
+              <button class="btn btn-outline" style="font-size:12px;padding:5px 10px;" aria-label="Save this charge" onclick="saveExtraCharge('${escHtml(c.id)}')">💾</button>
+              <button class="action-btn danger" style="font-size:11px;" aria-label="Delete this charge" onclick="deleteExtraCharge('${escHtml(c.id)}')">✕</button>
             </td>
           </tr>`).join('')}
         <tr style="background:var(--bg-secondary);">
@@ -11402,8 +11402,8 @@ async function renderSettingsTab() {
             <td>${a.renewalDate ? `<span style="${a.renewalDate <= soon10 ? 'color:var(--danger);font-weight:600;' : ''}">${fmtDate(a.renewalDate)}${a.renewalDate < today10 ? ' ⚠' : ''}</span>` : '—'}</td>
             <td style="white-space:nowrap;">
               ${a.hasCred ? `<button class="action-btn" style="font-size:11px;" onclick="revealBizAccount('${escHtml(a.id)}')">🔑 Reveal</button>` : ''}
-              <button class="action-btn" onclick="openBizAccountModal('${escHtml(a.id)}')">✏️</button>
-              <button class="action-btn danger" onclick="retireBizAccount('${escHtml(a.id)}', '${escJs(a.name)}')">✕</button>
+              <button class="action-btn" aria-label="Edit ${escHtml(a.name || 'account')}" onclick="openBizAccountModal('${escHtml(a.id)}')">✏️</button>
+              <button class="action-btn danger" aria-label="Retire ${escHtml(a.name || 'account')}" onclick="retireBizAccount('${escHtml(a.id)}', '${escJs(a.name)}')">✕</button>
             </td>
           </tr>`).join('')}
       </tbody></table>
@@ -11430,8 +11430,8 @@ async function renderSettingsTab() {
             <td style="font-size:11.5px;color:var(--muted);max-width:260px;">${escHtml(['Dual SIM: ' + (m.dualSim || '—'), 'Hebrew: ' + (m.yiddishText || '—'), 'Touch: ' + (m.touchScreen || '—'), 'Text: ' + (m.texting || '—')].join(' · '))}</td>
             <td style="font-size:11.5px;">${m.pros || m.cons ? '✍️ written' : '<span style="color:var(--muted);">not written yet</span>'}</td>
             <td style="white-space:nowrap;">
-              <button class="action-btn" onclick="openPhoneModelModal('${escHtml(m.id)}')">✏️</button>
-              <button class="action-btn danger" onclick="retirePhoneModel('${escHtml(m.id)}', '${escJs(m.name)}')">✕</button>
+              <button class="action-btn" aria-label="Edit ${escHtml(m.name || 'model')}" onclick="openPhoneModelModal('${escHtml(m.id)}')">✏️</button>
+              <button class="action-btn danger" aria-label="Retire ${escHtml(m.name || 'model')}" onclick="retirePhoneModel('${escHtml(m.id)}', '${escJs(m.name)}')">✕</button>
             </td>
           </tr>`).join('')}
       </tbody></table>
