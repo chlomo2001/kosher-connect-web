@@ -202,6 +202,25 @@ Found 07-31, FIXED 07-31 (8a186a0) — see the log row above:
 Held / owner input: family-trip sheet (£1,364 balance) needs the customer's
 name before it's entered; Canada/EU loss rates — follow T&C schedule or stay?
 
+🔒 **Owner decision — what "paid" meant on the cancelled Wizz bookings** (write-up:
+`docs/BOOKINGS-DIG-2026-07-31.md`). The owner flagged 31/07 that "paid" in the
+flights sheet may mean *Wizz paid the refund*, not *the customer paid us*. The
+30/07 reconcile assumed the latter and wrote 11 `payment` entries (£3,190). All
+11 now net to £0 while their own notes say "refund due" — the app says settled,
+the note says we owe them. Reading A: the payments are right and a refund
+liability is missing. Reading B: the payments are fictitious and the charges
+should have been reversed. Independent of the answer: **the ledger has no refund
+leg at all** — the one booking known to have been refunded at the counter looks
+identical to the ten that are still owed. Don't hand-correct before the owner
+answers; the wrong reading moves real customer balances.
+
+- [ ] **P2 · S** 🔒 — **Check-in + travel-requirements: built, never used.** 0 of
+      101 bookings have `checkin_done` set and 0 have `destination_country`, so
+      the whole 🛂 per-passenger visa/passport screen has never rendered a
+      requirement. Owner to say whether the shop works this way at all before
+      anything is built on top. Also 36 of 41 upcoming bookings have no passport
+      on file (nothing expiring before travel, so not urgent).
+
 🔒 **Owner decision — SIM records vs the shop's Gmail** (full write-up:
 `docs/GMAIL-SWEEP-2026-07-31.md`; the number list went to the owner directly,
 deliberately not in the repo). Read all 25,393 provider messages in
