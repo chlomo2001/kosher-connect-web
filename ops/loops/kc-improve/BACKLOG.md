@@ -269,10 +269,30 @@ API kind (owner-only, sign applied server-side, tender required), the wallet
 form, and tests. The revenue report now separates `refunded` (credit issued)
 from `paidOut` (cash returned); the gap between them is `refundsOwed`.
 
-Note this unblocks the Wizz eleven *mechanically* but decides nothing: the two
-open questions above — whether `Refunded?` is stale, and whether KC is the
-principal — still gate any write. What changed is that when the answer comes,
-the ledger can now record it truthfully in either direction.
+**Both gating questions moved 31 Jul** (detail in `docs/BOOKINGS-DIG-2026-07-31.md`):
+- **Principal — answered, it's KC.** Owner: Shloime owns the business and uses
+  his account as part of KC. Known to need changing; not today's problem. So the
+  correction belongs in KC's ledger.
+- **`Refunded?` stale — confirmed** from five owner screenshots. Wizz money is
+  already back on bookings the sheet marks FALSE.
+
+But the fix is **not** the £3,190. That is what customers *paid*; Wizz refunds
+less. MN8VSZ: paid £175, refunded £90. BNKYRW: paid £495, sent £285 — under the
+fare in both, so it isn't just the fee being retained. Reversing amounts paid
+would over-credit every customer.
+
+Three states hide behind one FALSE, and only one is a debt: refunded-and-passed-on
+(settled), refunded-and-held (**the live liability** — customer money in KC's
+hands, 3 of the 5 screenshots), and not-yet-refunded (KC has a claim on Wizz,
+owes the customer nothing). The refund leg records all three; it can't invent the
+amounts.
+
+🔒 **Now blocked on data, not a decision:** the per-booking refund amount and
+whether it was passed on. Those live in `ch7023518@gmail.com`, which sessions
+can't read — the connected mailbox is `e.a.rothbart@gmail.com`. Either Shloime
+supplies the figures or that mailbox gets connected. Also unexplained: `XU2WWH`
+appears twice in the eleven (£360 and £145), so a ref-keyed reversal is
+ambiguous until that's resolved.
 
 - [ ] **P2 · S** 🔒 — **Check-in + travel-requirements: built, never used.** 0 of
       101 bookings have `checkin_done` set and 0 have `destination_country`, so

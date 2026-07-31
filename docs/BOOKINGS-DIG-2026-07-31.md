@@ -76,28 +76,85 @@ Reversing the eleven booking charges for the amounts actually paid moves each
 from £0 to **+£X owed to the customer**, £3,190 in total. A later refund entry
 takes it back to zero when the money is handed over.
 
-### Two things the data cannot answer
+### Two things the data could not answer — both now moved (31 Jul, owner)
 
-1. **`Refunded?` is probably already stale.** The sheet was last modified 29
-   July; the owner's sent mail from around then says *"yesterday I received
-   refunds for 70% of the customers"* and asks customers where to send the
-   money. So Wizz money is arriving now, and the sheet has not caught up.
-2. **Whose book is this?** Those emails tell customers *"Please arrange payment
-   to Chlomo Grinfeld, 230120 17316507"* — his account, his sheet. If Kosher
-   Connect is not the principal on these bookings, then carrying them as KC
-   charges and KC payments mirrors someone else's ledger, and the correction is
-   a different one. **Needs the owner before anything is written.**
+**Q2, whose book is this — ANSWERED. It is KC's.** The owner: *"shloime as the
+owner of this business, is using it as part of kc. yes we know this has to
+change, but that's the case today."* So Shlomo Grinfeld's account and his sheet
+are being used as part of Kosher Connect. These bookings belong in KC's ledger,
+and the reversal is the right shape of correction rather than an unwind. (That
+the personal account is doing the shop's work is a known problem the owner has
+flagged for later — it does not change today's accounting.)
+
+**Q1, is `Refunded?` stale — YES, confirmed, and it hides more than staleness.**
+Five owner screenshots (29–30 Jul, from `ch7023518@gmail.com`) show Wizz money
+already returned on bookings the sheet still marks FALSE:
+
+| booking | evidence (owner's sent mail) | Wizz refunded | reached the customer? |
+|---|---|---|---|
+| BNKYRW | 30 Jul 23:21 *"Refund sent £285"* | — | **yes, £285 sent** |
+| MN8VSZ | 29 Jul 23:28 *"cancelled your booking and refunded £90"* | £90 | no — asking where to send |
+| FMLJ8J | 29 Jul 23:55 *"refunded £45"* | £45 | no — asking where to send |
+| Tager (4 pax, LTN–TLV Jan 27) | 29 Jul 23:29 *"refunded £320"* | £320 | no — asking how |
+| TLKCQC | 30 Jul, *"Wizzair has refunded £205… your balance is now £130"* | £205 | n/a — customer had not paid; **owed KC £130, since received** |
+
+### What this changes: the £3,190 is not the liability
+
+**The amount Wizz refunds is not the amount the customer paid.** Both bookings
+where we can see the two figures side by side show a shortfall:
+
+- **MN8VSZ** — customer paid £175 (£130 fare + £45 fee); Wizz refunded **£90**.
+- **BNKYRW** — customer paid £495 (£345 fare + £150 fee); refund sent **£285**.
+
+In each case the refund is smaller than the fare alone, so it is not simply
+"fee retained, fare returned" — Wizz is refunding part of the fare too.
+Reversing what the customer paid would therefore **over-credit every one of
+them**. The figure that belongs in the ledger is the refund actually received
+per booking, and that number exists only in the refund email for that booking.
+
+### Three states, not one
+
+The sheet's single `Refunded?` FALSE collapses three genuinely different
+positions, and only one of them is a debt to a customer:
+
+- **(a) refunded and passed on** — settled. `refund` + `refund_payout`, nets to
+  zero with both legs on file. BNKYRW.
+- **(b) refunded, KC holding it, waiting on the customer's bank details** —
+  **this is the live liability**: customer money physically in KC's hands.
+  `refund` posted, no payout, so the balance stands positive. MN8VSZ, FMLJ8J,
+  Tager — three in five screenshots, so likely the largest group.
+- **(c) Wizz has not refunded** — KC owes the customer nothing yet; KC has a
+  claim on Wizz. Nothing to post.
+
+The refund leg shipped 31 Jul records all three correctly. What it cannot do is
+invent the per-booking amount.
+
+### Blocked on the numbers, not on a decision any more
+
+Q2 is closed and Q1 is answered in principle. What remains is arithmetic that
+only the refund emails hold: **the refund amount per booking, and whether it has
+been passed on.** Those live in `ch7023518@gmail.com`, which this session cannot
+read — the connected mailbox is `e.a.rothbart@gmail.com`. Either Shloime
+supplies the per-booking figures, or that mailbox gets connected.
+
+Also unresolved in the sheet itself: **`XU2WWH` appears twice** in the eleven,
+at £360 and £145. A reversal keyed on booking reference would be ambiguous
+until that is explained — two bookings under one reference, or a data error.
+
+Deliberately not recorded here: the customer and payee bank details visible in
+that correspondence. They are not needed for the ledger correction.
 
 ### Not applied
 
-No reversal has been posted. It moves eleven real customer balances by £3,190
-and hangs on question 2 above. When it is approved: snapshot first (standing
-rule for bulk data writes), then one reversal per booking, referencing the
-sheet row it came from.
+No reversal has been posted, and the plan has changed since this was written:
+**do not reverse the £3,190.** That is what customers paid, not what is owed
+back — see above. Post per booking, for the refund actually received, in the
+state that booking is actually in. Snapshot first (standing rule for bulk data
+writes), and reference the sheet row and the refund email each figure came from.
 
-Also still true regardless: **the ledger has no refund leg**. Once Wizz money
-reaches a customer there is no entry type that records it going out, so a
-settled refund and an owed refund will keep looking identical.
+The refund leg is no longer missing — `refund_payout` shipped 31 Jul, so a
+refund KC still owes and one it has settled are now distinguishable on the
+record.
 
 ---
 
