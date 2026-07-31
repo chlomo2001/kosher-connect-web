@@ -2,75 +2,102 @@
 
 Read-only. Nothing was written to the database.
 
-Two things came out: a money question the owner raised that the app currently
-answers wrongly either way, and three built features that no booking has ever
-used.
+Two things came out: a £3,190 debt to eleven customers that the app reports as
+settled, and three built features that no booking has ever used.
+
+The first started as an ambiguity the owner raised about the word "paid" and was
+resolved against the source spreadsheet — the reconcile had read it correctly,
+and the real problem sat one column further along.
 
 ---
 
-## 1. "Paid" on a cancelled Wizz booking — the owner's question
+## 1. The cancelled Wizz bookings — RESOLVED, and the app is understating a debt
 
 **Owner, 31 July: "paid" could mean Wizz paid the refund** — not that the
-customer paid us.
+customer paid us. Worth challenging, and now answered from the source.
 
-That matters because the 30/07 flights-sheet reconcile read every "paid" marker
-as *the customer paid the shop*, and wrote a ledger `payment` entry for each one.
+### The source, and what its columns actually mean
 
-### What is in the ledger right now
+The "flights sheet 30/07" the reconcile read is a Google Sheet, **`Wizz AIr
+Tickets`, owned by ch7023518@gmail.com (Shlomo Grinfeld)**, shared with the
+owner on 29 July with the note *"Crazy, I need to collect so much money now."*
 
-11 cancelled bookings carry a note of the form
-`paid £X before cancellation — refund due`. Every one of them has exactly:
+Its columns settle the ambiguity outright — there is no single "paid" column:
 
-| entry | date | amount |
-|---|---|---|
-| `booking` — the original charge | 2026-07-13 | −£X |
-| `payment` — "Paid — reconciled from flights sheet 30/07/2026" | 2026-07-30 | +£X |
+| column | meaning |
+|---|---|
+| `Ticket price` / `Paid 1?` | the fare, and whether **the customer paid it** |
+| `Service fee` / `Paid 2?` | the booking fee, and whether **the customer paid it** |
+| `Cancelled` | Wizz cancelled the booking |
+| `Refunded?` | whether **Wizz has paid the money back** — a separate column |
+| `New Balance` | recomputed balance, populated on only 3 rows |
 
-£3,280 charged, £3,190 recorded as paid, one £90 adjustment (the split case:
-ticket paid, fee unpaid and reversed). **Net position on all 11: £0.00.**
+So the reconcile was right: "paid" meant the customer paid the shop. The proof
+it understood the two columns rather than summing blindly is DSCUFH — the
+sheet's only split row, `Paid 1? TRUE / Paid 2? FALSE`, which the reconcile
+recorded as "ticket £235 paid; £90 fee unpaid — reversed".
 
-So the app says these customers are square. The note on the same record says a
-refund is due. Those two statements contradict each other, and the £0 is what
-the balance, the statement and the portal all read from.
+### Why the answer still matters: `Refunded?` is FALSE on all eleven
 
-### The refund leg is missing regardless of which reading is right
+| Ref | Ticket | Fee | Paid 1 | Paid 2 | Paid to us | Refunded? |
+|---|---|---|---|---|---|---|
+| EHC93Y | £400 | £120 | TRUE | TRUE | £520 | FALSE |
+| BNKYRW | £345 | £150 | TRUE | TRUE | £495 | FALSE |
+| IMPKJZ | £310 | £100 | TRUE | TRUE | £410 | FALSE |
+| IJEVNV | £230 | £150 | TRUE | TRUE | £380 | FALSE |
+| XU2WWH | £300 | £60  | TRUE | TRUE | £360 | FALSE |
+| DSCUFH | £235 | £90  | TRUE | FALSE| £235 | FALSE |
+| TMZZXC | £135 | £50  | TRUE | TRUE | £185 | FALSE |
+| MN8VSZ | £130 | £45  | TRUE | TRUE | £175 | FALSE |
+| XU2WWH | £100 | £45  | TRUE | TRUE | £145 | FALSE |
+| HWGC5D | £100 | £45  | TRUE | TRUE | £145 | FALSE |
+| UGSJJB | £95  | £45  | TRUE | TRUE | £140 | FALSE |
+| | | | | **£3,190** | |
 
-This is the part that does not depend on the owner's answer.
+**£3,190 — exactly the ledger's payment total for these eleven.** Sheet and app
+agree to the penny, which is the strongest evidence the import was faithful.
 
-The tell is the one booking noted `paid £140 — refunded at counter`. We *know*
-that customer got their money back. Its ledger is still just charge + payment =
-£0, with **no refund entry**. The reconcile never modelled a refund at all — so
-a refund that has happened and a refund that is still owed look identical in the
-app, and both look like "settled".
+The one row in the whole sheet with `Refunded? TRUE` is VU792E (£100 + £40) —
+and that is precisely the booking our notes call "paid £140 — refunded at
+counter". The two sources agree there too.
 
-For contrast, the 14 `cancelled unpaid` bookings were handled correctly: charge
-posted, then a `manual_adjustment` reversing it, net £0 — because there nothing
-ever moved.
+### The defect
 
-### What each reading would mean
+Eleven cancelled flights. £3,190 of customer money held. Wizz has not refunded.
+**Every one nets to £0 in the ledger, so the app reports all eleven settled.**
 
-**A — "paid" = the customer paid us.** The payment entries are right, but the
-shop is holding money for a cancelled flight. There is a liability to the
-customer that appears nowhere. Each of the 11 needs a refund-due credit, cleared
-when the money actually goes back.
+The charge is still standing against the customer's payment. It should not be:
+the flight is cancelled and the customer is not receiving what they paid for.
+The `cancelled unpaid` group models this correctly — charge posted, then a
+`manual_adjustment` reversing it — because there nothing ever moved. The paid
+group is missing that reversal, and the missing reversal is what hides the debt.
 
-**B — "paid" = Wizz refunded the shop.** Then up to £3,190 of `payment` entries
-assert customer payments that never happened. Those bookings should look like
-the `cancelled unpaid` group — charge reversed — and any customer who *did* pay
-needs a real refund recorded.
+Reversing the eleven booking charges for the amounts actually paid moves each
+from £0 to **+£X owed to the customer**, £3,190 in total. A later refund entry
+takes it back to zero when the money is handed over.
 
-Under A the app understates what the shop owes. Under B it has invented income.
+### Two things the data cannot answer
 
-### Needed from the owner
+1. **`Refunded?` is probably already stale.** The sheet was last modified 29
+   July; the owner's sent mail from around then says *"yesterday I received
+   refunds for 70% of the customers"* and asks customers where to send the
+   money. So Wizz money is arriving now, and the sheet has not caught up.
+2. **Whose book is this?** Those emails tell customers *"Please arrange payment
+   to Chlomo Grinfeld, 230120 17316507"* — his account, his sheet. If Kosher
+   Connect is not the principal on these bookings, then carrying them as KC
+   charges and KC payments mirrors someone else's ledger, and the correction is
+   a different one. **Needs the owner before anything is written.**
 
-For the 11 bookings (references: BNKYRW, IJEVNV, XU2WWH ×2, UGSJJB, HWGC5D,
-MN8VSZ, DSCUFH, TMZZXC, EHC93Y, IMPKJZ), which is it — did the **customer** pay
-the shop, or did **Wizz** pay the refund back to the shop? It may not be the same
-answer for all 11; the sheet's wording is the only source and it is ambiguous.
+### Not applied
 
-Once that is settled, the fix is a small reconcile script plus a refund entry
-type so the refund leg stops being invisible. **Do not correct these by hand
-first** — the wrong reading would move real customer balances.
+No reversal has been posted. It moves eleven real customer balances by £3,190
+and hangs on question 2 above. When it is approved: snapshot first (standing
+rule for bulk data writes), then one reversal per booking, referencing the
+sheet row it came from.
+
+Also still true regardless: **the ledger has no refund leg**. Once Wizz money
+reaches a customer there is no entry type that records it going out, so a
+settled refund and an owed refund will keep looking identical.
 
 ---
 

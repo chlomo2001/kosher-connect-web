@@ -215,17 +215,27 @@ Found 07-31, FIXED 07-31 (8a186a0) — see the log row above:
 Held / owner input: family-trip sheet (£1,364 balance) needs the customer's
 name before it's entered; Canada/EU loss rates — follow T&C schedule or stay?
 
-🔒 **Owner decision — what "paid" meant on the cancelled Wizz bookings** (write-up:
-`docs/BOOKINGS-DIG-2026-07-31.md`). The owner flagged 31/07 that "paid" in the
-flights sheet may mean *Wizz paid the refund*, not *the customer paid us*. The
-30/07 reconcile assumed the latter and wrote 11 `payment` entries (£3,190). All
-11 now net to £0 while their own notes say "refund due" — the app says settled,
-the note says we owe them. Reading A: the payments are right and a refund
-liability is missing. Reading B: the payments are fictitious and the charges
-should have been reversed. Independent of the answer: **the ledger has no refund
-leg at all** — the one booking known to have been refunded at the counter looks
-identical to the ten that are still owed. Don't hand-correct before the owner
-answers; the wrong reading moves real customer balances.
+🔒 **Owner decision — £3,190 owed on eleven cancelled Wizz bookings** (write-up:
+`docs/BOOKINGS-DIG-2026-07-31.md`). The owner asked 31/07 whether "paid" in the
+flights sheet might mean *Wizz paid the refund*. Resolved against the source —
+the sheet (`Wizz AIr Tickets`, owned by ch7023518@gmail.com, shared 29/07) has
+`Paid 1?`/`Paid 2?` for the customer paying the fare and the fee, and a separate
+`Refunded?` for Wizz paying back. The reconcile read it correctly.
+
+The real defect is one column along: **`Refunded?` is FALSE on all eleven.** The
+customers paid £3,190, Wizz cancelled, Wizz has not refunded, and every booking
+nets to £0 so the app calls them settled. The `cancelled unpaid` rows reverse
+their charge correctly; the paid ones never got that reversal, and its absence
+is what hides the debt. Reversing them moves each to +£X owed, £3,190 total.
+
+Blocked on two things the data can't answer: (a) `Refunded?` is likely stale —
+the owner's sent mail says refunds for ~70% of customers had already arrived;
+(b) those emails direct customers to pay *Chlomo Grinfeld's* account on *his*
+sheet, so whether KC is the principal decides whether this belongs in KC's
+ledger at all. Snapshot before any write.
+
+Independent of all of it: **the ledger has no refund leg** — money going back to
+a customer has no entry type, so a settled refund and an owed one look the same.
 
 - [ ] **P2 · S** 🔒 — **Check-in + travel-requirements: built, never used.** 0 of
       101 bookings have `checkin_done` set and 0 have `destination_country`, so
