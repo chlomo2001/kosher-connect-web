@@ -92,11 +92,28 @@ already returned on bookings the sheet still marks FALSE:
 
 | booking | evidence (owner's sent mail) | Wizz refunded | reached the customer? |
 |---|---|---|---|
-| BNKYRW | 30 Jul 23:21 *"Refund sent £285"* | — | **yes, £285 sent** |
+| BNKYRW | 30 Jul 23:21 *"Refund sent £285"* | — | **probably — see caveat** |
 | MN8VSZ | 29 Jul 23:28 *"cancelled your booking and refunded £90"* | £90 | no — asking where to send |
 | FMLJ8J | 29 Jul 23:55 *"refunded £45"* | £45 | no — asking where to send |
 | Tager (4 pax, LTN–TLV Jan 27) | 29 Jul 23:29 *"refunded £320"* | £320 | no — asking how |
 | TLKCQC | 30 Jul, *"Wizzair has refunded £205… your balance is now £130"* | £205 | n/a — customer had not paid; **owed KC £130, since received** |
+
+**Caveat on BNKYRW — "Refund sent" is read, not proven.** *"Refund sent £285"*
+does not name a sender. It could mean Shloime sent £285 to the customer, or that
+Wizz sent £285 in. Three things favour the first: the customer had supplied their
+account details 16 minutes earlier (*"You can send the payment for the Kopilowitz
+booking — BNKYRW — to this account"*), they replied *"תודה רבה על עזרתך"* —
+thanking him for his help, which reads like a completed act rather than news of
+one pending; and Shloime's wording is consistent elsewhere — when Wizz is the
+payer he names it (*"Wizzair … refunded £45"*) and then asks where to send the
+money, which he does not do here because he had just been told.
+
+That is a strong reading, not a fact. **It is settled by one look at the bank
+statement**: an outbound £285 around 30 Jul confirms it; its absence means KC is
+holding £285 and BNKYRW belongs in state (b) below, not (a).
+
+Either way the conclusion below is unaffected: £285 ≠ the £495 the customer paid,
+so the refund still is not the payment. Only BNKYRW's *state* turns on it.
 
 ### What this changes: the £3,190 is not the liability
 
