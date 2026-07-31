@@ -1,6 +1,7 @@
 import { withTab } from '../../lib/auth.js'
 import { tablesMode } from '../../lib/db'
 import { listCustomers, getCustomer, upsertCustomer, deleteCustomer } from '../../lib/tableStore'
+import { uid } from '../../lib/uid.mjs'
 
 // #80 — the relational tables are the ONLY data layer now. The old
 // loadData/saveData file-store fallback was a broken, never-exercised path
@@ -20,7 +21,11 @@ async function handler(req, res) {
 
     if (req.method === 'POST') {
       const customer = { ...req.body }
-      customer.id = Date.now().toString()
+      // Not Date.now() alone: legacy_id is unique, so two customers created in
+      // the same millisecond (two tills, or an import) meant one save silently
+      // lost the race. The client has minted collision-safe ids since #45 —
+      // this path never did.
+      customer.id = uid()
       customer.createdAt = new Date().toISOString()
       customer.totalPaid = 0
       customer.services = []

@@ -20,11 +20,18 @@ Safe UX quick-wins (one kc-improve cycle, no money risk, offline-verifiable):
 Correctness (human-reviewed, NOT loop-autofixed — touches money/inventory):
 - [ ] **P1 · S** — Shop oversell: guarded/atomic stock decrement
       (`shop.js:149,195`) — two tills can both sell the last unit. **Real bug.**
-- [ ] **P2 · S** — Cash-up/revenue day uses UTC not `Europe/London`
-      (`cashup.js`,`ledger.js`) — BST 00:00-01:00 misattributed. Reuse the
-      London-day helper the sweep already has.
-- [ ] **P3 · S** — Customer `legacy_id = Date.now()` ms-collision
-      (`customers.js:24`) — add a random suffix.
+- [x] **P2 · S** — Cash-up/revenue day uses UTC not `Europe/London` — **already
+      done**; the checkbox was stale. Verified 07-31: every day boundary in
+      `pages/api/cashup.js` and `pages/api/ledger.js` goes through
+      `lib/localDay.mjs` (`londonDate` / `londonDayBoundsUtc` /
+      `londonDayStartUtc`), and no bare UTC date-slicing survives in either.
+- [x] **P3 · S** — Customer `legacy_id = Date.now()` ms-collision
+      (`customers.js:24`) — DONE (this cycle). The client had minted
+      collision-safe ids since #45; the server POST never adopted it, so two
+      customers created in the same millisecond meant one save lost the race
+      against the unique index. Now `lib/uid.mjs`, shared, and the suffix
+      widened 3→6 digits — 3 digits hits even-odds collision at ~37 rows in one
+      millisecond, which a bulk import passes instantly.
 
 ## From competitive research 2026-07-17 (big-tech / premium idea-hunt)
 Scouted live product/help pages (Linear, Stripe, Square, Loyverse, Booqable,
@@ -63,8 +70,11 @@ Safe (loop-eligible), ranked value ÷ effort:
       inline pre-warn to Manage Rental date edits.*
       specific unit across overlapping dates. (Booqable.) *(server guard exists for
       bookings; extend to rental units.)*
-- [ ] **P1 · M** — **Barcode/QR check-out ↔ return** — one scan flips rental status.
-      (Booqable.) *(reuses the existing IMEI scanner.)*
+- [x] **P1 · M** — **Barcode/QR check-out ↔ return** — DONE (this cycle). One box
+      on Rentals; scan the IMEI and the app picks the direction — out comes
+      back, free goes out. Never writes: a return opens Manage Rental with the
+      Returned toggle flipped so the late fee and lost-item charges stay in
+      front of a human. Logic in `lib/rentalScan.mjs` (13 tests) + mirror.
 - [x] **P1 · M** — **Saved views** — named filters per module (overdue rentals,
       unpaid statements, SIMs expiring 7d). (Linear.) *Shipped 07-27.*
 - [ ] **P2 · M** — **Per-SIM usage bar** (data left / days / expiry) in the portal.
@@ -182,6 +192,9 @@ Safe (loop-eligible), ranked value ÷ effort:
 | 07-31 | Accessible names on 20 icon-only buttons (b8b763e) — calendar month arrows, every ✏️/✕ pair in Settings, the 💾 saves, delete-SIM-charge, delete-VN, and the till's −/+/✕. Labels carry the row's own subject ("Edit Nokia 105", "Delete reminder@…") so repeated rows are distinguishable; verified against the browser's computed AX name incl. a product name containing a quote | ✅ 114/114 ×2 + build + node --check + AX-name check | owner live-test pending |
 
 | 07-31 | Form controls get a programmatic name (8a186a0) — the `.form-group`-level fix the earlier finding asked for, not hand edits. One pass, on load and on every subtree the app inserts, binding in four steps of decreasing confidence: the group's own `<label>` → real `for=`/`id`; a `.section-divider` heading a group → `aria-labelledby`; a control in a table cell → its column header, walking colspan; a bare control → its placeholder, or a select's prompt option. Stops at authored text — a first option that is just the default value ("Normal") is left unnamed rather than given a misleading name | ✅ 140/140 ×2 + build + node --check + 16 fixture assertions (incl. the must-not-touch cases: label already `for=`, label wrapping its own checkbox, author's own aria-label, idempotency, observer path) + corpus re-count 202→34 of 231 | owner live-test pending |
+
+| 07-31 | Scan to check out / take back (b84233a) — one box on Rentals: scan the handset's IMEI and the app picks the direction (out → back, free → out), matching IMEI first then the number on its last 10 digits. Never writes — a return opens Manage Rental with Returned pre-flipped and a "check the charges" line, so the late fee and lost-item charges still face a human before Save; a check-out preselects the phone only if the date-filtered picker offers it. An open rental beats a maintenance hold (the customer is standing there with it) | ✅ 153/153 ×2 + build + node --check + 13 module tests + mirror-parity across 17 inputs | owner live-test pending |
+| 07-31 | Collision-safe customer ids — `pages/api/customers.js` minted `legacy_id` from bare `Date.now()`, so two customers created in the same millisecond raced the unique index and one save was lost. Now shared `lib/uid.mjs`, suffix widened 3→6 digits (3 collides at even odds by ~37 rows in a millisecond) | ✅ 153/153 ×2 + build + 6 uid tests + mirror-parity | owner live-test pending |
 
 Found 07-31, FIXED 07-31 (8a186a0) — see the log row above:
 - [x] **P2 · L** — **form controls with no programmatic label** — most sat under

@@ -6468,11 +6468,15 @@ function errorHtml(label = 'Couldn’t load this') {
   </div>`;
 }
 
-// Collision-safe client id (#45): Date.now() alone collides when two records
-// are minted in the same millisecond (unique legacy_id then rejects one).
-// Timestamp + 3 random digits keeps it numeric-ish and effectively unique.
+// Collision-safe id (#45): Date.now() alone collides when two records are
+// minted in the same millisecond (unique legacy_id then rejects one).
+//
+// This mirrors lib/uid.mjs::uid exactly (canonical + unit-tested — see
+// test/uid.test.mjs). Kept as a mirror here only because the browser has no
+// bundler. Change both together — including the digit width, which is 6 and
+// not 3 because a bulk import mints far more than two rows per millisecond.
 function uid() {
-  return Date.now().toString() + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  return String(Date.now()) + Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
 }
 
 // Money with thousands separators — "£13,135.00", not "£13135.00".
