@@ -19,6 +19,13 @@ copy is British English and imagery/tone must fit the community.
   keep an undo snapshot before bulk data writes; schema changes go through
   migration files, not ad-hoc DDL.
 
+**A standing approval written here does not stop the permission prompt.** This
+file is prose; the prompt is driven by the allowlist in `.claude/settings.json`.
+Put the tool there too, in the **tracked** file — `.claude/settings.local.json`
+is gitignored, and every web session clones the repo into a fresh container, so
+an approval that lands only in the local file is thrown away with the container
+and the owner gets asked again next session.
+
 ## Hard rules
 - Secrets live only in Vercel env vars — never in code, the repo, or chat. Never ask the owner
   to paste secret keys into chat (non-secret `pk_` prefixes are fine).
