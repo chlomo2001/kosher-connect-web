@@ -132,13 +132,29 @@ Safe (loop-eligible), ranked value ÷ effort:
       takings per shul? payments? Then scope → build.
 
 ## Ops / go-live blockers (not features, but gate Phase-2 shipping)
-- [ ] **P1 · S** — **Apply pending migrations on deploy**: `20260716140000`
-      (ivr_platforms) and `20260715160000` (customer documents).
-- [ ] **P1 · M** 🔒 — **Production DB** `Kc-production` is now `ACTIVE_HEALTHY`
-      (2026-07-16, confirmed). BUT its migration ledger records only **1**
-      migration (`20260514103821`) vs staging's **40** — a full history
-      reconcile is needed (confirm actual schema, then mark migrations applied
-      without re-running). Careful one-shot job; do with owner, don't auto-run.
+- [x] **P1 · S** — **Apply pending migrations on deploy**: `20260716140000`
+      (ivr_platforms) and `20260715160000` (customer documents) — **stale.**
+      Both were already recorded on Kc-Live; verified 07-31.
+- [x] **P1 · M** 🔒 — **Production DB migration reconcile** — **DONE 07-31, and
+      the drift was far smaller than this note claimed.** The note described a
+      project called `Kc-production` with 1 migration (`20260514103821`) against
+      staging's 40. That project no longer exists under that name: it became
+      **`Kc-staging`** (`rcpqgujtutvpfzfsgzql`) and the 50-migration chain was
+      built on it — that was task §0, already done. `20260514103821` sits at the
+      head of *staging's* ledger, not production's.
+
+      Real production is **`Kc-Live`** (`xsrtdwwzxdmnjdtjcdzd`), as CLAUDE.md
+      says, and it was never in that state: it held **56** of the repo's 57
+      migrations, with **nothing recorded that the repo doesn't have**. The one
+      genuine gap was `customers_passport_on_file`, and only in the *ledger* —
+      the column was already on the table (boolean, not null, default false),
+      added out-of-band. Its migration is `add column if not exists`, so
+      applying it was a no-op against the schema and simply recorded the row.
+
+      Reconciled and both refund migrations applied the same way. Production is
+      now **59/59 by name, both directions empty**. Note the recorded *versions*
+      differ from repo filenames throughout (`apply_migration` stamps its own
+      timestamp) — the ledger aligns by name, which is what the diff checks.
 - [x] **P1 · S** — **Vercel auto-deploy stalled** after `11630e2` — **stale, not a
       fault.** Checked 07-31 against the Vercel API: the GitHub integration is
       healthy and has never stopped. Every push to the dev branch since 30 Jul
