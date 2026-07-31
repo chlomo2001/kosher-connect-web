@@ -1499,7 +1499,7 @@ function availabilityCalendarHtml() {
   const dayHead = Array.from({ length: daysInMonth }, (_, i) => {
     const d = i + 1;
     const dow = new Date(y, m - 1, d).getDay();
-    return `<th class="cal-day${dow === 6 ? ' cal-shabbat' : ''}${iso(d) === today ? ' cal-today' : ''}">${d}</th>`;
+    return `<th scope="col" class="cal-day${dow === 6 ? ' cal-shabbat' : ''}${iso(d) === today ? ' cal-today' : ''}">${d}</th>`;
   }).join('');
 
   const rows = phones.map(p => {
@@ -1510,16 +1510,27 @@ function availabilityCalendarHtml() {
       if (!hit) {
         return `<td class="cal-cell cal-free${dow === 6 ? ' cal-shabbat' : ''}${dIso === today ? ' cal-today' : ''}"
           title="Free — click to reserve ${escHtml(p.number)} from ${fmtDate(dIso)}"
+          aria-label="${fmtDate(dIso)}: free"
           onclick="calQuickReserve('${p.id}','${dIso}')"></td>`;
       }
-      const cls = hit.r.status === 'booked' ? 'cal-booked'
-        : (hit.r.status !== 'returned' && hit.r.toDate < today) ? 'cal-overdue' : 'cal-active';
-      return `<td class="cal-cell ${cls}${dIso === today ? ' cal-today' : ''}"
+      const state = hit.r.status === 'booked' ? 'booked'
+        : (hit.r.status !== 'returned' && hit.r.toDate < today) ? 'overdue' : 'active';
+      // The fill used to be the ONLY signal, so gold "reserved" and red
+      // "overdue" were the same cell to anyone with a colour-vision
+      // deficiency — and the <td> was empty, so the whole grid read as blank
+      // to a screen reader. Each state now also differs in texture or glyph
+      // (see .cal-booked / .cal-overdue in globals.css) and carries a label.
+      const word = { active: 'out', booked: 'reserved', overdue: 'overdue' }[state];
+      const mark = state === 'overdue' ? '<span class="cal-mark" aria-hidden="true">!</span>' : '';
+      return `<td class="cal-cell cal-${state}${dIso === today ? ' cal-today' : ''}"
         title="${escHtml(hit.r.customerName || '')} · ${fmtDate(hit.r.fromDate)} → ${fmtDate(hit.r.toDate)}${hit.r.status === 'booked' ? ' (reserved)' : ''}"
-        onclick="openManageRentalModal('${hit.r.id}')"></td>`;
+        aria-label="${fmtDate(dIso)}: ${word} — ${escHtml(hit.r.customerName || 'no name')}"
+        onclick="openManageRentalModal('${hit.r.id}')">${mark}</td>`;
     }).join('');
+    // th+scope, not td: it makes the phone the row header, so a screen reader
+    // announces "07… , 14" for a cell instead of an unplaced date.
     return `<tr>
-      <td class="cal-phone"><strong>${escHtml(fmtPhone(p.number))}</strong><div class="customer-email">${escHtml(p.country)}${p.ukPlan === 'unlimited' ? ' intl' : ''}</div></td>
+      <th scope="row" class="cal-phone"><strong>${escHtml(fmtPhone(p.number))}</strong><div class="customer-email">${escHtml(p.country)}${p.ukPlan === 'unlimited' ? ' intl' : ''}</div></th>
       ${cells}
     </tr>`;
   }).join('');
@@ -1532,8 +1543,8 @@ function availabilityCalendarHtml() {
         <button class="btn btn-outline btn-sm" onclick="calShift(1)">→</button>
         <span style="margin-left:auto;font-size:11px;color:var(--muted);">
           <span class="cal-key cal-active"></span> out
-          <span class="cal-key cal-booked"></span> reserved
-          <span class="cal-key cal-overdue"></span> overdue
+          <span class="cal-key cal-booked"></span> reserved (striped)
+          <span class="cal-key cal-overdue"></span> overdue (!)
           <span class="cal-key cal-shabbat"></span> Shabbat
           · click a free day to reserve</span>
       </div>

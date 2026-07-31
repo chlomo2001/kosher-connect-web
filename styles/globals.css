@@ -1397,7 +1397,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 /* Availability calendar */
 .cal-table { border-collapse: collapse; width: 100%; }
 .cal-table th { font-size: 10px; color: var(--muted); font-weight: 400; padding: 4px 0; text-align: center; }
-.cal-phone { text-align: left !important; white-space: nowrap; padding: 4px 10px 4px 0 !important; font-size: 12px; position: sticky; left: 0; background: var(--surface); }
+/* Scoped under .cal-table so it outranks the 10px muted `.cal-table th` rule —
+   the row header is a <th> now (it names the phone the row belongs to). */
+.cal-table .cal-phone { text-align: left !important; white-space: nowrap; padding: 4px 10px 4px 0 !important; font-size: 12px; font-weight: 400; color: var(--text); position: sticky; left: 0; background: var(--surface); }
 .cal-cell { width: 22px; height: 24px; border: 1px solid var(--border); padding: 0 !important; }
 .cal-free { background: var(--surface); cursor: pointer; }
 .cal-free:hover { background: rgba(0, 96, 168, 0.12); }
@@ -1412,6 +1414,21 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .cal-key.cal-booked { background: #e8b93c; }
 .cal-key.cal-overdue { background: var(--danger); }
 .cal-key.cal-shabbat { background: var(--bg-secondary); border: 1px solid var(--border); }
+
+/* Colour was the only thing telling these three states apart, which fails for
+   anyone with a colour-vision deficiency (and in a greyscale print of the
+   month). Reserved now carries a diagonal stripe and overdue a "!", so the
+   three read as three in any palette. Applied to the key swatches too, or the
+   legend would stop matching the grid. */
+.cal-booked, .cal-key.cal-booked {
+  background-image: repeating-linear-gradient(45deg,
+    rgba(0, 0, 0, .28) 0 2px, transparent 2px 5px);
+}
+.cal-mark {
+  display: block; text-align: center; line-height: 24px;
+  font-size: 11px; font-weight: 800; color: #fff;
+}
+.cal-key.cal-overdue { position: relative; }
 
 /* Command palette (Ctrl/Cmd+K) */
 .palette-overlay {
