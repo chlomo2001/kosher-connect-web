@@ -639,6 +639,17 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 }
 .action-btn:hover { border-color: var(--accent); color: var(--accent); }
 .action-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+/* At rest, Delete was the same size, weight and muted grey as Details sitting
+   8px away — hover was the ONLY thing that distinguished "look at this
+   customer" from "delete this customer", and hover arrives after you have
+   already committed to the click. A gap and a standing tint make the
+   difference visible before the pointer gets there. Scoped to .row-actions so
+   the ✕ icon-buttons elsewhere keep their own treatment. */
+.row-actions .action-btn.danger {
+  margin-inline-start: 8px;
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--border));
+  color: color-mix(in srgb, var(--danger) 72%, var(--muted));
+}
 
 /* ─── EMPTY STATE ─── */
 .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
