@@ -771,7 +771,11 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .detail-name { font-size: 20px; font-weight: 300; letter-spacing: -0.2px; }
 .detail-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
 
-.detail-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+/* auto-fit rather than a hard 3, and rather than a media query: this sits in a
+   modal whose width is a percentage of the viewport, so the breakpoint that
+   matters is the CARD's width, not the screen's. At three fixed columns on a
+   handset each stat got ~90px and the 20px balance figure clipped. */
+.detail-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 12px; margin-bottom: 18px; }
 .detail-stat {
   background: var(--bg);
   border: 1px solid var(--border);
