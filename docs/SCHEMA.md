@@ -25,6 +25,31 @@ Start empty — seed config, the service menu, and the holiday calendar only.
 | `20260712120200_seed.sql` | rental_rates, damage_rates, settings, 33 service prices |
 | `20260712120300_seed_holidays.sql` | 2,223 Yom Tov dates 2020–2125 (diaspora + israel), generated from `scripts/generate-holidays.mjs` output |
 
+## Checking a database against these files
+
+**Compare by NAME, never by version.** Migrations applied through the Supabase
+MCP `apply_migration` are stamped with the timestamp of the moment they ran, not
+the one in the filename — so `20260719240000_customers_passport_on_file.sql` is
+recorded as version `20260731171234`. On Kc-Live *every* version differs from
+its filename. Diffing on version reports all 59 as drift and buries the one that
+is real; the name is the stable key.
+
+```
+node ops/migration-drift.mjs --label Kc-Live < live-migrations.json
+```
+
+Pipe in the Supabase MCP `list_migrations` output as-is (it also takes a bare
+array or newline-separated names). Exits 0 when they agree, 1 on drift, so it
+can gate a deploy. It reports both directions — migrations the repo has that the
+database lacks, and migrations the database has that the repo lacks — and fails
+loudly if two files ever share a name, since name-matching depends on that being
+unique. Logic in `lib/migrationDrift.mjs`, tested in `test/migrationDrift.test.mjs`.
+
+Last run 31 Jul: Kc-Live 59/59, both directions empty. Kc-staging is behind by
+`line_status_permanent` and the two `refund_payout` migrations, and carries two
+of its own (`disable_rls_on_store`, `drop_vestigial_store`) from before the chain
+was rebuilt on it.
+
 ## Deltas from the original draft (why)
 
 1. **`rental_items` table replaces the four `checklist_*` booleans.** The
