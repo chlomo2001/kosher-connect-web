@@ -175,5 +175,23 @@ Safe (loop-eligible), ranked value ÷ effort:
 | 07-29 | Welcome travel-band price lines verified EN/HE × 390px/1160px after the price-truth correction — clean wrap, LRM-isolated amounts render correctly in RTL; no change needed | ✅ harness shots | n/a (verification) |
 | 07-29 | A11y: aria-label on the icon-only 💬 WhatsApp link on the customer card; confirmed the global :focus-visible ring already covers the new SIM-badge buttons and WhatsApp buttons | ✅ 114/114 ×2 + build + node --check | owner live-test pending |
 
+| 07-31 | Calendar states without colour (b126b09) — "out"/"reserved"/"overdue" were three fills and nothing else, and the cells were empty `<td>`s so the grid read as blank to a screen reader. Reserved gets a diagonal stripe, overdue a "!", both mirrored in the legend; per-cell aria-label (date + state + customer); phone becomes `<th scope="row">`, day headers `scope="col"` | ✅ 114/114 ×2 + build + node --check + harness L/D **and greyscale** (4 states visibly distinct without colour) | owner live-test pending |
+| 07-31 | Customer-card stats wrap (6cbe1a0) — `.detail-stats` was a hard 3-col with a ~134px min per label, so on a 330px screen it needed 426px in a 306px card and pushed the modal into horizontal scroll. auto-fit/minmax(132px) instead of a media query, because the deciding width is the card's, not the screen's | ✅ 114/114 ×2 + build + measured at 4 card widths (330/390 wrap, no overflow; 520/760 unchanged 3-up) | owner live-test pending |
+| 07-31 | Way out of a filtered-empty list (51fbebd) — `kcViewIsFiltered`/`kcViewReset` + a "↺ Clear filters" button in all 7 filtered empty states. Also fixed two lying messages: Rentals said "No rentals yet — click New Rental" and SIM plans "No SIM plans yet" regardless of how many were on file, which with 800+ SIMs behind a filter reads as data loss. Reset leaves sort alone on purpose | ✅ 114/114 ×2 + build + node --check + 8 isolated reset-logic assertions (dimension & flat tabs, unknown tab, sort survives) | owner live-test pending |
+| 07-31 | Delete looks destructive at rest (020d2da) — in `.row-actions` Delete was the same size/weight/muted-grey as Details 8px away; hover was the only signal and hover comes after you've aimed. Now 16px clear with a standing red tint on label + border | ✅ 114/114 ×2 + build + contrast measured 5.50:1 light / 5.45:1 dark (AA) | owner live-test pending |
+| 07-31 | Accessible names on 20 icon-only buttons (b8b763e) — calendar month arrows, every ✏️/✕ pair in Settings, the 💾 saves, delete-SIM-charge, delete-VN, and the till's −/+/✕. Labels carry the row's own subject ("Edit Nokia 105", "Delete reminder@…") so repeated rows are distinguishable; verified against the browser's computed AX name incl. a product name containing a quote | ✅ 114/114 ×2 + build + node --check + AX-name check | owner live-test pending |
+
+Found 07-31, NOT auto-fixed (too big for one loop item, wants a plan):
+- [ ] **P2 · L** — **274 form controls with no programmatic label** (194 input,
+      72 select, 8 textarea) — most sit under a visible `<label>` that has no
+      `for=`, so they look labelled and aren't. 173 have no placeholder either.
+      A mechanical sweep over that many controls risks breaking live forms;
+      wants a `.form-group`-level fix (auto-associate label↔control at render)
+      rather than 274 hand edits. Measured, not guessed.
+- Verified clean while hunting: no hardcoded text colour in globals.css lacks
+  a dark-theme override (the three that looked unguarded all have one — the
+  first scan's selector matching was wrong). B2's class of bug has not
+  regressed.
+
 Held / owner input: family-trip sheet (£1,364 balance) needs the customer's
 name before it's entered; Canada/EU loss rates — follow T&C schedule or stay?
