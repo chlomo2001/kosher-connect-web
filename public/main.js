@@ -1604,7 +1604,13 @@ function renderRentalRows() {
   filtered = kcViewApply('rentals', filtered);
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="emoji">📱</div><p>No rentals yet.</p><small>Click "New Rental" to get started.</small></div></td></tr>`;
+    // "No rentals yet" was shown even with a full pool behind an active
+    // filter — the one message a busy shop would read as data loss.
+    const narrowed = rentals.length > 0;
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="emoji">📱</div>
+      <p>${narrowed ? 'No rentals match this view.' : 'No rentals yet.'}</p>
+      <small>${narrowed ? '' : 'Click "New Rental" to get started.'}</small>
+      ${narrowed ? kcClearFiltersBtn('rentals') : ''}</div></td></tr>`;
     return;
   }
 
@@ -3253,6 +3259,41 @@ function kcViewSetDim(key, dim, value) {
   st.dims[dim] = value;
   const cfg = kcViewCfg[key];
   if (cfg && cfg.render) cfg.render();
+}
+
+// A filtered-to-empty list is a dead end: the rows are gone, so the thing you
+// would click to get them back is the one control still on screen, and it is a
+// <select> you have to know to reset — dimension by dimension. These give the
+// empty state itself a way out.
+//
+// "Is anything narrowed?" is answered against the CONFIG, not a remembered
+// default, so a tab that later reorders its options can't leave this lying.
+function kcViewIsFiltered(key) {
+  const cfg = kcViewCfg[key];
+  if (!cfg) return false;
+  const st = kcView(key);
+  const dims = kcFsDims(cfg.filters);
+  if (dims) return dims.some(d => (st.dims || {})[d.dim] !== d.options[0].value);
+  return !!cfg.filters.length && st.filter !== cfg.filters[0].value;
+}
+function kcViewReset(key) {
+  const cfg = kcViewCfg[key];
+  if (!cfg) return;
+  const st = kcView(key);
+  const dims = kcFsDims(cfg.filters);
+  if (dims) { st.dims = {}; for (const d of dims) st.dims[d.dim] = d.options[0].value; }
+  else if (cfg.filters.length) st.filter = cfg.filters[0].value;
+  // Sort deliberately survives: it isn't why the list is empty, and silently
+  // reordering what comes back would be a second surprise.
+  if (cfg.render) cfg.render();
+}
+// The button for a filtered-empty list. Returns '' when nothing is narrowed,
+// so callers can drop it straight into their existing <small>.
+function kcClearFiltersBtn(key) {
+  return kcViewIsFiltered(key)
+    ? `<button type="button" class="btn btn-outline btn-sm" style="margin-top:10px;"
+        onclick="kcViewReset('${key}')">↺ Clear filters</button>`
+    : '';
 }
 
 // Apply the active filter + sort for a tab to a list (returns a new array).
@@ -5853,7 +5894,13 @@ function renderSimRows() {
   if (countEl) countEl.textContent = `${sorted.length} of ${sims.length}`;
 
   if (sorted.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="emoji">💳</div><p>No SIM plans yet.</p><small>Click "+ New SIM Plan" to add one.</small></div></td></tr>`;
+    // Same trap as Rentals: with 800+ SIMs on file, "No SIM plans yet" reads
+    // as the list having been wiped rather than filtered.
+    const narrowed = sims.length > 0;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="emoji">💳</div>
+      <p>${narrowed ? 'No SIM plans match this view.' : 'No SIM plans yet.'}</p>
+      <small>${narrowed ? '' : 'Click "+ New SIM Plan" to add one.'}</small>
+      ${narrowed ? kcClearFiltersBtn('sim') : ''}</div></td></tr>`;
     return;
   }
 
@@ -6482,7 +6529,7 @@ function renderBookingsTab() {
   ], renderBookingsTab);
   const bkShown = kcViewApply('bookings', bookings);
   const rows = bkShown.length === 0
-    ? `<tr><td colspan="9"><div class="empty-state"><div class="emoji">✈️</div><p>${bookings.length ? 'No bookings match this filter.' : 'No bookings yet.'}</p><small>${bookings.length ? 'Change the filter above.' : 'Click "New Booking" to add the first one.'}</small></div></td></tr>`
+    ? `<tr><td colspan="9"><div class="empty-state"><div class="emoji">✈️</div><p>${bookings.length ? 'No bookings match this filter.' : 'No bookings yet.'}</p><small>${bookings.length ? 'Change the filter above.' : 'Click "New Booking" to add the first one.'}</small>${kcClearFiltersBtn('bookings')}</div></td></tr>`
     : bkShown.map(b => `
       <tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a'))openEditBookingModal('${escHtml(b.id)}')" title="Open booking">
         <td><div class="customer-name">${escHtml(b.customerName || '—')}</div>
@@ -7289,7 +7336,7 @@ async function renderRepairsTab() {
   const shown = kcViewApply('repairs', repairs);
   const emptyMsg = repairs.length ? 'No repairs match this filter.' : 'No repairs yet.';
   const rows = shown.length === 0
-    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔧</div><p>${emptyMsg}</p><small>${repairs.length ? 'Change the filter above.' : 'Click "New Repair" to open the first ticket.'}</small></div></td></tr>`
+    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔧</div><p>${emptyMsg}</p><small>${repairs.length ? 'Change the filter above.' : 'Click "New Repair" to open the first ticket.'}</small>${kcClearFiltersBtn('repairs')}</div></td></tr>`
     : shown.map(r => `
       <tr>
         <td><div class="customer-name">${escHtml(r.customerName || '—')}</div></td>
@@ -7754,7 +7801,7 @@ async function renderServicesTab() {
   ], renderServicesTab);
   const svcShown = kcViewApply('services', serviceOrders);
   const orderRows = svcShown.length === 0
-    ? `<tr><td colspan="5"><div class="empty-state"><div class="emoji">🖨️</div><p>${serviceOrders.length ? 'No orders match this filter.' : 'No services charged yet.'}</p></div></td></tr>`
+    ? `<tr><td colspan="5"><div class="empty-state"><div class="emoji">🖨️</div><p>${serviceOrders.length ? 'No orders match this filter.' : 'No services charged yet.'}</p>${kcClearFiltersBtn('services')}</div></td></tr>`
     : svcShown.map(o => `
       <tr>
         <td><div class="customer-name">${escHtml(o.customerName || '—')}</div></td>
@@ -8023,7 +8070,7 @@ async function renderShopTab() {
   ], renderShopTab);
   const shopShown = kcViewApply('shop', active);
   const itemRows = shopShown.length === 0
-    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🛍️</div><p>${active.length ? 'No stock matches this filter.' : 'No stock yet — add your first item.'}</p></div></td></tr>`
+    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🛍️</div><p>${active.length ? 'No stock matches this filter.' : 'No stock yet — add your first item.'}</p>${kcClearFiltersBtn('shop')}</div></td></tr>`
     : shopShown.map(i => `
       <tr style="${i.quantity <= i.lowStockAt ? 'background:rgba(234,34,97,0.04);' : ''}">
         <td><strong>${escHtml([i.company, i.model].filter(Boolean).join(' '))}</strong>
@@ -10750,7 +10797,7 @@ async function renderVirtualTab() {
   ], renderVirtualTab);
   const vnShown = kcViewApply('virtual', virtualNumbers);
   const rows = vnShown.length === 0
-    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔢</div><p>${virtualNumbers.length ? 'No numbers match this filter.' : 'No virtual numbers yet.'}</p></div></td></tr>`
+    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔢</div><p>${virtualNumbers.length ? 'No numbers match this filter.' : 'No virtual numbers yet.'}</p>${kcClearFiltersBtn('virtual')}</div></td></tr>`
     : vnShown.map(v => `
       <tr>
         <td><strong>${escHtml(fmtPhone(v.number))}</strong></td>
