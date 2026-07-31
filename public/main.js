@@ -10079,6 +10079,100 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// ── Programmatic labels for form controls ────────────────────────────────
+// Nearly every field in the app sits in a `.form-group` under a visible
+// `<label class="form-label">` that has no `for=`. Sighted staff see a
+// labelled field; a screen reader announces "edit text, blank" — and clicking
+// the label doesn't focus the field either. ~200 controls are like this, so
+// rather than 200 hand edits (200 chances to break a live form), bind the pair
+// the markup already puts together, at render time. Same shape as
+// kcScanClickable below: one pass per inserted subtree.
+const KC_CTL = 'input:not([type=hidden]):not([type=submit]):not([type=button]),select,textarea';
+let kcLabelSeq = 0;
+function kcHasName(el) {
+  return !!((el.getAttribute('aria-label') || '').trim() ||
+            el.getAttribute('aria-labelledby') ||
+            (el.labels && el.labels.length) ||
+            (el.getAttribute('title') || '').trim());
+}
+function kcLabelControls(group) {
+  // Form groups nest (a group can hold a form-grid of groups), so only take
+  // the controls and labels this group actually owns.
+  const mine = el => el.closest('.form-group') === group;
+  const ctls = [...group.querySelectorAll(KC_CTL)].filter(mine);
+  if (!ctls.length) return;
+  // A label that already points somewhere, or that wraps its own control
+  // (the checkbox rows), is left alone — it works.
+  const label = [...group.querySelectorAll('label')].filter(mine)
+    .find(l => !l.getAttribute('for') && !l.querySelector(KC_CTL));
+  const first = ctls[0];                       // what the group's label describes
+  if (label && !kcHasName(first)) {
+    if (!first.id) first.id = 'kc-ctl-' + (++kcLabelSeq);
+    label.setAttribute('for', first.id);
+    return;
+  }
+  // Some groups head themselves with a `.section-divider` ("Payment") instead
+  // of a label. It's a heading, not a <label>, so point at it by id rather
+  // than inventing a `for`.
+  const head = [...group.querySelectorAll('.section-divider')].filter(mine)[0];
+  if (head && !kcHasName(first) && head.textContent.trim()) {
+    if (!head.id) head.id = 'kc-lbl-' + (++kcLabelSeq);
+    first.setAttribute('aria-labelledby', head.id);
+  }
+}
+// Inline-edit tables (the price menu, Kol Torah titles, extra charges) put a
+// bare control in every cell. The column header IS the field name there — it's
+// what a sighted user reads the cell against — so borrow it. Column index is
+// walked with colspan so the grouping rows don't shift the mapping.
+const KC_CELL_CTL = KC_CTL.split(',').map(s => 'td ' + s).join(',');
+function kcLabelCells(root) {
+  root.querySelectorAll(KC_CELL_CTL).forEach(el => {
+    if (kcHasName(el)) return;
+    const cell = el.closest('td'), table = cell.closest('table');
+    const head = table && table.querySelector(':scope > thead > tr:last-child');
+    if (!head) return;
+    let col = 0;
+    for (const c of cell.parentElement.children) { if (c === cell) break; col += c.colSpan || 1; }
+    let at = 0, name = '';
+    for (const th of head.children) {
+      const w = th.colSpan || 1;
+      if (col < at + w) { name = th.textContent.trim(); break; }
+      at += w;
+    }
+    if (name) el.setAttribute('aria-label', name);
+  });
+}
+// Last resort for a control with no label anywhere — the search boxes, and the
+// second/third field of a paired row. The placeholder is the only text a
+// sighted user gets, and it vanishes as soon as they type, so promoting it to
+// an accessible name loses nothing and gives a screen reader something.
+// …and for a bare <select>, its own prompt option. Only a real prompt counts:
+// an empty-value first option ("Choose a customer…") or a "Filter: everyone"
+// style prefix. A first option that's just the default value ("Normal") names
+// nothing, so it's left alone rather than given a misleading name.
+function kcSelectPrompt(sel) {
+  const first = sel.options && sel.options[0];
+  if (!first) return '';
+  const txt = (first.textContent || '').trim();
+  if (/:\s/.test(txt)) return txt.split(/:\s/)[0].trim();
+  return first.value === '' ? txt.replace(/^[—–-]\s*|\s*[—–-]$/g, '').trim() : '';
+}
+function kcLabelFallback(root) {
+  root.querySelectorAll(KC_CTL).forEach(el => {
+    if (kcHasName(el)) return;
+    const name = (el.getAttribute('placeholder') || '').trim() ||
+                 (el.tagName === 'SELECT' ? kcSelectPrompt(el) : '');
+    if (name) el.setAttribute('aria-label', name);
+  });
+}
+function kcScanLabels(root) {
+  if (!root || root.nodeType !== 1 || !root.querySelectorAll) return;
+  if (root.matches && root.matches('.form-group')) kcLabelControls(root);
+  root.querySelectorAll('.form-group').forEach(kcLabelControls);
+  kcLabelCells(root);
+  kcLabelFallback(root);
+}
+
 // ── Keyboard-operable clickable rows / drill-downs ───────────────────────
 // Dozens of rows and cards use inline onclick on non-button elements (tr, div),
 // which a keyboard can neither focus nor trigger. Rather than edit ~240 call
@@ -10110,11 +10204,12 @@ document.addEventListener('keydown', e => {
 });
 try {
   const kcClickObs = new MutationObserver(muts => {
-    for (const m of muts) m.addedNodes.forEach(n => kcScanClickable(n));
+    for (const m of muts) m.addedNodes.forEach(n => { kcScanClickable(n); kcScanLabels(n); });
   });
   kcClickObs.observe(document.body, { childList: true, subtree: true });
 } catch { /* MutationObserver unsupported — rows stay mouse-only, no worse than before */ }
 kcScanClickable(document.body);
+kcScanLabels(document.body);
 
 // ── Modal focus trap ─────────────────────────────────────────────────────
 // Modals carry role=dialog + aria-modal (announced as dialogs) and Escape
