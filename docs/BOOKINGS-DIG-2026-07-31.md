@@ -92,28 +92,32 @@ already returned on bookings the sheet still marks FALSE:
 
 | booking | evidence (owner's sent mail) | Wizz refunded | reached the customer? |
 |---|---|---|---|
-| BNKYRW | 30 Jul 23:21 *"Refund sent £285"* | — | **probably — see caveat** |
+| BNKYRW | *"received a refund from Wizz … £285"*, then 30 Jul 23:21 *"Refund sent £285"* | £285 | **yes — both legs, 16 min apart** |
 | MN8VSZ | 29 Jul 23:28 *"cancelled your booking and refunded £90"* | £90 | no — asking where to send |
 | FMLJ8J | 29 Jul 23:55 *"refunded £45"* | £45 | no — asking where to send |
 | Tager (4 pax, LTN–TLV Jan 27) | 29 Jul 23:29 *"refunded £320"* | £320 | no — asking how |
 | TLKCQC | 30 Jul, *"Wizzair has refunded £205… your balance is now £130"* | £205 | n/a — customer had not paid; **owed KC £130, since received** |
 
-**Caveat on BNKYRW — "Refund sent" is read, not proven.** *"Refund sent £285"*
-does not name a sender. It could mean Shloime sent £285 to the customer, or that
-Wizz sent £285 in. Three things favour the first: the customer had supplied their
-account details 16 minutes earlier (*"You can send the payment for the Kopilowitz
-booking — BNKYRW — to this account"*), they replied *"תודה רבה על עזרתך"* —
-thanking him for his help, which reads like a completed act rather than news of
-one pending; and Shloime's wording is consistent elsewhere — when Wizz is the
-payer he names it (*"Wizzair … refunded £45"*) and then asks where to send the
-money, which he does not do here because he had just been told.
+**BNKYRW — resolved: both legs happened, in that order.** The owner questioned
+whether *"Refund sent £285"* meant Wizz sent it in rather than Shloime sending it
+on, and rightly — that message names no sender. An earlier message in the same
+thread settles it:
 
-That is a strong reading, not a fact. **It is settled by one look at the bank
-statement**: an outbound £285 around 30 Jul confirms it; its absence means KC is
-holding £285 and BNKYRW belongs in state (b) below, not (a).
+> *"Hi I have received a refund from Wizz for your booking in the amount of £285.
+> Let me know where to [send it]"*
 
-Either way the conclusion below is unaffected: £285 ≠ the £495 the customer paid,
-so the refund still is not the payment. Only BNKYRW's *state* turns on it.
+So Wizz refunded **£285 in**, Shloime asked where to forward it, the customer
+supplied their account on 30 Jul at 23:05, and *"Refund sent £285"* followed at
+23:21. Both legs, sixteen minutes apart. BNKYRW is state (a), settled.
+
+This is the clearest evidence for the whole model: **the two legs are separate
+events that can sit days apart**, which is exactly why one `Refunded?` boolean
+cannot express the position and why the ledger needed `refund` and
+`refund_payout` as distinct entries.
+
+It also fixes the amount. Wizz returned £285 against a £345 fare on a booking
+where the customer paid £495 — so the shortfall is real and is not only the
+service fee.
 
 ### What this changes: the £3,190 is not the liability
 
@@ -154,9 +158,31 @@ been passed on.** Those live in `ch7023518@gmail.com`, which this session cannot
 read — the connected mailbox is `e.a.rothbart@gmail.com`. Either Shloime
 supplies the per-booking figures, or that mailbox gets connected.
 
-Also unresolved in the sheet itself: **`XU2WWH` appears twice** in the eleven,
-at £360 and £145. A reversal keyed on booking reference would be ambiguous
-until that is explained — two bookings under one reference, or a data error.
+**The eleven were all cancelled together.** Wizz sent *"Important Update
+Regarding Your Reservation"* on **23 July** for ten references — EHC93Y, BNKYRW,
+IMPKJZ, IJEVNV, XU2WWH, DSCUFH, TMZZXC, MN8VSZ, HWGC5D, UGSJJB — one per
+reference, i.e. every distinct ref in the eleven. Bookings were made 8–12 Jul,
+a second run of Wizz invoices lands 20–21 Jul (alongside *"Important information
+regarding your flight change booking"*), then the cancellations on 23 Jul. So
+this is one event, not eleven separate mishaps.
+
+**`XU2WWH` — the mail says one reservation, the sheet says two rows.** There is
+a single 23 Jul cancellation for XU2WWH and a single invoice per run (BWUK21691218
+on 9 Jul, BWUK21843070 on 21 Jul). Nothing in the mailbox suggests two bookings
+under that reference. That points to one of the sheet's two rows (£360 / £145)
+carrying the **wrong reference** rather than there being a genuine duplicate —
+which would mean one of the eleven is a booking we cannot yet identify. Resolve
+before any ref-keyed write.
+
+**Where the exact amounts live.** Only two are known so far (BNKYRW £285,
+MN8VSZ £90), both from Shloime's own messages to customers. The rest are in the
+same place — his sent mail — and in the Wizz credit-note PDFs from the 21/23 Jul
+run. The search that surfaces them by amount, since the figure appears in the
+snippet:
+
+```
+in:sent (refunded OR "received a refund") newer_than:20d
+```
 
 Deliberately not recorded here: the customer and payee bank details visible in
 that correspondence. They are not needed for the ledger correction.
