@@ -181,13 +181,19 @@ Safe (loop-eligible), ranked value ÷ effort:
 | 07-31 | Delete looks destructive at rest (020d2da) — in `.row-actions` Delete was the same size/weight/muted-grey as Details 8px away; hover was the only signal and hover comes after you've aimed. Now 16px clear with a standing red tint on label + border | ✅ 114/114 ×2 + build + contrast measured 5.50:1 light / 5.45:1 dark (AA) | owner live-test pending |
 | 07-31 | Accessible names on 20 icon-only buttons (b8b763e) — calendar month arrows, every ✏️/✕ pair in Settings, the 💾 saves, delete-SIM-charge, delete-VN, and the till's −/+/✕. Labels carry the row's own subject ("Edit Nokia 105", "Delete reminder@…") so repeated rows are distinguishable; verified against the browser's computed AX name incl. a product name containing a quote | ✅ 114/114 ×2 + build + node --check + AX-name check | owner live-test pending |
 
-Found 07-31, NOT auto-fixed (too big for one loop item, wants a plan):
-- [ ] **P2 · L** — **274 form controls with no programmatic label** (194 input,
-      72 select, 8 textarea) — most sit under a visible `<label>` that has no
-      `for=`, so they look labelled and aren't. 173 have no placeholder either.
-      A mechanical sweep over that many controls risks breaking live forms;
-      wants a `.form-group`-level fix (auto-associate label↔control at render)
-      rather than 274 hand edits. Measured, not guessed.
+| 07-31 | Form controls get a programmatic name (8a186a0) — the `.form-group`-level fix the earlier finding asked for, not hand edits. One pass, on load and on every subtree the app inserts, binding in four steps of decreasing confidence: the group's own `<label>` → real `for=`/`id`; a `.section-divider` heading a group → `aria-labelledby`; a control in a table cell → its column header, walking colspan; a bare control → its placeholder, or a select's prompt option. Stops at authored text — a first option that is just the default value ("Normal") is left unnamed rather than given a misleading name | ✅ 140/140 ×2 + build + node --check + 16 fixture assertions (incl. the must-not-touch cases: label already `for=`, label wrapping its own checkbox, author's own aria-label, idempotency, observer path) + corpus re-count 202→34 of 231 | owner live-test pending |
+
+Found 07-31, FIXED 07-31 (8a186a0) — see the log row above:
+- [x] **P2 · L** — **form controls with no programmatic label** — most sat under
+      a visible `<label>` that has no `for=`, so they looked labelled and
+      weren't. Re-measured properly on the app's real markup (template literals
+      extracted with the `${…}` holes recursed into, then loaded as a document
+      and asked the DOM for an accessible name): **202 of 231 unnamed → 34.**
+      The first count of 274 came from a shallower extraction that blanked the
+      holes; 231 is the truer denominator.
+      The 34 left have no text anywhere to borrow — a lone number field beside
+      another, a status `<select>` whose options are all values. They want
+      authored labels, one at a time, not a rule.
 - Verified clean while hunting: no hardcoded text colour in globals.css lacks
   a dark-theme override (the three that looked unguarded all have one — the
   first scan's selector matching was wrong). B2's class of bug has not
@@ -195,3 +201,17 @@ Found 07-31, NOT auto-fixed (too big for one loop item, wants a plan):
 
 Held / owner input: family-trip sheet (£1,364 balance) needs the customer's
 name before it's entered; Canada/EU loss rates — follow T&C schedule or stay?
+
+🔒 **Owner decision — SIM records vs the shop's Gmail** (full write-up:
+`docs/GMAIL-SWEEP-2026-07-31.md`; the number list went to the owner directly,
+deliberately not in the repo). Read all 25,393 provider messages in
+`5311386k@gmail.com` and compared every number found against `sims`:
+- **241 numbers had provider mail in 2026 that the app has no record of** (124
+  in July alone, 237 of them Lebara). Spot-checked the 15 busiest across the
+  whole database — 14 appear nowhere at all. The app holds 545 Lebara SIMs; the
+  mail names 887 distinct Lebara numbers.
+- **119 rows still marked `active`** have had no provider mail since before
+  2026. 106 are Lebara, where monthly mail is reliable enough for silence to
+  mean something; the other 13 prove nothing (1pMobile never prints the number).
+Not loop work — it's data about live customer plans and money. Needs the owner
+to say which are his, which have ceased, and which should be entered.
