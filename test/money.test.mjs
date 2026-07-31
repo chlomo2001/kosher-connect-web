@@ -114,6 +114,49 @@ test('ledgerSignFor — mirrors the DB sign CHECK', () => {
   assert.equal(ledgerSignFor('refund'), 'credit')
   assert.equal(ledgerSignFor('extra_charge'), 'debit')  // DB CHECK: auto extras are always charges
   assert.equal(ledgerSignFor('manual_adjustment'), 'either')
+  // Money handed back is a debit by SIGN, though it is not revenue earned —
+  // ledger_revenue_since keeps it out of `charged` for exactly that reason.
+  assert.equal(ledgerSignFor('refund_payout'), 'debit')
+})
+
+test('refund legs — an owed refund and a settled one stop looking alike', () => {
+  // One booking the airline cancelled. Balance is the running sum of the ledger:
+  // negative means the customer owes, positive means the shop does.
+  const balance = (rows) => money(rows.reduce((t, r) => t + r.amount, 0))
+
+  const charged  = [{ entry_type: 'booking', amount: -290 }]
+  const paid     = [...charged, { entry_type: 'payment', amount: 290 }]
+  assert.equal(balance(paid), 0)
+
+  // Cancelled: the shop now owes the customer. Before the payout leg existed
+  // this was where it stopped, and a positive balance was the only evidence.
+  const owed = [...paid, { entry_type: 'refund', amount: 290 }]
+  assert.equal(balance(owed), 290)
+
+  // Handed back: nets to zero again, with both legs on the record.
+  const settled = [...owed, { entry_type: 'refund_payout', amount: -290 }]
+  assert.equal(balance(settled), 0)
+
+  // The distinction the payout leg buys: a refund still owed carries no payout
+  // against it. A zero balance alone can't tell the two apart — the paid-and-
+  // never-refunded case also sums to zero, which is what hid the Wizz debt.
+  const hasPayout = (rows) => rows.some((r) => r.entry_type === 'refund_payout')
+  assert.equal(hasPayout(owed), false)
+  assert.equal(hasPayout(settled), true)
+  assert.equal(balance(paid), balance(settled))  // identical totals, different facts
+})
+
+test('cashExpected — a cash refund payout lowers the drawer', () => {
+  // The payout carries a tender method precisely so cash-up can see it; an
+  // untagged one would leave the drawer short with nothing to explain it.
+  const entries = [
+    { method: 'cash', amount: 290 },                              // they paid
+    { method: 'cash', amount: -290, entry_type: 'refund_payout' },// handed back
+  ]
+  assert.equal(cashExpected(entries, 0), 0)
+  assert.equal(cashExpected(entries, 100), 100)  // float untouched
+  // A refund CREDIT carries no method, so it must not move the drawer at all.
+  assert.equal(cashExpected([{ method: null, amount: 290 }], 40), 40)
 })
 
 test('money — rounds to pennies', () => {

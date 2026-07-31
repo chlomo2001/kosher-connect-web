@@ -1,0 +1,21 @@
+-- 'refund_payout' ledger entry type — money actually handed back to a customer.
+--
+-- The ledger could already say "we owe you £X": entry_type 'refund', a positive
+-- wallet credit. It had no way to say "…and we've now paid it". The only
+-- negative-capable non-goods type was 'manual_adjustment', a generic owner
+-- correction, so once the money moved a settled refund and an owed one looked
+-- identical on the record.
+--
+-- The two legs, on one booking that the airline cancelled:
+--   booking        -290   customer owes 290
+--   payment        +290   they paid — balance 0
+--   refund         +290   airline cancelled; KC owes them 290
+--   refund_payout  -290   handed back — balance 0, and both legs on file
+--
+-- A refund still owed is now a positive balance with no payout against it; a
+-- settled one nets to zero with the payout entry proving it.
+--
+-- Separate migration: a Postgres enum value must be committed before it can be
+-- referenced, so the sign constraint and the revenue aggregate that name it live
+-- in the next migration (mirrors the 100100 / 100300 extra_charge split).
+alter type ledger_entry_type add value if not exists 'refund_payout';

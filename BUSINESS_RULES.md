@@ -210,6 +210,17 @@ of every entry type and refuses any edit or deletion of a posted row.
   a rental is overdue the accruing fee shows on the rental itself.
 - **Mistakes are corrected forward**: post an adjustment or refund. Nothing
   is ever edited or deleted.
+- **A refund is two entries, not one.** `refund` credits the customer's wallet
+  and means *we owe them this*; `refund_payout` records the money actually
+  going back and cancels that credit. Post the first when the obligation
+  arises (a supplier cancels, a return is accepted), the second when the money
+  physically leaves. Both are owner-only.
+  A refund still owed is a positive balance with no payout against it. Posting
+  only the payout, or nothing at all, leaves the customer's balance at zero and
+  the debt invisible — a customer who paid and was never refunded sums to
+  exactly the same zero as one who was.
+  A payout carries a till method (it lowers the drawer like any cash out); the
+  credit leg carries none, or it would inflate the Z-report's expected cash.
 - **Deleting things**: deleting a rental reverses its ledger position and
   keeps the history on the customer (marked "Rental deleted"). A customer
   with any money history can NOT be deleted — rename them instead.

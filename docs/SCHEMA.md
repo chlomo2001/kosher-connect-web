@@ -41,6 +41,11 @@ Start empty — seed config, the service menu, and the holiday calendar only.
    charge type negative; `rental_adjustment`/`manual_adjustment` either way but
    never zero. (`payment` added as a distinct type — a cash payment against
    arrears is not semantically a "top-up".)
+   `refund_payout` (added 31 Jul) is negative: it is the second half of a
+   refund — money actually handed back, cancelling the credit the positive
+   `refund` entry created. It sits in the negative list for its *sign* only and
+   is deliberately excluded from `charged` in `ledger_revenue_since`, since a
+   refund paid out is not revenue earned.
 4. **`tasks.reference` uses a partial unique index (`where not done`)** — one
    *open* task per key. A plain UNIQUE would permanently block re-raising
    `BALANCE-<id>` after the earlier task closed.

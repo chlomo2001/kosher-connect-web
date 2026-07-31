@@ -5,8 +5,10 @@
 //     idempotency via charge_reference unique
 //   - balance is never stored: customer_balances view (sum of amounts)
 //   - money-in kinds here: payment (settling arrears), top_up (credit in
-//     advance), refund (money back to the customer's wallet), adjustment
-//     (owner correction, either sign, never zero)
+//     advance), refund (credit back to the customer's wallet — we owe them),
+//     adjustment (owner correction, either sign, never zero)
+//   - money-out: refund_payout (that credit actually handed back). The pair is
+//     what makes a refund we still owe distinguishable from one we've settled.
 // Charges are posted only by their owning features (bookings, repairs, …),
 // each with a stable reference — never from this endpoint.
 
@@ -22,12 +24,22 @@ async function canTouchWallet(staff) {
 }
 
 const KINDS = {
-  payment:    { entry_type: 'payment',           prefix: 'PAY' },
-  top_up:     { entry_type: 'top_up',            prefix: 'TOPUP' },
-  refund:     { entry_type: 'refund',            prefix: 'REFUND' },
-  adjustment: { entry_type: 'manual_adjustment', prefix: 'ADJ' },
+  payment:       { entry_type: 'payment',           prefix: 'PAY' },
+  top_up:        { entry_type: 'top_up',            prefix: 'TOPUP' },
+  refund:        { entry_type: 'refund',            prefix: 'REFUND' },
+  refund_payout: { entry_type: 'refund_payout',     prefix: 'RFDOUT' },
+  adjustment:    { entry_type: 'manual_adjustment', prefix: 'ADJ' },
 }
 const METHODS = ['cash', 'card', 'bank_transfer', 'voucher', 'wallet', 'other']
+// 'wallet' is not a way to pay a refund out: the wallet credit IS the thing
+// being settled, so tendering it against itself would book the payout twice.
+const PAYOUT_METHODS = METHODS.filter((m) => m !== 'wallet')
+// The one kind here that moves money OUT. The caller sends how much is going
+// back as a positive figure (same as a payment); the sign is applied server-side
+// so no screen can mint a credit by flipping it.
+const MONEY_OUT = 'refund_payout'
+// Kinds that pass through the till drawer and so carry a tender method.
+const TENDERED = ['payment', 'top_up', MONEY_OUT]
 
 // A client idempotency token (uuid-ish) folds into a stable charge_reference so a
 // retried / double-submitted money-in POST collapses to one row via the ledger's
@@ -88,15 +100,25 @@ async function handler(req, res) {
           const rows = await db.rpc('ledger_revenue_since', { p_from: londonDayStartUtc(from) })
           const round = (v) => Math.round(v * 100) / 100
           const byType = {}
-          let charged = 0, received = 0, refunded = 0
+          // `refunded` is credit ISSUED to wallets, `paidOut` is money actually
+          // returned. The gap between them is what the shop still owes back —
+          // before the payout leg existed the two were the same number, so a
+          // settled refund and an owed one read identically.
+          let charged = 0, received = 0, refunded = 0, paidOut = 0
           for (const r of (rows || [])) {
             const c = Number(r.charged) || 0
             if (c > 0) byType[r.entry_type] = round((byType[r.entry_type] || 0) + c)
             charged += c
             received += Number(r.received) || 0
             refunded += Number(r.refunded) || 0
+            paidOut += Number(r.paid_out) || 0
           }
-          return res.json({ success: true, from, byType, charged: round(charged), received: round(received), refunded: round(refunded) })
+          return res.json({
+            success: true, from, byType,
+            charged: round(charged), received: round(received),
+            refunded: round(refunded), paidOut: round(paidOut),
+            refundsOwed: round(refunded - paidOut),
+          })
         }
         const since = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.since || ''))
           ? req.query.since : londonDate()
@@ -177,7 +199,9 @@ async function handler(req, res) {
       // and top_up (unbacked credits) are ADMIN-ONLY. Only 'payment' — which
       // records real money received and requires a method — stays open to the
       // wallet/customers tab. Previously only 'adjustment' was gated.
-      if (['adjustment', 'refund', 'top_up'].includes(b.kind)) {
+      // …and refund_payout is money leaving the business, which is at least as
+      // sensitive as minting credit — owner-only too.
+      if (['adjustment', 'refund', 'top_up', MONEY_OUT].includes(b.kind)) {
         if (requireOwner(req, res)) return
       } else if (!(await canTouchWallet(req.staff))) {
         return res.status(403).json({ success: false, error: 'Not permitted to record wallet money.' })
@@ -189,13 +213,20 @@ async function handler(req, res) {
       if (b.kind !== 'adjustment' && amount < 0) {
         return res.status(400).json({ success: false, error: 'Amount must be positive — use an adjustment for corrections.' })
       }
+      // Every kind takes a positive figure; only this one is stored negative.
+      const signed = b.kind === MONEY_OUT ? -amount : amount
       // A method (till tender) only makes sense for money that moves through the
-      // drawer — payment/top_up. Forcing it null for refund/adjustment stops a
-      // stale 'cash' method from inflating the Z-report's expected cash.
-      const method = (['payment', 'top_up'].includes(b.kind) && b.method && METHODS.includes(b.method))
+      // drawer — payment/top_up, and now a payout going the other way. Forcing it
+      // null for refund/adjustment stops a stale 'cash' method from inflating the
+      // Z-report's expected cash.
+      const allowedMethods = b.kind === MONEY_OUT ? PAYOUT_METHODS : METHODS
+      const method = (TENDERED.includes(b.kind) && b.method && allowedMethods.includes(b.method))
         ? b.method : null
-      if (b.kind === 'payment' && !method) {
-        return res.status(400).json({ success: false, error: `Payment method must be one of: ${METHODS.join(', ')}.` })
+      // A payout needs its tender for the same reason a payment does: cash-up
+      // nets cash-method rows by sign, so an untagged cash refund would leave the
+      // drawer short with nothing to explain it.
+      if (['payment', MONEY_OUT].includes(b.kind) && !method) {
+        return res.status(400).json({ success: false, error: `Method must be one of: ${allowedMethods.join(', ')}.` })
       }
       const uuid = await resolveCustomer(b.customerId)
       if (!uuid) return res.status(400).json({ success: false, error: `Customer ${b.customerId} not found.` })
@@ -208,7 +239,7 @@ async function handler(req, res) {
         customer_id: uuid,
         charge_reference: chargeRef,
         entry_type: kind.entry_type,
-        amount,
+        amount: signed,
         method,
         description: b.note || null,
         created_by: req.staff?.id || null, // #46 — who moved the money

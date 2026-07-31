@@ -4687,6 +4687,7 @@ const walletEntriesCache = {};
 
 const LEDGER_TYPE_LABELS = {
   payment: '💷 Payment', top_up: '➕ Top-up', refund: '↩️ Refund',
+  refund_payout: '↩️ Refund paid out',
   manual_adjustment: '✏️ Adjustment', booking: '✈️ Flight', rental: '📱 Rental',
   rental_adjustment: '📱 Rental adj.', rental_loss: '📱 Loss', rental_void: '📱 Void credit',
   repair: '🔧 Repair', online_service: '🖨️ Service', sim_annual: '💳 SIM annual',
@@ -5192,10 +5193,11 @@ function openWalletModal(customerId, balance = null) {
       <div class="form-group">
         <label class="form-label">Type</label>
         <select class="form-input" id="wlKind"
-          onchange="document.getElementById('wlMethodWrap').style.display=this.value==='payment'||this.value==='top_up'?'block':'none'">
+          onchange="document.getElementById('wlMethodWrap').style.display=['payment','top_up','refund_payout'].includes(this.value)?'block':'none'">
           <option value="payment">💷 Payment (settles what they owe)</option>
           <option value="top_up">➕ Top-up (credit in advance)</option>
-          <option value="refund">↩️ Refund (money back to wallet)</option>
+          <option value="refund">↩️ Refund (credit to wallet — we owe them)</option>
+          <option value="refund_payout">↩️ Refund paid out (money handed back)</option>
           <option value="adjustment">✏️ Adjustment (correction, ± allowed)</option>
         </select>
       </div>
@@ -5254,10 +5256,21 @@ async function saveWalletEntry(customerId) {
         okLabel: 'Apply adjustment',
       }))) return;
     }
-    // Only payment/top_up move through a till tender; a refund or adjustment must
+    // Money handed back is money leaving the drawer — confirm it like a charge.
+    if (kind === 'refund_payout') {
+      const wlCust = customers.find(x => x.id === customerId);
+      if (!(await kcConfirm({
+        title: 'Confirm refund paid out',
+        body: `<strong>${wlCust ? escHtml(wlCust.firstName) + ' ' + escHtml(wlCust.lastName) : 'Customer'}</strong><br>${note ? escHtml(note) : 'Money handed back — uses up the credit they were owed'}`,
+        amount: Math.abs(amount),
+        okLabel: 'Record payout',
+      }))) return;
+    }
+    // Only tendered kinds carry a till method; a refund credit or adjustment must
     // NOT carry the (hidden, still-'cash') method, or it inflates the Z-report's
-    // expected drawer cash. Mirrors the receipt-email guard below.
-    const tenderMethod = (kind === 'payment' || kind === 'top_up') ? method : null;
+    // expected drawer cash. A payout does carry one — it lowers the drawer by the
+    // same rule, which is why cash-up nets cash rows by sign.
+    const tenderMethod = ['payment', 'top_up', 'refund_payout'].includes(kind) ? method : null;
     res = await window.api.addLedgerEntry({ customerId, kind, amount, method: tenderMethod, note, clientRef: kcRef() });
   } finally {
     kcEndWrite(guardKey);
@@ -5265,7 +5278,9 @@ async function saveWalletEntry(customerId) {
   if (!res.success) { toast(res.error || 'Could not record it.', 'error'); return; }
   closeDynamicModal();
   toast(`Recorded — wallet balance now ${fmtGbp(res.balance)}.`, 'success');
-  if (wantEmail && amount > 0) {
+  // The receipt template says "payment received", so it only fits money coming
+  // in. A payout going the other way would thank them for money they were given.
+  if (wantEmail && amount > 0 && (kind === 'payment' || kind === 'top_up')) {
     kcFetch('/api/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -243,8 +243,20 @@ the owner's sent mail says refunds for ~70% of customers had already arrived;
 sheet, so whether KC is the principal decides whether this belongs in KC's
 ledger at all. Snapshot before any write.
 
-Independent of all of it: **the ledger has no refund leg** — money going back to
-a customer has no entry type, so a settled refund and an owed one look the same.
+Independent of all of it: **the ledger had no refund leg** — money going back to
+a customer had no entry type, so a settled refund and an owed one looked the
+same. **DONE (this cycle).** `refund_payout` is the missing half: `refund` (+)
+credits the wallet and means *we owe them*, `refund_payout` (−) records the
+money actually handed back and cancels it. Migrations
+`20260731100000`/`20260731100100` (enum, then sign check + revenue RPC), the
+API kind (owner-only, sign applied server-side, tender required), the wallet
+form, and tests. The revenue report now separates `refunded` (credit issued)
+from `paidOut` (cash returned); the gap between them is `refundsOwed`.
+
+Note this unblocks the Wizz eleven *mechanically* but decides nothing: the two
+open questions above — whether `Refunded?` is stale, and whether KC is the
+principal — still gate any write. What changed is that when the answer comes,
+the ledger can now record it truthfully in either direction.
 
 - [ ] **P2 · S** 🔒 — **Check-in + travel-requirements: built, never used.** 0 of
       101 bookings have `checkin_done` set and 0 have `destination_country`, so
