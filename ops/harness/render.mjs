@@ -202,23 +202,62 @@ export async function contrast(page, tabs = TABS) {
   return findings
 }
 
+// Interactive things smaller than WCAG 2.5.8's 24×24 CSS px. Run the page with
+// a coarse pointer, since that is the counter tablet and the rules that bump
+// these are scoped to `pointer: coarse`.
+export async function targets(page, tabs = TABS) {
+  const found = []
+  for (const tab of tabs) {
+    await page.evaluate((t) => window.renderTab(t), tab).catch(() => {})
+    await page.waitForTimeout(280)
+    found.push(...await page.evaluate((tab) => {
+      const out = []
+      document.querySelectorAll('#mainContent button, #mainContent a[href], #mainContent input, #mainContent select, #mainContent [role="button"]').forEach((el) => {
+        const cs = getComputedStyle(el)
+        if (cs.display === 'none' || cs.visibility === 'hidden') return
+        const r = el.getBoundingClientRect()
+        if (!r.width || !r.height) return
+        const min = Math.min(Math.round(r.width), Math.round(r.height))
+        if (min >= 24) return
+        out.push({ tab, min, w: Math.round(r.width), h: Math.round(r.height),
+          sel: el.tagName.toLowerCase() + (el.className ? '.' + String(el.className).trim().split(/\s+/)[0] : ''),
+          text: (el.textContent || el.value || el.getAttribute('aria-label') || '').trim().slice(0, 22) })
+      })
+      return out
+    }, tab))
+  }
+  return found
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? process.argv[i + 1] : d }
   const file = buildAppHtml()
   console.log('built', path.relative(ROOT, file))
 
-  if (process.argv.includes('--shot') || process.argv.includes('--audit') || process.argv.includes('--contrast')) {
+  if (process.argv.includes('--shot') || process.argv.includes('--audit') || process.argv.includes('--contrast') || process.argv.includes('--targets')) {
     const { chromium } = require(path.join(ROOT, 'node_modules/playwright-core'))
     const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
     const width = Number(arg('--width', process.argv.includes('--audit') ? 390 : 1280))
     const theme = arg('--theme', 'light')
-    const ctx = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme })
+    const ctx = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme, hasTouch: process.argv.includes('--targets') })
     const page = await ctx.newPage()
     await page.goto('file://' + file, { waitUntil: 'load' })
     await page.waitForTimeout(800)
     await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)
 
-    if (process.argv.includes('--contrast')) {
+    if (process.argv.includes('--targets')) {
+      const seen = new Map()
+      for (const f of await targets(page)) {
+        const k = `${f.sel}|${f.min}`
+        if (!seen.has(k)) seen.set(k, { ...f, tabs: new Set() })
+        seen.get(k).tabs.add(f.tab)
+      }
+      const rows = [...seen.values()].sort((a, b) => a.min - b.min)
+      for (const r of rows) {
+        console.log(`✗ ${String(r.min).padStart(3)}px min  ${(r.w + '×' + r.h).padEnd(9)} ${r.sel.padEnd(22)} "${r.text}"  [${[...r.tabs].slice(0, 4).join(' ')}]`)
+      }
+      console.log(rows.length ? `\n${rows.length} distinct target(s) under 24×24 at ${width}px` : `\nno target under 24×24 at ${width}px`)
+    } else if (process.argv.includes('--contrast')) {
       const found = await contrast(page)
       const seen = new Map()
       for (const f of found) {

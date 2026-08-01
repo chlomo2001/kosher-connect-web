@@ -7,6 +7,7 @@ be **looked at** rather than reasoned about.
 node ops/harness/render.mjs                                  # build app.html
 node ops/harness/render.mjs --audit --width 390              # overflow report, every tab
 node ops/harness/render.mjs --contrast --theme dark          # AA contrast, every tab
+node ops/harness/render.mjs --targets --width 390            # touch targets under 24×24
 node ops/harness/render.mjs --shot rentals --width 390 --theme dark
 ```
 
@@ -20,6 +21,11 @@ blank tab overflows by nothing, and the first version of this happily reported
 it, compositing translucent fills down to the first opaque ancestor — because a
 wash over a card is where this goes wrong, and `getComputedStyle` alone will not
 tell you. It applies the 4.5:1 threshold, or 3:1 for large text.
+
+`--targets` runs the page with a coarse pointer and lists anything interactive
+under WCAG 2.5.8's 24×24 CSS px. Coarse on purpose: the rules that enlarge these
+are scoped to `pointer: coarse`, because the case that matters is the counter
+tablet, not a narrow window.
 
 Two traps, both already paid for:
 
