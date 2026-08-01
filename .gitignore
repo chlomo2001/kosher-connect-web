@@ -12,3 +12,7 @@ data/
 
 # Local scratch: screenshots, harnesses, dev logs — working files, never shipped
 scratchpad/
+
+# Offline harness build output (regenerate: node ops/harness/render.mjs)
+ops/harness/app.html
+ops/harness/shot_*.png
