@@ -556,7 +556,15 @@ body.pos-mode .content { padding: 14px 18px; }
 .stat-value.purple { color: var(--text); }
 
 /* ─── TABLE ─── */
-.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+/* The header is a title on the left and a cluster of filter/sort controls on
+   the right. Without wrapping, that cluster's min-content width becomes the
+   floor for whatever column the header sits in — which is how the Rentals grid
+   ended up with a 1066px track inside a 362px page, and 648px of sideways
+   scroll even at 1280px. The control cluster is an inline-styled flex row that
+   never declares flex-wrap, so the second rule reaches it without editing
+   markup at ten call sites. */
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+.section-header > div { flex-wrap: wrap; min-width: 0; }
 .section-title { font-size: 18px; font-weight: 300; letter-spacing: -0.18px; }
 
 .table-wrap, .table-card {
@@ -1094,8 +1102,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 }
 
 /* SPLIT LAYOUT for Rentals */
-.rentals-split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.rentals-split-col { display: flex; flex-direction: column; }
+/* minmax(0, …), not 1fr: a bare 1fr floors the track at its content's
+   min-content width, and the section header above made that 1066px. */
+.rentals-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.rentals-split-col { display: flex; flex-direction: column; min-width: 0; }
 .rentals-split-col .table-wrap { overflow-y: auto; max-height: 420px; }
 /* The rentals column carries a filter/sort toolbar; the Phone Inventory column
    carries an equal-height spacer so both tables line up side-by-side. The
@@ -1637,7 +1647,7 @@ td.cal-active.cal-shabbat { background: var(--accent); }
   .dash-cols { grid-template-columns: 1fr; }
   /* Rentals: stack the two tables so each gets full width instead of
      squeezing side-by-side and clipping columns. */
-  .rentals-split { grid-template-columns: 1fr; }
+  .rentals-split { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ============================================================
