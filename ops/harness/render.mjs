@@ -92,12 +92,20 @@ export const TABS = ['dashboard', 'customers', 'rentals', 'sim', 'bookings', 'wa
 
 // A page must never scroll sideways, and nothing may sit outside the content
 // column unless it is inside something that scrolls on purpose.
+//
+// A tab that never rendered must NOT pass. The first version of this reported
+// "no tab overflows" while Settings sat on its spinner, because a tab showing
+// nothing overflows by nothing. So each tab is also asked whether it actually
+// painted, and any error it threw is attached to its row.
 export async function audit(page, tabs = TABS) {
   const rows = []
+  const errors = []
+  page.on('pageerror', (e) => errors.push(String(e).split('\n')[0]))
   for (const tab of tabs) {
-    await page.evaluate((t) => window.renderTab(t), tab).catch(() => {})
+    errors.length = 0
+    await page.evaluate((t) => window.renderTab(t), tab).catch((e) => errors.push(e.message))
     await page.waitForTimeout(280)
-    rows.push(await page.evaluate((tab) => {
+    const row = await page.evaluate((tab) => {
       const c = document.getElementById('mainContent')
       const cr = c.getBoundingClientRect()
       const stray = []
@@ -113,8 +121,11 @@ export async function audit(page, tabs = TABS) {
         page: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         content: c.scrollWidth - c.clientWidth,
         stray: [...new Set(stray)].slice(0, 4),
+        // Still spinning, or barely any text on the screen: it did not render.
+        painted: !c.querySelector('.kc-loading') && (c.textContent || '').trim().length > 40,
       }
-    }, tab))
+    }, tab)
+    rows.push({ ...row, errors: [...new Set(errors)].slice(0, 2) })
   }
   return rows
 }
@@ -136,13 +147,23 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)
 
     if (process.argv.includes('--audit')) {
-      let bad = 0
+      let bad = 0, blank = 0
       for (const r of await audit(page)) {
-        const ok = r.page === 0 && r.content === 0
-        if (!ok) bad++
-        console.log(`${ok ? '✓' : '✗'} ${r.tab.padEnd(10)} page=${r.page}px content=${r.content}px ${r.stray.join(' ')}`)
+        const ok = r.page === 0 && r.content === 0 && r.painted
+        if (!ok) (r.painted ? bad++ : blank++)
+        const why = [
+          r.page ? `page +${r.page}px` : '',
+          r.content ? `content +${r.content}px` : '',
+          r.painted ? '' : 'DID NOT RENDER',
+          r.stray.length ? `stray: ${r.stray.join(' ')}` : '',
+          r.errors.length ? `err: ${r.errors[0].slice(0, 70)}` : '',
+        ].filter(Boolean).join('  ')
+        console.log(`${ok ? '✓' : '✗'} ${r.tab.padEnd(10)} ${why || 'clean'}`)
       }
-      console.log(bad ? `\n${bad} tab(s) overflow at ${width}px` : `\nno tab overflows at ${width}px`)
+      const notes = []
+      if (bad) notes.push(`${bad} tab(s) overflow`)
+      if (blank) notes.push(`${blank} tab(s) never rendered — usually a seed.json shape, check pages/api/ before believing it`)
+      console.log(notes.length ? `\n${notes.join('; ')} at ${width}px` : `\nall ${TABS.length} tabs render and none overflows at ${width}px`)
     } else {
       const tab = arg('--shot', 'dashboard')
       await page.evaluate((t) => window.renderTab(t), tab)

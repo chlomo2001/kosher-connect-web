@@ -391,7 +391,8 @@
     "lowStockAt": 4,
     "sku": "CHG-CAR"
    }
-  ]
+  ],
+  "sales": []
  },
  "/api/services": [
   {
@@ -413,10 +414,99 @@
  ],
  "/api/kol-torah": {
   "success": true,
-  "titles": [],
-  "shuls": [],
-  "jobs": [],
-  "movements": [],
-  "takings": []
+  "titles": [
+   {
+    "id": "kt1",
+    "code": "KT-001",
+    "name": "Shiur \u2014 Parshas Devarim",
+    "speaker": "R. Cohen",
+    "price": 8,
+    "active": true,
+    "notes": ""
+   }
+  ],
+  "shuls": [
+   {
+    "id": "sh1",
+    "name": "Beis Medrash",
+    "contact": "",
+    "active": true,
+    "notes": "",
+    "customerId": null,
+    "customerName": ""
+   }
+  ],
+  "stock": [
+   {
+    "shulId": "sh1",
+    "titleId": "kt1",
+    "qty": 12
+   }
+  ],
+  "jobs": [
+   {
+    "id": "j1",
+    "kind": "cd_to_mp3",
+    "status": "open",
+    "customerId": "c1",
+    "customerName": "Menachem Adler",
+    "qty": 3,
+    "price": 15
+   }
+  ],
+  "settlements": []
+ },
+ "/api/team": {
+  "success": true,
+  "members": [
+   {
+    "id": "st1",
+    "name": "Shloime",
+    "email": "owner@example.com",
+    "role": "owner",
+    "allowedTabs": null
+   },
+   {
+    "id": "st2",
+    "name": "Counter helper",
+    "email": "helper@example.com",
+    "role": "helper",
+    "allowedTabs": [
+     "customers",
+     "rentals",
+     "shop"
+    ]
+   }
+  ]
+ },
+ "/api/automations": {
+  "success": true,
+  "rules": []
+ },
+ "/api/business-accounts": {
+  "success": true,
+  "accounts": [],
+  "credVault": true
+ },
+ "/api/custom-charges": {
+  "success": true,
+  "charges": []
+ },
+ "/api/elid/summary": {
+  "success": true,
+  "accounts": [],
+  "lines": []
+ },
+ "/api/email-aliases": {
+  "success": true,
+  "aliases": []
+ },
+ "/api/phone-guide": {
+  "success": true,
+  "phones": []
+ },
+ "/api/repairs/menu": {
+  "success": true,
+  "items": []
  }
 }
