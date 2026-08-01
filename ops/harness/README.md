@@ -1,5 +1,11 @@
 # Offline UI harness
 
+```bash
+npm i --no-save playwright-core     # once per session; deliberately not a dependency
+bash ops/harness/audit-all.sh       # every check below, one summary line each
+```
+
+
 Renders the staff app with no server, no auth and no database, so a screen can
 be **looked at** rather than reasoned about.
 
