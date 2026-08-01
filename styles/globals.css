@@ -886,6 +886,16 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .dot-purple { background: var(--vn); }
 .dot-green { background: var(--success); }
 .history-desc { color: var(--ink-secondary); }
+/* One-line with an ellipsis, which is right on a wide row. On a phone it is
+   not: the line reads "name · type · description (method)", so the ellipsis
+   always eats the END, and the end is the payment method. On the wallet that
+   is part of the money record — "(cash)" was rendering fully outside the
+   visible box. Narrow screens wrap instead; the row grows a line and keeps
+   the fact. */
+.kc-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 560px) {
+  .kc-truncate { overflow: visible; text-overflow: clip; white-space: normal; }
+}
 .history-date { color: var(--muted); font-size: 12px; font-feature-settings: "tnum"; }
 .history-amount { font-weight: 500; color: var(--text); min-width: 50px; text-align: right; font-feature-settings: "tnum"; letter-spacing: -0.42px; }
 

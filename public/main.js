@@ -5358,7 +5358,7 @@ async function renderWalletTab() {
           ${e.customerId ? `onclick="goToTab('customers',{customerId:'${escHtml(String(e.customerId))}'})" title="Open customer"` : ''}>
           <div style="display:flex;align-items:center;flex:1;min-width:0;">
             <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>
-            <div class="history-desc" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            <div class="history-desc kc-truncate">
               <strong>${escHtml(e.customerName || '—')}</strong> · ${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}${e.method ? ` <span style="color:var(--muted);">(${escHtml(e.method.replace('_', ' '))})</span>` : ''}</div>
           </div>
           <div class="history-date" style="margin:0 12px;">${fmtDate(e.at)}</div>
@@ -10979,7 +10979,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList) {
           ${e.customerId ? `onclick="goToTab('customers',{customerId:'${escHtml(String(e.customerId))}'})" title="Open customer"` : ''}>
           <div style="display:flex;align-items:center;flex:1;min-width:0;">
             <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>
-            <div class="history-desc" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            <div class="history-desc kc-truncate">
               ${escHtml(e.customerName || '—')} · ${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}</div>
           </div>
           <div class="history-date" style="margin:0 12px;">${fmtDate(e.at)}</div>
