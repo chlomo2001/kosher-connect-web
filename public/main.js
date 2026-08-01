@@ -6659,6 +6659,7 @@ function renderBookingsTab() {
           <button class="action-btn" onclick="openPassengersModal('${escHtml(b.id)}')" title="Passengers (DOB, passport)">👥</button>
           <button class="action-btn" onclick="openRemindModal('booking','${escHtml(b.id)}')" title="Remind me">⏰</button>
           <select class="form-input" style="width:110px;padding:5px 8px;font-size:12px;"
+            aria-label="Status for ${escHtml(b.customerName || b.bookingRef || 'this booking')}"
             onchange="changeBookingStatus('${escHtml(b.id)}', this.value)">
             ${BOOKING_STATUSES.map(s => `<option value="${s}" ${b.status === s ? 'selected' : ''}>${s}</option>`).join('')}
           </select>
@@ -7465,6 +7466,7 @@ async function renderRepairsTab() {
           ${r.status === 'Ready' ? `<button class="action-btn" onclick="openRepairSmsModal('${escHtml(r.id)}')" title="Ready-to-collect message">💬</button>` : ''}
           <button class="action-btn" onclick="openRemindModal('repair','${escHtml(r.id)}')" title="Remind me">⏰</button>
           <select class="form-input" style="width:120px;padding:5px 8px;font-size:12px;"
+            aria-label="Status for ${escHtml([r.customerName, r.device].filter(Boolean).join(' — ') || 'this repair')}"
             onchange="changeRepairStatus('${escHtml(r.id)}', this.value)">
             ${REPAIR_STATUSES.map(s => `<option value="${s}" ${r.status === s ? 'selected' : ''}>${s}</option>`).join('')}
           </select>
@@ -9127,7 +9129,7 @@ async function renderKolTorahTab() {
           <button class="btn btn-outline btn-sm" style="font-size:11px;" onclick="ktSaveShul('${s.id}')">💾 Save</button>
         </div>` : ''}
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-          <select class="form-input" id="ktMoveTitle_${s.id}" style="min-height:0;padding:6px 9px;font-size:12px;max-width:230px;">${titleOptions}</select>
+          <select class="form-input" id="ktMoveTitle_${s.id}" aria-label="Title to move for ${escHtml(s.name)}" style="min-height:0;padding:6px 9px;font-size:12px;max-width:230px;">${titleOptions}</select>
           <input class="form-input" id="ktMoveQty_${s.id}" type="number" min="1" step="1" value="1" aria-label="Quantity" style="width:64px;min-height:0;padding:6px 9px;font-size:12px;">
           <button class="btn btn-outline" style="font-size:11px;padding:5px 9px;" onclick="ktMove('${s.id}','delivery')">📦 Deliver</button>
           <button class="btn btn-outline" style="font-size:11px;padding:5px 9px;" onclick="ktMove('${s.id}','sold')">💿 Sold</button>
@@ -9137,7 +9139,7 @@ async function renderKolTorahTab() {
           <span style="font-size:12px;color:var(--muted);">Settle:</span>
           <input class="form-input" id="ktSettleSold_${s.id}" type="number" min="0" step="0.01" placeholder="£ sold" style="width:88px;min-height:0;padding:6px 9px;font-size:12px;">
           <input class="form-input" id="ktSettleRecv_${s.id}" type="number" min="0" step="0.01" placeholder="£ collected" style="width:98px;min-height:0;padding:6px 9px;font-size:12px;">
-          <select class="form-input" id="ktSettleMethod_${s.id}" style="min-height:0;padding:6px 9px;font-size:12px;width:110px;">
+          <select class="form-input" id="ktSettleMethod_${s.id}" aria-label="Settlement method for ${escHtml(s.name)}" style="min-height:0;padding:6px 9px;font-size:12px;width:110px;">
             <option value="cash">💵 Cash</option><option value="bank_transfer">🏦 Transfer</option><option value="card">💳 Card</option><option value="other">Other</option>
           </select>
           <button class="btn btn-primary" style="font-size:11px;padding:5px 10px;" onclick="ktSettle('${s.id}')">🧾 Settle</button>
@@ -10634,6 +10636,7 @@ async function renderTasksTab() {
     <div class="task-card${t.done ? ' task-done' : ''}">
       <div style="display:flex;align-items:flex-start;gap:10px;">
         <input type="checkbox" ${t.done ? 'checked' : ''} style="margin-top:3px;cursor:pointer;"
+          aria-label="Mark done: ${escHtml(t.title || 'task')}"
           onchange="toggleTaskDone('${escHtml(t.id)}', this.checked)">
         <div style="flex:1;min-width:0;">
           <div class="history-desc" style="${t.done ? 'text-decoration:line-through;' : ''}">${escHtml(t.title)}</div>
@@ -10704,8 +10707,8 @@ async function renderTasksTab() {
       <div style="display:flex;gap:8px;align-items:center;">
         <input class="form-input" id="tkTitle" placeholder="Add a task…" style="flex:1;"
           onkeydown="if(event.key==='Enter')saveNewTask()">
-        <input class="form-input" type="date" id="tkDue" style="width:150px;">
-        <select class="form-input" id="tkPriority" style="width:110px;">
+        <input class="form-input" type="date" id="tkDue" style="width:150px;" aria-label="Due date for the new task">
+        <select class="form-input" id="tkPriority" style="width:110px;" aria-label="Priority for the new task">
           <option value="Normal">Normal</option>
           <option value="High">High</option>
           <option value="Low">Low</option>
