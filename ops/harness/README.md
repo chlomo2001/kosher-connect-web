@@ -73,6 +73,23 @@ treated as a defect on their own. When a width finding matters, re-measure it
 with a squeeze applied (`* { letter-spacing: -0.07em }`) and see whether it
 survives; the Rentals grid did, at 551px, which is how that one was believed.
 
+## Half-written dark rules (`theme-pairs.mjs`)
+
+```bash
+node ops/harness/theme-pairs.mjs      # exits non-zero if any dark rule is written once
+```
+
+/welcome ships its own OS-dark palette, so each dark rule there needs both a
+`:root[data-theme="dark"]` form (someone used the toggle) and a
+`prefers-color-scheme` twin (someone never touched it). Eleven selectors had
+only the first, so a visitor on a dark computer got the dark paper with
+light-mode ink on it.
+
+`styles/globals.css` is exempt and must stay exempt — it has no OS-dark palette
+at all and `html` pins `color-scheme: light`, so an OS-preference rule there
+would make the same bug in reverse. The reasoning is written out beside the
+`.pd-logo` rule.
+
 ## Keep the seed faithful
 
 `seed.json` must match what the API really returns, field for field. An
