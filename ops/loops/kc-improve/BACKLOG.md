@@ -260,6 +260,8 @@ deliberate.
 
 | 08-01 | Touch targets at the counter (7b3a766) — WCAG 2.5.8 wants 24×24 CSS px; eight controls were under it at 390px, including bare 13×13 checkboxes and a 21px-tall "💰 Take payment". Scoped to `pointer: coarse` rather than a width breakpoint, because the case that matters is the counter tablet — a touch device at any width — and a mouse on a narrow window needs nothing. Checkbox sizing moved out of seven inline style attributes into one CSS rule; inline beats any stylesheet rule, which is exactly why the bump could not reach them. 8 → 1, the survivor being a customer name inline in a sentence, which 2.5.8 exempts | ✅ 195/195 ×2 + build + node --check + measured both pointer types at 1280 (fine: 16px checkbox, button unchanged; coarse: 24px) + `--targets` added to the harness | owner live-test pending |
 
+| 08-01 | The tail of the labelling job (f5eac63) — July's pass fixed labels by rule and left 34 controls with nothing to borrow, "want authored labels, one at a time". Re-measured on the **rendered** app: 242 controls across twelve tabs, seven still unnamed. Written, each carrying its own row's subject ("Status for Chaim Kopilowitz — Alcatel 1", "Mark done: Chase Wizz refund for BNKYRW") so repeated rows are distinguishable. **242 of 242 now have an accessible name** | ✅ 195/195 ×2 + build + node --check + names read back out of the DOM (catches a template hole rendering "Status for undefined") | owner live-test pending |
+
 Found 07-31, FIXED 07-31 (8a186a0) — see the log row above:
 - [x] **P2 · L** — **form controls with no programmatic label** — most sat under
       a visible `<label>` that has no `for=`, so they looked labelled and
