@@ -75,8 +75,18 @@
   --gold: #7c5d24;              /* warm accent text (AA on cream) */
   --sim: #0e7490;               /* #53 — SIM gets its own teal so "SIM" ≠ "warning" */
   --danger: #df1b41;            /* Stripe red */
+  /* A red dark enough to carry white text in BOTH themes, deliberately not
+     overridden below. --danger lightens for dark cards, which is right for red
+     text on a pale wash and wrong for a solid fill: white on the dark-theme
+     --danger is 2.92:1. Use this wherever white sits on red. */
+  --danger-solid: #a81232;
   --magenta: #a435c9;
   --success: #0c8049;           /* readable green on light — AA (4.9:1) on cards */
+  /* Green text on a GREEN wash, which is not the same problem: the mint tint
+     lifts the background and --success drops to 4.28:1 there. This is the pair
+     .badge-active already worked out (audit U16); it exists as a token so the
+     badges built from inline styles can reach it too. */
+  --success-ink: #0a6e3f;
 
   /* #77 — 4/8/12/16/24 spacing scale so paddings/gaps stop being re-typed */
   --space-1: 4px;  --space-2: 8px;  --space-3: 12px;  --space-4: 16px;  --space-6: 24px;
@@ -135,6 +145,7 @@
   --danger: #ff5f80;
   --magenta: #d878e8;
   --success: #34d399;
+  --success-ink: #6ee7b7;
   --warning: #f0a04b;
 
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);

@@ -410,8 +410,8 @@ function showReloadBanner(msg) {
   if (document.getElementById('kcReloadBanner')) return;
   const b = document.createElement('div');
   b.id = 'kcReloadBanner';
-  b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:6000;background:var(--danger);color:#fff;padding:11px 18px;text-align:center;font-size:14px;font-weight:500;box-shadow:0 2px 8px rgba(0,0,0,.2);';
-  b.innerHTML = `⚠️ ${escHtml(msg)} <button onclick="location.reload()" style="margin-left:12px;background:#fff;color:var(--danger);border:none;border-radius:7px;padding:5px 14px;cursor:pointer;font-weight:700;">↻ Reload</button>`;
+  b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:6000;background:var(--danger-solid);color:#fff;padding:11px 18px;text-align:center;font-size:14px;font-weight:500;box-shadow:0 2px 8px rgba(0,0,0,.2);';
+  b.innerHTML = `⚠️ ${escHtml(msg)} <button onclick="location.reload()" style="margin-left:12px;background:#fff;color:var(--danger-solid);border:none;border-radius:7px;padding:5px 14px;cursor:pointer;font-weight:700;">↻ Reload</button>`;
   document.body.appendChild(b);
 }
 
@@ -1623,12 +1623,12 @@ function renderRentalRows() {
   tbody.innerHTML = filtered.map(r => {
     const computedStatus = getComputedStatus(r, today);
     let statusBadge;
-    if      (computedStatus === 'booked')               statusBadge = `<span class="badge" style="background:#f5e9d4;color:#9b6829;">📅 Reserved${r.fromDate <= today ? ' — pickup due' : ''}</span>`;
+    if      (computedStatus === 'booked')               statusBadge = `<span class="badge" style="background:var(--canvas-cream);color:var(--gold);">📅 Reserved${r.fromDate <= today ? ' — pickup due' : ''}</span>`;
     else if (computedStatus === 'active' && r.toDate === today) statusBadge = `<span class="badge badge-sim">Due Today</span>`;
     else if (computedStatus === 'active')               statusBadge = `<span class="badge badge-rental">Active</span>`;
     else if (computedStatus === 'overdue')              statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--danger);">Overdue ⚠️</span>`;
     else if (computedStatus === 'returned')             statusBadge = `<span class="badge badge-active">Returned</span>`;
-    else                                                statusBadge = `<span class="badge" style="background:#f5e9d4;color:#9b6829;">Returned ⚠️</span>`;
+    else                                                statusBadge = `<span class="badge" style="background:var(--canvas-cream);color:var(--gold);">Returned ⚠️</span>`;
 
     const paid = r.amountPaid || 0;
     const totalOwed = rentalGrandTotal(r) - paid;
@@ -7254,16 +7254,20 @@ async function saveEditBooking(id) {
 const KC_DEST_NAMES = { US: 'USA', IL: 'Israel', CA: 'Canada', EU: 'Europe (Schengen)', UK: 'United Kingdom' };
 const KC_RECORDABLE = new Set(['ESTA', 'ETA_CA', 'ETA_IL', 'ETIAS', 'ETA_UK']);
 
+// Badge text colour is ALWAYS a token, never a literal — a literal cannot flip
+// for the dark theme, and a translucent wash over a dark card leaves dark text
+// on a dark background. These five chips were #07639e (2.32:1 in dark) and the
+// CHECK chip's brown-on-cream missed AA in *light* too, at 3.97:1 on 11px text.
 function travelReqBadge(code, label) {
   const styles = {
-    ESTA:   'background:rgba(7,99,158,0.14);color:#07639e;',
-    ETA_CA: 'background:rgba(7,99,158,0.14);color:#07639e;',
-    ETA_IL: 'background:rgba(7,99,158,0.14);color:#07639e;',
-    ETIAS:  'background:rgba(7,99,158,0.14);color:#07639e;',
-    ETA_UK: 'background:rgba(7,99,158,0.14);color:#07639e;',
+    ESTA:   'background:rgba(7,99,158,0.14);color:var(--accent);',
+    ETA_CA: 'background:rgba(7,99,158,0.14);color:var(--accent);',
+    ETA_IL: 'background:rgba(7,99,158,0.14);color:var(--accent);',
+    ETIAS:  'background:rgba(7,99,158,0.14);color:var(--accent);',
+    ETA_UK: 'background:rgba(7,99,158,0.14);color:var(--accent);',
     VISA:   'background:rgba(239,68,68,0.14);color:var(--danger);',
     NONE:   'background:rgba(34,197,94,0.15);color:var(--success);',
-    CHECK:  'background:#f5e9d4;color:#9b6829;',
+    CHECK:  'background:var(--canvas-cream);color:var(--gold);',
   };
   return `<span class="badge" style="${styles[code] || styles.CHECK}">${escHtml(label)}</span>`;
 }
@@ -7300,12 +7304,12 @@ async function openTravelReqModal(bookingId) {
     if (cov.status === 'not-needed') {
       cover = `<div style="color:var(--success);font-size:13px;">No entry authorisation needed — passport only.</div>`;
     } else if (cov.status === 'check') {
-      cover = `<div style="font-size:13px;color:#9b6829;">${escHtml(r.note || 'Confirm the requirement on the official site before travel.')} ${link}</div>`;
+      cover = `<div style="font-size:13px;color:var(--gold);">${escHtml(r.note || 'Confirm the requirement on the official site before travel.')} ${link}</div>`;
     } else if (KC_RECORDABLE.has(r.code)) {
       const covLine = cov.status === 'covered'
         ? `<span style="color:var(--success);">✓ ${escHtml(r.label)} on file — valid until ${escHtml(cov.validUntil || '')}</span>`
         : cov.status === 'expiring'
-          ? `<span style="color:#9b6829;">⚠ ${escHtml(r.label)} ${cov.expiresBeforeTravel ? 'expires BEFORE this trip' : 'expiring soon'} — valid until ${escHtml(cov.validUntil || '')}</span>`
+          ? `<span style="color:var(--gold);">⚠ ${escHtml(r.label)} ${cov.expiresBeforeTravel ? 'expires BEFORE this trip' : 'expiring soon'} — valid until ${escHtml(cov.validUntil || '')}</span>`
           : `<span style="color:var(--danger);">Not recorded yet — ${escHtml(r.label)} needed${validity}</span>`;
       cover = `
         <div style="font-size:13px;margin-bottom:6px;">${covLine}</div>
@@ -7408,8 +7412,9 @@ const REPAIR_STATUSES = ['Open', 'In Progress', 'Ready', 'Collected', 'Cancelled
 
 function repairStatusBadge(status) {
   const styles = {
-    'Open':        'background:rgba(185,185,249,0.45);color:#4434d4;',
-    'In Progress': 'background:#f5e9d4;color:#9b6829;',
+    // Was #4434d4 on a 45% lavender wash — 1.39:1 in dark, effectively invisible.
+    'Open':        'background:rgba(0,96,168,0.10);color:var(--accent);',
+    'In Progress': 'background:var(--canvas-cream);color:var(--gold);',
     'Ready':       'background:rgba(124,58,237,0.13);color:var(--vn);',
     'Collected':   'background:rgba(34,197,94,0.15);color:var(--success);',
     'Cancelled':   'background:rgba(239,68,68,0.15);color:var(--danger);',
@@ -9034,8 +9039,8 @@ const ktEditShuls = new Set();
 
 const KT_JOB_KINDS = { cd_to_mp3: 'CD → MP3', cd_to_sd: 'CD → SD card', cd_copy: 'CD copying', audio_other: 'Audio work' };
 const KT_JOB_BADGE = {
-  open:      'background:rgba(59,130,246,0.14);color:#2563eb;',
-  ready:     'background:rgba(16,185,129,0.15);color:#059669;',
+  open:      'background:rgba(59,130,246,0.14);color:var(--accent);',
+  ready:     'background:rgba(14,138,82,0.14);color:var(--success-ink);',
   collected: 'background:rgba(148,163,184,0.18);color:var(--muted);',
   cancelled: 'background:rgba(239,68,68,0.12);color:var(--danger);',
 };
@@ -9109,7 +9114,7 @@ async function renderKolTorahTab() {
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <strong>${escHtml(s.name)}</strong>
           ${s.contact ? `<span style="font-size:12px;color:var(--muted);">${escHtml(s.contact)}</span>` : ''}
-          ${s.customerName ? `<span class="badge" style="background:rgba(16,185,129,0.12);color:#059669;" title="Settlements post to this wallet">👛 ${escHtml(s.customerName)}</span>`
+          ${s.customerName ? `<span class="badge" style="background:rgba(14,138,82,0.14);color:var(--success-ink);" title="Settlements post to this wallet">👛 ${escHtml(s.customerName)}</span>`
             : '<span class="badge" style="background:rgba(239,68,68,0.1);color:var(--danger);" title="Link a customer record so settlements hit the ledger">no wallet link</span>'}
           <span style="margin-left:auto;font-size:12px;color:var(--muted);">${held} CD${held === 1 ? '' : 's'} out</span>
           <button class="btn btn-outline" style="font-size:11px;padding:4px 8px;" onclick="ktToggleShulEdit('${s.id}')">${editing ? 'Close' : '✎ Edit'}</button>
@@ -9401,7 +9406,7 @@ let tasksList = [];
 function taskPriorityBadge(p) {
   const styles = {
     High:   'background:rgba(239,68,68,0.15);color:var(--danger);',
-    Normal: 'background:rgba(185,185,249,0.45);color:#4434d4;',
+    Normal: 'background:rgba(0,96,168,0.10);color:var(--accent);',
     Low:    'background:rgba(148,163,184,0.15);color:var(--muted);',
   };
   return `<span class="badge" style="${styles[p] || styles.Normal}">${escHtml(p)}</span>`;
