@@ -6,12 +6,28 @@ be **looked at** rather than reasoned about.
 ```bash
 node ops/harness/render.mjs                                  # build app.html
 node ops/harness/render.mjs --audit --width 390              # overflow report, every tab
+node ops/harness/render.mjs --contrast --theme dark          # AA contrast, every tab
 node ops/harness/render.mjs --shot rentals --width 390 --theme dark
 ```
 
-`--audit` exits after printing one line per tab. It fails a tab when the page or
-the content column scrolls sideways, and lists anything sitting outside the
-content column that is **not** inside something meant to scroll.
+`--audit` prints one line per tab. It fails a tab when the page or the content
+column scrolls sideways, when anything sits outside the content column without
+being inside something meant to scroll, **or when the tab never rendered** — a
+blank tab overflows by nothing, and the first version of this happily reported
+"no tab overflows" while Settings sat on its spinner.
+
+`--contrast` measures every run of text against what is actually painted behind
+it, compositing translucent fills down to the first opaque ancestor — because a
+wash over a card is where this goes wrong, and `getComputedStyle` alone will not
+tell you. It applies the 4.5:1 threshold, or 3:1 for large text.
+
+Two traps, both already paid for:
+
+- Chromium reports some colours as `color(srgb 0.88 0.44 0.54)` — 0–1 channels,
+  not 0–255. Parse that as 0–255 and everything looks black; it invented a
+  1.28:1 failure on a button that measures 5.45:1.
+- A finding is only as good as the seed. Check the route in `pages/api/` before
+  believing the app is wrong.
 
 ## How it works
 
