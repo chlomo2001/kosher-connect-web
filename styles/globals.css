@@ -579,7 +579,18 @@ body.pos-mode .content { padding: 14px 18px; }
    and masks the shadow when that edge is reached, the `scroll` pair is pinned
    to the box. The shadow is therefore only ever drawn on a side that really
    has more table beyond it, and it updates as you drag. */
-.table-wrap {
+/* Some panels put the table straight inside a .table-card, which shares the
+   `overflow: hidden` above and never got .table-wrap's `overflow-x: auto`.
+   Those tables were not scrolled, they were CUT: Tickets & Flights is 1022px
+   wide, so on a 390px phone 662px of it — Status, Check-in and the row actions —
+   could not be reached by any input at all. Even at 1280px it loses 12px.
+   `display: block` turns the table itself into the scroll box. Measured before
+   and after: every column keeps the identical width, the overflow just becomes
+   reachable. */
+.table-card > table { display: block; overflow-x: auto; }
+
+.table-wrap,
+.table-card > table {
   background-image:
     linear-gradient(to right, var(--surface) 30%, rgba(0, 0, 0, 0)),
     linear-gradient(to left,  var(--surface) 30%, rgba(0, 0, 0, 0)),

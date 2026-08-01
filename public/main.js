@@ -10304,13 +10304,18 @@ function kcScanLabels(root) {
 // table at 1280px has nothing hidden, and a tab stop that does nothing is
 // noise. So this re-runs on resize and takes the attributes off again.
 function kcSyncScrollers() {
-  document.querySelectorAll('.table-wrap').forEach(w => {
+  // Two shapes scroll: the .table-wrap div, and a table that IS the scroll box
+  // because it sits straight inside a .table-card.
+  document.querySelectorAll('.table-wrap, .table-card > table').forEach(w => {
     const scrolls = w.scrollWidth - w.clientWidth > 1;
     if (scrolls) {
       if (w.getAttribute('data-kc-scroller') === '1') return;
       w.setAttribute('data-kc-scroller', '1');
       w.setAttribute('tabindex', '0');
-      w.setAttribute('role', 'region');
+      // role=region on a <table> would stop it being a table to a screen
+      // reader, which costs more than the region announcement is worth. The
+      // table keeps its own role; the label below still names it.
+      if (w.tagName !== 'TABLE') w.setAttribute('role', 'region');
       // Name it after the section it belongs to, so a screen reader announces
       // "Customers, scrollable region" rather than an anonymous one.
       const head = w.previousElementSibling?.querySelector?.('.section-title')
@@ -10320,7 +10325,7 @@ function kcSyncScrollers() {
     } else if (w.getAttribute('data-kc-scroller') === '1') {
       w.removeAttribute('data-kc-scroller');
       w.removeAttribute('tabindex');
-      w.removeAttribute('role');
+      if (w.tagName !== 'TABLE') w.removeAttribute('role');
       w.removeAttribute('aria-label');
     }
   });
