@@ -47,6 +47,32 @@ Needs `playwright-core` for the screenshot and audit modes; Chromium is already
 at `/opt/pw-browsers/chromium` in the session container. Building `app.html`
 needs nothing but the repo.
 
+## Public pages (`public.mjs`)
+
+```bash
+node ops/harness/public.mjs                       # welcome/join/portal/phone-guide × en+he
+node ops/harness/public.mjs --shot join --lang he --width 390
+```
+
+The staff harness renders to static markup, which is fine because main.js paints
+everything afterwards. These pages are different: **language lives in React
+state**, set by a `useEffect` that reads `localStorage`, so static markup is
+always English and the entire right-to-left half of the product is invisible to
+it. So this one ships React + ReactDOM as UMD from `node_modules`, transpiles
+the page into a browser bundle, sets `kcLang` before mounting, and lets React
+run for real.
+
+It fails a page that does not render, throws, or shows no `dir="rtl"` in Hebrew.
+
+**It does not fail a page on width, and neither should you.** Inter comes from
+Google Fonts and there is no network here, so Latin text falls back to a wider
+face — measured 65px on the welcome nav alone, which is most of the 173px that
+page "overflows" by. Hebrew is self-hosted (`public/fonts/heebo-var-hebrew.woff2`)
+so it fares better. Widths are printed to be looked at with that in mind, never
+treated as a defect on their own. When a width finding matters, re-measure it
+with a squeeze applied (`* { letter-spacing: -0.07em }`) and see whether it
+survives; the Rentals grid did, at 551px, which is how that one was believed.
+
 ## Keep the seed faithful
 
 `seed.json` must match what the API really returns, field for field. An
