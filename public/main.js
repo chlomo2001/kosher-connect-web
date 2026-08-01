@@ -10290,6 +10290,48 @@ function kcScanLabels(root) {
   kcLabelFallback(root);
 }
 
+// ── A scrollable table must be reachable by keyboard ─────────────────────
+// The edge shadow now shows that a list table has more to the side, but a
+// keyboard still could not get there. Not for the buttons — tabbing to a
+// control scrolls it into view, so Edit/Details/Delete were always reachable
+// even at 339px off-screen. It is the columns with nothing focusable in them:
+// Balance is plain text, so a keyboard-only user tabs from the last button of
+// one row to the first of the next and never sees "£45.00 debt" at all.
+// A scroll container that holds content a keyboard cannot reach needs to be
+// focusable itself (WCAG 2.1.1).
+//
+// A tab stop is only warranted while the table actually overflows — the same
+// table at 1280px has nothing hidden, and a tab stop that does nothing is
+// noise. So this re-runs on resize and takes the attributes off again.
+function kcSyncScrollers() {
+  document.querySelectorAll('.table-wrap').forEach(w => {
+    const scrolls = w.scrollWidth - w.clientWidth > 1;
+    if (scrolls) {
+      if (w.getAttribute('data-kc-scroller') === '1') return;
+      w.setAttribute('data-kc-scroller', '1');
+      w.setAttribute('tabindex', '0');
+      w.setAttribute('role', 'region');
+      // Name it after the section it belongs to, so a screen reader announces
+      // "Customers, scrollable region" rather than an anonymous one.
+      const head = w.previousElementSibling?.querySelector?.('.section-title')
+        || w.closest('.card, .settings-card, .content')?.querySelector('.section-title');
+      const title = (head?.textContent || '').trim();
+      w.setAttribute('aria-label', title ? `${title} — scrolls sideways` : 'Table, scrolls sideways');
+    } else if (w.getAttribute('data-kc-scroller') === '1') {
+      w.removeAttribute('data-kc-scroller');
+      w.removeAttribute('tabindex');
+      w.removeAttribute('role');
+      w.removeAttribute('aria-label');
+    }
+  });
+}
+let kcScrollerTimer = null;
+function kcScheduleScrollerSync() {
+  if (kcScrollerTimer) return;                 // coalesce a burst of mutations
+  kcScrollerTimer = setTimeout(() => { kcScrollerTimer = null; kcSyncScrollers(); }, 60);
+}
+window.addEventListener('resize', kcScheduleScrollerSync);
+
 // ── Keyboard-operable clickable rows / drill-downs ───────────────────────
 // Dozens of rows and cards use inline onclick on non-button elements (tr, div),
 // which a keyboard can neither focus nor trigger. Rather than edit ~240 call
@@ -10322,11 +10364,13 @@ document.addEventListener('keydown', e => {
 try {
   const kcClickObs = new MutationObserver(muts => {
     for (const m of muts) m.addedNodes.forEach(n => { kcScanClickable(n); kcScanLabels(n); });
+    kcScheduleScrollerSync();          // a repainted tab may have swapped the table
   });
   kcClickObs.observe(document.body, { childList: true, subtree: true });
 } catch { /* MutationObserver unsupported — rows stay mouse-only, no worse than before */ }
 kcScanClickable(document.body);
 kcScanLabels(document.body);
+kcSyncScrollers();
 
 // ── Modal focus trap ─────────────────────────────────────────────────────
 // Modals carry role=dialog + aria-modal (announced as dialogs) and Escape
