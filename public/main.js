@@ -2354,7 +2354,7 @@ function openManagePhonesModal() {
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">Phone Number *</label>
-        <input class="form-input" id="pNumber" type="text" placeholder="+1 718 555 0101">
+        <input class="form-input" id="pNumber" type="tel" inputmode="tel" dir="ltr" placeholder="+1 718 555 0101">
       </div>
       <div class="form-group">
         <label class="form-label">Country *</label>
@@ -2393,7 +2393,7 @@ function openManagePhonesModal() {
       </div>
       <div class="form-group">
         <label class="form-label">SIM Card ID</label>
-        <input class="form-input" id="pSIMID" type="text" placeholder="ICCID...">
+        <input class="form-input" id="pSIMID" type="text" inputmode="numeric" dir="ltr" placeholder="ICCID...">
       </div>
       <div class="form-group">
         <label class="form-label">IMEI <span style="color:var(--muted);font-weight:400;">(scan the barcode)</span></label>
@@ -6074,7 +6074,7 @@ function openSimFormModal(id, preselectCustomerId = null) {
       </div>
       <div class="form-group">
         <label class="form-label">SIM Phone Number</label>
-        <input class="form-input" id="simNumber" type="text" placeholder="+44 7700 900000"
+        <input class="form-input" id="simNumber" type="tel" inputmode="tel" dir="ltr" placeholder="+44 7700 900000"
           value="${escHtml(s?.simNumber || '')}" autocomplete="off">
       </div>
       <div class="form-group">
@@ -11076,7 +11076,7 @@ function openNewVNModal(preselectCustomerId) {
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">Number *</label>
-        <input class="form-input" id="vnNumber" placeholder="+1 732 555 0123">
+        <input class="form-input" id="vnNumber" type="tel" inputmode="tel" dir="ltr" placeholder="+1 732 555 0123">
       </div>
       <div class="form-group">
         <label class="form-label">Customer</label>

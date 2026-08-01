@@ -186,10 +186,17 @@ export default function AppShell({ initialTab = 'dashboard' }) {
                   <option value="+54">🇦🇷 +54</option>
                   <option value="+27">🇿🇦 +27</option>
                 </select>
+                {/* tel, not text: the dial-code sits in the select beside this,
+                    so what is typed here is digits and spaces. On a tablet at
+                    the counter, type=text opens a full QWERTY. autoComplete
+                    stays off on purpose — staff are typing a customer's number,
+                    and the browser would offer their own. */}
                 <input
                   className="form-input"
                   id="fPhoneNumber"
-                  type="text"
+                  type="tel"
+                  inputMode="tel"
+                  dir="ltr"
                   placeholder="7911 123456"
                   style={{ flex: 1 }}
                   autoComplete="off"
