@@ -6880,8 +6880,7 @@ async function openNewBookingModal(preselectCustomerId = null) {
           <input class="form-input" type="number" id="bkPax" value="1" min="1" step="1"
             oninput="bkCalcFee()" title="Passengers" style="width:80px;">
           ${startFee ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
-            <input type="checkbox" id="bkStartFee" onchange="bkCalcFee()"
-              style="width:14px;height:14px;accent-color:var(--accent);"> + start fee ${fmtGbp(startFee.price)}
+            <input type="checkbox" id="bkStartFee" onchange="bkCalcFee()"> + start fee ${fmtGbp(startFee.price)}
           </label>` : ''}
         </div>
         <div id="bkFeeBreakdown" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
@@ -6903,7 +6902,7 @@ async function openNewBookingModal(preselectCustomerId = null) {
             <option value="us">We do check-in</option>
           </select>
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
-            <input type="checkbox" id="bkCheckinDone" style="width:15px;height:15px;accent-color:var(--accent);"> already done
+            <input type="checkbox" id="bkCheckinDone"> already done
           </label>
           <span id="bkCheckinDateWrap" style="display:none;align-items:center;gap:6px;">
             <span style="font-size:12px;color:var(--muted);">do it on</span>
@@ -7114,7 +7113,7 @@ async function openCheckinModal(bookingId) {
       </div>
       <div class="form-group form-full">
         <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;">
-          <input type="checkbox" id="ciDone" ${b.checkinDone ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--accent);">
+          <input type="checkbox" id="ciDone" ${b.checkinDone ? 'checked' : ''}>
           ✅ Check-in is done
         </label>
       </div>
@@ -8053,7 +8052,7 @@ async function openNewServiceModal(preselectCustomerId = null) {
         <div style="display:flex;gap:8px;align-items:center;">
           <input type="checkbox" id="svPaid" checked
             onchange="document.getElementById('svMethod').style.display=this.checked?'':'none'"
-            style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+            style="cursor:pointer;">
           <select class="form-input" id="svMethod" style="flex:1;">
             <option value="cash">💵 Cash</option>
             <option value="card">💳 Card</option>
@@ -8418,8 +8417,7 @@ function renderPosView() {
           </select>
           <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
             <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;flex-shrink:0;">
-              <input type="checkbox" id="posPaid" checked onchange="posRenderTender()"
-                style="width:15px;height:15px;accent-color:var(--accent);"> Paid now</label>
+              <input type="checkbox" id="posPaid" checked onchange="posRenderTender()"> Paid now</label>
             <div class="pos-methods" id="posMethods">${posMethodsHtml()}</div>
           </div>
           <div id="posTender"></div>
@@ -10635,7 +10633,7 @@ async function renderTasksTab() {
     return `
     <div class="task-card${t.done ? ' task-done' : ''}">
       <div style="display:flex;align-items:flex-start;gap:10px;">
-        <input type="checkbox" ${t.done ? 'checked' : ''} style="margin-top:3px;cursor:pointer;width:15px;height:15px;accent-color:var(--accent);"
+        <input type="checkbox" ${t.done ? 'checked' : ''} style="margin-top:3px;cursor:pointer;"
           onchange="toggleTaskDone('${escHtml(t.id)}', this.checked)">
         <div style="flex:1;min-width:0;">
           <div class="history-desc" style="${t.done ? 'text-decoration:line-through;' : ''}">${escHtml(t.title)}</div>
@@ -11228,7 +11226,7 @@ function openVNBillingModal(id) {
       </div>
       <div class="form-group form-full" style="flex-direction:row;align-items:center;gap:10px;">
         <input type="checkbox" id="vbEnabled" ${v.billingEnabled ? 'checked' : ''}
-          style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+          style="cursor:pointer;">
         <label for="vbEnabled" style="font-size:13px;cursor:pointer;">Billing enabled — the daily sweep posts one wallet charge per month</label>
       </div>
     </div>

@@ -1012,6 +1012,31 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 }
 .section-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
+/* Checkboxes and radios are sized here, not inline at each of seven call
+   sites — inline wins over any stylesheet rule, which is what stopped the
+   touch-target bump below reaching them. */
+input[type="checkbox"], input[type="radio"] {
+  width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer;
+}
+
+/* ─── TOUCH TARGETS ─── */
+/* WCAG 2.5.8 asks for 24×24 CSS px. Measured at 390px across every tab, eight
+   controls were under it: bare checkboxes at 13×13, "💰 Take payment" 21px
+   tall, "📤 Collected" 19px, "📦 Deliver" 23px, the ✕ action button 27×23 and
+   the task-mini selects 23px.
+   Scoped to `pointer: coarse` rather than a width breakpoint, because the case
+   that matters is the counter tablet — that is a touch device at any width,
+   and a mouse on a small window does not need bigger targets. Desktop is
+   untouched. min-height only, so nothing is stretched wider than its label. */
+@media (pointer: coarse) {
+  .btn, .action-btn, .card-tool, .task-mini, .form-input, .country-select, select {
+    min-height: 24px;
+  }
+  .action-btn, .card-tool { min-width: 24px; }
+  /* A 13px checkbox is the browser default and is genuinely hard to hit. */
+  input[type="checkbox"], input[type="radio"] { width: 24px; height: 24px; }
+}
+
 /* ─── TOAST ─── */
 #toast-container {
   position: fixed; bottom: 24px; right: 24px; z-index: 9999;
