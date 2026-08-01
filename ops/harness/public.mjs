@@ -14,6 +14,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { measure, report } from './contrast.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '../..')
@@ -114,6 +115,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const langs = (arg('--lang', 'en,he')).split(',')
   const only = arg('--shot', null)
   let bad = 0
+  const contrastAll = []
 
   for (const page of (only ? [only] : Object.keys(PAGES))) {
     for (const lang of langs) {
@@ -153,6 +155,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         // 65px on the welcome nav alone. So a width does not fail a page here;
         // rendering, page errors and RTL do. Widths are printed to be looked at
         // with that in mind, not treated as defects.
+        if (process.argv.includes('--contrast')) {
+          const found = (await measure(p, '#root')).map((f) => ({ ...f, where: `${page}/${lang}/${w}` }))
+          contrastAll.push(...found)
+        }
         const ok = r.painted && !errs.length && (lang === 'en' || r.rtl)
         if (!ok) bad++
         if (only) {
@@ -170,6 +176,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       }
     }
   }
+  if (process.argv.includes('--contrast')) report(contrastAll, `the public pages (${arg('--theme', 'light')})`)
   console.log(bad ? `\n${bad} public-page check(s) failed` : '\nevery public page renders clean in both languages')
   await browser.close()
 }

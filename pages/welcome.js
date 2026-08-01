@@ -569,6 +569,11 @@ export default function Welcome() {
 const SKY_CSS = `
   :root{
     --sk-ink:#0d1526; --sk-sky:#07639e; --sk-sky-bright:#2f95d8; --sk-gold:#c19161;
+    /* The same gold reads 2.80:1 on white paper and 6.51:1 on the dark one,
+       so text needs its own value while decoration keeps the brand tan.
+       This is --sk-gold darkened until 17px copy clears AA; the dark theme
+       overrides it back to --sk-gold, which already passes there. */
+    --sk-gold-ink:#8d612b;
     --sk-text:#0d1526; --sk-muted:#566079; --sk-line:#dbe3f0;
     --sk-paper:#ffffff; --sk-canvas:#f4f7fc; --sk-band:#ffffff; --sk-band-alt:#eef2fb;
     --sk-maxw:1320px; /* Sky-scale desktop container (owner comparison, 27 Jul) */
@@ -600,6 +605,8 @@ const SKY_CSS = `
   .sk-eyebrow{font-family:var(--sk-fbody);font-weight:700;font-size:12.5px;letter-spacing:.14em;
     text-transform:uppercase;color:var(--sk-sky);display:block;margin-bottom:14px}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-eyebrow{color:var(--sk-sky-bright)}}
+  :root[data-theme="dark"]{--sk-gold-ink:var(--sk-gold)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme]){--sk-gold-ink:var(--sk-gold)}}
   :root[data-theme="dark"] .sk-eyebrow{color:var(--sk-sky-bright)}
 
   /* nav */
@@ -643,7 +650,7 @@ const SKY_CSS = `
   .sk-nav-phone span{font-size:11px;color:var(--sk-muted);font-weight:600}
   .sk-nav-phone:hover strong{color:var(--sk-sky)}
   :root[data-theme="dark"] .sk-nav-phone:hover strong{color:var(--sk-sky-bright)}
-
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-nav-phone:hover strong{color:var(--sk-sky-bright)}}
   /* back to top */
   .sk-top{position:fixed;bottom:22px;inset-inline-end:22px;z-index:40;width:44px;height:44px;
     border-radius:50%;border:1px solid var(--sk-line);background:var(--sk-paper);color:var(--sk-text);
@@ -653,7 +660,7 @@ const SKY_CSS = `
   .sk-top.show{opacity:1;visibility:visible;transform:none;transition:opacity .2s ease,transform .2s ease}
   .sk-top:hover{color:var(--sk-sky);border-color:var(--sk-sky)}
   :root[data-theme="dark"] .sk-top:hover{color:var(--sk-sky-bright);border-color:var(--sk-sky-bright)}
-
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-top:hover{color:var(--sk-sky-bright);border-color:var(--sk-sky-bright)}}
   /* buttons */
   .sk-btn{display:inline-flex;align-items:center;justify-content:center;gap:.35em;font-weight:700;
     border-radius:999px;cursor:pointer;transition:transform .12s ease,filter .12s ease;white-space:nowrap;
@@ -668,6 +675,11 @@ const SKY_CSS = `
   .sk .sk-btn-sky{background:var(--sk-sky);color:#fff}
   .sk .sk-btn-sky:hover{filter:brightness(1.08)}
   .sk .sk-btn-ghost{background:transparent;color:var(--sk-sky);border:1.5px solid var(--sk-sky)}
+  /* The ghost button had no dark rule at all, in either form — the deep sky on
+     the near-black paper is 2.86:1, and "My account" is the button a customer
+     is looking for. Both halves, like everything else here. */
+  :root[data-theme="dark"] .sk .sk-btn-ghost{color:var(--sk-sky-bright);border-color:var(--sk-sky-bright)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk .sk-btn-ghost{color:var(--sk-sky-bright);border-color:var(--sk-sky-bright)}}
   .sk-btn-sm{padding:9px 17px;font-size:14px}
   .sk-btn-lg{padding:13px 26px;font-size:15.5px}
 
@@ -710,7 +722,8 @@ const SKY_CSS = `
   .sk-accent{font-family:var(--sk-fdisp);font-weight:800;font-size:clamp(21px,3vw,28px);
     color:var(--sk-sky);letter-spacing:-.02em;margin-top:4px;line-height:1.15}
   :root[data-theme="dark"] .sk-accent{color:var(--sk-sky-bright)}
-  .sk-subline{color:var(--sk-gold);font-size:17px;font-weight:600;margin-top:5px;
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-accent{color:var(--sk-sky-bright)}}
+  .sk-subline{color:var(--sk-gold-ink);font-size:17px;font-weight:600;margin-top:5px;
     font-style:italic;line-height:1.35}
   .sk-band-body{color:var(--sk-muted);margin:18px 0 0;font-size:16.5px;max-width:60ch}
   .sk-band-note{color:var(--sk-muted);margin:10px 0 0;font-size:15px;font-weight:600;max-width:60ch}
@@ -731,13 +744,14 @@ const SKY_CSS = `
   .sk-tile{background:var(--sk-band-alt);border:1px solid var(--sk-line);border-radius:16px;padding:22px}
   .sk-tile-ico{width:38px;height:38px;color:var(--sk-sky);margin-bottom:12px}
   :root[data-theme="dark"] .sk-tile-ico{color:var(--sk-sky-bright)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-tile-ico{color:var(--sk-sky-bright)}}
   .sk-tile-ico svg{width:100%;height:100%}
   .sk-tile h4{font-size:18px;margin:0 0 8px}
   .sk-tile p{color:var(--sk-muted);font-size:14.5px;margin:0}
   .sk-guide{text-align:center;margin-top:30px}
   .sk-guide a{color:var(--sk-sky);font-weight:700}
   :root[data-theme="dark"] .sk-guide a{color:var(--sk-sky-bright)}
-
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-guide a{color:var(--sk-sky-bright)}}
   /* friends — dark one-liner band */
   .sk-friends{background:radial-gradient(130% 150% at 84% 0%,#123a6b 0%,#0b2350 45%,#071634 100%);
     color:#eaf2ff;padding:60px 0;text-align:center}
@@ -756,12 +770,13 @@ const SKY_CSS = `
   .sk-form input:focus,.sk-form textarea:focus{outline:2px solid var(--sk-sky);outline-offset:1px;border-color:transparent}
   .sk-form .sk-btn{margin-top:2px}
   .sk-form-ok{color:#1a7f4b;font-size:14px;margin:2px 0 0;font-weight:600}
-  .sk-form-err{color:var(--sk-gold);font-size:14px;margin:2px 0 0;font-weight:600}
+  .sk-form-err{color:var(--sk-gold-ink);font-size:14px;margin:2px 0 0;font-weight:600}
   :root[data-theme="dark"] .sk-form-ok{color:#5fd08a}
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-form-ok{color:#5fd08a}}
   .sk-prefer{color:var(--sk-muted);font-size:14px;margin:24px auto 0;max-width:60ch}
   .sk-prefer a,.sk .sk-join{color:var(--sk-sky);font-weight:700}
   :root[data-theme="dark"] .sk-prefer a,:root[data-theme="dark"] .sk-join{color:var(--sk-sky-bright)}
-
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-prefer a,:root:not([data-theme]) .sk-join{color:var(--sk-sky-bright)}}
   /* visit — live map card + shop details */
   .sk-visit{padding:70px 0 76px;background:var(--sk-band);text-align:center}
   .sk-visit h2{font-size:clamp(24px,3.6vw,34px)}
@@ -779,12 +794,13 @@ const SKY_CSS = `
   .sk-visit-row{display:flex;gap:12px}
   .sk-visit-ico{flex:none;width:20px;height:20px;color:var(--sk-sky);margin-top:3px}
   :root[data-theme="dark"] .sk-visit-ico{color:var(--sk-sky-bright)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-visit-ico{color:var(--sk-sky-bright)}}
   .sk-visit-ico svg{width:100%;height:100%}
   .sk-visit-row strong{display:block;font-size:14.5px;margin-bottom:2px}
   .sk-visit-row p{margin:0;color:var(--sk-muted);font-size:14px;line-height:1.55}
   .sk-visit-row a{color:var(--sk-sky);font-weight:600}
   :root[data-theme="dark"] .sk-visit-row a{color:var(--sk-sky-bright)}
-
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-visit-row a{color:var(--sk-sky-bright)}}
   /* footer — labelled columns */
   .sk-foot{background:var(--sk-band);border-top:1px solid var(--sk-line);padding:48px 0 40px}
   .sk-foot-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:26px;align-items:start;text-align:start}
@@ -816,6 +832,7 @@ const SKY_CSS = `
       border:1px solid var(--sk-line);border-radius:999px;padding:6px 12px;line-height:1.2}
     .sk-mobnav a.on{color:var(--sk-sky);border-color:var(--sk-sky)}
     :root[data-theme="dark"] .sk-mobnav a.on{color:var(--sk-sky-bright);border-color:var(--sk-sky-bright)}
+    @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-mobnav a.on{color:var(--sk-sky-bright);border-color:var(--sk-sky-bright)}}
     /* Taller sticky header on phones (bar + chips) — keep anchors clear of it. */
     .sk [id]{scroll-margin-top:122px}
   }
