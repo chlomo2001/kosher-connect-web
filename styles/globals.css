@@ -681,9 +681,18 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .modal-title { font-size: 22px; font-weight: 300; letter-spacing: -0.22px; margin-bottom: 20px; }
 
 /* ─── FORM ─── */
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+/* minmax(0, 1fr), not 1fr. A bare 1fr means minmax(auto, 1fr), and `auto`
+   floors the track at the content's min-content width — for the phone row that
+   is a 130px country select plus an input at its intrinsic ~226px, so the
+   column refuses to go below 364px. In a modal that is 95vw the track then
+   overhangs the box and the fields are clipped: 23px of sideways scroll at
+   390px wide, 80px at 360px. Desktop never showed it, which is why the
+   one-column collapse below looked like it had solved this. */
+.form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
 .form-full { grid-column: 1 / -1; }
-.form-group { display: flex; flex-direction: column; gap: 6px; }
+/* Grid and flex items default to min-width:auto, which re-introduces the same
+   floor one level down — the track can shrink but its contents will not. */
+.form-group { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .form-label { font-size: 11px; font-weight: 500; letter-spacing: 0.2px; text-transform: uppercase; color: var(--muted); }
 
 .form-input {
@@ -696,6 +705,11 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   transition: border-color 0.2s, box-shadow 0.2s;
   user-select: text;
   min-height: 38px;
+  /* An <input> carries an intrinsic width from its `size` (~226px at this font)
+     and will not shrink past it on its own. Both are needed: min-width so it
+     may shrink, width so it still fills the group when there is room. */
+  min-width: 0;
+  width: 100%;
 }
 /* Shared compact filter/sort selects (feature #4) — the two-dropdown control
    every list tab carries, matching the Customers-tab styling. */
@@ -732,8 +746,11 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .form-input.error { border-color: var(--danger); }
 .form-input::placeholder { color: var(--muted); }
 
-.phone-row { display: flex; gap: 8px; }
+/* The dial-code select keeps its size; the number field is what gives way. */
+.phone-row { display: flex; gap: 8px; min-width: 0; }
+.phone-row .form-input { min-width: 0; }
 .country-select {
+  flex: 0 0 auto;
   background: var(--surface);
   border: 1px solid var(--border-input);
   border-radius: 6px;
@@ -824,7 +841,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   .card-action-grid { grid-template-columns: repeat(2, 1fr); }
   /* Two-column forms are unusable in a ~95vw modal on a handset — collapse to
      a single column so every field gets full width. */
-  .form-grid { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: minmax(0, 1fr); }
 }
 .card-action {
   display: flex; align-items: center; gap: 8px;
