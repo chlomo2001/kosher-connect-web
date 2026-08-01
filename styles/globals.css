@@ -101,6 +101,8 @@
   --shadow-1: 0 1px 1px rgba(10, 37, 64, 0.04), 0 1px 2px rgba(10, 37, 64, 0.06);
   --shadow-2: 0 1px 3px rgba(10, 37, 64, 0.10), 0 12px 30px rgba(10, 37, 64, 0.14);
   --ring: 0 0 0 3px rgba(0, 96, 168, 0.22);   /* focus ring */
+  /* Edge shadow marking a scroller that has more content that way. */
+  --scroll-shadow: rgba(10, 37, 64, 0.22);
 
   /* ── Motion scale — named durations + easing so transitions stop being
      magic numbers and read as one designed system. Consumed by buttons,
@@ -151,6 +153,7 @@
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
   --shadow-2: 0 1px 3px rgba(0, 0, 0, 0.5), 0 14px 34px rgba(0, 0, 0, 0.55);
   --ring: 0 0 0 3px rgba(87, 166, 230, 0.32);
+  --scroll-shadow: rgba(0, 0, 0, 0.62);
 }
 :root[data-theme="dark"] body { background: var(--bg); color: var(--text); }
 html { color-scheme: light; }
@@ -567,6 +570,31 @@ body.pos-mode .content { padding: 14px 18px; }
    screen ever overflows horizontally. */
 .table-wrap { overflow-x: auto; }
 .table-wrap table { min-width: 560px; }
+
+/* …but a scroll nobody can see is content nobody knows about. On a 390px
+   phone the customers table hides 339px — Balance and Actions, Delete
+   included — and the table's right edge lands flush on the card border, so it
+   reads as a finished table rather than a clipped one.
+   Two gradient pairs, no JavaScript: the `local` pair scrolls with the content
+   and masks the shadow when that edge is reached, the `scroll` pair is pinned
+   to the box. The shadow is therefore only ever drawn on a side that really
+   has more table beyond it, and it updates as you drag. */
+.table-wrap {
+  background-image:
+    linear-gradient(to right, var(--surface) 30%, rgba(0, 0, 0, 0)),
+    linear-gradient(to left,  var(--surface) 30%, rgba(0, 0, 0, 0)),
+    linear-gradient(to right, var(--scroll-shadow), rgba(0, 0, 0, 0)),
+    linear-gradient(to left,  var(--scroll-shadow), rgba(0, 0, 0, 0));
+  background-position: left center, right center, left center, right center;
+  background-size: 34px 100%, 34px 100%, 15px 100%, 15px 100%;
+  background-repeat: no-repeat;
+  background-attachment: local, local, scroll, scroll;
+}
+/* Two places give .table-wrap a vertical scroll as well. There the `local`
+   layers would drift upward as you scroll down and fake a horizontal edge, so
+   they sit those out — both are desktop panels wide enough not to need it. */
+.settings-card .table-wrap,
+.rentals-split-col .table-wrap { background-image: none; }
 table { width: 100%; border-collapse: collapse; }
 thead { background: var(--surface2); }
 
