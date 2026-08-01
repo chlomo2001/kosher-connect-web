@@ -118,6 +118,11 @@ export default function Join() {
     finally { setBusy(false) }
   }
 
+  // autoComplete defaults to off but every real call passes a token. This is a
+  // public form where someone is entering their OWN details on a phone, so the
+  // browser should be allowed to fill them — "off" here just made a stranger
+  // retype their name and number. (The staff customer form is the opposite
+  // case and keeps autocomplete off: staff type other people's details.)
   const field = (k, label, type = 'text', props = {}) => (
     <div className="form-group">
       <label className="form-label" htmlFor={`jn-${k}`}>{label}</label>
@@ -175,10 +180,10 @@ export default function Join() {
             ) : (
               <form className="w-card jn-card" onSubmit={submit} noValidate>
                 <div className="form-grid">
-                  {field('firstName', t.firstName)}
-                  {field('lastName', t.lastName)}
-                  {field('phone', t.phone, 'tel', { dir: 'ltr', inputMode: 'tel' })}
-                  {field('email', t.email, 'email', { dir: 'ltr', inputMode: 'email' })}
+                  {field('firstName', t.firstName, 'text', { autoComplete: 'given-name' })}
+                  {field('lastName', t.lastName, 'text', { autoComplete: 'family-name' })}
+                  {field('phone', t.phone, 'tel', { dir: 'ltr', inputMode: 'tel', autoComplete: 'tel' })}
+                  {field('email', t.email, 'email', { dir: 'ltr', inputMode: 'email', autoComplete: 'email' })}
                   <div className="form-group form-full">
                     <span className="form-label" id="jn-reach-label">{t.reach}</span>
                     <div role="radiogroup" aria-labelledby="jn-reach-label" className="jn-chips">
@@ -196,6 +201,9 @@ export default function Join() {
                   </div>
                   <div className="form-group form-full">
                     <label className="form-label" htmlFor="jn-address">{t.address}</label>
+                    {/* Address stays off: the Places widget owns this field, and
+                        browser autofill fighting it produces a half-filled
+                        address that never gets a place id. */}
                     <input className="form-input" id="jn-address" ref={addrRef} type="text"
                       value={form.address} onChange={set('address')} autoComplete="off"
                       placeholder={t.addressPh} />
