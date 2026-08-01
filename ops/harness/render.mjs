@@ -130,12 +130,84 @@ export async function audit(page, tabs = TABS) {
   return rows
 }
 
+// Contrast of every visible run of text against what is actually painted
+// behind it — translucent fills composited down to the first opaque ancestor,
+// because a wash over a dark card is where this goes wrong.
+export async function contrast(page, tabs = TABS) {
+  const findings = []
+  for (const tab of tabs) {
+    await page.evaluate((t) => window.renderTab(t), tab).catch(() => {})
+    await page.waitForTimeout(280)
+    findings.push(...await page.evaluate((tab) => {
+      // Chromium reports some colours as `color(srgb 0.88 0.44 0.54)` — 0–1
+      // channels, not 0–255. Dividing those by 255 makes anything look black,
+      // which invented a 1.28:1 failure on a button that is genuinely fine.
+      const parts = (c) => {
+        const nums = (String(c).match(/[\d.]+/g) || []).map(Number)
+        if (!nums.length) return []
+        if (/^color\(/i.test(String(c).trim())) {
+          const [r, g, b, a] = nums
+          return [r * 255, g * 255, b * 255, a === undefined ? 1 : a]
+        }
+        return nums
+      }
+      const lum = (col) => {
+        const [r, g, b] = parts(col).slice(0, 3).map((v) => {
+          const c = v / 255
+          return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+        })
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+      }
+      // Composite this element's stack down to the first opaque background.
+      const backdrop = (el) => {
+        let layers = []
+        for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+          const p = parts(getComputedStyle(n).backgroundColor)
+          if (!p.length) continue
+          const a = p.length > 3 ? p[3] : 1
+          if (a === 0) continue
+          layers.push([p[0], p[1], p[2], a])
+          if (a === 1) break
+        }
+        if (!layers.length) layers = [[255, 255, 255, 1]]
+        let out = layers[layers.length - 1].slice(0, 3)
+        for (let i = layers.length - 2; i >= 0; i--) {
+          const [r, g, b, a] = layers[i]
+          out = [a * r + (1 - a) * out[0], a * g + (1 - a) * out[1], a * b + (1 - a) * out[2]]
+        }
+        return `rgb(${out.join(',')})`
+      }
+      const out = []
+      document.querySelectorAll('#mainContent *').forEach((el) => {
+        const text = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent.trim()).join(' ').trim()
+        if (text.length < 2) return
+        const cs = getComputedStyle(el)
+        if (cs.visibility === 'hidden' || cs.display === 'none' || Number(cs.opacity) < 0.15) return
+        const r = el.getBoundingClientRect()
+        if (!r.width || !r.height) return
+        const size = parseFloat(cs.fontSize)
+        const bold = Number(cs.fontWeight) >= 700
+        const large = size >= 24 || (size >= 18.66 && bold)
+        const need = large ? 3 : 4.5
+        const L1 = lum(cs.color), L2 = lum(backdrop(el))
+        const ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05)
+        if (ratio < need) {
+          out.push({ tab, text: text.slice(0, 34), ratio: Number(ratio.toFixed(2)), need,
+            size, sel: el.tagName.toLowerCase() + (el.className ? '.' + String(el.className).trim().split(/\s+/)[0] : '') })
+        }
+      })
+      return out
+    }, tab))
+  }
+  return findings
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? process.argv[i + 1] : d }
   const file = buildAppHtml()
   console.log('built', path.relative(ROOT, file))
 
-  if (process.argv.includes('--shot') || process.argv.includes('--audit')) {
+  if (process.argv.includes('--shot') || process.argv.includes('--audit') || process.argv.includes('--contrast')) {
     const { chromium } = require(path.join(ROOT, 'node_modules/playwright-core'))
     const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
     const width = Number(arg('--width', process.argv.includes('--audit') ? 390 : 1280))
@@ -146,7 +218,20 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     await page.waitForTimeout(800)
     await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)
 
-    if (process.argv.includes('--audit')) {
+    if (process.argv.includes('--contrast')) {
+      const found = await contrast(page)
+      const seen = new Map()
+      for (const f of found) {
+        const key = `${f.sel}|${f.ratio}`
+        if (!seen.has(key)) seen.set(key, { ...f, tabs: new Set() })
+        seen.get(key).tabs.add(f.tab)
+      }
+      const rows = [...seen.values()].sort((a, b) => a.ratio - b.ratio)
+      for (const r of rows) {
+        console.log(`✗ ${String(r.ratio).padStart(5)}:1 (needs ${r.need}) ${String(Math.round(r.size)) + 'px'} ${r.sel.padEnd(24)} "${r.text}"  [${[...r.tabs].join(' ')}]`)
+      }
+      console.log(rows.length ? `\n${rows.length} distinct contrast failure(s) in ${theme}` : `\nno contrast failures in ${theme}`)
+    } else if (process.argv.includes('--audit')) {
       let bad = 0, blank = 0
       for (const r of await audit(page)) {
         const ok = r.page === 0 && r.content === 0 && r.painted

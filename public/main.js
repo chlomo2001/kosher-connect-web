@@ -1626,7 +1626,7 @@ function renderRentalRows() {
     if      (computedStatus === 'booked')               statusBadge = `<span class="badge" style="background:var(--canvas-cream);color:var(--gold);">📅 Reserved${r.fromDate <= today ? ' — pickup due' : ''}</span>`;
     else if (computedStatus === 'active' && r.toDate === today) statusBadge = `<span class="badge badge-sim">Due Today</span>`;
     else if (computedStatus === 'active')               statusBadge = `<span class="badge badge-rental">Active</span>`;
-    else if (computedStatus === 'overdue')              statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--danger);">Overdue ⚠️</span>`;
+    else if (computedStatus === 'overdue')              statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--danger-ink);">Overdue ⚠️</span>`;
     else if (computedStatus === 'returned')             statusBadge = `<span class="badge badge-active">Returned</span>`;
     else                                                statusBadge = `<span class="badge" style="background:var(--canvas-cream);color:var(--gold);">Returned ⚠️</span>`;
 
@@ -7148,7 +7148,7 @@ function checkinChip(b) {
   if (b.checkinDone) return `<span class="badge badge-active" title="Check-in done">✅ In</span>`;
   if (b.checkinBy === 'us') return `<span class="badge badge-rental" title="We check in${b.checkinDate ? ' on ' + fmtDate(b.checkinDate) : ''}">🛫 us${b.checkinDate ? ' ' + fmtDate(b.checkinDate).slice(0, 5) : ''}</span>`;
   if (b.checkinBy === 'customer') return `<span class="badge" style="background:rgba(148,163,184,0.15);color:var(--muted);" title="Customer checks in">👤 cust</span>`;
-  return `<span class="badge" style="background:rgba(234,179,8,0.15);color:var(--warning);" title="Check-in not set">⚠️ ?</span>`;
+  return `<span class="badge" style="background:rgba(234,179,8,0.15);color:var(--warning-ink);" title="Check-in not set">⚠️ ?</span>`;
 }
 
 async function changeBookingStatus(id, status) {
@@ -7265,8 +7265,8 @@ function travelReqBadge(code, label) {
     ETA_IL: 'background:rgba(7,99,158,0.14);color:var(--accent);',
     ETIAS:  'background:rgba(7,99,158,0.14);color:var(--accent);',
     ETA_UK: 'background:rgba(7,99,158,0.14);color:var(--accent);',
-    VISA:   'background:rgba(239,68,68,0.14);color:var(--danger);',
-    NONE:   'background:rgba(34,197,94,0.15);color:var(--success);',
+    VISA:   'background:rgba(239,68,68,0.14);color:var(--danger-ink);',
+    NONE:   'background:rgba(34,197,94,0.15);color:var(--success-ink);',
     CHECK:  'background:var(--canvas-cream);color:var(--gold);',
   };
   return `<span class="badge" style="${styles[code] || styles.CHECK}">${escHtml(label)}</span>`;
@@ -7416,8 +7416,8 @@ function repairStatusBadge(status) {
     'Open':        'background:rgba(0,96,168,0.10);color:var(--accent);',
     'In Progress': 'background:var(--canvas-cream);color:var(--gold);',
     'Ready':       'background:rgba(124,58,237,0.13);color:var(--vn);',
-    'Collected':   'background:rgba(34,197,94,0.15);color:var(--success);',
-    'Cancelled':   'background:rgba(239,68,68,0.15);color:var(--danger);',
+    'Collected':   'background:rgba(34,197,94,0.15);color:var(--success-ink);',
+    'Cancelled':   'background:rgba(239,68,68,0.15);color:var(--danger-ink);',
   };
   return `<span class="badge" style="${styles[status] || styles.Open}">${escHtml(status)}</span>`;
 }
@@ -9042,7 +9042,7 @@ const KT_JOB_BADGE = {
   open:      'background:rgba(59,130,246,0.14);color:var(--accent);',
   ready:     'background:rgba(14,138,82,0.14);color:var(--success-ink);',
   collected: 'background:rgba(148,163,184,0.18);color:var(--muted);',
-  cancelled: 'background:rgba(239,68,68,0.12);color:var(--danger);',
+  cancelled: 'background:rgba(239,68,68,0.12);color:var(--danger-ink);',
 };
 
 function ktSectionHead(title, sub) {
@@ -9115,7 +9115,7 @@ async function renderKolTorahTab() {
           <strong>${escHtml(s.name)}</strong>
           ${s.contact ? `<span style="font-size:12px;color:var(--muted);">${escHtml(s.contact)}</span>` : ''}
           ${s.customerName ? `<span class="badge" style="background:rgba(14,138,82,0.14);color:var(--success-ink);" title="Settlements post to this wallet">👛 ${escHtml(s.customerName)}</span>`
-            : '<span class="badge" style="background:rgba(239,68,68,0.1);color:var(--danger);" title="Link a customer record so settlements hit the ledger">no wallet link</span>'}
+            : '<span class="badge" style="background:rgba(239,68,68,0.1);color:var(--danger-ink);" title="Link a customer record so settlements hit the ledger">no wallet link</span>'}
           <span style="margin-left:auto;font-size:12px;color:var(--muted);">${held} CD${held === 1 ? '' : 's'} out</span>
           <button class="btn btn-outline" style="font-size:11px;padding:4px 8px;" onclick="ktToggleShulEdit('${s.id}')">${editing ? 'Close' : '✎ Edit'}</button>
         </div>
@@ -9405,7 +9405,7 @@ let tasksList = [];
 
 function taskPriorityBadge(p) {
   const styles = {
-    High:   'background:rgba(239,68,68,0.15);color:var(--danger);',
+    High:   'background:rgba(239,68,68,0.15);color:var(--danger-ink);',
     Normal: 'background:rgba(0,96,168,0.10);color:var(--accent);',
     Low:    'background:rgba(148,163,184,0.15);color:var(--muted);',
   };
@@ -11068,7 +11068,7 @@ async function renderVirtualTab() {
           ? `<strong>${fmtGbp(v.monthlyPrice)}</strong><div class="customer-email">next ${fmtDate(v.nextBillingDate) || '—'}</div>`
           : '<span style="color:var(--muted);">—</span>'}</td>
         <td><span class="badge" style="${v.status === 'Active'
-          ? 'background:rgba(34,197,94,0.15);color:var(--success);'
+          ? 'background:rgba(34,197,94,0.15);color:var(--success-ink);'
           : 'background:rgba(148,163,184,0.15);color:var(--muted);'}">${escHtml(v.status)}</span></td>
         <td>${v.shortcutUrl ? `<a href="${escHtml(v.shortcutUrl)}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;">open ↗</a>` : '—'}</td>
         <td style="white-space:nowrap;">

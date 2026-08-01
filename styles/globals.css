@@ -69,7 +69,10 @@
   /* ── Text — navy ink on warm paper ── */
   --text: #0a2540;              /* ink / display */
   --ink-secondary: #46505c;     /* body (warm slate) */
-  --muted: #6a6d70;             /* muted (warm slate, AA on ivory) */
+  /* Tuned against --bg ivory, but every table column header sits on
+     --surface2, which is darker — 4.38:1 on 11px text across nine tabs.
+     Six points darker clears both: 5.14:1 on --bg, 4.79:1 on --surface2. */
+  --muted: #64676a;             /* muted (warm slate, AA on ivory AND surface2) */
 
   /* ── Semantic ── */
   --gold: #7c5d24;              /* warm accent text (AA on cream) */
@@ -87,6 +90,16 @@
      .badge-active already worked out (audit U16); it exists as a token so the
      badges built from inline styles can reach it too. */
   --success-ink: #0a6e3f;
+  /* Same problem, same answer, for the other two semantic hues: a wash of
+     the hue lifts the background, so the plain token drops under AA on an
+     11px badge. Measured on their own washes: --danger 3.83:1, --warning
+     4.49:1. These clear it at 5.6 and 5.0. */
+  --danger-ink: #b3123a;
+  --warning-ink: #a94e08;
+  /* Ink for text sitting ON the accent fill. White works here because the
+     light accent is a deep blue; on dark the accent lightens and white
+     drops to 2.62:1, so that theme flips this to near-black. */
+  --on-accent: #ffffff;
 
   /* #77 — 4/8/12/16/24 spacing scale so paddings/gaps stop being re-typed */
   --space-1: 4px;  --space-2: 8px;  --space-3: 12px;  --space-4: 16px;  --space-6: 24px;
@@ -148,6 +161,11 @@
   --magenta: #d878e8;
   --success: #34d399;
   --success-ink: #6ee7b7;
+  /* On dark the lightened tokens already clear their washes — measured, no
+     dark contrast failures — so the inks are the same colour there. */
+  --danger-ink: #ff5f80;
+  --warning-ink: #f0a04b;
+  --on-accent: #101319;   /* dark ink on the lightened accent — 7.1:1 */
   --warning: #f0a04b;
 
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
@@ -434,13 +452,17 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
               transform var(--dur-1) var(--ease-out);
   white-space: nowrap;
 }
-.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary { background: var(--accent); color: var(--on-accent); }
 .btn-primary:hover { background: var(--primary-deep); }
 .btn-primary:active { background: var(--primary-press); }
 .btn-primary:disabled { opacity: 0.55; cursor: default; }
 .btn-outline { background: var(--surface); border: 1px solid var(--border-input); color: var(--ink-secondary); }
 .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+/* Light is already fine at 4.80:1 and stays as it was. Dark is not: --danger
+   lightens for dark cards, so white on it is 2.92:1 — that theme only takes
+   the deeper red. */
 .btn-danger { background: var(--danger); color: #fff; }
+:root[data-theme="dark"] .btn-danger { background: var(--danger-solid); }
 .btn-danger:hover { filter: brightness(0.92); }
 .btn-sm { padding: 6px 12px; font-size: 13px; }
 
@@ -663,7 +685,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .badge-sim { background: rgba(14,116,144,0.10); color: var(--sim); }
 .badge-vn { background: rgba(124,58,237,0.11); color: var(--vn); }
 .badge-booking { background: rgba(2,132,199,0.11); color: #0369a1; }
-.badge-repair { background: rgba(234,88,12,0.12); color: #c2410c; }
+.badge-repair { background: rgba(234,88,12,0.12); color: #b23a0b; } /* 4.40:1 → 5.10:1 on its own wash */
 
 /* #81 — derived lifecycle chip on the customer card */
 .lifecycle-chip {
