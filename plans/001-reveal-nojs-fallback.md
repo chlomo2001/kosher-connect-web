@@ -1,6 +1,6 @@
 # 001 — Make the scroll-reveal additive so /welcome is never blank without JS
 
-- **Status**: TODO
+- **Status**: DONE (e371932, 2 Aug 2026)
 - **Commit**: c54b10d
 - **Severity**: HIGH
 - **Category**: Interruptibility / Accessibility (entry without JS)

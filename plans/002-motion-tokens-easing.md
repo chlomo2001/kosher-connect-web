@@ -1,6 +1,6 @@
 # 002 — Introduce motion tokens and a strong ease-out for the /welcome reveal
 
-- **Status**: TODO
+- **Status**: DONE (e371932, 2 Aug 2026)
 - **Commit**: c54b10d
 - **Severity**: MEDIUM
 - **Category**: Easing & duration / Cohesion & tokens
