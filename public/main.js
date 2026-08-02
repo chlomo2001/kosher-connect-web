@@ -1638,7 +1638,7 @@ function renderRentalRows() {
         <div class="customer-name">${nameHtml(r.customerName || '—')}</div>
         <div class="customer-email" style="font-size:11px;">${r.vn ? '🔢 +'+escHtml(r.vnPrefix || '') : ''}</div>
       </td>
-      <td style="font-weight:600;font-size:12px;">${escHtml(r.phoneNumber || '—')}</td>
+      <td class="kc-phone" style="font-weight:600;font-size:12px;">${escHtml(r.phoneNumber || '—')}</td>
       <td style="font-size:11px;">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}</td>
       <td style="text-align:center;">${r.chargeableDays}d</td>
       <td style="color:var(--success);font-weight:700;">${fmtGbp(r.price)}</td>
@@ -1681,7 +1681,7 @@ function renderPhoneRows() {
     const poolDisplay   = isUSA ? (p.pool || '—') : 'N/A';
     const expiryDisplay = isUSA ? (p.poolExpiry || '—') : 'N/A';
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('.action-btn'))openEditPhoneModal('${p.id}')">
-      <td style="font-weight:600;font-size:12px;">${escHtml(fmtPhone(p.number))}${p.model ? `<div class="customer-email">${escHtml(p.model)}</div>` : ''}</td>
+      <td class="kc-phone" style="font-weight:600;font-size:12px;">${escHtml(fmtPhone(p.number))}${p.model ? `<div class="customer-email">${escHtml(p.model)}</div>` : ''}</td>
       <td>${p.country === 'USA' ? '🇺🇸' : p.country === 'Israel' ? '🇮🇱' : p.country === 'UK' ? '🇬🇧' : p.country === 'Canada' ? '🇨🇦' : '🇪🇺'} ${escHtml(p.country)}</td>
       <td style="font-size:12px;color:${isUSA?'':'var(--muted)'};">${isUSA ? escHtml(poolDisplay) : poolDisplay}</td>
       <td style="font-size:11px;color:${poolExpired?'var(--danger)':isUSA?'var(--muted)':'var(--muted)'};">${isUSA ? expiryDisplay : '<span style="color:var(--muted);">N/A</span>'}</td>
@@ -3634,7 +3634,7 @@ function renderTableRows() {
         <div class="customer-name">${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file">🛂</span>' : ''}</div>
         <div class="customer-email">${escHtml(c.email || '')}${c.accountEmail ? `${c.email ? '<br>' : ''}<span title="Account/login email (Lebara etc.) — not for contacting the customer" style="color:var(--muted);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''}</div>
       </td>
-      <td>${c.phone ? escHtml(fmtPhone(c.phone)) : '—'}</td>
+      <td class="kc-phone">${c.phone ? escHtml(fmtPhone(c.phone)) : '—'}</td>
       <td>${services || '<span style="color:var(--muted);font-size:12px;">None</span>'}</td>
       <td style="color: ${customerDebt > 0 ? 'var(--danger)' : (customerCredit > 0 ? 'var(--accent)' : 'var(--success)')}; font-weight: 700;">${
         customerDebt > 0 ? `${fmtGbp(customerDebt)} debt`

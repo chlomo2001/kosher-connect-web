@@ -926,6 +926,14 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
    is part of the money record — "(cash)" was rendering fully outside the
    visible box. Narrow screens wrap instead; the row grows a line and keeps
    the fact. */
+/* A phone number is one value, not four. fmtPhone groups the digits for
+   readability (+44 7871 385 566) and a narrow table column then breaks it at
+   every one of those spaces — on a 390px screen the customers table was
+   stacking each number over four lines, which is both unreadable and four
+   times the row height. The tables scroll sideways (see .table-wrap), so the
+   column is free to be as wide as the number needs. */
+.kc-phone { white-space: nowrap; }
+
 .kc-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 560px) {
   .kc-truncate { overflow: visible; text-overflow: clip; white-space: normal; }
