@@ -388,9 +388,6 @@ export default function Welcome() {
                     onClick={() => pick(l)}>{T[l].langLabel}</button>
                 ))}
               </div>
-              <a href={PHONE_TEL} className="sk-nav-phone" dir="ltr" aria-label="Call Kosher Connect">
-                <strong>{PHONE_SHOWN}</strong><span>{hours}</span>
-              </a>
               <a href="/portal" className="sk-btn sk-btn-ghost sk-btn-sm">{t.nav.account}</a>
               <a href="#contact" className="sk-btn sk-btn-sky sk-btn-sm">{t.nav.message}</a>
             </nav>
@@ -705,23 +702,29 @@ const SKY_CSS = `
     background:url(/logo-full-tight.png) center/contain no-repeat}
   :root[data-theme="dark"] .sk-logo{background-image:url(/logo-full-tight-dark.png)}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-logo{background-image:url(/logo-full-tight-dark.png)}}
-  .sk-nav-links{display:flex;align-items:center;gap:20px}
+  /* The row is a fixed run of nowrap items, so it cannot shrink: at gap 20 it
+     measured 1281px against the 1123px the 1320px container can ever offer,
+     which put a horizontal scrollbar on EVERY desktop width and pushed the
+     "Message us" CTA off-screen. Tighter gap, min-width:0 so it can never
+     wedge the container open again, and the phone block moved out (the hero
+     already carries "Call 0161 531 1386"). */
+  .sk-nav-links{display:flex;align-items:center;gap:12px;min-width:0}
+  /* The theme toggle is position:fixed at inset-inline-end:14px, so it floats
+     over this bar at every width — it was sitting on top of "Message us" and
+     clipping the word. Reserve its lane instead of letting it overlap. */
+  .sk-nav{padding-inline-end:56px}
   .sk-navlink{color:var(--sk-muted);font-weight:600;font-size:14.5px;white-space:nowrap;
     border-bottom:2px solid transparent;padding-bottom:2px}
   .sk-navlink:hover{color:var(--sk-text)}
   .sk-navlink.on{color:var(--sk-sky);border-bottom-color:var(--sk-sky)}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-navlink.on{color:var(--sk-sky-bright);border-bottom-color:var(--sk-sky-bright)}}
   :root[data-theme="dark"] .sk-navlink.on{color:var(--sk-sky-bright);border-bottom-color:var(--sk-sky-bright)}
-  .sk-lang{display:inline-flex;border:1px solid var(--sk-line);border-radius:999px;overflow:hidden}
+  /* flex:none — as a shrinkable flex item the pill was being crushed to 2px on
+     a phone, so the Hebrew/Yiddish switch was there but impossible to hit. */
+  .sk-lang{display:inline-flex;flex:none;border:1px solid var(--sk-line);border-radius:999px;overflow:hidden}
   .sk-lang button{border:0;background:transparent;color:var(--sk-muted);font-weight:700;font-size:12.5px;
     padding:5px 11px;cursor:pointer}
   .sk-lang button.on{background:var(--sk-sky);color:#fff}
-  .sk-nav-phone{display:flex;flex-direction:column;line-height:1.15;color:var(--sk-text);white-space:nowrap}
-  .sk-nav-phone strong{font-weight:800;font-size:15px;letter-spacing:-.01em}
-  .sk-nav-phone span{font-size:11px;color:var(--sk-muted);font-weight:600}
-  .sk-nav-phone:hover strong{color:var(--sk-sky)}
-  :root[data-theme="dark"] .sk-nav-phone:hover strong{color:var(--sk-sky-bright)}
-  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-nav-phone:hover strong{color:var(--sk-sky-bright)}}
   /* back to top */
   .sk-top{position:fixed;bottom:22px;inset-inline-end:22px;z-index:40;width:44px;height:44px;
     border-radius:50%;border:1px solid var(--sk-line);background:var(--sk-paper);color:var(--sk-text);
@@ -913,10 +916,15 @@ const SKY_CSS = `
   .sk-reveal.in{opacity:1;transform:none}
   @media (prefers-reduced-motion:reduce){.sk-reveal{opacity:1;transform:none;transition:none}}
 
-  @media (max-width:960px){ .sk-navlink{display:none} .sk-nav-phone{display:none} .sk-foot-grid{grid-template-columns:1fr 1fr} }
+  @media (max-width:960px){ .sk-foot-grid{grid-template-columns:1fr 1fr} }
+  /* The link row needs 1009px beside the logo; the container only offers that
+     from 1280px up once the toggle's lane is reserved. Hand over to the chip
+     strip below that rather than let the bar overflow — the old 960 breakpoint
+     left every width from 961 to 1280 permanently broken. */
+  @media (max-width:1279px){ .sk-navlink{display:none} }
   /* Mobile section chips (hidden on desktop, where the nav links exist) */
   .sk-mobnav{display:none}
-  @media (max-width:960px){
+  @media (max-width:1279px){
     .sk-mobnav{display:flex;gap:8px;overflow-x:auto;padding:0 16px 10px;
       -webkit-overflow-scrolling:touch;scrollbar-width:none}
     .sk-mobnav::-webkit-scrollbar{display:none}
@@ -928,7 +936,15 @@ const SKY_CSS = `
     /* Taller sticky header on phones (bar + chips) — keep anchors clear of it. */
     .sk [id]{scroll-margin-top:122px}
   }
-  /* Keep the nav's CTA clear of the fixed theme toggle on phones. */
-  @media (max-width:640px){ .sk-nav{padding-inline-end:60px} }
+  /* Keep the nav's CTA clear of the fixed theme toggle on phones. That 60px,
+     plus the logo and both buttons, added up to 511px of bar in a 390px
+     viewport — "Message us" sat 61px off the right edge. The account link goes
+     (it's in the footer's "Your account" column); logo and CTA get compact. */
+  @media (max-width:640px){
+    .sk-nav{padding-inline-start:16px;padding-inline-end:56px}
+    .sk-nav .sk-logo{height:26px}
+    .sk-nav .sk-btn-ghost{display:none}
+    .sk-nav .sk-btn-sm{padding:9px 13px;font-size:13.5px}
+  }
   @media (max-width:820px){ .sk-grid{grid-template-columns:1fr} .sk-visit-grid{grid-template-columns:1fr} .sk-map-card{min-height:300px} .sk-map-card iframe{min-height:300px} }
 `
