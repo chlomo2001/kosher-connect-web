@@ -309,30 +309,34 @@
         "id": "l1",
         "customerId": "c1",
         "customerName": "Menachem Adler",
-        "entryType": "payment",
         "amount": 45,
         "method": "cash",
-        "createdAt": "2026-08-01T09:12:00Z",
-        "description": "Rental part payment"
+        "description": "Rental part payment",
+        "type": "payment",
+        "at": "2026-08-01T09:12:00Z",
+        "reference": null
       },
       {
         "id": "l2",
         "customerId": "c3",
         "customerName": "Chaim Kopilowitz",
-        "entryType": "top_up",
         "amount": 20,
         "method": "card",
-        "createdAt": "2026-08-01T08:40:00Z",
-        "description": "Wallet top-up"
+        "description": "Wallet top-up",
+        "type": "top_up",
+        "at": "2026-08-01T08:40:00Z",
+        "reference": null
       },
       {
         "id": "l3",
         "customerId": "c2",
         "customerName": "Yossi Taitelbaum",
-        "entryType": "rental_charge",
         "amount": -60,
-        "createdAt": "2026-07-31T16:05:00Z",
-        "description": "Israel rental"
+        "description": "Israel rental",
+        "type": "rental",
+        "at": "2026-07-31T16:05:00Z",
+        "method": "",
+        "reference": null
       }
     ],
     "arrears": [
