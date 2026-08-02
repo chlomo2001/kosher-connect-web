@@ -109,7 +109,7 @@ const T = {
     openMaps: 'Open in Google Maps',
     addressLabel: 'Address',
     addressLine: '421 Bury New Road, Salford M7 4ED',
-    findUs: 'The door left of Toy Zone (MMR Group sign) — ring bell 5, we’re on level 2.',
+    findUs: 'The door left of Toy Zone (MMR Group sign) — ring bell 5, we’re on level 2.',
     phoneLabel: 'Phone', emailLabel: 'Email',
     footServices: 'Services', footAccount: 'Your account', footLegal: 'Information',
     hoursLabel: 'Open',
@@ -192,7 +192,7 @@ const T = {
     openMaps: 'לניווט בגוגל מפות',
     addressLabel: 'כתובת',
     addressLine: '421 Bury New Road, Salford M7 4ED',
-    findUs: 'הדלת משמאל ל־Toy Zone (שלט MMR Group) — מצלצלים בפעמון 5, קומה 2.',
+    findUs: 'הדלת משמאל ל־Toy Zone (שלט MMR Group) — מצלצלים בפעמון 5, קומה 2.',
     phoneLabel: 'טלפון', emailLabel: 'מייל',
     footServices: 'שירותים', footAccount: 'האזור האישי', footLegal: 'מידע',
     hoursLabel: 'שעות פתיחה',
@@ -797,7 +797,12 @@ const SKY_CSS = `
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-visit-ico{color:var(--sk-sky-bright)}}
   .sk-visit-ico svg{width:100%;height:100%}
   .sk-visit-row strong{display:block;font-size:14.5px;margin-bottom:2px}
-  .sk-visit-row p{margin:0;color:var(--sk-muted);font-size:14px;line-height:1.55}
+  /* text-wrap:balance evens these short blocks out instead of leaving a stub
+     last line. Browsers that do not support it still get no orphan here: the
+     copy ties "level 2." / "קומה 2." together with a non-breaking space, so
+     the floor number can never end up alone on a line of its own. */
+  .sk-visit-row p{margin:0;color:var(--sk-muted);font-size:14px;line-height:1.55;
+    text-wrap:balance}
   .sk-visit-row a{color:var(--sk-sky);font-weight:600}
   :root[data-theme="dark"] .sk-visit-row a{color:var(--sk-sky-bright)}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-visit-row a{color:var(--sk-sky-bright)}}
