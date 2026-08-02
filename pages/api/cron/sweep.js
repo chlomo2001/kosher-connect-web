@@ -16,6 +16,7 @@
 // only on PRODUCTION deployments), or a signed-in staff member (the "Run
 // sweeps now" button, which is also how previews test this).
 
+import crypto from 'node:crypto'
 import { db, tablesMode } from '../../../lib/db.js'
 import { resolveStaff } from '../../../lib/auth.js'
 import { advanceOneMonth, advancePastDate } from '../../../lib/money.mjs'
@@ -172,10 +173,20 @@ async function handler(req, res) {
     return res.status(503).json({ success: false, error: 'Sweeps need the relational data layer.' })
   }
 
-  // Auth: Vercel Cron bearer OR a signed-in staff member.
+  // Auth: Vercel Cron bearer OR a signed-in staff member. The secret compare
+  // is timing-safe, matching check2faTicket (sweep 2026-08-02 #12).
   const cronSecret = (process.env.CRON_SECRET || '').trim()
   const bearer = (req.headers.authorization || '').replace(/^Bearer\s+/i, '')
-  const isCron = cronSecret && bearer === cronSecret
+  const a = Buffer.from(bearer)
+  const b = Buffer.from(cronSecret)
+  const isCron = !!cronSecret && a.length === b.length && crypto.timingSafeEqual(a, b)
+  // Cookie-authenticated runs must be POST: the session cookie is SameSite=Lax,
+  // which rides along on a top-level cross-site GET, so a crafted link could run
+  // the sweep as whoever clicked it (sweep 2026-08-02 #10). The app already
+  // POSTs; only Vercel Cron calls with GET, and it authenticates by bearer.
+  if (!isCron && req.method !== 'POST') {
+    return res.status(405).json({ success: false, error: 'Sweeps run with POST.' })
+  }
   const staff = isCron ? null : await resolveStaff(req)
   if (!isCron && !staff) {
     return res.status(401).json({ success: false, error: 'Not authorised to run sweeps.' })

@@ -107,6 +107,19 @@ async function handler(req, res) {
       if (notes !== undefined) patch.notes = notes || null
       if (!Object.keys(patch).length) return res.status(400).json({ success: false, error: 'Nothing to update.' })
 
+      // Cancelled is TERMINAL (sweep 2026-08-02 #19). The money references are
+      // one-shot by design (REPAIR-<id>, REPAIR-REVERSAL-<id> both dedupe), so
+      // a Collected→Cancelled→Collected cycle would replay the charge into the
+      // dedupe and leave the reversal standing — a collected repair netting £0.
+      // A cancelled job that comes back to the counter is a new repair.
+      if (patch.status && patch.status !== 'Cancelled') {
+        const [cur] = await db.select('repairs', `select=status&id=eq.${encodeURIComponent(String(id))}`)
+        if (!cur) return res.status(404).json({ success: false, error: 'Repair not found.' })
+        if (cur.status === 'Cancelled') {
+          return res.status(409).json({ success: false, error: 'This repair was cancelled and its money reversed — open a new repair instead.' })
+        }
+      }
+
       const updated = await db.update('repairs', `id=eq.${encodeURIComponent(String(id))}`, patch)
       if (!updated.length) return res.status(404).json({ success: false, error: 'Repair not found.' })
       const repair = updated[0]

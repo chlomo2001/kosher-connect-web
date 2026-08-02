@@ -41,12 +41,29 @@ async function handler(req, res) {
   const paid = Math.round((Number(pay.amount) || 0) * 100) / 100
   if (!(paid > 0)) return res.status(400).json({ success: false, error: 'That payment has no positive amount to refund.' })
 
-  // Default to a full refund; a supplied amount must be within the payment.
-  let amt = amount === '' || amount == null ? paid : Math.round((Number(amount) || 0) * 100) / 100
-  if (!(amt > 0)) return res.status(400).json({ success: false, error: 'Enter an amount greater than £0.' })
-  if (amt > paid + 0.005) return res.status(400).json({ success: false, error: `You can’t refund more than the £${paid.toFixed(2)} paid.` })
-
   const paymentIntentId = reference.replace(/^STRIPE-/, '')
+
+  // Cap against what's LEFT of the payment, not its face value (sweep
+  // 2026-08-02 #2): two partial refunds must never exceed the original.
+  // Our refund rows embed the payment intent in their reference (see the
+  // insert below), which is the payment↔refund link; filter in JS because
+  // pi_ ids contain '_', which is a wildcard to PostgREST's like.
+  const priorRows = await db.select('ledger',
+    `select=charge_reference,amount&customer_id=eq.${c.id}&charge_reference=like.STRIPE-REFUND-*`)
+  const refunded = Math.round(priorRows
+    .filter(r => String(r.charge_reference).startsWith(`STRIPE-REFUND-${paymentIntentId}-`))
+    .reduce((s, r) => s - Number(r.amount), 0) * 100) / 100 // rows are negative
+  const remaining = Math.round((paid - refunded) * 100) / 100
+  if (remaining <= 0) {
+    return res.status(400).json({ success: false, error: 'That payment has already been fully refunded.' })
+  }
+
+  // Default to refunding what's left; a supplied amount must fit within it.
+  let amt = amount === '' || amount == null ? remaining : Math.round((Number(amount) || 0) * 100) / 100
+  if (!(amt > 0)) return res.status(400).json({ success: false, error: 'Enter an amount greater than £0.' })
+  if (amt > remaining + 0.005) {
+    return res.status(400).json({ success: false, error: `You can’t refund more than the £${remaining.toFixed(2)} left of this payment.` })
+  }
   try {
     const refund = await refundPayment({
       paymentIntentId,
@@ -56,10 +73,12 @@ async function handler(req, res) {
     if (refund.status === 'failed' || refund.status === 'canceled') {
       return res.status(402).json({ success: false, error: `The refund did not go through (${refund.status}).` })
     }
-    // Reverse the wallet credit. Idempotent on the refund id, so a retry is a no-op.
+    // Reverse the wallet credit. Idempotent on the refund id, so a retry is a
+    // no-op. The payment intent in the reference is what lets the net-of-prior
+    // cap above find this row again.
     await db.insertIgnoreDup('ledger', [{
       customer_id: c.id,
-      charge_reference: `STRIPE-REFUND-${refund.id}`,
+      charge_reference: `STRIPE-REFUND-${paymentIntentId}-${refund.id}`,
       entry_type: 'manual_adjustment',
       amount: -amt, // negative = removes the credit the card payment added
       method: 'card',

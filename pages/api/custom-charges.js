@@ -6,7 +6,7 @@
 // Reads open to any signed-in staff (the charge flows need them); writes
 // admin-only. Applied automatically by lib/customCharges.js.
 
-import { withStaff } from '../../lib/auth.js'
+import { withStaff, tabAllowedFor } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 import { postAutoCharges } from '../../lib/customCharges.js'
 
@@ -36,11 +36,18 @@ async function handler(req, res) {
     const b = req.body || {}
 
     // Apply auto-extras for a just-created record whose money doesn't flow
-    // through a single server charge (rentals, SIMs). Any signed-in staff may
-    // trigger this — it's the charging action, not an admin config change.
+    // through a single server charge (rentals, SIMs). It's the charging action,
+    // not an admin config change — but it still posts payment rows with a
+    // caller-chosen tender, so it requires the tab whose record it charges
+    // (sweep 2026-08-02 #4): a helper who may not write rentals must not be
+    // able to inflate the Z-report's expected cash through this side door.
     if (req.method === 'POST' && b.op === 'apply') {
-      if (!['rental', 'sim'].includes(b.appliesTo)) {
+      const APPLY_TABS = { rental: 'rentals', sim: 'sim' }
+      if (!APPLY_TABS[b.appliesTo]) {
         return res.status(400).json({ success: false, error: 'apply supports rental and sim.' })
+      }
+      if (!(await tabAllowedFor(req.staff, APPLY_TABS[b.appliesTo]))) {
+        return res.status(403).json({ success: false, error: 'Not permitted to charge extras here.' })
       }
       if (!b.customerId || !b.refBase) return res.status(400).json({ success: false, error: 'customerId and refBase are required.' })
       const custRows = await db.select('customers', `select=id&legacy_id=eq.${encodeURIComponent(String(b.customerId))}`)

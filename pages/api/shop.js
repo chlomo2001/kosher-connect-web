@@ -127,7 +127,13 @@ async function handler(req, res) {
         ? b.lines
         : (b.itemId ? [{ itemId: b.itemId, qty: b.qty, imei: b.imei, total: b.total }] : [])
       if (!lines.length) return res.status(400).json({ success: false, error: 'Pick at least one item.' })
+      // The basket token is REQUIRED (sweep 2026-08-02 #1): without it every
+      // retry minted fresh SALE- references and a double-click charged twice.
+      // The till always sends one; a request without it is not the till.
       const clientRef = (typeof b.clientRef === 'string' && /^[\w-]{8,64}$/.test(b.clientRef)) ? b.clientRef : null
+      if (!clientRef) {
+        return res.status(400).json({ success: false, error: 'Missing idempotency token — refresh and try again.' })
+      }
 
       const customerUuid = !b.customerId || b.customerId === 'walkin'
         ? await walkInCustomer()

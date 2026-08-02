@@ -13,7 +13,6 @@
 // each with a stable reference — never from this endpoint.
 
 import { withStaff, tabAllowedFor, requireOwner } from '../../lib/auth.js'
-import crypto from 'node:crypto'
 import { db, tablesMode } from '../../lib/db.js'
 import { londonDate, londonDayStartUtc } from '../../lib/localDay.mjs'
 
@@ -213,6 +212,12 @@ async function handler(req, res) {
       if (b.kind !== 'adjustment' && amount < 0) {
         return res.status(400).json({ success: false, error: 'Amount must be positive — use an adjustment for corrections.' })
       }
+      // Same ceiling as charge-card and portal/pay (sweep 2026-08-02 #3): this
+      // was the one money-in path with no upper bound, and a fat-fingered credit
+      // is spendable as goods at the till. Genuine larger amounts get split.
+      if (Math.abs(amount) > 5000) {
+        return res.status(400).json({ success: false, error: 'Single entries are capped at £5,000 — record larger amounts as two entries.' })
+      }
       // Every kind takes a positive figure; only this one is stored negative.
       const signed = b.kind === MONEY_OUT ? -amount : amount
       // A method (till tender) only makes sense for money that moves through the
@@ -233,8 +238,15 @@ async function handler(req, res) {
 
       // Idempotent write: a client token yields a stable reference; a replay/retry
       // hits the unique charge_reference and is ignored, then we return the row that
-      // already exists — never a second credit/debit for one action.
-      const chargeRef = `${kind.prefix}-${validRef(b.clientRef) || crypto.randomUUID()}`
+      // already exists — never a second credit/debit for one action. The token is
+      // REQUIRED (sweep 2026-08-02 #1): minting a fresh UUID per call meant a
+      // retry-after-timeout posted the same £50 twice, because the unique index
+      // never saw the same reference. The Stripe paths already insist on it.
+      const token = validRef(b.clientRef)
+      if (!token) {
+        return res.status(400).json({ success: false, error: 'Missing idempotency token — refresh and try again.' })
+      }
+      const chargeRef = `${kind.prefix}-${token}`
       const inserted = await db.insertIgnoreDup('ledger', [{
         customer_id: uuid,
         charge_reference: chargeRef,

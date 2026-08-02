@@ -26,7 +26,9 @@ test('typed row round-trips back to the app shape', () => {
   const back = customerRowFromTyped(row)
   assert.equal(back.firstName, 'Rivka')
   assert.equal(back.lastName, 'Klein')
-  assert.equal(back.phone, '+44 7911 123456')
+  // Canonical digits in the typed columns, owner's 4-3-3 grouping on the way
+  // back out (sweep #17) — not the input's own spacing.
+  assert.equal(back.phone, '+44 7911 123 456')
   assert.equal(back.email, 'Rivka.Klein+news@Gmail.com')
   assert.equal(back.address, '12 Cazenove Rd')
   assert.equal(back.passportOnFile, true)
@@ -60,6 +62,21 @@ test('typed columns win over stale extras on read', () => {
   row.address = '99 New Street' // authoritative typed value
   const back = customerRowFromTyped(row)
   assert.equal(back.address, '99 New Street')
+})
+
+// One person, one (code, number) pair — the unique index only works if every
+// way of writing a number splits identically (sweep #17).
+test('splitPhone collapses every format of one number to one key', async () => {
+  const { splitPhone } = await import('../lib/mappers.js')
+  const expected = { code: '+44', number: '7911123456' }
+  assert.deepEqual(splitPhone('+44 7911 123456'), expected)
+  assert.deepEqual(splitPhone('+447911123456'), expected)
+  assert.deepEqual(splitPhone('07911 123456'), expected)
+  assert.deepEqual(splitPhone('0044 7911-123-456'), expected)
+  assert.deepEqual(splitPhone('0525115445'), { code: '+972', number: '525115445' })
+  assert.deepEqual(splitPhone('+1 718 123 4567'), { code: '+1', number: '7181234567' })
+  assert.deepEqual(splitPhone(''), { code: null, number: null })
+  assert.deepEqual(splitPhone('LEBARA'), { code: null, number: 'LEBARA' })
 })
 
 // Gmail-aware sign-in email matching (staff Google login).
