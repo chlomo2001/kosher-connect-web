@@ -188,6 +188,27 @@ Mandelbaum £170, Lemberger £95, Lebrecht £90, Schwartz £45); customers owe
 KC £375 in reinstated balances + Leifer's £980 + VU15UH's £130. Still
 awaiting Wizz-refund evidence: **IMPKJZ, UGSJJB, DSCUFH, HWGC5D, XU2WWH.**
 
+## Round 4 — 2 Aug, 23:10 (the last five refs searched: nothing to find)
+
+The owner searched IMPKJZ, UGSJJB, DSCUFH (+ the Sofer address), HWGC5D and
+XU2WWH in `ch7023518`. For every one, the mailbox holds only the 23 Jul
+cancellation notice and the 20 Jul fare-difference thread — **no refund
+announcement exists. Wizz has not refunded these five.** Nothing posted;
+state (c) stands and the reconcile is now as complete as the evidence allows.
+
+Context worth keeping: the DSCUFH thread contains a 22 Jul Jewish Community
+Council letter — the JCC negotiated with Wizz for the affected London
+families, Wizz declined a discounted fix but "confirmed that affected
+passengers will be eligible to receive refunds". Shloime's stated policy in
+his 24 Jul reply matches the ledger's model exactly: *"When I receive the
+refund, I will refund all customers the amount received back from Wizz Air."*
+Wizz's own cancellation boilerplate says refunds return via the original
+payment method — which is why the money lands with KC first.
+
+**Watch-list from here** (re-run every few days until dry):
+`in:sent refunded after:2026/08/02` — new Wizz refunds to announce, and
+"sent"/"received" confirmations that close the payout legs.
+
 ## What "done" looks like from here
 
 Each remaining (c) booking gets its `refund` entry when Wizz's money is seen;
