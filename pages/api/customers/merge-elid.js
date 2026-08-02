@@ -58,6 +58,9 @@ async function handler(req, res) {
     if (e?.code === 'MONEY_HISTORY') {
       return res.status(400).json({ success: false, error: 'That import has money history — it wasn’t deleted. The ELID line was still added to the customer you kept.' })
     }
+    if (e?.code === 'HAS_RECORDS') {
+      return res.status(400).json({ success: false, error: `That import still has records, so it wasn’t deleted (${e.message}). The ELID line was still added to the customer you kept.` })
+    }
     throw e
   }
 

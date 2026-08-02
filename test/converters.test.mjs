@@ -42,6 +42,21 @@ test('normalizeUkNumber: output modes', () => {
   assert.equal(normalizeUkNumber('+447911123456', { mode: 'national' }), '07911123456')
   assert.equal(normalizeUkNumber('0161 531 1386', { mode: 'keep' }), '0161 531 1386')
 })
+test('normalizeUkNumber: Israeli nationals become +972, never +44 (sweep #18)', () => {
+  assert.equal(normalizeUkNumber('0525115445'), '+972525115445')     // mobile, 10 digits
+  assert.equal(normalizeUkNumber('052-511-5445'), '+972525115445')
+  assert.equal(normalizeUkNumber('025005656'), '+97225005656')       // Jerusalem landline, 9 digits
+  assert.equal(normalizeUkNumber('039876543'), '+97239876543')       // Tel Aviv landline
+  // UK numbers of every real shape still convert to +44:
+  assert.equal(normalizeUkNumber('07911123456'), '+447911123456')    // UK mobile, 11 digits
+  assert.equal(normalizeUkNumber('05611234567'), '+445611234567')    // UK 056 corporate, 11 digits
+  assert.equal(normalizeUkNumber('0161 531 1386'), '+441615311386')  // UK landline
+})
+test('normalizeUkNumber: trunk zero inside a country code is dropped', () => {
+  assert.equal(normalizeUkNumber('+44 (0)161 531 1386'), '+441615311386')
+  assert.equal(normalizeUkNumber('0044 (0)7911 123456'), '+447911123456')
+  assert.equal(normalizeUkNumber('+972 (0)52 511 5445'), '+972525115445')
+})
 test('phoneKey collapses formats to one identity', () => {
   assert.equal(phoneKey('07911 123456'), phoneKey('+447911123456'))
   assert.equal(phoneKey('07911 123456'), phoneKey('00447911123456'))

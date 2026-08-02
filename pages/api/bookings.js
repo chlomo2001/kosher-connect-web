@@ -79,6 +79,47 @@ function toAppFull(row) {
 const CUSTOMER_EMBED = 'customers(legacy_id,first_name,last_name)'
 const PASSENGER_EMBED = 'booking_passengers(id,position,full_name,dob,passport_number,passport_expiry,nationality,passport_issue_date,issuing_country)'
 
+// The unmasked check-in view is the only place passport numbers leave the
+// server, so reads through it are throttled per staff member and audited
+// (sweep 2026-08-02 #7). The budget covers a family's worth of check-ins
+// back-to-back; walking the whole register trips it. Same best-effort
+// in-memory trade-off as the auth counters in lib/auth.js — the Vercel
+// runtime log is the audit trail.
+const checkinReads = new Map() // staff id -> { n, first }
+const CHECKIN_READS_MAX = 15
+const CHECKIN_WINDOW_MS = 10 * 60 * 1000
+function checkinReadAllowed(staffId) {
+  const key = String(staffId || 'unknown')
+  const e = checkinReads.get(key)
+  if (e && Date.now() - e.first > CHECKIN_WINDOW_MS) checkinReads.delete(key)
+  const cur = checkinReads.get(key) || { n: 0, first: Date.now() }
+  cur.n += 1
+  if (checkinReads.size > 200) checkinReads.clear()
+  checkinReads.set(key, cur)
+  return cur.n <= CHECKIN_READS_MAX
+}
+
+// Passenger dates arrive as yyyy-mm-dd from the date inputs; anything else
+// must be refused BEFORE the replace starts, because a row that fails to
+// insert after the old rows are deleted destroys passport data helpers
+// cannot re-enter (sweep 2026-08-02 #16).
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+function badPassengerDate(passengers) {
+  for (const p of Array.isArray(passengers) ? passengers : []) {
+    if (!p || !String(p.fullName || '').trim()) continue
+    for (const [label, v] of [
+      ['date of birth', p.dob],
+      ['passport expiry', p.passportExpiry],
+      ['passport issue date', p.passportIssueDate],
+    ]) {
+      if (v && !ISO_DATE.test(String(v))) {
+        return `${String(p.fullName).trim()}: ${label} must be a full date (year-month-day).`
+      }
+    }
+  }
+  return null
+}
+
 // Normalise a client passengers array into insertable rows. Rows with no
 // name are dropped (blank editor lines), everything else is trimmed.
 function passengerRows(bookingId, passengers) {
@@ -122,6 +163,10 @@ async function handler(req, res) {
         if (!(await tabAllowedFor(req.staff, 'bookings'))) {
           return res.status(403).json({ success: false, error: 'Not permitted to view check-in details.' })
         }
+        if (!checkinReadAllowed(req.staff?.id)) {
+          return res.status(429).json({ success: false, error: 'Too many check-in views in a row — wait a few minutes.' })
+        }
+        console.log(`[audit] check-in passport view: staff=${req.staff?.id || 'auth-off'} booking=${String(req.query.checkin)}`)
         const [full] = await db.select(
           'bookings',
           `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&id=eq.${encodeURIComponent(String(req.query.checkin))}`
@@ -146,6 +191,8 @@ async function handler(req, res) {
       if (!b.travelDate) return res.status(400).json({ success: false, error: 'Travel date is required.' })
       if (!Number.isFinite(price) || price < 0) return res.status(400).json({ success: false, error: 'Price must be a number ≥ 0.' })
       if (fee < 0) return res.status(400).json({ success: false, error: 'Booking fee cannot be negative.' })
+      const badDate = badPassengerDate(b.passengers)
+      if (badDate) return res.status(400).json({ success: false, error: badDate })
 
       const custRows = await db.select(
         'customers',
@@ -398,13 +445,21 @@ async function handler(req, res) {
       }
 
       if (passengers !== undefined) {
-        // Replace-all, with one wrinkle: helpers never see passport fields,
-        // so a blank passport on a row they round-trip means "unchanged",
-        // not "erase" — merge those back from the existing rows by id.
+        // Replace-all, with two wrinkles. First: helpers never see passport
+        // fields, so a blank passport on a row they round-trip means
+        // "unchanged", not "erase" — merge those back from the existing rows
+        // by id. Second: the NEW rows go in before the OLD rows come out
+        // (there's no transaction across PostgREST calls), so a failed insert
+        // leaves the old passenger data fully intact instead of destroying
+        // passports nobody can see to re-enter (sweep 2026-08-02 #16). Dates
+        // were validated up front, so a failure here is the exceptional case,
+        // not the malformed-input case.
+        const badEditDate = badPassengerDate(passengers)
+        if (badEditDate) return res.status(400).json({ success: false, error: badEditDate })
         const rows = passengerRows(String(id), passengers)
+        const existing = await db.select('booking_passengers',
+          `select=id,passport_number,passport_expiry&booking_id=eq.${bid}`)
         if (req.staff && req.staff.role !== 'owner') {
-          const existing = await db.select('booking_passengers',
-            `select=id,passport_number,passport_expiry&booking_id=eq.${bid}`)
           const byId = new Map(existing.map(p => [p.id, p]))
           const sent = Array.isArray(passengers) ? passengers.filter(p => p && String(p.fullName || '').trim()) : []
           rows.forEach((row, i) => {
@@ -415,8 +470,10 @@ async function handler(req, res) {
             }
           })
         }
-        await db.delete('booking_passengers', `booking_id=eq.${bid}`)
         if (rows.length) await db.insert('booking_passengers', rows)
+        if (existing.length) {
+          await db.delete('booking_passengers', `id=in.(${existing.map(p => p.id).join(',')})`)
+        }
       }
 
       const [full] = await db.select('bookings', `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&id=eq.${bid}`)

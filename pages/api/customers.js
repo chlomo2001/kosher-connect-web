@@ -50,7 +50,7 @@ async function handler(req, res) {
 
     return res.status(405).end()
   } catch (e) {
-    if (e.code === 'MONEY_HISTORY') {
+    if (e.code === 'MONEY_HISTORY' || e.code === 'HAS_RECORDS') {
       return res.status(409).json({ success: false, error: e.message })
     }
     console.error('[api/customers]', e)

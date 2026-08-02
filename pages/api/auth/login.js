@@ -3,6 +3,7 @@
 // step 2 (/api/auth/verify-2fa) completes the session.
 
 import { tablesMode } from '../../../lib/db.js'
+import { rateLimit } from '../../../lib/rateLimit.js'
 import {
   passwordLogin,
   sessionCookie,
@@ -11,12 +12,22 @@ import {
   staff2faEnabled,
   sendEmailOtp,
   make2faTicket,
+  loginLocked,
+  noteLoginFailure,
+  clearLoginFailures,
 } from '../../../lib/auth.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
   if (!tablesMode) {
     return res.status(503).json({ success: false, error: 'Login needs the relational data layer.' })
+  }
+  // Two guessing guards (sweep 2026-08-02 #5): per-IP token bucket, and a
+  // per-email lockout that holds even when the guesses arrive from many IPs.
+  // Staff logins are a handful a day, so the budget is generous for humans
+  // and hopeless for a wordlist.
+  if (!rateLimit(req, { burst: 10, perMinute: 3 })) {
+    return res.status(429).json({ success: false, error: 'Too many sign-in attempts — wait a minute and try again.' })
   }
   const { email, password } = req.body || {}
   if (!email || !password) {
@@ -25,8 +36,12 @@ export default async function handler(req, res) {
 
   try {
     const cleanEmail = String(email).trim()
+    if (loginLocked(cleanEmail)) {
+      return res.status(429).json({ success: false, error: 'Too many sign-in attempts — wait 15 minutes and try again.' })
+    }
     const grant = await passwordLogin(cleanEmail, String(password))
     if (!grant.ok || !grant.json?.access_token) {
+      noteLoginFailure(cleanEmail)
       return res.status(401).json({ success: false, error: 'Wrong email or password.' })
     }
     const user = grant.json.user
@@ -39,9 +54,11 @@ export default async function handler(req, res) {
     if (!staff) {
       // Don't reveal that the password was correct but the account isn't staff —
       // that distinguishes staff from non-staff Supabase accounts. Mirror the
-      // wrong-password response exactly. audit C19.
+      // wrong-password response exactly, lockout counting included. audit C19.
+      noteLoginFailure(cleanEmail)
       return res.status(401).json({ success: false, error: 'Wrong email or password.' })
     }
+    clearLoginFailures(cleanEmail)
 
     if (staff2faEnabled()) {
       const sent = await sendEmailOtp(cleanEmail)

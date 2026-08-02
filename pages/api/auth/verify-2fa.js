@@ -7,7 +7,7 @@ import {
   sessionCookie,
   staffProfileFor,
   check2faTicket,
-  twofaTicketLocked,
+  twofaLocked,
   note2faFailure,
   clear2faFailures,
   verifyEmailOtp,
@@ -23,20 +23,22 @@ export default async function handler(req, res) {
   if (!check2faTicket(cleanEmail, ticket)) {
     return res.status(403).json({ success: false, error: 'Sign-in expired — start again with your password.' })
   }
-  if (twofaTicketLocked(ticket)) {
-    return res.status(429).json({ success: false, error: 'Too many attempts — start again with your password.' })
+  // Keyed on the email, not the ticket — a fresh ticket must not reset the
+  // counter, or five-guesses-per-ticket becomes unlimited (sweep #6).
+  if (twofaLocked(cleanEmail)) {
+    return res.status(429).json({ success: false, error: 'Too many attempts — wait 15 minutes and start again with your password.' })
   }
 
   try {
     const verified = await verifyEmailOtp(cleanEmail, String(code).trim())
     if (!verified.ok || !verified.json?.access_token) {
-      note2faFailure(ticket)
+      note2faFailure(cleanEmail)
       return res.status(401).json({ success: false, error: 'Wrong or expired code.' })
     }
     const staff = await staffProfileFor(verified.json.user.id)
     if (!staff) return res.status(403).json({ success: false, error: 'This account is not a staff member.' })
 
-    clear2faFailures(ticket)
+    clear2faFailures(cleanEmail)
     res.setHeader('Set-Cookie', sessionCookie(verified.json))
     return res.json({ success: true, role: staff.role })
   } catch (e) {
