@@ -56,25 +56,42 @@ Rothschild + the *paid* Koppenheim (Myer), and the third (Boruch Tzvi) was
 reversed as unpaid on 30 Jul. One reference, one family/group booking, three
 passengers — no wrong ref, no missing booking.
 
-## Open items (mailbox-only — the app cannot see these)
+## Corrections, same day (owner supplied the sheet screenshot)
 
-1. **An unidentified cancelled booking is not in the app at all.** Screenshot 1
-   (2 Aug): itinerary W9 5301 LTN→TLV dep 04/08/2026, return 17/08; Wizz
-   refunded £205; customer owed a £130 balance and emailed a TSB transfer
-   confirmation **today, 2 Aug 14:24**. No booking with that travel date exists
-   in the app (the 03–05 Aug range is empty). The amounts mirror TLKCQC but the
-   itinerary does not — it is a different booking, living only in the mailbox.
-   Needs: the booking reference from that thread, then a booking record + the
-   same entry pattern as TLKCQC.
-2. **"What about for Sara Rptman?"** (Shloime, 30 Jul, TLKCQC thread) — no
-   passenger or customer matching any spelling of that name exists in the app.
-   Another mailbox-only person, presumably owing or owed on some booking.
-3. **TMZZXC payout** — the customer supplied her account on 30 Jul; no "sent"
+Two "mailbox-only" claims above were **my search errors, both found in the app**:
+
+1. **The 04/08 booking is `VU15UH` — Perel Ettel Pruzansky** (sheet row 29;
+   same £245+£90 shape as TLKCQC, which is why the amounts mirrored). My
+   travel-date query missed it because the import used placeholder dates.
+   In the app as charge −335 / reversal +335; **ledger id 149 posted**
+   (snapshot `zz_snapshot_ledger_wizz_20260802b` first): reinstate −£130 per
+   the cancellation notice. The customer emailed a TSB transfer confirmation
+   2 Aug 14:24; the **payment leg is deliberately unposted** until Shloime
+   confirms receipt — one word and it goes on.
+2. **"Sara Rptman" is Sara Rothman — `SW9PXJ`** (sheet row 27, £130+£45,
+   cancelled). My name-regex didn't tolerate the "th". In the app as
+   charge −175 / reversal +175 (unpaid). Her refund amount / balance is not
+   in evidence yet — on the Gmail search list.
+
+## Open items
+
+1. **VU15UH payment leg** — £130, TSB proof sent 2 Aug, awaiting Shloime's
+   "received".
+2. **TMZZXC payout** — the customer supplied her account on 30 Jul; no "sent"
    confirmation is visible. Either the transfer happened off-thread (then post
    the `refund_payout` leg) or it is still owed after 3 days.
-4. **Three customers have never answered "how do you want your refund"** —
+3. **Three customers have never answered "how do you want your refund"** —
    Tager (£320, asked 29 Jul), Lebrecht (£90, asked 29 Jul), Schwartz (£45,
    asked 29 Jul). Money sitting in KC's hands, aging.
+4. **Sheet `New Balance` hints, unposted** — SPSHHD (Rotter) £160, SLW7XC
+   (Lieber £65, Zieg £65). These look like TLKCQC/VU15UH-pattern balances
+   after a Wizz refund, but the NB column is Shloime's recomputation, not
+   evidence of the refund itself — awaiting the refund emails before posting.
+5. **SLW7XC import defect** — the sheet shows £100 fare + £45 fee per
+   passenger; the app booked **fee only** (price £0.00, charge −£45 each).
+   If the £100 fares are real, both bookings are understated by £100.
+6. **USSGPK (Napthaly Padwa) has no ledger entries at all** — booking exists
+   (£245+£90, cancelled), zero money rows. Import gap.
 
 ## What "done" looks like from here
 
