@@ -151,6 +151,43 @@ Position after round 2: KC's liability to customers unchanged at **£550**
 (+ VU15UH's £130 pending Shloime's "received"); customers now visibly owe KC
 **£375** across SPSHHD/SLW7XC/SW9PXJ (+ £130 VU15UH).
 
+## Round 3 — 2 Aug, late evening (owner opened the two flagged threads)
+
+**Open item 7 closed — the £170 is Mendel Mandelbaum, `IJEVNV`.** The 29 Jul
+"Wizzair ticket" mail was addressed to him; IJEVNV is one of the six paid
+bookings awaiting refund evidence. **Ledger id 168**: `refund` +£170 — KC
+holds it, owed to the customer (state (b), same as Tager).
+
+**Open item 8 closed — the £980 breakdown is exactly as inferred.** The
+OKQKKS thread (29 Jul): "£1165 − £185 (WizzAir refund for cancelled tickets)
+Total £980". So ZMKWJP (3 pax, £395, cancelled) received a **£185** Wizz
+refund. **Ledger id 169**: reinstate −£210 on ZMKWJP. Leifer's ledger now
+nets **−£980 — matching Shloime's demand to the penny.**
+
+**And a defect the £170 hunt exposed: 14 duplicated payments, £5,405.**
+IJEVNV's ledger showed the £380 payment twice — once from the 13 Jul import
+(`PAY-SHEET-<uuid>`) and again from the 30 Jul reconcile
+(`PAY-BOOKING-<uuid>`). The unique `charge_reference` constraint never fired
+because the prefixes differ. A join across the whole ledger found **14 such
+pairs** (same customer, same amount, same booking — including six non-Wizz
+bookings: PMNQ8Z, RNBPRM, DIWJVI, QJJ4VI, QNJ9TZ, and VU792E), £5,405 of
+phantom credit sitting on customer balances since 30 Jul. Snapshot
+`zz_snapshot_ledger_duppay_20260802` (28 rows), then **ledger ids 154–167**:
+one `manual_adjustment` reversal per pair, keyed `DUP-PAY-REVERSAL-<uuid>`
+(idempotent). Verified after: all six non-Wizz customers back to £0; the
+Wizz positions land exactly on the evidence (Tager +320, Lemberger +95,
+Lebrecht +90, Mandelbaum +170, Leifer −980, Kopilowitz 0). Shimon Adler's
+−£20 is an unrelated unpaid rental from 14 Jul.
+
+**Lesson for the next import:** payment idempotency must be keyed on the
+booking uuid, not on the full reference string — two prefixes for the same
+economic event defeated the constraint.
+
+Position after round 3: KC holds **£720** of customer money (Tager £320,
+Mandelbaum £170, Lemberger £95, Lebrecht £90, Schwartz £45); customers owe
+KC £375 in reinstated balances + Leifer's £980 + VU15UH's £130. Still
+awaiting Wizz-refund evidence: **IMPKJZ, UGSJJB, DSCUFH, HWGC5D, XU2WWH.**
+
 ## What "done" looks like from here
 
 Each remaining (c) booking gets its `refund` entry when Wizz's money is seen;
