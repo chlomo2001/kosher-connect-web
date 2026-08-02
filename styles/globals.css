@@ -212,6 +212,18 @@ body {
    was unselectable too. Opt those data surfaces back in. */
 td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
 
+/* …and the public pages are documents, not app chrome. /welcome, /join,
+   /phone-guide, /portal and /login get read, quoted, and forwarded to a
+   family member — a visitor who tries to copy the phone number or a line of
+   the offer instead finds the page behaves like a picture of itself. They
+   already undo body's display/height/overflow (see the <style jsx global>
+   block in welcome.js); user-select was the one part nobody undid.
+   -webkit- included: iOS Safari is most of this audience. */
+.sk, .welcome-shell, .pd-shell, .login-shell {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 #__next { display: flex; width: 100%; height: 100%; overflow: hidden; }
 
 /* ─── CUSTOM SELECT ─── */
