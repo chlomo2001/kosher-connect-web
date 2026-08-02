@@ -6646,7 +6646,7 @@ function renderBookingsTab() {
       <tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a'))openEditBookingModal('${escHtml(b.id)}')" title="Open booking">
         <td><div class="customer-name">${escHtml(b.customerName || '—')}</div>
             <div class="customer-email">${escHtml(b.passenger || '')}${(b.passengers || []).length ? ` · 👥 ${b.passengers.length}` : ''}</div></td>
-        <td>${escHtml(b.route)}</td>
+        <td style="white-space:nowrap;">${escHtml(b.route)}</td>
         <td>${escHtml(b.airline || '—')}<div class="customer-email">${escHtml(b.bookingReference || '')}</div></td>
         <td>${b.travelDate ? fmtDate(b.travelDate) : '—'}
             <div class="customer-email">${escHtml(b.departureTime || '')}${b.arrivalTime ? ' → ' + escHtml(b.arrivalTime) : ''}</div></td>
@@ -11068,7 +11068,7 @@ async function renderVirtualTab() {
     ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔢</div><p>${virtualNumbers.length ? 'No numbers match this filter.' : 'No virtual numbers yet.'}</p>${kcClearFiltersBtn('virtual')}</div></td></tr>`
     : vnShown.map(v => `
       <tr>
-        <td><strong>${escHtml(fmtPhone(v.number))}</strong></td>
+        <td class="kc-phone"><strong>${escHtml(fmtPhone(v.number))}</strong></td>
         <td>${escHtml(v.customerName || '—')}</td>
         <td>${escHtml(v.platform || '—')}</td>
         <td>${v.billingEnabled && v.monthlyPrice
