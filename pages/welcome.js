@@ -63,9 +63,10 @@ const T = {
         eyebrow: 'Mobile & SIM',
         title: 'Kosher SIM plans, matched to how you really use your phone',
         accent: 'Pay less', sub: 'the right plan for how you really use your phone',
-        body: 'Most people are quietly on the wrong SIM and overpaying every month. Bring in your latest bill and we’ll match the plan to what you really need — international minutes and all. No long contract you can’t follow, no company in the middle, no small print.',
+        body: 'Bring in your latest bill and we’ll go through it with you, line by line — what you use, what you don’t, and which plan actually fits, international minutes and all. Then we handle the switch from start to finish. No long contract you can’t follow, no company in the middle, no small print.',
         chips: ['Keep your number', 'Keep your phone', 'We do the switch for you'],
         price: '£20 setup · then £20 a year · services £5 (free for USA & Canada SIMs)', cta: 'Bring us your bill',
+        prefill: 'I’d like you to look at my phone bill and see if I could pay less.',
       },
       {
         eyebrow: 'Travel phones',
@@ -75,6 +76,7 @@ const T = {
         note: 'We can book your flights as well — one trip, one place.',
         chips: ['Set up before you travel', 'Priced by the day', 'Shabbos never charged'],
         price: '£3 a day · minimum £20–£25 · capped £45–£50 a month · Shabbos & Yom Tov never charged', cta: 'Plan your trip',
+        prefill: 'I’m planning a trip and would like a travel phone. Where I’m going and when: ',
       },
       {
         eyebrow: 'International numbers',
@@ -83,6 +85,7 @@ const T = {
         body: 'Family in Israel? Business in the States? Get a local number that rings straight through to the phone already in your pocket — no second handset, and no roaming charges for the people calling you.',
         chips: ['Rings on your own phone', 'Israeli or USA number', 'No roaming for callers'],
         price: 'from £10 a month', cta: 'Get your number',
+        prefill: 'I’d like an Israeli or USA number that rings on my own phone.',
       },
     ],
     moreTitle: 'More at Kosher Connect',
@@ -149,9 +152,10 @@ const T = {
         eyebrow: 'חבילות וסים',
         title: 'חבילה כשרה שנתפרת בדיוק לפי השימוש שלכם',
         accent: 'משלמים פחות', sub: 'החבילה הנכונה, לפי מה שאתם באמת צריכים',
-        body: 'כמעט כולם מחזיקים חבילה גדולה מדי או קטנה מדי — ומשלמים על זה כל חודש. תביאו את החשבונית האחרונה, נעבור עליה ביחד ונתאים לכם חבילה, כולל דקות לחו״ל. בלי התחייבות, בלי חברה באמצע, בלי אותיות קטנות.',
+        body: 'תביאו את החשבונית האחרונה ונעבור עליה ביחד, שורה אחרי שורה — מה אתם באמת מנצלים, מה מיותר, ואיזו חבילה באמת מתאימה, כולל דקות לחו״ל. ומשם? את כל המעבר אנחנו עושים בשבילכם, מההתחלה ועד הסוף. בלי התחייבות, בלי חברה באמצע, בלי אותיות קטנות.',
         chips: ['שומרים על המספר', 'נשארים עם אותו מכשיר', 'המעבר — עלינו'],
         price: '‎£20‎ הקמה · ‎£20‎ לשנה · ‎£5‎ לשירות (חינם לסים של ארה״ב וקנדה)', cta: 'תביאו לנו את החשבונית',
+        prefill: 'אשמח שתעברו על חשבונית הסלולר שלי ותבדקו אם אפשר לשלם פחות.',
       },
       {
         eyebrow: 'טלפון לחו״ל',
@@ -161,6 +165,7 @@ const T = {
         note: 'ואפשר להזמין אצלנו גם את הטיסות — נסיעה אחת, הכול במקום אחד.',
         chips: ['מוכן לפני הטיסה', 'תמחור לפי יום', 'שבת ויו״ט בחינם'],
         price: '‎£3‎ ליום · מינימום ‎£20–£25‎ · תקרה חודשית ‎£45–£50‎ · שבת ויום טוב בחינם, תמיד', cta: 'דברו איתנו לפני הטיסה',
+        prefill: 'אני מתכנן/ת נסיעה ואשמח לשכור טלפון לחו״ל. לאן ומתי: ',
       },
       {
         eyebrow: 'מספרים בינלאומיים',
@@ -169,6 +174,7 @@ const T = {
         body: 'המשפחה בארץ? עסקים באמריקה? מקבלים מספר מקומי שמצלצל ישר לנייד שכבר יש לכם — בלי מכשיר נוסף, ומי שמתקשר אליכם משלם שיחה מקומית רגילה, בלי רומינג.',
         chips: ['מצלצל בנייד שלכם', 'מספר ישראלי או אמריקאי', 'שיחה מקומית למתקשרים'],
         price: 'החל מ־‎£10‎ לחודש', cta: 'להזמנת מספר',
+        prefill: 'אשמח למספר ישראלי או אמריקאי שמצלצל אצלי בנייד.',
       },
     ],
     moreTitle: 'עוד אצלנו בכשר קונקט',
@@ -319,6 +325,10 @@ export default function Welcome() {
   const waHref = `https://wa.me/441615311386?text=${encodeURIComponent(t.waText)}`
 
   useEffect(() => {
+    // js-on arms the reveal's hidden state — see the .sk-reveal CSS comment.
+    // Only added here, so a no-JS visitor never gets content hidden on them.
+    const root = document.querySelector('.sk')
+    if (root) root.classList.add('js-on')
     const els = document.querySelectorAll('.sk-reveal:not(.in)')
     const obs = new IntersectionObserver((entries) => {
       entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target) } })
@@ -443,7 +453,12 @@ export default function Welcome() {
               {b.note && <p className="sk-band-note">{b.note}</p>}
               <div className="sk-chips">{b.chips.map((c, j) => <span key={j}>✓ {c}</span>)}</div>
               {b.price && <div className="sk-band-price">{b.price}</div>}
-              <a className="sk-btn sk-btn-sky sk-btn-lg" href="#contact">{b.cta}</a>
+              {/* Each band CTA promises a different door ("Plan your trip"…)
+                  but they all land on the one form — seed the message so the
+                  form reflects the promise. Empty-only: never clobber text the
+                  visitor already typed. The anchor jump itself is untouched. */}
+              <a className="sk-btn sk-btn-sky sk-btn-lg" href="#contact"
+                onClick={() => { if (b.prefill) setForm((f) => (f.message.trim() ? f : { ...f, message: b.prefill })) }}>{b.cta}</a>
             </div>
           </section>
         ))}
@@ -645,6 +660,10 @@ const SKY_CSS = `
     --sk-text:#0d1526; --sk-muted:#566079; --sk-line:#dbe3f0;
     --sk-paper:#ffffff; --sk-canvas:#f4f7fc; --sk-band:#ffffff; --sk-band-alt:#eef2fb;
     --sk-maxw:1320px; /* Sky-scale desktop container (owner comparison, 27 Jul) */
+    /* Motion tokens (animation playbook, plans/002): entrances decelerate hard,
+       on-screen movement eases both ends. Values verbatim — do not approximate. */
+    --sk-ease-out:cubic-bezier(0.23, 1, 0.32, 1);
+    --sk-ease-io:cubic-bezier(0.77, 0, 0.175, 1);
     --sk-fdisp:"Heebo KC","Helvetica Neue",Arial,system-ui,-apple-system,"Segoe UI",sans-serif;
     --sk-fbody:"Heebo KC",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
   }
@@ -730,14 +749,14 @@ const SKY_CSS = `
     border-radius:50%;border:1px solid var(--sk-line);background:var(--sk-paper);color:var(--sk-text);
     display:grid;place-items:center;cursor:pointer;box-shadow:0 4px 16px rgba(10,21,38,.14);
     opacity:0;visibility:hidden;transform:translateY(8px);
-    transition:opacity .2s ease,transform .2s ease,visibility 0s .2s}
-  .sk-top.show{opacity:1;visibility:visible;transform:none;transition:opacity .2s ease,transform .2s ease}
+    transition:opacity .2s var(--sk-ease-out),transform .2s var(--sk-ease-out),visibility 0s .2s}
+  .sk-top.show{opacity:1;visibility:visible;transform:none;transition:opacity .2s var(--sk-ease-out),transform .2s var(--sk-ease-out)}
   .sk-top:hover{color:var(--sk-sky);border-color:var(--sk-sky)}
   :root[data-theme="dark"] .sk-top:hover{color:var(--sk-sky-bright);border-color:var(--sk-sky-bright)}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-top:hover{color:var(--sk-sky-bright);border-color:var(--sk-sky-bright)}}
   /* buttons */
   .sk-btn{display:inline-flex;align-items:center;justify-content:center;gap:.35em;font-weight:700;
-    border-radius:999px;cursor:pointer;transition:transform .12s ease,filter .12s ease;white-space:nowrap;
+    border-radius:999px;cursor:pointer;transition:transform .12s var(--sk-ease-out),filter .12s var(--sk-ease-out);white-space:nowrap;
     border:0;font-family:inherit}
   .sk-btn:hover{transform:translateY(-1px)}
   .sk-btn:disabled{opacity:.6;cursor:default;transform:none}
@@ -911,10 +930,18 @@ const SKY_CSS = `
   .sk-foot-legal{color:var(--sk-muted);font-size:13px;margin:30px 0 0;padding-top:18px;
     border-top:1px solid var(--sk-line);line-height:1.7}
 
-  /* reveal */
-  .sk-reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
+  /* reveal — additive on purpose: content ships visible, and only once JS has
+     marked the root .js-on does it hide pre-scroll. Without JS (blocked, slow,
+     or crashed) the hidden state never applies, so the page below the hero —
+     including the contact form — still reads. The reduce rule repeats the
+     .js-on selector because the scoped hidden rule is three classes deep and
+     would otherwise out-rank it. */
+  .sk-reveal{transition:opacity .6s var(--sk-ease-out),transform .6s var(--sk-ease-out)}
+  .js-on .sk-reveal:not(.in){opacity:0;transform:translateY(16px)}
   .sk-reveal.in{opacity:1;transform:none}
-  @media (prefers-reduced-motion:reduce){.sk-reveal{opacity:1;transform:none;transition:none}}
+  @media (prefers-reduced-motion:reduce){
+    .sk-reveal,.js-on .sk-reveal:not(.in){opacity:1;transform:none;transition:none}
+  }
 
   @media (max-width:960px){ .sk-foot-grid{grid-template-columns:1fr 1fr} }
   /* The link row needs 1009px beside the logo; the container only offers that
