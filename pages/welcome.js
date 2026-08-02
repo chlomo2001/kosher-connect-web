@@ -758,7 +758,14 @@ const SKY_CSS = `
   .sk-btn{display:inline-flex;align-items:center;justify-content:center;gap:.35em;font-weight:700;
     border-radius:999px;cursor:pointer;transition:transform .12s var(--sk-ease-out),filter .12s var(--sk-ease-out);white-space:nowrap;
     border:0;font-family:inherit}
-  .sk-btn:hover{transform:translateY(-1px)}
+  /* Hover-lift only for a pointer that can actually hover: on touch a tap
+     fires a synthetic :hover, so the button lurched up 1px on every press and
+     the lift could stick until the next tap elsewhere (plans/003). Colour
+     hovers (.sk-btn-sky brightness etc.) stay unguarded — colour is harmless
+     on touch; it's the movement that reads as a glitch. */
+  @media (hover:hover) and (pointer:fine){
+    .sk-btn:hover{transform:translateY(-1px)}
+  }
   .sk-btn:disabled{opacity:.6;cursor:default;transform:none}
   /* Scoped under .sk on purpose. The "a{color:inherit}" rule above is (0,1,1)
      and a bare .sk-btn-sky is only (0,1,0) — so every button that is an <a>

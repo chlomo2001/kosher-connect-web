@@ -1,6 +1,6 @@
 # 003 — Gate the button hover-lift behind a real pointer
 
-- **Status**: TODO
+- **Status**: DONE (2 Aug 2026)
 - **Commit**: c54b10d
 - **Severity**: LOW
 - **Category**: Accessibility (false hover on touch)

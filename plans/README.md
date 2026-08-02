@@ -15,7 +15,7 @@ So the live motion surface is small, and these three plans cover it.
 | --- | --- | --- | --- |
 | 001 | Make the scroll-reveal additive (no blank page without JS) | HIGH | DONE |
 | 002 | Motion tokens + strong ease-out for the reveal | MEDIUM | DONE |
-| 003 | Gate the button hover-lift behind a real pointer | LOW | TODO |
+| 003 | Gate the button hover-lift behind a real pointer | LOW | DONE |
 
 ## Recommended order
 
