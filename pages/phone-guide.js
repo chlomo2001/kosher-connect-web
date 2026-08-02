@@ -33,6 +33,8 @@ const T = {
     foot1: 'OTP texting means the phone can receive texts from the bank only — nothing else gets through.',
     foot2: 'Not every phone includes a warranty — please ask before purchase. Prices can change; the shop price on the day is the right one.',
     foot3a: 'Not sure? Come in, or call', foot3b: '— describe who the phone is for and we’ll tell you straight which one fits.',
+    brandName: 'Kosher Connect', rights: 'All rights reserved.',
+    tradingName: 'Kosher Connect is a trading name of Hatsluche Ltd.',
   },
   he: {
     dir: 'rtl',
@@ -51,6 +53,8 @@ const T = {
     foot1: 'טקסט OTP פירושו שהטלפון מקבל הודעות מהבנק בלבד — שום דבר אחר לא עובר.',
     foot2: 'לא לכל טלפון מצורפת אחריות — נא לשאול לפני הקנייה. המחירים יכולים להשתנות; המחיר בחנות ביום הקנייה הוא הקובע.',
     foot3a: 'לא בטוחים? קפצו אלינו, או התקשרו:', foot3b: '— ספרו למי הטלפון מיועד, ונגיד לכם ישר איזה מתאים.',
+    brandName: 'כשר קונקט', rights: 'כל הזכויות שמורות.',
+    tradingName: 'כשר קונקט הוא שם מסחרי של Hatsluche Ltd.',
   },
 }
 
@@ -181,7 +185,11 @@ export default function PhoneGuide() {
 
           <footer className="w-footer2">
             <div className="w-footer-bottom">
-              <div>© {new Date().getFullYear()} Kosher Connect. All rights reserved.<span className="w-legal"> Kosher Connect is a trading name of Hatsluche Ltd.</span></div>
+              {/* Was hard-coded English on a page that flips to dir="rtl".
+                  Left untranslated it also came out bidi-mangled in Hebrew —
+                  "2026 ©" and ".Hatsluche Ltd" — because neutral characters
+                  around Latin text reorder inside an RTL paragraph. */}
+              <div>© {new Date().getFullYear()} {t.brandName}. {t.rights}<span className="w-legal"> {t.tradingName}</span></div>
               <div><a href="/welcome">kosher-connect.com</a></div>
             </div>
           </footer>
