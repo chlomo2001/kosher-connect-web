@@ -1,8 +1,8 @@
-// Render a PUBLIC page (welcome / join / portal / phone-guide) in the browser,
+// Render a PUBLIC page (welcome / portal / phone-guide) in the browser,
 // for real, with effects running — which is the only way to see Hebrew.
 //
 //   node ops/harness/public.mjs --audit
-//   node ops/harness/public.mjs --shot join --lang he --width 390
+//   node ops/harness/public.mjs --shot welcome --lang he --width 390
 //
 // The staff harness renders to static markup, which is fine because main.js
 // paints everything afterwards. These pages are different: language lives in
@@ -23,7 +23,7 @@ const babel = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/cor
 const presetReact = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/preset-react'))
 const cjs = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/plugin-transform-modules-commonjs'))
 
-export const PAGES = { welcome: 'pages/welcome.js', join: 'pages/join.js', portal: 'pages/portal.js', 'phone-guide': 'pages/phone-guide.js' }
+export const PAGES = { welcome: 'pages/welcome.js', portal: 'pages/portal.js', 'phone-guide': 'pages/phone-guide.js' }
 
 // Transpile the page and everything it imports into one browser bundle with a
 // tiny CommonJS shim. next/head and next/script render nothing here; next/link
@@ -88,7 +88,7 @@ export function buildPublicHtml(page, lang = 'en', out) {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>${css}</style>
 <script>
-// pages/join.js and AppShell inline process.env.NEXT_PUBLIC_* values; Next
+// pages/welcome.js and AppShell inline process.env.NEXT_PUBLIC_* values; Next
 // replaces those at build time and we are not Next, so give them a home.
 window.process = { env: {} };
 try { localStorage.setItem('kcLang', ${JSON.stringify(lang)}) } catch (e) {}
@@ -134,10 +134,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
           const stray = []
           const vw = de.clientWidth
           root.querySelectorAll('*').forEach((el) => {
-            // Decorative layers and the /join honeypot are deliberately off
+            // Decorative layers and the contact-form honeypot are deliberately off
             // screen and are all aria-hidden, so skip those subtrees rather
             // than report known-good as noise.
-            if (el.closest('[aria-hidden="true"], .jn-hp')) return
+            if (el.closest('[aria-hidden="true"]')) return
             const b = el.getBoundingClientRect()
             if (b.width && (b.right - vw > 1 || b.left < -1)) {
               stray.push(el.tagName.toLowerCase() + (el.className ? '.' + String(el.className).toString().trim().split(/\s+/)[0] : ''))

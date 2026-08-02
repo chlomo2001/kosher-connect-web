@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Head from 'next/head'
+import Script from 'next/script'
 import ThemeToggle from '../components/ThemeToggle'
 import { WHATSAPP_ENABLED } from '../lib/flags'
 import {
@@ -40,7 +41,7 @@ const T = {
   en: {
     dir: 'ltr', langLabel: 'EN',
     brandName: 'Kosher Connect',
-    nav: { mobile: 'Mobile & SIM', travel: 'Travel phones', intl: 'International numbers', repairs: 'Repairs & more', visit: 'Visit us', message: 'Message us', account: 'My account', signin: 'Staff sign in', join: 'Join us' },
+    nav: { mobile: 'Mobile & SIM', travel: 'Travel phones', intl: 'International numbers', repairs: 'Repairs & more', visit: 'Visit us', message: 'Message us', account: 'My account', signin: 'Staff sign in', join: 'New here?' },
     heroEyebrow: 'Kosher Connect · Salford, Manchester',
     heroTitle: 'Your phone bill, halved.',
     heroBody: 'Most people are quietly on the wrong SIM. Bring us your last bill and we’ll match a plan to how you actually use your phone — same coverage, same number, far less money.',
@@ -101,9 +102,12 @@ const T = {
     contactTitle: 'Send us a message',
     contactLead: 'Ask a question, tell us your plan, or leave your bill details — we’ll get back to you.',
     fName: 'Your name', fContact: 'Phone or email', fMsg: 'How can we help?', fSend: 'Send message', fSending: 'Sending…',
+    fEmail: 'Email (optional)', fAddress: 'Address (optional)',
+    fReach: 'Best way to reach you (optional)',
+    fReachOpts: { call: 'Call', text: 'Text message', whatsapp: 'WhatsApp', email: 'Email' },
     fOk: 'Thanks — we’ve got it and we’ll be in touch.', fErr: 'Couldn’t send — please call us on 0161 531 1386.',
     fBadName: 'Please enter your name.', fBadContact: 'Please enter a valid phone number or email address.',
-    preferCall: 'Prefer to call?', joinCta: 'New here? Leave your details →',
+    preferCall: 'Prefer to call?',
     waLabel: 'WhatsApp us', waText: 'Hello Kosher Connect — I’d like to ask about…',
     visitTitle: 'Come and see us',
     openMaps: 'Open in Google Maps',
@@ -123,7 +127,7 @@ const T = {
   he: {
     dir: 'rtl', langLabel: 'HE',
     brandName: 'כשר קונקט',
-    nav: { mobile: 'חבילות וסים', travel: 'טלפון לחו״ל', intl: 'מספרים בינלאומיים', repairs: 'תיקונים ועוד', visit: 'בואו לבקר', message: 'דברו איתנו', account: 'האזור האישי', signin: 'כניסת צוות', join: 'הצטרפות' },
+    nav: { mobile: 'חבילות וסים', travel: 'טלפון לחו״ל', intl: 'מספרים בינלאומיים', repairs: 'תיקונים ועוד', visit: 'בואו לבקר', message: 'דברו איתנו', account: 'האזור האישי', signin: 'כניסת צוות', join: 'חדשים אצלנו?' },
     heroEyebrow: 'כשר קונקט · סלפורד, מנצ׳סטר',
     heroTitle: 'למה לשלם כפול על הסלולר?',
     heroBody: 'רוב האנשים משלמים כל חודש על חבילה שפשוט לא מתאימה להם. תביאו לנו את החשבונית האחרונה — נתאים לכם חבילה לפי השימוש האמיתי שלכם. אותה רשת, אותו מספר, והרבה פחות בסוף החודש.',
@@ -184,9 +188,12 @@ const T = {
     contactTitle: 'שלחו לנו הודעה',
     contactLead: 'שאלה, בקשה, או פרטים מהחשבונית — כתבו לנו ונחזור אליכם.',
     fName: 'שם מלא', fContact: 'טלפון או מייל', fMsg: 'איך אפשר לעזור?', fSend: 'שליחה', fSending: 'שולחים…',
+    fEmail: 'מייל (לא חובה)', fAddress: 'כתובת (לא חובה)',
+    fReach: 'איך הכי נוח לחזור אליכם? (לא חובה)',
+    fReachOpts: { call: 'שיחת טלפון', text: 'הודעת טקסט', whatsapp: 'וואטסאפ', email: 'אימייל' },
     fOk: 'תודה! ההודעה אצלנו — נחזור אליכם בהקדם.', fErr: 'ההודעה לא נשלחה — התקשרו אלינו: 0161 531 1386.',
     fBadName: 'נא להזין שם.', fBadContact: 'נא להזין מספר טלפון או כתובת מייל תקינים.',
-    preferCall: 'מעדיפים להתקשר?', joinCta: 'חדשים אצלנו? השאירו פרטים ←',
+    preferCall: 'מעדיפים להתקשר?',
     waLabel: 'כתבו לנו בוואטסאפ', waText: 'שלום כשר קונקט — רציתי לשאול לגבי…',
     visitTitle: 'מחכים לכם בחנות',
     openMaps: 'לניווט בגוגל מפות',
@@ -240,7 +247,23 @@ const LD_JSON = JSON.stringify({
 export default function Welcome() {
   const [lang, setLang] = useState('en')
   const [hours, setHours] = useState('Sunday–Thursday, 2:00–6:30pm')
-  const [form, setForm] = useState({ name: '', contact: '', message: '' })
+  // name + contact are required; the rest are the fields /join used to collect
+  // on a page of its own. They ride along optionally rather than sending
+  // someone to a second form that filed the identical staff task.
+  const EMPTY_FORM = { name: '', contact: '', email: '', preferredContact: '', address: '', message: '' }
+  const [form, setForm] = useState(EMPTY_FORM)
+  // Google Places is ~200KB and this is the highest-traffic page in the
+  // product, so the helper is not loaded until someone actually puts a cursor
+  // in the address box. Until then the field is an ordinary text input.
+  const [wantAddr, setWantAddr] = useState(false)
+  const addrRef = useRef(null)
+  const attachAddr = () => {
+    if (window.kcAddressAutocomplete && addrRef.current) {
+      window.kcAddressAutocomplete(addrRef.current, {
+        onSelect: (r) => setForm((f) => ({ ...f, address: r.formatted })),
+      })
+    }
+  }
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState('') // '', 'ok', 'err'
   const [errMsg, setErrMsg] = useState('')
@@ -303,10 +326,14 @@ export default function Welcome() {
     try {
       const r = await fetch('/api/public/message', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: form.name.trim(), contact: form.contact.trim(), message: form.message.trim() }),
+        body: JSON.stringify({
+          name: form.name.trim(), contact: form.contact.trim(), message: form.message.trim(),
+          email: form.email.trim(), address: form.address.trim(),
+          preferredContact: form.preferredContact,
+        }),
       })
       const j = await r.json().catch(() => ({}))
-      if (r.ok && j.success) { setSent('ok'); setForm({ name: '', contact: '', message: '' }) }
+      if (r.ok && j.success) { setSent('ok'); setForm(EMPTY_FORM) }
       else { setSent('err'); setErrMsg(j.error || t.fErr) }
     } catch { setSent('err'); setErrMsg(t.fErr) }
     finally { setSending(false) }
@@ -452,11 +479,36 @@ export default function Welcome() {
             <h2>{t.contactTitle}</h2>
             <p className="sk-contact-lead">{t.contactLead}</p>
             <form className="sk-form" onSubmit={submit}>
-              <input type="text" name="name" autoComplete="name" placeholder={t.fName}
+              <input type="text" name="name" autoComplete="name" placeholder={t.fName} aria-label={t.fName}
                 value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-              <input type="text" name="contact" placeholder={t.fContact}
+              <input type="text" name="contact" placeholder={t.fContact} aria-label={t.fContact}
                 value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} required />
-              <textarea name="message" rows={3} placeholder={t.fMsg}
+              <input type="email" name="email" placeholder={t.fEmail} aria-label={t.fEmail}
+                dir="ltr" inputMode="email" autoComplete="email"
+                value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              <div className="sk-form-reach">
+                <span className="sk-form-hint" id="sk-reach-label">{t.fReach}</span>
+                <div className="sk-reach-chips" role="radiogroup" aria-labelledby="sk-reach-label">
+                  {['call', 'text', 'whatsapp', 'email']
+                    .filter((k) => k !== 'whatsapp' || WHATSAPP_ENABLED)
+                    .map((k) => {
+                      const on = form.preferredContact === k
+                      return (
+                        <button key={k} type="button" role="radio" aria-checked={on} className="sk-reach-chip"
+                          onClick={() => setForm({ ...form, preferredContact: on ? '' : k })}>
+                          {t.fReachOpts[k]}
+                        </button>
+                      )
+                    })}
+                </div>
+              </div>
+              {/* Places owns this field once loaded, so browser autofill stays
+                  off — the two together produce a half-filled address. */}
+              <input type="text" name="address" ref={addrRef} placeholder={t.fAddress}
+                aria-label={t.fAddress} autoComplete="off"
+                onFocus={() => { setWantAddr(true); attachAddr() }}
+                value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+              <textarea name="message" rows={3} placeholder={t.fMsg} aria-label={t.fMsg}
                 value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} />
               <input type="text" name="company" tabIndex={-1} autoComplete="off"
                 value="" onChange={() => {}} style={{ position: 'absolute', left: '-9999px', width: 1, height: 1 }} aria-hidden="true" />
@@ -471,7 +523,6 @@ export default function Welcome() {
               {WHATSAPP_ENABLED && (
                 <>&nbsp;·&nbsp;<a href={waHref} target="_blank" rel="noopener noreferrer">{t.waLabel}</a></>
               )}
-              &nbsp;·&nbsp;<a className="sk-join" href="/join">{t.joinCta}</a>
             </p>
           </div>
         </section>
@@ -536,7 +587,7 @@ export default function Welcome() {
               </nav>
               <nav className="sk-foot-col" aria-label={t.footAccount}>
                 <strong>{t.footAccount}</strong>
-                <a href="/join">{t.nav.join}</a>
+                <a href="#contact">{t.nav.join}</a>
                 <a href="/portal">{t.nav.account}</a>
                 <a href="/login">{t.nav.signin}</a>
               </nav>
@@ -562,6 +613,16 @@ export default function Welcome() {
           </svg>
         </button>
       </div>
+      {/* Only mounted once the address field has been touched — see wantAddr.
+          The Maps key is referrer-restricted, so it is safe in the browser. */}
+      {wantAddr && (
+        <>
+          <Script id="kc-maps-key" strategy="afterInteractive">
+            {`window.KC_MAPS_KEY=${JSON.stringify(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '')};`}
+          </Script>
+          <Script src="/address-autocomplete.js" strategy="afterInteractive" onLoad={attachAddr} />
+        </>
+      )}
     </>
   )
 }
@@ -769,14 +830,30 @@ const SKY_CSS = `
   .sk-form textarea{resize:vertical;min-height:88px}
   .sk-form input:focus,.sk-form textarea:focus{outline:2px solid var(--sk-sky);outline-offset:1px;border-color:transparent}
   .sk-form .sk-btn{margin-top:2px}
+  /* The optional block folded in from the old /join page. Kept visually quiet
+     so the three fields that matter still read as the form. */
+  .sk-form-reach{display:flex;flex-direction:column;gap:8px}
+  .sk-form-hint{font-size:13px;color:var(--sk-muted);font-weight:600}
+  /* Not .sk-chips — that is already the feature bands' tick list, and it
+     carries justify-content:center and a 22px top margin this row must not
+     inherit. */
+  .sk-reach-chips{display:flex;flex-wrap:wrap;gap:8px}
+  .sk-reach-chip{padding:8px 14px;border:1px solid var(--sk-line);border-radius:999px;
+    background:var(--sk-paper);color:var(--sk-text);font-family:inherit;font-size:14px;
+    font-weight:600;cursor:pointer;min-height:24px;transition:border-color .15s,background .15s}
+  .sk-reach-chip:hover{border-color:var(--sk-sky)}
+  .sk-reach-chip:focus-visible{outline:2px solid var(--sk-sky);outline-offset:2px}
+  .sk-reach-chip[aria-checked="true"]{background:var(--sk-sky);border-color:var(--sk-sky);color:#fff}
+  :root[data-theme="dark"] .sk-reach-chip[aria-checked="true"]{background:var(--sk-sky-bright);color:#08122b}
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-reach-chip[aria-checked="true"]{background:var(--sk-sky-bright);color:#08122b}}
   .sk-form-ok{color:#1a7f4b;font-size:14px;margin:2px 0 0;font-weight:600}
   .sk-form-err{color:var(--sk-gold-ink);font-size:14px;margin:2px 0 0;font-weight:600}
   :root[data-theme="dark"] .sk-form-ok{color:#5fd08a}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-form-ok{color:#5fd08a}}
   .sk-prefer{color:var(--sk-muted);font-size:14px;margin:24px auto 0;max-width:60ch}
-  .sk-prefer a,.sk .sk-join{color:var(--sk-sky);font-weight:700}
-  :root[data-theme="dark"] .sk-prefer a,:root[data-theme="dark"] .sk-join{color:var(--sk-sky-bright)}
-  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-prefer a,:root:not([data-theme]) .sk-join{color:var(--sk-sky-bright)}}
+  .sk-prefer a{color:var(--sk-sky);font-weight:700}
+  :root[data-theme="dark"] .sk-prefer a{color:var(--sk-sky-bright)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-prefer a{color:var(--sk-sky-bright)}}
   /* visit — live map card + shop details */
   .sk-visit{padding:70px 0 76px;background:var(--sk-band);text-align:center}
   .sk-visit h2{font-size:clamp(24px,3.6vw,34px)}

@@ -20,7 +20,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
-const FILES = ['pages/welcome.js', 'pages/portal.js', 'pages/join.js', 'pages/phone-guide.js', 'pages/login.js']
+const FILES = ['pages/welcome.js', 'pages/portal.js', 'pages/phone-guide.js', 'pages/login.js']
 
 let bad = 0
 for (const f of FILES) {

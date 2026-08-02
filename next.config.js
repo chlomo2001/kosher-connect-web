@@ -1,5 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async redirects() {
+    return [
+      {
+        // /join was a second public form that filed the same staff task as the
+        // contact form; its fields now live on /welcome#contact. The address
+        // is on printed material and in old messages, so it has to keep
+        // working. Deliberately temporary (307): a permanent redirect is
+        // cached hard by browsers and would be painful to walk back.
+        source: '/join',
+        destination: '/welcome#contact',
+        permanent: false,
+      },
+    ]
+  },
   async headers() {
     return [
       {

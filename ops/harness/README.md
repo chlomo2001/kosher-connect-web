@@ -56,8 +56,8 @@ needs nothing but the repo.
 ## Public pages (`public.mjs`)
 
 ```bash
-node ops/harness/public.mjs                       # welcome/join/portal/phone-guide × en+he
-node ops/harness/public.mjs --shot join --lang he --width 390
+node ops/harness/public.mjs                       # welcome/portal/phone-guide × en+he
+node ops/harness/public.mjs --shot welcome --lang he --width 390
 ```
 
 The staff harness renders to static markup, which is fine because main.js paints

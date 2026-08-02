@@ -212,7 +212,7 @@ body {
    was unselectable too. Opt those data surfaces back in. */
 td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
 
-/* …and the public pages are documents, not app chrome. /welcome, /join,
+/* …and the public pages are documents, not app chrome. /welcome,
    /phone-guide, /portal and /login get read, quoted, and forwarded to a
    family member — a visitor who tries to copy the phone number or a line of
    the offer instead finds the page behaves like a picture of itself. They
@@ -1775,7 +1775,7 @@ td.cal-active.cal-shabbat { background: var(--accent); }
    UNSCROLLABLE — everything below the first viewport was unreachable. */
 .welcome-shell { position: relative; height: 100vh; width: 100%; overflow-y: auto; background: var(--bg); scroll-behavior: smooth; }
 .welcome-shell .login-fx { position: fixed; inset: 0; }
-/* Phones (/join, /phone-guide): the globe's line-work otherwise runs straight
+/* Phones (/phone-guide): the globe's line-work otherwise runs straight
    through the body text on the narrow column — fade it to a hint. */
 @media (max-width: 640px) { .welcome-shell .login-fx { opacity: 0.3; } }
 /* Anchor jumps must land BELOW the sticky glass topbar, with the section
@@ -2158,30 +2158,6 @@ html { scroll-behavior: smooth; }
   font-family: 'Heebo KC', 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* /join — the public signup card (native replacement for the Google form). */
-.jn-wrap { max-width: 660px; }
-.jn-card { padding: 26px; }
-.jn-card .form-error { color: var(--danger); font-size: 12px; margin-top: 4px; }
-.jn-hp { position: absolute; inset-inline-start: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; }
-.jn-actions { margin-top: 18px; display: flex; justify-content: flex-end; }
-.jn-fail { margin: 12px 0 0; color: var(--danger); font-size: 13px; }
-.jn-done h4 { margin: 0 0 8px; font-size: 17px; }
-.jn-done p { margin: 0 0 8px; font-size: 14px; }
-/* "Best way to reach you" radio chips — one selected at most, tap again to
-   clear. Focus ring is required chrome: these are the page's only custom
-   controls, and keyboard users get no native affordance from a <button>. */
-.jn-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-.jn-chip {
-  border: 1px solid var(--border-input); background: var(--surface); color: var(--text);
-  border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 500;
-  font-family: inherit; cursor: pointer;
-  transition: border-color 0.12s ease, background 0.12s ease;
-}
-.jn-chip:hover { border-color: var(--accent); }
-.jn-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.jn-chip[aria-checked="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-.w-join-link { color: var(--accent); font-weight: 600; text-decoration: none; }
-.w-join-link:hover { text-decoration: underline; }
 .w-contact-link:hover { text-decoration: underline; }
 
 .w-footer2 {
