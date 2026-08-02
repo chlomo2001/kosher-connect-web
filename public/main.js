@@ -10929,7 +10929,11 @@ function dashPaint(money, tasksList2, stillLoading, shopList) {
          dueToday.length ? `${dueToday.length} due today` : ''].filter(Boolean).join(' · ') || 'all on schedule', 'rentals')}
       ${metric('Open Repairs', openRepairs.length,
         readyRepairs.length ? `<span style="color:var(--accent);">${readyRepairs.length} ready to collect</span>` : 'nothing waiting', 'repairs')}
-      ${metric('Flights · Next 7 Days', travel7.length,
+      ${/* Just 'Flights': its own sub-line already says 'N flights this week',
+           and the qualifier was the only stat label long enough to wrap — two
+           lines at 390px, which left the card 16px taller than the one beside
+           it. Matches Active Rentals / Open Repairs / Open Tasks. */''}
+      ${metric('Flights', travel7.length,
         `${travel7.length === 1 ? '1 flight' : travel7.length + ' flights'} this week${renewals7.length
           ? ` · <span class="dash-link" style="color:var(--gold);" onclick="event.stopPropagation();goToTab('sim')">${renewals7.length} SIM renewal${renewals7.length === 1 ? '' : 's'} ›</span>` : ''}`,
         'bookings')}
