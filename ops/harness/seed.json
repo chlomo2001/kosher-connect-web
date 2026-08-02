@@ -1,512 +1,577 @@
 {
- "/api/customers": [
-  {
-   "id": "c1",
-   "firstName": "Menachem",
-   "lastName": "Adler",
-   "phone": "+447911123456",
-   "email": "m.adler@example.com",
-   "passportOnFile": true,
-   "services": []
-  },
-  {
-   "id": "c2",
-   "firstName": "Yossi",
-   "lastName": "Taitelbaum",
-   "phone": "+447700900123",
-   "email": "yossi@example.com",
-   "services": []
-  },
-  {
-   "id": "c3",
-   "firstName": "Chaim",
-   "lastName": "Kopilowitz",
-   "phone": "+447871385566",
-   "email": "chaim@example.com",
-   "accountEmail": "kosherconnect+chaim@gmail.com",
-   "services": []
-  },
-  {
-   "id": "c4",
-   "firstName": "Rivka",
-   "lastName": "Gluck",
-   "phone": "+972544123456",
-   "email": "",
-   "services": []
-  }
- ],
- "/api/rentals": [
-  {
-   "id": "r1",
-   "customerId": "c1",
-   "phoneNumber": "+15185550101",
-   "country": "USA",
-   "fromDate": "2026-07-20",
-   "toDate": "2026-08-05",
-   "status": "active",
-   "price": 90,
-   "amountPaid": 45,
-   "customerName": "Menachem Adler",
-   "customerPhone": "+447911123456",
-   "phoneId": "p1",
-   "totalDays": 16,
-   "chargeableDays": 16,
-   "rentalPrice": 90,
-   "basePrice": 90
-  },
-  {
-   "id": "r2",
-   "customerId": "c2",
-   "phoneNumber": "+972544000111",
-   "country": "Israel",
-   "fromDate": "2026-07-01",
-   "toDate": "2026-07-25",
-   "status": "overdue",
-   "price": 60,
-   "amountPaid": 60,
-   "customerName": "Yossi Taitelbaum",
-   "customerPhone": "+447700900123",
-   "phoneId": "p1",
-   "totalDays": 16,
-   "chargeableDays": 16,
-   "rentalPrice": 60,
-   "basePrice": 60
-  },
-  {
-   "id": "r3",
-   "customerId": "c3",
-   "phoneNumber": "+15185550102",
-   "country": "USA",
-   "fromDate": "2026-08-10",
-   "toDate": "2026-08-20",
-   "status": "booked",
-   "price": 55,
-   "amountPaid": 0,
-   "customerName": "Chaim Kopilowitz",
-   "customerPhone": "+447871385566",
-   "phoneId": "p1",
-   "totalDays": 16,
-   "chargeableDays": 16,
-   "rentalPrice": 55,
-   "basePrice": 55
-  }
- ],
- "/api/phones": [
-  {
-   "id": "p1",
-   "number": "+15185550101",
-   "country": "USA",
-   "status": "rented",
-   "imei": "356938035643809",
-   "pool": "US"
-  },
-  {
-   "id": "p2",
-   "number": "+15185550102",
-   "country": "USA",
-   "status": "available",
-   "imei": "356938035643810",
-   "pool": "US"
-  },
-  {
-   "id": "p3",
-   "number": "+972544000111",
-   "country": "Israel",
-   "status": "rented",
-   "imei": "356938035643811",
-   "pool": "IL"
-  },
-  {
-   "id": "p4",
-   "number": "+447400111222",
-   "country": "UK",
-   "status": "maintenance",
-   "maintenanceReason": "Screen cracked",
-   "imei": "356938035643812",
-   "pool": "UK"
-  }
- ],
- "/api/sims": [
-  {
-   "id": "s1",
-   "customerId": "c1",
-   "simNumber": "+447400555001",
-   "provider": "Lebara",
-   "status": "active",
-   "expiryDate": "2026-08-14",
-   "customerName": "Menachem Adler"
-  },
-  {
-   "id": "s2",
-   "customerId": "c2",
-   "simNumber": "+447400555002",
-   "provider": "1pMobile",
-   "status": "active",
-   "expiryDate": "2026-09-01",
-   "customerName": "Yossi Taitelbaum"
-  }
- ],
- "/api/bookings": [
-  {
-   "id": "b1",
-   "customerId": "c1",
-   "route": "MAN \u2192 TLV",
-   "airline": "Wizz",
-   "bookingRef": "BNKYRW",
-   "travelDate": "2026-08-18",
-   "status": "confirmed",
-   "price": 285,
-   "amountPaid": 285,
-   "customerName": "Menachem Adler"
-  }
- ],
- "/api/virtual-numbers": [
-  {
-   "id": "v1",
-   "customerId": "c1",
-   "number": "+17325550123",
-   "provider": "Twilio",
-   "status": "Active",
-   "billing": "monthly",
-   "price": 8,
-   "customerName": "Menachem Adler"
-  }
- ],
- "/api/repairs": [
-  {
-   "id": "rp1",
-   "customerId": "c2",
-   "device": "Nokia 105",
-   "status": "Open",
-   "price": 25,
-   "customerName": "Yossi Taitelbaum",
-   "total": 25,
-   "services": [
+  "/api/customers": [
     {
-     "name": "Won't charge",
-     "price": 25
-    }
-   ],
-   "openedAt": "2026-07-28T10:00:00Z"
-  },
-  {
-   "id": "rp2",
-   "customerId": "c3",
-   "device": "Alcatel 1",
-   "status": "In Progress",
-   "price": 40,
-   "customerName": "Chaim Kopilowitz",
-   "total": 40,
-   "services": [
+      "id": "c1",
+      "firstName": "Menachem",
+      "lastName": "Adler",
+      "phone": "+447911123456",
+      "email": "m.adler@example.com",
+      "passportOnFile": true,
+      "services": []
+    },
     {
-     "name": "Screen",
-     "price": 40
-    }
-   ],
-   "openedAt": "2026-07-28T10:00:00Z"
-  },
-  {
-   "id": "rp3",
-   "customerId": "c1",
-   "device": "Nokia 210",
-   "status": "Ready",
-   "price": 30,
-   "customerName": "Menachem Adler",
-   "total": 30,
-   "services": [
+      "id": "c2",
+      "firstName": "Yossi",
+      "lastName": "Taitelbaum",
+      "phone": "+447700900123",
+      "email": "yossi@example.com",
+      "services": []
+    },
     {
-     "name": "Battery",
-     "price": 30
+      "id": "c3",
+      "firstName": "Chaim",
+      "lastName": "Kopilowitz",
+      "phone": "+447871385566",
+      "email": "chaim@example.com",
+      "accountEmail": "kosherconnect+chaim@gmail.com",
+      "services": []
+    },
+    {
+      "id": "c4",
+      "firstName": "Rivka",
+      "lastName": "Gluck",
+      "phone": "+972544123456",
+      "email": "",
+      "services": []
     }
-   ],
-   "openedAt": "2026-07-28T10:00:00Z"
-  }
- ],
- "/api/service-orders": [],
- "/api/settings": {
-  "success": true,
-  "rentalRates": [
-   {
-    "countryCode": "USA",
-    "displayName": "USA",
-    "ratePerDay": 5,
-    "minCharge": 18,
-    "cap": 90,
-    "capPeriodDays": 30,
-    "vnWeekly": 8,
-    "vnPer30Days": 25,
-    "active": true
-   },
-   {
-    "countryCode": "IL",
-    "displayName": "Israel",
-    "ratePerDay": 4,
-    "minCharge": 18,
-    "cap": 60,
-    "capPeriodDays": 30,
-    "vnWeekly": 8,
-    "vnPer30Days": 25,
-    "active": true
-   },
-   {
-    "countryCode": "UK",
-    "displayName": "UK",
-    "ratePerDay": 3,
-    "minCharge": 15,
-    "cap": 45,
-    "capPeriodDays": 30,
-    "vnWeekly": null,
-    "vnPer30Days": null,
-    "active": true
-   }
   ],
-  "damageRates": [
-   {
-    "countryCode": "USA",
-    "phoneDamageLoss": 80,
-    "chargerMissing": 12,
-    "simMissing": 10
-   }
+  "/api/rentals": [
+    {
+      "id": "r1",
+      "customerId": "c1",
+      "phoneNumber": "+15185550101",
+      "country": "USA",
+      "fromDate": "2026-07-20",
+      "toDate": "2026-08-05",
+      "status": "active",
+      "price": 90,
+      "amountPaid": 45,
+      "customerName": "Menachem Adler",
+      "customerPhone": "+447911123456",
+      "phoneId": "p1",
+      "totalDays": 16,
+      "chargeableDays": 16,
+      "rentalPrice": 90,
+      "basePrice": 90
+    },
+    {
+      "id": "r2",
+      "customerId": "c2",
+      "phoneNumber": "+972544000111",
+      "country": "Israel",
+      "fromDate": "2026-07-01",
+      "toDate": "2026-07-25",
+      "status": "overdue",
+      "price": 60,
+      "amountPaid": 60,
+      "customerName": "Yossi Taitelbaum",
+      "customerPhone": "+447700900123",
+      "phoneId": "p1",
+      "totalDays": 16,
+      "chargeableDays": 16,
+      "rentalPrice": 60,
+      "basePrice": 60
+    },
+    {
+      "id": "r3",
+      "customerId": "c3",
+      "phoneNumber": "+15185550102",
+      "country": "USA",
+      "fromDate": "2026-08-10",
+      "toDate": "2026-08-20",
+      "status": "booked",
+      "price": 55,
+      "amountPaid": 0,
+      "customerName": "Chaim Kopilowitz",
+      "customerPhone": "+447871385566",
+      "phoneId": "p1",
+      "totalDays": 16,
+      "chargeableDays": 16,
+      "rentalPrice": 55,
+      "basePrice": 55
+    }
   ],
-  "settings": [
-   {
-    "key": "late_fee_per_day",
-    "numValue": 3,
-    "textValue": null,
-    "description": "Late fee per day",
-    "editable": true,
-    "custom": false,
-    "unit": "\u00a3"
-   },
-   {
-    "key": "dd_fee",
-    "numValue": 1.5,
-    "textValue": null,
-    "description": "Direct debit fee",
-    "editable": true,
-    "custom": false,
-    "unit": "\u00a3"
-   },
-   {
-    "key": "ivr_platforms",
-    "numValue": null,
-    "textValue": "Twilio,Voip.ms",
-    "description": "VN platforms",
-    "editable": true,
-    "custom": false,
-    "unit": ""
-   }
-  ]
- },
- "/api/auth/me": {
-  "success": true,
-  "authEnabled": false
- },
- "/api/ledger": {
-  "success": true,
-  "recent": [
-   {
-    "id": "l1",
-    "customerId": "c1",
-    "customerName": "Menachem Adler",
-    "entryType": "payment",
-    "amount": 45,
-    "method": "cash",
-    "createdAt": "2026-08-01T09:12:00Z",
-    "description": "Rental part payment"
-   },
-   {
-    "id": "l2",
-    "customerId": "c3",
-    "customerName": "Chaim Kopilowitz",
-    "entryType": "top_up",
-    "amount": 20,
-    "method": "card",
-    "createdAt": "2026-08-01T08:40:00Z",
-    "description": "Wallet top-up"
-   },
-   {
-    "id": "l3",
-    "customerId": "c2",
-    "customerName": "Yossi Taitelbaum",
-    "entryType": "rental_charge",
-    "amount": -60,
-    "createdAt": "2026-07-31T16:05:00Z",
-    "description": "Israel rental"
-   }
+  "/api/phones": [
+    {
+      "id": "p1",
+      "number": "+15185550101",
+      "country": "USA",
+      "status": "rented",
+      "imei": "356938035643809",
+      "pool": "US"
+    },
+    {
+      "id": "p2",
+      "number": "+15185550102",
+      "country": "USA",
+      "status": "available",
+      "imei": "356938035643810",
+      "pool": "US"
+    },
+    {
+      "id": "p3",
+      "number": "+972544000111",
+      "country": "Israel",
+      "status": "rented",
+      "imei": "356938035643811",
+      "pool": "IL"
+    },
+    {
+      "id": "p4",
+      "number": "+447400111222",
+      "country": "UK",
+      "status": "maintenance",
+      "maintenanceReason": "Screen cracked",
+      "imei": "356938035643812",
+      "pool": "UK"
+    }
   ],
-  "arrears": [
-   {
-    "customerId": "c1",
-    "customerName": "Menachem Adler",
-    "balance": -45
-   }
+  "/api/sims": [
+    {
+      "id": "s1",
+      "customerId": "c1",
+      "simNumber": "+447400555001",
+      "provider": "Lebara",
+      "status": "active",
+      "expiryDate": "2026-08-14",
+      "customerName": "Menachem Adler"
+    },
+    {
+      "id": "s2",
+      "customerId": "c2",
+      "simNumber": "+447400555002",
+      "provider": "1pMobile",
+      "status": "active",
+      "expiryDate": "2026-09-01",
+      "customerName": "Yossi Taitelbaum"
+    }
   ],
-  "credits": [
-   {
-    "customerId": "c3",
-    "customerName": "Chaim Kopilowitz",
-    "balance": 20
-   }
+  "/api/bookings": [
+    {
+      "id": "b1",
+      "customerId": "c1",
+      "route": "MAN → TLV",
+      "airline": "Wizz",
+      "bookingRef": "BNKYRW",
+      "travelDate": "2026-08-18",
+      "status": "confirmed",
+      "price": 285,
+      "amountPaid": 285,
+      "customerName": "Menachem Adler"
+    }
   ],
-  "creditsTotal": 20,
-  "arrearsTotal": 45,
-  "todayIn": 65,
-  "todayOut": -60
- },
- "/api/tasks": [
-  {
-   "id": "t1",
-   "title": "Chase Wizz refund for BNKYRW",
-   "status": "open",
-   "priority": "High",
-   "dueDate": "2026-08-01",
-   "customerId": "c1",
-   "customerName": "Menachem Adler"
-  },
-  {
-   "id": "t2",
-   "title": "Order more USB-C cables",
-   "status": "open",
-   "priority": "Normal",
-   "dueDate": "2026-08-04"
-  }
- ],
- "/api/shop": {
-  "success": true,
-  "items": [
-   {
-    "id": "sh1",
-    "name": "USB-C cable 1m",
-    "price": 5,
-    "stock": 2,
-    "lowStockAt": 5,
-    "sku": "CBL-C1"
-   },
-   {
-    "id": "sh2",
-    "name": "Car charger",
-    "price": 12,
-    "stock": 14,
-    "lowStockAt": 4,
-    "sku": "CHG-CAR"
-   }
+  "/api/virtual-numbers": [
+    {
+      "id": "v1",
+      "customerId": "c1",
+      "number": "+17325550123",
+      "provider": "Twilio",
+      "status": "Active",
+      "billing": "monthly",
+      "price": 8,
+      "customerName": "Menachem Adler"
+    }
   ],
-  "sales": []
- },
- "/api/services": [
-  {
-   "id": "sv1",
-   "category": "sim",
-   "name": "SIM swap",
-   "price": 10,
-   "kcPrice": 8,
-   "repeat": false
-  },
-  {
-   "id": "sv2",
-   "category": "sim",
-   "name": "Top-up",
-   "price": 20,
-   "kcPrice": 20,
-   "repeat": true
-  }
- ],
- "/api/kol-torah": {
-  "success": true,
-  "titles": [
-   {
-    "id": "kt1",
-    "code": "KT-001",
-    "name": "Shiur \u2014 Parshas Devarim",
-    "speaker": "R. Cohen",
-    "price": 8,
-    "active": true,
-    "notes": ""
-   }
+  "/api/repairs": [
+    {
+      "id": "rp1",
+      "customerId": "c2",
+      "device": "Nokia 105",
+      "status": "Open",
+      "price": 25,
+      "customerName": "Yossi Taitelbaum",
+      "total": 25,
+      "services": [
+        {
+          "name": "Won't charge",
+          "price": 25
+        }
+      ],
+      "openedAt": "2026-07-28T10:00:00Z"
+    },
+    {
+      "id": "rp2",
+      "customerId": "c3",
+      "device": "Alcatel 1",
+      "status": "In Progress",
+      "price": 40,
+      "customerName": "Chaim Kopilowitz",
+      "total": 40,
+      "services": [
+        {
+          "name": "Screen",
+          "price": 40
+        }
+      ],
+      "openedAt": "2026-07-28T10:00:00Z"
+    },
+    {
+      "id": "rp3",
+      "customerId": "c1",
+      "device": "Nokia 210",
+      "status": "Ready",
+      "price": 30,
+      "customerName": "Menachem Adler",
+      "total": 30,
+      "services": [
+        {
+          "name": "Battery",
+          "price": 30
+        }
+      ],
+      "openedAt": "2026-07-28T10:00:00Z"
+    }
   ],
-  "shuls": [
-   {
-    "id": "sh1",
-    "name": "Beis Medrash",
-    "contact": "",
-    "active": true,
-    "notes": "",
-    "customerId": null,
-    "customerName": ""
-   }
-  ],
-  "stock": [
-   {
-    "shulId": "sh1",
-    "titleId": "kt1",
-    "qty": 12
-   }
-  ],
-  "jobs": [
-   {
-    "id": "j1",
-    "kind": "cd_to_mp3",
-    "status": "open",
-    "customerId": "c1",
-    "customerName": "Menachem Adler",
-    "qty": 3,
-    "price": 15
-   }
-  ],
-  "settlements": []
- },
- "/api/team": {
-  "success": true,
-  "members": [
-   {
-    "id": "st1",
-    "name": "Shloime",
-    "email": "owner@example.com",
-    "role": "owner",
-    "allowedTabs": null
-   },
-   {
-    "id": "st2",
-    "name": "Counter helper",
-    "email": "helper@example.com",
-    "role": "helper",
-    "allowedTabs": [
-     "customers",
-     "rentals",
-     "shop"
+  "/api/service-orders": [],
+  "/api/settings": {
+    "success": true,
+    "rentalRates": [
+      {
+        "countryCode": "USA",
+        "displayName": "USA",
+        "ratePerDay": 5,
+        "minCharge": 18,
+        "cap": 90,
+        "capPeriodDays": 30,
+        "vnWeekly": 8,
+        "vnPer30Days": 25,
+        "active": true
+      },
+      {
+        "countryCode": "IL",
+        "displayName": "Israel",
+        "ratePerDay": 4,
+        "minCharge": 18,
+        "cap": 60,
+        "capPeriodDays": 30,
+        "vnWeekly": 8,
+        "vnPer30Days": 25,
+        "active": true
+      },
+      {
+        "countryCode": "UK",
+        "displayName": "UK",
+        "ratePerDay": 3,
+        "minCharge": 15,
+        "cap": 45,
+        "capPeriodDays": 30,
+        "vnWeekly": null,
+        "vnPer30Days": null,
+        "active": true
+      }
+    ],
+    "damageRates": [
+      {
+        "countryCode": "USA",
+        "phoneDamageLoss": 80,
+        "chargerMissing": 12,
+        "simMissing": 10
+      }
+    ],
+    "settings": [
+      {
+        "key": "late_fee_per_day",
+        "numValue": 3,
+        "textValue": null,
+        "description": "Late fee per day",
+        "editable": true,
+        "custom": false,
+        "unit": "£"
+      },
+      {
+        "key": "dd_fee",
+        "numValue": 1.5,
+        "textValue": null,
+        "description": "Direct debit fee",
+        "editable": true,
+        "custom": false,
+        "unit": "£"
+      },
+      {
+        "key": "ivr_platforms",
+        "numValue": null,
+        "textValue": "Twilio,Voip.ms",
+        "description": "VN platforms",
+        "editable": true,
+        "custom": false,
+        "unit": ""
+      }
     ]
-   }
-  ]
- },
- "/api/automations": {
-  "success": true,
-  "rules": []
- },
- "/api/business-accounts": {
-  "success": true,
-  "accounts": [],
-  "credVault": true
- },
- "/api/custom-charges": {
-  "success": true,
-  "charges": []
- },
- "/api/elid/summary": {
-  "success": true,
-  "accounts": [],
-  "lines": []
- },
- "/api/email-aliases": {
-  "success": true,
-  "aliases": []
- },
- "/api/phone-guide": {
-  "success": true,
-  "phones": []
- },
- "/api/repairs/menu": {
-  "success": true,
-  "items": []
- }
+  },
+  "/api/auth/me": {
+    "success": true,
+    "authEnabled": false
+  },
+  "/api/ledger": {
+    "success": true,
+    "recent": [
+      {
+        "id": "l1",
+        "customerId": "c1",
+        "customerName": "Menachem Adler",
+        "entryType": "payment",
+        "amount": 45,
+        "method": "cash",
+        "createdAt": "2026-08-01T09:12:00Z",
+        "description": "Rental part payment"
+      },
+      {
+        "id": "l2",
+        "customerId": "c3",
+        "customerName": "Chaim Kopilowitz",
+        "entryType": "top_up",
+        "amount": 20,
+        "method": "card",
+        "createdAt": "2026-08-01T08:40:00Z",
+        "description": "Wallet top-up"
+      },
+      {
+        "id": "l3",
+        "customerId": "c2",
+        "customerName": "Yossi Taitelbaum",
+        "entryType": "rental_charge",
+        "amount": -60,
+        "createdAt": "2026-07-31T16:05:00Z",
+        "description": "Israel rental"
+      }
+    ],
+    "arrears": [
+      {
+        "customerId": "c1",
+        "customerName": "Menachem Adler",
+        "balance": -45
+      }
+    ],
+    "credits": [
+      {
+        "customerId": "c3",
+        "customerName": "Chaim Kopilowitz",
+        "balance": 20
+      }
+    ],
+    "creditsTotal": 20,
+    "arrearsTotal": 45,
+    "todayIn": 65,
+    "todayOut": -60
+  },
+  "/api/tasks": [
+    {
+      "id": "t1",
+      "title": "Chase Wizz refund for BNKYRW",
+      "status": "open",
+      "priority": "High",
+      "dueDate": "2026-08-01",
+      "customerId": "c1",
+      "customerName": "Menachem Adler"
+    },
+    {
+      "id": "t2",
+      "title": "Order more USB-C cables",
+      "status": "open",
+      "priority": "Normal",
+      "dueDate": "2026-08-04"
+    }
+  ],
+  "/api/shop": {
+    "success": true,
+    "items": [
+      {
+        "id": "sh1",
+        "code": "CBL-C1",
+        "barcode": "5060001000011",
+        "category": "accessory",
+        "company": "Anker",
+        "model": "USB-C cable 1m",
+        "description": "Braided, 1 metre",
+        "netPrice": 2.4,
+        "sellingPrice": 5,
+        "profit": 2.6,
+        "quantity": 2,
+        "lowStockAt": 5,
+        "active": true
+      },
+      {
+        "id": "sh2",
+        "code": "CHG-CAR",
+        "barcode": "5060001000028",
+        "category": "accessory",
+        "company": "Belkin",
+        "model": "Car charger 20W",
+        "description": "Dual port",
+        "netPrice": 6.5,
+        "sellingPrice": 12,
+        "profit": 5.5,
+        "quantity": 14,
+        "lowStockAt": 4,
+        "active": true
+      },
+      {
+        "id": "sh3",
+        "code": "PHN-A1",
+        "barcode": "5060001000035",
+        "category": "phone",
+        "company": "Alcatel",
+        "model": "1 (kosher)",
+        "description": "Filtered, no browser",
+        "netPrice": 28,
+        "sellingPrice": 45,
+        "profit": 17,
+        "quantity": 6,
+        "lowStockAt": 2,
+        "active": true
+      },
+      {
+        "id": "sh4",
+        "code": "SIM-UK",
+        "barcode": "",
+        "category": "sim",
+        "company": "Lebara",
+        "model": "UK SIM",
+        "description": "Pay monthly starter",
+        "netPrice": 0,
+        "sellingPrice": 10,
+        "profit": 10,
+        "quantity": 0,
+        "lowStockAt": 3,
+        "active": true
+      }
+    ],
+    "sales": [
+      {
+        "id": "sl1",
+        "customerName": "Chaim Kopilowitz",
+        "item": "Anker USB-C cable 1m",
+        "qty": 2,
+        "total": 10,
+        "imei": "",
+        "notes": "",
+        "createdAt": "2026-08-01T14:05:00.000Z"
+      },
+      {
+        "id": "sl2",
+        "customerName": "",
+        "item": "Belkin Car charger 20W",
+        "qty": 1,
+        "total": 12,
+        "imei": "",
+        "notes": "walk-in",
+        "createdAt": "2026-08-01T16:40:00.000Z"
+      }
+    ]
+  },
+  "/api/services": [
+    {
+      "id": "sv1",
+      "category": "sim",
+      "name": "SIM swap",
+      "price": 10,
+      "kcPrice": 8,
+      "repeat": false
+    },
+    {
+      "id": "sv2",
+      "category": "sim",
+      "name": "Top-up",
+      "price": 20,
+      "kcPrice": 20,
+      "repeat": true
+    }
+  ],
+  "/api/kol-torah": {
+    "success": true,
+    "titles": [
+      {
+        "id": "kt1",
+        "code": "KT-001",
+        "name": "Shiur — Parshas Devarim",
+        "speaker": "R. Cohen",
+        "price": 8,
+        "active": true,
+        "notes": ""
+      }
+    ],
+    "shuls": [
+      {
+        "id": "sh1",
+        "name": "Beis Medrash",
+        "contact": "",
+        "active": true,
+        "notes": "",
+        "customerId": null,
+        "customerName": ""
+      }
+    ],
+    "stock": [
+      {
+        "shulId": "sh1",
+        "titleId": "kt1",
+        "qty": 12
+      }
+    ],
+    "jobs": [
+      {
+        "id": "j1",
+        "kind": "cd_to_mp3",
+        "status": "open",
+        "customerId": "c1",
+        "customerName": "Menachem Adler",
+        "qty": 3,
+        "price": 15
+      }
+    ],
+    "settlements": []
+  },
+  "/api/team": {
+    "success": true,
+    "members": [
+      {
+        "id": "st1",
+        "name": "Shloime",
+        "email": "owner@example.com",
+        "role": "owner",
+        "allowedTabs": null
+      },
+      {
+        "id": "st2",
+        "name": "Counter helper",
+        "email": "helper@example.com",
+        "role": "helper",
+        "allowedTabs": [
+          "customers",
+          "rentals",
+          "shop"
+        ]
+      }
+    ]
+  },
+  "/api/automations": {
+    "success": true,
+    "rules": []
+  },
+  "/api/business-accounts": {
+    "success": true,
+    "accounts": [],
+    "credVault": true
+  },
+  "/api/custom-charges": {
+    "success": true,
+    "charges": []
+  },
+  "/api/elid/summary": {
+    "success": true,
+    "accounts": [],
+    "lines": []
+  },
+  "/api/email-aliases": {
+    "success": true,
+    "aliases": []
+  },
+  "/api/phone-guide": {
+    "success": true,
+    "phones": []
+  },
+  "/api/repairs/menu": {
+    "success": true,
+    "items": []
+  }
 }

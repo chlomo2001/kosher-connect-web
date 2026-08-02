@@ -8371,7 +8371,6 @@ function openSaleModal(preselectItemId = null) { // name kept: every Sell button
   renderPosView();
 }
 
-const POS_CAT_ICONS = { phone: '📱', accessory: '🔌', sim: '📶', other: '📦' };
 
 function closePosView() {
   document.body.classList.remove('pos-mode');
@@ -8404,7 +8403,7 @@ function renderPosView() {
         <div class="pos-cats">
           <button class="pos-cat${posCat === 'all' ? ' on' : ''}" onclick="posSetCat('all')">All</button>
           ${cats.map(c => `<button class="pos-cat${posCat === c ? ' on' : ''}" onclick="posSetCat('${c}')">
-            ${POS_CAT_ICONS[c] || ''} ${STOCK_CATEGORY_LABELS[c] || escHtml(c)}</button>`).join('')}
+            ${STOCK_CATEGORY_LABELS[c] || escHtml(c)}</button>`).join('')}
         </div>
         <div id="posTiles" class="pos-tiles pos-tiles-full"></div>
       </div>
@@ -8490,7 +8489,7 @@ function posRenderTender() {
     html += `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
         <input class="form-input" id="posTenderIn" type="number" min="0" step="0.01" placeholder="Cash given £"
-          oninput="posChangeCalc()" style="width:110px;min-height:0;padding:7px 10px;">
+          oninput="posChangeCalc()" style="width:132px;min-height:0;padding:7px 10px;">
         ${[5, 10, 20, 50].map(n => `<button class="pos-note" onclick="posTenderQuick(${n})">£${n}</button>`).join('')}
         <span id="posChange" style="font-weight:700;font-size:14px;margin-left:auto;"></span>
       </div>`;
