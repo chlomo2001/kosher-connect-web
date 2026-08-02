@@ -1543,15 +1543,15 @@ function availabilityCalendarHtml() {
 
   return `
     <div class="table-card" style="margin-bottom:20px;padding-bottom:10px;">
-      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px 4px;">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px 4px;flex-wrap:wrap;">
         <button class="btn btn-outline btn-sm" aria-label="Previous month" onclick="calShift(-1)">←</button>
         <strong style="min-width:150px;text-align:center;">${monthName}</strong>
         <button class="btn btn-outline btn-sm" aria-label="Next month" onclick="calShift(1)">→</button>
         <span style="margin-left:auto;font-size:11px;color:var(--muted);">
-          <span class="cal-key cal-active"></span> out
-          <span class="cal-key cal-booked"></span> reserved (striped)
-          <span class="cal-key cal-overdue"></span> overdue (!)
-          <span class="cal-key cal-shabbat"></span> Shabbat
+          <span style="white-space:nowrap;"><span class="cal-key cal-active"></span> out</span>
+          <span style="white-space:nowrap;"><span class="cal-key cal-booked"></span> reserved (striped)</span>
+          <span style="white-space:nowrap;"><span class="cal-key cal-overdue"></span> overdue (!)</span>
+          <span style="white-space:nowrap;"><span class="cal-key cal-shabbat"></span> Shabbat</span>
           · click a free day to reserve</span>
       </div>
       <div style="overflow-x:auto;padding:0 14px 6px;">

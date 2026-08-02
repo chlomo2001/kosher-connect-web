@@ -1587,7 +1587,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 }
 
 /* Availability calendar */
-.cal-table { border-collapse: collapse; width: 100%; }
+/* min-width:max-content — the calendar sits in an overflow-x:auto wrap and
+   .cal-phone is sticky, so it was built to scroll sideways; width:100% alone
+   let a 390px screen shrink-to-fit it instead, crushing every 22px day column
+   to 6px. Natural width scrolls on a phone, 100% still fills a wide screen. */
+.cal-table { border-collapse: collapse; width: 100%; min-width: max-content; }
 .cal-table th { font-size: 10px; color: var(--muted); font-weight: 400; padding: 4px 0; text-align: center; }
 /* Scoped under .cal-table so it outranks the 10px muted `.cal-table th` rule —
    the row header is a <th> now (it names the phone the row belongs to). */
