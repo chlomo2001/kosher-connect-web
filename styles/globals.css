@@ -751,10 +751,10 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 
 /* An empty table's header is the only thing making it wider than the screen —
    there are no rows to line up under it. So "No stock yet — add your first
-   item" was being centred inside a ~700px table and clipped by a 390px
-   window, leaving the one message that tells a new user what to do next
-   unreadable. Drop the header while the body is a single empty state and the
-   table collapses to its container, putting the message back on screen.
+   item" was being centred inside a cell far wider than its card and clipped
+   by a 390px window, leaving the one message that tells a new user what to do
+   next unreadable. Drop the header while the body is a single empty state
+   and the table collapses to its container, putting the message on screen.
    Scoped by :has() to a tbody holding an .empty-state, so a table with real
    rows is untouched; a browser without :has() simply keeps today's behaviour. */
 .table-wrap table:has(> tbody > tr > td > .empty-state) thead,
@@ -951,8 +951,9 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 /* A phone number is one value, not four. fmtPhone groups the digits for
    readability (+44 7871 385 566) and a narrow table column then breaks it at
    every one of those spaces — on a 390px screen the customers table was
-   stacking each number over four lines, which is both unreadable and four
-   times the row height. The tables scroll sideways (see .table-wrap), so the
+   stacking each number over four lines, so one value read as four. (It does
+   not shorten the row much: 112px to 108px, because the name/email cell is
+   the taller one.) The tables scroll sideways (see .table-wrap), so the
    column is free to be as wide as the number needs. */
 .kc-phone { white-space: nowrap; }
 
