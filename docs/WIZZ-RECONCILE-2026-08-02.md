@@ -100,6 +100,57 @@ Two "mailbox-only" claims above were **my search errors, both found in the app**
    that was never billed. Nothing to fix unless the mailbox shows Padwa
    actually paid.
 
+## Round 2 — 2 Aug evening (owner ran the Gmail searches)
+
+The owner ran the four search strings in `ch7023518` and sent five screenshots.
+Snapshot `zz_snapshot_ledger_wizz_20260802c` (8 rows), then **ledger ids
+150–153** posted — all TLKCQC-pattern balance reinstatements on
+cancelled-unpaid bookings, each quoting Shloime's own 29 Jul email:
+
+| Ref | Customer | Wizz refunded | Balance owed to KC | Ledger id |
+|---|---|---|---|---|
+| SPSHHD | Menachem Rotter | £250 | **£160** | 150 |
+| SLW7XC | Mechel Lieber | £80 | **£65** | 151 |
+| SLW7XC | Shulem Zieg | £80 | **£65** | 152 |
+| SW9PXJ | Sara Rothman | £90 | **£85** | 153 |
+
+SW9PXJ's evidence sat in a thread mislabelled TLKCQC; the £175−£90=£85 shape
+fits only her booking, and the same correspondent asked "What about Sara
+Rptman" in that thread. SLW7XC's £100 fares were confirmed verbatim
+("£100 for the ticket and £45 for the service"), so both bookings' prices
+were corrected £0 → £100 (open item 5 now fully closed).
+
+Also settled by the searches:
+
+- **TMZZXC payout (open item 2): confirmed still owed.** The 30 Jul thread
+  still asks "how and where you want the refund", and the owner's
+  `refund sent` search for Lemberger returned nothing. The £95 stays a live
+  liability — correctly.
+- **OKQKKS / ZMKWJP (Leifer, both in app).** OKQKKS is *not* cancelled
+  (sheet "No", app Booked, £770 charge standing unpaid — consistent).
+  Shloime's 29 Jul mail demands **£980** "(WizzAir refund for cancelled
+  tickets)": £770 + ZMKWJP's £395 − an implied **£185** Wizz refund on
+  ZMKWJP fits exactly, but the £185 is inferred, not seen — nothing posted.
+- **LPJW7Q (Mordechai Menachem Grin)** — in app, Booked, £750 unpaid,
+  matches the sheet. Nothing to do.
+
+**New open items from round 2:**
+
+7. **An unidentified "£170 refunded" sent mail (29 Jul)** — "Wizzair tickets
+   have been cancelled; Wizzair has refunded £170", plural tickets, no ref in
+   the snippet. Could be one of the six still-unposted paid bookings. Owner
+   to open that thread and read the ref.
+8. **OKQKKS thread breakdown** — confirm ZMKWJP's Wizz refund figure (£185
+   implied) before reinstating Leifer's balance.
+9. **The six paid bookings (IMPKJZ, IJEVNV, UGSJJB, DSCUFH, HWGC5D, XU2WWH)
+   show no refund emails at all** — consistent with Ruchi's 26 Jul note
+   ("received refunds for 70% of the customers… check each customer
+   manually"). They stay state (c) except whichever turns out to be the £170.
+
+Position after round 2: KC's liability to customers unchanged at **£550**
+(+ VU15UH's £130 pending Shloime's "received"); customers now visibly owe KC
+**£375** across SPSHHD/SLW7XC/SW9PXJ (+ £130 VU15UH).
+
 ## What "done" looks like from here
 
 Each remaining (c) booking gets its `refund` entry when Wizz's money is seen;
