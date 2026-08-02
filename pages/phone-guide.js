@@ -97,7 +97,7 @@ export default function PhoneGuide() {
       <Head>
         <title>Phone guide — Kosher Connect</title>
         <meta name="description" content="Every kosher handset we sell, compared honestly: price, dual SIM, Hebrew text, touch-screen and texting options — straight answers from the counter." />
-        <link rel="canonical" href="https://app.kosher-connect.com/phone-guide" />
+        <link rel="canonical" href="https://www.kosher-connect.com/phone-guide" />
       </Head>
       <div className="welcome-shell">
         <AuthBackdrop />

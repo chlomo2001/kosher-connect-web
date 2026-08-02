@@ -245,7 +245,7 @@ const LD_JSON = JSON.stringify({
   description: 'Kosher phones, SIM plans, travel phone rentals, international numbers, Kol Torah audio and repairs. Serving the Heimishe community.',
   telephone: '+441615311386',
   email: EMAIL,
-  url: 'https://app.kosher-connect.com/welcome',
+  url: 'https://www.kosher-connect.com/',
   address: {
     '@type': 'PostalAddress',
     streetAddress: '421 Bury New Road, Level 2',
@@ -364,13 +364,13 @@ export default function Welcome() {
       <Head>
         <title>Kosher Connect — kosher phones, SIMs & travel rentals in Manchester</title>
         <meta name="description" content="Kosher Connect - Kosher phones, SIM plans, travel phones, repairs, and international numbers. Serving the Heimishe community from Manchester." />
-        <link rel="canonical" href="https://app.kosher-connect.com/welcome" />
+        <link rel="canonical" href="https://www.kosher-connect.com/" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Kosher Connect" />
         <meta property="og:title" content="Kosher Connect — Your phone bill, halved" />
         <meta property="og:description" content="Kosher phones, SIM plans, travel rentals, international numbers, Kol Torah audio and repairs — under one roof in Manchester." />
-        <meta property="og:url" content="https://app.kosher-connect.com/welcome" />
-        <meta property="og:image" content="https://app.kosher-connect.com/logo-full.png" />
+        <meta property="og:url" content="https://www.kosher-connect.com/" />
+        <meta property="og:image" content="https://www.kosher-connect.com/logo-full.png" />
         <meta property="og:image:width" content="1080" />
         <meta property="og:image:height" content="509" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
