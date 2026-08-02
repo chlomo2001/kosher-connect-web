@@ -10704,8 +10704,11 @@ async function renderTasksTab() {
         ${suggestions.length ? '<div class="stat-sub">awaiting your call</div>' : '<div class="stat-sub">all agreed</div>'}</div>
     </div>
     <div class="table-card" style="padding:14px;margin-bottom:14px;">
-      <div style="display:flex;gap:8px;align-items:center;">
-        <input class="form-input" id="tkTitle" placeholder="Add a task…" style="flex:1;"
+      <!-- flex-wrap + a real flex-basis on the title: with flex:1 (basis 0)
+           and three fixed-width siblings, the box you actually type in
+           was the one that collapsed — 10px wide at 390px. -->
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input class="form-input" id="tkTitle" placeholder="Add a task…" style="flex:1 1 200px;min-width:180px;"
           onkeydown="if(event.key==='Enter')saveNewTask()">
         <input class="form-input" type="date" id="tkDue" style="width:150px;" aria-label="Due date for the new task">
         <select class="form-input" id="tkPriority" style="width:110px;" aria-label="Priority for the new task">
