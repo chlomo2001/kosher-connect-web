@@ -9181,7 +9181,7 @@ async function renderKolTorahTab() {
           <td><select class="form-input" id="ktJobCust" style="min-height:0;padding:6px 9px;font-size:12px;max-width:180px;">
               <option value="walkin">🚶 Walk-in</option>${customerOptions}</select>
             <input class="form-input" id="ktJobName" placeholder="Name if walk-in" style="margin-top:4px;min-height:0;padding:6px 9px;font-size:12px;max-width:180px;"></td>
-          <td><select class="form-input" id="ktJobKind" style="min-height:0;padding:6px 9px;font-size:12px;">
+          <td><select class="form-input" id="ktJobKind" style="min-height:0;padding:6px 9px;font-size:12px;min-width:132px;">
               ${Object.entries(KT_JOB_KINDS).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select>
             <input class="form-input" id="ktJobQty" type="number" min="1" step="1" value="1" aria-label="Quantity" style="margin-top:4px;width:64px;min-height:0;padding:6px 9px;font-size:12px;"></td>
           <td><input class="form-input" id="ktJobDetails" placeholder="e.g. 3 CDs of R' Shloime onto one SD" style="min-width:200px;min-height:0;padding:6px 9px;font-size:12px;"></td>
