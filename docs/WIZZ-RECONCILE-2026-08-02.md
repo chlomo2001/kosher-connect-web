@@ -87,11 +87,18 @@ Two "mailbox-only" claims above were **my search errors, both found in the app**
    (Lieber £65, Zieg £65). These look like TLKCQC/VU15UH-pattern balances
    after a Wizz refund, but the NB column is Shloime's recomputation, not
    evidence of the refund itself — awaiting the refund emails before posting.
-5. **SLW7XC import defect** — the sheet shows £100 fare + £45 fee per
-   passenger; the app booked **fee only** (price £0.00, charge −£45 each).
-   If the £100 fares are real, both bookings are understated by £100.
-6. **USSGPK (Napthaly Padwa) has no ledger entries at all** — booking exists
-   (£245+£90, cancelled), zero money rows. Import gap.
+5. ~~SLW7XC import defect~~ — **not a defect.** Checked 2 Aug: the app only
+   ever billed the £45 fee per passenger (charges 55/56, 13 Jul), reversed as
+   cancelled-unpaid on 30 Jul (ids 133/134), and the booking notes already
+   flag the discrepancy: *"sheet shows £100 ticket + new balance £65 —
+   confirm."* The in-app position (£0 both ways) is internally consistent;
+   whether the £100 fares and the £65 balances are real debts is the same
+   evidence question as item 4 — it rides on the Gmail search.
+6. ~~USSGPK import gap~~ — **not a gap.** The booking was created *by* the
+   30 Jul reconcile itself with the note *"cancelled before billing; no
+   charge posted."* Zero ledger rows is the correct position for a booking
+   that was never billed. Nothing to fix unless the mailbox shows Padwa
+   actually paid.
 
 ## What "done" looks like from here
 
