@@ -749,6 +749,28 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .empty-state p { font-size: 16px; font-weight: 300; }
 .empty-state small { font-size: 13px; display: block; margin-top: 6px; }
 
+/* An empty table's header is the only thing making it wider than the screen —
+   there are no rows to line up under it. So "No stock yet — add your first
+   item" was being centred inside a ~700px table and clipped by a 390px
+   window, leaving the one message that tells a new user what to do next
+   unreadable. Drop the header while the body is a single empty state and the
+   table collapses to its container, putting the message back on screen.
+   Scoped by :has() to a tbody holding an .empty-state, so a table with real
+   rows is untouched; a browser without :has() simply keeps today's behaviour. */
+.table-wrap table:has(> tbody > tr > td > .empty-state) thead,
+.table-card > table:has(> tbody > tr > td > .empty-state) thead { display: none; }
+/* …and the table itself has to stop sizing to its content. `display: block`
+   (the fix that made wide tables scroll instead of clip) leaves the cell at
+   max-content width, so the sentence never wraps — it was 464px inside a
+   362px card. With no data rows there is nothing to scroll, so the empty
+   case goes back to a real table at 100% and the text wraps. */
+.table-card > table:has(> tbody > tr > td > .empty-state) { display: table; }
+/* `.table-wrap table` also carries `min-width: 560px`, which is there to stop
+   real columns crushing together. With no columns it is just 200px of forced
+   overflow, so the empty case drops it too. */
+.table-wrap table:has(> tbody > tr > td > .empty-state),
+.table-card > table:has(> tbody > tr > td > .empty-state) { width: 100%; min-width: 0; }
+
 /* ─── MODAL ─── */
 .modal-overlay {
   position: fixed; inset: 0;
