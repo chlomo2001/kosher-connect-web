@@ -21,9 +21,19 @@ const PHONE_SHOWN = '0161 531 1386' // shop's local form; tel: link stays +44
 // names an internal role and reads as the wrong door. Delivery is identical —
 // the domain catches every address — so the choice is purely what it signals.
 const EMAIL = 'support@kosher-connect.com'
-const MAPS_URL = 'https://maps.google.com/?q=421+Bury+New+Road,+Salford+M7+4ED'
+// The business name leads the query so Google's pin card is titled "Kosher
+// Connect" rather than "421 Bury New Rd". The address stays in the query as
+// the fallback: with no matching place Google resolves the address part and
+// centres there anyway, so the worst case is the card we already had.
+//
+// This only puts our name on the card if there is a Google Business Profile
+// for it at this address. That is the owner's to create, not code's, and it
+// is worth far more than the label — it is also what makes the shop show up
+// when someone searches Maps for a phone shop in Salford.
+const MAPS_QUERY = 'Kosher Connect, 421 Bury New Road, Salford M7 4ED'
+const MAPS_URL = `https://maps.google.com/?q=${encodeURIComponent(MAPS_QUERY)}`
 // Keyless Google Maps embed — the iframe endpoint needs no API key.
-const MAPS_EMBED = 'https://www.google.com/maps?q=421+Bury+New+Road,+Salford+M7+4ED&z=16&output=embed'
+const MAPS_EMBED = `https://www.google.com/maps?q=${encodeURIComponent(MAPS_QUERY)}&z=16&output=embed`
 
 const BAND_IDS = ['mobile', 'travel', 'intl']
 
