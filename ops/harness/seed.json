@@ -443,6 +443,29 @@
       }
     ]
   },
+  "/api/goods-in": {
+    "success": true,
+    "deliveries": [
+      {
+        "id": "gi1", "supplierId": "sup1", "supplierName": "TechTrade Wholesale",
+        "deliveryDate": "2026-08-02", "invoiceRef": "INV-8841", "invoiceTotal": 640,
+        "paid": false, "paidAt": null, "notes": "", "createdAt": "2026-08-02T11:00:00Z",
+        "lines": [
+          { "id": "gil1", "itemId": null, "description": "Nokia 110 4G", "qty": 10, "unitCost": 34 },
+          { "id": "gil2", "itemId": null, "description": "USB-C chargers", "qty": 20, "unitCost": 15 }
+        ]
+      },
+      {
+        "id": "gi2", "supplierId": "sup2", "supplierName": "Nordic Handsets Ltd",
+        "deliveryDate": "2026-07-25", "invoiceRef": "NH-2210", "invoiceTotal": 380,
+        "paid": true, "paidAt": "2026-07-30", "notes": "", "createdAt": "2026-07-25T09:30:00Z",
+        "lines": [
+          { "id": "gil3", "itemId": null, "description": "Alcatel 1 handsets", "qty": 8, "unitCost": 47.5 }
+        ]
+      }
+    ],
+    "balances": { "sup1": 430, "sup2": 0 }
+  },
   "/api/shop": {
     "success": true,
     "items": [

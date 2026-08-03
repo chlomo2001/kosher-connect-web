@@ -8321,6 +8321,10 @@ const SUPPLIER_RETURN_STATUS = {
   written_off:   { label: '🗑 Written off', color: 'var(--muted)' },
 };
 const SUPPLIER_RETURN_OPEN = ['awaiting_send', 'sent'];
+// Goods-in v2 — deliveries + the lightweight per-supplier balance
+// (unpaid invoices minus credit notes; the shop's only AP record for now).
+let goodsIn = [];
+let goodsInBalances = {};
 
 const STOCK_CATEGORY_LABELS = { phone: '📱 Phone', accessory: '🔌 Accessory', sim: '💳 SIM', other: '📦 Other' };
 // What the shelf actually carries (owner's list) — offered as type-ahead
@@ -8335,10 +8339,11 @@ const STOCK_TYPE_SUGGESTIONS = [
 async function renderShopTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = loadingHtml('Loading shop…');
-  const [data, retData] = await Promise.all([
+  const [data, retData, giData] = await Promise.all([
     kcFetch('/api/shop').then(r => r.json()).catch(() => null),
-    // Returns are additive: if this fetch fails the shop still renders.
+    // Returns and goods-in are additive: if either fetch fails the shop still renders.
     kcFetch('/api/supplier-returns').then(r => r.json()).catch(() => null),
+    kcFetch('/api/goods-in').then(r => r.json()).catch(() => null),
   ]);
   if (!data || !data.success) {
     content.innerHTML = errorHtml(data?.error || 'Couldn’t load the shop');
@@ -8346,6 +8351,7 @@ async function renderShopTab() {
   }
   shopItems = data.items; shopSales = data.sales;
   if (retData?.success) { suppliers = retData.suppliers; supplierReturns = retData.returns; }
+  if (giData?.success) { goodsIn = giData.deliveries; goodsInBalances = giData.balances; }
 
   const today = localISO();
   const active = shopItems.filter(i => i.active);
@@ -8415,6 +8421,35 @@ async function renderShopTab() {
     ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">Nothing waiting to go back. When defective stock has to return to a wholesaler, record it here so it isn't forgotten.</div>`
     : openReturns.map(returnRow).join('') + doneReturns.slice(0, 5).map(returnRow).join('');
 
+  // Goods in: recent deliveries with a paid/unpaid toggle, headed by the
+  // per-supplier balance line ("we owe" = unpaid invoices − credit notes).
+  const oweEntries = suppliers
+    .map(s => ({ name: s.name, owed: goodsInBalances[s.id] || 0 }))
+    .filter(e => Math.abs(e.owed) >= 0.005);
+  const totalOwed = oweEntries.reduce((s, e) => s + e.owed, 0);
+  const balanceLine = oweEntries.length
+    ? `<div style="font-size:12px;margin:2px 0 8px;color:var(--muted);">
+        ${oweEntries.map(e => `${escHtml(e.name)}: <strong style="color:${e.owed > 0 ? 'var(--danger-ink)' : 'var(--success-ink)'};">${e.owed > 0 ? fmtGbp(e.owed) + ' owed' : fmtGbp(-e.owed) + ' credit'}</strong>`).join(' · ')}
+      </div>` : '';
+  const deliveryRow = (d) => `
+    <div class="history-item history-flat">
+      <div style="flex:1;min-width:0;">
+        <div class="history-desc"><strong>${escHtml(d.supplierName || '?')}</strong>${d.invoiceRef ? ' — ' + escHtml(d.invoiceRef) : ''}
+          — ${d.lines.map(l => `${l.qty}× ${escHtml(l.description)}`).join(', ')}</div>
+        <div style="font-size:11px;color:var(--muted);">
+          ${fmtDate(d.deliveryDate)}${d.paid ? ` · <span style="color:var(--success-ink);font-weight:600;">✅ Paid${d.paidAt ? ' ' + fmtDate(d.paidAt) : ''}</span>` : d.invoiceTotal !== null ? ' · <span style="color:var(--warning-ink);font-weight:600;">⏳ Unpaid</span>' : ''}
+          ${d.notes ? ' · ' + escHtml(d.notes) : ''}
+        </div>
+      </div>
+      <div class="history-amount" style="margin:0 10px;">${d.invoiceTotal === null ? '—' : fmtGbp(d.invoiceTotal)}</div>
+      ${d.invoiceTotal !== null ? `<button class="action-btn" aria-label="Mark delivery from ${escHtml(d.supplierName || 'supplier')} ${d.paid ? 'unpaid' : 'paid'}"
+        onclick="markGoodsInPaid('${d.id}', ${d.paid ? 'false' : 'true'})">${d.paid ? '↩️' : '💷 Pay'}</button>` : ''}
+    </div>`;
+  const goodsRows = goodsIn.length === 0
+    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No deliveries recorded yet. When stock arrives from a wholesaler, record it here — quantities and cost prices update themselves.</div>`
+    : goodsIn.slice(0, 8).map(deliveryRow).join('');
+  const unpaidCount = goodsIn.filter(d => !d.paid && d.invoiceTotal !== null).length;
+
   const saleRows = shopSales.length === 0
     ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No sales recorded yet.</div>`
     : shopSales.slice(0, 25).map(s => `
@@ -8442,6 +8477,7 @@ async function renderShopTab() {
       <button class="btn btn-primary" onclick="openSaleModal()">🧾 Open Till</button>
       <button class="btn btn-outline" onclick="openStockItemModal()">➕ Add Item</button>
       <button class="btn btn-outline" onclick="openSupplierReturnModal()">📤 Return to supplier</button>
+      <button class="btn btn-outline" onclick="openGoodsInModal()">📥 Goods in</button>
     </div>
     <div class="dash-cols">
       <div class="table-card">
@@ -8459,6 +8495,12 @@ async function renderShopTab() {
           <div class="section-divider" style="margin-top:12px;">Returns to supplier${openReturns.length
             ? ` <span style="color:var(--danger-ink);font-weight:600;">· ${openReturns.length} open${openClaim ? ' · ' + fmtGbp(openClaim) + ' claimed' : ''}</span>` : ''}</div>
           <div>${returnRows}</div>
+        </div>
+        <div class="table-card" style="padding:8px 18px 14px;margin-bottom:14px;">
+          <div class="section-divider" style="margin-top:12px;">Goods in${totalOwed > 0.005
+            ? ` <span style="color:var(--danger-ink);font-weight:600;">· ${fmtGbp(totalOwed)} owed${unpaidCount ? ` · ${unpaidCount} invoice${unpaidCount === 1 ? '' : 's'}` : ''}</span>` : ''}</div>
+          ${balanceLine}
+          <div>${goodsRows}</div>
         </div>
         <div class="table-card" style="padding:8px 18px 14px;">
           <div class="section-divider" style="margin-top:12px;">Recent sales</div>
@@ -8558,6 +8600,137 @@ async function saveSupplierReturn(retId) {
   if (!res || !res.success) { toast(res?.error || 'Could not save the return.', 'error'); return; }
   closeDynamicModal();
   toast(retId ? 'Return updated.' : 'Return recorded — it will nag from the dashboard until settled.', 'success');
+  renderShopTab();
+}
+
+// ── Goods in — record a delivery; linked lines bump stock + cost ──
+function giLineRowHtml(idx) {
+  const itemOptions = shopItems.filter(i => i.active)
+    .map(i => `<option value="${i.id}">${escHtml([i.company, i.model].filter(Boolean).join(' '))}</option>`).join('');
+  return `
+    <div class="gi-line" style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;">
+      <select class="form-input" data-gi="item" style="flex:2;min-width:130px;" aria-label="Stock item for line ${idx + 1}"
+        onchange="giItemPicked(this)">
+        <option value="">✍️ Not in stock list</option>
+        ${itemOptions}
+      </select>
+      <input class="form-input" data-gi="desc" style="flex:3;min-width:140px;" placeholder="What arrived *" aria-label="Description for line ${idx + 1}">
+      <input class="form-input" data-gi="qty" type="number" min="1" step="1" value="1" style="width:64px;" aria-label="Quantity for line ${idx + 1}">
+      <input class="form-input" data-gi="cost" type="number" min="0" step="0.01" placeholder="£/unit" style="width:88px;" aria-label="Unit cost for line ${idx + 1}">
+    </div>`;
+}
+
+function giItemPicked(sel) {
+  const item = shopItems.find(i => i.id === sel.value);
+  const row = sel.closest('.gi-line');
+  const desc = row.querySelector('[data-gi="desc"]');
+  const cost = row.querySelector('[data-gi="cost"]');
+  if (item) {
+    if (!desc.value.trim()) desc.value = [item.company, item.model].filter(Boolean).join(' ');
+    if (!cost.value && item.netPrice !== null) cost.value = item.netPrice;
+  }
+}
+
+function giAddLine() {
+  const wrap = document.getElementById('giLines');
+  wrap.insertAdjacentHTML('beforeend', giLineRowHtml(wrap.querySelectorAll('.gi-line').length));
+}
+
+function openGoodsInModal() {
+  const supplierOptions = suppliers.filter(s => s.active)
+    .map(s => `<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
+  showDynamicModal(`
+    <div class="modal-title">📥 Goods In</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Supplier *</label>
+        <select class="form-input" id="giSupplier" onchange="document.getElementById('giNewSupplierWrap').style.display = this.value === '__new' ? '' : 'none'">
+          ${supplierOptions}
+          <option value="__new" ${suppliers.length === 0 ? 'selected' : ''}>➕ New supplier…</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Delivery date</label>
+        <input class="form-input" type="date" id="giDate" value="${localISO()}">
+      </div>
+      <div class="form-group form-full" id="giNewSupplierWrap" style="${suppliers.length === 0 ? '' : 'display:none;'}">
+        <label class="form-label">New supplier name *</label>
+        <input class="form-input" id="giNewSupplier" placeholder="e.g. TechTrade Wholesale">
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Lines * <span style="color:var(--muted);font-weight:400;">(pick a stock item to update its quantity and cost, or free-type)</span></label>
+        <div id="giLines">${giLineRowHtml(0)}</div>
+        <button type="button" class="btn btn-outline" style="padding:4px 10px;font-size:12px;" onclick="giAddLine()">➕ Add line</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Invoice ref</label>
+        <input class="form-input" id="giRef" placeholder="INV-1234">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Invoice total £</label>
+        <input class="form-input" type="number" step="0.01" min="0" id="giTotal">
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label" style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="giPaid"> Already paid
+        </label>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="giNotes" placeholder="who delivered, part-order…">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveGoodsIn()">💾 Save</button>
+    </div>
+  `);
+}
+
+async function saveGoodsIn() {
+  let supplierId = document.getElementById('giSupplier').value;
+  if (supplierId === '__new') {
+    const name = document.getElementById('giNewSupplier').value.trim();
+    if (!name) { toast('Give the new supplier a name.', 'error'); return; }
+    const res = await kcFetch('/api/supplier-returns', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ op: 'supplier', name }),
+    }).then(r => r.json()).catch(() => null);
+    if (!res || !res.success) { toast(res?.error || 'Could not add the supplier.', 'error'); return; }
+    supplierId = res.supplier.id;
+  }
+  const lines = [...document.querySelectorAll('#giLines .gi-line')].map(row => ({
+    itemId: row.querySelector('[data-gi="item"]').value || null,
+    description: row.querySelector('[data-gi="desc"]').value.trim(),
+    qty: row.querySelector('[data-gi="qty"]').value,
+    unitCost: row.querySelector('[data-gi="cost"]').value === '' ? null : parseFloat(row.querySelector('[data-gi="cost"]').value),
+  })).filter(l => l.description);
+  if (!lines.length) { toast('Add at least one line — what arrived?', 'error'); return; }
+  const res = await kcFetch('/api/goods-in', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      supplierId,
+      deliveryDate: document.getElementById('giDate').value,
+      invoiceRef: document.getElementById('giRef').value.trim(),
+      invoiceTotal: document.getElementById('giTotal').value === '' ? null : parseFloat(document.getElementById('giTotal').value),
+      paid: document.getElementById('giPaid').checked,
+      notes: document.getElementById('giNotes').value.trim(),
+      lines,
+    }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not save the delivery.', 'error'); return; }
+  closeDynamicModal();
+  toast(res.warning || 'Delivery recorded — stock and costs updated.', res.warning ? 'error' : 'success');
+  renderShopTab();
+}
+
+async function markGoodsInPaid(id, paid) {
+  const res = await kcFetch('/api/goods-in', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, paid }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not update the invoice.', 'error'); return; }
+  toast(paid ? 'Marked paid.' : 'Marked unpaid.', 'success');
   renderShopTab();
 }
 

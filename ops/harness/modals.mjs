@@ -50,6 +50,7 @@ const MODALS = [
   ['cashup',        'dashboard', `openCashupModal()`],
   ['supplier-return','shop',     `openSupplierReturnModal()`],
   ['supplier-return-manage','shop', `openSupplierReturnModal(window.__kc.supplierReturn)`],
+  ['goods-in',      'shop',      `openGoodsInModal()`],
   // Not modals, but the same eyes-on treatment: the Customer-360 page
   // (/customers/<id>) renders in the content column — .kc-cpage is in the
   // geometry selector below so both sub-tabs get measured and screenshotted.

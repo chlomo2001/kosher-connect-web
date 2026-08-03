@@ -181,16 +181,15 @@ sell-side quantities only.
       line while anything sits in `awaiting-send`/`sent` (that bag stops
       being invisible). Migration + API + UI; no money posting in v1 — value
       is a claim, not a ledger entry, until the credit actually arrives.
-- [ ] **P2 · M** 🔒 — **v2: goods-in (purchases)** — record deliveries
+- [x] **P2 · M** 🔒 — **v2: goods-in (purchases)** — record deliveries
       (supplier, date, lines → increments stock quantities, cost prices) so
       stock levels come from arrivals, not hand edits — and margin per SKU
-      becomes knowable. Scope question for the owner: is tracking **what we
-      owe suppliers** (invoices/accounts payable) wanted too, or only the
-      stock movement? *Owner probed "why not AP?" (08-03). Recommended a
-      lightweight middle path: goods-in carries invoice total + paid/unpaid,
-      credited returns offset it, per-supplier running balance — no aging
-      reports or bank reconciliation; the accountant's books stay the truth.
-      Full AP only if the owner asks for it explicitly. Decision pending.*
+      becomes knowable. *Owner approved the lightweight-AP middle path 08-03
+      ("they don't have a book yet" — so this is the primary record): goods-in
+      carries invoice ref/total + paid/unpaid, credited returns offset it,
+      per-supplier running balance in the Shop tab. Deliberately no aging
+      reports or bank reconciliation — revisit only if the owner asks for
+      full AP once real books exist.*
 
 ## New business line
 - [ ] **P1 · L** 🔒 — **Kol Torah CD module** — needs a 20-min scoping answer:
