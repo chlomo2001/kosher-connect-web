@@ -53,6 +53,25 @@ Needs `playwright-core` for the screenshot and audit modes; Chromium is already
 at `/opt/pw-browsers/chromium` in the session container. Building `app.html`
 needs nothing but the repo.
 
+## Modals (`modals.mjs`)
+
+```bash
+node ops/harness/modals.mjs                       # all big modals, 390px light
+node ops/harness/modals.mjs --theme dark --only customer-card
+```
+
+The tab audits stop at the tab: four rounds of eyeballing never opened a
+modal, and the first run of this found the customer card's whole tool strip
+(✕ Close included) off the right edge of a 390px screen. Opens each big
+modal, screenshots it (`modal_<name>_<theme>_<width>.png` here, gitignored),
+and flags a box that leaves the viewport, scrolls sideways, or has children
+overhanging its right edge. A ✓ means the geometry is sane — it does NOT
+mean the modal reads well. The screenshots are the deliverable; look at them.
+
+The seed's `/api/ledger` carries both the dashboard shape (`recent`) and the
+customer-card shape (`balance`/`entries`) in one object, because the fetch
+stub strips query strings so `?customerId=` cannot select a different body.
+
 ## Public pages (`public.mjs`)
 
 ```bash

@@ -28,6 +28,9 @@ run "staff app · contrast, both themes" \
 run "staff app · touch targets (coarse pointer)" \
   bash -c 'node ops/harness/render.mjs --targets --width 390 | tail -1'
 
+run "staff app · modals open + geometry, 390px both themes" \
+  bash -c 'for t in light dark; do node ops/harness/modals.mjs --width 390 --theme $t | tail -1; done'
+
 run "public pages · render + RTL, en and he" \
   bash -c 'node ops/harness/public.mjs | tail -1'
 

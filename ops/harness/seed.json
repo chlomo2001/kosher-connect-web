@@ -356,7 +356,47 @@
     "creditsTotal": 20,
     "arrearsTotal": 45,
     "todayIn": 65,
-    "todayOut": -60
+    "todayOut": -60,
+    "known": true,
+    "balance": -45,
+    "entries": [
+      {
+        "id": "le1",
+        "type": "rental",
+        "amount": -120,
+        "method": "",
+        "reference": "R-1001",
+        "description": "Nokia 105 rental — 2 weeks",
+        "at": "2026-07-20T10:00:00Z"
+      },
+      {
+        "id": "le2",
+        "type": "payment",
+        "amount": 45,
+        "method": "cash",
+        "reference": null,
+        "description": "Part payment at the counter",
+        "at": "2026-07-24T15:30:00Z"
+      },
+      {
+        "id": "le3",
+        "type": "stock_sale",
+        "amount": -12,
+        "method": "card",
+        "reference": "POS-88",
+        "description": "Charger + SIM tray tool",
+        "at": "2026-08-01T11:05:00Z"
+      },
+      {
+        "id": "le4",
+        "type": "payment",
+        "amount": 42,
+        "method": "card",
+        "reference": null,
+        "description": "Balance payment",
+        "at": "2026-08-02T09:40:00Z"
+      }
+    ]
   },
   "/api/tasks": [
     {
