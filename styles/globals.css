@@ -901,7 +901,14 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 
-.detail-header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+/* The header must be allowed to wrap: the headline's min-content width is set
+   by the longest unbreakable contact string (an account email like
+   kosherconnect+chaim@gmail.com), and on a 390px screen that floored the
+   flex row so hard the whole tool strip — including ✕ Close — sat off the
+   card's right edge, unreachable. Wrapping costs nothing on a wide screen
+   (one line stays one line) and on a phone the tools become their own row. */
+.detail-header { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 18px; }
+.detail-headline { flex: 1; min-width: 0; }
 .avatar {
   width: 48px; height: 48px;
   border-radius: var(--radius-lg);
@@ -911,7 +918,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   letter-spacing: 0.2px;
 }
 .detail-name { font-size: 20px; font-weight: 300; letter-spacing: -0.2px; }
-.detail-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.detail-meta { font-size: 13px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
 
 /* auto-fit rather than a hard 3, and rather than a media query: this sits in a
    modal whose width is a percentage of the viewport, so the breakpoint that
@@ -934,6 +941,16 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   background: var(--bg);
   border-radius: 8px;
   font-size: 13px;
+}
+/* The dot+description half of a history row. flex:1 with min-width:0 so the
+   description shrinks by WRAPPING, not by crushing to a one-word-per-line
+   column — on a 390px card "Rental · Nokia 105 rental — 2 weeks" was
+   rendering six lines tall beside a centred date. On a phone the row wraps:
+   description takes the full width, date and amount share the second line. */
+.history-main { display: flex; align-items: center; flex: 1; min-width: 0; }
+@media (max-width: 560px) {
+  .history-item { flex-wrap: wrap; row-gap: 2px; }
+  .history-main { flex-basis: 100%; }
 }
 .history-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
 .dot-blue { background: var(--accent); }

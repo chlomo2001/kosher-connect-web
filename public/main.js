@@ -3825,7 +3825,7 @@ function renderDetailPanel(id) {
     ? `<div style="color:var(--muted);font-size:13px;padding:10px 0;">No history yet.</div>`
     : history.slice().reverse().map(h => `
         <div class="history-item">
-          <div style="display:flex;align-items:center;flex:1;">
+          <div class="history-main">
             <div class="history-dot ${dotColor[h.type] || 'dot-blue'}"></div>
             <div class="history-desc">${escHtml(h.desc)}</div>
           </div>
@@ -3937,7 +3937,7 @@ function renderDetailPanel(id) {
     <div class="detail-panel" id="detailPanel">
       <div class="detail-header">
         <div class="avatar">${initials}</div>
-        <div style="flex:1;">
+        <div class="detail-headline">
           <div class="detail-name">${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:16px;">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
           <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${waLink(c, '') ? ` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
         </div>
@@ -4728,7 +4728,7 @@ async function loadWalletSection(customerId) {
     ? `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No wallet activity yet — record a payment or charge to start the ledger.</div>`
     : data.entries.slice(0, 8).map((e, i) => `
         <div class="history-item">
-          <div style="display:flex;align-items:center;flex:1;">
+          <div class="history-main">
             <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>
             <div class="history-desc">${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}</div>
           </div>
@@ -4742,8 +4742,8 @@ async function loadWalletSection(customerId) {
         </div>`).join('');
 
   el.innerHTML = `
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
-      <span class="badge" style="font-size:14px;padding:7px 16px;background:${bal < 0 ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)'};color:${balColor};">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
+      <span class="badge" style="font-size:14px;padding:7px 16px;white-space:nowrap;background:${bal < 0 ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)'};color:${balColor};">
         Balance: ${balLabel}</span>
       <button class="btn btn-primary" style="font-size:12px;padding:6px 14px;"
         onclick="openWalletModal('${escHtml(customerId)}', ${Number(bal) || 0})">💰 Record payment / credit</button>
