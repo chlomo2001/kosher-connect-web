@@ -130,7 +130,12 @@ export default function ScanReader() {
           }
         } catch (err) {
           console.error('[scan-reader]', file.name, err)
-          const detail = err && err.message ? ` (${String(err.message).slice(0, 120)})` : ''
+          const raw = err && err.message ? String(err.message) : ''
+          // Network-level failures surface as browser jargon ("Failed to
+          // fetch", Safari's "Load failed", chunk-load errors after a deploy).
+          // Say the thing the user can act on; keep real server messages.
+          const network = /failed to fetch|load failed|networkerror|dynamically imported module|chunkload/i.test(raw)
+          const detail = network ? ' — check your connection and try again' : raw ? ` (${raw.slice(0, 120)})` : ''
           setItems((p) => [...p, { name: file.name, error: (isPdf ? 'Could not read this PDF' : 'Could not read this image') + detail }])
         }
       }

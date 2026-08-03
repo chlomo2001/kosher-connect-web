@@ -86,7 +86,14 @@ export default function Converter() {
   async function run(label, fn) {
     if (busy) return
     setBusy(label); setMsg('')
-    try { await fn() } catch (e) { console.error('[convert]', e); setMsg(`Couldn’t ${label.toLowerCase()} — ${e.message || 'failed'}.`) }
+    try { await fn() } catch (e) {
+      console.error('[convert]', e)
+      const raw = String((e && e.message) || 'failed')
+      // Browser network jargon → something the user can act on (same rule as
+      // the Scan Reader); real converter messages pass through untouched.
+      const network = /failed to fetch|load failed|networkerror|dynamically imported module|chunkload/i.test(raw)
+      setMsg(`Couldn’t ${label.toLowerCase()} — ${network ? 'check your connection and try again' : raw}.`)
+    }
     finally { setBusy('') }
   }
 
