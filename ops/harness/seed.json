@@ -617,5 +617,18 @@
   "/api/repairs/menu": {
     "success": true,
     "items": []
+  },
+  "/api/cashup": {
+    "success": true,
+    "date": "2026-08-03",
+    "methods": {
+      "cash": 87.0,
+      "card": 45.0
+    },
+    "totalIn": 132.0,
+    "totalOut": 12.0,
+    "openingFloat": 50.0,
+    "expectedCash": 137.0,
+    "count": null
   }
 }

@@ -43,6 +43,11 @@ const MODALS = [
   ['sim-manage',    'sim',       `openManageSimModal(window.__kc.sim)`],
   ['vn-new',        'virtual',   `openNewVNModal()`],
   ['stock-item',    'shop',      `openStockItemModal()`],
+  // The small dynamic dialogs staff open all day long.
+  ['remind',        'customers', `openRemindModal('customer', window.__kc.customer)`],
+  ['draft-reminder','customers', `openDraftReminderModal(window.__kc.customer)`],
+  ['log-comm',      'customers', `openLogCommModal(window.__kc.customer)`],
+  ['cashup',        'dashboard', `openCashupModal()`],
 ]
 
 const file = buildAppHtml()
