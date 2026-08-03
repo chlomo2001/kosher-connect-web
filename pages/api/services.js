@@ -30,8 +30,11 @@ const toApp = (r) => ({
   active: r.active !== false,
 })
 
+// Unicode-aware (sweep 2026-08-02 #23): the ASCII-only version collapsed
+// every Hebrew service name to the bare category prefix, so the second one
+// collided on the unique service_id and died as "Storage error".
 const slug = (s) => String(s).toLowerCase().trim()
-  .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60)
+  .replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '').slice(0, 60)
 
 async function handler(req, res) {
   if (!tablesMode) {
@@ -64,8 +67,14 @@ async function handler(req, res) {
       if (!Number.isFinite(price) || price < 0) {
         return res.status(400).json({ success: false, error: 'Price must be £0 or more.' })
       }
+      // A same-name collision surfaces as a usable message, not "Storage error".
+      const serviceId = `${b.category}-${slug(name)}`
+      const clash = await db.select('service_prices', `select=id&service_id=eq.${encodeURIComponent(serviceId)}&limit=1`)
+      if (clash.length) {
+        return res.status(409).json({ success: false, error: 'A service with that name already exists in this category.' })
+      }
       const [row] = await db.insert('service_prices', [{
-        service_id: `${b.category}-${slug(name)}`,
+        service_id: serviceId,
         name,
         category: b.category,
         price: money(price),

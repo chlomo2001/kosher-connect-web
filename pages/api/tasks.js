@@ -61,6 +61,11 @@ async function handler(req, res) {
         )
         customerUuid = rows.length ? rows[0].id : null
       }
+      // Dates reach a Postgres `date` column — only unambiguous ISO goes
+      // through (sweep 2026-08-02 #22): a slash date would parse month-first.
+      if (b.dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(String(b.dueDate))) {
+        return res.status(400).json({ success: false, error: 'Due date must be a full date (year-month-day).' })
+      }
       const [row] = await db.insert('tasks', [{
         title: String(b.title).trim(),
         customer_id: customerUuid,

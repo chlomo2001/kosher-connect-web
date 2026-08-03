@@ -43,6 +43,11 @@ async function handler(req, res) {
       if (req.method === 'PUT' && !b.id) return res.status(400).json({ success: false, error: 'id is required.' })
       if (!b.name || !String(b.name).trim()) return res.status(400).json({ success: false, error: 'Give the rule a name.' })
       if (!TRIGGERS[b.trigger]) return res.status(400).json({ success: false, error: 'Unknown trigger.' })
+      // A blank threshold must not slide through as 0 — Number('') === 0, and
+      // a rule that "fires at 0 days" is almost never what a blank field meant.
+      if (b.threshold === '' || b.threshold == null) {
+        return res.status(400).json({ success: false, error: 'Enter a valid threshold.' })
+      }
       const threshold = Number(b.threshold)
       if (!Number.isFinite(threshold) || threshold < 0) return res.status(400).json({ success: false, error: 'Enter a valid threshold.' })
       const row = {

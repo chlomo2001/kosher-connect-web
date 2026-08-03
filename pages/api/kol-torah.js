@@ -111,13 +111,20 @@ async function handler(req, res) {
     const name = str(b.name, 120)
     if (!name) return res.status(400).json({ success: false, error: 'The shul needs a name.' })
     // Optional wallet link: pick an existing customer record (created through
-    // the normal + New Customer flow) so settlements ride the ledger.
-    let customer_id = null
-    if (b.customerId) {
-      customer_id = await customerUuidFor(b.customerId)
-      if (!customer_id) return res.status(400).json({ success: false, error: 'That customer record wasn’t found.' })
+    // the normal + New Customer flow) so settlements ride the ledger. The link
+    // changes ONLY when the request carries the field (sweep 2026-08-02 #20):
+    // a save without it must not silently null customer_id, or every later
+    // settlement posts no ledger rows at all. An explicit '' unlinks.
+    const row = { name, contact: str(b.contact, 200) }
+    if (b.customerId !== undefined) {
+      if (b.customerId) {
+        const customer_id = await customerUuidFor(b.customerId)
+        if (!customer_id) return res.status(400).json({ success: false, error: 'That customer record wasn’t found.' })
+        row.customer_id = customer_id
+      } else {
+        row.customer_id = null
+      }
     }
-    const row = { name, contact: str(b.contact, 200), customer_id }
     if (b.active !== undefined) row.active = b.active !== false
     if (b.notes !== undefined) row.notes = str(b.notes, 500)
     try {

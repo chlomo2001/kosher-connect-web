@@ -25,10 +25,14 @@ async function handler(req, res) {
   ]
   // CSV formula-injection guard: a cell starting with = + - @ (or a control char)
   // is executed by Excel/Sheets even inside quotes, and these cells carry customer-
-  // controlled data. Prefix a quote on those, but leave plain numbers alone. audit C14.
+  // controlled data. Prefix a quote on those — but phone-shaped values are exempt
+  // (sweep 2026-08-02 #25): the old number-only exemption missed '+44 7911 …', so
+  // the entire phone column shipped with a leading apostrophe. A + or - followed
+  // by nothing but digits and phone punctuation cannot call anything.
   const csvCell = (v) => {
     const s = String(v == null ? '' : v)
-    const safe = /^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s) ? `'${s}` : s
+    const phoneLike = /^[+-][\d\s().\-]+$/.test(s)
+    const safe = /^[=+\-@\t\r]/.test(s) && !phoneLike && !/^-?\d+(\.\d+)?$/.test(s) ? `'${s}` : s
     return `"${safe.replace(/"/g, '""')}"`
   }
   const csv = rows.map(r => r.map(csvCell).join(',')).join('\n')

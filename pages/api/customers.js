@@ -21,6 +21,9 @@ async function handler(req, res) {
 
     if (req.method === 'POST') {
       const customer = { ...req.body }
+      if (!String(customer.firstName || '').trim()) {
+        return res.status(400).json({ success: false, error: 'First name is required.' })
+      }
       // Not Date.now() alone: legacy_id is unique, so two customers created in
       // the same millisecond (two tills, or an import) meant one save silently
       // lost the race. The client has minted collision-safe ids since #45 —
@@ -35,6 +38,15 @@ async function handler(req, res) {
 
     if (req.method === 'PUT') {
       const updated = req.body
+      // Bound the read-modify-write (sweep 2026-08-02 #21): the merged object
+      // lands in legacy_extras verbatim, so an oversized payload would bloat
+      // the row (and every future read of it) with no limit at all.
+      if (!updated || typeof updated !== 'object' || !updated.id) {
+        return res.status(400).json({ success: false, error: 'Customer id is required.' })
+      }
+      if (JSON.stringify(updated).length > 200_000) {
+        return res.status(413).json({ success: false, error: 'That update is too large.' })
+      }
       // Single-row read: editing one customer must not pay a whole-table scan.
       const existing = await getCustomer(updated.id)
       if (!existing) return res.status(404).json({ success: false, error: 'Not found' })

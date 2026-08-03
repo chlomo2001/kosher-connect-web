@@ -24,7 +24,15 @@ function toApp(row, staff) {
   const app = toAppFull(row)
   if (staff && staff.role !== 'owner') {
     app.passportExpiry = ''
-    app.passengers = app.passengers.map(p => ({ ...p, passportNumber: '', passportExpiry: '' }))
+    // The whole passport DOCUMENT is masked for helpers — number, expiry, and
+    // the passport-adjacent fields (nationality, issue date, issuing country)
+    // that the old mask let through (sweep 2026-08-02 #8). DOB deliberately
+    // stays visible: staff need it to make the airline booking (owner
+    // decision, see header). The check-in view carries the full details.
+    app.passengers = app.passengers.map(p => ({
+      ...p, passportNumber: '', passportExpiry: '',
+      nationality: '', passportIssueDate: '', issuingCountry: '',
+    }))
   }
   return app
 }
@@ -189,6 +197,13 @@ async function handler(req, res) {
       if (!b.customerId) return res.status(400).json({ success: false, error: 'Customer is required.' })
       if (!b.route || !String(b.route).trim()) return res.status(400).json({ success: false, error: 'Route is required.' })
       if (!b.travelDate) return res.status(400).json({ success: false, error: 'Travel date is required.' })
+      // Booking-level dates hit Postgres `date` columns — ISO only, or a slash
+      // date parses month-first (sweep 2026-08-02 #22).
+      for (const [label, v] of [['Travel date', b.travelDate], ['Check-in date', b.checkinDate], ['Passport expiry', b.passportExpiry]]) {
+        if (v && !ISO_DATE.test(String(v))) {
+          return res.status(400).json({ success: false, error: `${label} must be a full date (year-month-day).` })
+        }
+      }
       if (!Number.isFinite(price) || price < 0) return res.status(400).json({ success: false, error: 'Price must be a number ≥ 0.' })
       if (fee < 0) return res.status(400).json({ success: false, error: 'Booking fee cannot be negative.' })
       const badDate = badPassengerDate(b.passengers)
@@ -385,6 +400,11 @@ async function handler(req, res) {
       if (!Object.keys(patch).length && passengers === undefined) {
         return res.status(400).json({ success: false, error: 'Nothing to update.' })
       }
+      for (const [label, v] of [['Travel date', patch.travel_date], ['Check-in date', patch.checkin_date], ['Passport expiry', patch.passport_expiry]]) {
+        if (v && !ISO_DATE.test(String(v))) {
+          return res.status(400).json({ success: false, error: `${label} must be a full date (year-month-day).` })
+        }
+      }
 
       const bid = encodeURIComponent(String(id))
       let updated
@@ -458,15 +478,20 @@ async function handler(req, res) {
         if (badEditDate) return res.status(400).json({ success: false, error: badEditDate })
         const rows = passengerRows(String(id), passengers)
         const existing = await db.select('booking_passengers',
-          `select=id,passport_number,passport_expiry&booking_id=eq.${bid}`)
+          `select=id,passport_number,passport_expiry,nationality,passport_issue_date,issuing_country&booking_id=eq.${bid}`)
         if (req.staff && req.staff.role !== 'owner') {
           const byId = new Map(existing.map(p => [p.id, p]))
           const sent = Array.isArray(passengers) ? passengers.filter(p => p && String(p.fullName || '').trim()) : []
           rows.forEach((row, i) => {
             const prev = byId.get(sent[i]?.id)
             if (prev) {
+              // Every masked field merges back when blank — a helper's
+              // round-trip of the masked read must never erase document data.
               if (!row.passport_number) row.passport_number = prev.passport_number
               if (!row.passport_expiry) row.passport_expiry = prev.passport_expiry
+              if (!row.nationality) row.nationality = prev.nationality
+              if (!row.passport_issue_date) row.passport_issue_date = prev.passport_issue_date
+              if (!row.issuing_country) row.issuing_country = prev.issuing_country
             }
           })
         }

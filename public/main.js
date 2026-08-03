@@ -9123,7 +9123,7 @@ async function renderKolTorahTab() {
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0;padding:8px;border-radius:6px;background:var(--bg-secondary);">
           <input class="form-input" id="ktShulContact_${s.id}" value="${escHtml(s.contact || '')}" placeholder="Contact / gabbai" style="min-height:0;padding:6px 9px;font-size:12px;min-width:170px;">
           <select class="form-input" id="ktShulCust_${s.id}" style="min-height:0;padding:6px 9px;font-size:12px;max-width:220px;">
-            <option value="">No wallet link</option>${customerOptions}
+            <option value="">No wallet link</option>${s.customerId ? customerOptions.replace(`value="${escHtml(String(s.customerId))}"`, '$& selected') : customerOptions}
           </select>
           <button class="btn btn-outline btn-sm" style="font-size:11px;" onclick="ktSaveShul('${s.id}')">💾 Save</button>
         </div>` : ''}
@@ -9242,12 +9242,11 @@ function ktFocusNewJob() {
 
 function ktToggleShulEdit(id) {
   if (ktEditShuls.has(id)) ktEditShuls.delete(id); else ktEditShuls.add(id);
-  renderKolTorahTab().then(() => {
-    // Preselect the current wallet link once the edit row exists.
-    const s = ktData?.shuls.find(x => x.id === id);
-    const sel = document.getElementById(`ktShulCust_${id}`);
-    if (s && sel && s.customerId) sel.value = s.customerId;
-  });
+  // The current wallet link is preselected IN the option markup: the old
+  // post-render sel.value assignment was lost on any intervening re-render,
+  // and saving with the picker silently back on "No wallet link" unlinked
+  // the shul's wallet (sweep 2026-08-02 #20).
+  renderKolTorahTab();
 }
 
 async function ktPost(body) {
