@@ -566,8 +566,9 @@ export default function Welcome() {
                   src={`${MAPS_EMBED}&hl=${lang === 'he' ? 'iw' : 'en'}`}
                   title={t.visitTitle} loading="lazy" allowFullScreen
                   referrerPolicy="no-referrer-when-downgrade" />
-                <a className="sk-btn sk-btn-sky sk-btn-sm sk-map-open" href={MAPS_URL}
-                  target="_blank" rel="noopener noreferrer">{t.openMaps} ↗</a>
+                {/* No own "open in Maps" button: Google's embed already renders
+                    its own link (localised via the iframe's hl param), and two
+                    buttons for one action read as a mistake (owner, 08-03). */}
               </div>
               <div className="sk-visit-info">
                 <div className="sk-visit-row">
