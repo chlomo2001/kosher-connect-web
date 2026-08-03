@@ -123,8 +123,14 @@ Safe (loop-eligible), ranked value ÷ effort:
 - [ ] **P1 · M** 🔒 — **Email delivery** go-live (Track A below) — provider + domain
       decision, `email_log` table, HOLD→TEST→LIVE. Unblocks receipts + portal
       sign-in + reminders. *DNS has lead time — decide first.*
-- [ ] **P2 · L** 🔒 — **myPOS K300 ↔ till** one-tap (native wrapper). Long pole =
-      myPOS developer-programme access; web-side plumbing can be stubbed now.
+- [ ] **P2 · L** 🔒 — **myPOS ↔ till** one-tap. Researched 08-03: the easy path
+      is the **ePOS API** (plain REST, server→terminal over the internet, no
+      cables/SDK) — but it supports only **Carbon / Ultra / Sigma**, and the
+      Cash Register Remote API lists Mini/Combo/Go/Integra; the shop's **K300
+      is on neither list**. Next step: ask myPOS support whether the K300 can
+      take any remote-trigger API; if no, the pragmatic route is a supported
+      terminal (e.g. Sigma) + free developers.mypos.com account + ePOS REST,
+      which lands on the `/api/pos/card-result` plumbing already stubbed.
 - [ ] **P2 · L** 🔒 — **Stripe** save-card + off-session charge + webhook (test keys
       first). Least urgent of the three; card-present already works.
 - [ ] **P2 · S** — **Phone-migration job logging**: "Contact transfer / phone
@@ -150,9 +156,15 @@ only carries our name once a profile exists).
       `hasMap` + `sameAs` on the `LocalBusiness` schema: the card's permanent
       Maps cid (decimal of 0xd095f9388a46f473, from the owner's place URL)
       plus the owner's share.google link.
-- [ ] **P2 · S** 🔒 — **Reviews habit**: the profile's review link, shortened,
-      on receipts/emails ("Happy with the service? Leave us a review"). Gated
+- [ ] **P2 · S** 🔒 — **Reviews habit**: the profile's review link —
+      `https://g.page/r/CXP0Roo4-ZXQEAI/review` (owner, 08-03) — on
+      receipts/emails ("Happy with the service? Leave us a review"). Gated
       on the email decision; the ask-text can be drafted any time.
+- [ ] **P3 · S** — **Map tile says "Hatsluche"** while the panel says Kosher
+      Connect (owner screenshot 08-03): the tile label likely comes from an
+      old auto-created record (Companies House name). Expected to self-heal
+      within days of verification; if a separate Hatsluche pin survives a
+      week, report it as a duplicate from its "Suggest an edit".
 - [ ] **P3 · S** — GBP "products/services" entries mirroring the welcome page's
       services list (rentals, SIM plans, virtual numbers, repairs, Kol Torah).
 
