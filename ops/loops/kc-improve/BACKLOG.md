@@ -133,6 +133,29 @@ Safe (loop-eligible), ranked value ÷ effort:
 - [ ] **P3 · S** 🔒 — **Gmail / Drive scan** — needs explicit owner go-ahead +
       scope (which accounts, read-only, what we're hunting) before any sweep.
 
+## Local presence (Google Business Profile)
+**VERIFIED 08-03** (owner screenshot: blue tick on "Kosher Connect, 421 Bury New
+Rd, Salford M7 4DE" in the Business Profile manager). The shop now controls its
+own card on Google Search + Maps — this is what the welcome page's Maps embed
+was waiting on (see the `MAPS_QUERY` comment in `pages/welcome.js`: the card
+only carries our name once a profile exists).
+- [ ] **P1 · S** 🔒 — **Fill the profile in** (owner, ~20 min, in the GBP manager):
+      opening hours (Su–Th 14:00–18:30 — keep in step with the `opening_hours`
+      settings key), website `https://www.kosher-connect.com/`, phone
+      0161 531 1386, category (mobile phone shop), the "left of Toy Zone, MMR
+      Group building, ring bell 5" arrival note, and 3–5 real photos (shopfront,
+      counter, rental phones). Profiles with photos + hours rank far better in
+      "phone shop near me".
+- [ ] **P2 · S** — **Point the JSON-LD at the profile**: add `sameAs` (the
+      Maps/GBP listing URL) + `hasMap` to the `LocalBusiness` schema in
+      `pages/welcome.js` so Google ties the site and the card together. Needs
+      the profile's public Maps URL from the owner first.
+- [ ] **P2 · S** 🔒 — **Reviews habit**: the profile's review link, shortened,
+      on receipts/emails ("Happy with the service? Leave us a review"). Gated
+      on the email decision; the ask-text can be drafted any time.
+- [ ] **P3 · S** — GBP "products/services" entries mirroring the welcome page's
+      services list (rentals, SIM plans, virtual numbers, repairs, Kol Torah).
+
 ## New business line
 - [ ] **P1 · L** 🔒 — **Kol Torah CD module** — needs a 20-min scoping answer:
       titles catalogue? per-shul stock/consignment? CD→MP3/SD conversion jobs?
@@ -281,6 +304,9 @@ deliberate.
 | 08-03 | **The modals, at last** — every eyeball round had stopped at the tab; teaching the harness to open dialogs (a660ae9, 9e20f1c: `modals.mjs`, 14 dialogs, wired into audit-all at 390px both themes) immediately found the customer card unusable at phone width (5ae1121): the whole tool strip — ✕ Close included — off the card's right edge (the headline's min-content was floored by an unbreakable account email and `.detail-header` never wrapped); wallet/history rows crushing "Rental · Nokia 105 rental — 2 weeks" six lines tall beside a centred date (`.history-main`, wraps ≤560px); "Balance: owes £45.00" wrapping thrice inside its badge. Desktop byte-identical. Two more seed traps paid for: `/api/ledger` needs the customer shape (`balance`/`entries`) beside the dashboard's `recent` (the stub strips `?customerId=`), and `/api/cashup` unseeded passes the success check then dies on `data.methods` | ✅ each: 195/195 ×2 + build + node --check + modal sweep clean ×2 themes + card re-measured (tools reachable, scrollX 0, rows 2-line) + 1280px header/rows unchanged | owner live-test pending |
 | 08-03 | **Customer-360 page** (owner's direct ask) — the profile grown from a pop-over into a real page at `/customers/<id>`: `pages/customers/[id].js` (same `requireStaffCookie` gate as every tab) serves the shell, main.js reads the second path segment on boot and on popstate, so refresh, Back/Forward and a link pasted to a colleague all land on the profile. One builder (`buildCustomerPanelHtml(c, mode)`) now renders both surfaces — the card is byte-identical except a new ⤢ tool — and the page adds Stripe-style Overview \| Activity sub-tabs: Activity unfolds the full timeline the card keeps in `<details>`, every record dated, filterable by category chips, lifetime spend alongside. `renderDetailPanel` repaints whichever surface is up, so every existing save-refresh works on the page unchanged; ⌘K verbs act on the page too. Helpers without the Customers tab can't reach it (boot gate + render guard) | ✅ 198/198 ×2 + build + node --check + harness: modals sweep clean ×2 themes incl. two new permanent `customer-page` entries (390+1280 screenshots eyeballed) + 10-point functional probe (card→⤢→page, refresh-stays-on-page, chips filter, breadcrumb back, no card re-pop, selection cleared) | owner live-test pending |
 | 08-03 | **⌘K context verbs** (0034941) — see the ticked idea-hunt item above. Verified by driving the palette in the harness: baseline unchanged with no card open, verbs render + rank first with one open, running one opens the right modal for the right customer, no overflow at 390px, no Recent pollution | ✅ 195/195 ×2 + build + node --check | owner live-test pending |
+
+| 08-03 | **Google Business Profile verified** (owner) — noted under "Local presence" above with the follow-ups (fill-in, JSON-LD sameAs/hasMap, review link, services). No code shipped yet | n/a (milestone) | owner |
+| 08-03 | **Wizz refund credit notes arrived** — 11 Wizz Air credit-note PDFs in the owner's Drive `wizz` folder, one per cancelled PNR, €27,550.71 total. Every PNR matches a Cancelled booking in the app. **This is the per-PNR "refund amount" data the £3,190 reconcile was blocked on** (amounts are per-PNR group totals in EUR; passed-on-to-customer status still unknown). One name mismatch: ZMKWJP invoice says Chaya Leifer, booking says Yitzhak Leifer | n/a (data) | awaiting owner go-ahead to post refund legs |
 
 Found 07-31, FIXED 07-31 (8a186a0) — see the log row above:
 - [x] **P2 · L** — **form controls with no programmatic label** — most sat under
