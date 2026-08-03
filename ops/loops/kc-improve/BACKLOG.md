@@ -168,6 +168,26 @@ only carries our name once a profile exists).
 - [ ] **P3 · S** — GBP "products/services" entries mirroring the welcome page's
       services list (rentals, SIM plans, virtual numbers, repairs, Kol Torah).
 
+## Suppliers & stock (owner ask 08-03 — "the business must track this all")
+The buy side is invisible today: stock arrives from wholesalers, some of it is
+defective and sits in a bag waiting to go back ("a few hundred quid of phones
+to return to the sender"), and nothing in the app knows. Shop tab tracks
+sell-side quantities only.
+- [ ] **P1 · M** — **v1: Suppliers + returns (RMA)** — a `suppliers` list
+      (name, contact, notes); a **supplier return** record: supplier, items
+      (free text or linked SKU/IMEI), claimed value £, status
+      `awaiting-send → sent → credited / replaced / written-off`, dates,
+      notes. Surfaces: a "Returns" card in Shop, a dashboard needs-attention
+      line while anything sits in `awaiting-send`/`sent` (that bag stops
+      being invisible). Migration + API + UI; no money posting in v1 — value
+      is a claim, not a ledger entry, until the credit actually arrives.
+- [ ] **P2 · M** 🔒 — **v2: goods-in (purchases)** — record deliveries
+      (supplier, date, lines → increments stock quantities, cost prices) so
+      stock levels come from arrivals, not hand edits — and margin per SKU
+      becomes knowable. Scope question for the owner: is tracking **what we
+      owe suppliers** (invoices/accounts payable) wanted too, or only the
+      stock movement?
+
 ## New business line
 - [ ] **P1 · L** 🔒 — **Kol Torah CD module** — needs a 20-min scoping answer:
       titles catalogue? per-shul stock/consignment? CD→MP3/SD conversion jobs?
