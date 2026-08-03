@@ -173,7 +173,7 @@ The buy side is invisible today: stock arrives from wholesalers, some of it is
 defective and sits in a bag waiting to go back ("a few hundred quid of phones
 to return to the sender"), and nothing in the app knows. Shop tab tracks
 sell-side quantities only.
-- [ ] **P1 · M** — **v1: Suppliers + returns (RMA)** — a `suppliers` list
+- [x] **P1 · M** — **v1: Suppliers + returns (RMA)** — a `suppliers` list
       (name, contact, notes); a **supplier return** record: supplier, items
       (free text or linked SKU/IMEI), claimed value £, status
       `awaiting-send → sent → credited / replaced / written-off`, dates,

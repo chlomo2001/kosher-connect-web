@@ -416,6 +416,33 @@
       "dueDate": "2026-08-04"
     }
   ],
+  "/api/supplier-returns": {
+    "success": true,
+    "suppliers": [
+      { "id": "sup1", "name": "TechTrade Wholesale", "contact": "0161 000 0000", "notes": "", "active": true },
+      { "id": "sup2", "name": "Nordic Handsets Ltd", "contact": "rep: Avi", "notes": "", "active": true }
+    ],
+    "returns": [
+      {
+        "id": "sr1", "supplierId": "sup1", "supplierName": "TechTrade Wholesale",
+        "items": "6× Nokia 105, screens dead", "imeis": "356789100000001\n356789100000002",
+        "claimedValue": 210, "status": "awaiting_send", "sentAt": null, "resolvedAt": null,
+        "notes": "bag under the counter", "createdAt": "2026-08-01T10:00:00Z"
+      },
+      {
+        "id": "sr2", "supplierId": "sup2", "supplierName": "Nordic Handsets Ltd",
+        "items": "2× Alcatel 1, no charge", "imeis": "",
+        "claimedValue": 56, "status": "sent", "sentAt": "2026-07-28", "resolvedAt": null,
+        "notes": "RMA-4471", "createdAt": "2026-07-27T09:00:00Z"
+      },
+      {
+        "id": "sr3", "supplierId": "sup1", "supplierName": "TechTrade Wholesale",
+        "items": "1× charger batch (wrong plug)", "imeis": "",
+        "claimedValue": 30, "status": "credited", "sentAt": "2026-07-10", "resolvedAt": "2026-07-18",
+        "notes": "", "createdAt": "2026-07-09T15:00:00Z"
+      }
+    ]
+  },
   "/api/shop": {
     "success": true,
     "items": [

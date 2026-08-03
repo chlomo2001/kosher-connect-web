@@ -8310,6 +8310,17 @@ async function saveNewServiceOrder() {
 
 let shopItems = [];
 let shopSales = [];
+// Buy side v1 — suppliers + returns going back to them (RMA).
+let suppliers = [];
+let supplierReturns = [];
+const SUPPLIER_RETURN_STATUS = {
+  awaiting_send: { label: '📦 To send',     color: 'var(--danger-ink)' },
+  sent:          { label: '📮 Sent',        color: 'var(--warning-ink)' },
+  credited:      { label: '✅ Credited',    color: 'var(--success-ink)' },
+  replaced:      { label: '🔁 Replaced',    color: 'var(--success-ink)' },
+  written_off:   { label: '🗑 Written off', color: 'var(--muted)' },
+};
+const SUPPLIER_RETURN_OPEN = ['awaiting_send', 'sent'];
 
 const STOCK_CATEGORY_LABELS = { phone: '📱 Phone', accessory: '🔌 Accessory', sim: '💳 SIM', other: '📦 Other' };
 // What the shelf actually carries (owner's list) — offered as type-ahead
@@ -8324,12 +8335,17 @@ const STOCK_TYPE_SUGGESTIONS = [
 async function renderShopTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = loadingHtml('Loading shop…');
-  const data = await kcFetch('/api/shop').then(r => r.json()).catch(() => null);
+  const [data, retData] = await Promise.all([
+    kcFetch('/api/shop').then(r => r.json()).catch(() => null),
+    // Returns are additive: if this fetch fails the shop still renders.
+    kcFetch('/api/supplier-returns').then(r => r.json()).catch(() => null),
+  ]);
   if (!data || !data.success) {
     content.innerHTML = errorHtml(data?.error || 'Couldn’t load the shop');
     return;
   }
   shopItems = data.items; shopSales = data.sales;
+  if (retData?.success) { suppliers = retData.suppliers; supplierReturns = retData.returns; }
 
   const today = localISO();
   const active = shopItems.filter(i => i.active);
@@ -8373,6 +8389,32 @@ async function renderShopTab() {
         </td>
       </tr>`).join('');
 
+  // Returns to supplier: open ones first (the bag by the counter), then the
+  // last few settled ones for reference. Money shown is a claim, not ledger.
+  const openReturns = supplierReturns.filter(r => SUPPLIER_RETURN_OPEN.includes(r.status));
+  const doneReturns = supplierReturns.filter(r => !SUPPLIER_RETURN_OPEN.includes(r.status));
+  const openClaim = openReturns.reduce((s, r) => s + (r.claimedValue || 0), 0);
+  const returnRow = (r) => {
+    const st = SUPPLIER_RETURN_STATUS[r.status] || { label: r.status, color: 'var(--muted)' };
+    return `
+      <div class="history-item history-flat">
+        <div style="flex:1;min-width:0;">
+          <div class="history-desc"><strong>${escHtml(r.supplierName || '?')}</strong> — ${escHtml(r.items)}</div>
+          <div style="font-size:11px;color:var(--muted);">
+            <span style="color:${st.color};font-weight:600;">${st.label}</span>
+            ${r.sentAt ? ' · sent ' + fmtDate(r.sentAt) : ''}${r.resolvedAt ? ' · settled ' + fmtDate(r.resolvedAt) : ''}
+            ${r.notes ? ' · ' + escHtml(r.notes) : ''}
+          </div>
+        </div>
+        <div class="history-amount" style="margin:0 10px;">${r.claimedValue === null ? '—' : fmtGbp(r.claimedValue)}</div>
+        <button class="action-btn" aria-label="Manage return to ${escHtml(r.supplierName || 'supplier')}"
+          onclick="openSupplierReturnModal('${r.id}')">✏️</button>
+      </div>`;
+  };
+  const returnRows = supplierReturns.length === 0
+    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">Nothing waiting to go back. When defective stock has to return to a wholesaler, record it here so it isn't forgotten.</div>`
+    : openReturns.map(returnRow).join('') + doneReturns.slice(0, 5).map(returnRow).join('');
+
   const saleRows = shopSales.length === 0
     ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No sales recorded yet.</div>`
     : shopSales.slice(0, 25).map(s => `
@@ -8396,9 +8438,10 @@ async function renderShopTab() {
       <div class="stat-card"><div class="stat-label">All-Time Sales</div><div class="stat-value">${fmtGbp(revenue)}</div></div>
     </div>
     ${lowBanner}
-    <div style="display:flex;gap:10px;margin-bottom:14px;">
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
       <button class="btn btn-primary" onclick="openSaleModal()">🧾 Open Till</button>
       <button class="btn btn-outline" onclick="openStockItemModal()">➕ Add Item</button>
+      <button class="btn btn-outline" onclick="openSupplierReturnModal()">📤 Return to supplier</button>
     </div>
     <div class="dash-cols">
       <div class="table-card">
@@ -8411,11 +8454,111 @@ async function renderShopTab() {
           <tbody>${itemRows}</tbody>
         </table>
       </div>
-      <div class="table-card" style="padding:8px 18px 14px;">
-        <div class="section-divider" style="margin-top:12px;">Recent sales</div>
-        <div>${saleRows}</div>
+      <div>
+        <div class="table-card" style="padding:8px 18px 14px;margin-bottom:14px;">
+          <div class="section-divider" style="margin-top:12px;">Returns to supplier${openReturns.length
+            ? ` <span style="color:var(--danger-ink);font-weight:600;">· ${openReturns.length} open${openClaim ? ' · ' + fmtGbp(openClaim) + ' claimed' : ''}</span>` : ''}</div>
+          <div>${returnRows}</div>
+        </div>
+        <div class="table-card" style="padding:8px 18px 14px;">
+          <div class="section-divider" style="margin-top:12px;">Recent sales</div>
+          <div>${saleRows}</div>
+        </div>
       </div>
     </div>`;
+}
+
+// ── Returns to supplier (RMA) — create + manage in one modal ──
+function openSupplierReturnModal(retId = null) {
+  const r = retId ? supplierReturns.find(x => x.id === retId) : null;
+  const supplierOptions = suppliers.filter(s => s.active || (r && s.id === r.supplierId))
+    .map(s => `<option value="${s.id}" ${r?.supplierId === s.id ? 'selected' : ''}>${escHtml(s.name)}</option>`).join('');
+  showDynamicModal(`
+    <div class="modal-title">${r ? '📤 Manage Return' : '📤 Return to Supplier'}</div>
+    <div class="form-grid">
+      <div class="form-group form-full">
+        <label class="form-label">Supplier *</label>
+        <select class="form-input" id="srSupplier" onchange="document.getElementById('srNewSupplierWrap').style.display = this.value === '__new' ? '' : 'none'">
+          ${supplierOptions}
+          <option value="__new" ${suppliers.length === 0 ? 'selected' : ''}>➕ New supplier…</option>
+        </select>
+      </div>
+      <div class="form-group form-full" id="srNewSupplierWrap" style="${suppliers.length === 0 && !r ? '' : 'display:none;'}">
+        <label class="form-label">New supplier name *</label>
+        <input class="form-input" id="srNewSupplier" placeholder="e.g. TechTrade Wholesale">
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">What's going back *</label>
+        <textarea class="form-input" id="srItems" rows="2"
+          placeholder="e.g. 6× Nokia 105, screens dead">${escHtml(r?.items || '')}</textarea>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">IMEIs <span style="color:var(--muted);font-weight:400;">(optional, one per line)</span></label>
+        <textarea class="form-input" id="srImeis" rows="2" style="direction:ltr;">${escHtml(r?.imeis || '')}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Claimed value £</label>
+        <input class="form-input" type="number" step="0.01" min="0" id="srValue" value="${r?.claimedValue ?? ''}">
+      </div>
+      ${r ? `
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-input" id="srStatus">
+          ${Object.entries(SUPPLIER_RETURN_STATUS).map(([k, v]) =>
+            `<option value="${k}" ${r.status === k ? 'selected' : ''}>${v.label}</option>`).join('')}
+        </select>
+      </div>` : `
+      <div class="form-group">
+        <label class="form-label">&nbsp;</label>
+        <div style="font-size:12px;color:var(--muted);padding-top:8px;">Starts as “📦 To send”.</div>
+      </div>`}
+      <div class="form-group form-full">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="srNotes" value="${escHtml(r?.notes || '')}" placeholder="courier ref, who agreed the return…">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSupplierReturn(${r ? `'${r.id}'` : 'null'})">💾 Save</button>
+    </div>
+  `);
+}
+
+async function saveSupplierReturn(retId) {
+  let supplierId = document.getElementById('srSupplier').value;
+  if (supplierId === '__new') {
+    const name = document.getElementById('srNewSupplier').value.trim();
+    if (!name) { toast('Give the new supplier a name.', 'error'); return; }
+    const res = await kcFetch('/api/supplier-returns', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ op: 'supplier', name }),
+    }).then(r => r.json()).catch(() => null);
+    if (!res || !res.success) { toast(res?.error || 'Could not add the supplier.', 'error'); return; }
+    supplierId = res.supplier.id;
+  }
+  const payload = {
+    op: 'return',
+    supplierId,
+    items: document.getElementById('srItems').value.trim(),
+    imeis: document.getElementById('srImeis').value.trim(),
+    claimedValue: document.getElementById('srValue').value === '' ? null : parseFloat(document.getElementById('srValue').value),
+    notes: document.getElementById('srNotes').value.trim(),
+  };
+  if (!payload.items) { toast('Say what is going back.', 'error'); return; }
+  if (retId) {
+    payload.id = retId;
+    payload.status = document.getElementById('srStatus').value;
+    delete payload.supplierId; // v1: a return stays with the supplier it was recorded against
+  }
+  const res = await kcFetch('/api/supplier-returns', {
+    method: retId ? 'PUT' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not save the return.', 'error'); return; }
+  closeDynamicModal();
+  toast(retId ? 'Return updated.' : 'Return recorded — it will nag from the dashboard until settled.', 'success');
+  renderShopTab();
 }
 
 function openStockItemModal(itemId = null) {
@@ -11047,26 +11190,28 @@ function hebrewDateString(d) {
 // The dashboard paints INSTANTLY from what's already in memory (rentals,
 // phones, sims, bookings, repairs) plus the last-known money/tasks, then
 // repaints once the fresh ledger + tasks arrive. No blank "Loading…" wait.
-let dashCache = { money: null, tasks: null, shop: null };
+let dashCache = { money: null, tasks: null, shop: null, returns: null };
 
 async function renderDashboardTab() {
-  dashPaint(dashCache.money, dashCache.tasks, dashCache.money === null, dashCache.shop);
+  dashPaint(dashCache.money, dashCache.tasks, dashCache.money === null, dashCache.shop, dashCache.returns);
 
   const today = localISO();
-  const [ledgerSummary, tasksData, shopData] = await Promise.all([
+  const [ledgerSummary, tasksData, shopData, retData] = await Promise.all([
     kcFetch('/api/ledger?since=' + today).then(r => r.ok ? r.json() : null).catch(() => null),
     window.api.getTasks().catch(() => []),
     kcFetch('/api/shop').then(r => r.ok ? r.json() : null).catch(() => null),
+    kcFetch('/api/supplier-returns').then(r => r.ok ? r.json() : null).catch(() => null),
   ]);
   dashCache = {
     money: ledgerSummary?.success ? ledgerSummary : dashCache.money,
     tasks: Array.isArray(tasksData) ? tasksData : (dashCache.tasks || []),
     shop: shopData?.success ? shopData.items : dashCache.shop,
+    returns: retData?.success ? retData.returns : dashCache.returns,
   };
-  if (currentTab === 'dashboard') dashPaint(dashCache.money, dashCache.tasks, false, dashCache.shop);
+  if (currentTab === 'dashboard') dashPaint(dashCache.money, dashCache.tasks, false, dashCache.shop, dashCache.returns);
 }
 
-function dashPaint(money, tasksList2, stillLoading, shopList) {
+function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   const content = document.getElementById('mainContent');
   const now = new Date();
   const today = localISO(now);
@@ -11183,6 +11328,16 @@ function dashPaint(money, tasksList2, stillLoading, shopList) {
     const names = lowStock.slice(0, 3).map(i => `${escHtml(i.model)} (${i.quantity})`).join(', ');
     attention.push(['📦',
       `<strong>${lowStock.length} item${lowStock.length === 1 ? '' : 's'} low on stock</strong> — ${names}${lowStock.length > 3 ? ` + ${lowStock.length - 3} more` : ''}`,
+      () => goToTab('shop')]);
+  }
+  // Open supplier returns: the bag of defective stock waiting to go back.
+  // One rolled-up line (like low stock) so it nags until the supplier settles.
+  const openRets = (returnsList || []).filter(r => SUPPLIER_RETURN_OPEN.includes(r.status));
+  if (openRets.length) {
+    const claim = openRets.reduce((s, r) => s + (r.claimedValue || 0), 0);
+    const names = [...new Set(openRets.map(r => r.supplierName).filter(Boolean))].slice(0, 2).map(escHtml).join(', ');
+    attention.push(['📤',
+      `<strong>${openRets.length} return${openRets.length === 1 ? '' : 's'} to supplier open</strong>${claim ? ` — ${fmtGbp(claim)} claimed` : ''}${names ? ` (${names})` : ''}`,
       () => goToTab('shop')]);
   }
   highTasks.slice(0, 5).forEach(t => attention.push(['❗', escHtml(t.title), () => goToTab('tasks')]));

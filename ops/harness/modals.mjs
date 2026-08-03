@@ -48,6 +48,8 @@ const MODALS = [
   ['draft-reminder','customers', `openDraftReminderModal(window.__kc.customer)`],
   ['log-comm',      'customers', `openLogCommModal(window.__kc.customer)`],
   ['cashup',        'dashboard', `openCashupModal()`],
+  ['supplier-return','shop',     `openSupplierReturnModal()`],
+  ['supplier-return-manage','shop', `openSupplierReturnModal(window.__kc.supplierReturn)`],
   // Not modals, but the same eyes-on treatment: the Customer-360 page
   // (/customers/<id>) renders in the content column — .kc-cpage is in the
   // geometry selector below so both sub-tabs get measured and screenshotted.
@@ -70,6 +72,7 @@ await page.evaluate(async () => {
     customer: await first('/api/customers', 'customers'),
     rental: await first('/api/rentals', 'rentals'),
     sim: await first('/api/sims', 'sims'),
+    supplierReturn: await first('/api/supplier-returns', 'returns'),
   }
 })
 
