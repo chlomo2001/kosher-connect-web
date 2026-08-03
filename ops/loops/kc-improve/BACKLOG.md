@@ -108,6 +108,18 @@ Safe (loop-eligible), ranked value ÷ effort:
       (Loyverse.) *money persistence — careful design.*
 
 ## UX / smoothness / delight
+- [ ] **P1 · M** — **"Google-feel" polish — NEXT CYCLE (owner ask 08-03**, after
+      "why does business.google.com feel so much nicer/richer/smoother?").
+      Adopt the affordable parts of that feel, in order:
+      1. **Nothing pops** — tab/content transitions: cross-fade (+ a few px
+         slide) using the existing motion tokens instead of one-frame
+         innerHTML swaps; respect `prefers-reduced-motion`.
+      2. **Waiting is disguised** — skeleton shapes (rows/cards mirroring the
+         incoming layout) on the heavier tabs, replacing "Loading…" text.
+      3. As far as it goes: sweep the worst inline-style micro-decisions into
+         the token/class system so screens stop disagreeing in tiny ways.
+      Start with the improve-animations audit to rank the worst offenders;
+      verify in the visual harness at 390px + desktop, light + dark.
 - [ ] **P1 · S** — Owner live-test pass on this session's work (dark theme retune,
       login backdrop, dashboard clock+charts, dotted cards, ⌘K quick-actions,
       floating timer). All offline-verified; needs the real-browser sign-off.
