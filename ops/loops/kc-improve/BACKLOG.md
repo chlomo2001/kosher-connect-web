@@ -146,10 +146,10 @@ only carries our name once a profile exists).
       Group building, ring bell 5" arrival note, and 3–5 real photos (shopfront,
       counter, rental phones). Profiles with photos + hours rank far better in
       "phone shop near me".
-- [ ] **P2 · S** — **Point the JSON-LD at the profile**: add `sameAs` (the
-      Maps/GBP listing URL) + `hasMap` to the `LocalBusiness` schema in
-      `pages/welcome.js` so Google ties the site and the card together. Needs
-      the profile's public Maps URL from the owner first.
+- [x] **P2 · S** — **Point the JSON-LD at the profile** — DONE 08-03 (b154bba).
+      `hasMap` + `sameAs` on the `LocalBusiness` schema: the card's permanent
+      Maps cid (decimal of 0xd095f9388a46f473, from the owner's place URL)
+      plus the owner's share.google link.
 - [ ] **P2 · S** 🔒 — **Reviews habit**: the profile's review link, shortened,
       on receipts/emails ("Happy with the service? Leave us a review"). Gated
       on the email decision; the ask-text can be drafted any time.
