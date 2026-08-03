@@ -16,4 +16,5 @@ scratchpad/
 # Offline harness build output (regenerate: node ops/harness/render.mjs)
 ops/harness/app.html
 ops/harness/shot_*.png
+ops/harness/modal_*.png
 ops/harness/public_*.html
