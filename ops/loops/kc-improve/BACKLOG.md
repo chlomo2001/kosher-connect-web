@@ -186,7 +186,11 @@ sell-side quantities only.
       stock levels come from arrivals, not hand edits — and margin per SKU
       becomes knowable. Scope question for the owner: is tracking **what we
       owe suppliers** (invoices/accounts payable) wanted too, or only the
-      stock movement?
+      stock movement? *Owner probed "why not AP?" (08-03). Recommended a
+      lightweight middle path: goods-in carries invoice total + paid/unpaid,
+      credited returns offset it, per-supplier running balance — no aging
+      reports or bank reconciliation; the accountant's books stay the truth.
+      Full AP only if the owner asks for it explicitly. Decision pending.*
 
 ## New business line
 - [ ] **P1 · L** 🔒 — **Kol Torah CD module** — needs a 20-min scoping answer:
