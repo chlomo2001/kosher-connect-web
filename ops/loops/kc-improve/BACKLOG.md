@@ -108,18 +108,26 @@ Safe (loop-eligible), ranked value ÷ effort:
       (Loyverse.) *money persistence — careful design.*
 
 ## UX / smoothness / delight
-- [ ] **P1 · M** — **"Google-feel" polish — NEXT CYCLE (owner ask 08-03**, after
+- [ ] **P1 · L** — **"Google-feel" polish — NEXT CYCLE (owner ask 08-03**, after
       "why does business.google.com feel so much nicer/richer/smoother?").
-      Adopt the affordable parts of that feel, in order:
+      Owner wants the **first three** of the four gaps, as far as they go
+      (the fourth — Google's headcount — is out of reach by definition):
       1. **Nothing pops** — tab/content transitions: cross-fade (+ a few px
          slide) using the existing motion tokens instead of one-frame
          innerHTML swaps; respect `prefers-reduced-motion`.
       2. **Waiting is disguised** — skeleton shapes (rows/cards mirroring the
          incoming layout) on the heavier tabs, replacing "Loading…" text.
-      3. As far as it goes: sweep the worst inline-style micro-decisions into
-         the token/class system so screens stop disagreeing in tiny ways.
+      3. **A deep design system** — pre-decide the details once, app-wide:
+         one spacing grid enforced (audit the odd paddings), a strict type
+         ramp (collapse the ad-hoc font-sizes to the scale), a motion spec
+         (named easing/duration tokens per motion kind — enter, exit,
+         emphasis — used everywhere), elevation/border rules, and sweep
+         inline-style micro-decisions into the token/class system so no
+         screen disagrees with another in the small ways. docs/DESIGN.md is
+         the contract; extend it as tokens land.
       Start with the improve-animations audit to rank the worst offenders;
-      verify in the visual harness at 390px + desktop, light + dark.
+      verify in the visual harness at 390px + desktop, light + dark. Likely
+      2–3 sessions: system + tokens first, then surfaces adopt it.
 - [ ] **P1 · S** — Owner live-test pass on this session's work (dark theme retune,
       login backdrop, dashboard clock+charts, dotted cards, ⌘K quick-actions,
       floating timer). All offline-verified; needs the real-browser sign-off.
