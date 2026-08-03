@@ -9849,7 +9849,8 @@ const PALETTE_COMMANDS = [
   { icon: '🛂', label: 'Customers with passport on file', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'passport'; }, renderTableRows) },
   { icon: '📶', label: 'SIMs that renew this week', sub: 'view', run: () => filterView('sim', () => { simFilterStatus = 'week'; simFilterPay = 'all'; }, renderSimRows) },
   { icon: '🔧', label: 'Repairs waiting for collection', sub: 'view', run: () => filterView('repairs', () => { kcView('repairs').filter = 'ready'; }) },
-  { icon: '💳', label: 'Payment / top-up for open customer', sub: 'context', run: () => selectedId ? openWalletModal(selectedId) : toast('Open a customer first, then run this.', 'warning') },
+  // (the old one-off 'Payment / top-up for open customer' entry is superseded
+  // by paletteContextVerbs — every card verb now surfaces automatically)
   // ── Admin (hidden for helpers) ──
   { icon: '📊', label: 'Business summary (revenue)', sub: 'admin', admin: true, run: () => openBusinessSummary() },
   { icon: '⚙️', label: 'Run automations now', sub: 'admin', admin: true, run: () => runSweepsNow() },
@@ -9884,6 +9885,14 @@ function paletteSearch(q) {
   const commands = visibleCommands();
   if (!needle) return commands.slice(0, 9);
 
+  // Verbs for the open customer card outrank everything: with a card open,
+  // "pay" should mean THIS customer's payment before any generic command.
+  const ctx = paletteContextVerbs();
+  if (ctx) {
+    for (const v of ctx.verbs) {
+      if (v.label.toLowerCase().includes(needle)) out.push({ ...v, sub: `for ${ctx.name}`, kind: 'ctx' });
+    }
+  }
   for (const c of commands) {
     if (c.label.toLowerCase().includes(needle)) { out.push(c); if (out.length >= 6) break; }
   }
@@ -10032,6 +10041,37 @@ function paletteRun(i) {
   if (r) { pushRecent(r); r.run(); }
 }
 
+// ── Context verbs (⌘K) — act on the record you're looking at, not just
+// navigate (Linear pattern). With a customer card open, the palette leads
+// with verbs for THAT customer, and a typed search matches them first —
+// ⌘K "pay" ↵ takes the payment without hunting for a button. Every verb is
+// an existing card action; opening one over the card is exactly what the
+// card's own buttons do. pushRecent ignores these (kind 'ctx' isn't
+// navigable), so they never pollute Recent.
+function paletteContextVerbs() {
+  const card = document.getElementById('customerCard');
+  if (!card || card.classList.contains('hidden') || !selectedId) return null;
+  const c = customers.find((x) => x.id === selectedId);
+  if (!c) return null;
+  const id = c.id;
+  return {
+    name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'this customer',
+    verbs: [
+      { icon: '💰', label: 'Record payment / credit', run: () => openWalletModal(id) },
+      { icon: '📱', label: 'New rental', run: () => openNewRentalModal(id) },
+      { icon: '✉️', label: 'Draft reminder', run: () => openDraftReminderModal(id) },
+      { icon: '📞', label: 'Log call / note', run: () => openLogCommModal(id) },
+      { icon: '⏰', label: 'Remind me', run: () => openRemindModal('customer', id) },
+      { icon: '✏️', label: 'Edit details', run: () => openEditModal(id) },
+    ],
+  };
+}
+window.paletteCtxRun = (i) => {
+  const ctx = paletteContextVerbs();
+  closePalette();
+  if (ctx && ctx.verbs[i]) ctx.verbs[i].run();
+};
+
 // Spotlight-style quick actions — the common "create" commands as icon tiles,
 // shown while the palette query is empty (hidden the moment you start typing).
 function paletteQuickItems() { return PALETTE_COMMANDS.filter(c => c.sub === 'create'); }
@@ -10050,6 +10090,14 @@ function fillPaletteQuick() {
     `<span class="pq-pin${on ? ' on' : ''}" role="button" tabindex="0" aria-label="${title}" title="${title}"
         onclick="event.stopPropagation();${call}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();${call}}">📌</span>`;
   let html = '';
+  const ctx = paletteContextVerbs();
+  if (ctx) {
+    html += `<div class="palette-quick-label">For ${escHtml(ctx.name)}</div><div class="palette-quick-row">` +
+      ctx.verbs.map((v, i) =>
+        `<button type="button" class="palette-quick-card" onclick="paletteCtxRun(${i})">
+          <span class="pq-icon">${v.icon}</span><span class="pq-label">${escHtml(v.label)}</span>
+        </button>`).join('') + `</div>`;
+  }
   if (pinnedNav.length) {
     html += `<div class="palette-quick-label">Pinned</div><div class="palette-quick-row">` +
       pinnedNav.map((r, i) => navCard(`palettePinRun(${i})`, r, pin(`paletteUnpin(${i})`, true, 'Unpin'))).join('') + `</div>`;
