@@ -63,7 +63,10 @@ node ops/harness/modals.mjs --theme dark --only customer-card
 The tab audits stop at the tab: four rounds of eyeballing never opened a
 modal, and the first run of this found the customer card's whole tool strip
 (✕ Close included) off the right edge of a 390px screen. Opens each big
-modal, screenshots it (`modal_<name>_<theme>_<width>.png` here, gitignored),
+modal — plus the Customer-360 page (`customer-page` / `customer-page-log`),
+which is not a modal but gets the same geometry + screenshot treatment via
+its `.kc-cpage` panel — screenshots it (`modal_<name>_<theme>_<width>.png`
+here, gitignored),
 and flags a box that leaves the viewport, scrolls sideways, or has children
 overhanging its right edge. A ✓ means the geometry is sane — it does NOT
 mean the modal reads well. The screenshots are the deliverable; look at them.

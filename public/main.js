@@ -266,6 +266,13 @@ function sortCustomersAZ() {
 }
 let selectedId = null;
 let currentTab = 'customers';
+// Customer-360 page state: non-null while the full-page profile
+// (/customers/<id>) is what the content column is showing. The card overlay
+// and the page never show the same customer at once — renderDetailPanel
+// redirects to the page when it's up.
+let customerPageId = null;
+let customerPageTab = 'overview'; // overview | activity
+let customerPageCat = 'all';      // activity-log category filter
 let searchTerm = '';
 let customerSort = 'name'; // name | name_desc | owed | recent | services
 let customerFilter = 'all'; // all | rental | flight | sim | vn | repair | arrears | passport
@@ -355,8 +362,17 @@ async function initApp() {
     startTab = allowedTabs.includes('dashboard') ? 'dashboard' : allowedTabs[0];
   }
   syncNavActive(startTab);
-  pushTabUrl(startTab, true); // canonicalise the address bar without a history entry
-  renderTab(startTab);
+  // /customers/<id> deep-link: open the full-page profile, not the list.
+  // (startTab already passed the allowedTabs gate above, so a helper without
+  // the Customers tab never reaches the profile either.)
+  const startCustomer = startTab === 'customers' ? customerIdFromPath() : null;
+  if (startCustomer) {
+    renderCustomerPage(startCustomer);
+    pushCustomerUrl(startCustomer, true);
+  } else {
+    pushTabUrl(startTab, true); // canonicalise the address bar without a history entry
+    renderTab(startTab);
+  }
   hideBootLoader(); // first tab painted — reveal the app
 
   setupNav();
@@ -443,6 +459,19 @@ function pushTabUrl(tab, replace) {
   const url = tabUrl(tab);
   if (location.pathname === url) return; // already there — no duplicate entry
   try { history[replace ? 'replaceState' : 'pushState']({ kcTab: tab }, '', url); }
+  catch { /* history API blocked (e.g. sandboxed) — navigation still works */ }
+}
+// The Customer-360 page lives one segment deeper: /customers/<id>.
+// pages/customers/[id].js serves the same shell for it, so a refresh or a
+// link pasted to a colleague lands on the profile, not the list.
+function customerIdFromPath() {
+  const parts = (location.pathname || '/').replace(/^\/+|\/+$/g, '').split('/');
+  return parts[0] === 'customers' && parts[1] ? decodeURIComponent(parts[1]) : null;
+}
+function pushCustomerUrl(id, replace) {
+  const url = '/customers/' + encodeURIComponent(id);
+  if (location.pathname === url) return; // already there — no duplicate entry
+  try { history[replace ? 'replaceState' : 'pushState']({ kcTab: 'customers', kcCustomer: String(id) }, '', url); }
   catch { /* history API blocked (e.g. sandboxed) — navigation still works */ }
 }
 function syncNavActive(tab) {
@@ -545,7 +574,11 @@ function setupNav() {
     }
     syncNavActive(tab);
     currentTab = tab;
-    renderTab(tab);
+    // Back/Forward can land on a profile URL (/customers/<id>) as well as a
+    // tab — re-open whichever the address now names.
+    const cid = tab === 'customers' ? customerIdFromPath() : null;
+    if (cid) renderCustomerPage(cid);
+    else renderTab(tab);
   });
 }
 
@@ -589,6 +622,10 @@ function renderTab(tab) {
   // direct renderTab() on first load), so async repaints (the dashboard's
   // fresh-money pass) don't skip because currentTab still said 'customers'.
   currentTab = tab;
+  // Leaving the full-page profile via any nav: drop the page state AND the
+  // selection — otherwise renderCustomersTab would see selectedId and pop the
+  // card overlay open the moment the list renders.
+  if (customerPageId) { customerPageId = null; selectedId = null; }
   document.body.classList.remove('pos-mode'); // leaving the till via any nav
   const searchBox = document.getElementById('searchBox');
   const btnNew = document.getElementById('btnNewCustomer');
@@ -3791,11 +3828,13 @@ function customerNextBestAction(c, balance) {
   return null;
 }
 
-function renderDetailPanel(id) {
-  const c = customers.find(x => x.id === id);
-  if (!c) return;
-  const container = document.getElementById('detailPanelContainer');
-  if (!container) return;
+// Everything the profile shows, built once and worn two ways: mode 'card' is
+// the pop-over the list opens (compact, full history folded into <details>),
+// mode 'page' is the Customer-360 page at /customers/<id> — same header and
+// stats, then Overview | Activity sub-tabs, and no ✕ (the breadcrumb above
+// the panel is the way back).
+function buildCustomerPanelHtml(c, mode = 'card') {
+  const isPage = mode === 'page';
   const lifecycle = customerLifecycle(c);
 
   const initials = ((c.firstName || '?')[0] + (c.lastName || '?')[0]).toUpperCase();
@@ -3916,25 +3955,28 @@ function renderDetailPanel(id) {
           </div>`).join('')}
       </div>` : '';
 
-  // Full activity timeline (Customer 360).
+  // Full activity timeline (Customer 360). One row builder serves both the
+  // card's folded history (no date column — the card is narrow) and the
+  // page's Activity tab (with the date: a log without dates isn't a log).
   const timeline = buildCustomerTimeline(c);
   const catCounts = timeline.reduce((m, e) => (m[e.cat] = (m[e.cat] || 0) + 1, m), {});
   const timelineSummary = Object.entries(catCounts).map(([k, n]) => `${n} ${k.toLowerCase()}${n === 1 ? '' : 's'}`).join(' · ');
   const lifetimeSpend = timeline.reduce((s, e) => s + (Number(e.amount) || 0), 0);
-  const timelineHtml = timeline.length === 0
-    ? `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No activity yet.</div>`
-    : timeline.map(e => `
+  const timelineRow = (e, withDate) => `
         <div class="history-item" style="align-items:flex-start;gap:8px;">
           <span style="width:20px;flex-shrink:0;text-align:center;">${e.icon}</span>
           <div style="flex:1;min-width:0;">
             <div style="font-size:13px;color:var(--text);">${escHtml(e.title)}</div>
             <div style="font-size:11px;color:var(--muted);">${escHtml(e.cat)}${e.sub ? ' · ' + escHtml(e.sub) : ''}</div>
           </div>
+          ${withDate && e.date ? `<span style="font-size:11px;color:var(--muted);white-space:nowrap;">${fmtDate(e.date)}</span>` : ''}
           ${e.amount ? `<span style="font-size:12px;color:var(--muted);white-space:nowrap;">${fmtGbp(Number(e.amount))}</span>` : ''}
-        </div>`).join('');
+        </div>`;
+  const timelineHtml = timeline.length === 0
+    ? `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No activity yet.</div>`
+    : timeline.map(e => timelineRow(e, false)).join('');
 
-  const panelHtml = `
-    <div class="detail-panel" id="detailPanel">
+  const headerHtml = `
       <div class="detail-header">
         <div class="avatar">${initials}</div>
         <div class="detail-headline">
@@ -3961,11 +4003,13 @@ function renderDetailPanel(id) {
             <button class="card-tool" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer" aria-label="Set reminder">⏰</button>
             ${(!currentStaff || currentStaff.role === 'owner') ? `<button class="card-tool" onclick="openElidModal('${c.id}')" title="Look up this customer's ELID (telecom) balance & status" aria-label="ELID lookup">📡</button>` : ''}
             <button class="card-tool" onclick="openEditModal('${c.id}')" title="Edit customer" aria-label="Edit customer">✏️</button>
+            ${isPage ? '' : `<button class="card-tool" onclick="openCustomerPage('${c.id}')" title="Open as a full page — own link, refresh-safe, shareable with a colleague" aria-label="Open full profile page">⤢</button>`}
           </span>
-          <button class="card-close" onclick="dismissCustomerCard()" title="Close" aria-label="Close">✕</button>
+          ${isPage ? '' : `<button class="card-close" onclick="dismissCustomerCard()" title="Close" aria-label="Close">✕</button>`}
         </div>
-      </div>
+      </div>`;
 
+  const statsHtml = `
       <div class="detail-stats">
         <div class="detail-stat">
           <div class="detail-stat-label" id="cardBalanceLabel">Wallet balance</div>
@@ -3979,8 +4023,9 @@ function renderDetailPanel(id) {
           <div class="detail-stat-label">Virtual Numbers</div>
           <div class="detail-stat-value" style="color:var(--vn);">${activeVNs}</div>
         </div>
-      </div>
+      </div>`;
 
+  const overviewHtml = `
       <div id="nbaStrip-${c.id}"></div>
       ${tripHtml}
       ${notesHtml}
@@ -3997,16 +4042,18 @@ function renderDetailPanel(id) {
       <div class="section-divider">📄 Documents</div>
       <div id="docsSection-${c.id}" style="margin-bottom:18px;">
         <div style="color:var(--muted);font-size:13px;padding:6px 0;">Loading documents…</div>
-      </div>
+      </div>`;
 
+  const historyDetailsHtml = `
       <details style="margin-top:18px;margin-bottom:6px;">
         <summary style="cursor:pointer;font-weight:600;color:var(--text);font-size:13px;padding:6px 0;border-top:1px solid var(--border);">
           📋 Full history — ${timeline.length} record${timeline.length === 1 ? '' : 's'}${lifetimeSpend > 0 ? ` · ${fmtGbp(lifetimeSpend)} lifetime` : ''}
           ${timelineSummary ? `<div style="font-weight:400;color:var(--muted);font-size:11px;margin-top:2px;">${escHtml(timelineSummary)}</div>` : ''}
         </summary>
         <div style="max-height:300px;overflow-y:auto;margin-top:8px;">${timelineHtml}</div>
-      </details>
+      </details>`;
 
+  const newServiceHtml = `
       <div class="section-divider" style="margin-top:18px;">New Service</div>
       <div class="card-action-grid">
         <button class="card-action" onclick="openNewRentalModal('${c.id}')"><span class="ca-icon">📱</span> Rental</button>
@@ -4015,8 +4062,63 @@ function renderDetailPanel(id) {
         <button class="card-action" onclick="openNewVNModal('${c.id}')"><span class="ca-icon">🔢</span> Virtual Number</button>
         <button class="card-action" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal('${c.id}')})()"><span class="ca-icon">🔧</span> Repair</button>
         <button class="card-action" onclick="openNewServiceModal('${c.id}')"><span class="ca-icon">🖨️</span> Print / Online</button>
-      </div>
+      </div>`;
+
+  if (!isPage) {
+    return `
+    <div class="detail-panel" id="detailPanel">
+      ${headerHtml}
+      ${statsHtml}
+      ${overviewHtml}
+      ${historyDetailsHtml}
+      ${newServiceHtml}
     </div>`;
+  }
+
+  // ── Page mode: Overview | Activity sub-tabs under the stats row ──
+  const onActivity = customerPageTab === 'activity';
+  const subtabsHtml = `
+      <div class="kc-subtabs" role="tablist" aria-label="Customer profile sections">
+        <button class="kc-subtab${onActivity ? '' : ' on'}" role="tab" aria-selected="${!onActivity}" onclick="kcCustomerPageTab('overview')">Overview</button>
+        <button class="kc-subtab${onActivity ? ' on' : ''}" role="tab" aria-selected="${onActivity}" onclick="kcCustomerPageTab('activity')">Activity <span class="n">${timeline.length}</span></button>
+      </div>`;
+  let bodyHtml;
+  if (onActivity) {
+    // The activity log unfolded: every record with its date, filterable by
+    // category — the answer to "what have we ever done for this customer".
+    const cats = Object.keys(catCounts);
+    const cat = cats.includes(customerPageCat) ? customerPageCat : 'all';
+    const shown = cat === 'all' ? timeline : timeline.filter(e => e.cat === cat);
+    const chip = (key, label, n) => `<button class="kc-cat-chip${cat === key ? ' on' : ''}" onclick="kcCustomerPageCat('${escHtml(key)}')">${escHtml(label)} <span style="opacity:.7;">${n}</span></button>`;
+    bodyHtml = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        <div class="kc-cat-chips">${[chip('all', 'All', timeline.length), ...cats.map(k => chip(k, k, catCounts[k]))].join('')}</div>
+        ${lifetimeSpend > 0 ? `<span style="font-size:12px;color:var(--muted);white-space:nowrap;">${fmtGbp(lifetimeSpend)} lifetime</span>` : ''}
+      </div>
+      ${shown.length === 0
+        ? `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No activity ${cat === 'all' ? 'yet' : 'in this category yet'}.</div>`
+        : shown.map(e => timelineRow(e, true)).join('')}`;
+  } else {
+    bodyHtml = overviewHtml + newServiceHtml;
+  }
+  return `
+    <div class="detail-panel kc-cpage" id="detailPanel">
+      ${headerHtml}
+      ${statsHtml}
+      ${subtabsHtml}
+      ${bodyHtml}
+    </div>`;
+}
+
+function renderDetailPanel(id) {
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  // "Refresh the open customer" must repaint whichever surface is showing.
+  // Every save handler calls this — when the full-page profile is up, repaint
+  // that; never pop the card overlay over it.
+  if (customerPageId === c.id) { renderCustomerPage(c.id); return; }
+  const container = document.getElementById('detailPanelContainer');
+  if (!container) return;
 
   // The card opens as a POP-UP over the page — a real "separate card", no
   // page scrolling. Its own overlay sits BELOW the action modals (New Rental,
@@ -4031,11 +4133,74 @@ function renderDetailPanel(id) {
     overlay.addEventListener('click', e => { if (e.target === overlay) dismissCustomerCard(); });
     document.body.appendChild(overlay);
   }
-  overlay.innerHTML = `<div class="modal" style="width:720px;max-width:94vw;max-height:90vh;overflow-y:auto;">${panelHtml}</div>`;
+  overlay.innerHTML = `<div class="modal" style="width:720px;max-width:94vw;max-height:90vh;overflow-y:auto;">${buildCustomerPanelHtml(c, 'card')}</div>`;
   overlay.classList.remove('hidden');
   if (container) container.innerHTML = ''; // legacy inline container stays empty
   loadWalletSection(c.id);
   loadDocsSection(c.id);
+}
+
+// ─────────────────────────────────────────────
+//  CUSTOMER-360 PAGE  (/customers/<id>)
+// ─────────────────────────────────────────────
+// The card's big brother (Stripe pattern): the same profile as a real page
+// with its own URL — refresh-safe, shareable with another staff member,
+// browser Back returns to wherever you came from — plus an Activity tab that
+// unfolds the full timeline the card keeps inside a <details>.
+function renderCustomerPage(id) {
+  if (allowedTabs && !allowedTabs.includes('customers')) { renderTab(currentTab || 'dashboard'); return; }
+  const main = document.getElementById('mainContent');
+  if (!main) return;
+  if (customerPageId !== id) { customerPageTab = 'overview'; customerPageCat = 'all'; } // new customer, fresh tabs
+  document.body.classList.remove('pos-mode');
+  currentTab = 'customers';
+  syncNavActive('customers');
+  closeCustomerCard(); // the page replaces the overlay, never sits under it
+  // Topbar chrome: profile title, no list search, no create button.
+  document.getElementById('pageTitle').innerHTML = 'Customer <span>Profile</span>';
+  const searchBox = document.getElementById('searchBox');
+  if (searchBox) searchBox.style.display = 'none';
+  const btnNew = document.getElementById('btnNewCustomer');
+  if (btnNew) btnNew.style.display = 'none';
+  tabPrimaryAction = null;
+  const crumb = `<button class="kc-crumb" onclick="closeCustomerPage()">← All customers</button>`;
+  const c = customers.find(x => String(x.id) === String(id));
+  if (!c) {
+    customerPageId = null;
+    main.innerHTML = `${crumb}
+      <div class="detail-panel" style="text-align:center;padding:40px 20px;">
+        <div style="font-size:28px;margin-bottom:8px;">👤</div>
+        <div style="font-weight:500;margin-bottom:4px;">Customer not found</div>
+        <div style="color:var(--muted);font-size:13px;">This link may be old, or the record was merged or deleted.</div>
+      </div>`;
+    return;
+  }
+  customerPageId = c.id;
+  selectedId = c.id; // ⌘K context verbs act on the profile being viewed
+  main.innerHTML = crumb + buildCustomerPanelHtml(c, 'page');
+  // The wallet fetch also fills the headline balance stat, so it runs on both
+  // sub-tabs; the documents box only exists on Overview.
+  loadWalletSection(c.id);
+  if (customerPageTab !== 'activity') loadDocsSection(c.id);
+}
+function openCustomerPage(id) {
+  closeCustomerCard(); // arriving from the card's ⤢ — the page takes over
+  renderCustomerPage(id);
+  pushCustomerUrl(id);
+}
+function closeCustomerPage() {
+  renderTab('customers'); // clears customerPageId + selectedId itself
+  pushTabUrl('customers');
+}
+function kcCustomerPageTab(t) {
+  if (!customerPageId) return;
+  customerPageTab = t;
+  renderCustomerPage(customerPageId);
+}
+function kcCustomerPageCat(cat) {
+  if (!customerPageId) return;
+  customerPageCat = cat;
+  renderCustomerPage(customerPageId);
 }
 
 // ── Customer documents (operator side) ─────────────────────────────────────
@@ -4698,12 +4863,14 @@ const LEDGER_TYPE_LABELS = {
 
 async function loadWalletSection(customerId) {
   const el = document.getElementById(`walletSection-${customerId}`);
-  if (!el) return;
+  // The page's Activity tab has no wallet box, but the headline balance stat
+  // above the sub-tabs still renders — fetch and fill that even without it.
+  if (!el && !(customerPageId === customerId && document.getElementById('cardBalanceStat'))) return;
   let data;
   try { data = await window.api.getLedger(customerId); }
   catch { data = null; }
   if (!data || !data.success) {
-    el.innerHTML = `<div style="color:var(--muted);font-size:12px;">Wallet unavailable${data?.error ? ' — ' + escHtml(data.error) : ''}.</div>`;
+    if (el) el.innerHTML = `<div style="color:var(--muted);font-size:12px;">Wallet unavailable${data?.error ? ' — ' + escHtml(data.error) : ''}.</div>`;
     return;
   }
   const bal = data.balance || 0;
@@ -4723,6 +4890,7 @@ async function loadWalletSection(customerId) {
   // payments/top-ups a payment confirmation — so a receipt can be issued (or
   // re-issued) any time from the card, not only in the moment on the till.
   walletEntriesCache[customerId] = { entries: data.entries, balance: bal };
+  if (!el) return; // Activity tab: headline stat filled — no wallet box on screen
   const RECEIPTABLE = { phone_sale: 'sale', stock_sale: 'sale', payment: 'payment', top_up: 'payment' };
   const entriesHtml = data.entries.length === 0
     ? `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No wallet activity yet — record a payment or charge to start the ledger.</div>`
@@ -10049,8 +10217,11 @@ function paletteRun(i) {
 // card's own buttons do. pushRecent ignores these (kind 'ctx' isn't
 // navigable), so they never pollute Recent.
 function paletteContextVerbs() {
+  // "Looking at a customer" = the card overlay OR the full-page profile —
+  // the palette's verbs act on whichever is up.
   const card = document.getElementById('customerCard');
-  if (!card || card.classList.contains('hidden') || !selectedId) return null;
+  const cardOpen = !!card && !card.classList.contains('hidden');
+  if ((!cardOpen && !customerPageId) || !selectedId) return null;
   const c = customers.find((x) => x.id === selectedId);
   if (!c) return null;
   const id = c.id;
@@ -10063,6 +10234,7 @@ function paletteContextVerbs() {
       { icon: '📞', label: 'Log call / note', run: () => openLogCommModal(id) },
       { icon: '⏰', label: 'Remind me', run: () => openRemindModal('customer', id) },
       { icon: '✏️', label: 'Edit details', run: () => openEditModal(id) },
+      ...(customerPageId === id ? [] : [{ icon: '👤', label: 'Open full profile', run: () => openCustomerPage(id) }]),
     ],
   };
 }

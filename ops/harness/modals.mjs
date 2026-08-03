@@ -48,6 +48,11 @@ const MODALS = [
   ['draft-reminder','customers', `openDraftReminderModal(window.__kc.customer)`],
   ['log-comm',      'customers', `openLogCommModal(window.__kc.customer)`],
   ['cashup',        'dashboard', `openCashupModal()`],
+  // Not modals, but the same eyes-on treatment: the Customer-360 page
+  // (/customers/<id>) renders in the content column — .kc-cpage is in the
+  // geometry selector below so both sub-tabs get measured and screenshotted.
+  ['customer-page',     'customers', `openCustomerPage(window.__kc.customer)`],
+  ['customer-page-log', 'customers', `openCustomerPage(window.__kc.customer); kcCustomerPageTab('activity')`],
 ]
 
 const file = buildAppHtml()
@@ -78,7 +83,7 @@ for (const [name, tab, js] of MODALS) {
   const geo = await page.evaluate(() => {
     // The visible dialog: last modal-shaped box that isn't inside .hidden.
     // .modal is included because the customer card renders one directly.
-    const cards = [...document.querySelectorAll('.modal-content, .modal-card, .modal, [role="dialog"]')]
+    const cards = [...document.querySelectorAll('.modal-content, .modal-card, .modal, [role="dialog"], .kc-cpage')]
       .filter((el) => el.getBoundingClientRect().width && !el.closest('.hidden'))
     const el = cards[cards.length - 1]
     if (!el) return null
