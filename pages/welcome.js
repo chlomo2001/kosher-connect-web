@@ -258,6 +258,13 @@ const LD_JSON = JSON.stringify({
   // page text is settings-driven; this schema copy is static and only a
   // deploy updates it).
   openingHours: ['Su 14:00-18:30', 'Mo-Th 14:00-18:30'],
+  // The verified Google Business Profile (2026-08-03). The cid is the card's
+  // permanent Maps identifier (hex 0xd095f9388a46f473 from the owner's place
+  // URL, in decimal). Ties the site to the Search/Maps card — several
+  // unrelated "Kosher Connect"s exist (a dating service, a US restaurant
+  // directory), so the explicit link matters more here than usual.
+  hasMap: 'https://maps.google.com/?cid=15030193352652289139',
+  sameAs: ['https://maps.google.com/?cid=15030193352652289139', 'https://share.google/f9Ccv6oC7kaRvod0w'],
 })
 
 export default function Welcome() {
