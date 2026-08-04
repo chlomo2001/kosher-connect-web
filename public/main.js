@@ -5622,6 +5622,8 @@ async function renderWalletTab() {
       <button class="btn btn-primary" onclick="(()=>{const id=document.getElementById('wtCustomer').value;
         if(!id){toast('Choose a customer first.','error');return;}openWalletModal(id)})()">💰 Record payment / credit</button>
       <button class="btn btn-outline" onclick="openCashupModal()" style="margin-left:auto;">🧾 Cash-up</button>
+      ${(!currentStaff || currentStaff.role === 'owner')
+        ? `<button class="btn btn-outline" onclick="renderBankRecon()">🏦 Bank statements</button>` : ''}
     </div>
 
     <div class="dash-cols">
@@ -5720,6 +5722,259 @@ async function saveCashup(date) {
   toast(v === 0 ? 'Till counted — balances exactly. ✓'
     : `Till counted — ${v > 0 ? '+' : '−'}${fmtGbp(Math.abs(v))} ${v > 0 ? 'over' : 'short'}.`,
     v === 0 ? 'success' : 'warning');
+}
+
+// ── Bank reconciliation (owner-only; lives under the Wallet tab) ─────────
+// A statement upload proposes matches; a person confirms each one. Nothing
+// posts by itself — the API refuses it and lib/bankMatch.mjs can't express it.
+// Multiple accounts are just labels: each upload says which account it is.
+
+let bankData = null;
+let bankAccountFilter = '';           // '' = every account
+let bankStateFilter = 'open';         // open (unmatched+proposed) | confirmed | ignored
+
+async function renderBankRecon() {
+  const content = document.getElementById('mainContent');
+  document.getElementById('pageTitle').innerHTML = 'Bank <span>Reconciliation</span>';
+  content.innerHTML = skeletonHtml();
+  const data = await kcFetch('/api/bank').then(r => r.json()).catch(() => null);
+  if (!data || !data.success) {
+    content.innerHTML = `<div class="empty-state"><div class="emoji">🏦</div>
+      <p>${escHtml(data?.error || 'Bank reconciliation is unavailable.')}</p>
+      <button class="btn btn-outline" onclick="renderTab('wallet')">← Back to Wallet</button></div>`;
+    return;
+  }
+  bankData = data;
+  bankPaint();
+}
+
+function bankPaint() {
+  const content = document.getElementById('mainContent');
+  const d = bankData;
+  const counts = d.counts || {};
+  const open = (counts.unmatched || 0) + (counts.proposed || 0);
+
+  const inFilter = (t) =>
+    (!bankAccountFilter || t.accountRef === bankAccountFilter) &&
+    (bankStateFilter === 'open' ? (t.state === 'unmatched' || t.state === 'proposed') : t.state === bankStateFilter);
+  const shown = (d.transactions || []).filter(inFilter);
+
+  const accountOptions = (d.accounts || []).map(a =>
+    `<option value="${escHtml(a.ref)}" ${a.ref === bankAccountFilter ? 'selected' : ''}>${escHtml(a.ref)} (${a.open} open)</option>`).join('');
+
+  const stateBtn = (key, label, n) => `
+    <button class="btn ${bankStateFilter === key ? 'btn-primary' : 'btn-outline'} btn-sm"
+      onclick="bankStateFilter='${key}';bankPaint()">${label}${n != null ? ` · ${n}` : ''}</button>`;
+
+  const CONF_BADGE = {
+    strong:   'background:var(--success-bg,rgba(34,160,90,.12));color:var(--success);',
+    possible: 'background:var(--warning-bg,rgba(200,140,20,.12));color:var(--warning,#b07d10);',
+    weak:     'background:var(--bg-secondary);color:var(--muted);',
+  };
+
+  const row = (t) => {
+    const isIn = t.amount >= 0;
+    const best = t.match && t.match.proposals && t.match.proposals[0];
+    const proposalHtml = (t.state === 'unmatched' || t.state === 'proposed') ? (
+      best ? `
+        <div class="bank-proposal">
+          ${t.match.ambiguous ? `<div style="font-size:12px;color:var(--warning,#b07d10);margin-bottom:4px;">⚠ Two candidates score alike — read the reasons before confirming.</div>` : ''}
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:12px;color:var(--muted);">Looks like</span>
+            <strong>${escHtml(best.name)}</strong>
+            <span style="font-size:11px;padding:2px 8px;border-radius:99px;${CONF_BADGE[best.confidence] || CONF_BADGE.weak}">${escHtml(best.confidence)}</span>
+            ${isIn ? `<button class="btn btn-primary btn-sm" style="font-size:12px;padding:4px 12px;"
+              onclick="bankConfirm('${escHtml(t.id)}','${escHtml(String(best.customerId ?? ''))}','${escHtml(best.name).replace(/'/g, '&#39;')}')">✓ Confirm match</button>` : ''}
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px;">${best.reasons.map(escHtml).join(' · ')}</div>
+        </div>` : `
+        <div class="bank-proposal" style="color:var(--muted);font-size:12px;">
+          No candidate found${isIn ? ' — pick the customer yourself if you recognise it' : ''}.</div>`
+    ) : '';
+
+    const actions = (t.state === 'unmatched' || t.state === 'proposed') ? `
+      ${isIn ? `<button class="btn btn-outline btn-sm" style="font-size:12px;" onclick="bankPick('${escHtml(t.id)}')">Choose customer…</button>` : ''}
+      <button class="btn btn-outline btn-sm" style="font-size:12px;" onclick="bankIgnore('${escHtml(t.id)}')">Not customer money</button>`
+      : t.state === 'confirmed' ? `
+      <span style="font-size:12px;color:var(--success);">✓ On the ledger</span>
+      <button class="btn btn-outline btn-sm" style="font-size:12px;" onclick="bankUndo('${escHtml(t.id)}')">Undo</button>`
+      : `
+      <span style="font-size:12px;color:var(--muted);">Ignored${t.note ? ' — ' + escHtml(t.note) : ''}</span>
+      <button class="btn btn-outline btn-sm" style="font-size:12px;" onclick="bankReopen('${escHtml(t.id)}')">Reopen</button>`;
+
+    return `
+      <div class="history-item history-flat" style="flex-wrap:wrap;align-items:flex-start;gap:6px 12px;">
+        <div style="display:flex;align-items:baseline;gap:10px;flex:1;min-width:220px;">
+          <span class="history-date" style="min-width:78px;">${fmtDate(t.bookedAt)}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:99px;background:var(--bg-secondary);color:var(--muted);white-space:nowrap;">${escHtml(t.accountRef)}</span>
+          <span class="kc-truncate" style="flex:1;font-size:13px;">
+            ${t.counterparty ? `<strong>${escHtml(t.counterparty)}</strong> · ` : ''}${escHtml(t.description || '—')}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px 10px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end;max-width:100%;min-width:0;">
+          <span style="font-weight:600;font-feature-settings:'tnum';color:${isIn ? 'var(--success)' : 'var(--text)'};">
+            ${isIn ? '+' : '−'}${fmtGbp(Math.abs(t.amount))}</span>
+          ${actions}
+        </div>
+        ${proposalHtml ? `<div style="flex-basis:100%;">${proposalHtml}</div>` : ''}
+      </div>`;
+  };
+
+  content.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+      <button class="btn btn-outline btn-sm" onclick="renderTab('wallet')">← Wallet</button>
+      <span style="color:var(--muted);font-size:13px;">Upload a statement export; confirm each match yourself — nothing posts on its own.</span>
+    </div>
+
+    <div class="table-card" style="padding:16px 18px;margin-bottom:16px;">
+      <div class="section-divider" style="margin:0 0 10px;">Import a statement</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Account label</label>
+          <input class="form-input" id="bankAccLabel" list="bankAccKnown" placeholder="e.g. Revolut main"
+            style="width:200px;min-height:0;padding:8px 12px;font-size:13px;" value="${escHtml(bankAccountFilter)}">
+          <datalist id="bankAccKnown">${(d.accounts || []).map(a => `<option value="${escHtml(a.ref)}">`).join('')}</datalist>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">CSV export</label>
+          <input class="form-input" id="bankCsvFile" type="file" accept=".csv,text/csv"
+            style="min-height:0;padding:7px 12px;font-size:13px;">
+        </div>
+        <button class="btn btn-primary" id="bankUploadBtn" onclick="bankUpload()">⬆ Import</button>
+        <span style="font-size:12px;color:var(--muted);flex-basis:100%;">Re-importing an overlapping window is safe — rows already seen are absorbed, never doubled. One label per bank account.</span>
+      </div>
+      <div id="bankUploadNote" style="font-size:12px;margin-top:6px;"></div>
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+      ${stateBtn('open', 'Needs review', open)}
+      ${stateBtn('confirmed', 'Confirmed', counts.confirmed || 0)}
+      ${stateBtn('ignored', 'Ignored', counts.ignored || 0)}
+      <select class="form-input" style="width:auto;min-height:0;padding:6px 10px;font-size:13px;margin-left:auto;"
+        onchange="bankAccountFilter=this.value;bankPaint()">
+        <option value="">All accounts</option>${accountOptions}
+      </select>
+    </div>
+    ${d.proposeCapped ? `<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Showing proposals for the newest rows — ${d.proposeCapped} older open row${d.proposeCapped === 1 ? '' : 's'} will get theirs as these are worked through.</div>` : ''}
+
+    <div class="table-card" style="padding:6px 18px 12px;">
+      ${shown.length ? shown.map(row).join('') : `
+        <div class="empty-state" style="padding:32px 0;"><div class="emoji">🏦</div>
+          <p>${(d.transactions || []).length === 0
+            ? 'No bank rows yet — import a statement above to start.'
+            : 'Nothing in this view.'}</p></div>`}
+    </div>`;
+}
+
+async function bankUpload() {
+  const label = document.getElementById('bankAccLabel').value.trim();
+  const fileEl = document.getElementById('bankCsvFile');
+  const note = document.getElementById('bankUploadNote');
+  if (!label) { toast('Give the account a label first — e.g. "Revolut main".', 'error'); return; }
+  if (!fileEl.files || !fileEl.files[0]) { toast('Choose the CSV export to import.', 'error'); return; }
+  const btn = document.getElementById('bankUploadBtn');
+  btn.disabled = true;
+  try {
+    const csv = await fileEl.files[0].text();
+    const res = await kcFetch('/api/bank', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ op: 'upload', accountLabel: label, csv }),
+    }).then(r => r.json()).catch(() => null);
+    if (!res || !res.success) {
+      toast(res?.error || 'Import failed.', 'error');
+      if (note && res?.warnings?.length) note.innerHTML = res.warnings.map(w => `⚠ ${escHtml(w)}`).join('<br>');
+      return;
+    }
+    toast(`Imported ${res.inserted} new row${res.inserted === 1 ? '' : 's'}${res.duplicates ? ` (${res.duplicates} already known)` : ''}.`, 'success');
+    if (note) note.innerHTML = (res.warnings || []).map(w => `⚠ ${escHtml(w)}`).join('<br>');
+    bankAccountFilter = '';
+    await renderBankRecon();
+  } finally { btn.disabled = false; }
+}
+
+async function bankConfirm(txnId, customerId, name) {
+  const t = (bankData?.transactions || []).find(x => x.id === txnId);
+  if (!t || !customerId) return;
+  if (!(await kcConfirm({
+    title: 'Confirm bank match',
+    body: `<strong>${escHtml(name)}</strong><br>${escHtml(t.counterparty || t.description || 'Bank credit')} · ${fmtDate(t.bookedAt)} · ${escHtml(t.accountRef)}<br>Posts as a payment (bank transfer) on their wallet.`,
+    amount: Math.abs(t.amount),
+    okLabel: 'Confirm match',
+  }))) return;
+  const res = await kcFetch('/api/bank', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: 'confirm', txnId, customerId, clientRef: kcRef() }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not confirm it.', 'error'); return; }
+  toast('Matched — payment is on the ledger.', 'success');
+  await renderBankRecon();
+}
+
+function bankPick(txnId) {
+  const t = (bankData?.transactions || []).find(x => x.id === txnId);
+  if (!t) return;
+  showDynamicModal(`
+    <div class="modal-title">Who sent this?</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">
+      ${escHtml(t.counterparty || t.description || '')} · ${fmtDate(t.bookedAt)} ·
+      <strong style="color:var(--text);">+${fmtGbp(Math.abs(t.amount))}</strong></div>
+    <input class="form-input" id="bankPickSearch" placeholder="Type a name…" autocomplete="off"
+      oninput="bankPickList('${escHtml(txnId)}')">
+    <div id="bankPickResults" style="max-height:300px;overflow:auto;margin-top:8px;"></div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button></div>
+  `);
+  const s = document.getElementById('bankPickSearch');
+  if (s) { s.focus(); }
+  bankPickList(txnId);
+}
+
+function bankPickList(txnId) {
+  const q = (document.getElementById('bankPickSearch')?.value || '').trim().toLowerCase();
+  const box = document.getElementById('bankPickResults');
+  if (!box) return;
+  const hits = (bankData?.customers || [])
+    .filter(c => c.customerId && (!q || c.name.toLowerCase().includes(q)))
+    .slice(0, 30);
+  box.innerHTML = hits.length ? hits.map(c => `
+    <div class="feed-item dash-link" onclick="closeDynamicModal();bankConfirm('${escHtml(txnId)}','${escHtml(String(c.customerId))}','${escHtml(c.name).replace(/'/g, '&#39;')}')">
+      <span style="flex:1;">${escHtml(c.name)}</span><span class="feed-go">›</span>
+    </div>`).join('')
+    : `<div style="color:var(--muted);font-size:13px;padding:10px 0;">No customer matches “${escHtml(q)}”.</div>`;
+}
+
+async function bankIgnore(txnId) {
+  const res = await kcFetch('/api/bank', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: 'ignore', txnId, note: 'Not customer money' }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not update it.', 'error'); return; }
+  await renderBankRecon();
+}
+
+async function bankReopen(txnId) {
+  const res = await kcFetch('/api/bank', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: 'reopen', txnId }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not update it.', 'error'); return; }
+  await renderBankRecon();
+}
+
+async function bankUndo(txnId) {
+  const t = (bankData?.transactions || []).find(x => x.id === txnId);
+  if (!t) return;
+  if (!(await kcConfirm({
+    title: 'Undo this match?',
+    body: `The ledger is append-only, so this posts an equal-and-opposite correction and reopens the bank row. Both entries stay visible on the customer's statement.`,
+    amount: Math.abs(t.amount),
+    okLabel: 'Undo match',
+  }))) return;
+  const res = await kcFetch('/api/bank', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: 'undo', txnId, clientRef: kcRef() }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not undo it.', 'error'); return; }
+  toast('Undone — correction posted, row reopened.', 'success');
+  await renderBankRecon();
 }
 
 async function addPayment(id) {

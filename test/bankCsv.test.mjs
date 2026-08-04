@@ -130,6 +130,42 @@ test('the same movement in two different accounts is not the same movement', () 
   assert.notEqual(one.providerTxnId, two.providerTxnId)
 })
 
+// The shop's likely bank. Real export shape: completed/started date pair, the
+// bank's own ID, a State lifecycle column, Description AND Reference, Payer,
+// and a Fee booked BESIDE the amount rather than inside it.
+const REVOLUT = [
+  'Date started (UTC),Date completed (UTC),ID,Type,State,Description,Reference,Payer,Orig currency,Orig amount,Payment currency,Amount,Fee,Balance,Account',
+  '2026-07-29 09:11:03,2026-07-30 09:12:00,rev-001,TRANSFER,COMPLETED,Incoming transfer,BNKYRW,KOPILOWITZ M,GBP,285.00,GBP,285.00,0.00,1520.44,Main',
+  '2026-07-30 11:00:00,2026-07-30 11:00:04,rev-002,CARD_PAYMENT,COMPLETED,Amazon,order 123,,GBP,42.15,GBP,-42.15,0.20,1478.09,Main',
+  '2026-07-31 08:00:00,,rev-003,TRANSFER,DECLINED,Outgoing transfer,,SUPPLIER LTD,GBP,900.00,GBP,-900.00,0.00,,Main',
+].join('\n')
+
+test('Revolut Business export — columns, fee netting, dead rows', () => {
+  const { rows, warnings } = parseStatementCsv(REVOLUT, { accountRef: 'revolut-main' })
+  assert.equal(rows.length, 2)                    // the DECLINED row never moved money
+  assert.match(warnings.join(' '), /declined, reverted or still pending/)
+  // Completed date, not started date.
+  assert.equal(rows[0].bookedAt, '2026-07-30')
+  // Payer lands as the counterparty; Reference rides with the description so a
+  // PNR in it stays findable by the matcher.
+  assert.equal(rows[0].counterpartyName, 'KOPILOWITZ M')
+  assert.match(rows[0].description, /BNKYRW/)
+  // The balance change is Amount − Fee: −42.15 with a 0.20 fee is −42.35.
+  assert.equal(rows[1].amount, -42.35)
+})
+
+test('Revolut Business export — the bank id is the idempotency key', () => {
+  const a = parseStatementCsv(REVOLUT, { accountRef: 'revolut-main' })
+  // Same rows exported again in a wider window → identical ids, so the unique
+  // constraint absorbs the overlap.
+  const b = parseStatementCsv(REVOLUT, { accountRef: 'revolut-main' })
+  assert.deepEqual(a.rows.map((r) => r.providerTxnId), b.rows.map((r) => r.providerTxnId))
+  assert.match(a.rows[0].providerTxnId, /^bank:/)
+  // A second account label is a different account — never the same movement.
+  const other = parseStatementCsv(REVOLUT, { accountRef: 'revolut-savings' })
+  assert.notEqual(a.rows[0].providerTxnId, other.rows[0].providerTxnId)
+})
+
 test('an unrecognisable file explains itself instead of importing nothing quietly', () => {
   const { rows, warnings } = parseStatementCsv('Foo,Bar\n1,2\n', { accountRef: 'acc' })
   assert.equal(rows.length, 0)
