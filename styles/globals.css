@@ -1165,7 +1165,7 @@ input[type="checkbox"], input[type="radio"] {
   border-radius: var(--radius);
   font-size: 14px; font-weight: 400;
   box-shadow: var(--shadow-2);
-  animation: toastIn 0.25s ease;
+  animation: toastIn var(--dur-3) var(--ease-out);
   max-width: 360px;
 }
 @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

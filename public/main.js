@@ -2579,7 +2579,7 @@ function reviewRowHtml(p) {
       <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline;">
         <div>
           <strong style="font-size:15px;">${escHtml(fmtPhone(p.number || '—'))}</strong>
-          <span style="color:var(--muted);font-size:12.5px;">
+          <span style="color:var(--muted);font-size:var(--fs-body);">
             ${escHtml(p.company || '')}${p.subBrand ? ' · ' + escHtml(p.subBrand) : ''}
             ${p.country ? ' · ' + escHtml(p.country) : ''}
             ${p.assetTag ? ' · ' + escHtml(p.assetTag) : ''}
@@ -2596,8 +2596,8 @@ function reviewRowHtml(p) {
         ${p.reviewReasons.map(r => `<span class="badge badge-warning" style="font-size:11px;">${escHtml(REVIEW_LABELS[r] || r)}</span>`).join('')}
       </div>
       ${p.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">${escHtml(p.notes)}</div>` : ''}
-      <details style="margin-top:6px;"><summary style="font-size:11.5px;color:var(--muted);cursor:pointer;">Original sheet row ${p.importSource ? p.importSource.row : ''}</summary>
-        <div style="font-size:11.5px;color:var(--muted);margin-top:4px;word-break:break-word;">${escHtml(raw)}</div>
+      <details style="margin-top:6px;"><summary style="font-size:var(--fs-small);color:var(--muted);cursor:pointer;">Original sheet row ${p.importSource ? p.importSource.row : ''}</summary>
+        <div style="font-size:var(--fs-small);color:var(--muted);margin-top:4px;word-break:break-word;">${escHtml(raw)}</div>
       </details>
       <div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap;">
         ${p.status === 'rented' || p.status === 'permanent'
@@ -4447,7 +4447,7 @@ function openElidModal(customerId) {
       </div>
       <button class="btn btn-primary" id="elidGo" onclick="elidAddLine('${cid}')">Add &amp; look up</button>
     </div>
-    <div id="elidAddMsg" style="font-size:12.5px;margin-top:6px;"></div>
+    <div id="elidAddMsg" style="font-size:var(--fs-body);margin-top:6px;"></div>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
   `);
   renderElidLines(customerId);
@@ -4457,7 +4457,7 @@ function renderElidLines(customerId) {
   const wrap = document.getElementById('elidLines');
   if (!c || !wrap) return;
   const lines = elidLinesOf(c);
-  if (!lines.length) { wrap.innerHTML = '<div style="color:var(--muted);font-size:12.5px;">No ELID line linked yet — add one below.</div>'; return; }
+  if (!lines.length) { wrap.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-body);">No ELID line linked yet — add one below.</div>'; return; }
   const cid = escHtml(String(customerId));
   wrap.innerHTML = lines.map((u, i) => `
     <div class="elid-line" data-u="${escHtml(u)}" style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;">
@@ -4538,7 +4538,7 @@ function openElidMatchModal() {
     <div class="modal-title">🔗 Match customers to ELID</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Goes through every customer, guesses their ELID username from the name, and — <strong>only when ELID confirms the account and the name matches</strong> — saves the link on the customer. Read-only against ELID; nothing is mislinked and no new customers are created. Safe to stop anytime.</div>
     <div id="emProg" style="font-size:13px;margin-bottom:8px;">Ready when you are.</div>
-    <div id="emList" style="max-height:220px;overflow:auto;font-size:12.5px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:none;"></div>
+    <div id="emList" style="max-height:220px;overflow:auto;font-size:var(--fs-body);border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:none;"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="elidMatchStop=true;closeDynamicModal()">Close</button>
       <button class="btn btn-primary" id="emGo" onclick="runElidMatch()">Start matching</button>
@@ -4696,13 +4696,13 @@ function renderElidImport(accounts) {
     <div class="modal-title">📥 Import ELID accounts</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">${linked.length} already linked · ${possible} likely existing (${exact.length} same spelling + ${fuzzy.length} similar) · ${fresh.length} new. Nothing happens until you press a button. Names for new customers are pulled live from ELID.</div>
     <div class="section-divider" style="margin:6px 0;">Likely already a customer — link instead <span style="color:var(--muted);font-weight:400;">(${possible})</span></div>
-    <div style="font-size:11.5px;color:var(--muted);margin:0 0 6px;">Exact matches are pre-ticked; “similar — check” are spelling-variant guesses left un-ticked — tick the ones that are really the same person.</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin:0 0 6px;">Exact matches are pre-ticked; “similar — check” are spelling-variant guesses left un-ticked — tick the ones that are really the same person.</div>
     <div style="max-height:150px;overflow:auto;">${possRows}</div>
     ${possible ? '<button class="btn btn-outline" style="margin:8px 0 14px;" onclick="applyElidLinks()">Link ticked</button>' : ''}
     <div class="section-divider" style="margin:6px 0;">New — create as customers <span style="color:var(--muted);font-weight:400;">(${fresh.length})</span></div>
-    <div style="font-size:11.5px;color:var(--muted);margin:0 0 6px;">Only tick genuine new people — untick anyone you spot who’s already a customer above.</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin:0 0 6px;">Only tick genuine new people — untick anyone you spot who’s already a customer above.</div>
     <div style="max-height:190px;overflow:auto;">${freshRows}</div>
-    <div id="eiResult" style="font-size:12.5px;margin-top:8px;"></div>
+    <div id="eiResult" style="font-size:var(--fs-body);margin-top:8px;"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
       <button class="btn btn-primary" id="eiCreate" onclick="applyElidCreate()">Create ticked</button>
@@ -4782,7 +4782,7 @@ function renderDupScan(j) {
     + (x.elid && x.elid.length ? ` <span style="font-size:10px;color:var(--muted);">📡${x.elid.length}</span>` : '')
     + (x.phone ? ` <span style="font-size:10px;color:var(--muted);">${escHtml(x.phone)}</span>` : '');
   const mBtn = (from, to, label) =>
-    `<button style="font-size:11.5px;background:none;border:1px solid var(--border);border-radius:999px;padding:3px 10px;color:var(--accent);cursor:pointer;" onclick="mergeElidDup('${escHtml(from)}','${escHtml(to)}')">${label}</button>`;
+    `<button style="font-size:var(--fs-small);background:none;border:1px solid var(--border);border-radius:999px;padding:3px 10px;color:var(--accent);cursor:pointer;" onclick="mergeElidDup('${escHtml(from)}','${escHtml(to)}')">${label}</button>`;
   const rows = (j.pairs || []).map((p) => {
     // Only an ELID-import can be the one deleted. Offer to keep the non-import
     // side; if both are imports, let the owner choose which to keep.
@@ -12270,8 +12270,8 @@ async function renderSettingsTab() {
           <tr>
             <td><strong>${escHtml(m.name)}</strong><div style="font-size:11px;color:var(--muted);">order ${m.sortOrder}${m.notes ? ' · ' + escHtml(m.notes.slice(0, 50)) : ''}</div></td>
             <td style="font-feature-settings:'tnum';">${m.price != null ? fmtGbp(m.price) : '—'}</td>
-            <td style="font-size:11.5px;color:var(--muted);max-width:260px;">${escHtml(['Dual SIM: ' + (m.dualSim || '—'), 'Hebrew: ' + (m.yiddishText || '—'), 'Touch: ' + (m.touchScreen || '—'), 'Text: ' + (m.texting || '—')].join(' · '))}</td>
-            <td style="font-size:11.5px;">${m.pros || m.cons ? '✍️ written' : '<span style="color:var(--muted);">not written yet</span>'}</td>
+            <td style="font-size:var(--fs-small);color:var(--muted);max-width:260px;">${escHtml(['Dual SIM: ' + (m.dualSim || '—'), 'Hebrew: ' + (m.yiddishText || '—'), 'Touch: ' + (m.touchScreen || '—'), 'Text: ' + (m.texting || '—')].join(' · '))}</td>
+            <td style="font-size:var(--fs-small);">${m.pros || m.cons ? '✍️ written' : '<span style="color:var(--muted);">not written yet</span>'}</td>
             <td style="white-space:nowrap;">
               <button class="action-btn" aria-label="Edit ${escHtml(m.name || 'model')}" onclick="openPhoneModelModal('${escHtml(m.id)}')">✏️</button>
               <button class="action-btn danger" aria-label="Retire ${escHtml(m.name || 'model')}" onclick="retirePhoneModel('${escHtml(m.id)}', '${escJs(m.name)}')">✕</button>
@@ -12302,13 +12302,13 @@ async function renderSettingsTab() {
           <td><strong>📧 Email</strong></td>
           <td style="font-size:12px;">${escHtml(health?.email?.provider || '—')}</td>
           <td>${chanBadge(health?.email)}</td>
-          <td style="font-size:11.5px;color:var(--muted);">HOLD builds &amp; logs but sends nothing · TEST sends everything to your own address · LIVE emails real customers (MAIL_LIVE).</td>
+          <td style="font-size:var(--fs-small);color:var(--muted);">HOLD builds &amp; logs but sends nothing · TEST sends everything to your own address · LIVE emails real customers (MAIL_LIVE).</td>
         </tr>
         <tr>
           <td><strong>💬 SMS</strong></td>
           <td style="font-size:12px;">${escHtml(health?.sms?.provider || 'Twilio (not connected)')}</td>
           <td>${chanBadge(health?.sms)}</td>
-          <td style="font-size:11.5px;color:var(--muted);">${health?.sms?.configured
+          <td style="font-size:var(--fs-small);color:var(--muted);">${health?.sms?.configured
             ? 'HOLD builds &amp; logs but sends nothing · TEST sends everything to SMS_TEST_TO · LIVE texts real customers (SMS_LIVE).'
             : 'Connect the Twilio console: paste TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM (or TWILIO_MESSAGING_SERVICE_SID) into Vercel env vars, redeploy, and this flips to HOLD.'}</td>
         </tr>
@@ -12325,7 +12325,7 @@ async function renderSettingsTab() {
   const openingHours = cfg.settings.find(s => s.key === 'opening_hours')?.textValue || 'Sunday–Thursday, 2:00–6:30pm';
   const shopHtml = settingsCard('shop-details', '🏪 Shop details', 'what the public site shows', `
       <div style="padding:12px 14px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
-        <label style="font-size:12.5px;color:var(--muted);">Opening hours</label>
+        <label style="font-size:var(--fs-body);color:var(--muted);">Opening hours</label>
         <input class="form-input" id="stOpeningHours" value="${escHtml(openingHours)}"
           style="min-height:0;padding:7px 10px;font-size:13px;flex:1;min-width:240px;" placeholder="e.g. Sunday–Thursday, 2:00–6:30pm">
         <button class="btn btn-primary btn-sm" onclick="saveOpeningHours()">💾 Save</button>
