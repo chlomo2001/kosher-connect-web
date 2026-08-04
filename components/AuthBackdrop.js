@@ -32,7 +32,9 @@ const CITIES = [
 ]
 // Signal links [i, j, kind] — carry a travelling pulse, drawn tower-to-tower
 // (tip-to-tip, off the mast top). kind: 0 = data, 1 = gold "best route",
-// 2 = AUDIO (Kol Torah — Tel Aviv → London carries music notes, not dots).
+// 2 = the Kol Torah audio route (gold, like 1 — it used to carry floating
+// quavers, stripped 04/08/2026 on the owner's ask; the mast ripples alone
+// say "sound" now).
 //
 // The scene used to also run a separate FLIGHTS set: dashed airport-to-airport
 // bows with a little aeroplane tracing each one. Removed 30/07/2026 — the
@@ -232,17 +234,6 @@ export default function AuthBackdrop() {
       ctx.strokeStyle = rgba(cur.line, dk ? 0.38 : 0.3); ctx.lineWidth = 1
       ctx.beginPath(); ctx.arc(gx, gy, Rg, 0, 6.2832); ctx.stroke()
 
-      // A tiny quaver — the scene's word for "sound". Used by the Kol Torah
-      // broadcast mast and the audio link.
-      const drawNote = (x, y, alpha) => {
-        ctx.save(); ctx.translate(x, y); ctx.scale(1.4, 1.4)
-        ctx.strokeStyle = rgba(GOLD, alpha); ctx.fillStyle = rgba(GOLD, alpha); ctx.lineWidth = 1
-        ctx.beginPath(); ctx.ellipse(0, 2.2, 2.1, 1.5, -0.45, 0, 6.2832); ctx.fill()   // head
-        ctx.beginPath(); ctx.moveTo(1.9, 1.6); ctx.lineTo(1.9, -3.6); ctx.stroke()      // stem
-        ctx.beginPath(); ctx.moveTo(1.9, -3.6); ctx.quadraticCurveTo(4.4, -2.8, 4.6, -0.6); ctx.stroke() // flag
-        ctx.restore()
-      }
-
       // 6) Lattice masts at each hub — a real 4-leg transmission tower, not a
       //    2D stick: a square footprint (two front legs, two back legs drawn
       //    fainter and offset for depth) tapering to the antenna, ladder rungs
@@ -283,17 +274,16 @@ export default function AuthBackdrop() {
         seg(FL(RUNGS[1]), FR(RUNGS[2])); seg(FR(RUNGS[1]), FL(RUNGS[2]))   // X-brace
         const baseA = Math.atan2(uy, ux)                                                       // waves off the top
         if (i === 2) {
-          // Tel Aviv is the Kol Torah mast — it doesn't just signal, it SINGS.
-          // Wider, slower gold ripples spread from the antenna and a quaver
-          // rides the crest of each one: the audio line as behaviour, not an
-          // object pasted on the page.
+          // Tel Aviv is the Kol Torah mast — wider, slower GOLD ripples spread
+          // from the antenna (the other masts pulse quick and neutral). The
+          // quavers that rode each crest were stripped 04/08/2026 — the waves
+          // alone carry the "sound" idea without floating objects.
           for (let s = 0; s < 3; s++) {
             const ph = ((t * 0.00045 + s / 3) % 1 + 1) % 1
             const rr = mast * (0.3 + ph * 2.4)
             const al = (dk ? 0.5 : 0.42) * (1 - ph)
             ctx.strokeStyle = rgba(GOLD, al); ctx.lineWidth = 1
             ctx.beginPath(); ctx.arc(tp.x, tp.y, rr, baseA - 0.95, baseA + 0.95); ctx.stroke()
-            drawNote(tp.x + Math.cos(baseA) * rr, tp.y + Math.sin(baseA) * rr, Math.min(1, al * 1.6))
           }
         } else {
           for (let s = 0; s < 2; s++) {
@@ -323,8 +313,8 @@ export default function AuthBackdrop() {
       })
 
       // 7) Signal network — TOWER-TOP to TOWER-TOP (tip to tip): a bow carrying
-      //    a travelling pulse. No plane. Gold links = "best route"; the AUDIO
-      //    link broadcasts Kol Torah — tiny quavers travel it instead of dots.
+      //    a travelling pulse. No plane, no floating glyphs — every link runs
+      //    a plain travelling dot (gold on the priority + audio routes).
       SIGNALS.forEach(([i, j, kind], li) => {
         const a = tips[i], b = tips[j]
         if (!a || !b) return
@@ -345,24 +335,9 @@ export default function AuthBackdrop() {
         ctx.lineWidth = gold ? 1.3 : 1
         ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(cx, cy, b.x, b.y); ctx.stroke()
         ctx.setLineDash([])
-        if (kind === 2) {
-          for (let s = 0; s < 2; s++) {                            // two phase-offset quavers
-            const u = ((t * 0.00013 + li * 0.11 + s * 0.5) % 1 + 1) % 1
-            const pt = bez(a, cx, cy, b, u)
-            drawNote(pt.x, pt.y, (dk ? 0.9 : 0.75) * Math.sin(Math.PI * u))
-            // The far end RECEIVES: as each note arrives, a soft gold ripple
-            // blooms off the destination mast — London hears Tel Aviv.
-            const land = u > 0.8 ? (u - 0.8) / 0.2 : 0
-            if (land > 0) {
-              ctx.strokeStyle = rgba(GOLD, (dk ? 0.55 : 0.45) * (1 - land)); ctx.lineWidth = 1
-              ctx.beginPath(); ctx.arc(b.x, b.y, 2.5 + land * 11, 0, 6.2832); ctx.stroke()
-            }
-          }
-        } else {
-          const u = ((t * (gold ? 0.0002 : 0.00015) + li * 0.11) % 1 + 1) % 1, pt = bez(a, cx, cy, b, u)
-          ctx.fillStyle = rgba(gold ? GOLD : cur.dot, dk ? 0.92 : 0.8)
-          ctx.beginPath(); ctx.arc(pt.x, pt.y, gold ? 2.3 : 1.8, 0, 6.2832); ctx.fill()
-        }
+        const u = ((t * (gold ? 0.0002 : 0.00015) + li * 0.11) % 1 + 1) % 1, pt = bez(a, cx, cy, b, u)
+        ctx.fillStyle = rgba(gold ? GOLD : cur.dot, dk ? 0.92 : 0.8)
+        ctx.beginPath(); ctx.arc(pt.x, pt.y, gold ? 2.3 : 1.8, 0, 6.2832); ctx.fill()
       })
 
       // 8) Faint logo watermark, top-left. Static — it just holds the corner

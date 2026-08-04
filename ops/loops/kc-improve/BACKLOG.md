@@ -141,19 +141,28 @@ Safe (loop-eligible), ranked value ÷ effort:
 - [ ] **P1 · M** 🔒 — **Email delivery** go-live (Track A below) — provider + domain
       decision, `email_log` table, HOLD→TEST→LIVE. Unblocks receipts + portal
       sign-in + reminders. *DNS has lead time — decide first.*
-- [ ] **P2 · L** 🔒 — **myPOS ↔ till** one-tap. Researched 08-03: the easy path
-      is the **ePOS API** (plain REST, server→terminal over the internet, no
-      cables/SDK) — but it supports only **Carbon / Ultra / Sigma**, and the
-      Cash Register Remote API lists Mini/Combo/Go/Integra; the shop's **K300
-      is on neither list**. Next step: ask myPOS support whether the K300 can
-      take any remote-trigger API; if no, the pragmatic route is a supported
-      terminal (e.g. Sigma) + free developers.mypos.com account + ePOS REST,
-      which lands on the `/api/pos/card-result` plumbing already stubbed.
+- [ ] **P2 · L** 🔒 — **myPOS ↔ till** one-tap. **BUILT 08-04** (owner's
+      go-ahead): full ePOS cloud lane on the dev branch — `lib/mypos.mjs`
+      adapter (demo/live gateways + stateless mock), `/api/pos/terminal`
+      (charge/status/cancel, staff+shop-gated), till card flow reusing the
+      wrapper lane's approval-cache/re-ring/`card_receipts` safety. Ships
+      dark: env-gated on `MYPOS_EPOS_MODE` + credentials. Remaining is
+      myPOS-side: emailed online@mypos.com 08-04 (K300 eligibility?, UK
+      price of Carbon/Sigma vs the £229 Ultra, SoftPOS-on-NFC-tablet via
+      ePOS?, fees, Partners Portal access). Decide purchase on their reply;
+      then register the Partners Portal integration (POS Payments / Cash
+      Register) and drop the 3 keys + TID into Vercel env.
 - [ ] **P2 · L** 🔒 — **Stripe** save-card + off-session charge + webhook (test keys
       first). Least urgent of the three; card-present already works.
 - [ ] **P2 · S** — **Phone-migration job logging**: "Contact transfer / phone
       setup" service line + attach exported `.vcf` to the customer + a Settings
       "Contact Tools" reference card. (Suggestions already written; build them.)
+- [ ] **P2 · M** — **Public repair-booking page** (owner spotted figphones'
+      RepairDesk widget 08-04, asked "can/should we do same?" — yes). A
+      `/repair` public page in the `/join` pattern: name + phone + device +
+      what's wrong (EN+HE), lands as an enquiry in the Repairs tab for staff
+      to triage. Keep it two steps max — the RepairDesk widget demands a full
+      postal address before hearing the problem; ours shouldn't.
 - [ ] **P3 · S** 🔒 — **Gmail / Drive scan** — needs explicit owner go-ahead +
       scope (which accounts, read-only, what we're hunting) before any sweep.
 
