@@ -32,14 +32,18 @@ const EMAIL = 'support@kosher-connect.com'
 // when someone searches Maps for a phone shop in Salford.
 const MAPS_QUERY = 'Kosher Connect, 421 Bury New Road, Salford M7 4ED'
 const MAPS_URL = `https://maps.google.com/?q=${encodeURIComponent(MAPS_QUERY)}`
+// The verified Business Profile's permanent Maps id — one place, no search.
+const MAPS_CID = '15030193352652289139'
 // Keyless Google Maps embed — the iframe endpoint needs no API key.
-// The embed pins the PLAIN ADDRESS, not the business-name query: several
-// unrelated "Kosher Connect"s exist, and the name+address search sometimes
-// resolved to a wide area view with our pin off-screen (owner report 08-04).
-// A bare address geocode is deterministic — pin centred on first load, every
-// load. The business-name link (MAPS_URL) stays on the open-in-Maps path and
-// the JSON-LD cid keeps the tie to the Business Profile card.
-const MAPS_EMBED = `https://www.google.com/maps?q=${encodeURIComponent('421 Bury New Road, Salford M7 4ED')}&z=17&output=embed`
+// Three takes on what the iframe asks for (08-04): the name+address SEARCH
+// sometimes resolved to an area view with the pin off-screen; the bare
+// address pinned reliably but the card read "421 Bury New Rd", not the shop
+// (owner: "now it won't say our business name"). Embedding by cid asks for
+// the Business Profile itself — name on the card AND a deterministic pin.
+// If Google ever stops honouring cid on the keyless endpoint, fall back to
+// the official Maps Embed API place mode (needs Maps Embed API enabled on
+// the NEXT_PUBLIC key in the Google console).
+const MAPS_EMBED = `https://maps.google.com/maps?cid=${MAPS_CID}&z=17&output=embed`
 
 const BAND_IDS = ['mobile', 'travel', 'intl']
 
@@ -271,8 +275,8 @@ const LD_JSON = JSON.stringify({
   // URL, in decimal). Ties the site to the Search/Maps card — several
   // unrelated "Kosher Connect"s exist (a dating service, a US restaurant
   // directory), so the explicit link matters more here than usual.
-  hasMap: 'https://maps.google.com/?cid=15030193352652289139',
-  sameAs: ['https://maps.google.com/?cid=15030193352652289139', 'https://share.google/f9Ccv6oC7kaRvod0w'],
+  hasMap: `https://maps.google.com/?cid=${MAPS_CID}`,
+  sameAs: [`https://maps.google.com/?cid=${MAPS_CID}`, 'https://share.google/f9Ccv6oC7kaRvod0w'],
 })
 
 export default function Welcome() {
