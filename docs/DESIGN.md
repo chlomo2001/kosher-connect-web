@@ -114,7 +114,7 @@ Waiting is disguised, not announced:
 | Colour tokens (light+dark) | ✅ swept (#159 badge pass) |
 | Spacing/radius/elevation tokens | ✅ defined, ✅ major surfaces |
 | Motion tokens | ✅ defined; buttons/rows/toasts consume them |
-| Tab content transitions | ⏳ this cycle |
+| Tab content transitions | ✅ `kcContentEnter()` + `.tab-enter` |
 | Skeleton loading (heavy tabs) | ⏳ this cycle |
 | Type-ramp tokens | ✅ defined; adoption sweep **pending** (~470 inline font-sizes in main.js) |
 | Inline-style sweep (spacing/colour in `style=""`) | ⏳ pending — collapse opportunistically per surface |

@@ -613,6 +613,18 @@ const TAB_META = {
 };
 let tabPrimaryAction = null; // #58 — what the topbar primary button does on this tab
 
+// Content never pops in on a single frame — each tab paint re-runs a quiet
+// fade + 5px rise on the content column (DESIGN.md §Motion, "Enter"). A
+// keyframe restart so rapid tab-hopping always plays from the top; the
+// reduced-motion umbrella makes it effectively instant.
+function kcContentEnter() {
+  const el = document.getElementById('mainContent');
+  if (!el) return;
+  el.classList.remove('tab-enter');
+  void el.offsetWidth; // reflush so re-adding the class restarts the animation
+  el.classList.add('tab-enter');
+}
+
 function renderTab(tab) {
   if (allowedTabs && !allowedTabs.includes(tab)) {
     toast('That area is not enabled for your account.', 'warning');
@@ -645,6 +657,7 @@ function renderTab(tab) {
       tabPrimaryAction = null;
     }
   }
+  kcContentEnter();
   meta.render();
 }
 
@@ -4164,6 +4177,7 @@ function renderCustomerPage(id) {
   if (btnNew) btnNew.style.display = 'none';
   tabPrimaryAction = null;
   const crumb = `<button class="kc-crumb" onclick="closeCustomerPage()">← All customers</button>`;
+  kcContentEnter(); // the profile page enters like any tab
   const c = customers.find(x => String(x.id) === String(id));
   if (!c) {
     customerPageId = null;

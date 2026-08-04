@@ -492,6 +492,11 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
 
 /* ─── CONTENT ─── */
 .content { flex: 1; overflow-y: auto; padding: 22px 24px; background: transparent; }
+/* Tab switches enter, they don't pop — DESIGN.md §Motion "Enter": fade + 5px
+   rise, restarted per paint by kcContentEnter(). transform/opacity only; the
+   reduced-motion umbrella (0.01ms) neutralises it for free. */
+@keyframes kc-tab-enter { from { opacity: 0; transform: translateY(5px); } }
+.tab-enter { animation: kc-tab-enter var(--dur-2) var(--ease-out); }
 
 /* The customer card carries the same faint dot-grid as the app canvas, so an
    opened record reads as part of the system rather than a plain white box.
