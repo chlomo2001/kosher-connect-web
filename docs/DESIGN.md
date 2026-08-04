@@ -7,6 +7,9 @@ or a change to this document — never a local exception. Token values live in
 
 Started 2026-08-04 as part of the "Google-feel" cycle (owner ask: the first
 three gaps — content transitions, skeleton loading, a deep design system).
+The Stripe-language analysis that inspired the flat look formerly lived at
+this path; it is reference material, not the contract, and now lives at
+`docs/STRIPE-REFERENCE.md`.
 
 ## Ink & surfaces
 
