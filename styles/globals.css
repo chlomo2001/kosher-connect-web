@@ -1224,6 +1224,30 @@ body.pos-mode .toast { font-size: 17px; font-weight: 500; padding: 16px 22px; ma
 .kc-boot-title { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
 .kc-boot-sub { font-size: 13px; color: var(--muted); }
 
+/* SKELETON LOADING — tab loads mirror the incoming layout (DESIGN.md
+   §Loading): stat-card and table ghosts with a soft shimmer. Shapes stay
+   under reduced motion; only the shimmer stops. */
+.kc-skel {
+  height: 13px; border-radius: var(--radius-sm); margin: 9px 0;
+  background: linear-gradient(90deg, var(--border) 25%, var(--bg-secondary) 45%, var(--border) 65%);
+  background-size: 200% 100%; animation: kcShimmer 1.3s linear infinite;
+}
+.kc-skel-label { height: 10px; width: 40%; margin: 2px 0 12px; }
+.kc-skel-big { height: 28px; width: 55%; margin: 0; }
+.kc-skel-title { height: 17px; width: 200px; max-width: 55%; margin: 0 0 16px; }
+.kc-skel-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 22px 24px; box-shadow: var(--shadow-1);
+}
+.kc-skel-panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 18px 20px; box-shadow: var(--shadow-1);
+}
+.kc-skel-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .kc-skel-cols { grid-template-columns: 1fr; } }
+@keyframes kcShimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .kc-skel { animation: none; } }
+
 /* legacy inline spinner kept for any older markup */
 .kc-spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: kcSpin 0.7s linear infinite; flex-shrink: 0; }
 @keyframes kcSpin { to { transform: rotate(360deg); } }

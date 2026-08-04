@@ -5498,7 +5498,7 @@ async function saveWalletEntry(customerId) {
 
 async function renderWalletTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = loadingHtml('Loading wallet…');
+  content.innerHTML = skeletonHtml();
 
   const today = localISO();
   const data = await kcFetch(`/api/ledger?since=${today}&recent=50`)
@@ -6653,6 +6653,20 @@ function loadingHtml(label = 'Loading…') {
   return `<div class="kc-loading"><span class="kc-logo-loader"><img src="/logo.png" alt="" width="34" height="34"></span><span>${escHtml(label)}</span></div>`;
 }
 
+// Skeleton loading — the wait mirrors the incoming layout instead of
+// announcing itself (DESIGN.md §Loading). 'stats' ghosts the usual
+// stats-row + table page; 'columns' ghosts a two-column card tab. The
+// spinner (loadingHtml) stays for modals and small inline areas.
+function skeletonHtml(kind = 'stats') {
+  const rows = (n, panel = '') =>
+    `<div class="kc-skel-panel">${panel}${'<div class="kc-skel"></div>'.repeat(n)}</div>`;
+  const card = `<div class="kc-skel-card"><div class="kc-skel kc-skel-label"></div><div class="kc-skel kc-skel-big"></div></div>`;
+  if (kind === 'columns') {
+    return `<div class="kc-skel-cols" aria-hidden="true">${rows(5, '<div class="kc-skel kc-skel-title"></div>')}${rows(5, '<div class="kc-skel kc-skel-title"></div>')}</div>`;
+  }
+  return `<div aria-hidden="true"><div class="stats-row">${card.repeat(3)}</div>${rows(7, '<div class="kc-skel kc-skel-title"></div>')}</div>`;
+}
+
 // An error state with a Retry — never a dead-end, and never a reassuring
 // empty shell when the backend is actually unreachable. Retry re-renders the
 // current tab.
@@ -7606,7 +7620,7 @@ function repairStatusBadge(status) {
 
 async function renderRepairsTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = loadingHtml('Loading repairs…');
+  content.innerHTML = skeletonHtml();
   try {
     [repairs, repairMenu] = await Promise.all([
       window.api.getRepairs(),
@@ -8072,7 +8086,7 @@ function svcFloatDragStart(e) {
 
 async function renderServicesTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = loadingHtml('Loading services…');
+  content.innerHTML = skeletonHtml();
   if (svcTimerInterval) { clearInterval(svcTimerInterval); svcTimerInterval = null; }
   try {
     [serviceOrders, onlineMenu] = await Promise.all([
@@ -8352,7 +8366,7 @@ const STOCK_TYPE_SUGGESTIONS = [
 
 async function renderShopTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = loadingHtml('Loading shop…');
+  content.innerHTML = skeletonHtml();
   const [data, retData, giData] = await Promise.all([
     kcFetch('/api/shop').then(r => r.json()).catch(() => null),
     // Returns and goods-in are additive: if either fetch fails the shop still renders.
@@ -9550,7 +9564,7 @@ function ktSectionHead(title, sub) {
 
 async function renderKolTorahTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = loadingHtml('Loading Kol Torah…');
+  content.innerHTML = skeletonHtml('columns');
   const res = await kcFetch('/api/kol-torah').then(r => r.json()).catch(() => null);
   if (!res || !res.success) { content.innerHTML = errorHtml('Couldn’t load Kol Torah'); return; }
   ktData = res;
@@ -11142,7 +11156,7 @@ async function snoozeTask(id, choice) {
 
 async function renderTasksTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = loadingHtml('Loading tasks…');
+  content.innerHTML = skeletonHtml();
   tasksList = await window.api.getTasks();
   if (!Array.isArray(tasksList)) tasksList = [];
 
@@ -11601,7 +11615,7 @@ let vnPriceMatrix = []; // bundle price matrix (also drives the billing modal)
 
 async function renderVirtualTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = loadingHtml('Loading virtual numbers…');
+  content.innerHTML = skeletonHtml();
   try {
     [virtualNumbers, vnPriceMatrix] = await Promise.all([
       window.api.getVirtualNumbers(),
@@ -11856,7 +11870,7 @@ async function deleteVN(id, number) {
 
 async function renderSettingsTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = loadingHtml('Loading settings…');
+  content.innerHTML = skeletonHtml('columns');
   const [cfg, team, autos, aliases, menu, extra, bizacc, pguide, health, elidSummary] = await Promise.all([
     window.api.getSettings(),
     kcFetch('/api/team').then(r => r.status === 403 ? null : r.json()).catch(() => null),

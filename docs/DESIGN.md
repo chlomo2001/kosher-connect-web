@@ -115,6 +115,6 @@ Waiting is disguised, not announced:
 | Spacing/radius/elevation tokens | ✅ defined, ✅ major surfaces |
 | Motion tokens | ✅ defined; buttons/rows/toasts consume them |
 | Tab content transitions | ✅ `kcContentEnter()` + `.tab-enter` |
-| Skeleton loading (heavy tabs) | ⏳ this cycle |
+| Skeleton loading (heavy tabs) | ✅ `skeletonHtml()` on all 8 spinner tabs |
 | Type-ramp tokens | ✅ defined; adoption sweep **pending** (~470 inline font-sizes in main.js) |
 | Inline-style sweep (spacing/colour in `style=""`) | ⏳ pending — collapse opportunistically per surface |
