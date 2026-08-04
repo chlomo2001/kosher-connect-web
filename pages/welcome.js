@@ -105,16 +105,16 @@ const T = {
         label: 'For your phone',
         items: [
           { icon: 'wrench', title: 'Repairs', body: 'Screens, batteries, charging trouble — most fixed quickly, and we’ll tell you honestly if it isn’t worth it.', href: '/repair', linkLabel: 'Book a repair →' },
-          { icon: 'bag', title: 'Accessories', body: 'Chargers, cables, cases, power banks, SD cards, adapters and USA SIMs — on the shelf.' },
-          { icon: 'phone', title: 'Kosher phones', body: 'The right kosher handset for you — we stock a range and talk you through what suits.' },
+          { icon: 'bag', title: 'Accessories', body: 'Chargers, cables, cases, power banks, SD cards, adapters and USA SIMs — on the shelf.', href: '#contact', linkLabel: 'Ask if it’s in stock →', prefill: 'I’m after an accessory — what I need: ' },
+          { icon: 'phone', title: 'Kosher phones', body: 'The right kosher handset for you — we stock a range and talk you through what suits.', href: '/phone-guide', linkLabel: 'See the phone guide →' },
         ],
       },
       {
         label: 'Everyday help',
         items: [
-          { icon: 'music', title: 'Kol Torah audio', body: 'Shiurim, music and children’s stories — on CD or loaded onto your phone or player while you visit.' },
-          { icon: 'plane', title: 'Flights & tickets', body: 'We book the trip and keep an eye on times and changes, so it’s sorted before you pack.' },
-          { icon: 'chat', title: 'Online help', body: 'Forms, printing and the little online jobs that are easier done properly than fought with.' },
+          { icon: 'music', title: 'Kol Torah audio', body: 'Shiurim, music and children’s stories — on CD or loaded onto your phone or player while you visit.', href: '#contact', linkLabel: 'Ask about Kol Torah →', prefill: 'I’d like to ask about Kol Torah audio — shiurim, music or children’s stories.' },
+          { icon: 'plane', title: 'Flights & tickets', body: 'We book the trip and keep an eye on times and changes, so it’s sorted before you pack.', href: '#contact', linkLabel: 'Start a booking →', prefill: 'I’d like help booking a flight. Where I’m going and when: ' },
+          { icon: 'chat', title: 'Online help', body: 'Forms, printing and the little online jobs that are easier done properly than fought with.', href: '#contact', linkLabel: 'Tell us what you need →', prefill: 'I could use a hand with an online job — here’s what: ' },
         ],
       },
     ],
@@ -195,16 +195,16 @@ const T = {
         label: 'לטלפון שלכם',
         items: [
           { icon: 'wrench', title: 'תיקונים', body: 'מסך, סוללה, בעיות טעינה — את רוב התיקונים מסיימים מהר. ואם לא שווה לתקן? נגיד לכם ביושר.', href: '/repair', linkLabel: 'לקבוע תיקון ←' },
-          { icon: 'bag', title: 'אביזרים', body: 'מטענים, כבלים, כיסויים, מטענים ניידים, כרטיסי זיכרון, מתאמים וסים לארה״ב — הכול על המדף.' },
-          { icon: 'phone', title: 'טלפונים כשרים', body: 'מגוון מכשירים כשרים במלאי — ונעזור לכם לבחור את מה שבאמת מתאים.' },
+          { icon: 'bag', title: 'אביזרים', body: 'מטענים, כבלים, כיסויים, מטענים ניידים, כרטיסי זיכרון, מתאמים וסים לארה״ב — הכול על המדף.', href: '#contact', linkLabel: 'לבדוק אם יש במלאי ←', prefill: 'אני מחפש/ת אביזר — מה שאני צריך/ה: ' },
+          { icon: 'phone', title: 'טלפונים כשרים', body: 'מגוון מכשירים כשרים במלאי — ונעזור לכם לבחור את מה שבאמת מתאים.', href: '/phone-guide', linkLabel: 'למדריך הטלפונים ←' },
         ],
       },
       {
         label: 'עזרה יומיומית',
         items: [
-          { icon: 'music', title: 'קול תורה', body: 'שיעורים, ניגונים וסיפורים לילדים — על דיסק, או שנעביר לכם ישר לטלפון או לנגן בזמן שאתם כאן.' },
-          { icon: 'plane', title: 'טיסות וכרטיסים', body: 'מזמינים לכם את הטיסה ועוקבים אחרי הזמנים והשינויים — הכול סגור עוד לפני שאתם אורזים.' },
-          { icon: 'chat', title: 'עזרה אונליין', body: 'טפסים, הדפסות וכל הסידורים הקטנים באינטרנט — אנחנו נעשה את זה בשבילכם, בלי כאב ראש.' },
+          { icon: 'music', title: 'קול תורה', body: 'שיעורים, ניגונים וסיפורים לילדים — על דיסק, או שנעביר לכם ישר לטלפון או לנגן בזמן שאתם כאן.', href: '#contact', linkLabel: 'לשאול על קול תורה ←', prefill: 'אשמח לשמוע על קול תורה — שיעורים, ניגונים או סיפורים לילדים.' },
+          { icon: 'plane', title: 'טיסות וכרטיסים', body: 'מזמינים לכם את הטיסה ועוקבים אחרי הזמנים והשינויים — הכול סגור עוד לפני שאתם אורזים.', href: '#contact', linkLabel: 'להתחיל הזמנה ←', prefill: 'אשמח לעזרה בהזמנת טיסה. לאן ומתי: ' },
+          { icon: 'chat', title: 'עזרה אונליין', body: 'טפסים, הדפסות וכל הסידורים הקטנים באינטרנט — אנחנו נעשה את זה בשבילכם, בלי כאב ראש.', href: '#contact', linkLabel: 'ספרו לנו מה צריך ←', prefill: 'אשמח לעזרה בסידור באינטרנט — במה מדובר: ' },
         ],
       },
     ],
@@ -492,13 +492,21 @@ export default function Welcome() {
                 <div className="sk-grid">
                   {g.items.map((m, i) => {
                     const Icon = MORE_ICONS[m.icon] || ChatIcon
-                    // A tile with an href is a real door, not a poster — the
-                    // whole card is the link (owner ask 08-04: the Repairs
-                    // tile should book a repair, not just describe one).
+                    // Every tile is a real door, not a poster (owner ask
+                    // 08-04: "every tile should be clickable"). Tiles that
+                    // land on the contact form seed a fitting message the
+                    // same way the band CTAs do — empty-only, never
+                    // clobbering what the visitor already typed.
                     const Tag = m.href ? 'a' : 'div'
                     return (
                       <Tag className={`sk-tile sk-reveal ${m.href ? 'sk-tile-link' : ''}`}
-                        key={`${lang}-g${gi}-m${i}`} {...(m.href ? { href: m.href } : {})}>
+                        key={`${lang}-g${gi}-m${i}`}
+                        {...(m.href ? {
+                          href: m.href,
+                          onClick: m.prefill
+                            ? () => setForm((f) => (f.message.trim() ? f : { ...f, message: m.prefill }))
+                            : undefined,
+                        } : {})}>
                         <div className="sk-tile-ico" aria-hidden="true"><Icon /></div>
                         <h4>{m.title}</h4>
                         <p>{m.body}</p>
