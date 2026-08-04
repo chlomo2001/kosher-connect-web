@@ -108,26 +108,24 @@ Safe (loop-eligible), ranked value ÷ effort:
       (Loyverse.) *money persistence — careful design.*
 
 ## UX / smoothness / delight
-- [ ] **P1 · L** — **"Google-feel" polish — NEXT CYCLE (owner ask 08-03**, after
-      "why does business.google.com feel so much nicer/richer/smoother?").
-      Owner wants the **first three** of the four gaps, as far as they go
-      (the fourth — Google's headcount — is out of reach by definition):
-      1. **Nothing pops** — tab/content transitions: cross-fade (+ a few px
-         slide) using the existing motion tokens instead of one-frame
-         innerHTML swaps; respect `prefers-reduced-motion`.
-      2. **Waiting is disguised** — skeleton shapes (rows/cards mirroring the
-         incoming layout) on the heavier tabs, replacing "Loading…" text.
-      3. **A deep design system** — pre-decide the details once, app-wide:
-         one spacing grid enforced (audit the odd paddings), a strict type
-         ramp (collapse the ad-hoc font-sizes to the scale), a motion spec
-         (named easing/duration tokens per motion kind — enter, exit,
-         emphasis — used everywhere), elevation/border rules, and sweep
-         inline-style micro-decisions into the token/class system so no
-         screen disagrees with another in the small ways. docs/DESIGN.md is
-         the contract; extend it as tokens land.
-      Start with the improve-animations audit to rank the worst offenders;
-      verify in the visual harness at 390px + desktop, light + dark. Likely
-      2–3 sessions: system + tokens first, then surfaces adopt it.
+- [ ] **P1 · L** — **"Google-feel" polish (owner ask 08-03**, after "why does
+      business.google.com feel so much nicer/richer/smoother?"). Owner wants
+      the **first three** of the four gaps. **Session 1 shipped 08-04**
+      (see log): motion spec + type-ramp tokens + `docs/DESIGN.md` as the
+      contract; tab/profile cross-fade; skeletons on the eight spinner tabs;
+      modal entrances; first ramp-adoption sweep (all 15 half-step sizes) +
+      toast tokens + last `transition: all` retired. **Remaining for
+      sessions 2–3** (adoption, per DESIGN.md's ledger):
+      1. Type-ramp sweep of the ~455 remaining inline `font-size`s in
+         main.js, surface by surface (eyeball each in the harness).
+      2. Inline-style spacing/colour micro-decisions into tokens/classes.
+      3. Odd paddings onto the 4/8/12/16/24 spacing grid.
+      4. Considered + parked: customer-search dropdown enter animation —
+         it re-renders per keystroke, so a naive animation would flicker;
+         needs a first-open-only guard and a live feel-check.
+      **Owner feel-check first**: transitions/skeletons/modal enters are
+      offline-verified but feel is judged live — tune durations with the
+      owner before sweeping further.
 - [ ] **P1 · S** — Owner live-test pass on this session's work (dark theme retune,
       login backdrop, dashboard clock+charts, dotted cards, ⌘K quick-actions,
       floating timer). All offline-verified; needs the real-browser sign-off.
@@ -362,6 +360,7 @@ deliberate.
 
 | 08-03 | **Google Business Profile verified** (owner) — noted under "Local presence" above with the follow-ups (fill-in, JSON-LD sameAs/hasMap, review link, services). No code shipped yet | n/a (milestone) | owner |
 | 08-03 | **Wizz refund credit notes arrived** — 11 Wizz Air credit-note PDFs in the owner's Drive `wizz` folder, one per cancelled PNR, €27,550.71 total. Every PNR matches a Cancelled booking in the app. **This is the per-PNR "refund amount" data the £3,190 reconcile was blocked on** (amounts are per-PNR group totals in EUR; passed-on-to-customer status still unknown). One name mismatch: ZMKWJP invoice says Chaya Leifer, booking says Yitzhak Leifer | n/a (data) | awaiting owner go-ahead to post refund legs |
+| 08-04 | **Google-feel session 1** — five items off the owner's three gaps. (1) **The contract** (ecf5153, 5fb3c8f): `docs/DESIGN.md` written as the design-system contract — which token when, per surface: spacing, radius, elevation, the new `--fs-*` type ramp (11/12/13/14/16/18/22/28), and a named motion spec (enter/exit/move/drawer/press/hover — each mapped to a duration + easing token, with the hard rules: never ease-in, UI < 300ms, keyboard actions never animate, transform/opacity only). The Stripi analysis that previously sat at that path moved honestly to `docs/STRIPE-REFERENCE.md` after the first commit accidentally replaced it. (2) **Tabs enter, they don't pop** (b831139): every renderTab paint (and the customer profile page) restarts a 180ms fade + 5px rise on #mainContent — one-frame innerHTML swaps gone. (3) **Waiting is disguised** (76f9e1e): the eight tabs that opened on a centred spinner (wallet, repairs, services, shop, Kol Torah, tasks, VN, settings) now paint `skeletonHtml()` — stat-card + table ghosts (two-column ghost where that's the layout) with a soft shimmer off the border/surface tokens; spinner stays for modals. (4) **Modals enter** (725d426): scrim fades, dialog rises from scale(0.97), pure CSS, exits deliberately instant; the last `transition: all` (.action-btn) pinned to its four real properties. (5) **Ramp adoption begins** (d69346e): all 15 fractional font-sizes in main.js onto `--fs-small`/`--fs-body`; toasts onto `--dur-3`/`--ease-out`. Checked and already right: press feedback exists app-wide, ⌘K palette correctly never animates, reduced-motion umbrella covers everything new for free | ✅ each item: 198/198 ×2 + build (+ node --check where main.js touched); skeletons screenshotted light+dark at 1280+390 (shapes mirror layout, dark flips on tokens); full modal sweep clean after the modal-enter change | **owner feel-check wanted** — durations are tuned blind; judge live and I'll adjust |
 
 Found 07-31, FIXED 07-31 (8a186a0) — see the log row above:
 - [x] **P2 · L** — **form controls with no programmatic label** — most sat under
