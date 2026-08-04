@@ -1,0 +1,182 @@
+import { useEffect, useState } from 'react'
+import Head from 'next/head'
+import ThemeToggle from '../components/ThemeToggle'
+import AuthBackdrop from '../components/AuthBackdrop'
+import { WrenchIcon } from '../components/kcIcons'
+
+// Public repair booking — the online front door for the repair bench. One
+// short form (who you are, which device, what's wrong), lands as a task in
+// the staff queue via /api/public/repair; staff open a real Repairs job when
+// the device arrives. Deliberately two questions lighter than the SaaS
+// widgets it competes with: no address, no appointment grid — this is a
+// walk-in shop and the form's job is a heads-up, not a contract.
+// EN + Hebrew sharing the kcLang preference, same chrome as /phone-guide.
+
+const PHONE_TEL = 'tel:+441615311386'
+const PHONE_SHOWN = '0161 531 1386'
+
+const T = {
+  en: {
+    dir: 'ltr',
+    tag: 'Repairs',
+    back: '← Back to the shop', account: 'My account',
+    strap: 'Screens · batteries · charging · buttons',
+    h3: 'Book a repair',
+    lead: 'Tell us what’s broken and how to reach you — we’ll come back with an honest price, and if it isn’t worth fixing, we’ll say so. Most jobs are done quickly.',
+    fName: 'Your name', fContact: 'Phone number or email', fDevice: 'Which phone or device? (e.g. Nokia 105, iPhone 8)',
+    fIssue: 'What’s wrong with it?',
+    send: 'Send it in',
+    sending: 'Sending…',
+    okTitle: 'Got it — we’ll be in touch.',
+    okBody: 'Bring the device in whenever suits you: 421 Bury New Road, Salford M7 4ED. Left of Toy Zone, MMR Group building — ring bell 5.',
+    okCall: 'In a hurry? Call',
+    errFallback: 'That didn’t send — please call us on',
+    urgent: 'Urgent? Skip the form —',
+    urgentCall: 'call',
+    brandName: 'Kosher Connect', rights: 'All rights reserved.',
+    tradingName: 'Kosher Connect is a trading name of Hatsluche Ltd.',
+  },
+  he: {
+    dir: 'rtl',
+    tag: 'תיקונים',
+    back: 'חזרה לחנות', account: 'האזור האישי',
+    strap: 'מסכים · סוללות · טעינה · כפתורים',
+    h3: 'לקבוע תיקון',
+    lead: 'ספרו לנו מה התקלקל ואיך להשיג אתכם — נחזור אליכם עם מחיר הוגן, ואם לא שווה לתקן נגיד ביושר. את רוב התיקונים מסיימים מהר.',
+    fName: 'השם שלכם', fContact: 'טלפון או אימייל', fDevice: 'איזה מכשיר? (למשל Nokia 105, iPhone 8)',
+    fIssue: 'מה הבעיה?',
+    send: 'לשלוח',
+    sending: 'שולח…',
+    okTitle: 'קיבלנו — נחזור אליכם בקרוב.',
+    okBody: 'אפשר להביא את המכשיר מתי שנוח: 421 Bury New Road, Salford M7 4ED. משמאל ל־Toy Zone, בניין MMR Group — פעמון 5.',
+    okCall: 'ממהרים? התקשרו:',
+    errFallback: 'לא נשלח — התקשרו אלינו:',
+    urgent: 'דחוף? בלי טפסים —',
+    urgentCall: 'התקשרו',
+    brandName: 'כשר קונקט', rights: 'כל הזכויות שמורות.',
+    tradingName: 'כשר קונקט הוא שם מסחרי של Hatsluche Ltd.',
+  },
+}
+
+const EMPTY = { name: '', contact: '', device: '', issue: '', company: '' }
+
+export default function RepairBooking() {
+  const [lang, setLang] = useState('en')
+  useEffect(() => { try {
+    if (localStorage.getItem('kcLang') === 'he') setLang('he')
+  } catch { /* stay en */ } }, [])
+  const t = T[lang]
+  const flip = () => {
+    const n = lang === 'he' ? 'en' : 'he'
+    setLang(n)
+    try { localStorage.setItem('kcLang', n) } catch { /* not persisted */ }
+  }
+
+  const [form, setForm] = useState(EMPTY)
+  const [state, setState] = useState('idle') // idle | busy | ok | err
+  const [errMsg, setErrMsg] = useState('')
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
+
+  async function submit(e) {
+    e.preventDefault()
+    if (state === 'busy') return
+    setState('busy'); setErrMsg('')
+    try {
+      const r = await fetch('/api/public/repair', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const d = await r.json().catch(() => null)
+      if (d && d.success) { setState('ok'); setForm(EMPTY) }
+      else { setState('err'); setErrMsg((d && d.error) || '') }
+    } catch { setState('err'); setErrMsg('') }
+  }
+
+  return (
+    <>
+      <Head>
+        <title>Book a repair — Kosher Connect</title>
+        <meta name="description" content="Phone repairs in Salford — screens, batteries, charging trouble. Tell us what's wrong and we'll come back with an honest price. Kosher Connect, 421 Bury New Road." />
+        <link rel="canonical" href="https://www.kosher-connect.com/repair" />
+      </Head>
+      <div className="welcome-shell">
+        <AuthBackdrop />
+        <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
+        <div className="w-wrap" dir={t.dir} lang={lang}>
+          <div className="w-topbar">
+            <div className="w-brand">
+              <img src="/logo-full-tight.png" alt="Kosher Connect" />
+              <div>
+                <h1>Kosher Connect</h1>
+                <p>{t.tag}</p>
+              </div>
+            </div>
+            <nav className="w-pills" aria-label="Site">
+              <div className="w-lang" role="group" aria-label="Language">
+                {['en', 'he'].map((l) => (
+                  <button key={l} type="button" lang={l}
+                    className={lang === l ? 'active' : ''} aria-pressed={lang === l}
+                    onClick={() => (lang === l ? null : flip())}>{l === 'en' ? 'EN' : 'HE'}</button>
+                ))}
+              </div>
+              <a href="/welcome" className="w-anchor">{t.back}</a>
+              <a href="/portal" className="w-pill-primary">{t.account}</a>
+            </nav>
+          </div>
+
+          <section className="w-section rp-head" id="top">
+            <div className="w-strap">{t.strap}</div>
+            <h3 className="w-show">{t.h3}</h3>
+            <p className="w-lead">{t.lead}</p>
+          </section>
+
+          <section className="w-section rp-form-wrap" aria-label={t.h3}>
+            {state === 'ok' ? (
+              <div className="w-card rp-card rp-ok" role="status">
+                <div className="rp-ok-ico" aria-hidden="true"><WrenchIcon /></div>
+                <h4>{t.okTitle}</h4>
+                <p>{t.okBody}</p>
+                <p>{t.okCall} <a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a></p>
+              </div>
+            ) : (
+              <form className="w-card rp-card rp-form" onSubmit={submit}>
+                <label>
+                  <span>{t.fName}</span>
+                  <input value={form.name} onChange={set('name')} required minLength={2} maxLength={80} autoComplete="name" />
+                </label>
+                <label>
+                  <span>{t.fContact}</span>
+                  <input value={form.contact} onChange={set('contact')} required maxLength={120} autoComplete="tel" inputMode="email" dir="ltr" />
+                </label>
+                <label>
+                  <span>{t.fDevice}</span>
+                  <input value={form.device} onChange={set('device')} required maxLength={80} />
+                </label>
+                <label>
+                  <span>{t.fIssue}</span>
+                  <textarea value={form.issue} onChange={set('issue')} required minLength={3} maxLength={600} rows={4} />
+                </label>
+                {/* Honeypot — humans never see it; bots fill it and get a polite nothing. */}
+                <input className="rp-hp" type="text" tabIndex={-1} autoComplete="off" aria-hidden="true"
+                  value={form.company} onChange={set('company')} placeholder="Company" />
+                <button type="submit" className="rp-btn" disabled={state === 'busy'}>
+                  {state === 'busy' ? t.sending : t.send}
+                </button>
+                {state === 'err' && (
+                  <p className="rp-err" role="alert">
+                    {errMsg || <>{t.errFallback} <a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a></>}
+                  </p>
+                )}
+                <p className="rp-urgent">{t.urgent} <a href={PHONE_TEL}>{t.urgentCall} <span dir="ltr">{PHONE_SHOWN}</span></a></p>
+              </form>
+            )}
+          </section>
+
+          <footer className="rp-foot">
+            © {new Date().getFullYear()} {t.brandName}. {t.rights} {t.tradingName}
+          </footer>
+        </div>
+      </div>
+    </>
+  )
+}

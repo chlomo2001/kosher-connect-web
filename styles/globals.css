@@ -2289,6 +2289,41 @@ html { scroll-behavior: smooth; }
   .pg-verdict { grid-template-columns: 1fr; }
   .pg-row-head { flex-wrap: wrap; }
 }
+
+/* ─── /repair — public repair booking (shares the w- chrome) ─── */
+.rp-head h3 { margin-bottom: 10px; }
+.rp-form-wrap { max-width: 560px; }
+.rp-card { padding: 24px 26px; }
+.rp-form { display: flex; flex-direction: column; gap: 14px; }
+.rp-form label { display: flex; flex-direction: column; gap: 6px; }
+.rp-form label span { font-size: 13px; font-weight: 600; color: var(--ink-secondary); }
+.rp-form input, .rp-form textarea {
+  width: 100%; padding: 11px 13px; border: 1px solid var(--border-input);
+  border-radius: var(--radius); background: var(--surface); color: var(--text);
+  font: inherit; font-size: 15px;
+}
+.rp-form textarea { resize: vertical; min-height: 96px; }
+.rp-form input:focus, .rp-form textarea:focus {
+  outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent;
+}
+/* Honeypot: off-canvas, not display:none — some bots skip hidden fields. */
+.rp-hp { position: absolute; inset-inline-start: -9999px; width: 1px; height: 1px; opacity: 0; }
+.rp-btn {
+  margin-top: 4px; padding: 12px 18px; border: none; border-radius: var(--radius);
+  background: var(--accent); color: #fff; font: inherit; font-size: 15px; font-weight: 600;
+}
+.rp-btn:hover { background: var(--primary-deep); }
+.rp-btn:disabled { opacity: 0.6; cursor: default; }
+.rp-err { margin: 0; font-size: 14px; font-weight: 600; color: var(--danger-ink, #b3261e); }
+.rp-err a, .rp-urgent a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.rp-urgent { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.rp-ok { text-align: center; }
+.rp-ok-ico { display: inline-flex; color: var(--accent); margin-bottom: 6px; }
+.rp-ok h4 { margin: 0 0 8px; font-size: 18px; }
+.rp-ok p { margin: 0 0 8px; font-size: 14.5px; line-height: 1.6; color: var(--ink-secondary); }
+.rp-ok a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.rp-foot { margin-top: 40px; font-size: 12.5px; color: var(--muted); }
+
 /* The Hebrew welcome AND the Hebrew portal speak Heebo — the modern sans
    that matches the Inter look — instead of the app-wide David Libre serif.
    Form controls don't inherit font by default, so pull them along too. */
