@@ -141,17 +141,17 @@ Safe (loop-eligible), ranked value ÷ effort:
 - [ ] **P1 · M** 🔒 — **Email delivery** go-live (Track A below) — provider + domain
       decision, `email_log` table, HOLD→TEST→LIVE. Unblocks receipts + portal
       sign-in + reminders. *DNS has lead time — decide first.*
-- [ ] **P2 · L** 🔒 — **myPOS ↔ till** one-tap. **BUILT 08-04** (owner's
-      go-ahead): full ePOS cloud lane on the dev branch — `lib/mypos.mjs`
-      adapter (demo/live gateways + stateless mock), `/api/pos/terminal`
-      (charge/status/cancel, staff+shop-gated), till card flow reusing the
-      wrapper lane's approval-cache/re-ring/`card_receipts` safety. Ships
-      dark: env-gated on `MYPOS_EPOS_MODE` + credentials. Remaining is
-      myPOS-side: emailed online@mypos.com 08-04 (K300 eligibility?, UK
-      price of Carbon/Sigma vs the £229 Ultra, SoftPOS-on-NFC-tablet via
-      ePOS?, fees, Partners Portal access). Decide purchase on their reply;
-      then register the Partners Portal integration (POS Payments / Cash
-      Register) and drop the 3 keys + TID into Vercel env.
+- [ ] **P3 · done-but-dark** — **myPOS ↔ till** one-tap. **BUILT 08-04 and
+      PARKED by owner decision 08-04** ("we wait and work manually with the
+      current K300"). Facts that closed it: K300 will never do ePOS
+      (support, ticket 4235846); Glass/SoftPOS is SDK-only, not
+      ePOS-addressable, so the NFC tablet can't be till-triggered; Sigma is
+      a kiosk device — the realistic buy was Carbon ~£174–250 or Ultra
+      £229, not worth it at current card volume. The full cloud lane is
+      merged and ships dark (env-gated on `MYPOS_EPOS_MODE`+credentials,
+      205-test gate, mock verified). To wake it later: buy Carbon/Ultra →
+      Partners Portal integration (POS Payments / Cash Register, has an
+      approval step) → 3 keys + TID into Vercel env. No code work left.
 - [ ] **P2 · L** 🔒 — **Stripe** save-card + off-session charge + webhook (test keys
       first). Least urgent of the three; card-present already works.
 - [ ] **P2 · S** — **Phone-migration job logging**: "Contact transfer / phone
