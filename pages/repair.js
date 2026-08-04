@@ -19,7 +19,7 @@ const T = {
   en: {
     dir: 'ltr',
     tag: 'Repairs',
-    back: '← Back to the shop', account: 'My account',
+    back: '← Back to the main page', account: 'My account',
     strap: 'Screens · batteries · charging · buttons',
     h3: 'Book a repair',
     lead: 'Tell us what’s broken and how to reach you — we’ll come back with an honest price, and if it isn’t worth fixing, we’ll say so. Most jobs are done quickly.',
@@ -39,7 +39,7 @@ const T = {
   he: {
     dir: 'rtl',
     tag: 'תיקונים',
-    back: 'חזרה לחנות', account: 'האזור האישי',
+    back: 'חזרה לעמוד הראשי', account: 'האזור האישי',
     strap: 'מסכים · סוללות · טעינה · כפתורים',
     h3: 'לקבוע תיקון',
     lead: 'ספרו לנו מה התקלקל ואיך להשיג אתכם — נחזור אליכם עם מחיר הוגן, ואם לא שווה לתקן נגיד ביושר. את רוב התיקונים מסיימים מהר.',

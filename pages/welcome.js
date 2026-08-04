@@ -104,7 +104,7 @@ const T = {
       {
         label: 'For your phone',
         items: [
-          { icon: 'wrench', title: 'Repairs', body: 'Screens, batteries, charging trouble — most fixed quickly, and we’ll tell you honestly if it isn’t worth it.' },
+          { icon: 'wrench', title: 'Repairs', body: 'Screens, batteries, charging trouble — most fixed quickly, and we’ll tell you honestly if it isn’t worth it.', href: '/repair', linkLabel: 'Book a repair →' },
           { icon: 'bag', title: 'Accessories', body: 'Chargers, cables, cases, power banks, SD cards, adapters and USA SIMs — on the shelf.' },
           { icon: 'phone', title: 'Kosher phones', body: 'The right kosher handset for you — we stock a range and talk you through what suits.' },
         ],
@@ -194,7 +194,7 @@ const T = {
       {
         label: 'לטלפון שלכם',
         items: [
-          { icon: 'wrench', title: 'תיקונים', body: 'מסך, סוללה, בעיות טעינה — את רוב התיקונים מסיימים מהר. ואם לא שווה לתקן? נגיד לכם ביושר.' },
+          { icon: 'wrench', title: 'תיקונים', body: 'מסך, סוללה, בעיות טעינה — את רוב התיקונים מסיימים מהר. ואם לא שווה לתקן? נגיד לכם ביושר.', href: '/repair', linkLabel: 'לקבוע תיקון ←' },
           { icon: 'bag', title: 'אביזרים', body: 'מטענים, כבלים, כיסויים, מטענים ניידים, כרטיסי זיכרון, מתאמים וסים לארה״ב — הכול על המדף.' },
           { icon: 'phone', title: 'טלפונים כשרים', body: 'מגוון מכשירים כשרים במלאי — ונעזור לכם לבחור את מה שבאמת מתאים.' },
         ],
@@ -492,12 +492,18 @@ export default function Welcome() {
                 <div className="sk-grid">
                   {g.items.map((m, i) => {
                     const Icon = MORE_ICONS[m.icon] || ChatIcon
+                    // A tile with an href is a real door, not a poster — the
+                    // whole card is the link (owner ask 08-04: the Repairs
+                    // tile should book a repair, not just describe one).
+                    const Tag = m.href ? 'a' : 'div'
                     return (
-                      <div className="sk-tile sk-reveal" key={`${lang}-g${gi}-m${i}`}>
+                      <Tag className={`sk-tile sk-reveal ${m.href ? 'sk-tile-link' : ''}`}
+                        key={`${lang}-g${gi}-m${i}`} {...(m.href ? { href: m.href } : {})}>
                         <div className="sk-tile-ico" aria-hidden="true"><Icon /></div>
                         <h4>{m.title}</h4>
                         <p>{m.body}</p>
-                      </div>
+                        {m.linkLabel && <span className="sk-tile-cta">{m.linkLabel}</span>}
+                      </Tag>
                     )
                   })}
                 </div>
@@ -865,6 +871,11 @@ const SKY_CSS = `
     color:var(--sk-muted);text-align:center;margin:26px 0 14px}
   .sk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
   .sk-tile{background:var(--sk-band-alt);border:1px solid var(--sk-line);border-radius:16px;padding:22px}
+  a.sk-tile{color:inherit;text-decoration:none;display:block}
+  .sk-tile-link:hover{border-color:var(--sk-sky)}
+  .sk-tile-cta{display:inline-block;margin-top:10px;font-weight:700;font-size:14px;color:var(--sk-sky)}
+  :root[data-theme="dark"] .sk-tile-cta{color:var(--sk-sky-bright)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-tile-cta{color:var(--sk-sky-bright)}}
   .sk-tile-ico{width:38px;height:38px;color:var(--sk-sky);margin-bottom:12px}
   :root[data-theme="dark"] .sk-tile-ico{color:var(--sk-sky-bright)}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-tile-ico{color:var(--sk-sky-bright)}}

@@ -19,7 +19,7 @@ const T = {
   en: {
     dir: 'ltr',
     tag: 'The phone guide',
-    back: '← Back to the shop', account: 'My account',
+    back: '← Back to the main page', account: 'My account',
     strap: 'Compared honestly — no favourites',
     h3: 'Which kosher phone is right for you?',
     lead1: 'Every handset below is one we sell, set up and stand behind. The specs answer what people actually ask in the shop',
@@ -39,7 +39,7 @@ const T = {
   he: {
     dir: 'rtl',
     tag: 'מדריך הטלפונים',
-    back: 'חזרה לחנות', account: 'החשבון שלי',
+    back: 'חזרה לעמוד הראשי', account: 'החשבון שלי',
     strap: 'השוואה הוגנת — בלי מועדפים',
     h3: 'איזה טלפון כשר מתאים לכם?',
     lead1: 'כל מכשיר ברשימה הוא מכשיר שאנחנו מוכרים, מגדירים ועומדים מאחוריו. המפרט עונה על מה שבאמת שואלים אצלנו בחנות',
