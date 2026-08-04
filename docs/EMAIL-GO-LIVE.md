@@ -1,51 +1,28 @@
-# Email go-live — kosher-connect.com (decided 08-04)
+# Email — ALREADY CONFIGURED (corrected 08-04, verified against /api/health)
 
-**Owner decision:** send from our own domain, **everything configured and
-verified, but NOT sendable** until Shloime officially starts using the app.
+An earlier version of this file described a setup that was already done —
+context lost to a session boundary, owner caught it. The live truth, from
+`/api/health` on production (04 Aug):
 
-The code already guarantees "ready but not sendable": `lib/email.js` has a
-three-state gate and **HOLD is the default**. With a provider configured and
-neither override set, every email is built and logged to `email_log` — and
-nothing leaves the building. Sending requires deliberately setting an env var
-(`MAIL_LIVE=true`), which is the one step this runbook tells you NOT to do.
+    email: { configured: true, provider: resend, mode: test }
+    sms:   { configured: true, provider: twilio, mode: test }
 
-## Setup (one sitting, ~20 minutes + DNS wait)
+Resend is fully set up — account, domain, keys in Vercel — and the gate sits
+in **TEST mode**: every email the app generates is redirected to the test
+inbox (`MAIL_TEST_TO`). No customer can receive anything. SMS is in the same
+state via Twilio.
 
-1. **Create a Resend account** — resend.com, free tier (100/day, 3,000/month —
-   plenty for receipts and sign-in links). Sign up with a business Google
-   account, not a personal one.
-2. **Add the sending domain**: Resend dashboard → Domains → Add →
-   **`mail.kosher-connect.com`** (a subdomain keeps the root domain's email
-   reputation separate from anything else, and matches the app's example
-   `MAIL_FROM`). Pick the **EU (Ireland)** region.
-3. **Add the DNS records Resend shows** (an MX, an SPF TXT, and DKIM records —
-   exact values only appear after step 2). kosher-connect.com's DNS lives
-   where the domain was connected (Vercel → the team's Domains page → DNS
-   records). Add them exactly as shown; then hit Verify in Resend. Usually
-   minutes, can take a few hours.
-4. **Create an API key** in Resend (Sending access is enough) and put TWO env
-   vars into Vercel (project → Settings → Environment Variables, production):
-   - `RESEND_API_KEY` = `re_…`
-   - `MAIL_FROM` = `Kosher Connect <hello@mail.kosher-connect.com>`
+**Owner rule (08-04): it stays this way until Shloime officially starts
+using the app.** TEST mode satisfies that by construction.
 
-   **Do NOT set `MAIL_LIVE` or `MAIL_TEST_TO`.** Their absence IS the hold.
-5. **Bounce webhook**: Resend dashboard → Webhooks → add
-   `https://app.kosher-connect.com/api/email/webhook` (events: bounced,
-   complained). Hard bounces land in `email_suppressions` and are refused
-   before any future send.
-6. **Redeploy** (any push does it) and check `/api/health` — email should
-   report `configured: true, provider: resend, mode: hold`.
+## The only remaining step — the un-hold, on the owner's word
 
-## When Shloime officially starts (the un-hold, in two steps)
+1. Remove `MAIL_TEST_TO` from Vercel env.
+2. Set `MAIL_LIVE=true`.
+3. Redeploy. `/api/health` should read `mode: live`.
 
-1. Set `MAIL_TEST_TO=<owner email>` for a day — every receipt/link redirects
-   to that one inbox so you can see exactly what customers would get.
-2. Happy? Remove `MAIL_TEST_TO`, set `MAIL_LIVE=true`, redeploy. Done.
+Same two-var pattern for SMS when its day comes (`SMS_TEST_TO` → live flag —
+check `lib/sms.js` for the exact names before flipping).
 
-## Notes
-
-- Replies to `hello@mail.kosher-connect.com` are not received anywhere — the
-  templates point people at support@kosher-connect.com / the shop number, and
-  the support@ alias already forwards (Settings → Email addresses).
-- Every attempt in every mode is recorded in `email_log`, so "what would have
-  been sent while on hold" is queryable before flipping live.
+Everything sent in any mode is recorded in `email_log`, so what customers
+*would* have received during test/hold is queryable before going live.

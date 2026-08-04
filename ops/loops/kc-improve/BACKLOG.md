@@ -138,15 +138,15 @@ Safe (loop-eligible), ranked value ÷ effort:
 - [ ] **P3 · S** — Optional analog+pulse clock variant to compare vs the digital.
 
 ## Integrations
-- [ ] **P1 · M** 🔒 — **Email delivery** go-live — **DECIDED 08-04**: Resend +
-      `mail.kosher-connect.com`, configured-but-HOLD until Shloime officially
-      starts on the app (owner's word is the un-hold trigger). Full runbook:
-      `docs/EMAIL-GO-LIVE.md` — owner does the Resend signup + DNS records +
-      2 Vercel env vars; `MAIL_LIVE` stays unset. Also queued for the
-      end-of-week Shloime session (tablet back ~Thu 08-06): Twilio number
-      verification, fresh Stripe `rk_live` into Vercel, and the Wizz per-PNR
-      receipt confirmations (ZMKWJP name question settled 08-04 — husband;
-      refund legs still post only against confirmed receipts).
+- [ ] **P1 · S** 🔒 — **Email un-hold** — Resend is ALREADY fully configured
+      (verified /api/health 08-04: provider resend, mode TEST — everything
+      redirects to the test inbox; Twilio SMS same state). Owner rule: stays
+      test until Shloime officially starts on the app; then remove
+      MAIL_TEST_TO + set MAIL_LIVE=true (docs/EMAIL-GO-LIVE.md). End-of-week
+      Shloime session (tablet ~Thu 08-06): Twilio number verification, fresh
+      Stripe `rk_live` into Vercel (health shows live-pk/test-sk mismatch),
+      Wizz per-PNR receipt confirmations (ZMKWJP settled 08-04 — husband;
+      refund legs post only against confirmed receipts).
 - [ ] **P3 · done-but-dark** — **myPOS ↔ till** one-tap. **BUILT 08-04 and
       PARKED by owner decision 08-04** ("we wait and work manually with the
       current K300"). Facts that closed it: K300 will never do ePOS
