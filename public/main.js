@@ -8931,6 +8931,7 @@ function openSaleModal(preselectItemId = null) { // name kept: every Sell button
   posWallet = 0;
   posSaleRef = null;   // fresh till session = fresh handover token
   posLastSale = null;
+  kcEposProbe();       // learn (once) whether the cloud terminal lane is on
   renderPosView();
 }
 
@@ -9399,13 +9400,17 @@ async function emailSaleReceipt(btn) {
   posShowLastSale();
 }
 
-// ── myPOS terminal bridge ("KosherConnect Till" wrapper on the K300) ─────
-// Inside the Android wrapper, the native side injects window.KCTill with
+// ── myPOS terminal bridge — two lanes, one contract ──────────────────────
+// Lane 1 (Android wrapper): the native side injects window.KCTill with
 // charge(amountPence, chargeReference) — it starts a sale on the terminal
-// (our reference rides along as the myPOS foreignTransactionId) and reports
-// back by calling window.kcTillResult({ chargeReference, approved, myposRef,
-// stan, authCode, brand, last4, error }). In a plain browser KCTill is absent
-// and none of this runs — the manual card flow is unchanged.
+// and reports back by calling window.kcTillResult({ chargeReference,
+// approved, myposRef, stan, authCode, brand, last4, error }).
+// Lane 2 (ePOS API, cloud): no wrapper needed — /api/pos/terminal pushes the
+// amount to the shop terminal over myPOS's ePOS API and the till polls for
+// the outcome, then reports through the SAME window.kcTillResult, so the
+// approval cache, re-ring guard and card_receipts recording are one code
+// path for both lanes. With neither lane available the manual card flow is
+// unchanged.
 const kcTillPending = {};
 // Approved terminal charges per reference WITH the approved amount: a re-ring
 // after a lost sale POST reuses the approval instead of charging the card
@@ -9413,7 +9418,18 @@ const kcTillPending = {};
 // blocked and told to re-ring the original total or refund on the machine.
 const kcTillApproved = {};   // ref → { result, amountPence }
 const kcTillAmounts = {};    // ref → requested pence (survives the timeout)
-function kcTillAvailable() { return !!(window.KCTill && typeof window.KCTill.charge === 'function'); }
+let kcEposEnabled = false;
+let kcEposProbed = false;
+async function kcEposProbe() {
+  if (kcEposProbed) return;
+  kcEposProbed = true;
+  try {
+    const d = await (await kcFetch('/api/pos/terminal')).json();
+    kcEposEnabled = !!(d && d.success && d.enabled);
+  } catch { kcEposEnabled = false; }
+}
+function kcWrapperAvailable() { return !!(window.KCTill && typeof window.KCTill.charge === 'function'); }
+function kcTillAvailable() { return kcWrapperAvailable() || kcEposEnabled; }
 function kcTillCharge(amountPence, chargeReference) {
   const cached = kcTillApproved[chargeReference];
   if (cached) {
@@ -9421,6 +9437,7 @@ function kcTillCharge(amountPence, chargeReference) {
     return Promise.resolve({ approved: false, mismatch: true, approvedAmount: cached.amountPence });
   }
   kcTillAmounts[chargeReference] = amountPence;
+  if (!kcWrapperAvailable()) return kcEposCharge(amountPence, chargeReference);
   return new Promise((resolve) => {
     // Terminal interactions are slow (card tap, PIN, issuer) — 3 minutes, then
     // give up with "no answer" so the operator checks the machine itself.
@@ -9432,6 +9449,63 @@ function kcTillCharge(amountPence, chargeReference) {
       delete kcTillPending[chargeReference];
       resolve({ approved: false, error: String((e && e.message) || e) });
     }
+  });
+}
+// ePOS lane: start the payment server-side, poll every 2s until the terminal
+// answers, then report through window.kcTillResult like the wrapper does.
+// Transient poll failures are tolerated (the terminal is mid-interaction);
+// if the till's 3-minute patience runs out first, the loop notices its
+// pending slot is gone, stops, and best-effort cancels so the terminal
+// doesn't sit waiting for a sale the till already abandoned.
+function kcEposCharge(amountPence, chargeReference) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => { delete kcTillPending[chargeReference]; resolve(null); }, 180000);
+    kcTillPending[chargeReference] = (result) => { clearTimeout(timer); resolve(result); };
+    (async () => {
+      let paymentId = null;
+      const finish = (r) => window.kcTillResult({ chargeReference, ...r });
+      const cancelUpstream = () => {
+        if (!paymentId) return;
+        kcFetch('/api/pos/terminal', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ op: 'cancel', paymentId }),
+        }).catch(() => {});
+      };
+      try {
+        const r = await kcFetch('/api/pos/terminal', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ op: 'charge', chargeReference, amountPence }),
+        });
+        const d = await r.json();
+        if (!d.success) { finish({ approved: false, error: d.error || 'The card machine could not be started.' }); return; }
+        paymentId = d.paymentId;
+        while (true) {
+          await new Promise((z) => setTimeout(z, 2000));
+          if (!kcTillPending[chargeReference]) {
+            // Till gave up: try to free the terminal, then look ONCE more —
+            // if the card was actually approved in the gap, report it late so
+            // the approval cache blocks a second charge (same protection as
+            // the wrapper's late kcTillResult callback).
+            cancelUpstream();
+            try {
+              const s = await (await kcFetch(`/api/pos/terminal?paymentId=${encodeURIComponent(paymentId)}`)).json();
+              if (s && s.success && s.done && s.approved) finish({ approved: true, myposRef: paymentId });
+            } catch { /* nothing to salvage */ }
+            return;
+          }
+          try {
+            const s = await (await kcFetch(`/api/pos/terminal?paymentId=${encodeURIComponent(paymentId)}`)).json();
+            if (s && s.success && s.done) {
+              finish({ approved: !!s.approved, myposRef: paymentId, error: s.approved ? null : (s.error || 'Declined') });
+              return;
+            }
+          } catch { /* one missed poll is fine — keep waiting */ }
+        }
+      } catch (e) {
+        cancelUpstream();
+        finish({ approved: false, error: String((e && e.message) || e) });
+      }
+    })();
   });
 }
 window.kcTillResult = (result) => {
