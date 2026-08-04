@@ -33,7 +33,13 @@ const EMAIL = 'support@kosher-connect.com'
 const MAPS_QUERY = 'Kosher Connect, 421 Bury New Road, Salford M7 4ED'
 const MAPS_URL = `https://maps.google.com/?q=${encodeURIComponent(MAPS_QUERY)}`
 // Keyless Google Maps embed — the iframe endpoint needs no API key.
-const MAPS_EMBED = `https://www.google.com/maps?q=${encodeURIComponent(MAPS_QUERY)}&z=16&output=embed`
+// The embed pins the PLAIN ADDRESS, not the business-name query: several
+// unrelated "Kosher Connect"s exist, and the name+address search sometimes
+// resolved to a wide area view with our pin off-screen (owner report 08-04).
+// A bare address geocode is deterministic — pin centred on first load, every
+// load. The business-name link (MAPS_URL) stays on the open-in-Maps path and
+// the JSON-LD cid keeps the tie to the Business Profile card.
+const MAPS_EMBED = `https://www.google.com/maps?q=${encodeURIComponent('421 Bury New Road, Salford M7 4ED')}&z=17&output=embed`
 
 const BAND_IDS = ['mobile', 'travel', 'intl']
 
@@ -734,13 +740,13 @@ const SKY_CSS = `
     background:url(/logo-full-tight.png) center/contain no-repeat}
   :root[data-theme="dark"] .sk-logo{background-image:url(/logo-full-tight-dark.png)}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-logo{background-image:url(/logo-full-tight-dark.png)}}
-  /* The row is a fixed run of nowrap items, so it cannot shrink: at gap 20 it
-     measured 1281px against the 1123px the 1320px container can ever offer,
-     which put a horizontal scrollbar on EVERY desktop width and pushed the
-     "Message us" CTA off-screen. Tighter gap, min-width:0 so it can never
-     wedge the container open again, and the phone block moved out (the hero
-     already carries "Call 0161 531 1386"). */
-  .sk-nav-links{display:flex;align-items:center;gap:12px;min-width:0}
+  /* The row is a fixed run of nowrap items, so it cannot shrink — gap 20 once
+     overflowed every desktop width (with the phone block still in the row).
+     With the phone block gone the links only render at ≥~1260px, and gap 18
+     measures clean at 1280–1320 with no overflow and no CTA clipping
+     (verified in-browser 08-04); 12px read as cramped (owner). min-width:0
+     stays so the row can never wedge the container open again. */
+  .sk-nav-links{display:flex;align-items:center;gap:18px;min-width:0}
   /* The theme toggle is position:fixed at inset-inline-end:14px, so it floats
      over this bar at every width — it was sitting on top of "Message us" and
      clipping the word. Reserve its lane instead of letting it overlap. */
