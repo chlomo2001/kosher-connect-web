@@ -53,6 +53,7 @@ const P = {
     docSend: 'Send this file',
     upSent: 'Sent — we’ll review it shortly.', upFailed: 'Upload failed.',
     pendingReview: 'Awaiting review', received: 'Received',
+    rejected: 'Not accepted', rejectedHint: 'Please send it again — pop into the shop or call us if unsure.',
     reqTitle: 'Need something?',
     reqHint: 'Tell us what you need and we’ll get back to you — a call back, a question about your plan, anything.',
     reqPlaceholder: 'e.g. Please call me about my SIM plan — mornings are best, 07…',
@@ -110,6 +111,7 @@ const P = {
     docSend: 'שליחת הקובץ',
     upSent: 'הגיע אלינו — נעבור עליו בקרוב.', upFailed: 'ההעלאה לא הצליחה. נסו שוב.',
     pendingReview: 'ממתין לבדיקה', received: 'התקבל',
+    rejected: 'לא התקבל', rejectedHint: 'נא לשלוח שוב — או לגשת לחנות או להתקשר אם משהו לא ברור.',
     reqTitle: 'צריכים משהו?',
     reqHint: 'כתבו לנו מה אתם צריכים ונחזור אליכם — שיחת טלפון, שאלה על החבילה, כל דבר.',
     reqPlaceholder: 'למשל: נא להתקשר אליי בעניין חבילת הסים — עדיף בבוקר, 07…',
@@ -737,9 +739,16 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                   <div style={{ marginTop: 10 }}>
                     {myUploads.map((d) => (
                       <div className="p-row" key={d.id}>
-                        <div className="p-row-main"><div className="p-row-sub">{d.filename}</div></div>
+                        <div className="p-row-main">
+                          <div className="p-row-sub">{d.filename}</div>
+                          {d.status === 'rejected' && (
+                            <div className="p-row-sub" style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>
+                              {d.note ? <bdi>{d.note}</bdi> : L.rejectedHint}
+                            </div>
+                          )}
+                        </div>
                         <span className={`p-badge ${d.status === 'pending' ? 'p-badge-warn' : d.status === 'published' ? 'p-badge-ok' : 'p-badge-muted'}`}>
-                          {d.status === 'pending' ? L.pendingReview : d.status === 'published' ? L.received : d.status}
+                          {d.status === 'pending' ? L.pendingReview : d.status === 'published' ? L.received : d.status === 'rejected' ? L.rejected : d.status}
                         </span>
                       </div>
                     ))}

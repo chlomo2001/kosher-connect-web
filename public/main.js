@@ -4240,8 +4240,8 @@ function renderDocsSection(custId, docs) {
   const row = (d) => `
     <div id="doc-row-${escHtml(d.id)}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
       <span style="flex:1;">${escHtml(d.filename)}
-        <span style="color:var(--muted);font-size:11px;"> · ${d.source === 'customer' ? 'from customer' : 'shared'}${d.status !== 'published' ? ` · ${escHtml(d.status)}` : ''}</span></span>
-      <button class="action-btn" title="Download" onclick="${dl(d.id)}">⬇︎</button>
+        <span style="color:var(--muted);font-size:11px;"> · ${d.source === 'customer' ? 'from customer' : 'shared'}${d.status !== 'published' ? ` · ${escHtml(d.status)}` : ''}${d.status === 'rejected' && d.note ? ` — “${escHtml(d.note)}”` : ''}</span></span>
+      ${d.status === 'rejected' ? '' : `<button class="action-btn" title="Download" onclick="${dl(d.id)}">⬇︎</button>`}
       <button class="action-btn danger" title="Delete" onclick="deleteCustomerDoc('${custId}','${d.id}')">✕</button>
     </div>`;
   const pendingHtml = pending.length ? `
@@ -4258,15 +4258,34 @@ function renderDocsSection(custId, docs) {
   const listHtml = others.length ? others.map(row).join('')
     : (pending.length ? '' : `<div style="color:var(--muted);font-size:13px;padding:4px 0;">No documents yet.</div>`);
   el.innerHTML = pendingHtml + listHtml + `
-    <div style="margin-top:10px;">
-      <input type="file" id="docUpload-${custId}" accept="image/*,application/pdf" style="display:none;" onchange="uploadCustomerDoc('${custId}', this)">
+    <div style="margin-top:10px;" id="docStage-${custId}">
+      <input type="file" id="docUpload-${custId}" accept="image/*,application/pdf" style="display:none;" onchange="stageCustomerDoc('${custId}', this)">
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('docUpload-${custId}').click()">⬆︎ Upload &amp; share</button>
       <span id="docMsg-${custId}" style="font-size:11px;color:var(--muted);margin-left:8px;"></span>
     </div>`;
 }
-async function uploadCustomerDoc(custId, input) {
+// Picking a file only STAGES it — same contract as the customer's portal
+// form: nothing uploads (and nothing is shared) until the explicit Share
+// click. Owner-reported 08-04: staff side used to fire on file-pick.
+const kcStagedDoc = {}; // custId → File awaiting the confirm click
+function stageCustomerDoc(custId, input) {
   const file = input.files && input.files[0];
+  input.value = '';
   if (!file) return;
+  kcStagedDoc[custId] = file;
+  const st = document.getElementById(`docStage-${custId}`);
+  if (!st) return;
+  st.innerHTML = `
+    <span style="font-size:13px;">${escHtml(file.name)}
+      <span style="color:var(--muted);font-size:11px;"> · ${Math.max(1, Math.round(file.size / 1024))} KB</span></span>
+    <button class="btn btn-primary btn-sm" style="margin-left:8px;" onclick="uploadCustomerDoc('${custId}')">✓ Share with customer</button>
+    <button class="btn btn-outline btn-sm" onclick="delete kcStagedDoc['${custId}']; loadDocsSection('${custId}')">Cancel</button>
+    <span id="docMsg-${custId}" style="font-size:11px;color:var(--muted);margin-left:8px;"></span>`;
+}
+async function uploadCustomerDoc(custId) {
+  const file = kcStagedDoc[custId];
+  if (!file) return;
+  delete kcStagedDoc[custId];
   const msg = document.getElementById(`docMsg-${custId}`);
   if (msg) msg.textContent = 'Uploading…';
   try {
@@ -4281,15 +4300,23 @@ async function uploadCustomerDoc(custId, input) {
     if (!d.success) { if (msg) msg.textContent = d.error || 'Upload failed.'; toast(d.error || 'Upload failed.', 'error'); }
     else { toast('Document shared ✔', 'success'); loadDocsSection(custId); }
   } catch { if (msg) msg.textContent = 'Upload failed.'; }
-  finally { input.value = ''; }
 }
 async function reviewCustomerDoc(custId, id, action) {
+  // A reject keeps the record and shows the customer why — the note lands in
+  // their portal next to a "Not accepted" badge. Escape backs out entirely.
+  let note;
+  if (action === 'reject') {
+    note = prompt('Why is it not accepted? This note shows in the customer’s portal (optional):');
+    if (note === null) return;
+    note = note.trim();
+  }
   try {
     const r = await kcFetch('/api/documents/review', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, action, ...(note ? { note } : {}) }),
     });
     const d = await r.json();
-    if (d.success) { toast(action === 'approve' ? 'Approved ✔' : 'Rejected', 'success'); loadDocsSection(custId); }
+    if (d.success) { toast(action === 'approve' ? 'Approved ✔' : 'Rejected — the customer sees this in their portal', 'success'); loadDocsSection(custId); }
     else toast(d.error || 'Failed.', 'error');
   } catch { toast('Failed.', 'error'); }
 }

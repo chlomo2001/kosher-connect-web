@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     const documents = await db.select('customer_documents',
-      `select=id,filename,content_type,size_bytes,source,status,created_at` +
+      `select=id,filename,content_type,size_bytes,source,status,note,created_at` +
       `&customer_id=eq.${cust.id}` +
       `&or=(and(source.eq.staff,status.eq.published),source.eq.customer)` +
       `&order=created_at.desc`)
