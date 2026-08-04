@@ -241,16 +241,26 @@ deliberate.
       KC's database — a privacy problem no filtering fixes, because the
       filtering happens after the data is stored. **Do not connect a feed until
       the shop has its own account.**
-- [ ] **P2 · S** — **Apply `20260731180000_bank_transactions.sql`.** Written,
-      not applied anywhere. No hurry until something fills it.
-- [ ] **P2 · M** — **Statement upload screen.** `lib/bankCsv.mjs` parses and is
-      driveable from a script; the screen wants a real statement in front of it.
+- [x] **Statement upload + triage UI — BUILT 08-04 (owner-directed loop,
+      c3f1d36).** Wallet → "Bank statements" (owner-only): upload a CSV under
+      an account label (multiple accounts = multiple labels — owner: "maybe he
+      has more than 1"), `/api/bank` proposes matches with reasons +
+      confidence bands, a person confirms each one (posts an idempotent
+      bank_transfer payment), undo posts the equal-and-opposite correction.
+      Parser handles the real Revolut Business export (completed dates, Payer,
+      Reference, Fee netting, DECLINED/REVERTED dropped, bank ID as the
+      idempotency key) and still rejects unknown shapes with a plain
+      explanation.
+- [ ] **P2 · S** — **Apply `20260731180000_bank_transactions.sql` at next
+      ship.** The UI now exists dark; the route answers 503 with the
+      apply-this-migration instruction until the table is there. Apply via
+      Supabase MCP `apply_migration` as part of the next "ff it".
 - [ ] **P3 · M** — **Provider client** (GoCardless Bank Account Data — free UK
       account-information tier; you connect under their FCA licence, not your
       own). Budget for **90-day consent expiry**: someone re-authenticates
-      quarterly, and it should be a named job. Untestable without credentials.
-- [ ] **P3 · M** — **Triage UI** for proposed matches. Design it against real
-      transactions, not imagined ones.
+      quarterly, and it should be a named job. **Still blocked on
+      credentials AND on the business-account item above — do not stub it
+      live** (re-affirmed by owner-directed scope 08-04).
 
 ## Ops / go-live blockers (not features, but gate Phase-2 shipping)
 - [x] **P1 · S** — **Apply pending migrations on deploy**: `20260716140000`
@@ -375,6 +385,8 @@ deliberate.
 
 | 08-03 | **Google Business Profile verified** (owner) — noted under "Local presence" above with the follow-ups (fill-in, JSON-LD sameAs/hasMap, review link, services). No code shipped yet | n/a (milestone) | owner |
 | 08-03 | **Wizz refund credit notes arrived** — 11 Wizz Air credit-note PDFs in the owner's Drive `wizz` folder, one per cancelled PNR, €27,550.71 total. Every PNR matches a Cancelled booking in the app. **This is the per-PNR "refund amount" data the £3,190 reconcile was blocked on** (amounts are per-PNR group totals in EUR; passed-on-to-customer status still unknown). One name mismatch: ZMKWJP invoice says Chaya Leifer, booking says Yitzhak Leifer | n/a (data) | awaiting owner go-ahead to post refund legs |
+| 08-04 | **Owner-directed night (23:08 trigger): bank reconciliation v1** (c3f1d36) — Wallet → 🏦 Bank statements (owner-only): CSV upload per account label (multiple accounts supported), Revolut Business export parsed for real (completed dates, Payer, Description+Reference merged, Fee netted, DECLINED/REVERTED dropped, bank ID = idempotency key), `/api/bank` proposes matches with reasons + confidence, human confirms each (idempotent bank_transfer payment; retry-safe — a replay never double-posts or reverses a good confirm), undo = equal-and-opposite correction + row reopens. GoCardless client untouched — still blocked on credentials + business account. **Needs `20260731180000_bank_transactions` applied at next ship (route 503s with that exact instruction until then)** | ✅ 216/216 ×2 + build + node --check; screenshotted light 1280 + dark 390 (button-clip at 390 found and fixed) | owner live-test pending |
+| 08-04 | **Owner-directed night: every welcome tile is a door** (3073f38) — all six service tiles clickable: Kosher phones → /phone-guide; Accessories / Kol Torah / Flights / Online help → #contact with an empty-only seeded message per tile (band-prefill pattern, typed text never clobbered); EN+HE labels/CTAs, same hover affordance as the Repairs tile | ✅ 216/216 ×2 + build; live-harness click-through both languages (hash lands, message seeds, typed text survives) + EN/HE grid screenshots | owner live-test pending |
 | 08-04 | **Google-feel session 1** — five items off the owner's three gaps. (1) **The contract** (ecf5153, 5fb3c8f): `docs/DESIGN.md` written as the design-system contract — which token when, per surface: spacing, radius, elevation, the new `--fs-*` type ramp (11/12/13/14/16/18/22/28), and a named motion spec (enter/exit/move/drawer/press/hover — each mapped to a duration + easing token, with the hard rules: never ease-in, UI < 300ms, keyboard actions never animate, transform/opacity only). The Stripi analysis that previously sat at that path moved honestly to `docs/STRIPE-REFERENCE.md` after the first commit accidentally replaced it. (2) **Tabs enter, they don't pop** (b831139): every renderTab paint (and the customer profile page) restarts a 180ms fade + 5px rise on #mainContent — one-frame innerHTML swaps gone. (3) **Waiting is disguised** (76f9e1e): the eight tabs that opened on a centred spinner (wallet, repairs, services, shop, Kol Torah, tasks, VN, settings) now paint `skeletonHtml()` — stat-card + table ghosts (two-column ghost where that's the layout) with a soft shimmer off the border/surface tokens; spinner stays for modals. (4) **Modals enter** (725d426): scrim fades, dialog rises from scale(0.97), pure CSS, exits deliberately instant; the last `transition: all` (.action-btn) pinned to its four real properties. (5) **Ramp adoption begins** (d69346e): all 15 fractional font-sizes in main.js onto `--fs-small`/`--fs-body`; toasts onto `--dur-3`/`--ease-out`. Checked and already right: press feedback exists app-wide, ⌘K palette correctly never animates, reduced-motion umbrella covers everything new for free | ✅ each item: 198/198 ×2 + build (+ node --check where main.js touched); skeletons screenshotted light+dark at 1280+390 (shapes mirror layout, dark flips on tokens); full modal sweep clean after the modal-enter change | **owner feel-check wanted** — durations are tuned blind; judge live and I'll adjust |
 
 Found 07-31, FIXED 07-31 (8a186a0) — see the log row above:
