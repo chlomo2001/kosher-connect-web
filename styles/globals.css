@@ -801,7 +801,10 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 /* Modals enter, they don't pop — scrim fades in, the dialog rises from 0.97
    (DESIGN.md §Motion "Enter"). display:none → flex restarts the keyframes, so
    re-opening replays it with zero JS. Exits stay instant: closing is the
-   system responding, and a response snaps. */
+   system responding, and a response snaps. Caveat: innerHTML swaps re-create
+   .modal and would replay this on an OPEN dialog (wizard steps, save
+   repaints) — showDynamicModal/renderDetailPanel zero it out when the
+   overlay was already showing, so only real opens animate. */
 @keyframes kc-fade-in { from { opacity: 0; } }
 @keyframes kc-modal-enter { from { opacity: 0; transform: scale(0.97) translateY(4px); } }
 .modal-overlay .modal { animation: kc-modal-enter var(--dur-2) var(--ease-out); }
@@ -1257,6 +1260,12 @@ body.pos-mode .toast { font-size: 17px; font-weight: 500; padding: 16px 22px; ma
 @media (max-width: 900px) { .kc-skel-cols { grid-template-columns: 1fr; } }
 @keyframes kcShimmer { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .kc-skel { animation: none; } }
+/* Screen-reader-only text — the skeleton ghosts are aria-hidden, so a hidden
+   "Loading…" keeps the wait announced (skeletonHtml prepends one). */
+.kc-sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
 
 /* legacy inline spinner kept for any older markup */
 .kc-spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: kcSpin 0.7s linear infinite; flex-shrink: 0; }

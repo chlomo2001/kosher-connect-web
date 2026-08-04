@@ -3163,14 +3163,21 @@ async function deletePhone(id) {
 // ══ DYNAMIC MODAL (shared) ══
 function showDynamicModal(html) {
   let overlay = document.getElementById('dynamicModal');
+  let wasOpen = false;
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'dynamicModal';
     overlay.className = 'modal-overlay';
     overlay.addEventListener('click', e => { if (e.target === overlay) closeDynamicModal(); });
     document.body.appendChild(overlay);
+  } else {
+    wasOpen = !overlay.classList.contains('hidden');
   }
   overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:560px;">${html}</div>`;
+  // Content swaps inside an already-open dialog (wizard steps, post-save
+  // repaints) are responses, and responses snap (DESIGN.md §Motion) — the
+  // enter animation would otherwise replay because innerHTML re-creates .modal.
+  if (wasOpen) overlay.firstElementChild.style.animation = 'none';
   kcSaveReturnFocus('dynamicModal');
   overlay.classList.remove('hidden');
   suppressCardScrim(true);
@@ -4138,6 +4145,7 @@ function renderDetailPanel(id) {
   // Edit, …) so those stack on top of it. z-index 90 < the 100 of #dynamicModal
   // and #customerModal.
   let overlay = document.getElementById('customerCard');
+  let wasOpen = false;
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'customerCard';
@@ -4145,8 +4153,13 @@ function renderDetailPanel(id) {
     overlay.style.zIndex = '90';
     overlay.addEventListener('click', e => { if (e.target === overlay) dismissCustomerCard(); });
     document.body.appendChild(overlay);
+  } else {
+    wasOpen = !overlay.classList.contains('hidden');
   }
   overlay.innerHTML = `<div class="modal" style="width:720px;max-width:94vw;max-height:90vh;overflow-y:auto;">${buildCustomerPanelHtml(c, 'card')}</div>`;
+  // Save-handler repaints of the open card snap — only a fresh open animates
+  // (innerHTML re-creates .modal, which would otherwise replay the enter).
+  if (wasOpen) overlay.firstElementChild.style.animation = 'none';
   overlay.classList.remove('hidden');
   if (container) container.innerHTML = ''; // legacy inline container stays empty
   loadWalletSection(c.id);
@@ -4164,7 +4177,11 @@ function renderCustomerPage(id) {
   if (allowedTabs && !allowedTabs.includes('customers')) { renderTab(currentTab || 'dashboard'); return; }
   const main = document.getElementById('mainContent');
   if (!main) return;
-  if (customerPageId !== id) { customerPageTab = 'overview'; customerPageCat = 'all'; } // new customer, fresh tabs
+  // Entering the page animates like a tab; repaints of the page already on
+  // screen (sub-tab switch, filter chips, save handlers) are responses and
+  // snap — replaying the fade would blink the whole column on every click.
+  const entering = customerPageId !== id;
+  if (entering) { customerPageTab = 'overview'; customerPageCat = 'all'; } // new customer, fresh tabs
   document.body.classList.remove('pos-mode');
   currentTab = 'customers';
   syncNavActive('customers');
@@ -4177,7 +4194,7 @@ function renderCustomerPage(id) {
   if (btnNew) btnNew.style.display = 'none';
   tabPrimaryAction = null;
   const crumb = `<button class="kc-crumb" onclick="closeCustomerPage()">← All customers</button>`;
-  kcContentEnter(); // the profile page enters like any tab
+  if (entering) kcContentEnter(); // the profile page enters like any tab
   const c = customers.find(x => String(x.id) === String(id));
   if (!c) {
     customerPageId = null;
@@ -4285,6 +4302,9 @@ function stageCustomerDoc(custId, input) {
 async function uploadCustomerDoc(custId) {
   const file = kcStagedDoc[custId];
   if (!file) return;
+  // Unstage while in flight (a double-click mustn't fire twice), but re-stage
+  // on ANY failure — the '✓ Share' button is still on screen, and it must
+  // retry rather than silently no-op on a file that's already gone.
   delete kcStagedDoc[custId];
   const msg = document.getElementById(`docMsg-${custId}`);
   if (msg) msg.textContent = 'Uploading…';
@@ -4297,9 +4317,9 @@ async function uploadCustomerDoc(custId) {
       body: JSON.stringify({ customerId: custId, filename: file.name, contentType: file.type, dataBase64 }),
     });
     const d = await r.json();
-    if (!d.success) { if (msg) msg.textContent = d.error || 'Upload failed.'; toast(d.error || 'Upload failed.', 'error'); }
+    if (!d.success) { kcStagedDoc[custId] = file; if (msg) msg.textContent = d.error || 'Upload failed — ✓ tries again.'; toast(d.error || 'Upload failed.', 'error'); }
     else { toast('Document shared ✔', 'success'); loadDocsSection(custId); }
-  } catch { if (msg) msg.textContent = 'Upload failed.'; }
+  } catch { kcStagedDoc[custId] = file; if (msg) msg.textContent = 'Upload failed — ✓ tries again.'; }
 }
 async function reviewCustomerDoc(custId, id, action) {
   // A reject keeps the record and shows the customer why — the note lands in
@@ -6685,13 +6705,17 @@ function loadingHtml(label = 'Loading…') {
 // stats-row + table page; 'columns' ghosts a two-column card tab. The
 // spinner (loadingHtml) stays for modals and small inline areas.
 function skeletonHtml(kind = 'stats') {
+  // The ghosts are aria-hidden noise, so a real (visually hidden) "Loading…"
+  // rides along — the spinner it replaced announced itself as text, and a
+  // screen reader must not land on an empty main region.
+  const sr = `<span class="kc-sr-only" role="status">Loading…</span>`;
   const rows = (n, panel = '') =>
     `<div class="kc-skel-panel">${panel}${'<div class="kc-skel"></div>'.repeat(n)}</div>`;
   const card = `<div class="kc-skel-card"><div class="kc-skel kc-skel-label"></div><div class="kc-skel kc-skel-big"></div></div>`;
   if (kind === 'columns') {
-    return `<div class="kc-skel-cols" aria-hidden="true">${rows(5, '<div class="kc-skel kc-skel-title"></div>')}${rows(5, '<div class="kc-skel kc-skel-title"></div>')}</div>`;
+    return `${sr}<div class="kc-skel-cols" aria-hidden="true">${rows(5, '<div class="kc-skel kc-skel-title"></div>')}${rows(5, '<div class="kc-skel kc-skel-title"></div>')}</div>`;
   }
-  return `<div aria-hidden="true"><div class="stats-row">${card.repeat(3)}</div>${rows(7, '<div class="kc-skel kc-skel-title"></div>')}</div>`;
+  return `${sr}<div aria-hidden="true"><div class="stats-row">${card.repeat(3)}</div>${rows(7, '<div class="kc-skel kc-skel-title"></div>')}</div>`;
 }
 
 // An error state with a Retry — never a dead-end, and never a reassuring

@@ -18,7 +18,10 @@ export default async function handler(req, res) {
     `select=storage_path,customer_id,source,status&id=eq.${encodeURIComponent(id)}`)
   const doc = rows[0]
   if (!doc || doc.customer_id !== cust.id) return res.status(404).json({ success: false, error: 'Not found.' })
-  const allowed = (doc.source === 'staff' && doc.status === 'published') || doc.source === 'customer'
+  // A rejected upload's stored file is deleted on review — the row survives
+  // (so the customer sees why), but there is nothing left to sign.
+  const allowed = (doc.source === 'staff' && doc.status === 'published') ||
+    (doc.source === 'customer' && doc.status !== 'rejected')
   if (!allowed) return res.status(403).json({ success: false, error: 'Not available.' })
 
   const url = await signedUrl(DOCS_BUCKET, doc.storage_path, 120)

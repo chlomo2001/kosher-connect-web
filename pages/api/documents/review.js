@@ -18,15 +18,24 @@ async function handler(req, res) {
     return res.status(400).json({ success: false, error: 'id and action (approve|reject) required.' })
   }
 
+  // Both verdicts only apply to a doc still awaiting review — two staff can
+  // have the same pending card on screen, and the loser of that race must get
+  // a conflict, not silently flip the other's verdict (a late approve would
+  // republish a rejected doc whose file is already gone). The guarded update
+  // runs FIRST; the reject only deletes the stored file after it has won the
+  // row, so a lost race never removes a published document's file.
+  const pendingOnly = `id=eq.${encodeURIComponent(id)}&status=eq.pending`
+
   if (action === 'approve') {
-    await db.update('customer_documents', `id=eq.${encodeURIComponent(id)}`, { status: 'published' })
+    const updated = await db.update('customer_documents', pendingOnly, { status: 'published' })
+    if (!updated.length) return res.status(409).json({ success: false, error: 'Already reviewed — refresh to see its current state.' })
     return res.json({ success: true, status: 'published' })
   }
 
   const reason = String(note || '').trim().slice(0, 300) || null
-  const rows = await db.select('customer_documents', `select=storage_path&id=eq.${encodeURIComponent(id)}`)
-  if (rows[0] && storageEnabled) await removeObject(DOCS_BUCKET, rows[0].storage_path).catch(() => {})
-  await db.update('customer_documents', `id=eq.${encodeURIComponent(id)}`, { status: 'rejected', note: reason })
+  const updated = await db.update('customer_documents', pendingOnly, { status: 'rejected', note: reason })
+  if (!updated.length) return res.status(409).json({ success: false, error: 'Already reviewed — refresh to see its current state.' })
+  if (storageEnabled && updated[0].storage_path) await removeObject(DOCS_BUCKET, updated[0].storage_path).catch(() => {})
   return res.json({ success: true, status: 'rejected' })
 }
 
