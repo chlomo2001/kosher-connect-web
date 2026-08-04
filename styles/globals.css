@@ -124,6 +124,18 @@
   --ease-out: cubic-bezier(.16, 1, .3, 1);
   --ease-emphasis: cubic-bezier(.32, .72, 0, 1);
   --ease-in-out: cubic-bezier(.77, 0, .175, 1);
+
+  /* ── Type ramp — the only font sizes new UI may use (docs/DESIGN.md §Type).
+     Half-steps in older code (11.5/12.5/13.5px) collapse onto this ramp as
+     surfaces get touched — don't add new ones. ── */
+  --fs-micro: 11px;   /* badges, table meta, timestamps */
+  --fs-small: 12px;   /* secondary text, dense tables */
+  --fs-body: 13px;    /* app default — body copy, controls, table cells */
+  --fs-ui: 14px;      /* emphasised body, inputs, buttons */
+  --fs-lead: 16px;    /* section leads, modal titles */
+  --fs-title: 18px;   /* card titles, big stats */
+  --fs-h1: 22px;      /* page headings */
+  --fs-hero: 28px;    /* hero numbers (dashboard money) */
 }
 
 /* Dark theme — the shop stays open into the evening. Overrides the same
