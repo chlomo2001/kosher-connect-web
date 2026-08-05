@@ -486,7 +486,12 @@ function pushCustomerUrl(id, replace) {
   catch { /* history API blocked (e.g. sandboxed) — navigation still works */ }
 }
 function syncNavActive(tab) {
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.tab === tab));
+  document.querySelectorAll('.nav-item').forEach(n => {
+    const on = n.dataset.tab === tab;
+    n.classList.toggle('active', on);
+    // The active tab was carried by colour alone; aria-current states it.
+    if (on) n.setAttribute('aria-current', 'page'); else n.removeAttribute('aria-current');
+  });
 }
 
 // Small "signed in as" identity in the sidebar footer. Handy when staff share
@@ -3212,6 +3217,15 @@ function showDynamicModal(html) {
     wasOpen = !overlay.classList.contains('hidden');
   }
   overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:560px;">${html}</div>`;
+  // Name the dialog from the title the payload already renders. Without this
+  // all 49 call sites announce as an unnamed dialog — and because focus jumps
+  // straight into the first field, the visible title is never read aloud.
+  const dlg = overlay.querySelector('.modal');
+  const dlgTitle = dlg && dlg.querySelector('.modal-title');
+  if (dlg && dlgTitle) {
+    if (!dlgTitle.id) dlgTitle.id = 'kcDynModalTitle';
+    dlg.setAttribute('aria-labelledby', dlgTitle.id);
+  }
   // Content swaps inside an already-open dialog (wizard steps, post-save
   // repaints) are responses, and responses snap (DESIGN.md §Motion) — the
   // enter animation would otherwise replay because innerHTML re-creates .modal.
@@ -4202,11 +4216,22 @@ function renderDetailPanel(id) {
   } else {
     wasOpen = !overlay.classList.contains('hidden');
   }
-  overlay.innerHTML = `<div class="modal" style="width:720px;max-width:94vw;max-height:90vh;overflow-y:auto;">${buildCustomerPanelHtml(c, 'card')}</div>`;
+  // Named by the customer, so a screen reader announces WHOSE card opened.
+  const cardName = `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Customer';
+  overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="${escHtml(cardName)}" style="width:720px;max-width:94vw;max-height:90vh;overflow-y:auto;">${buildCustomerPanelHtml(c, 'card')}</div>`;
   // Save-handler repaints of the open card snap — only a fresh open animates
   // (innerHTML re-creates .modal, which would otherwise replay the enter).
   if (wasOpen) overlay.firstElementChild.style.animation = 'none';
+  // Focus bookkeeping is gated on a FRESH open. renderDetailPanel is also the
+  // repaint path — every save handler re-enters it — so doing this
+  // unconditionally would overwrite the return-focus record mid-edit and yank
+  // focus back to the card on every save.
+  if (!wasOpen) kcSaveReturnFocus('customerCard');
   overlay.classList.remove('hidden');
+  if (!wasOpen) {
+    const card = overlay.firstElementChild;
+    if (card) { card.setAttribute('tabindex', '-1'); card.focus({ preventScroll: true }); }
+  }
   if (container) container.innerHTML = ''; // legacy inline container stays empty
   loadWalletSection(c.id);
   loadDocsSection(c.id);
@@ -4946,6 +4971,8 @@ async function deleteCustomerDoc(custId, id) {
 function closeCustomerCard() {
   const overlay = document.getElementById('customerCard');
   if (overlay) overlay.classList.add('hidden');
+  // Hand focus back to whatever opened the card — usually the table row.
+  kcRestoreReturnFocus('customerCard');
 }
 
 // Always closes, whatever the selection state (✕ button + backdrop click).
@@ -11119,6 +11146,7 @@ function fillPaletteQuick() {
 }
 
 function openPalette() {
+  kcSaveReturnFocus('paletteOverlay');
   if (document.getElementById('paletteOverlay')) return;
   const el = document.createElement('div');
   el.id = 'paletteOverlay';
@@ -11160,6 +11188,7 @@ function openPalette() {
 }
 
 function closePalette() {
+  kcRestoreReturnFocus('paletteOverlay');
   document.getElementById('paletteOverlay')?.remove();
 }
 
@@ -11431,7 +11460,7 @@ kcSyncScrollers();
 // can't wander into the dimmed page behind it. Stack order matches the Escape
 // handler: confirm > dynamic action modal > customer form.
 function kcTopModalOverlay() {
-  for (const id of ['kcShortcuts', 'kcConfirm', 'dynamicModal', 'customerModal']) {
+  for (const id of ['kcShortcuts', 'kcConfirm', 'dynamicModal', 'customerModal', 'customerCard']) {
     const el = document.getElementById(id);
     if (el && !el.classList.contains('hidden')) return el;
   }

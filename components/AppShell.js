@@ -85,7 +85,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
         {/* #20 grouped sections, with monochrome SVG line icons (no emoji).
             The nav is its own scroll region so the identity/sign-out footer
             stays reachable on short or zoomed screens instead of clipping. */}
-        <div className="sidebar-nav">
+        <div className="sidebar-nav" role="navigation" aria-label="Main">
           {NAV.map((section, si) => (
             <Fragment key={si}>
               {section.label && <div className="nav-group-label">{section.label}</div>}
@@ -126,11 +126,11 @@ export default function AppShell({ initialTab = 'dashboard' }) {
 
       {/* MAIN */}
       <div className="main">
-        <div className="topbar">
+        <div className="topbar" role="banner">
           <button className="nav-burger" id="navBurger" aria-label="Open menu" aria-expanded="false" aria-controls="appSidebar">
             <I><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></I>
           </button>
-          <div className="page-title" id="pageTitle">Customer <span>Management</span></div>
+          <div className="page-title" id="pageTitle" role="heading" aria-level="1">Customer <span>Management</span></div>
           <div className="topbar-actions">
             <input className="search-box" id="searchBox" type="text" placeholder="Search by name, phone, email…" />
             <button className="btn btn-primary" id="btnNewCustomer">+ New Customer</button>
@@ -145,7 +145,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
           </div>
         </div>
 
-        <div className="content" id="mainContent" />
+        <div className="content" id="mainContent" role="main" />
       </div>
 
       {/* ADD / EDIT CUSTOMER MODAL */}
