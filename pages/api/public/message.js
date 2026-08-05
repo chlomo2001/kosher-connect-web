@@ -94,7 +94,15 @@ export default async function handler(req, res) {
       }
     } catch { /* matching is advisory */ }
 
-    const open = await db.select('tasks', `select=id&reference=eq.${encodeURIComponent(reference)}&done=is.false&limit=1`)
+    const open = await db.select('tasks', `select=id,raw_text&reference=eq.${encodeURIComponent(reference)}&done=is.false&limit=1`)
+    if (open.length) {
+      // Same sender, task still open: append rather than discard. Dropping it
+      // while replying "we've got it" cost exactly the follow-ups that matter
+      // most ("my flight moved to Tuesday").
+      const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ')
+      const addition = `\n\n— follow-up ${stamp} —\n${message || '(no message text)'}`
+      await db.update('tasks', `id=eq.${encodeURIComponent(String(open[0].id))}`, { raw_text: `${open[0].raw_text || ''}${addition}` })
+    }
     if (!open.length) {
       const notes = [
         phone ? `Phone: ${phone}` : null,

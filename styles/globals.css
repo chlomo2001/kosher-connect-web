@@ -1196,6 +1196,13 @@ input[type="checkbox"], input[type="radio"] {
 }
 /* Keyboard-reachable dismissal. Inherits the toast's ink so it reads on the
    dark success/error grounds and the cream warning alike. */
+/* Keyboard-chord hint beside a label. Hidden where there is no keyboard to
+   press it on, so a phone reads "Search", not "Ctrl K". */
+.kc-chord {
+  margin-inline-start: 6px; font-size: var(--fs-micro); font-weight: 500;
+  color: var(--muted); white-space: nowrap;
+}
+@media (max-width: 768px) { .kc-chord { display: none; } }
 .toast-x {
   flex: none; margin-inline-start: auto; margin-top: -1px;
   background: none; border: 0; padding: 0 2px; cursor: pointer;

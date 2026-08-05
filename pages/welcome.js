@@ -1040,7 +1040,7 @@ const SKY_CSS = `
     background:var(--sk-line);border:1px solid var(--sk-line);border-radius:14px;overflow:hidden}
   .sk-faq-item{background:var(--sk-card)}
   .sk-faq-item summary{cursor:pointer;padding:18px 22px;font-size:16px;font-weight:600;
-    color:var(--sk-ink);list-style:none;display:flex;align-items:center;gap:12px;min-height:24px}
+    color:var(--sk-text);list-style:none;display:flex;align-items:center;gap:12px;min-height:24px}
   .sk-faq-item summary::-webkit-details-marker{display:none}
   /* The marker is drawn, not a glyph, so it mirrors correctly in RTL. */
   .sk-faq-item summary::after{content:'';margin-inline-start:auto;flex:none;width:9px;height:9px;

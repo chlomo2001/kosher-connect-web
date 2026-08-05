@@ -181,7 +181,7 @@ export default function RepairBooking() {
                 </label>
                 <label>
                   <span>{t.fContact}</span>
-                  <input value={form.contact} onChange={set('contact')} required maxLength={120} autoComplete="tel" inputMode="email" dir="ltr" />
+                  <input value={form.contact} onChange={set('contact')} required maxLength={120} autoComplete="tel" dir="ltr" />
                 </label>
                 <label>
                   <span>{t.fDevice}</span>

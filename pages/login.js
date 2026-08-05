@@ -93,7 +93,7 @@ export default function Login({ supabaseUrl, googleEnabled }) {
                 📬 A 6-digit code is on its way to<br /><strong>{email}</strong>
               </div>
               <input
-                className="form-input" inputMode="numeric" placeholder="Enter the code" value={code}
+                className="form-input" inputMode="numeric" name="code" maxLength={6} pattern="[0-9]*" aria-label="Six-digit code" placeholder="Enter the code" value={code}
                 onChange={e => setCode(e.target.value)} autoFocus required
                 style={{ width: '100%', marginBottom: 14, textAlign: 'center', letterSpacing: '0.3em', fontSize: 18 }}
               />
@@ -109,12 +109,12 @@ export default function Login({ supabaseUrl, googleEnabled }) {
           ) : (
             <>
               <input
-                className="form-input" type="email" placeholder="Email" value={email}
+                className="form-input" type="email" name="email" autoComplete="username" aria-label="Email address" placeholder="Email" value={email}
                 onChange={e => setEmail(e.target.value)} autoFocus required
                 style={{ width: '100%', marginBottom: 10 }}
               />
               <input
-                className="form-input" type="password" placeholder="Password" value={password}
+                className="form-input" type="password" name="password" autoComplete="current-password" aria-label="Password" placeholder="Password" value={password}
                 onChange={e => setPassword(e.target.value)} required
                 style={{ width: '100%', marginBottom: 14 }}
               />

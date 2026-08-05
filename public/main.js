@@ -782,6 +782,12 @@ function filterCustomerDropdown() {
 // Enter commits the one visible match — the same bargain posScanEnter already
 // makes at the till. With several matches it does nothing rather than guess,
 // because guessing here attaches a rental to the wrong person.
+// The till's most-repeated action had no keyboard path — every POS handler
+// refocuses the scan field, and Enter there is a no-op. Ctrl/Cmd+Enter charges.
+function posScanCharge(e) {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveSale(); }
+}
+
 function rentalPickerKey(e) {
   if (e.key !== 'Enter') return;
   e.preventDefault();
@@ -5812,6 +5818,32 @@ let bankData = null;
 let bankAccountFilter = '';           // '' = every account
 let bankStateFilter = 'open';         // open (unmatched+proposed) | confirmed | ignored
 
+// Refetch and repaint WITHOUT the skeleton, keeping the scroll position. Used
+// after an action that has already been reflected optimistically in bankData —
+// the proposal window still has to come from the server, but the operator
+// shouldn't lose their place waiting for it.
+async function bankRefreshQuiet() {
+  const data = await kcFetch('/api/bank').then(r => r.json()).catch(() => null);
+  if (!data || !data.success) return;
+  const y = window.scrollY;
+  bankData = data;
+  bankPaint();
+  window.scrollTo(0, y);
+}
+
+// Reflect a state change locally so the row updates on the spot.
+function bankPatchRow(txnId, patch) {
+  const t = (bankData?.transactions || []).find(x => x.id === txnId);
+  if (!t) return;
+  const was = t.matchState || 'unmatched';
+  Object.assign(t, patch);
+  const now = t.matchState || 'unmatched';
+  if (bankData.counts && was !== now) {
+    bankData.counts[was] = Math.max(0, (bankData.counts[was] || 0) - 1);
+    bankData.counts[now] = (bankData.counts[now] || 0) + 1;
+  }
+}
+
 async function renderBankRecon() {
   const content = document.getElementById('mainContent');
   document.getElementById('pageTitle').innerHTML = 'Bank <span>Reconciliation</span>';
@@ -5985,7 +6017,9 @@ async function bankConfirm(txnId, customerId, name) {
   }).then(r => r.json()).catch(() => null);
   if (!res || !res.success) { toast(res?.error || 'Could not confirm it.', 'error'); return; }
   toast('Matched — payment is on the ledger.', 'success');
-  await renderBankRecon();
+  bankPatchRow(txnId, { matchState: 'confirmed', matchedCustomerId: customerId, matchedName: name });
+  bankPaint();
+  bankRefreshQuiet();
 }
 
 function bankPick(txnId) {
@@ -6026,7 +6060,9 @@ async function bankIgnore(txnId) {
     body: JSON.stringify({ op: 'ignore', txnId, note: 'Not customer money' }),
   }).then(r => r.json()).catch(() => null);
   if (!res || !res.success) { toast(res?.error || 'Could not update it.', 'error'); return; }
-  await renderBankRecon();
+  bankPatchRow(txnId, { matchState: 'ignored' });
+  bankPaint();
+  bankRefreshQuiet();
 }
 
 async function bankReopen(txnId) {
@@ -6035,7 +6071,9 @@ async function bankReopen(txnId) {
     body: JSON.stringify({ op: 'reopen', txnId }),
   }).then(r => r.json()).catch(() => null);
   if (!res || !res.success) { toast(res?.error || 'Could not update it.', 'error'); return; }
-  await renderBankRecon();
+  bankPatchRow(txnId, { matchState: 'unmatched', matchedCustomerId: null, matchedName: null });
+  bankPaint();
+  bankRefreshQuiet();
 }
 
 async function bankUndo(txnId) {
@@ -6053,7 +6091,9 @@ async function bankUndo(txnId) {
   }).then(r => r.json()).catch(() => null);
   if (!res || !res.success) { toast(res?.error || 'Could not undo it.', 'error'); return; }
   toast('Undone — correction posted, row reopened.', 'success');
-  await renderBankRecon();
+  bankPatchRow(txnId, { matchState: 'unmatched', matchedCustomerId: null, matchedName: null });
+  bankPaint();
+  bankRefreshQuiet();
 }
 
 async function addPayment(id) {
@@ -6121,7 +6161,7 @@ function setupTopbarButtons() {
     b.className = 'btn btn-outline';
     b.style.cssText = 'font-size:var(--fs-small);padding:8px 12px;margin-right:8px;';
     b.title = 'Search everything (Ctrl+K)';
-    b.innerHTML = '🔍 <span style="color:var(--muted);font-size:var(--fs-micro);">Ctrl K</span>';
+    b.innerHTML = '🔍 Search<span class="kc-chord">Ctrl K</span>';
     b.addEventListener('click', openPalette);
     btnNew.parentElement.insertBefore(b, btnNew);
   }
@@ -7312,10 +7352,10 @@ function paxEditorHtml() {
         <button type="button" class="action-btn" onclick="bkRemovePax(${i})" title="Remove">✕</button>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        ${fld('Full name (as on passport)', `<input class="form-input" value="${escHtml(p.fullName || '')}" oninput="bkPassengers[${i}].fullName=this.value" style="width:200px;">`)}
-        ${fld('Date of birth', `<input class="form-input" type="date" value="${escHtml(p.dob || '')}" onchange="bkPassengers[${i}].dob=this.value" style="width:150px;">`)}
-        ${fld('Nationality', `<input class="form-input" value="${escHtml(p.nationality || '')}" oninput="bkPassengers[${i}].nationality=this.value" placeholder="e.g. British" style="width:140px;">`)}
-        ${fld('Passport №', `<input class="form-input" value="${escHtml(p.passportNumber || '')}" oninput="bkPassengers[${i}].passportNumber=this.value" placeholder="${helperMasked ? 'hidden — check-in screen' : ''}" style="width:150px;">`)}
+        ${fld('Full name (as on passport)', `<input class="form-input" value="${escHtml(p.fullName || '')}" oninput="bkPassengers[${i}].fullName=this.value" autocomplete="off" style="width:200px;">`)}
+        ${fld('Date of birth', `<input class="form-input" type="date" value="${escHtml(p.dob || '')}" onchange="bkPassengers[${i}].dob=this.value" autocomplete="off" style="width:150px;">`)}
+        ${fld('Nationality', `<input class="form-input" value="${escHtml(p.nationality || '')}" oninput="bkPassengers[${i}].nationality=this.value" autocomplete="off" placeholder="e.g. British" style="width:140px;">`)}
+        ${fld('Passport №', `<input class="form-input" value="${escHtml(p.passportNumber || '')}" oninput="bkPassengers[${i}].passportNumber=this.value" autocomplete="off" placeholder="${helperMasked ? 'hidden — check-in screen' : ''}" style="width:150px;">`)}
         ${fld('Passport expiry', `<input class="form-input" type="date" value="${escHtml(p.passportExpiry || '')}" onchange="bkPassengers[${i}].passportExpiry=this.value" style="width:150px;">`)}
         ${fld('Issue date', `<input class="form-input" type="date" value="${escHtml(p.passportIssueDate || '')}" onchange="bkPassengers[${i}].passportIssueDate=this.value" style="width:150px;">`)}
         ${fld('Issuing country', `<input class="form-input" value="${escHtml(p.issuingCountry || '')}" oninput="bkPassengers[${i}].issuingCountry=this.value" placeholder="e.g. UK" style="width:140px;">`)}
@@ -9316,7 +9356,7 @@ function renderPosView() {
             style="white-space:nowrap;${parkedN ? '' : 'display:none;'}">⏸ Parked (<span id="posParkedN">${parkedN}</span>)</button>
           <input class="form-input pos-scan" id="posScan" placeholder="🔍 Scan a barcode, or type to search…"
             autocomplete="off" oninput="posRenderTiles()"
-            onkeydown="if(event.key==='Enter'){event.preventDefault();posScanEnter();}">
+            onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();saveSale();}else if(event.key==='Enter'){event.preventDefault();posScanEnter();}">
           <button class="theme-toggle" data-theme-btn onclick="toggleTheme()" title="Light / dark mode"
             aria-label="Toggle light or dark mode">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙'}</button>
         </div>
@@ -9343,7 +9383,7 @@ function renderPosView() {
           </div>
           <div id="posTender"></div>
           <div class="pos-total-row"><span>TOTAL</span><strong id="posTotal">£0.00</strong></div>
-          <button class="btn btn-primary pos-charge" onclick="saveSale()">💷 Charge</button>
+          <button class="btn btn-primary pos-charge" onclick="saveSale()" title="Ctrl+Enter from the scan box">💷 Charge<span class="kc-chord">Ctrl ⏎</span></button>
           <button class="btn btn-outline" onclick="posParkSale()" style="width:100%;margin-top:8px;"
             title="Hold this sale to serve someone else, then resume it later">⏸ Park sale</button>
         </div>
@@ -10859,9 +10899,9 @@ const PALETTE_COMMANDS = [
   { icon: '📦', label: 'Add Stock Item', sub: 'create', run: () => openOnTab('shop', openStockItemModal) },
   // ── Tools ──
   { icon: '⏱', label: 'Start help timer', sub: 'tool', run: () => openOnTab('services', () => document.getElementById('svcTimerCustomer')?.focus()) },
-  { icon: '🛒', label: 'Point of Sale (Till)', sub: 'tool', run: () => goToTab('shop') },
+  { icon: '🛒', label: 'Point of Sale (Till)', sub: 'tool', keys: ['pos', 'till', 'sell', 'checkout'], run: () => goToTab('shop') },
   { icon: '📇', label: 'Manage Phone Inventory', sub: 'tool', run: () => openOnTab('rentals', openManagePhonesModal) },
-  { icon: '🧾', label: 'Cash-up (Z-report)', sub: 'tool', run: () => openCashupModal() },
+  { icon: '🧾', label: 'Cash-up (Z-report)', sub: 'tool', keys: ['cashup', 'z report', 'eod', 'end of day', 'takings'], run: () => openCashupModal() },
   { icon: '⌨️', label: 'Keyboard shortcuts', sub: 'help', run: () => openShortcuts() },
   { icon: '⏰', label: 'New reminder', sub: 'tool', run: () => openRemindModal('note', '') },
   { icon: '🔑', label: 'Change my password', sub: 'tool', run: () => openChangePasswordModal() },
@@ -10890,7 +10930,7 @@ const PALETTE_COMMANDS = [
   // ── Navigate ──
   // #49 — palette navigate entries read the same label map, so "Go to SIM
   // Plans" matches the sidebar and page title exactly (no more "Go to sim").
-  ...['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'shop', 'virtual', 'tasks', 'settings']
+  ...Object.keys(TAB_META)
     .map(t => ({ icon: '↪', label: `Go to ${TAB_META[t]?.label || t}`, sub: 'navigate', tab: t, run: () => goToTab(t) })),
 ];
 
@@ -10903,8 +10943,17 @@ function visibleCommands() {
     (!c.tab || !allowedTabs || allowedTabs.includes(c.tab)));
 }
 
+// Strip everything that isn't a letter or digit from both sides, so
+// punctuation and spacing in a label can never block a match.
+function paletteNorm(v) { return String(v || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+// A command matches on its label OR any alias.
+function paletteHit(c, needle) {
+  if (paletteNorm(c.label).includes(needle)) return true;
+  return (c.keys || []).some(k => paletteNorm(k).includes(needle));
+}
+
 function paletteSearch(q) {
-  const needle = q.trim().toLowerCase();
+  const needle = paletteNorm(q);
   const digits = needle.replace(/\D/g, '');
   const out = [];
   const commands = visibleCommands();
@@ -10915,11 +10964,11 @@ function paletteSearch(q) {
   const ctx = paletteContextVerbs();
   if (ctx) {
     for (const v of ctx.verbs) {
-      if (v.label.toLowerCase().includes(needle)) out.push({ ...v, sub: `for ${ctx.name}`, kind: 'ctx' });
+      if (paletteHit(v, needle)) out.push({ ...v, sub: `for ${ctx.name}`, kind: 'ctx' });
     }
   }
   for (const c of commands) {
-    if (c.label.toLowerCase().includes(needle)) { out.push(c); if (out.length >= 6) break; }
+    if (paletteHit(c, needle)) { out.push(c); if (out.length >= 6) break; }
   }
   for (const c of customers) {
     if (out.length >= 12) break;
