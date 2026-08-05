@@ -7039,7 +7039,7 @@ function escJs(str) {
 
 // A consistent spinner + label for tab/section loading states.
 function loadingHtml(label = 'Loading…') {
-  return `<div class="kc-loading"><span class="kc-logo-loader"><img src="/logo.png" alt="" width="34" height="34"></span><span>${escHtml(label)}</span></div>`;
+  return `<div class="kc-loading"><span class="kc-logo-loader"><img src="/logo-112.png" alt="" width="34" height="34"></span><span>${escHtml(label)}</span></div>`;
 }
 
 // Skeleton loading — the wait mirrors the incoming layout instead of

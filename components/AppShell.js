@@ -55,6 +55,12 @@ export default function AppShell({ initialTab = 'dashboard' }) {
     <>
       <Head>
         <meta charSet="UTF-8" />
+        {/* Start the app bundle downloading immediately. Without this the
+            764KB fetch waits on framework download + hydration, because the
+            Script tags below are afterInteractive. Preload only fetches — the
+            Script tags still decide when it runs. */}
+        <link rel="preload" as="script" href="/main.js" />
+        <link rel="preload" as="script" href="/address-autocomplete.js" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Kosher Connect – Customer Management</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -68,7 +74,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
       {/* Full-page boot loader — shows from first paint until the first tab
           renders, then fades out (removed by initApp / the safety timeout). */}
       <div id="kcBoot" className="kc-boot">
-        <span className="kc-logo-loader kc-boot-mark"><img src="/logo.png" alt="" width="56" height="56" /></span>
+        <span className="kc-logo-loader kc-boot-mark"><img src="/logo-112.png" alt="" width="56" height="56" /></span>
         <div className="kc-boot-title">Kosher Connect</div>
         <div className="kc-boot-sub">Loading your business…</div>
       </div>

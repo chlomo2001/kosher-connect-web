@@ -139,6 +139,7 @@ const T = {
       server: 'Couldn’t send — please call us on',
     },
     fPrivacy: 'We only use these details to reply to you.', fPrivacyLink: 'Privacy notice',
+    legalPrivacy: 'Privacy', legalTerms: 'Terms', legalRefunds: 'Refunds',
     fBadName: 'Please enter your name.', fBadContact: 'Please enter a valid phone number or email address.',
     preferCall: 'Prefer to call?',
     waLabel: 'WhatsApp us', waText: 'Hello Kosher Connect — I’d like to ask about…',
@@ -238,6 +239,7 @@ const T = {
       server: 'ההודעה לא נשלחה — התקשרו אלינו:',
     },
     fPrivacy: 'הפרטים משמשים אותנו רק כדי לחזור אליכם.', fPrivacyLink: 'מדיניות הפרטיות',
+    legalPrivacy: 'פרטיות', legalTerms: 'תנאים', legalRefunds: 'החזרים',
     fBadName: 'נא להזין שם.', fBadContact: 'נא להזין מספר טלפון או כתובת מייל תקינים.',
     preferCall: 'מעדיפים להתקשר?',
     waLabel: 'כתבו לנו בוואטסאפ', waText: 'שלום כשר קונקט — רציתי לשאול לגבי…',
@@ -702,9 +704,9 @@ export default function Welcome() {
               <nav className="sk-foot-col" aria-label={t.footLegal}>
                 <strong>{t.footLegal}</strong>
                 <a href="#visit">{t.nav.visit}</a>
-                <a href="/privacy">Privacy</a>
-                <a href="/terms">Terms</a>
-                <a href="/refund">Refunds</a>
+                <a href="/privacy">{t.legalPrivacy}</a>
+                <a href="/terms">{t.legalTerms}</a>
+                <a href="/refund">{t.legalRefunds}</a>
               </nav>
             </div>
             <p className="sk-foot-legal">
