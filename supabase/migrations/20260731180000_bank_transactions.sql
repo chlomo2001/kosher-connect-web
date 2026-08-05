@@ -13,8 +13,10 @@
 -- Unlike the ledger this table is mutable: match_state is worked through as a
 -- human triages. The immutable record stays the ledger's.
 --
--- NOT YET APPLIED anywhere. Spike only — no provider is connected, and see
--- docs/OPEN-BANKING.md on why it must not point at a personal account.
+-- Applied to Kc-Live 05 Aug 2026 (ship of the reconciliation UI). The spike
+-- version of this file typed matched_ledger_id as uuid; the real ledger's id
+-- is BIGINT and the apply failed loudly — corrected here before applying.
+-- See docs/OPEN-BANKING.md on why no live feed points at a personal account.
 
 create table bank_transactions (
   id                uuid primary key default gen_random_uuid(),
@@ -43,7 +45,7 @@ create table bank_transactions (
   --   ignored   — genuinely not customer money (bank fees, transfers, personal)
   match_state       text not null default 'unmatched'
                     check (match_state in ('unmatched', 'proposed', 'confirmed', 'ignored')),
-  matched_ledger_id uuid references ledger(id),
+  matched_ledger_id bigint references ledger(id),
   matched_by        uuid references staff_profiles(id),
   matched_at        timestamptz,
   note              text,
