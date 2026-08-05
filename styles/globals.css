@@ -2460,6 +2460,10 @@ html { scroll-behavior: smooth; }
 }
 .p-foot a { color: var(--accent); text-decoration: none; }
 .p-foot a:hover { text-decoration: underline; }
+/* The renewal line is red (.p-renew-over) — the call has to stay legible as a
+   link inside it rather than inheriting the alarm colour. */
+.p-renew-call { color: inherit; text-decoration: underline; font-weight: 700; white-space: nowrap; }
+.p-renew-call:hover { text-decoration: none; }
 .p-reassure { margin-top: 12px; font-size: var(--fs-small); color: var(--muted); text-align: center; line-height: 1.5; }
 /* Expired sign-in link, or a send that genuinely failed. Sits above the email
    field so the reason is read before the customer retypes their address. */

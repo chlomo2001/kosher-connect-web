@@ -41,16 +41,28 @@ const P = {
     couldNotSaveCard: 'Could not save the card.',
     rentals: 'Rentals', noRentals: 'No active rentals.',
     flights: 'Flights', noFlights: 'No upcoming flights.',
-    simPlan: 'My SIM plan', noSims: 'No SIM plan with us yet.',
+    simPlan: (n) => (n === 1 ? 'My SIM plan' : 'My SIM plans'), noSims: 'No SIM plan with us yet.',
+    downloadFailed: 'Couldn’t open that file — try again, or call us and we’ll send it over.',
     renews: (d) => `Renews ${d}`,
     renewIn: (n) => (n === 1 ? 'tomorrow' : `in ${n} days`),
     renewToday: 'today',
-    renewOverdue: 'renewal due — speak to us',
+    renewOverdueLead: 'renewal due —', renewOverdueCall: 'call us',
+    bookingRef: 'Ref',
     bankRef1: 'Paying by bank transfer? Please use the reference', bankRef2: 'so we can match your payment.',
     noMatchTitle: 'We couldn’t match this email to an account',
     noMatchBody: 'You’re signed in, but this email address isn’t linked to a Kosher Connect account yet. If you’re a customer, we may have a different email (or none) on file — call us and we’ll link it up in a minute.',
     tryAnother: 'Try a different email',
     statement: 'Recent activity', noStatement: 'No activity yet.',
+    // Keyed on ledger.entry_type — the machine-written descriptions are
+    // English, so Hebrew titles its rows from these instead.
+    entryTypes: {
+      payment: 'Payment received', charge: 'Charge', refund: 'Refund',
+      refund_payout: 'Refund paid out', manual_adjustment: 'Adjustment',
+      topup: 'Top-up', rental: 'Rental', sim_charge: 'SIM plan',
+      booking: 'Flight booking', repair: 'Repair', service: 'Service',
+    },
+    balAfterOwed: (v) => <>owed {v} after this</>,
+    balAfterCredit: (v) => <>{v} in credit after this</>,
     docs: 'Documents', noDocs: 'Nothing shared with you yet.',
     download: 'Download', upload: 'Send us a document', uploading: 'Uploading…',
     docSend: 'Send this file',
@@ -65,7 +77,7 @@ const P = {
     reqFailed: 'That didn’t send. Please try again, or just call us.',
     qShort: 'Questions? We’re here —',
     reassure: 'No password needed — we email you a secure one-time sign-in link.',
-    statuses: { active: 'Active', booked: 'Booked', overdue: 'Overdue', Booked: 'Booked', Ticketed: 'Ticketed', Confirmed: 'Confirmed' },
+    statuses: { active: 'Active', booked: 'Booked', overdue: 'Overdue', Booked: 'Booked', Ticketed: 'Ticket issued', Confirmed: 'Confirmed' },
     daysLeft: (n) => (n === 0 ? 'returns today' : n === 1 ? 'returns tomorrow' : `${n} days left`),
     subSignedOut: (g) => `${g}! See your rentals, bookings and balance`,
     yourEmail: 'Your email', emailLink: 'Email me a sign-in link', sending: 'Sending…',
@@ -108,11 +120,13 @@ const P = {
     couldNotSaveCard: 'הכרטיס לא נשמר. נסו שוב.',
     rentals: 'השכרות', noRentals: 'אין כרגע השכרות פעילות.',
     flights: 'טיסות', noFlights: 'אין טיסות קרובות ביומן.',
-    simPlan: 'חבילת הסים שלי', noSims: 'עוד אין חבילת סים אצלנו.',
+    simPlan: (n) => (n === 1 ? 'חבילת הסים שלי' : 'חבילות הסים שלי'), noSims: 'עוד אין חבילת סים אצלנו.',
+    downloadFailed: 'לא הצלחנו לפתוח את הקובץ — נסו שוב, או התקשרו אלינו ונשלח לכם אותו.',
     renews: (d) => `מתחדשת ב־${d}`,
     renewIn: (n) => (n === 1 ? 'מחר' : `בעוד ${n} ימים`),
     renewToday: 'היום',
-    renewOverdue: 'החידוש הגיע — דברו איתנו',
+    renewOverdueLead: 'החידוש הגיע —', renewOverdueCall: 'התקשרו אלינו',
+    bookingRef: 'אסמכתא',
     bankRef1: 'משלמים בהעברה בנקאית? נא לציין את האסמכתא', bankRef2: 'כדי שנוכל לשייך את התשלום.',
     noMatchTitle: 'לא הצלחנו לשייך את המייל הזה לחשבון',
     noMatchBody: 'נכנסתם בהצלחה, אבל כתובת המייל הזו עדיין לא מקושרת לחשבון בכשר קונקט. ייתכן שרשומה אצלנו כתובת אחרת (או שאין בכלל) — התקשרו אלינו ונקשר את החשבון תוך דקה.',
@@ -137,6 +151,14 @@ const P = {
     subSignedOut: (g) => `${g}! כל ההשכרות, ההזמנות והיתרה שלכם — במקום אחד`,
     yourEmail: 'כתובת המייל שלכם', emailLink: 'שלחו לי קישור כניסה', sending: 'שולחים…',
     noEmailHelp: 'אין לכם כתובת מייל? התקשרו אלינו:', noEmailHelp2: 'ונסדר לכם גישה בחנות.',
+    entryTypes: {
+      payment: 'תשלום שהתקבל', charge: 'חיוב', refund: 'זיכוי',
+      refund_payout: 'החזר ששולם', manual_adjustment: 'התאמה',
+      topup: 'טעינה', rental: 'השכרה', sim_charge: 'חבילת SIM',
+      booking: 'הזמנת טיסה', repair: 'תיקון', service: 'שירות',
+    },
+    balAfterOwed: (v) => <>נותרה יתרת חוב {v} אחרי הפעולה</>,
+    balAfterCredit: (v) => <>נותרה יתרת זכות {v} אחרי הפעולה</>,
     sent: '📬 אם הכתובת שייכת ללקוח של כשר קונקט — קישור הכניסה כבר בדרך אליכם. אפשר לסגור את העמוד.',
     linkExpired: 'תוקף קישור הכניסה פג — הזינו את כתובת המייל ונשלח לכם קישור חדש.',
     sendFailed: 'השליחה לא הצליחה — נסו שוב בעוד דקה, או התקשרו אלינו:',
@@ -401,13 +423,18 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     finally { setReqBusy(false) }
   }
   async function downloadDoc(id) {
+    // Tapping Download and having nothing at all happen is the worst of both
+    // worlds — the customer can't tell whether it failed or their browser
+    // blocked it. Say so in the message line the panel already renders.
+    setDocMsg('')
     try {
       const r = await fetch(`/api/portal/documents/download?id=${encodeURIComponent(id)}`, {
         headers: { Authorization: `Bearer ${token()}` },
       })
       const d = await r.json()
       if (d.success && d.url) window.open(d.url, '_blank', 'noopener')
-    } catch { /* ignore */ }
+      else setDocMsg(d.error || L.downloadFailed)
+    } catch { setDocMsg(L.downloadFailed) }
   }
 
   // ── Pay by card ────────────────────────────────────────────────────────────
@@ -626,8 +653,14 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       if (isNaN(d)) return null
       const n = Math.ceil((d.getTime() - Date.now()) / 86400000)
       const cls = n < 0 ? 'p-renew-over' : n <= 14 ? 'p-renew-soon' : ''
-      const rel = n < 0 ? L.renewOverdue : n === 0 ? L.renewToday : L.renewIn(n)
-      return { text: `${L.renews(fmtDate(s.renewalDate))} · ${rel}`, cls }
+      // Overdue is the one state that asks the customer to DO something, so
+      // it carries the call. Returns a node rather than a string — the caller
+      // renders it directly, and the anchor needs its own colour so it isn't
+      // swallowed by the red .p-renew-over rule.
+      const rel = n < 0
+        ? <>{L.renewOverdueLead} <a className="p-renew-call" href="tel:+441615311386" dir="ltr">{L.renewOverdueCall}</a></>
+        : n === 0 ? L.renewToday : L.renewIn(n)
+      return { text: <>{L.renews(fmtDate(s.renewalDate))} · {rel}</>, cls }
     }
     return (
       <>
@@ -696,10 +729,26 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                   : account.statement.map((e, i) => (
                     <div className="p-row" key={i}>
                       <div className="p-row-main">
-                        {/* Ledger descriptions are English; in an RTL context an
-                            unisolated run gets its word order shuffled. */}
-                        <div className="p-row-title"><bdi>{e.description || (e.amount >= 0 ? L.received : '—')}</bdi></div>
-                        <div className="p-row-sub">{fmtDate(e.at)}</div>
+                        {/* Ledger descriptions are machine-generated English; in
+                            an RTL context an unisolated run gets its word order
+                            shuffled, and untranslated it just reads as English
+                            in a Hebrew page. Hebrew prefers the translated entry
+                            type and falls back to the raw description. */}
+                        <div className="p-row-title"><bdi>
+                          {(isHe ? (L.entryTypes[e.type] || e.description) : (e.description || L.entryTypes[e.type]))
+                            || (e.amount >= 0 ? L.received : '—')}
+                        </bdi></div>
+                        <div className="p-row-sub">
+                          {fmtDate(e.at)}
+                          {/* The hero sums the whole ledger, so without a running
+                              figure per line an older debt can't be reconciled
+                              against anything on screen. */}
+                          {typeof e.balanceAfter === 'number' && (
+                            <> · {e.balanceAfter < 0
+                              ? L.balAfterOwed(<bdi key="b" dir="ltr">{fmtGbp(Math.abs(e.balanceAfter))}</bdi>)
+                              : L.balAfterCredit(<bdi key="b" dir="ltr">{fmtGbp(e.balanceAfter)}</bdi>)}</>
+                          )}
+                        </div>
                       </div>
                       <span className={`p-amt ${e.amount >= 0 ? 'p-amt-pos' : ''}`} dir="ltr">
                         {e.amount >= 0 ? '+' : '−'}{fmtGbp(Math.abs(e.amount))}
@@ -736,7 +785,11 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                     <div className="p-row" key={i}>
                       <div className="p-row-main">
                         <div className="p-row-title"><bdi dir="ltr">{formatPhoneDisplay(r.phoneNumber) || L.phoneFallback}</bdi> · {r.country}</div>
-                        <div className="p-row-sub"><bdi dir="ltr">{fmtDate(r.fromDate)} {isHe ? '←' : '→'} {fmtDate(r.toDate)}</bdi>{daysLeft(r)}</div>
+                        {/* The arrow lives INSIDE a forced-LTR bdi, so the run
+                            already reads left-to-right in both languages —
+                            flipping it for Hebrew pointed the date range
+                            backwards (to-date first). Same glyph both ways. */}
+                        <div className="p-row-sub"><bdi dir="ltr">{fmtDate(r.fromDate)} → {fmtDate(r.toDate)}</bdi>{daysLeft(r)}</div>
                       </div>
                       <span className={`p-badge ${stClass(r.status)}`}>{stLabel(r.status)}</span>
                     </div>
@@ -746,7 +799,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
               {/* SIM plan — 88% of customers have one; without this card the
                   portal reads as empty/broken to the typical customer. */}
               <section className="pd-card">
-                <div className="p-kicker"><SimIcon /> {L.simPlan}</div>
+                <div className="p-kicker"><SimIcon /> {L.simPlan((account.sims || []).length)}</div>
                 {(account.sims || []).length === 0
                   ? <div className="p-empty">{L.noSims}</div>
                   : account.sims.map((s, i) => (
@@ -769,7 +822,13 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                     <div className="p-row" key={i}>
                       <div className="p-row-main">
                         <div className="p-row-title"><bdi dir="ltr">{b.route || L.flightFallback}{b.airline ? ` · ${b.airline}` : ''}</bdi></div>
-                        {b.travelDate ? <div className="p-row-sub">{fmtDate(b.travelDate)}</div> : null}
+                        <div className="p-row-sub">
+                          {b.travelDate ? fmtDate(b.travelDate) : null}
+                          {b.travelDate && b.bookingReference ? ' · ' : null}
+                          {b.bookingReference
+                            ? <>{L.bookingRef} <bdi dir="ltr" style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{b.bookingReference}</bdi></>
+                            : null}
+                        </div>
                       </div>
                       <span className={`p-badge ${stClass(b.status)}`}>{stLabel(b.status)}</span>
                     </div>

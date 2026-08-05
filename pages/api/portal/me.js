@@ -51,7 +51,10 @@ export default async function handler(req, res) {
     db.select('sims', `select=provider,tier,status,next_renewal_date&customer_id=eq.${cust.id}&order=created_at.asc`),
     // Mini statement: the customer's own last few wallet lines — date,
     // description and amount only (no references, no staff ids).
-    db.select('ledger', `select=created_at,description,amount,entry_type&customer_id=eq.${cust.id}&order=created_at.desc&limit=6`),
+    // 12, not 6: the balance hero sums the customer's WHOLE ledger, so with
+    // only six lines showing, an older debt made "You owe £X" impossible to
+    // reconcile from anything on screen.
+    db.select('ledger', `select=created_at,description,amount,entry_type&customer_id=eq.${cust.id}&order=created_at.desc&limit=12`),
   ])
 
   const balance = balRows.length ? Number(balRows[0].balance) : 0
@@ -79,12 +82,25 @@ export default async function handler(req, res) {
     renewalDate: s.next_renewal_date || '',
   }))
 
-  const statement = ledgerRows.map((e) => ({
-    at: e.created_at,
-    description: e.description || '',
-    amount: Number(e.amount) || 0,
-    type: e.entry_type || '',
-  }))
+  // Running balance per line, so the hero figure can be followed down the
+  // list. Rows arrive newest-first and the balance is the sum of ALL rows, so
+  // walking down subtracts each line's amount to get the balance that stood
+  // after the row below it. Rounded to pence at each step — the two reads run
+  // in the same Promise.all, so an entry posted between them would skew this,
+  // and float drift must not add a phantom penny on top of that.
+  let running = balance
+  const statement = ledgerRows.map((e) => {
+    const amount = Number(e.amount) || 0
+    const balanceAfter = Math.round(running * 100) / 100
+    running = Math.round((running - amount) * 100) / 100
+    return {
+      at: e.created_at,
+      description: e.description || '',
+      amount,
+      type: e.entry_type || '',
+      balanceAfter,
+    }
+  })
 
   return res.json({
     success: true,
