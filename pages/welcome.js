@@ -61,7 +61,7 @@ const T = {
   en: {
     dir: 'ltr', langLabel: 'EN',
     brandName: 'Kosher Connect',
-    nav: { mobile: 'Mobile & SIM', travel: 'Travel phones', intl: 'International numbers', repairs: 'Repairs & more', repair: 'Book a repair', visit: 'Visit us', message: 'Message us', account: 'My account', join: 'New here?' },
+    nav: { mobile: 'Mobile & SIM', travel: 'Travel phones', intl: 'International numbers', repairs: 'Repairs & more', repair: 'Book a repair', faq: 'Questions', visit: 'Visit us', message: 'Message us', account: 'My account', join: 'New here?' },
     heroEyebrow: 'Kosher Connect · Salford, Manchester',
     heroTitle: 'Your phone bill, halved.',
     heroBody: 'Most people are quietly on the wrong SIM. Bring us your last bill and we’ll match a plan to how you actually use your phone — same coverage, same number, far less money.',
@@ -140,6 +140,22 @@ const T = {
     },
     fPrivacy: 'We only use these details to reply to you.', fPrivacyLink: 'Privacy notice',
     legalPrivacy: 'Privacy', legalTerms: 'Terms', legalRefunds: 'Refunds',
+    faqEyebrow: 'Common questions',
+    faqTitle: 'The things people ring up and ask',
+    faq: [
+      { q: 'My phone stopped working while I was abroad — what do I do?',
+        a: 'Ring us on 0161 531 1386. If it is a rental we can usually sort it over the phone, and if it cannot be fixed remotely we will arrange a replacement. Do not buy a local SIM before speaking to us — it often makes the number harder to recover.' },
+      { q: 'My new SIM is not working — is it broken?',
+        a: 'Nearly always not. It is usually the phone needing a restart after the SIM goes in, or the plan not being switched on yet. Give us a ring and we will check it from our side before you make a journey.' },
+      { q: 'Can you unlock my phone so it takes another SIM?',
+        a: 'Often yes, depending on the handset and which network it is locked to. Bring it in and we will tell you honestly whether it can be done, what it costs and how long it takes — before you commit to anything.' },
+      { q: 'How do I top up, and what happens if I forget?',
+        a: 'Most plans are handled by us and billed to your account, so there is nothing to remember. If you would rather top up yourself we will show you how. Your balance and renewal dates are always on your account page.' },
+      { q: 'What if I am not happy with something I bought?',
+        a: 'Bring it back and talk to us. Accessories in a saleable condition can be returned, and anything faulty we will put right. The full position is on our refunds page.' },
+      { q: 'You are closed — can I still get help?',
+        a: 'Leave us a message with the form on this page, or ring and leave a voicemail. We pick both up when we open and reply the same day. For an urgent problem abroad, say so in the message and we will come back to you first.' },
+    ],
     fBadName: 'Please enter your name.', fBadContact: 'Please enter a valid phone number or email address.',
     preferCall: 'Prefer to call?',
     waLabel: 'WhatsApp us', waText: 'Hello Kosher Connect — I’d like to ask about…',
@@ -161,7 +177,7 @@ const T = {
   he: {
     dir: 'rtl', langLabel: 'HE',
     brandName: 'כשר קונקט',
-    nav: { mobile: 'חבילות וסים', travel: 'טלפון לחו״ל', intl: 'מספרים בינלאומיים', repairs: 'תיקונים ועוד', repair: 'לקבוע תיקון', visit: 'בואו לבקר', message: 'דברו איתנו', account: 'האזור האישי', join: 'חדשים אצלנו?' },
+    nav: { mobile: 'חבילות וסים', travel: 'טלפון לחו״ל', intl: 'מספרים בינלאומיים', repairs: 'תיקונים ועוד', repair: 'לקבוע תיקון', faq: 'שאלות', visit: 'בואו לבקר', message: 'דברו איתנו', account: 'האזור האישי', join: 'חדשים אצלנו?' },
     heroEyebrow: 'כשר קונקט · סלפורד, מנצ׳סטר',
     heroTitle: 'למה לשלם כפול על הסלולר?',
     heroBody: 'רוב האנשים משלמים כל חודש על חבילה שפשוט לא מתאימה להם. תביאו לנו את החשבונית האחרונה — נתאים לכם חבילה לפי השימוש האמיתי שלכם. אותה רשת, אותו מספר, והרבה פחות בסוף החודש.',
@@ -240,6 +256,22 @@ const T = {
     },
     fPrivacy: 'הפרטים משמשים אותנו רק כדי לחזור אליכם.', fPrivacyLink: 'מדיניות הפרטיות',
     legalPrivacy: 'פרטיות', legalTerms: 'תנאים', legalRefunds: 'החזרים',
+    faqEyebrow: 'שאלות נפוצות',
+    faqTitle: 'מה שהכי שואלים אותנו בטלפון',
+    faq: [
+      { q: 'הטלפון הפסיק לעבוד בחו״ל — מה עושים?',
+        a: 'התקשרו אלינו: 0161 531 1386. אם זו השכרה, לרוב נוכל לפתור את זה בטלפון, ואם לא — נדאג למכשיר חלופי. אל תקנו סים מקומי לפני שדיברתם איתנו; זה בדרך כלל מקשה על שחזור המספר.' },
+      { q: 'הסים החדש לא עובד — הוא תקול?',
+        a: 'כמעט תמיד לא. בדרך כלל צריך לכבות ולהדליק את הטלפון אחרי הכנסת הסים, או שהחבילה עוד לא הופעלה. התקשרו ונבדוק מהצד שלנו לפני שתגיעו במיוחד.' },
+      { q: 'אפשר לפתוח נעילה של הטלפון כדי שיקבל סים אחר?',
+        a: 'לא פעם כן — תלוי במכשיר ובחברה שנעל אותו. הביאו אותו ונגיד לכם בכנות אם אפשר, כמה זה עולה וכמה זמן זה לוקח, לפני שאתם מתחייבים.' },
+      { q: 'איך טוענים, ומה קורה אם שוכחים?',
+        a: 'רוב החבילות מנוהלות אצלנו ומחויבות לחשבון שלכם, כך שאין מה לזכור. אם אתם מעדיפים לטעון בעצמכם — נראה לכם איך. היתרה ותאריכי החידוש תמיד מופיעים באזור האישי.' },
+      { q: 'ומה אם לא הייתי מרוצה ממשהו שקניתי?',
+        a: 'הביאו אותו חזרה ונדבר. אביזרים במצב תקין אפשר להחזיר, וכל דבר פגום נתקן. הפירוט המלא נמצא בעמוד ההחזרים.' },
+      { q: 'אתם סגורים — אפשר בכל זאת לקבל עזרה?',
+        a: 'השאירו לנו הודעה בטופס שבעמוד, או התקשרו והשאירו הודעה קולית. אנחנו אוספים את שתיהן עם הפתיחה ומשיבים באותו יום. אם זה דחוף ואתם בחו״ל — כתבו זאת, ונחזור אליכם ראשונים.' },
+    ],
     fBadName: 'נא להזין שם.', fBadContact: 'נא להזין מספר טלפון או כתובת מייל תקינים.',
     preferCall: 'מעדיפים להתקשר?',
     waLabel: 'כתבו לנו בוואטסאפ', waText: 'שלום כשר קונקט — רציתי לשאול לגבי…',
@@ -437,6 +469,15 @@ export default function Welcome() {
         <meta property="og:image:height" content="509" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: LD_JSON }} />
+        {/* Built from the rendered strings, so the markup can't drift from
+            what a visitor actually reads. */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          '@context': 'https://schema.org', '@type': 'FAQPage',
+          mainEntity: t.faq.map((f) => ({
+            '@type': 'Question', name: f.q,
+            acceptedAnswer: { '@type': 'Answer', text: f.a },
+          })),
+        }) }} />
       </Head>
       <style dangerouslySetInnerHTML={{ __html: SKY_CSS }} />
       <ThemeToggle style={{ position: 'fixed', top: 14, insetInlineEnd: 14, zIndex: 60 }} />
@@ -466,14 +507,17 @@ export default function Welcome() {
           </div>
           {/* Phones lose the top nav links entirely (<=960px) — give them a
               swipeable chip strip so the sections stay one tap away. */}
+          <div className="sk-mobnav-wrap">
           <nav className="sk-mobnav" aria-label="Site sections">
             <a href="#mobile">{t.nav.mobile}</a>
             <a href="#travel">{t.nav.travel}</a>
             <a href="#intl">{t.nav.intl}</a>
             <a href="#services">{t.nav.repairs}</a>
+            <a href="#faq">{t.nav.faq}</a>
             <a href="#visit">{t.nav.visit}</a>
             <a href="/portal">{t.nav.account}</a>
           </nav>
+          </div>
         </header>
 
         {paid && (
@@ -569,6 +613,21 @@ export default function Welcome() {
           <div className="sk-wrap sk-reveal">
             <span className="sk-eyebrow">{t.friendsEyebrow}</span>
             <p className="sk-friends-line">{t.friendsText}</p>
+          </div>
+        </section>
+
+        <section className="sk-faq" id="faq">
+          <div className="sk-wrap sk-reveal">
+            <span className="sk-eyebrow">{t.faqEyebrow}</span>
+            <h2>{t.faqTitle}</h2>
+            <div className="sk-faq-list">
+              {t.faq.map((f, i) => (
+                <details className="sk-faq-item" key={i}>
+                  <summary>{f.q}</summary>
+                  <p>{f.a}</p>
+                </details>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -703,7 +762,8 @@ export default function Welcome() {
               </nav>
               <nav className="sk-foot-col" aria-label={t.footLegal}>
                 <strong>{t.footLegal}</strong>
-                <a href="#visit">{t.nav.visit}</a>
+                <a href="#faq">{t.nav.faq}</a>
+            <a href="#visit">{t.nav.visit}</a>
                 <a href="/privacy">{t.legalPrivacy}</a>
                 <a href="/terms">{t.legalTerms}</a>
                 <a href="/refund">{t.legalRefunds}</a>
@@ -967,6 +1027,26 @@ const SKY_CSS = `
   .sk-form-reach{display:flex;flex-direction:column;gap:8px}
   .sk-form-hint{font-size:13px;color:var(--sk-muted);font-weight:600}
   .sk-form-privacy{margin:12px 0 0;font-size:12.5px;color:var(--sk-muted);line-height:1.5}
+  .sk-faq{padding:74px 0}
+  .sk-faq-list{margin-top:26px;display:flex;flex-direction:column;gap:1px;
+    background:var(--sk-line);border:1px solid var(--sk-line);border-radius:14px;overflow:hidden}
+  .sk-faq-item{background:var(--sk-card)}
+  .sk-faq-item summary{cursor:pointer;padding:18px 22px;font-size:16px;font-weight:600;
+    color:var(--sk-ink);list-style:none;display:flex;align-items:center;gap:12px;min-height:24px}
+  .sk-faq-item summary::-webkit-details-marker{display:none}
+  /* The marker is drawn, not a glyph, so it mirrors correctly in RTL. */
+  .sk-faq-item summary::after{content:'';margin-inline-start:auto;flex:none;width:9px;height:9px;
+    border-right:2px solid currentColor;border-bottom:2px solid currentColor;opacity:.45;
+    transform:rotate(45deg);transition:transform .18s var(--sk-ease-out)}
+  .sk-faq-item[open] summary::after{transform:rotate(-135deg)}
+  .sk-faq-item summary:hover{color:var(--sk-sky)}
+  .sk-faq-item summary:focus-visible{outline:2px solid var(--sk-sky);outline-offset:-2px}
+  .sk-faq-item p{margin:0;padding:0 22px 20px;color:var(--sk-muted);line-height:1.65;font-size:15px}
+  @media (max-width:560px){
+    .sk-faq{padding:54px 0}
+    .sk-faq-item summary{padding:16px 16px;font-size:15px}
+    .sk-faq-item p{padding:0 16px 18px;font-size:14.5px}
+  }
   .sk-form-privacy a{color:inherit;text-decoration:underline}
   /* Not .sk-chips — that is already the feature bands' tick list, and it
      carries justify-content:center and a 22px top margin this row must not
@@ -1054,6 +1134,16 @@ const SKY_CSS = `
   /* Mobile section chips (hidden on desktop, where the nav links exist) */
   .sk-mobnav{display:none}
   @media (max-width:1279px){
+    /* Must not grow to the chip row's content width — the nav scrolls
+       INSIDE it. Without these the wrapper stretched to 679px and took
+       the whole page sideways with it. */
+    .sk-mobnav-wrap{position:relative;width:100%;min-width:0;max-width:100vw;overflow:hidden}
+    /* Trailing fade = "there is more this way". Logical inset, so it sits on
+       the correct edge in RTL. Pointer-events off so it never eats a tap. */
+    .sk-mobnav-wrap::after{content:'';position:absolute;inset-block:0;inset-inline-end:0;
+      width:34px;pointer-events:none;
+      background:linear-gradient(to left,var(--sk-bg) 12%,transparent)}
+    [dir="rtl"] .sk-mobnav-wrap::after{background:linear-gradient(to right,var(--sk-bg) 12%,transparent)}
     .sk-mobnav{display:flex;gap:8px;overflow-x:auto;padding:0 16px 10px;
       -webkit-overflow-scrolling:touch;scrollbar-width:none}
     .sk-mobnav::-webkit-scrollbar{display:none}
