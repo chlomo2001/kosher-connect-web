@@ -2421,6 +2421,9 @@ html { scroll-behavior: smooth; }
 .p-row-main { flex: 1 1 auto; min-width: 0; }
 .p-row-title { font-size: var(--fs-body); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .p-row-sub { font-size: var(--fs-small); color: var(--muted); margin-top: 2px; }
+/* SIM renewal proximity — amber inside a fortnight, red once it's passed. */
+.p-renew-soon { color: var(--gold); font-weight: 600; }
+.p-renew-over { color: var(--danger); font-weight: 600; }
 .p-badge {
   flex: 0 0 auto; font-size: var(--fs-micro); font-weight: 500; line-height: 1;
   padding: 4px 9px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap;

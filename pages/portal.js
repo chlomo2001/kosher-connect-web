@@ -43,6 +43,9 @@ const P = {
     flights: 'Flights', noFlights: 'No upcoming flights.',
     simPlan: 'My SIM plan', noSims: 'No SIM plan with us yet.',
     renews: (d) => `Renews ${d}`,
+    renewIn: (n) => (n === 1 ? 'tomorrow' : `in ${n} days`),
+    renewToday: 'today',
+    renewOverdue: 'renewal due — speak to us',
     bankRef1: 'Paying by bank transfer? Please use the reference', bankRef2: 'so we can match your payment.',
     noMatchTitle: 'We couldn’t match this email to an account',
     noMatchBody: 'You’re signed in, but this email address isn’t linked to a Kosher Connect account yet. If you’re a customer, we may have a different email (or none) on file — call us and we’ll link it up in a minute.',
@@ -101,6 +104,9 @@ const P = {
     flights: 'טיסות', noFlights: 'אין טיסות קרובות ביומן.',
     simPlan: 'חבילת הסים שלי', noSims: 'עוד אין חבילת סים אצלנו.',
     renews: (d) => `מתחדשת ב־${d}`,
+    renewIn: (n) => (n === 1 ? 'מחר' : `בעוד ${n} ימים`),
+    renewToday: 'היום',
+    renewOverdue: 'החידוש הגיע — דברו איתנו',
     bankRef1: 'משלמים בהעברה בנקאית? נא לציין את האסמכתא', bankRef2: 'כדי שנוכל לשייך את התשלום.',
     noMatchTitle: 'לא הצלחנו לשייך את המייל הזה לחשבון',
     noMatchBody: 'נכנסתם בהצלחה, אבל כתובת המייל הזו עדיין לא מקושרת לחשבון בכשר קונקט. ייתכן שרשומה אצלנו כתובת אחרת (או שאין בכלל) — התקשרו אלינו ונקשר את החשבון תוך דקה.',
@@ -553,6 +559,18 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       const n = Math.ceil((d.getTime() - Date.now()) / 86400000)
       return n < 0 ? '' : ` · ${L.daysLeft(n)}`
     }
+    // How close a SIM's renewal is — the answer to "do I need to do anything?".
+    // Display-only, from the one date the record holds; no usage feed exists, so
+    // this deliberately does not pretend to know data-left.
+    const simRenewal = (s) => {
+      if (!s.renewalDate) return null
+      const d = new Date(s.renewalDate)
+      if (isNaN(d)) return null
+      const n = Math.ceil((d.getTime() - Date.now()) / 86400000)
+      const cls = n < 0 ? 'p-renew-over' : n <= 14 ? 'p-renew-soon' : ''
+      const rel = n < 0 ? L.renewOverdue : n === 0 ? L.renewToday : L.renewIn(n)
+      return { text: `${L.renews(fmtDate(s.renewalDate))} · ${rel}`, cls }
+    }
     return (
       <>
         <Head><title>{L.title}</title></Head>
@@ -677,7 +695,8 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                     <div className="p-row" key={i}>
                       <div className="p-row-main">
                         <div className="p-row-title"><bdi dir="ltr">{s.provider || 'SIM'}{s.tier ? ` · ${s.tier}` : ''}</bdi></div>
-                        {s.renewalDate ? <div className="p-row-sub">{L.renews(fmtDate(s.renewalDate))}</div> : null}
+                        {(() => { const r = simRenewal(s); return r
+                          ? <div className={`p-row-sub ${r.cls}`}>{r.text}</div> : null })()}
                       </div>
                       <span className={`p-badge ${stClass(s.status)}`}>{stLabel(s.status)}</span>
                     </div>
