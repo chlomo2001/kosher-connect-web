@@ -312,11 +312,15 @@ async function initApp() {
   const arr = v => (Array.isArray(v) ? v : []);
   loadFailed = {};
   const [cust, rent, ph, sm, bk, vn, rp, so, cfg, menu, me] = await Promise.all([
-    window.api.getAllCustomers().catch(() => []),
+    // Customers and bookings go through safeLoadArray too. They aren't
+    // whole-array saved, so this isn't about delete-protection — it's that a
+    // failed load used to return [] indistinguishably from "none", and the
+    // customers tab then said "No customers yet." over 751 real records.
+    safeLoadArray('customers', '/api/customers'),
     safeLoadArray('rentals', '/api/rentals'),
     safeLoadArray('phones', '/api/phones'),
     safeLoadArray('sims', '/api/sims'),
-    window.api.getAllBookings().catch(() => []),
+    safeLoadArray('bookings', '/api/bookings'),
     window.api.getVirtualNumbers().catch(() => []),
     // Repairs + service orders load up-front too, so customer badges/services
     // reflect them before their tabs are ever opened (same as bookings/SIMs).
@@ -352,7 +356,14 @@ async function initApp() {
   renderSidebarUser();
   // A failed load of a whole-array collection: warn, block saves, offer reload.
   const failedKeys = Object.keys(loadFailed).filter(k => loadFailed[k]);
-  if (failedKeys.length) showReloadBanner(`Couldn’t load ${failedKeys.join(', ')} — some data is missing. Saving is paused to protect your records.`);
+  if (failedKeys.length) {
+    // Only the whole-array collections have their saves paused (saveBlocked).
+    // Customers and bookings save per row, so promising a pause that isn't
+    // happening would be its own false statement.
+    const paused = failedKeys.filter(k => ['rentals', 'phones', 'sims'].includes(k));
+    showReloadBanner(`Couldn’t load ${failedKeys.join(', ')} — some data is missing.` +
+      (paused.length ? ' Saving is paused to protect your records.' : ' Reload before relying on what you see.'));
+  }
   applyTabVisibility();
   reconcilePhoneStatuses();
   // Open the tab named in the URL (/rentals …), defaulting to the dashboard.
@@ -558,6 +569,14 @@ function setupNav() {
       e.target.click();
     }
   });
+  // A focused type=number field takes wheel events and silently changes the
+  // figure — on a trackpad, scrolling past a filled-in payment box edits the
+  // amount with no keystroke and no undo. Blur instead, so the scroll scrolls.
+  // Passive: we never preventDefault, the page must keep scrolling normally.
+  document.addEventListener('wheel', (e) => {
+    const el = document.activeElement;
+    if (el && el.type === 'number' && el === e.target) el.blur();
+  }, { passive: true });
   // Back / Forward: re-open whatever tab the URL now points at.
   window.addEventListener('popstate', () => {
     const tab = tabFromPath();
@@ -3643,6 +3662,14 @@ function renderTableRows() {
   // (that narrowed the search result cumulatively on every render/filter change).
   const shown = sortCustomers(filteredCustomers.filter(customerMatchesFilter));
 
+  // A failed load must never read as "No customers yet." — with 751 real
+  // records behind it that invites a panicked re-entry of data that already
+  // exists. Say what actually happened and offer the retry.
+  if (loadFailed.customers) {
+    tbody.innerHTML = `<tr><td colspan="5">${errorHtml('Couldn’t load your customers')}</td></tr>`;
+    return;
+  }
+
   if (shown.length === 0) {
     tbody.innerHTML = `
       <tr><td colspan="5">
@@ -4374,7 +4401,13 @@ async function chargeCardOnFile(custId) {
     }
     // Processing or any failure: KEEP the token so a retry reuses it and Stripe
     // dedupes rather than double-charging.
-    else if (d.success) { toast(d.note || 'Payment processing…', 'info'); }
+    // Processing is an OUTCOME the operator has to follow up, not a status
+    // flash — as a warning it now stays until dismissed, names where the answer
+    // will appear, and the wallet is refreshed so a fast settlement shows.
+    else if (d.success) {
+      toast(d.note || 'Payment processing — the card issuer hasn’t answered yet. Check this customer’s wallet in a minute; don’t charge again.', 'warning');
+      loadWalletSection(custId);
+    }
     else toast(d.error || 'Charge failed.', 'error');
   } catch { toast('Charge failed.', 'error'); }
   finally { kcEndWrite(guardKey); }
@@ -6266,10 +6299,18 @@ async function saveCustomer() {
       : {}),
     passportOnFile: document.getElementById('fPassportOnFile').checked };
 
+  // Both branches must survive a rejected fetch as well as {success:false} —
+  // window.api.* does r.json() with no catch, so a dropped connection rejects
+  // here rather than returning a body. Failure keeps the modal open with the
+  // typed data intact (the convention deleteCustomer/saveCashup/reportSave
+  // already follow); only success falls through to closeModal().
+  const saveFailed = (res) => {
+    toast((res && res.error) || 'Could not save the customer — nothing was changed. Check your connection and try again.', 'error');
+  };
   if (editId) {
     payload.id = editId;
-    const res = await window.api.updateCustomer(payload);
-    if (res.success) {
+    const res = await window.api.updateCustomer(payload).catch(() => null);
+    if (res && res.success) {
       const idx = customers.findIndex(c => c.id === editId);
       if (idx !== -1) customers[idx] = res.customer;
       sortCustomersAZ();  // a rename may change where they sit in A–Z
@@ -6296,14 +6337,14 @@ async function saveCustomer() {
         });
         if (simChanged) saveSims(sims);
       }
-    }
+    } else { saveFailed(res); return; }
   } else {
-    const res = await window.api.addCustomer(payload);
-    if (res.success) {
+    const res = await window.api.addCustomer(payload).catch(() => null);
+    if (res && res.success) {
       customers.push(res.customer);
       sortCustomersAZ();
       toast('Customer added!', 'success');
-    }
+    } else { saveFailed(res); return; }
   }
 
   closeModal();
@@ -7036,19 +7077,30 @@ function toast(msg, type = 'success') {
   const container = document.getElementById('toast-container');
   const el = document.createElement('div');
   el.className = `toast toast-${type}`;
-  el.textContent = msg;
-  // Errors announce assertively (role=alert) and stay until dismissed — a
-  // payment/save failure shouldn't vanish in 3s before it's read. Success/info
-  // stay polite (the container's aria-live) and auto-clear.
-  if (type === 'error') {
-    el.setAttribute('role', 'alert');
-    el.title = 'Click to dismiss';
-    el.style.cursor = 'pointer';
-    el.addEventListener('click', () => el.remove());
-  } else {
-    el.setAttribute('role', 'status');
-    setTimeout(() => el.remove(), 3000);
-  }
+  const body = document.createElement('span');
+  body.textContent = msg;
+  el.appendChild(body);
+  // Errors AND warnings announce assertively (role=alert) and stay until
+  // dismissed — the money-critical ones are warnings ("card machine approved
+  // after the till gave up — re-ring the SAME items"), and a 3s clock threw
+  // those away before they could be read. Success/info stay polite and
+  // auto-clear, but on a timer that scales with reading time (~60ms/char)
+  // instead of a flat 3s that truncated the long ones mid-sentence.
+  const sticky = type === 'error' || type === 'warning';
+  el.setAttribute('role', sticky ? 'alert' : 'status');
+  // A real button, not just a click handler on the div: dismissal has to be
+  // reachable from the keyboard, and one control here serves every call site.
+  const x = document.createElement('button');
+  x.type = 'button';
+  x.className = 'toast-x';
+  x.setAttribute('aria-label', 'Dismiss');
+  x.textContent = '✕';
+  x.addEventListener('click', (e) => { e.stopPropagation(); el.remove(); });
+  el.appendChild(x);
+  el.title = 'Click to dismiss';
+  el.style.cursor = 'pointer';
+  el.addEventListener('click', () => el.remove());
+  if (!sticky) setTimeout(() => el.remove(), Math.min(12000, Math.max(3000, 900 + msg.length * 60)));
   container.appendChild(el);
 }
 
@@ -7142,7 +7194,9 @@ function renderBookingsTab() {
     { value: 'price', label: 'Price (high–low)', cmp: kcCmpNum(b => (b.price || 0) + (b.bookingFee || 0)) },
   ], renderBookingsTab);
   const bkShown = kcViewApply('bookings', bookings);
-  const rows = bkShown.length === 0
+  const rows = loadFailed.bookings
+    ? `<tr><td colspan="9">${errorHtml('Couldn’t load your bookings')}</td></tr>`
+    : bkShown.length === 0
     ? `<tr><td colspan="9"><div class="empty-state"><div class="emoji">✈️</div><p>${bookings.length ? 'No bookings match this filter.' : 'No bookings yet.'}</p><small>${bookings.length ? 'Change the filter above.' : 'Click "New Booking" to add the first one.'}</small>${kcClearFiltersBtn('bookings')}</div></td></tr>`
     : bkShown.map(b => `
       <tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a'))openEditBookingModal('${escHtml(b.id)}')" title="Open booking">
@@ -8809,6 +8863,7 @@ async function renderShopTab() {
     ${lowBanner}
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
       <button class="btn btn-primary" onclick="openSaleModal()">🧾 Open Till</button>
+      <button class="btn btn-outline" onclick="openCashupModal()">💰 Cash up</button>
       <button class="btn btn-outline" onclick="openStockItemModal()">➕ Add Item</button>
       <button class="btn btn-outline" onclick="openSupplierReturnModal()">📤 Return to supplier</button>
       <button class="btn btn-outline" onclick="openGoodsInModal()">📥 Goods in</button>
@@ -9811,7 +9866,9 @@ async function saveSale() {
   // across failed attempts, cleared on success/duplicate) makes an operator
   // re-ring after a lost response replay the same token — the server dedupes
   // instead of charging twice. audit U3/A2.
-  if (!kcBeginWrite('sale')) return;
+  // A blocked re-tap used to return in total silence, which reads exactly like
+  // a dead button to the operator standing at the counter.
+  if (!kcBeginWrite('sale')) { toast('Still working on the last one — give it a moment.', 'info'); return; }
   if (!posSaleRef) posSaleRef = kcRef();
   // Terminal lane: inside the K300 wrapper a card payment goes to the machine
   // FIRST — only an approved tap records the sale. The result is keyed to the
@@ -9820,9 +9877,23 @@ async function saveSale() {
   const payRef = `PAY-SALE-${posSaleRef}-now`;
   let tillResult = null;
   let res;
+  // A tap/PIN/issuer round trip is ~10-40s. Without a busy state the button
+  // stays live and the screen says nothing, so the operator cannot tell
+  // "waiting on the machine" from "my tap didn't register" — well past the
+  // ~10s threshold where a persistent indicator is required. Every other
+  // write in this file already does disabled + relabel; this one was the
+  // outlier, on the most-repeated action in the shop.
+  const chargeBtn = document.querySelector('.pos-charge');
+  const chargeIdle = chargeBtn ? chargeBtn.textContent : '';
+  const setCharging = (on, label) => {
+    if (!chargeBtn) return;
+    chargeBtn.disabled = on;
+    chargeBtn.textContent = on ? label : chargeIdle;
+  };
   try {
     if (paidNow && posMethod === 'card' && cashDue > 0 && kcTillAvailable()) {
       toast(`Take ${fmtGbp(cashDue)} on the card machine…`, 'info');
+      setCharging(true, '⏳ Waiting for the card machine…');
       tillResult = await kcTillCharge(Math.round(cashDue * 100), payRef);
       if (!tillResult) {
         toast('No answer from the card machine — nothing was recorded. Check the terminal and try again.', 'error');
@@ -9837,6 +9908,7 @@ async function saveSale() {
         return;
       }
     }
+    setCharging(true, '⏳ Recording the sale…');
     res = await kcFetch('/api/shop', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -9851,6 +9923,9 @@ async function saveSale() {
       }),
     }).then(r => r.json()).catch(() => null);
   } finally {
+    // Restores on every exit, including the early returns for a declined,
+    // mismatched or unanswered terminal.
+    setCharging(false);
     kcEndWrite('sale');
   }
   // NOTE: on a failed POST after an approved tap, posSaleRef and the cached
@@ -10594,7 +10669,10 @@ async function dispatchAssistant(plan, out) {
   if (a === 'who_owes') { out.innerHTML = reply + await assistantWhoOwes(); return; }
   if (a === 'customer_info') { out.innerHTML = reply + await assistantCustomerInfo(plan.args && plan.args.name); return; }
   if (a === 'overdue_rentals') { out.innerHTML = reply + assistantOverdue(); return; }
-  if (a === 'todays_takings') { out.innerHTML = reply + '<div style="font-size:var(--fs-body);">Opening the cash-up screen…</div>'; setTimeout(() => { closeDynamicModal(); goToTab('cashup'); }, 700); return; }
+  // There is no 'cashup' TAB — it's a modal. goToTab() clicked a nav item that
+  // doesn't exist and optional chaining swallowed the miss, so the announced
+  // action did nothing, every time.
+  if (a === 'todays_takings') { out.innerHTML = reply + '<div style="font-size:var(--fs-body);">Opening the cash-up screen…</div>'; setTimeout(() => { closeDynamicModal(); openCashupModal(); }, 700); return; }
   if (['draft_reminder', 'create_payment_link', 'add_task', 'mark_task_done'].includes(a)) { out.innerHTML = reply + await assistantConfirmCard(plan); return; }
   out.innerHTML = reply || '<div style="font-size:var(--fs-body);color:var(--muted);">I can help with balances, who owes, overdue rentals, reminders, payment links and tasks.</div>';
 }

@@ -71,6 +71,12 @@ const P = {
     yourEmail: 'Your email', emailLink: 'Email me a sign-in link', sending: 'Sending…',
     noEmailHelp: 'No email address? Call us on', noEmailHelp2: 'and we’ll sort your account in the shop.',
     sent: '📬 If that email belongs to a Kosher Connect customer, a sign-in link is on its way. You can close this page.',
+    linkExpired: 'That sign-in link has expired — enter your email and we’ll send a fresh one.',
+    sendFailed: 'That didn’t send — try again in a minute, or call us on',
+    offline: 'We couldn’t reach us just now — check your connection and try again, or call us on',
+    netErrTitle: 'We couldn’t load your account',
+    netErrBody: 'That looks like a connection problem, not a sign-in problem — you’re still signed in.',
+    tryAgain: 'Try again',
     or: 'or', google: 'Continue with Google',
     greeting: (h) => (h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'),
     title: 'My Kosher Connect', phoneFallback: 'Phone', flightFallback: 'Flight',
@@ -132,6 +138,12 @@ const P = {
     yourEmail: 'כתובת המייל שלכם', emailLink: 'שלחו לי קישור כניסה', sending: 'שולחים…',
     noEmailHelp: 'אין לכם כתובת מייל? התקשרו אלינו:', noEmailHelp2: 'ונסדר לכם גישה בחנות.',
     sent: '📬 אם הכתובת שייכת ללקוח של כשר קונקט — קישור הכניסה כבר בדרך אליכם. אפשר לסגור את העמוד.',
+    linkExpired: 'תוקף קישור הכניסה פג — הזינו את כתובת המייל ונשלח לכם קישור חדש.',
+    sendFailed: 'השליחה לא הצליחה — נסו שוב בעוד דקה, או התקשרו אלינו:',
+    offline: 'לא הצלחנו להתחבר כרגע — בדקו את החיבור ונסו שוב, או התקשרו אלינו:',
+    netErrTitle: 'לא הצלחנו לטעון את החשבון שלכם',
+    netErrBody: 'נראה שזו בעיית חיבור ולא בעיית התחברות — אתם עדיין מחוברים.',
+    tryAgain: 'לנסות שוב',
     or: 'או', google: 'כניסה עם Google',
     greeting: (h) => (h < 12 ? 'בוקר טוב' : h < 18 ? 'צהריים טובים' : 'ערב טוב'),
     title: 'כשר קונקט שלי', phoneFallback: 'טלפון', flightFallback: 'טיסה',
@@ -167,6 +179,8 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   const [busy, setBusy] = useState(false)
   const [account, setAccount] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [netErr, setNetErr] = useState(false)   // couldn't reach us — session kept
+  const [linkErr, setLinkErr] = useState('')    // expired / already-used sign-in link
 
   // Language: English / lashon hakodesh
   const [lang, setLang] = useState('en')
@@ -226,12 +240,35 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
 
   const token = () => (typeof window !== 'undefined' ? sessionStorage.getItem('kc_portal_token') : null)
 
+  // Holds refreshSession, which is defined below and itself depends on
+  // loadAccount — a ref breaks what would otherwise be a useCallback cycle.
+  const refreshRef = useRef(null)
+
   const loadAccount = useCallback((tok) => {
     setLoading(true)
+    setNetErr(false)
     return fetch('/api/portal/me', { headers: { Authorization: `Bearer ${tok}` } })
       .then((r) => r.json())
-      .then((d) => { if (d && d.success) setAccount(d); else signOut() })
-      .catch(() => signOut())
+      .then((d) => {
+        if (d && d.success) { setAccount(d); return }
+        // The server actively said no, so this access token really is dead.
+        // Spend the refresh token before falling back to the signed-out card:
+        // a same-tab reload after the ~1h expiry used to wipe the session
+        // without ever attempting a refresh.
+        const rt = typeof window !== 'undefined' ? localStorage.getItem('kc_portal_refresh') : null
+        if (rt && refreshRef.current) {
+          sessionStorage.removeItem('kc_portal_token')
+          refreshRef.current(rt)
+          return
+        }
+        signOut()
+      })
+      .catch(() => {
+        // A dropped connection is NOT an invalid token. Signing out here threw
+        // away the refresh token — the only session persistence — and cost an
+        // emailed link round trip, which is expensive on a filtered phone.
+        setNetErr(true)
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -258,6 +295,9 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       .catch(() => { localStorage.removeItem('kc_portal_refresh'); setLoading(false) })
   }, [loadAccount])
 
+  // Give loadAccount a live handle on refreshSession without a dependency cycle.
+  useEffect(() => { refreshRef.current = refreshSession }, [refreshSession])
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
@@ -266,6 +306,12 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     // instead of costing a freshly emailed link on every single visit.
     const ref = hash.get('refresh_token')
     if (ref) localStorage.setItem('kc_portal_refresh', ref)
+    // Supabase returns a dead link as #error=access_denied&error_code=otp_expired.
+    // Read it BEFORE the hash is wiped below — otherwise an expired link just
+    // bounces the customer back to a bare login form with no explanation, and
+    // they have no idea whether to wait, retry, or ring us.
+    const errCode = hash.get('error_code') || hash.get('error')
+    if (errCode) setLinkErr(errCode)
     const tok = hash.get('access_token') || sessionStorage.getItem('kc_portal_token')
     if (window.location.hash) window.history.replaceState(null, '', window.location.pathname)
     if (tok) {
@@ -469,14 +515,26 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     e.preventDefault()
     if (busy) return
     setBusy(true)
+    setLinkErr('')
+    // Only a 2xx may claim "the link is on its way". A 429, a 503 or a dropped
+    // connection used to render the same success card AND replace the form, so
+    // there was no retry — the customer waited for an email that never came.
+    // 200 responses stay byte-identical, so email-enumeration safety is
+    // unchanged. (A failed send behind a 200 is a separate, deliberate case.)
+    let ok = false
     try {
-      await fetch('/api/portal/request-link', {
+      const r = await fetch('/api/portal/request-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       })
-    } catch { /* the message below is identical either way */ }
-    setSent(true)
+      ok = r.ok
+      if (!ok) {
+        const d = await r.json().catch(() => null)
+        setLinkErr(d && d.error ? 'server' : 'server')
+      }
+    } catch { setLinkErr('offline') }
+    if (ok) setSent(true)
     setBusy(false)
   }
 
@@ -801,6 +859,42 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     )
   }
 
+  // Signed in, but we couldn't reach the server. The tokens are intact, so
+  // offer a retry instead of the login form — dropping them here is what used
+  // to cost an emailed link for what was only a dropped connection.
+  if (netErr) {
+    const retry = () => {
+      const tok = token()
+      const rt = typeof window !== 'undefined' ? localStorage.getItem('kc_portal_refresh') : null
+      if (tok) loadAccount(tok)
+      else if (rt) refreshSession(rt)
+      else setNetErr(false)
+    }
+    return (
+      <>
+        <Head><title>{L.title}</title></Head>
+        <div className="login-shell" dir={dir}>
+          <div className="login-mesh" aria-hidden="true" />
+          <AuthBackdrop />
+          <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
+          <div className="login-card" role="alert">
+            <div style={{ textAlign: 'center' }}>
+              <img src="/logo-full-tight.png" alt="Kosher Connect" style={{ height: 44, marginBottom: 12 }} />
+              <div className="login-title">{L.netErrTitle}</div>
+              <div className="login-sub">{L.netErrBody}</div>
+            </div>
+            <button className="btn btn-primary" onClick={retry} style={{ width: '100%', padding: '10px 16px', marginTop: 16 }}>
+              {L.tryAgain}
+            </button>
+            <div className="p-reassure" style={{ marginTop: 10 }}>
+              {L.noEmailHelp} <a href="tel:+441615311386" dir="ltr" style={{ whiteSpace: 'nowrap' }}>0161 531 1386</a>
+            </div>
+          </div>
+        </div>
+      </>
+    )
+  }
+
   return (
     <>
       <Head><title>{L.title}</title></Head>
@@ -821,6 +915,15 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
             </div>
           ) : (
             <>
+              {/* An expired link, or a send that genuinely failed, is explained
+                  here instead of silently dropping the customer on a bare form. */}
+              {linkErr && (
+                <div className="p-linkerr" role="alert">
+                  {linkErr === 'offline' ? <>{L.offline} <a href="tel:+441615311386" dir="ltr" style={{ whiteSpace: 'nowrap' }}>0161 531 1386</a></>
+                    : linkErr === 'server' ? <>{L.sendFailed} <a href="tel:+441615311386" dir="ltr" style={{ whiteSpace: 'nowrap' }}>0161 531 1386</a></>
+                    : L.linkExpired}
+                </div>
+              )}
               <input
                 className="form-input" type="email" placeholder={L.yourEmail} value={email}
                 onChange={e => setEmail(e.target.value)} autoFocus required
