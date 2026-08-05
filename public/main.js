@@ -689,7 +689,15 @@ function fmtDate(iso) {
   // (2026-07-13T16:03:02.6+00:00) — take just the date part either way.
   const [y, m, d] = String(iso).slice(0, 10).split('-');
   if (!y || !m || !d) return '—';
-  return d + '/' + m + '/' + y;
+  // "5 Aug 2026", not "05/08/2026". Two formats were in play across the app —
+  // this function at 78 call sites (including the customer-facing SMS drafts)
+  // and a long-form one in SIM history, the wallet and the portal. Converging
+  // here converges all 78, and the unambiguous form is the right one to send a
+  // customer: 05/08 and 08/05 are different days on either side of the Atlantic.
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const mi = parseInt(m, 10) - 1;
+  if (!(mi >= 0 && mi < 12)) return '—';
+  return String(parseInt(d, 10)) + ' ' + MONTHS[mi] + ' ' + y;
 }
 
 // ─────────────────────────────────────────────
@@ -764,6 +772,16 @@ function filterCustomerDropdown() {
       </div>`).join('');
   }
   dropdown.classList.add('open');
+}
+
+// Enter commits the one visible match — the same bargain posScanEnter already
+// makes at the till. With several matches it does nothing rather than guess,
+// because guessing here attaches a rental to the wrong person.
+function rentalPickerKey(e) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const items = document.querySelectorAll('#rCustomerDropdown .customer-dropdown-item');
+  if (items.length === 1) items[0].click();
 }
 
 function selectRentalCustomer(id) {
@@ -1620,7 +1638,7 @@ function availabilityCalendarHtml() {
           <span style="white-space:nowrap;"><span class="cal-key cal-active"></span> out</span>
           <span style="white-space:nowrap;"><span class="cal-key cal-booked"></span> reserved (striped)</span>
           <span style="white-space:nowrap;"><span class="cal-key cal-overdue"></span> overdue (!)</span>
-          <span style="white-space:nowrap;"><span class="cal-key cal-shabbat"></span> Shabbat</span>
+          <span style="white-space:nowrap;"><span class="cal-key cal-shabbat"></span> Shabbos</span>
           · click a free day to reserve</span>
       </div>
       <div style="overflow-x:auto;padding:0 14px 6px;">
@@ -1889,7 +1907,8 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
           <input type="hidden" id="rCustomer">
           <input class="form-input" type="text" id="rCustomerSearch"
             placeholder="Type a name or number…" autocomplete="off"
-            oninput="filterCustomerDropdown()" onfocus="filterCustomerDropdown()">
+            oninput="filterCustomerDropdown()" onfocus="filterCustomerDropdown()"
+            onkeydown="rentalPickerKey(event)">
           <div class="customer-dropdown" id="rCustomerDropdown"></div>
         </div>
         <div id="rCustomerSelected" style="font-size:var(--fs-small);color:var(--success);margin-top:4px;"></div>
@@ -2173,12 +2192,12 @@ function updateRentalCalc() {
   }
   txt.innerHTML = `
     <span style="color:var(--muted);">Total days:</span> ${totalDays} &nbsp;|&nbsp;
-    <span style="color:var(--muted);">Shabbat/Yom Tov excluded:</span> <span style="color:var(--gold);">${excluded}</span> &nbsp;|&nbsp;
+    <span style="color:var(--muted);">Shabbos/Yom Tov excluded:</span> <span style="color:var(--gold);">${excluded}</span> &nbsp;|&nbsp;
     <span style="color:var(--muted);">Chargeable days:</span> ${chargeableDays} &nbsp;|&nbsp;
     <strong style="color:var(--success);font-size:var(--fs-ui);">${fmtGbp(price)}</strong>${discountLine}
     <div style="margin-top:6px;font-size:var(--fs-micro);color:var(--muted);line-height:1.6;">
       🧮 ${steps.join(' → ')}
-      ${excluded > 0 ? `<br>📅 <span style="cursor:help;" title="Every Shabbos and full Yom Tov in the rental window is free — guests keep the phone over those days at no charge.">${excluded} free day${excluded === 1 ? '' : 's'} (Shabbos / Yom Tov) — hover for why</span>` : ''}
+      ${excluded > 0 ? `<br>📅 ${excluded} free day${excluded === 1 ? '' : 's'} (Shabbos / Yom Tov)<br><span style="color:var(--muted);font-size:var(--fs-small);">Every Shabbos and full Yom Tov in the rental window is free — the phone is kept over those days at no charge.</span>` : ''}
     </div>${poolLine}
   `;
   // #25 — keep the payment row's default in step with the live total.
@@ -2961,7 +2980,7 @@ function mgUpdateCalc() {
 
   const lateFee  = mgComputeLateFee();
   document.getElementById('mgCalcText').innerHTML =
-    `Total: ${totalDays}d &nbsp;|&nbsp; Shabbat/YT excluded: <span style="color:var(--gold);">${excl}</span> &nbsp;|&nbsp; Chargeable: ${chargeableDays}d &nbsp;|&nbsp; <strong style="color:var(--success);">${fmtGbp(price)}</strong>${discountLine}${vnPrice > 0 ? ` &nbsp;+&nbsp; VN ${fmtGbp(vnPrice)}` : ''}`;
+    `Total: ${totalDays}d &nbsp;|&nbsp; Shabbos/YT excluded: <span style="color:var(--gold);">${excl}</span> &nbsp;|&nbsp; Chargeable: ${chargeableDays}d &nbsp;|&nbsp; <strong style="color:var(--success);">${fmtGbp(price)}</strong>${discountLine}${vnPrice > 0 ? ` &nbsp;+&nbsp; VN ${fmtGbp(vnPrice)}` : ''}`;
   document.getElementById('mgPrice').value    = finalPrice.toFixed(2);
   document.getElementById('mgBasePrice').value = price;
 
@@ -10816,6 +10835,7 @@ const PALETTE_COMMANDS = [
   { icon: '🛒', label: 'Point of Sale (Till)', sub: 'tool', run: () => goToTab('shop') },
   { icon: '📇', label: 'Manage Phone Inventory', sub: 'tool', run: () => openOnTab('rentals', openManagePhonesModal) },
   { icon: '🧾', label: 'Cash-up (Z-report)', sub: 'tool', run: () => openCashupModal() },
+  { icon: '⌨️', label: 'Keyboard shortcuts', sub: 'help', run: () => openShortcuts() },
   { icon: '⏰', label: 'New reminder', sub: 'tool', run: () => openRemindModal('note', '') },
   { icon: '🔑', label: 'Change my password', sub: 'tool', run: () => openChangePasswordModal() },
   { icon: '🌓', label: 'Toggle dark mode', sub: 'tool', run: () => toggleTheme() },
