@@ -2156,7 +2156,7 @@ function updateRentalCalc() {
     <span style="color:var(--muted);">Total days:</span> ${totalDays} &nbsp;|&nbsp;
     <span style="color:var(--muted);">Shabbat/Yom Tov excluded:</span> <span style="color:var(--gold);">${excluded}</span> &nbsp;|&nbsp;
     <span style="color:var(--muted);">Chargeable days:</span> ${chargeableDays} &nbsp;|&nbsp;
-    <strong style="color:var(--success);font-size:15px;">${fmtGbp(price)}</strong>${discountLine}
+    <strong style="color:var(--success);font-size:var(--fs-ui);">${fmtGbp(price)}</strong>${discountLine}
     <div style="margin-top:6px;font-size:var(--fs-micro);color:var(--muted);line-height:1.6;">
       🧮 ${steps.join(' → ')}
       ${excluded > 0 ? `<br>📅 <span style="cursor:help;" title="Every Shabbos and full Yom Tov in the rental window is free — guests keep the phone over those days at no charge.">${excluded} free day${excluded === 1 ? '' : 's'} (Shabbos / Yom Tov) — hover for why</span>` : ''}
@@ -2578,7 +2578,7 @@ function reviewRowHtml(p) {
     <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
       <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline;">
         <div>
-          <strong style="font-size:15px;">${escHtml(fmtPhone(p.number || '—'))}</strong>
+          <strong style="font-size:var(--fs-ui);">${escHtml(fmtPhone(p.number || '—'))}</strong>
           <span style="color:var(--muted);font-size:var(--fs-body);">
             ${escHtml(p.company || '')}${p.subBrand ? ' · ' + escHtml(p.subBrand) : ''}
             ${p.country ? ' · ' + escHtml(p.country) : ''}
@@ -3251,7 +3251,7 @@ function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm cha
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="kcConfirmTitle" style="width:430px;">
         <div class="modal-title" id="kcConfirmTitle">${escHtml(title)}</div>
         <div style="font-size:var(--fs-ui);line-height:1.65;margin:4px 0 10px;color:var(--text);">${body}</div>
-        ${amount !== null ? `<div style="font-size:24px;font-weight:700;margin:0 0 16px;font-feature-settings:'tnum';">${fmtGbp(Number(amount))}</div>` : ''}
+        ${amount !== null ? `<div style="font-size:var(--fs-h1);font-weight:700;margin:0 0 16px;font-feature-settings:'tnum';">${fmtGbp(Number(amount))}</div>` : ''}
         <div class="modal-actions">
           <button class="btn btn-outline" onclick="kcConfirmDone(false)">Cancel</button>
           <button class="btn btn-primary" onclick="kcConfirmDone(true)">✓ ${escHtml(okLabel)}</button>
@@ -4825,9 +4825,9 @@ async function openDupScanModal() {
 }
 function renderDupScan(j) {
   const tag = (x) => `${escHtml(x.name)}`
-    + (x.imported ? ' <span style="font-size:10px;color:var(--gold);">ELID-new</span>' : '')
-    + (x.elid && x.elid.length ? ` <span style="font-size:10px;color:var(--muted);">📡${x.elid.length}</span>` : '')
-    + (x.phone ? ` <span style="font-size:10px;color:var(--muted);">${escHtml(x.phone)}</span>` : '');
+    + (x.imported ? ' <span style="font-size:var(--fs-micro);color:var(--gold);">ELID-new</span>' : '')
+    + (x.elid && x.elid.length ? ` <span style="font-size:var(--fs-micro);color:var(--muted);">📡${x.elid.length}</span>` : '')
+    + (x.phone ? ` <span style="font-size:var(--fs-micro);color:var(--muted);">${escHtml(x.phone)}</span>` : '');
   const mBtn = (from, to, label) =>
     `<button style="font-size:var(--fs-small);background:none;border:1px solid var(--border);border-radius:999px;padding:3px 10px;color:var(--accent);cursor:pointer;" onclick="mergeElidDup('${escHtml(from)}','${escHtml(to)}')">${label}</button>`;
   const rows = (j.pairs || []).map((p) => {
@@ -6979,7 +6979,7 @@ function skeletonHtml(kind = 'stats') {
 function errorHtml(label = 'Couldn’t load this') {
   return `<div style="text-align:center;padding:48px 30px;color:var(--muted);">
     <div style="font-size:30px;margin-bottom:8px;">⚠️</div>
-    <div style="font-size:15px;color:var(--text);margin-bottom:4px;">${escHtml(label)}</div>
+    <div style="font-size:var(--fs-lead);color:var(--text);margin-bottom:4px;">${escHtml(label)}</div>
     <div style="font-size:var(--fs-body);margin-bottom:16px;">Couldn’t reach the server. Your data is safe — this is just the view.</div>
     <button class="btn btn-primary" onclick="renderTab(currentTab)">↻ Try again</button>
   </div>`;
@@ -7204,7 +7204,7 @@ let bkPassengers = [];
 // the check-in screen); the merge-on-save keeps a blank from erasing it.
 function paxEditorHtml() {
   const helperMasked = currentStaff && currentStaff.role !== 'owner';
-  const fld = (label, inner) => `<label style="display:flex;flex-direction:column;gap:2px;font-size:10px;color:var(--muted);">${label}${inner}</label>`;
+  const fld = (label, inner) => `<label style="display:flex;flex-direction:column;gap:2px;font-size:var(--fs-micro);color:var(--muted);">${label}${inner}</label>`;
   return bkPassengers.map((p, i) => `
     <div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
@@ -7959,7 +7959,7 @@ async function renderRepairsTab() {
     : shown.map(r => `
       <tr>
         <td><div class="customer-name">${escHtml(r.customerName || '—')}</div></td>
-        <td>${escHtml(r.device || '—')}${r.kcPurchase ? ' <span class="badge" style="background:rgba(0, 96, 168,0.1);color:var(--accent);font-size:10px;">KC phone</span>' : ''}</td>
+        <td>${escHtml(r.device || '—')}${r.kcPurchase ? ' <span class="badge" style="background:rgba(0, 96, 168,0.1);color:var(--accent);font-size:var(--fs-micro);">KC phone</span>' : ''}</td>
         <td style="font-size:var(--fs-small);">${r.services.map(s => escHtml(s.name)).join('<br>') || '—'}</td>
         <td><strong>${fmtGbp((r.total || 0))}</strong></td>
         <td>${r.openedAt ? fmtDate(r.openedAt) : '—'}</td>
@@ -11853,7 +11853,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
       <div class="dash-hero-sub">${money && money.todayOut ? fmtGbp(Math.abs(money.todayOut)) + ' charged out today' : (stillLoading ? '&nbsp;' : 'no charges yet today')}</div>
       <div class="dash-hero-divider"></div>
       <div class="dash-hero-label">Outstanding</div>
-      <div class="dash-hero-value" style="font-size:26px;letter-spacing:-0.26px;">${stillLoading ? '…' : fmtGbp(arrearsTotal)}</div>
+      <div class="dash-hero-value" style="font-size:var(--fs-hero);letter-spacing:-0.28px;">${stillLoading ? '…' : fmtGbp(arrearsTotal)}</div>
       <div class="dash-hero-sub">${arrears.length ? arrears.length + ' customer' + (arrears.length === 1 ? '' : 's') + ' in arrears' : (stillLoading ? '&nbsp;' : 'nobody owes money 🎉')}</div>
       ${arrears.length ? `<div class="dash-hero-divider"></div>` +
         arrears.slice(0, 8).map(a => `
@@ -12337,7 +12337,7 @@ async function renderSettingsTab() {
           <tr style="${r.enabled ? '' : 'opacity:0.5;'}">
             <td><strong>${escHtml(r.name)}</strong></td>
             <td style="font-size:var(--fs-small);">${escHtml((autoTriggers[r.trigger]?.label || r.trigger).replace('N', r.threshold))}</td>
-            <td style="font-size:var(--fs-small);">📋 task <span class="badge badge-${r.priority === 'high' ? 'rental' : 'sim'}" style="font-size:10px;">${escHtml(r.priority)}</span></td>
+            <td style="font-size:var(--fs-small);">📋 task <span class="badge badge-${r.priority === 'high' ? 'rental' : 'sim'}" style="font-size:var(--fs-micro);">${escHtml(r.priority)}</span></td>
             <td><label style="font-size:var(--fs-small);cursor:pointer;"><input type="checkbox" ${r.enabled ? 'checked' : ''} onchange="toggleAutomation('${escHtml(r.id)}', this.checked)" style="accent-color:var(--accent);"> on</label></td>
             <td style="white-space:nowrap;">
               <button class="action-btn" aria-label="Edit this rule" onclick="openAutomationModal('${escHtml(r.id)}')">✏️</button>
@@ -12395,7 +12395,7 @@ async function renderSettingsTab() {
         onclick="deleteRateRow('rental_rates','${escHtml(r.countryCode)}')">✕</button></td>
     </tr>`).join('') + `
     <tr style="background:var(--bg-secondary);">
-      <td><div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a country</div>
+      <td><div style="font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a country</div>
         <input class="form-input" id="rrNew_code" placeholder="FR" style="width:70px;padding:5px 7px;font-size:var(--fs-small);min-height:0;text-transform:uppercase;">
         <input class="form-input" id="rrNew_name" placeholder="France" style="width:100px;padding:5px 7px;font-size:var(--fs-small);min-height:0;margin-top:3px;"></td>
       <td>${num('rrNew_rate', '')}</td><td>${num('rrNew_min', '')}</td><td>${num('rrNew_cap', '')}</td>
@@ -12415,7 +12415,7 @@ async function renderSettingsTab() {
         onclick="deleteRateRow('damage_rates','${escHtml(d.countryCode)}')">✕</button></td>
     </tr>`).join('') + `
     <tr style="background:var(--bg-secondary);">
-      <td><div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a country</div>
+      <td><div style="font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a country</div>
         <input class="form-input" id="drNew_code" placeholder="FR" style="width:70px;padding:5px 7px;font-size:var(--fs-small);min-height:0;text-transform:uppercase;"></td>
       <td>${num('drNew_phone', '')}</td><td>${num('drNew_charger', '')}</td><td>${num('drNew_sim', '')}</td>
       <td><button class="btn btn-primary btn-sm" onclick="addDamageRate()">+ Add</button></td>
@@ -12488,7 +12488,7 @@ async function renderSettingsTab() {
             </tr>`).join('');
         }).join('')}
         <tr style="background:var(--bg-secondary);">
-          <td><div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a service</div>
+          <td><div style="font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a service</div>
             <input class="form-input" id="miNewName" placeholder="New service name" style="min-height:0;padding:5px 8px;font-size:var(--fs-small);min-width:170px;"></td>
           <td>${menuNum('miNewPrice', '')}</td>
           <td colspan="3">
@@ -12533,7 +12533,7 @@ async function renderSettingsTab() {
             </td>
           </tr>`).join('')}
         <tr style="background:var(--bg-secondary);">
-          <td><div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a charge</div>
+          <td><div style="font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a charge</div>
             <input class="form-input" id="ecNew_label" placeholder="e.g. Handling fee" style="min-height:0;padding:5px 8px;font-size:var(--fs-small);min-width:150px;"></td>
           <td>${num('ecNew_amount', '')}</td>
           <td><select class="form-input" id="ecNew_target" style="min-height:0;padding:5px 8px;font-size:var(--fs-small);">
@@ -12669,7 +12669,7 @@ async function renderSettingsTab() {
       <div style="padding:8px 14px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
         <button class="btn btn-outline btn-sm" onclick="openPhoneModelModal()">+ Add phone</button>
         <a class="btn btn-outline btn-sm" href="/phone-guide" target="_blank" rel="noopener">👁 View the public page ↗</a>
-        ${retiredModels.length ? `<span style="font-size:var(--fs-micro);color:var(--muted);">Hidden: ${retiredModels.map(m => `${escHtml(m.name)} <button class="action-btn" style="font-size:10px;" onclick="restorePhoneModel('${escHtml(m.id)}')">↩ restore</button>`).join(' · ')}</span>` : ''}
+        ${retiredModels.length ? `<span style="font-size:var(--fs-micro);color:var(--muted);">Hidden: ${retiredModels.map(m => `${escHtml(m.name)} <button class="action-btn" style="font-size:var(--fs-micro);" onclick="restorePhoneModel('${escHtml(m.id)}')">↩ restore</button>`).join(' · ')}</span>` : ''}
       </div>`) : '';
 
   // ── Messaging status (email + SMS) — reads /api/health, which reports each

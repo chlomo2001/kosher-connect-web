@@ -56,14 +56,24 @@ The ramp (tokens in `globals.css`):
 | `--fs-title` | 18 | card titles, big stats |
 | `--fs-h1` | 22 | page headings |
 | `--fs-hero` | 28 | hero numbers (dashboard money) |
+| `--fs-overline` | 10 | UPPERCASE tracked section labels only — never body text |
 
 Weights: 400 body · 500 labels/links · 600 emphasis · 700 headings/values.
 Money and tabular data set `font-feature-settings: "tnum"`.
 
-**Legacy half-steps** (11.5 / 12.5 / 13.5px) and strays (10, 15, 17px) exist in
-older code. Collapse them to the ramp when you touch the surface; never
-introduce a new off-ramp size. Display sizes above the ramp (38, 48px) are
-allowed only on public marketing surfaces.
+**Adoption is done** (sessions 2–3, Aug 05): every staff-app and portal
+font-size sits on a token. The rounding rule used, for anything that drifts
+back: emphasis (weight ≥ 500, money) rounds UP to the nearest step; muted
+secondary text rounds DOWN. Never introduce a new off-ramp size.
+
+Deliberate non-token sizes, all allowed:
+- **Glyphs and emoji used as icons** (▾ ✕ › ⏱ ⚠️, avatar-circle contents) —
+  icon sizing, not typography.
+- **`body` base 15px** ("body-md") — the inherited root for unstyled corners;
+  real text always sets a token on top.
+- **Public marketing surfaces** (`sk-*`, `w-*`, `pg-*`, `rp-*` on /welcome,
+  /phone-guide, /repair) keep their own scale, including display sizes
+  (38–150px) and half-steps — marketing type is composed per page, not ramped.
 
 ## Motion
 
@@ -116,5 +126,5 @@ Waiting is disguised, not announced:
 | Motion tokens | ✅ defined; buttons/rows/toasts consume them |
 | Tab content transitions | ✅ `kcContentEnter()` + `.tab-enter` |
 | Skeleton loading (heavy tabs) | ✅ `skeletonHtml()` on all 8 spinner tabs |
-| Type-ramp tokens | ✅ defined; adoption sweep **pending** (~470 inline font-sizes in main.js) |
+| Type-ramp tokens | ✅ defined and **adopted** (sessions 2–3, Aug 05) — staff app + portal fully tokenised |
 | Inline-style sweep (spacing/colour in `style=""`) | ⏳ pending — collapse opportunistically per surface |

@@ -136,6 +136,7 @@
   --fs-title: 18px;   /* card titles, big stats */
   --fs-h1: 22px;      /* page headings */
   --fs-hero: 28px;    /* hero numbers (dashboard money) */
+  --fs-overline: 10px; /* UPPERCASE tracked section labels only — never body text */
 }
 
 /* Dark theme — the shop stays open into the evening. Overrides the same
@@ -301,7 +302,7 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
 }
 .logo img { width: 44px; height: 44px; border-radius: 50%; margin-bottom: 8px; border: 2px solid rgba(255,255,255,0.25); }
 .logo-title { font-size: var(--fs-lead); font-weight: 400; color: #ffffff; letter-spacing: -0.2px; line-height: 1.25; }
-.logo-sub { font-size: 10px; font-weight: 400; letter-spacing: 0.1px; text-transform: uppercase; color: rgba(255,255,255,0.45); margin-top: 3px; }
+.logo-sub { font-size: var(--fs-overline); font-weight: 400; letter-spacing: 0.1px; text-transform: uppercase; color: rgba(255,255,255,0.45); margin-top: 3px; }
 
 .nav-item {
   display: flex; align-items: center; gap: 10px;
@@ -321,7 +322,7 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
 /* #74 — a quiet section label + slight indent groups SIM Plans & Virtual
    Numbers as one "Connectivity" pair without changing where they navigate. */
 .nav-group-label {
-  padding: 8px 20px 2px; font-size: 10px; font-weight: 600;
+  padding: 8px 20px 2px; font-size: var(--fs-overline); font-weight: 600;
   letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.2;
   color: rgba(255,255,255,0.35);
 }
@@ -349,12 +350,12 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
 .sidebar-bottom {
   margin-top: auto; padding: 8px 20px 10px;
   border-top: 1px solid rgba(255,255,255,0.12);
-  font-size: 12.5px; color: rgba(255,255,255,0.45);
+  font-size: var(--fs-small); color: rgba(255,255,255,0.45);
   display: flex; flex-direction: column;
 }
 .sidebar-bottom a:hover { color: rgba(255,255,255,0.85) !important; }
 .sb-label {
-  font-size: 10px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
+  font-size: var(--fs-overline); font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
   color: rgba(255,255,255,0.32); padding: 4px 0 3px;
 }
 .sb-row {
@@ -379,11 +380,11 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
 }
 .su-meta { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
 .su-name {
-  font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,0.85);
+  font-size: var(--fs-small); font-weight: 600; color: rgba(255,255,255,0.85);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .su-role {
-  font-size: 10px; font-weight: 500; text-transform: uppercase;
+  font-size: var(--fs-overline); font-weight: 500; text-transform: uppercase;
   letter-spacing: 0.06em; color: rgba(255,255,255,0.4);
 }
 
@@ -396,7 +397,7 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
   .sidebar { padding: 10px 0; }
   .logo { padding-bottom: 10px; margin-bottom: 8px; }
   .logo img { width: 32px; height: 32px; margin-bottom: 5px; }
-  .logo-title { font-size: 15px; }
+  .logo-title { font-size: var(--fs-lead); }
   .nav-item { padding: 5px 12px; }
   .nav-group-label { padding: 6px 20px 2px; }
   .sidebar-bottom { padding: 6px 20px 8px; }
@@ -866,7 +867,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 }
 .kc-view-chip .kc-view-apply {
   border: 0; background: none; color: var(--text); cursor: pointer;
-  font: inherit; font-size: 12.5px; font-weight: 500; padding: 5px 4px 5px 12px;
+  font: inherit; font-size: var(--fs-body); font-weight: 500; padding: 5px 4px 5px 12px;
   max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .kc-view-chip .kc-view-del {
@@ -880,7 +881,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .kc-view-chip.on .kc-view-del:hover { color: #fff; }
 .kc-view-save {
   border: 1px dashed var(--border-input); background: none; color: var(--muted);
-  border-radius: 999px; cursor: pointer; font: inherit; font-size: 12.5px;
+  border-radius: 999px; cursor: pointer; font: inherit; font-size: var(--fs-body);
   font-weight: 500; padding: 5px 12px; white-space: nowrap;
 }
 .kc-view-save:hover { color: var(--accent); border-color: var(--accent); }
@@ -944,7 +945,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   border-radius: var(--radius-lg);
   background: var(--accent);   /* flat indigo — no gradient */
   display: flex; align-items: center; justify-content: center;
-  font-size: 17px; font-weight: 500; color: #fff; flex-shrink: 0;
+  font-size: var(--fs-title); font-weight: 500; color: #fff; flex-shrink: 0;
   letter-spacing: 0.2px;
 }
 .detail-name { font-size: 20px; font-weight: 300; letter-spacing: -0.2px; }
@@ -961,7 +962,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   border-radius: var(--radius-lg);
   padding: 12px 16px;
 }
-.detail-stat-label { font-size: 10px; font-weight: 400; letter-spacing: 0.1px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.detail-stat-label { font-size: var(--fs-overline); font-weight: 400; letter-spacing: 0.1px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
 .detail-stat-value { font-size: 20px; font-weight: 300; letter-spacing: -0.2px; font-feature-settings: "ss01", "tnum"; }
 
 /* ─── CUSTOMER-360 PAGE (/customers/<id>) ───
@@ -983,7 +984,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 }
 .kc-subtab:hover { color: var(--text); }
 .kc-subtab.on { color: var(--accent); border-bottom-color: var(--accent); }
-.kc-subtab .n { font-weight: 400; font-size: 11.5px; opacity: 0.75; }
+.kc-subtab .n { font-weight: 400; font-size: var(--fs-micro); opacity: 0.75; }
 /* Activity-log category filter chips */
 .kc-cat-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .kc-cat-chip {
@@ -1191,7 +1192,7 @@ input[type="checkbox"], input[type="radio"] {
 /* Till mode: feedback must read from across the counter, like a real POS
    customer display — bigger type, wider card, clear of the tender panel. */
 body.pos-mode #toast-container { bottom: 32px; right: 32px; gap: 10px; }
-body.pos-mode .toast { font-size: 17px; font-weight: 500; padding: 16px 22px; max-width: 480px; }
+body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16px 22px; max-width: 480px; }
 
 /* ─── KEYBOARD SHORTCUTS HELP ─── */
 .kc-shortcuts { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 4px; }
@@ -1341,7 +1342,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .customer-dropdown-empty { padding: 9px 12px; font-size: var(--fs-body); color: var(--muted); }
 
 /* HEBREW DATE label */
-.hebrew-date-label, .hebrew-date { font-size: 12.5px; color: var(--gold); margin-top: 3px; min-height: 16px; }
+.hebrew-date-label, .hebrew-date { font-size: var(--fs-small); color: var(--gold); margin-top: 3px; min-height: 16px; }
 
 /* DEBT BADGE */
 .badge-debt { background: rgba(234,34,97,0.1); color: var(--danger); }
@@ -1393,7 +1394,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   font-weight: 400; pointer-events: none; white-space: nowrap;
   opacity: 0; transition: opacity 0.18s; z-index: 0;
 }
-.eq-slide-lbl-n { font-size: 10px; color: var(--muted); }
+.eq-slide-lbl-n { font-size: var(--fs-micro); color: var(--muted); }
 .eq-slide-lbl-n-ret  { left: 7px; }
 .eq-slide-lbl-n-lost { right: 7px; }
 .eq-slide-track[data-status="undecided"] .eq-slide-lbl-n-ret  { opacity: 1; }
@@ -1423,7 +1424,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   color: var(--gold);
   border-radius: var(--radius);
   padding: 2px 8px;
-  font-size: 10px; font-weight: 400; letter-spacing: 0.1px; text-transform: uppercase;
+  font-size: var(--fs-overline); font-weight: 400; letter-spacing: 0.1px; text-transform: uppercase;
   flex-shrink: 0;
 }
 
@@ -1508,7 +1509,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .fx-item {
   display: flex; align-items: center; gap: 9px;
   padding: 6px 14px 6px 9px; border: none; background: transparent;
-  border-radius: 8px; font: inherit; font-size: 12.5px; font-weight: 400;
+  border-radius: 8px; font: inherit; font-size: var(--fs-body); font-weight: 400;
   color: var(--text); cursor: pointer; white-space: nowrap; text-align: left;
   transition: background .15s, color .15s;
 }
@@ -1549,9 +1550,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 /* Live clock — sits ahead of the date. A small gold pulse (matching the Hebrew
    date's gold) shows it's live, instead of ticking seconds in a clashing hue. */
 .dash-clock { text-transform: none; letter-spacing: 0; display: inline-flex; align-items: baseline; }
-.dash-clock b { font-size: 15px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: 0.4px; }
+.dash-clock b { font-size: var(--fs-lead); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: 0.4px; }
 .dash-pulse { align-self: center; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); margin-left: 8px; animation: dashPulse 1.7s ease-in-out infinite; }
-.dash-secs { align-self: baseline; font-size: 10px; font-weight: 400; color: var(--gold); opacity: 0.6; font-variant-numeric: tabular-nums; margin-left: 4px; letter-spacing: 0.3px; }
+.dash-secs { align-self: baseline; font-size: var(--fs-overline); font-weight: 400; color: var(--gold); opacity: 0.6; font-variant-numeric: tabular-nums; margin-left: 4px; letter-spacing: 0.3px; }
 @keyframes dashPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.28; transform: scale(0.66); } }
 @media (prefers-reduced-motion: reduce) { .dash-pulse { animation: none; } }
 .dash-greeting { font-size: 40px; font-weight: 300; letter-spacing: -1px; line-height: 1.08; }
@@ -1585,7 +1586,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   display: flex; flex-direction: column;
 }
 .dash-hero-label {
-  font-size: 10px; font-weight: 400; letter-spacing: 0.1px; text-transform: uppercase;
+  font-size: var(--fs-overline); font-weight: 400; letter-spacing: 0.1px; text-transform: uppercase;
   color: var(--muted); margin-bottom: 6px;
 }
 .dash-hero-value {
@@ -1636,7 +1637,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 }
 @media (max-width: 900px) { .pos-shell { grid-template-columns: 1fr; height: auto; } }
 .pos-main { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
-.pos-scan { flex: 1; font-size: 17px; padding: 14px 16px; }
+.pos-scan { flex: 1; font-size: var(--fs-title); padding: 14px 16px; }
 .pos-cats { display: flex; gap: 8px; flex-wrap: wrap; }
 .pos-cat {
   border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 18px;
@@ -1656,7 +1657,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 }
 /* Weight — not just size — carries the label→value hierarchy on each tile. */
 .pos-tiles-full .pos-tile .pos-tile-name { font-size: var(--fs-body); font-weight: 500; line-height: 1.3; color: var(--ink-secondary); }
-.pos-tiles-full .pos-tile .pos-tile-price { font-size: 19px; font-weight: 600; letter-spacing: -0.4px; color: var(--text); font-feature-settings: "tnum"; }
+.pos-tiles-full .pos-tile .pos-tile-price { font-size: var(--fs-title); font-weight: 600; letter-spacing: -0.4px; color: var(--text); font-feature-settings: "tnum"; }
 .pos-side {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
   padding: 18px; display: flex; flex-direction: column; gap: 10px;
@@ -1703,7 +1704,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
    let a 390px screen shrink-to-fit it instead, crushing every 22px day column
    to 6px. Natural width scrolls on a phone, 100% still fills a wide screen. */
 .cal-table { border-collapse: collapse; width: 100%; min-width: max-content; }
-.cal-table th { font-size: 10px; color: var(--muted); font-weight: 400; padding: 4px 0; text-align: center; }
+.cal-table th { font-size: var(--fs-overline); color: var(--muted); font-weight: 400; padding: 4px 0; text-align: center; }
 /* Scoped under .cal-table so it outranks the 10px muted `.cal-table th` rule —
    the row header is a <th> now (it names the phone the row belongs to). */
 .cal-table .cal-phone { text-align: left !important; white-space: nowrap; padding: 4px 10px 4px 0 !important; font-size: var(--fs-small); font-weight: 400; color: var(--text); position: sticky; left: 0; background: var(--surface); }
@@ -1751,7 +1752,7 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 }
 .palette-input {
   width: 100%; border: none; outline: none; background: transparent;
-  padding: 16px 18px; font-size: 15px; font-family: inherit; color: var(--text);
+  padding: 16px 18px; font-size: var(--fs-lead); font-family: inherit; color: var(--text);
   border-bottom: 1px solid var(--border);
 }
 .palette-item {
@@ -1763,7 +1764,7 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 /* Spotlight-style quick-action cards — shown when the palette is empty, a row
    of icon tiles for the common "create" actions (like macOS Spotlight). */
 .palette-quick { padding: 12px 14px; border-bottom: 1px solid var(--border); }
-.palette-quick-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.palette-quick-label { font-size: var(--fs-overline); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
 .palette-quick-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .palette-quick-card {
   flex: 1 0 78px; display: flex; flex-direction: column; align-items: center; gap: 6px;
@@ -1783,7 +1784,7 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .pq-pin.on { filter: none; }
 .pq-pin:hover { transform: scale(1.18); }
 /* Quick-action number accelerator (press 1–9 with an empty palette search). */
-.pq-key { position: absolute; top: 4px; inset-inline-start: 6px; font-size: 9.5px; font-weight: 700;
+.pq-key { position: absolute; top: 4px; inset-inline-start: 6px; font-size: var(--fs-overline); font-weight: 700;
   line-height: 1; color: var(--muted); opacity: 0.55; font-feature-settings: "tnum"; }
 .palette-quick-card:hover .pq-key, .palette-quick-card:focus-visible .pq-key { opacity: 0.9; }
 
@@ -2118,8 +2119,8 @@ html { scroll-behavior: smooth; }
 .tool-shell { width: 100%; height: 100vh; overflow-y: auto; background: var(--bg); padding: 34px 18px 60px; }
 .tool-wrap { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
 .tool-head h1 { font-size: 26px; font-weight: 300; letter-spacing: -0.5px; color: var(--text); margin: 6px 0 8px; }
-.tool-head p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; max-width: 64ch; }
-.tool-back { font-size: 12.5px; color: var(--muted); text-decoration: none; }
+.tool-head p { margin: 0; color: var(--muted); font-size: var(--fs-body); line-height: 1.55; max-width: 64ch; }
+.tool-back { font-size: var(--fs-small); color: var(--muted); text-decoration: none; }
 .tool-back:hover { color: var(--text); }
 .tool-card { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-lg); padding: 18px; }
 /* Titles are often <label>s (for the file inputs) — force block so the
@@ -2137,7 +2138,7 @@ html { scroll-behavior: smooth; }
 }
 .tool-drop:hover, .tool-drop.dragover, .tool-drop:focus-within { border-color: var(--accent); color: var(--text); }
 .tool-drop-icon { display: inline-flex; color: inherit; }
-.tool-drop-main { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.tool-drop-main { font-size: var(--fs-ui); font-weight: 600; color: var(--text); }
 .tool-drop-sub { font-size: var(--fs-small); color: var(--muted); max-width: 52ch; line-height: 1.5; }
 .tool-drop-input {
   position: absolute; width: 1px; height: 1px;
@@ -2146,26 +2147,26 @@ html { scroll-behavior: smooth; }
 /* Buttons that are links (the export download) — align like real buttons. */
 .tool-card a.btn { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
 .tool-optional { color: var(--muted); font-weight: 400; }
-.tool-hint { font-size: 12.5px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
+.tool-hint { font-size: var(--fs-small); color: var(--muted); margin-top: 10px; line-height: 1.5; }
 .tool-msg { font-size: var(--fs-body); color: var(--text); margin-top: 12px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-secondary); }
 .tool-msg-ok { border-color: rgba(34,197,94,0.4); }
-.tool-detect { margin-top: 12px; font-size: 13.5px; color: var(--text); }
-.tool-stats { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+.tool-detect { margin-top: 12px; font-size: var(--fs-body); color: var(--text); }
+.tool-stats { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: var(--fs-small); color: var(--muted); }
 .tool-options { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; margin-bottom: 14px; }
-.tool-options label { font-size: 12.5px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
+.tool-options label { font-size: var(--fs-small); color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
 .tool-check { flex-direction: row !important; align-items: center; gap: 8px !important; cursor: pointer; color: var(--text) !important; font-size: var(--fs-body) !important; }
 .tool-check input { width: 15px; height: 15px; accent-color: var(--accent); }
 .tool-scroll { overflow-x: auto; margin-top: 10px; }
-.tool-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.tool-table { width: 100%; border-collapse: collapse; font-size: var(--fs-small); }
 .tool-table th, .tool-table td { border: 1px solid var(--border); padding: 6px 9px; text-align: left; color: var(--text); white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 .tool-table th { background: var(--bg-secondary); }
 .tool-row-header td { color: var(--muted); font-style: italic; }
 .tool-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
 .tool-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
-.tool-chip { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text); border: 1px solid var(--border); background: var(--bg-secondary); border-radius: 999px; padding: 4px 6px 4px 11px; }
+.tool-chip { display: inline-flex; align-items: center; gap: 7px; font-size: var(--fs-small); color: var(--text); border: 1px solid var(--border); background: var(--bg-secondary); border-radius: 999px; padding: 4px 6px 4px 11px; }
 .tool-chip button { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: var(--fs-micro); padding: 2px 5px; border-radius: 999px; }
 .tool-chip button:hover { color: var(--danger); }
-.tool-foot { font-size: 12.5px; color: var(--muted); padding: 4px 2px; }
+.tool-foot { font-size: var(--fs-small); color: var(--muted); padding: 4px 2px; }
 .tool-foot a { color: var(--accent); text-decoration: none; }
 .tool-shell input[type="file"] { font-size: var(--fs-body); color: var(--muted); }
 
@@ -2434,7 +2435,7 @@ html { scroll-behavior: smooth; }
 :root[data-theme="dark"] .p-badge-warn { background: rgba(245,158,11,0.18); color: #fbbf24; }
 .p-badge-muted { background: var(--bg-secondary); color: var(--muted); border-color: var(--border); }
 /* Mini-statement amounts: tabular figures, credits in green, charges in ink. */
-.p-amt { flex-shrink: 0; font-size: 13.5px; font-weight: 500; font-feature-settings: 'tnum'; color: var(--text); }
+.p-amt { flex-shrink: 0; font-size: var(--fs-ui); font-weight: 500; font-feature-settings: 'tnum'; color: var(--text); }
 .p-amt-pos { color: #15803d; }
 :root[data-theme="dark"] .p-amt-pos { color: #4ade80; }
 
@@ -2448,7 +2449,7 @@ html { scroll-behavior: smooth; }
 .p-foot a:hover { text-decoration: underline; }
 .p-reassure { margin-top: 12px; font-size: var(--fs-small); color: var(--muted); text-align: center; line-height: 1.5; }
 /* Signed-out escape hatch — the sign-in card is otherwise a dead end. */
-.p-backlink { display: block; margin-top: 18px; text-align: center; font-size: 12.5px; color: var(--muted); text-decoration: none; }
+.p-backlink { display: block; margin-top: 18px; text-align: center; font-size: var(--fs-small); color: var(--muted); text-decoration: none; }
 .p-backlink:hover { color: var(--accent); text-decoration: underline; }
 
 /* ── Portal dashboard shell (signed-in view) ─────────────────────────────────
@@ -2488,13 +2489,13 @@ html { scroll-behavior: smooth; }
 .pd-top-actions { display: flex; align-items: center; gap: 10px; }
 .pd-chip {
   border: 1px solid var(--border); background: var(--surface); color: var(--text);
-  border-radius: 999px; padding: 7px 13px; font-size: 12.5px; line-height: 1; cursor: pointer;
+  border-radius: 999px; padding: 7px 13px; font-size: var(--fs-body); line-height: 1; cursor: pointer;
 }
 .pd-chip:hover { border-color: var(--accent); color: var(--accent); }
 .pd-main { max-width: 1000px; margin: 0 auto; padding: 26px 20px 44px; }
 .pd-greet { margin-bottom: 18px; }
 .pd-greet h1 { margin: 0; font-size: 24px; font-weight: 300; letter-spacing: -0.26px; }
-.pd-greet-sub { margin-top: 3px; font-size: 13.5px; color: var(--muted); }
+.pd-greet-sub { margin-top: 3px; font-size: var(--fs-body); color: var(--muted); }
 .pd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
 .pd-card {
   background: var(--surface); border: 1px solid var(--border);
@@ -2509,7 +2510,7 @@ html { scroll-behavior: smooth; }
   border: 1px dashed var(--border); border-radius: 10px; padding: 10px 12px;
 }
 .pd-foot {
-  margin-top: 24px; font-size: 12.5px; color: var(--muted); text-align: center; line-height: 1.7;
+  margin-top: 24px; font-size: var(--fs-small); color: var(--muted); text-align: center; line-height: 1.7;
 }
 .pd-foot a { color: var(--accent); text-decoration: none; }
 .pd-foot a:hover { text-decoration: underline; }
