@@ -20,6 +20,7 @@ const T = {
     dir: 'ltr',
     tag: 'Repairs',
     back: '← Back to the main page', account: 'My account',
+    homeAria: 'Kosher Connect — back to the main page',
     strap: 'Screens · batteries · charging · buttons',
     h3: 'Book a repair',
     lead: 'Tell us what’s broken and how to reach you — we’ll come back with an honest price, and if it isn’t worth fixing, we’ll say so. Most jobs are done quickly.',
@@ -49,7 +50,8 @@ const T = {
   he: {
     dir: 'rtl',
     tag: 'תיקונים',
-    back: 'חזרה לעמוד הראשי', account: 'האזור האישי',
+    homeAria: 'כשר קונקט — חזרה לעמוד הראשי',
+    back: '→ חזרה לעמוד הראשי', account: 'האזור האישי',
     strap: 'מסכים · סוללות · טעינה · כפתורים',
     h3: 'לקבוע תיקון',
     lead: 'ספרו לנו מה התקלקל ואיך להשיג אתכם — נחזור אליכם עם מחיר הוגן, ואם לא שווה לתקן נגיד ביושר. את רוב התיקונים מסיימים מהר.',
@@ -135,13 +137,13 @@ export default function RepairBooking() {
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         <div className="w-wrap" dir={t.dir} lang={lang}>
           <div className="w-topbar">
-            <div className="w-brand">
+            <a className="w-brand w-brand-link" href="/welcome" aria-label={t.homeAria}>
               <img src="/logo-full-tight.png" alt="Kosher Connect" />
               <div>
                 <h1>Kosher Connect</h1>
                 <p>{t.tag}</p>
               </div>
-            </div>
+            </a>
             <nav className="w-pills" aria-label="Site">
               <div className="w-lang" role="group" aria-label="Language">
                 {['en', 'he'].map((l) => (
@@ -157,7 +159,7 @@ export default function RepairBooking() {
 
           <section className="w-section rp-head" id="top">
             <div className="w-strap">{t.strap}</div>
-            <h3 className="w-show">{t.h3}</h3>
+            <h2 className="w-show">{t.h3}</h2>
             <p className="w-lead">{t.lead}</p>
           </section>
 
@@ -165,7 +167,7 @@ export default function RepairBooking() {
             {state === 'ok' ? (
               <div className="w-card rp-card rp-ok" role="status">
                 <div className="rp-ok-ico" aria-hidden="true"><WrenchIcon /></div>
-                <h4>{t.okTitle}</h4>
+                <h3>{t.okTitle}</h3>
                 <p>{t.okWhen}</p>
                 <p>{t.okBody}</p>
                 {hours && <p className="rp-hours"><strong>{t.hoursLabel}</strong> <span dir="ltr">{hours}</span></p>}

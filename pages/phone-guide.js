@@ -20,6 +20,7 @@ const T = {
     dir: 'ltr',
     tag: 'The phone guide',
     back: '← Back to the main page', account: 'My account',
+    homeAria: 'Kosher Connect — back to the main page',
     strap: 'Compared honestly — no favourites',
     h3: 'Which kosher phone is right for you?',
     lead1: 'Every handset below is one we sell, set up and stand behind. The specs answer what people actually ask in the shop',
@@ -29,6 +30,7 @@ const T = {
     empty1: 'The guide is being written — call us on', empty2: 'and we’ll talk you through the options.',
     specs: { dualSim: 'Dual SIM', yiddishText: 'Hebrew text', touchScreen: 'Touch-screen', texting: 'Texting' },
     askInShop: 'Ask in shop',
+    callAbout: 'Call us about the',
     prosAria: "What's good", consAria: 'Worth knowing',
     foot1: 'OTP texting means the phone can receive texts from the bank only — nothing else gets through.',
     foot2: 'Not every phone includes a warranty — please ask before purchase. Prices can change; the shop price on the day is the right one.',
@@ -39,7 +41,8 @@ const T = {
   he: {
     dir: 'rtl',
     tag: 'מדריך הטלפונים',
-    back: 'חזרה לעמוד הראשי', account: 'החשבון שלי',
+    homeAria: 'כשר קונקט — חזרה לעמוד הראשי',
+    back: '→ חזרה לעמוד הראשי', account: 'החשבון שלי',
     strap: 'השוואה הוגנת — בלי מועדפים',
     h3: 'איזה טלפון כשר מתאים לכם?',
     lead1: 'כל מכשיר ברשימה הוא מכשיר שאנחנו מוכרים, מגדירים ועומדים מאחוריו. המפרט עונה על מה שבאמת שואלים אצלנו בחנות',
@@ -49,6 +52,7 @@ const T = {
     empty1: 'המדריך עוד נכתב — התקשרו אלינו:', empty2: 'ונעבור איתכם על האפשרויות.',
     specs: { dualSim: 'שני כרטיסי סים', yiddishText: 'טקסט בעברית', touchScreen: 'מסך מגע', texting: 'הודעות' },
     askInShop: 'שאלו בחנות',
+    callAbout: 'להתקשר בקשר ל־',
     prosAria: 'מה טוב', consAria: 'כדאי לדעת',
     foot1: 'טקסט OTP פירושו שהטלפון מקבל הודעות מהבנק בלבד — שום דבר אחר לא עובר.',
     foot2: 'לא לכל טלפון מצורפת אחריות — נא לשאול לפני הקנייה. המחירים יכולים להשתנות; המחיר בחנות ביום הקנייה הוא הקובע.',
@@ -84,6 +88,10 @@ export default function PhoneGuide() {
   // The lead only promises pros and cons once at least one model actually has
   // them — until the owner writes them, the promise stays off the page.
   const hasVerdicts = (models || []).some((m) => lines(m.pros).length > 0 || lines(m.cons).length > 0)
+  // The API returns models:[] on any error too, so "no cards" and "the guide
+  // isn't written yet" look identical from here — either way the page must
+  // stop promising handsets it isn't showing.
+  const hasModels = (models || []).length > 0
 
   useEffect(() => {
     fetch('/api/public/phone-guide')
@@ -104,13 +112,13 @@ export default function PhoneGuide() {
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         <div className="w-wrap" dir={t.dir} lang={lang}>
           <div className="w-topbar">
-            <div className="w-brand">
+            <a className="w-brand w-brand-link" href="/welcome" aria-label={t.homeAria}>
               <img src="/logo-full-tight.png" alt="Kosher Connect" />
               <div>
                 <h1>Kosher Connect</h1>
                 <p>{t.tag}</p>
               </div>
-            </div>
+            </a>
             <nav className="w-pills" aria-label="Site">
               <div className="w-lang" role="group" aria-label="Language">
                 {['en', 'he'].map((l) => (
@@ -126,10 +134,12 @@ export default function PhoneGuide() {
 
           <section className="w-section pg-head" id="top">
             <div className="w-strap">{t.strap}</div>
-            <h3 className="w-show">{t.h3}</h3>
-            <p className="w-lead">
-              {t.lead1}{hasVerdicts && t.leadVerdicts}{t.lead2}
-            </p>
+            <h2 className="w-show">{t.h3}</h2>
+            {hasModels && (
+              <p className="w-lead">
+                {t.lead1}{hasVerdicts && t.leadVerdicts}{t.lead2}
+              </p>
+            )}
           </section>
 
           <section className="w-section pg-list-wrap" aria-label="Phone models">
@@ -146,17 +156,24 @@ export default function PhoneGuide() {
                     <header className="pg-row-head">
                       <div className="pg-name">
                         <span className="w-icon" aria-hidden="true"><FlipPhoneIcon /></span>
-                        <h4><bdi dir="ltr">{m.name}</bdi></h4>
+                        <h3><bdi dir="ltr">{m.name}</bdi></h3>
                       </div>
                       <div className="pg-price">{m.price != null ? `£${Number(m.price) % 1 === 0 ? Number(m.price) : Number(m.price).toFixed(2)}` : t.askInShop}</div>
                     </header>
                     <dl className="pg-specs">
-                      {SPEC_KEYS.map((k) => m[k] ? (
+                      {SPEC_KEYS.map((k) => (
+                        // Always all four, always in the same order, so the
+                        // eye can compare straight across the cards. A blank
+                        // shows as "—" rather than vanishing, which used to
+                        // make "no dual SIM" look like "not filled in".
                         // Spec values are owner-written English (e.g. "Yes —
                         // OTP (bank texts only)") — isolate so RTL can't
                         // shuffle the word order.
-                        <div className="pg-spec" key={k}><dt>{t.specs[k]}</dt><dd><bdi dir="ltr">{m[k]}</bdi></dd></div>
-                      ) : null)}
+                        <div className="pg-spec" key={k}>
+                          <dt>{t.specs[k]}</dt>
+                          <dd>{m[k] ? <bdi dir="ltr">{m[k]}</bdi> : <span className="pg-spec-none">—</span>}</dd>
+                        </div>
+                      ))}
                     </dl>
                     {(pros.length > 0 || cons.length > 0) && (
                       <div className="pg-verdict">
@@ -172,13 +189,18 @@ export default function PhoneGuide() {
                         )}
                       </div>
                     )}
+                    <a className="pg-call" href={`tel:+441615311386`}>
+                      {t.callAbout} <bdi dir="ltr">{m.name || ''}</bdi>
+                    </a>
                   </article>
                 )
               })}
             </div>
+            {/* The OTP and warranty notes annotate the cards — with no cards
+                they're footnotes to nothing. The call-us line always stays. */}
             <div className="pg-foot">
-              <p>{t.foot1}</p>
-              <p>{t.foot2}</p>
+              {hasModels && <p>{t.foot1}</p>}
+              {hasModels && <p>{t.foot2}</p>}
               <p>{t.foot3a} <a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a> {t.foot3b}</p>
             </div>
           </section>

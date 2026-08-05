@@ -2282,13 +2282,34 @@ html { scroll-behavior: smooth; }
   font-size: 19px; font-weight: 300; letter-spacing: -0.3px; color: var(--text);
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
+/* Wrapping pills put the same spec at a different position on every card, so
+   the four handsets couldn't be compared by eye. From 640px up they sit on a
+   fixed four-column grid — same spec, same column, every card. Below that the
+   pills wrap as before, which is right for one-card-at-a-time reading. */
 .pg-specs {
   display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 14px 0 0; padding: 0;
+}
+@media (min-width: 640px) {
+  .pg-specs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 10px; }
 }
 .pg-spec {
   display: flex; align-items: baseline; gap: 6px;
   border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px;
+  min-width: 0;
 }
+/* An unfilled spec reads as "—", never as an absent pill: "no dual SIM" and
+   "we haven't recorded it" are different answers to a buying question. */
+.pg-spec-none { color: var(--muted); font-weight: 400; }
+/* The decision happens at the card, not at the bottom of the list. */
+.pg-call {
+  display: inline-block; margin-top: 14px; font-size: var(--fs-body); font-weight: 600;
+  color: var(--accent); text-decoration: none;
+}
+.pg-call:hover { text-decoration: underline; }
+/* The logo is the way home on both sub-pages — at <=640px the anchor pill that
+   used to be the only exit is hidden. */
+.w-brand-link { text-decoration: none; color: inherit; }
+.w-brand-link:hover h1 { color: var(--accent); }
 .pg-spec dt { font-size: var(--fs-micro); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .pg-spec dd { margin: 0; font-size: 12.5px; font-weight: 600; color: var(--ink-secondary); }
 .pg-verdict { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 22px; margin-top: 14px; }
