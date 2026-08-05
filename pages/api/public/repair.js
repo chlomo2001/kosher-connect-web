@@ -18,7 +18,7 @@ const digitCount = (s) => (String(s).match(/\d/g) || []).length
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
   if (!rateLimit(req, { burst: 5, perMinute: 2 })) {
-    return res.status(429).json({ success: false, error: 'Too many requests — please wait a minute, or call 0161 531 1386.' })
+    return res.status(429).json({ success: false, error: 'Too many requests — please wait a minute, or call 0161 531 1386.', code: 'rate' })
   }
   const b = req.body || {}
 
@@ -30,24 +30,24 @@ export default async function handler(req, res) {
   const device = cap(b.device, 80)
   const issue = cap(b.issue, 600)
   if (name.length < 2 || !hasLetter(name)) {
-    return res.status(400).json({ success: false, error: 'Please enter your name.' })
+    return res.status(400).json({ success: false, error: 'Please enter your name.', code: 'name' })
   }
   const looksEmail = /@/.test(contact)
   if (looksEmail ? !isEmail(contact) : digitCount(contact) < 7) {
-    return res.status(400).json({ success: false, error: 'Please enter a valid phone number or email address.' })
+    return res.status(400).json({ success: false, error: 'Please enter a valid phone number or email address.', code: 'contact' })
   }
   if (!device || !(hasLetter(device) || digitCount(device) > 0)) {
-    return res.status(400).json({ success: false, error: 'Please tell us which phone or device it is.' })
+    return res.status(400).json({ success: false, error: 'Please tell us which phone or device it is.', code: 'device' })
   }
   if (issue.length < 3) {
-    return res.status(400).json({ success: false, error: 'Please describe what’s wrong.' })
+    return res.status(400).json({ success: false, error: 'Please describe what’s wrong.', code: 'device' })
   }
 
   const phone = looksEmail ? '' : contact
   const email = looksEmail ? contact : ''
 
   if (!tablesMode) {
-    return res.status(503).json({ success: false, error: 'Please call us instead — 0161 531 1386.' })
+    return res.status(503).json({ success: false, error: 'Please call us instead — 0161 531 1386.', code: 'offline' })
   }
 
   try {
@@ -96,6 +96,6 @@ export default async function handler(req, res) {
     return res.json({ success: true })
   } catch (e) {
     console.error('[api/public/repair]', e)
-    return res.status(503).json({ success: false, error: 'Please call us instead — 0161 531 1386.' })
+    return res.status(503).json({ success: false, error: 'Please call us instead — 0161 531 1386.', code: 'offline' })
   }
 }

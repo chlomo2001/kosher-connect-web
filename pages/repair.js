@@ -28,9 +28,19 @@ const T = {
     send: 'Send it in',
     sending: 'Sending…',
     okTitle: 'Got it — we’ll be in touch.',
-    okBody: 'Bring the device in whenever suits you: 421 Bury New Road, Salford M7 4ED. Left of Toy Zone, MMR Group building — ring bell 5.',
+    okWhen: 'We reply during opening hours, usually the same day.',
+    hoursLabel: 'Open:',
+    okBody: 'Bring the device in to 421 Bury New Road, Salford M7 4ED. Left of Toy Zone, MMR Group building — ring bell 5.',
     okCall: 'In a hurry? Call',
     errFallback: 'That didn’t send — please call us on',
+    errCodes: {
+      rate: 'That’s a few in a row — give it a minute, or call us on',
+      name: 'Please enter your name, then try again — or call us on',
+      contact: 'Please check the phone number or email, then try again — or call us on',
+      device: 'Please tell us which device and what’s wrong, then try again — or call us on',
+      offline: 'We can’t take repairs through the form this minute — please call us on',
+      server: 'That didn’t send — please call us on',
+    },
     urgent: 'Urgent? Skip the form —',
     urgentCall: 'call',
     brandName: 'Kosher Connect', rights: 'All rights reserved.',
@@ -48,9 +58,19 @@ const T = {
     send: 'לשלוח',
     sending: 'שולח…',
     okTitle: 'קיבלנו — נחזור אליכם בקרוב.',
-    okBody: 'אפשר להביא את המכשיר מתי שנוח: 421 Bury New Road, Salford M7 4ED. משמאל ל־Toy Zone, בניין MMR Group — פעמון 5.',
+    okWhen: 'נחזור אליכם בשעות הפתיחה, לרוב עוד באותו יום.',
+    hoursLabel: 'שעות פתיחה:',
+    okBody: 'אפשר להביא את המכשיר לכתובת: 421 Bury New Road, Salford M7 4ED. משמאל ל־Toy Zone, בניין MMR Group — פעמון 5.',
     okCall: 'ממהרים? התקשרו:',
     errFallback: 'לא נשלח — התקשרו אלינו:',
+    errCodes: {
+      rate: 'נשלחו כמה פניות ברצף — נסו שוב בעוד דקה, או התקשרו אלינו:',
+      name: 'נא למלא את השם ולנסות שוב — או להתקשר אלינו:',
+      contact: 'נא לבדוק את מספר הטלפון או המייל ולנסות שוב — או להתקשר אלינו:',
+      device: 'נא לציין איזו מכשיר ומה התקלה ולנסות שוב — או להתקשר אלינו:',
+      offline: 'לא נוכל לקבל פניות דרך הטופס ברגע זה — נא להתקשר אלינו:',
+      server: 'לא נשלח — התקשרו אלינו:',
+    },
     urgent: 'דחוף? בלי טפסים —',
     urgentCall: 'התקשרו',
     brandName: 'כשר קונקט', rights: 'כל הזכויות שמורות.',
@@ -74,13 +94,24 @@ export default function RepairBooking() {
 
   const [form, setForm] = useState(EMPTY)
   const [state, setState] = useState('idle') // idle | busy | ok | err
-  const [errMsg, setErrMsg] = useState('')
+  const [errCode, setErrCode] = useState('')
+  const [hours, setHours] = useState('')
+  // Opening hours from the same settings key /welcome reads, so the owner's
+  // Settings value stays the single source of truth. Without them the success
+  // card said "whenever suits you" — but the shop opens afternoons only, which
+  // invites a wasted morning trip.
+  useEffect(() => {
+    fetch('/api/public/info')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.openingHours) setHours(d.openingHours) })
+      .catch(() => {})
+  }, [])
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
 
   async function submit(e) {
     e.preventDefault()
     if (state === 'busy') return
-    setState('busy'); setErrMsg('')
+    setState('busy'); setErrCode('')
     try {
       const r = await fetch('/api/public/repair', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -88,8 +119,8 @@ export default function RepairBooking() {
       })
       const d = await r.json().catch(() => null)
       if (d && d.success) { setState('ok'); setForm(EMPTY) }
-      else { setState('err'); setErrMsg((d && d.error) || '') }
-    } catch { setState('err'); setErrMsg('') }
+      else { setState('err'); setErrCode((d && d.code) || 'server') }
+    } catch { setState('err'); setErrCode('offline') }
   }
 
   return (
@@ -135,7 +166,9 @@ export default function RepairBooking() {
               <div className="w-card rp-card rp-ok" role="status">
                 <div className="rp-ok-ico" aria-hidden="true"><WrenchIcon /></div>
                 <h4>{t.okTitle}</h4>
+                <p>{t.okWhen}</p>
                 <p>{t.okBody}</p>
+                {hours && <p className="rp-hours"><strong>{t.hoursLabel}</strong> <span dir="ltr">{hours}</span></p>}
                 <p>{t.okCall} <a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a></p>
               </div>
             ) : (
@@ -164,7 +197,8 @@ export default function RepairBooking() {
                 </button>
                 {state === 'err' && (
                   <p className="rp-err" role="alert">
-                    {errMsg || <>{t.errFallback} <a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a></>}
+                    {(t.errCodes && t.errCodes[errCode]) || t.errFallback}{' '}
+                    <a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a>
                   </p>
                 )}
                 <p className="rp-urgent">{t.urgent} <a href={PHONE_TEL}>{t.urgentCall} <span dir="ltr">{PHONE_SHOWN}</span></a></p>

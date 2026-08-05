@@ -40,7 +40,7 @@ export default async function handler(req, res) {
   // The dedup key is the sender's own phone/email — a script varying digits
   // makes one open task each. Throttle before it can bury the staff queue.
   if (!rateLimit(req, { burst: 5, perMinute: 2 })) {
-    return res.status(429).json({ success: false, error: 'Too many requests — please wait a minute, or call 0161 531 1386.' })
+    return res.status(429).json({ success: false, error: 'Too many requests — please wait a minute, or call 0161 531 1386.', code: 'rate' })
   }
   const b = req.body || {}
 
@@ -51,11 +51,11 @@ export default async function handler(req, res) {
   const contact = cap(b.contact, 120)
   const message = cap(b.message, 1000)
   if (name.length < 2 || !hasLetter(name)) {
-    return res.status(400).json({ success: false, error: 'Please enter your name.' })
+    return res.status(400).json({ success: false, error: 'Please enter your name.', code: 'name' })
   }
   const looksEmail = /@/.test(contact)
   if (looksEmail ? !isEmail(contact) : digitCount(contact) < 7) {
-    return res.status(400).json({ success: false, error: 'Please enter a valid phone number or email address.' })
+    return res.status(400).json({ success: false, error: 'Please enter a valid phone number or email address.', code: 'contact' })
   }
 
   // The optional extras. `email` may arrive both as the contact field and as
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
   const email = (looksEmail ? contact : '') || (isEmail(extraEmail) ? extraEmail : '')
 
   if (!tablesMode) {
-    return res.status(503).json({ success: false, error: 'Please call us instead — 0161 531 1386.' })
+    return res.status(503).json({ success: false, error: 'Please call us instead — 0161 531 1386.', code: 'offline' })
   }
 
   try {
@@ -117,6 +117,6 @@ export default async function handler(req, res) {
     return res.json({ success: true })
   } catch (e) {
     console.error('[api/public/message]', e)
-    return res.status(503).json({ success: false, error: 'Please call us instead — 0161 531 1386.' })
+    return res.status(503).json({ success: false, error: 'Please call us instead — 0161 531 1386.', code: 'offline' })
   }
 }

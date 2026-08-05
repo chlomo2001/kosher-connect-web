@@ -2334,6 +2334,10 @@ html { scroll-behavior: smooth; }
 .rp-err { margin: 0; font-size: var(--fs-ui); font-weight: 600; color: var(--danger-ink, #b3261e); }
 .rp-err a, .rp-urgent a { color: var(--accent); text-decoration: none; font-weight: 600; }
 .rp-urgent { margin: 4px 0 0; font-size: var(--fs-body); color: var(--muted); }
+/* Live opening hours on the repair success card — the shop opens afternoons
+   only, so "bring it in" needs the window attached to it. */
+.rp-hours { margin: 10px 0 0; font-size: var(--fs-body); color: var(--muted); }
+.rp-hours strong { color: var(--text); font-weight: 600; }
 .rp-ok { text-align: center; }
 .rp-ok-ico { display: inline-flex; color: var(--accent); margin-bottom: 6px; }
 .rp-ok h4 { margin: 0 0 8px; font-size: var(--fs-title); }

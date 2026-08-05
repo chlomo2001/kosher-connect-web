@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Head from 'next/head'
 import Script from 'next/script'
 import ThemeToggle from '../components/ThemeToggle'
@@ -75,7 +75,7 @@ const T = {
         accent: 'Pay less', sub: 'the right plan for how you really use your phone',
         body: 'Bring in your latest bill and we’ll go through it with you, line by line — what you use, what you don’t, and which plan actually fits, international minutes and all. Then we handle the switch from start to finish. No long contract you can’t follow, no company in the middle, no small print.',
         chips: ['Keep your number', 'Keep your phone', 'We do the switch for you'],
-        price: '£20 setup · then £20 a year · services £5 (free for USA & Canada SIMs)', cta: 'Bring us your bill',
+        price: '£20 setup · then £20 a year · £5 a service (free for USA & Canada SIMs)', cta: 'Bring us your bill',
         prefill: 'I’d like you to look at my phone bill and see if I could pay less.',
       },
       {
@@ -129,7 +129,16 @@ const T = {
     fEmail: 'Email (optional)', fAddress: 'Address (optional)',
     fReach: 'Best way to reach you (optional)',
     fReachOpts: { call: 'Call', text: 'Text message', whatsapp: 'WhatsApp', email: 'Email' },
-    fOk: 'Thanks — we’ve got it and we’ll be in touch.', fErr: 'Couldn’t send — please call us on 0161 531 1386.',
+    fOk: 'Thanks — we’ve got it. We reply during opening hours, usually the same day.',
+    fErrLead: 'Couldn’t send — please call us on',
+    fErrCodes: {
+      rate: 'That’s a few messages in a row — give it a minute, or call us on',
+      name: 'Please enter your name, then try again — or call us on',
+      contact: 'Please check the phone number or email, then try again — or call us on',
+      offline: 'We can’t take messages this minute — please call us on',
+      server: 'Couldn’t send — please call us on',
+    },
+    fPrivacy: 'We only use these details to reply to you.', fPrivacyLink: 'Privacy notice',
     fBadName: 'Please enter your name.', fBadContact: 'Please enter a valid phone number or email address.',
     preferCall: 'Prefer to call?',
     waLabel: 'WhatsApp us', waText: 'Hello Kosher Connect — I’d like to ask about…',
@@ -219,7 +228,16 @@ const T = {
     fEmail: 'מייל (לא חובה)', fAddress: 'כתובת (לא חובה)',
     fReach: 'איך הכי נוח לחזור אליכם? (לא חובה)',
     fReachOpts: { call: 'שיחת טלפון', text: 'הודעת טקסט', whatsapp: 'וואטסאפ', email: 'אימייל' },
-    fOk: 'תודה! ההודעה אצלנו — נחזור אליכם בהקדם.', fErr: 'ההודעה לא נשלחה — התקשרו אלינו: 0161 531 1386.',
+    fOk: 'תודה! ההודעה אצלנו — נחזור אליכם בשעות הפתיחה, לרוב עוד באותו יום.',
+    fErrLead: 'ההודעה לא נשלחה — התקשרו אלינו:',
+    fErrCodes: {
+      rate: 'נשלחו כמה הודעות ברצף — נסו שוב בעוד דקה, או התקשרו אלינו:',
+      name: 'נא למלא את השם ולנסות שוב — או להתקשר אלינו:',
+      contact: 'נא לבדוק את מספר הטלפון או המייל ולנסות שוב — או להתקשר אלינו:',
+      offline: 'לא נוכל לקבל הודעות ברגע זה — נא להתקשר אלינו:',
+      server: 'ההודעה לא נשלחה — התקשרו אלינו:',
+    },
+    fPrivacy: 'הפרטים משמשים אותנו רק כדי לחזור אליכם.', fPrivacyLink: 'מדיניות הפרטיות',
     fBadName: 'נא להזין שם.', fBadContact: 'נא להזין מספר טלפון או כתובת מייל תקינים.',
     preferCall: 'מעדיפים להתקשר?',
     waLabel: 'כתבו לנו בוואטסאפ', waText: 'שלום כשר קונקט — רציתי לשאול לגבי…',
@@ -301,7 +319,7 @@ export default function Welcome() {
   }
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState('') // '', 'ok', 'err'
-  const [errMsg, setErrMsg] = useState('')
+  const [errCode, setErrCode] = useState('')
   const [paid, setPaid] = useState(false) // Stripe Checkout success lands on /welcome?paid=1
   const [showTop, setShowTop] = useState(false)
   useEffect(() => {
@@ -340,6 +358,21 @@ export default function Welcome() {
   const pick = (l) => { setLang(l); try { localStorage.setItem('kcLang', l) } catch {} }
   // Strip ?paid=1 on dismiss so a refresh or shared link doesn't re-announce it.
   const dismissPaid = () => { setPaid(false); try { window.history.replaceState(null, '', window.location.pathname) } catch {} }
+  // Every prefill string in both languages. A door may replace the message
+  // when it is still exactly one of these — i.e. seeded, not typed. Full
+  // equality only: prefix matching would eat text typed after the ": ".
+  const PREFILLS = useMemo(() => {
+    const out = new Set()
+    Object.values(T).forEach((d) => {
+      ;(d.bands || []).forEach((b) => { if (b.prefill) out.add(b.prefill.trim()) })
+      ;(d.moreGroups || []).forEach((g) => (g.items || []).forEach((m) => { if (m.prefill) out.add(m.prefill.trim()) }))
+    })
+    return out
+  }, [])
+  const seedMessage = (prefill) => setForm((f) => {
+    const cur = f.message.trim()
+    return (cur && !PREFILLS.has(cur)) ? f : { ...f, message: prefill }
+  })
   const t = T[lang]
   const waHref = `https://wa.me/441615311386?text=${encodeURIComponent(t.waText)}`
 
@@ -347,11 +380,17 @@ export default function Welcome() {
     // js-on arms the reveal's hidden state — see the .sk-reveal CSS comment.
     // Only added here, so a no-JS visitor never gets content hidden on them.
     const root = document.querySelector('.sk')
-    if (root) root.classList.add('js-on')
     const els = document.querySelectorAll('.sk-reveal:not(.in)')
-    const obs = new IntersectionObserver((entries) => {
-      entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target) } })
-    }, { threshold: 0.12 })
+    // Build the observer FIRST. On engines without it (iOS 11-12.1) the throw
+    // used to happen after .js-on had already hidden every reveal, leaving the
+    // page blank below the hero. Now a failure simply means no animation.
+    let obs
+    try {
+      obs = new IntersectionObserver((entries) => {
+        entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target) } })
+      }, { threshold: 0.12 })
+    } catch { return }
+    if (root) root.classList.add('js-on')
     els.forEach((c) => obs.observe(c))
     return () => obs.disconnect()
   }, [lang])
@@ -359,9 +398,9 @@ export default function Welcome() {
   const submit = async (e) => {
     e.preventDefault()
     if (sending) return
-    if (!nameOk(form.name)) { setSent('err'); setErrMsg(t.fBadName); return }
-    if (!contactOk(form.contact)) { setSent('err'); setErrMsg(t.fBadContact); return }
-    setSending(true); setSent(''); setErrMsg('')
+    if (!nameOk(form.name)) { setSent('err'); setErrCode('name'); return }
+    if (!contactOk(form.contact)) { setSent('err'); setErrCode('contact'); return }
+    setSending(true); setSent(''); setErrCode('')
     try {
       const r = await fetch('/api/public/message', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -373,8 +412,10 @@ export default function Welcome() {
       })
       const j = await r.json().catch(() => ({}))
       if (r.ok && j.success) { setSent('ok'); setForm(EMPTY_FORM) }
-      else { setSent('err'); setErrMsg(j.error || t.fErr) }
-    } catch { setSent('err'); setErrMsg(t.fErr) }
+      // Keep the CODE, never the server's English sentence — printing that
+      // verbatim put English inside the Hebrew page (WCAG 3.1.2).
+      else { setSent('err'); setErrCode(j.code || 'server') }
+    } catch { setSent('err'); setErrCode('offline') }
     finally { setSending(false) }
   }
 
@@ -477,7 +518,7 @@ export default function Welcome() {
                   form reflects the promise. Empty-only: never clobber text the
                   visitor already typed. The anchor jump itself is untouched. */}
               <a className="sk-btn sk-btn-sky sk-btn-lg" href="#contact"
-                onClick={() => { if (b.prefill) setForm((f) => (f.message.trim() ? f : { ...f, message: b.prefill })) }}>{b.cta}</a>
+                onClick={() => { if (b.prefill) seedMessage(b.prefill) }}>{b.cta}</a>
             </div>
           </section>
         ))}
@@ -504,7 +545,7 @@ export default function Welcome() {
                         {...(m.href ? {
                           href: m.href,
                           onClick: m.prefill
-                            ? () => setForm((f) => (f.message.trim() ? f : { ...f, message: m.prefill }))
+                            ? () => seedMessage(m.prefill)
                             : undefined,
                         } : {})}>
                         <div className="sk-tile-ico" aria-hidden="true"><Icon /></div>
@@ -572,7 +613,15 @@ export default function Welcome() {
                 {sending ? t.fSending : t.fSend}
               </button>
               {sent === 'ok' && <p className="sk-form-ok" role="status">{t.fOk}</p>}
-              {sent === 'err' && <p className="sk-form-err" role="alert">{errMsg || t.fErr}</p>}
+              {sent === 'err' && (
+                <p className="sk-form-err" role="alert">
+                  {(t.fErrCodes && t.fErrCodes[errCode]) || t.fErrLead}{' '}
+                  <a href={PHONE_TEL} dir="ltr" style={{ whiteSpace: 'nowrap' }}>{PHONE_SHOWN}</a>
+                </p>
+              )}
+              {/* Why we're asking, next to where they type it — the address
+                  field is optional and this is where doubt shows up. */}
+              <p className="sk-form-privacy">{t.fPrivacy} <a href="/privacy">{t.fPrivacyLink}</a></p>
             </form>
             <p className="sk-prefer">
               {t.preferCall} <a href={PHONE_TEL} dir="ltr">{PHONE_SHOWN}</a>
@@ -915,6 +964,8 @@ const SKY_CSS = `
      so the three fields that matter still read as the form. */
   .sk-form-reach{display:flex;flex-direction:column;gap:8px}
   .sk-form-hint{font-size:13px;color:var(--sk-muted);font-weight:600}
+  .sk-form-privacy{margin:12px 0 0;font-size:12.5px;color:var(--sk-muted);line-height:1.5}
+  .sk-form-privacy a{color:inherit;text-decoration:underline}
   /* Not .sk-chips — that is already the feature bands' tick list, and it
      carries justify-content:center and a 22px top margin this row must not
      inherit. */
