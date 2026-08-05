@@ -426,7 +426,7 @@ function showReloadBanner(msg) {
   if (document.getElementById('kcReloadBanner')) return;
   const b = document.createElement('div');
   b.id = 'kcReloadBanner';
-  b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:6000;background:var(--danger-solid);color:#fff;padding:11px 18px;text-align:center;font-size:14px;font-weight:500;box-shadow:0 2px 8px rgba(0,0,0,.2);';
+  b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:6000;background:var(--danger-solid);color:#fff;padding:11px 18px;text-align:center;font-size:var(--fs-ui);font-weight:500;box-shadow:0 2px 8px rgba(0,0,0,.2);';
   b.innerHTML = `⚠️ ${escHtml(msg)} <button onclick="location.reload()" style="margin-left:12px;background:#fff;color:var(--danger-solid);border:none;border-radius:7px;padding:5px 14px;cursor:pointer;font-weight:700;">↻ Reload</button>`;
   document.body.appendChild(b);
 }
@@ -741,7 +741,7 @@ function filterCustomerDropdown() {
     dropdown.innerHTML = matches.map(c => `
       <div class="customer-dropdown-item" onclick="selectRentalCustomer('${c.id}')">
         <strong>${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}</strong>
-        <span style="color:var(--muted);font-size:11px;margin-left:8px;">${escHtml(fmtPhone(c.phone||''))} ${c.email ? '· '+escHtml(c.email) : ''}</span>
+        <span style="color:var(--muted);font-size:var(--fs-micro);margin-left:8px;">${escHtml(fmtPhone(c.phone||''))} ${c.email ? '· '+escHtml(c.email) : ''}</span>
       </div>`).join('');
   }
   dropdown.classList.add('open');
@@ -1471,7 +1471,7 @@ function renderRentalsTab() {
         </div>
         <div class="rentals-filter-row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           ${rentalBar}
-          <button class="btn btn-outline" style="font-size:12px;padding:5px 12px;" onclick="clearRentalFilters()">Clear</button>
+          <button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 12px;" onclick="clearRentalFilters()">Clear</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -1597,7 +1597,7 @@ function availabilityCalendarHtml() {
         <button class="btn btn-outline btn-sm" aria-label="Previous month" onclick="calShift(-1)">←</button>
         <strong style="min-width:150px;text-align:center;">${monthName}</strong>
         <button class="btn btn-outline btn-sm" aria-label="Next month" onclick="calShift(1)">→</button>
-        <span style="margin-left:auto;font-size:11px;color:var(--muted);">
+        <span style="margin-left:auto;font-size:var(--fs-micro);color:var(--muted);">
           <span style="white-space:nowrap;"><span class="cal-key cal-active"></span> out</span>
           <span style="white-space:nowrap;"><span class="cal-key cal-booked"></span> reserved (striped)</span>
           <span style="white-space:nowrap;"><span class="cal-key cal-overdue"></span> overdue (!)</span>
@@ -1686,10 +1686,10 @@ function renderRentalRows() {
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('.action-btn'))openManageRentalModal('${r.id}')">
       <td>
         <div class="customer-name">${nameHtml(r.customerName || '—')}</div>
-        <div class="customer-email" style="font-size:11px;">${r.vn ? '🔢 +'+escHtml(r.vnPrefix || '') : ''}</div>
+        <div class="customer-email" style="font-size:var(--fs-micro);">${r.vn ? '🔢 +'+escHtml(r.vnPrefix || '') : ''}</div>
       </td>
-      <td class="kc-phone" style="font-weight:600;font-size:12px;">${escHtml(r.phoneNumber || '—')}</td>
-      <td style="font-size:11px;">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}</td>
+      <td class="kc-phone" style="font-weight:600;font-size:var(--fs-small);">${escHtml(r.phoneNumber || '—')}</td>
+      <td style="font-size:var(--fs-micro);">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}</td>
       <td style="text-align:center;">${r.chargeableDays}d</td>
       <td style="color:var(--success);font-weight:700;">${fmtGbp(r.price)}</td>
       <td style="font-weight:700;${debtColor}">${totalOwed > 0 ? '£'+totalOwed+' owed' : '✓ Paid'}</td>
@@ -1731,10 +1731,10 @@ function renderPhoneRows() {
     const poolDisplay   = isUSA ? (p.pool || '—') : 'N/A';
     const expiryDisplay = isUSA ? (p.poolExpiry || '—') : 'N/A';
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('.action-btn'))openEditPhoneModal('${p.id}')">
-      <td class="kc-phone" style="font-weight:600;font-size:12px;">${escHtml(fmtPhone(p.number))}${p.model ? `<div class="customer-email">${escHtml(p.model)}</div>` : ''}</td>
+      <td class="kc-phone" style="font-weight:600;font-size:var(--fs-small);">${escHtml(fmtPhone(p.number))}${p.model ? `<div class="customer-email">${escHtml(p.model)}</div>` : ''}</td>
       <td>${p.country === 'USA' ? '🇺🇸' : p.country === 'Israel' ? '🇮🇱' : p.country === 'UK' ? '🇬🇧' : p.country === 'Canada' ? '🇨🇦' : '🇪🇺'} ${escHtml(p.country)}</td>
-      <td style="font-size:12px;color:${isUSA?'':'var(--muted)'};">${isUSA ? escHtml(poolDisplay) : poolDisplay}</td>
-      <td style="font-size:11px;color:${poolExpired?'var(--danger)':isUSA?'var(--muted)':'var(--muted)'};">${isUSA ? expiryDisplay : '<span style="color:var(--muted);">N/A</span>'}</td>
+      <td style="font-size:var(--fs-small);color:${isUSA?'':'var(--muted)'};">${isUSA ? escHtml(poolDisplay) : poolDisplay}</td>
+      <td style="font-size:var(--fs-micro);color:${poolExpired?'var(--danger)':isUSA?'var(--muted)':'var(--muted)'};">${isUSA ? expiryDisplay : '<span style="color:var(--muted);">N/A</span>'}</td>
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
@@ -1850,7 +1850,7 @@ function kcRentalScanEnter() {
   if (anchor) {
     const note = document.createElement('div');
     note.setAttribute('role', 'status');
-    note.style.cssText = 'margin-top:8px;font-size:12px;color:var(--muted);background:var(--bg-secondary);border-radius:6px;padding:7px 9px;';
+    note.style.cssText = 'margin-top:8px;font-size:var(--fs-small);color:var(--muted);background:var(--bg-secondary);border-radius:6px;padding:7px 9px;';
     note.textContent = '📷 Scanned in — marked returned for you. Check the charges below before saving.';
     anchor.appendChild(note);
   }
@@ -1873,7 +1873,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
             oninput="filterCustomerDropdown()" onfocus="filterCustomerDropdown()">
           <div class="customer-dropdown" id="rCustomerDropdown"></div>
         </div>
-        <div id="rCustomerSelected" style="font-size:12px;color:var(--success);margin-top:4px;"></div>
+        <div id="rCustomerSelected" style="font-size:var(--fs-small);color:var(--success);margin-top:4px;"></div>
       </div>
 
       <div class="form-group form-full">
@@ -1882,7 +1882,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
           <option value="">— Select phone —</option>
           ${availablePhoneOptions}
         </select>
-        <div id="rPhoneInfo" style="font-size:12px;color:var(--muted);margin-top:4px;"></div>
+        <div id="rPhoneInfo" style="font-size:var(--fs-small);color:var(--muted);margin-top:4px;"></div>
       </div>
 
       <div class="form-group">
@@ -1897,7 +1897,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
       </div>
 
       <div class="form-group form-full" id="rCalcBox" style="display:none;">
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:13px;">
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:var(--fs-body);">
           <div id="rCalcText"></div>
         </div>
       </div>
@@ -1905,7 +1905,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
       <div class="form-group form-full" style="flex-direction:row;align-items:center;gap:10px;">
         <input type="checkbox" id="rAddVN" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent);"
           onchange="document.getElementById('rVNSection').style.display=this.checked?'contents':'none'">
-        <label for="rAddVN" style="font-size:14px;cursor:pointer;">🔢 Add Virtual Number</label>
+        <label for="rAddVN" style="font-size:var(--fs-ui);cursor:pointer;">🔢 Add Virtual Number</label>
       </div>
 
       <div id="rVNSection" style="display:none;" class="form-full">
@@ -1947,11 +1947,11 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
           <div class="eq-btn" tabindex="0" role="button" id="nrGiven_sim"   data-given="1" onclick="nrToggleGiven('sim')">💳 SIM</div>
           <div class="eq-btn" tabindex="0" role="button" id="nrGiven_charger" data-given="0" onclick="nrToggleGiven('charger')">🔌 Charger</div>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:6px;">Tap to toggle — bright = given</div>
+        <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;">Tap to toggle — bright = given</div>
       </div>
 
       <div class="form-group form-full" id="rDiscountRow">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--fs-body);">
           <input type="checkbox" id="rAddDiscount" style="accent-color:var(--accent);"
             onchange="document.getElementById('rDiscountBox').style.display=this.checked?'flex':'none'; updateRentalCalc()">
           🏷️ Apply discount
@@ -1980,28 +1980,28 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
             <option value="card">Paid now — 💳 Card</option>
             <option value="bank_transfer">Paid now — 🏦 Transfer</option>
           </select>
-          <span id="rPayAmountWrap" style="display:none;align-items:center;gap:6px;font-size:13px;">
+          <span id="rPayAmountWrap" style="display:none;align-items:center;gap:6px;font-size:var(--fs-body);">
             £<input class="form-input" type="number" id="rPayAmount" step="0.01" min="0" style="width:100px;" oninput="this.dataset.touched='1'">
-            <button type="button" class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 10px;" onclick="rPayFull()">Full total</button>
+            <button type="button" class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:4px 10px;" onclick="rPayFull()">Full total</button>
           </span>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px;">"Paid now" settles the rental immediately — leave on account to bill it to the wallet.</div>
+        <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">"Paid now" settles the rental immediately — leave on account to bill it to the wallet.</div>
       </div>
 
       <div class="form-group form-full">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--fs-body);">
           <input type="checkbox" id="rDeposit" style="accent-color:var(--accent);"
             onchange="document.getElementById('rDepositBox').style.display=this.checked?'flex':'none'">
           🔒 Hold a refundable deposit
         </label>
         <div id="rDepositBox" style="display:none;gap:8px;align-items:center;margin-top:8px;">
           £<input class="form-input" type="number" id="rDepositAmount" min="0" step="1" style="width:100px;" placeholder="e.g. 50">
-          <span style="font-size:11px;color:var(--muted);">Recorded as held; refunded on a clean return. Not billed to the wallet.</span>
+          <span style="font-size:var(--fs-micro);color:var(--muted);">Recorded as held; refunded on a clean return. Not billed to the wallet.</span>
         </div>
       </div>
 
       <div class="form-group form-full">
-        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13px;">
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:var(--fs-body);">
           <input type="checkbox" id="rTerms" style="accent-color:var(--accent);margin-top:2px;"
             onchange="document.getElementById('rTermsName').style.display=this.checked?'block':'none'">
           <span>📝 Customer acknowledged the loss &amp; late-return terms at pickup</span>
@@ -2115,14 +2115,14 @@ function updateRentalCalc() {
     const dtype = document.getElementById('rDiscountType')?.value || 'percent';
     const dval  = parseFloat(document.getElementById('rDiscountValue')?.value) || 0;
     finalPrice  = dtype === 'percent' ? Math.max(0, price * (1 - dval / 100)) : Math.max(0, price - dval);
-    if (dval > 0) discountLine = ` &nbsp;|&nbsp; <span style="color:var(--gold);font-size:12px;">-${dtype==='percent'?dval+'%':'£'+dval} discount → <strong>${fmtGbp(finalPrice)}</strong></span>`;
+    if (dval > 0) discountLine = ` &nbsp;|&nbsp; <span style="color:var(--gold);font-size:var(--fs-small);">-${dtype==='percent'?dval+'%':'£'+dval} discount → <strong>${fmtGbp(finalPrice)}</strong></span>`;
   } else {
     // Auto multi-phone discount (3rd+ concurrent phone); a manual discount
     // replaces it — staff choice wins.
     const autoPct = multiPhoneDiscountPct(rentals, document.getElementById('rCustomer')?.value, from, to);
     if (autoPct > 0) {
       finalPrice = Math.max(0, price * (1 - autoPct / 100));
-      discountLine = ` &nbsp;|&nbsp; <span style="color:var(--gold);font-size:12px;">3rd phone+ −${autoPct}% → <strong>${fmtGbp(finalPrice)}</strong></span>`;
+      discountLine = ` &nbsp;|&nbsp; <span style="color:var(--gold);font-size:var(--fs-small);">3rd phone+ −${autoPct}% → <strong>${fmtGbp(finalPrice)}</strong></span>`;
     }
   }
   box.style.display = 'block';
@@ -2145,9 +2145,9 @@ function updateRentalCalc() {
     const ranked = poolPhoneSuggestions(phones, rentals, from, to, localISO());
     const best = ranked[0];
     if (best && best.phone.id !== (phone && phone.id)) {
-      poolLine = `<div style="margin-top:6px;font-size:11px;line-height:1.5;">
+      poolLine = `<div style="margin-top:6px;font-size:var(--fs-micro);line-height:1.5;">
         💡 <span style="color:var(--accent);font-weight:600;">Best pool match: ${escHtml(fmtPhone(best.phone.number))}</span>
-        <button type="button" class="btn btn-outline" style="padding:1px 8px;font-size:11px;margin-left:4px;"
+        <button type="button" class="btn btn-outline" style="padding:1px 8px;font-size:var(--fs-micro);margin-left:4px;"
           onclick="document.getElementById('rPhone').value='${best.phone.id}';updateRentalPhoneInfo();updateRentalCalc();">Use</button>
         <br><span style="color:var(--muted);">${escHtml(best.reason)}</span></div>`;
     }
@@ -2157,7 +2157,7 @@ function updateRentalCalc() {
     <span style="color:var(--muted);">Shabbat/Yom Tov excluded:</span> <span style="color:var(--gold);">${excluded}</span> &nbsp;|&nbsp;
     <span style="color:var(--muted);">Chargeable days:</span> ${chargeableDays} &nbsp;|&nbsp;
     <strong style="color:var(--success);font-size:15px;">${fmtGbp(price)}</strong>${discountLine}
-    <div style="margin-top:6px;font-size:11px;color:var(--muted);line-height:1.6;">
+    <div style="margin-top:6px;font-size:var(--fs-micro);color:var(--muted);line-height:1.6;">
       🧮 ${steps.join(' → ')}
       ${excluded > 0 ? `<br>📅 <span style="cursor:help;" title="Every Shabbos and full Yom Tov in the rental window is free — guests keep the phone over those days at no charge.">${excluded} free day${excluded === 1 ? '' : 's'} (Shabbos / Yom Tov) — hover for why</span>` : ''}
     </div>${poolLine}
@@ -2459,9 +2459,9 @@ function openManagePhonesModal() {
     </div>
     <div class="section-divider" style="margin-top:20px;">Current Inventory (${phones.length})</div>
     <div style="max-height:200px;overflow-y:auto;">
-      ${phones.length === 0 ? '<p style="color:var(--muted);font-size:13px;">No phones yet.</p>' :
+      ${phones.length === 0 ? '<p style="color:var(--muted);font-size:var(--fs-body);">No phones yet.</p>' :
         phones.map(p => `
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:var(--fs-body);">
             <span style="font-weight:600;">${escHtml(fmtPhone(p.number))}</span>
             <span style="color:var(--muted);">${escHtml(p.country)} · ${escHtml(p.company||'—')}</span>
             <span class="badge ${p.status==='rented'?'badge-rental':'badge-active'}">${p.status}</span>
@@ -2532,7 +2532,7 @@ function openReviewQueueModal(filter = 'all') {
   reviewFilter = filter;
   showDynamicModal(`
     <div class="modal-title">🔍 Lines needing a look</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
       Imported from the rental sheet. Nothing here is wrong — it's what the sheet
       couldn't tell us for certain. Work through it whenever; the pool is usable
       meanwhile.
@@ -2558,7 +2558,7 @@ function renderReviewQueue() {
   const shown = reviewFilter === 'all' ? all : all.filter(p => p.reviewReasons.includes(reviewFilter));
 
   const chip = (val, label, n) => `<button class="btn ${reviewFilter === val ? 'btn-primary' : 'btn-outline'}"
-    style="font-size:12px;padding:5px 12px;" onclick="reviewFilter='${val}';renderReviewQueue()">${escHtml(label)} (${n})</button>`;
+    style="font-size:var(--fs-small);padding:5px 12px;" onclick="reviewFilter='${val}';renderReviewQueue()">${escHtml(label)} (${n})</button>`;
 
   el.innerHTML = `
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
@@ -2587,23 +2587,23 @@ function reviewRowHtml(p) {
         </div>
         <span class="badge badge-${p.status === 'rented' ? 'rental' : 'sim'}">${escHtml(p.status)}</span>
       </div>
-      ${who ? `<div style="font-size:13px;margin-top:5px;">
+      ${who ? `<div style="font-size:var(--fs-body);margin-top:5px;">
         ${p.heldByNote ? 'With' : 'Last with'}: <strong>${escHtml(who)}</strong>
         ${p.holderUncertain ? '<span style="color:var(--gold);"> (not certain)</span>' : ''}
         ${p.dueDate ? ` · due <strong>${escHtml(p.dueDate)}</strong>` : ''}
       </div>` : ''}
       <div style="margin-top:7px;display:flex;gap:5px;flex-wrap:wrap;">
-        ${p.reviewReasons.map(r => `<span class="badge badge-warning" style="font-size:11px;">${escHtml(REVIEW_LABELS[r] || r)}</span>`).join('')}
+        ${p.reviewReasons.map(r => `<span class="badge badge-warning" style="font-size:var(--fs-micro);">${escHtml(REVIEW_LABELS[r] || r)}</span>`).join('')}
       </div>
-      ${p.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">${escHtml(p.notes)}</div>` : ''}
+      ${p.notes ? `<div style="font-size:var(--fs-small);color:var(--muted);margin-top:6px;">${escHtml(p.notes)}</div>` : ''}
       <details style="margin-top:6px;"><summary style="font-size:var(--fs-small);color:var(--muted);cursor:pointer;">Original sheet row ${p.importSource ? p.importSource.row : ''}</summary>
         <div style="font-size:var(--fs-small);color:var(--muted);margin-top:4px;word-break:break-word;">${escHtml(raw)}</div>
       </details>
       <div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap;">
         ${p.status === 'rented' || p.status === 'permanent'
-          ? `<button class="btn btn-outline" style="font-size:12px;padding:4px 11px;" onclick="reviewMarkBack('${escHtml(p.id)}')">📥 It's back</button>` : ''}
-        <button class="btn btn-outline" style="font-size:12px;padding:4px 11px;" onclick="reviewOpenPhone('${escHtml(p.id)}')">✏️ Edit line</button>
-        <button class="btn btn-outline" style="font-size:12px;padding:4px 11px;" onclick="reviewDismiss('${escHtml(p.id)}')">✓ Looks right</button>
+          ? `<button class="btn btn-outline" style="font-size:var(--fs-small);padding:4px 11px;" onclick="reviewMarkBack('${escHtml(p.id)}')">📥 It's back</button>` : ''}
+        <button class="btn btn-outline" style="font-size:var(--fs-small);padding:4px 11px;" onclick="reviewOpenPhone('${escHtml(p.id)}')">✏️ Edit line</button>
+        <button class="btn btn-outline" style="font-size:var(--fs-small);padding:4px 11px;" onclick="reviewDismiss('${escHtml(p.id)}')">✓ Looks right</button>
       </div>
     </div>`;
 }
@@ -2653,7 +2653,7 @@ function openEditPhoneModal(phoneId) {
   if (!p) return;
   const activeRental = rentals.find(r => r.phoneId === phoneId && (r.status === 'active' || r.status === 'overdue'));
   const renterInfo = activeRental
-    ? `<div style="margin-top:6px;font-size:13px;color:var(--muted);">Rented to: <strong style="color:var(--text);">${escHtml(activeRental.customerName)}</strong> &nbsp;<button class="btn btn-outline" style="padding:3px 10px;font-size:12px;" onclick="closeDynamicModal();openManageRentalModal('${activeRental.id}')">Manage Rental</button></div>`
+    ? `<div style="margin-top:6px;font-size:var(--fs-body);color:var(--muted);">Rented to: <strong style="color:var(--text);">${escHtml(activeRental.customerName)}</strong> &nbsp;<button class="btn btn-outline" style="padding:3px 10px;font-size:var(--fs-small);" onclick="closeDynamicModal();openManageRentalModal('${activeRental.id}')">Manage Rental</button></div>`
     : '';
   const statusColor = p.status === 'rented' ? 'var(--accent)' : p.maintenance ? 'var(--gold)' : 'var(--success)';
   const statusLabel = p.status === 'rented' ? '🔴 Rented' : p.maintenance ? '🔧 Maintenance' : '🟢 Available';
@@ -2683,11 +2683,11 @@ function openEditPhoneModal(phoneId) {
       </div>
       <div class="form-group">
         <label class="form-label">Status</label>
-        <div style="font-size:13px;font-weight:600;color:${statusColor};padding:8px 0;">${statusLabel}</div>
+        <div style="font-size:var(--fs-body);font-weight:600;color:${statusColor};padding:8px 0;">${statusLabel}</div>
         ${renterInfo}
       </div>
       <div class="form-group form-full">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--fs-body);">
           <input type="checkbox" id="epMaint" ${p.maintenance ? 'checked' : ''} style="accent-color:var(--gold);">
           <span>🔧 Under maintenance — hidden from New Rental until cleared</span>
         </label>
@@ -2755,7 +2755,7 @@ function openManageRentalModal(rentalId) {
     return `
       <div id="mgEqRow_${item}" style="display:${given ? 'flex' : 'none'};align-items:center;gap:8px;flex-wrap:wrap;padding:3px 0;">
         <input type="hidden" id="mgItemStatus_${item}" value="${status}">
-        <span style="font-size:13px;min-width:130px;">${EQ_LABELS[item]}</span>
+        <span style="font-size:var(--fs-body);min-width:130px;">${EQ_LABELS[item]}</span>
         <div class="eq-slide-track" id="mgSlide_${item}" data-status="${status}">
           <div class="eq-slide-zone eq-slide-zone-left"  onclick="mgSetItemStatus('${item}','returned')"></div>
           <div class="eq-slide-zone eq-slide-zone-right" onclick="mgSetItemStatus('${item}','lost')"></div>
@@ -2769,14 +2769,14 @@ function openManageRentalModal(rentalId) {
         <button type="button" id="mgClearItem_${item}" class="eq-item-clear" onclick="mgClearItemStatus('${item}')"
           style="display:${pending?'none':'inline-flex'};" title="Reset to pending">×</button>
         <input type="number" id="mgLostAmt_${item}" class="form-input" min="0" step="0.01" placeholder="£ amount"
-          style="display:${status==='lost'?'inline-block':'none'};width:110px;padding:4px 10px;font-size:12px;border-radius:20px;"
+          style="display:${status==='lost'?'inline-block':'none'};width:110px;padding:4px 10px;font-size:var(--fs-small);border-radius:20px;"
           value="${lostAmt}" oninput="mgUpdateCalc()">
       </div>`;
   }).join('');
 
   showDynamicModal(`
     <div class="modal-title">⚙ Manage Rental — ${escHtml(r.phoneNumber)}</div>
-    <div style="color:var(--muted);font-size:13px;margin-bottom:16px;">
+    <div style="color:var(--muted);font-size:var(--fs-body);margin-bottom:16px;">
       Customer: <strong style="color:var(--text);">${escHtml(r.customerName)}</strong>
     </div>
     <div class="form-grid">
@@ -2790,9 +2790,9 @@ function openManageRentalModal(rentalId) {
         <input class="form-input" type="date" id="mgTo" value="${r.toDate}" onchange="mgUpdateCalc(); mgCheckConflict('${escJs(r.id)}')">
         <div class="hebrew-date-label" id="mgToHeb"></div>
       </div>
-      <div class="form-group form-full" id="mgConflictWarn" role="alert" style="display:none;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.35);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--danger);"></div>
+      <div class="form-group form-full" id="mgConflictWarn" role="alert" style="display:none;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.35);border-radius:8px;padding:10px 14px;font-size:var(--fs-body);color:var(--danger);"></div>
       <div class="form-group form-full" id="mgCalcBox">
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;">
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:var(--fs-body);">
           <div id="mgCalcText"></div>
         </div>
       </div>
@@ -2807,7 +2807,7 @@ function openManageRentalModal(rentalId) {
             style="width:52px;height:28px;border-radius:14px;cursor:pointer;transition:background 0.2s;position:relative;background:${r.status==='returned'?'var(--success)':'var(--border)'};">
             <div id="mgToggleKnob" style="position:absolute;top:3px;left:${r.status==='returned'?'25px':'3px'};width:22px;height:22px;border-radius:50%;background:#fff;transition:left 0.2s;"></div>
           </div>
-          <span id="mgReturnedLabel" style="font-size:14px;font-weight:600;color:${r.status==='returned'?'var(--success)':'var(--muted)'};">
+          <span id="mgReturnedLabel" style="font-size:var(--fs-ui);font-weight:600;color:${r.status==='returned'?'var(--success)':'var(--muted)'};">
             ${r.status==='returned' ? 'Returned ✅' : 'Not returned yet'}
           </span>
         </div>
@@ -2819,37 +2819,37 @@ function openManageRentalModal(rentalId) {
     <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;">
       <div id="mgChargeBreakdown" style="margin-bottom:10px;"></div>
       <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">
-        <span style="font-size:13px;color:var(--muted);white-space:nowrap;">Amount paid: £</span>
+        <span style="font-size:var(--fs-body);color:var(--muted);white-space:nowrap;">Amount paid: £</span>
         <input class="form-input" type="number" id="mgPaid" value="${paid}" min="0" step="0.5"
           style="width:100px;padding:7px 10px;" oninput="mgUpdateDebt()">
       </div>
       <div style="margin-bottom:8px;">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--fs-body);">
           <input type="checkbox" id="mgFullyPaid" style="accent-color:var(--accent);"
             onchange="if(this.checked){document.getElementById('mgPaid').value=mgComputeTotal().toFixed(2);mgUpdateDebt();}else{document.getElementById('mgPaid').value='';mgUpdateDebt();}">
           Mark as fully paid
         </label>
       </div>
-      <div id="mgDebtDisplay" style="font-size:13px;font-weight:600;color:${debt>0?'var(--danger)':'var(--success)'};">
+      <div id="mgDebtDisplay" style="font-size:var(--fs-body);font-weight:600;color:${debt>0?'var(--danger)':'var(--success)'};">
         ${debt > 0 ? 'Remaining debt: £'+debt : '✓ Fully paid'}
       </div>
     </div>
 
     <div class="section-divider" style="margin-top:12px;">Equipment</div>
     <div style="margin-bottom:8px;">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Given to customer — tap to toggle</div>
+      <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:6px;">Given to customer — tap to toggle</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
         <div class="eq-btn" tabindex="0" role="button" id="mgGivenPhone" data-given="${(r.equipmentGiven?.phone??false)?'1':'0'}" onclick="mgToggleGiven('phone')">📱 Phone</div>
         <div class="eq-btn" tabindex="0" role="button" id="mgGivenSim"   data-given="${(r.equipmentGiven?.sim??true)?'1':'0'}"   onclick="mgToggleGiven('sim')">💳 SIM</div>
         <div class="eq-btn" tabindex="0" role="button" id="mgGivenCharger" data-given="${chargerGiven(r)?'1':'0'}" onclick="mgToggleGiven('charger')">🔌 Charger</div>
       </div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Item status — tap Returned or Lost for each item given</div>
+      <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:6px;">Item status — tap Returned or Lost for each item given</div>
       <div style="display:flex;flex-direction:column;gap:4px;">${eqRows}</div>
     </div>
 
     <div class="section-divider" style="margin-top:12px;">Discount</div>
     <div style="margin-bottom:16px;">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--fs-body);">
         <input type="checkbox" id="mgAddDiscount" style="accent-color:var(--accent);" ${(r.discountValue||0)>0?'checked':''} onchange="document.getElementById('mgDiscountBox').style.display=this.checked?'flex':'none'; mgUpdateCalc()">
         🏷️ Apply discount
       </label>
@@ -2863,7 +2863,7 @@ function openManageRentalModal(rentalId) {
         </div>
         <input type="hidden" id="mgDiscountType" value="${r.discountType||'percent'}">
         <input type="number" id="mgDiscountValue" value="${r.discountValue||0}" min="0" step="0.5"
-          style="width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-secondary);color:var(--text);font-size:13px;" oninput="mgUpdateCalc()">
+          style="width:80px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-secondary);color:var(--text);font-size:var(--fs-body);" oninput="mgUpdateCalc()">
       </div>
     </div>
 
@@ -2950,7 +2950,7 @@ function mgUpdateCalc() {
   const lostInfo   = mgComputeLostCharges();
   const grandTotal = finalPrice + lateFee + lostInfo.total;
   const row = (label, amount, colour) =>
-    `<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px;">
+    `<div style="display:flex;justify-content:space-between;font-size:var(--fs-body);margin-bottom:3px;">
       <span style="color:${colour||'var(--muted)'};">${label}</span>
       <span style="color:${colour||'var(--text)'};">${fmtGbp(amount)}</span>
     </div>`;
@@ -2960,7 +2960,7 @@ function mgUpdateCalc() {
   lostInfo.items.forEach(({ label, amount }) => {
     html += row(label + ' — lost', amount, 'var(--danger)');
   });
-  html += `<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;
+  html += `<div style="display:flex;justify-content:space-between;font-size:var(--fs-body);font-weight:700;
               margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">
              <span>Total</span>
              <span id="mgTotalChargeValue">${fmtGbp(grandTotal)}</span>
@@ -3032,7 +3032,7 @@ async function saveManageRental(rentalId) {
     title: 'Confirm rental charge change',
     body: `<strong>${escHtml(r.customerName || 'Customer')}</strong><br>
       Rental ${fmtGbp(newPrice)}${savedLateFee > 0 ? ` + late fee ${fmtGbp(savedLateFee)}` : ''}${lostInfo.total > 0 ? ` + lost items ${fmtGbp(lostInfo.total)}` : ''}<br>
-      <span style="color:var(--muted);font-size:12px;">was ${fmtGbp(oldGrand)}</span>`,
+      <span style="color:var(--muted);font-size:var(--fs-small);">was ${fmtGbp(oldGrand)}</span>`,
     amount: grandTotal,
     okLabel: 'Apply charges',
   }))) return;
@@ -3250,7 +3250,7 @@ function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm cha
     el.innerHTML = `
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="kcConfirmTitle" style="width:430px;">
         <div class="modal-title" id="kcConfirmTitle">${escHtml(title)}</div>
-        <div style="font-size:14px;line-height:1.65;margin:4px 0 10px;color:var(--text);">${body}</div>
+        <div style="font-size:var(--fs-ui);line-height:1.65;margin:4px 0 10px;color:var(--text);">${body}</div>
         ${amount !== null ? `<div style="font-size:24px;font-weight:700;margin:0 0 16px;font-feature-settings:'tnum';">${fmtGbp(Number(amount))}</div>` : ''}
         <div class="modal-actions">
           <button class="btn btn-outline" onclick="kcConfirmDone(false)">Cancel</button>
@@ -3522,7 +3522,7 @@ function renderCustomersTab() {
     <div class="section-header">
       <div class="section-title">Customer List</div>
       <div style="display:flex;gap:8px;align-items:center;">
-        <select class="form-input" style="width:180px;padding:6px 10px;font-size:13px;min-height:0;"
+        <select class="form-input" style="width:180px;padding:6px 10px;font-size:var(--fs-body);min-height:0;"
           onchange="customerFilter=this.value; renderTableRows()">
           <option value="all" ${customerFilter==='all'?'selected':''}>Filter: everyone</option>
           <option value="rental" ${customerFilter==='rental'?'selected':''}>📱 Active rental</option>
@@ -3533,7 +3533,7 @@ function renderCustomersTab() {
           <option value="arrears" ${customerFilter==='arrears'?'selected':''}>💰 In arrears</option>
           <option value="passport" ${customerFilter==='passport'?'selected':''}>🛂 Passport on file</option>
         </select>
-        <select class="form-input" style="width:170px;padding:6px 10px;font-size:13px;min-height:0;"
+        <select class="form-input" style="width:170px;padding:6px 10px;font-size:var(--fs-body);min-height:0;"
           onchange="customerSort=this.value; renderTableRows()">
           <option value="name" ${customerSort==='name'?'selected':''}>Sort: Name A–Z</option>
           <option value="name_desc" ${customerSort==='name_desc'?'selected':''}>Name Z–A</option>
@@ -3692,7 +3692,7 @@ function renderTableRows() {
         <div class="customer-email">${escHtml(c.email || '')}${c.accountEmail ? `${c.email ? '<br>' : ''}<span title="Account/login email (Lebara etc.) — not for contacting the customer" style="color:var(--muted);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''}</div>
       </td>
       <td class="kc-phone">${c.phone ? escHtml(fmtPhone(c.phone)) : '—'}</td>
-      <td>${services || '<span style="color:var(--muted);font-size:12px;">None</span>'}</td>
+      <td>${services || '<span style="color:var(--muted);font-size:var(--fs-small);">None</span>'}</td>
       <td style="color: ${customerDebt > 0 ? 'var(--danger)' : (customerCredit > 0 ? 'var(--accent)' : 'var(--success)')}; font-weight: 700;">${
         customerDebt > 0 ? `${fmtGbp(customerDebt)} debt`
         : customerCredit > 0 ? `${fmtGbp(customerCredit)} credit`
@@ -3881,7 +3881,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   const dotColor = { rental: 'dot-blue', vn: 'dot-purple', sim: 'dot-sim', payment: 'dot-green' };
 
   const historyHTML = history.length === 0
-    ? `<div style="color:var(--muted);font-size:13px;padding:10px 0;">No history yet.</div>`
+    ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:10px 0;">No history yet.</div>`
     : history.slice().reverse().map(h => `
         <div class="history-item">
           <div class="history-main">
@@ -3908,11 +3908,11 @@ function buildCustomerPanelHtml(c, mode = 'card') {
     ...otherServices,
   ];
   const servicesHTML = allActiveServices.length === 0
-    ? `<span style="color:var(--muted);font-size:13px;">No active services yet — add one from “New Service” below.</span>`
+    ? `<span style="color:var(--muted);font-size:var(--fs-body);">No active services yet — add one from “New Service” below.</span>`
     : allActiveServices.map(s => s.simId
         // SIM badges open the manage modal (it stacks above this card overlay).
-        ? `<button class="badge badge-${s.type}" style="font-size:12px;padding:5px 12px;border:0;cursor:pointer;font-family:inherit;" onclick="openManageSimModal('${escHtml(String(s.simId))}')" title="Open this SIM plan">${escHtml(s.label)}</button>`
-        : `<span class="badge badge-${s.type}" style="font-size:12px;padding:5px 12px;">${escHtml(s.label)}</span>`).join('');
+        ? `<button class="badge badge-${s.type}" style="font-size:var(--fs-small);padding:5px 12px;border:0;cursor:pointer;font-family:inherit;" onclick="openManageSimModal('${escHtml(String(s.simId))}')" title="Open this SIM plan">${escHtml(s.label)}</button>`
+        : `<span class="badge badge-${s.type}" style="font-size:var(--fs-small);padding:5px 12px;">${escHtml(s.label)}</span>`).join('');
 
   // ── Trip bundle: the next flight as a unit — flight + phone + SIM + VN,
   // with what's missing flagged (travel-agent pattern).
@@ -3927,7 +3927,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
     const simCover = sims.find(s => s.customerId === c.id && s.status === 'active');
     const vnCover = virtualNumbers.find(v => v.customerId === c.id && v.status === 'Active');
     const item = (ok, okLabel, missingLabel, fixHtml) => `
-      <div style="display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0;">
+      <div style="display:flex;align-items:center;gap:8px;font-size:var(--fs-body);padding:4px 0;">
         <span>${ok ? '✅' : '⚠️'}</span>
         <span style="flex:1;">${ok ? okLabel : missingLabel}</span>
         ${!ok ? fixHtml : ''}
@@ -3939,19 +3939,19 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         ${item(!!phoneCover,
           `Phone covered — ${escHtml(phoneCover?.phoneNumber || '')} until ${fmtDate(phoneCover?.toDate)}`,
           'No rental phone covering the travel date',
-          `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openNewRentalModal('${c.id}')">📱 Book a phone</button>`)}
+          `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="openNewRentalModal('${c.id}')">📱 Book a phone</button>`)}
         ${item(!!simCover,
           `SIM plan active — ${escHtml(simCover?.provider || '')}`,
           'No active SIM plan',
-          `<span style="color:var(--muted);font-size:11px;">add via SIM Plans tab</span>`)}
+          `<span style="color:var(--muted);font-size:var(--fs-micro);">add via SIM Plans tab</span>`)}
         ${item(!!vnCover,
           `Virtual number — ${escHtml(fmtPhone(vnCover?.number || ''))}`,
           'No virtual number (family cannot call locally)',
-          `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openNewVNModal('${c.id}')">🔢 Add a number</button>`)}
+          `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="openNewVNModal('${c.id}')">🔢 Add a number</button>`)}
         ${item(nextTrip.hasPassportDetails,
           'Passport details on file',
           nextTrip.passportOnFile ? 'Passport marked on file — but no details entered' : 'Passport not on file',
-          `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openPassengersModal('${nextTrip.id}')">🛂 Add details</button>`)}
+          `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="openPassengersModal('${nextTrip.id}')">🛂 Add details</button>`)}
       </div>`;
   }
 
@@ -3959,8 +3959,8 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   // stub: notes weren't shown and reminders saved to the customer never
   // surfaced on the card).
   const notesHtml = c.notes ? `
-      <div style="background:var(--bg-secondary);border-left:3px solid var(--gold);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--text);white-space:pre-wrap;">
-        <span style="color:var(--muted);font-size:11px;display:block;margin-bottom:2px;">📝 Notes</span>${escHtml(c.notes)}
+      <div style="background:var(--bg-secondary);border-left:3px solid var(--gold);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:var(--fs-body);color:var(--text);white-space:pre-wrap;">
+        <span style="color:var(--muted);font-size:var(--fs-micro);display:block;margin-bottom:2px;">📝 Notes</span>${escHtml(c.notes)}
       </div>` : '';
   const custTasks = (tasksList || []).filter(t => t.customerId === c.id && !t.done)
     .sort((a, b) => String(a.dueDate || '').localeCompare(String(b.dueDate || '')));
@@ -3968,10 +3968,10 @@ function buildCustomerPanelHtml(c, mode = 'card') {
       <div class="section-divider">⏰ Open reminders & tasks</div>
       <div style="margin-bottom:16px;">
         ${custTasks.slice(0, 6).map(t => `
-          <div style="display:flex;align-items:center;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:8px;font-size:var(--fs-body);padding:5px 0;border-bottom:1px solid var(--border);">
             <span>${t.priority === 'High' ? '🔴' : t.priority === 'Medium' ? '🟡' : '⚪'}</span>
             <span style="flex:1;min-width:0;">${escHtml(t.title || '')}</span>
-            ${t.dueDate ? `<span style="color:var(--muted);font-size:11px;white-space:nowrap;">${fmtDate(t.dueDate)}</span>` : ''}
+            ${t.dueDate ? `<span style="color:var(--muted);font-size:var(--fs-micro);white-space:nowrap;">${fmtDate(t.dueDate)}</span>` : ''}
           </div>`).join('')}
       </div>` : '';
 
@@ -3986,21 +3986,21 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         <div class="history-item" style="align-items:flex-start;gap:8px;">
           <span style="width:20px;flex-shrink:0;text-align:center;">${e.icon}</span>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;color:var(--text);">${escHtml(e.title)}</div>
-            <div style="font-size:11px;color:var(--muted);">${escHtml(e.cat)}${e.sub ? ' · ' + escHtml(e.sub) : ''}</div>
+            <div style="font-size:var(--fs-body);color:var(--text);">${escHtml(e.title)}</div>
+            <div style="font-size:var(--fs-micro);color:var(--muted);">${escHtml(e.cat)}${e.sub ? ' · ' + escHtml(e.sub) : ''}</div>
           </div>
-          ${withDate && e.date ? `<span style="font-size:11px;color:var(--muted);white-space:nowrap;">${fmtDate(e.date)}</span>` : ''}
-          ${e.amount ? `<span style="font-size:12px;color:var(--muted);white-space:nowrap;">${fmtGbp(Number(e.amount))}</span>` : ''}
+          ${withDate && e.date ? `<span style="font-size:var(--fs-micro);color:var(--muted);white-space:nowrap;">${fmtDate(e.date)}</span>` : ''}
+          ${e.amount ? `<span style="font-size:var(--fs-small);color:var(--muted);white-space:nowrap;">${fmtGbp(Number(e.amount))}</span>` : ''}
         </div>`;
   const timelineHtml = timeline.length === 0
-    ? `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No activity yet.</div>`
+    ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:6px 0;">No activity yet.</div>`
     : timeline.map(e => timelineRow(e, false)).join('');
 
   const headerHtml = `
       <div class="detail-header">
         <div class="avatar">${initials}</div>
         <div class="detail-headline">
-          <div class="detail-name">${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:16px;">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
+          <div class="detail-name">${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:var(--fs-lead);">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
           <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${waLink(c, '') ? ` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
         </div>
         <!-- Grouped by what the button DOES, not by the order they were added.
@@ -4056,19 +4056,19 @@ function buildCustomerPanelHtml(c, mode = 'card') {
 
       <div class="section-divider">💰 Wallet</div>
       <div id="walletSection-${c.id}" style="margin-bottom:18px;">
-        <div style="color:var(--muted);font-size:13px;padding:6px 0;">Loading wallet…</div>
+        <div style="color:var(--muted);font-size:var(--fs-body);padding:6px 0;">Loading wallet…</div>
       </div>
 
       <div class="section-divider">📄 Documents</div>
       <div id="docsSection-${c.id}" style="margin-bottom:18px;">
-        <div style="color:var(--muted);font-size:13px;padding:6px 0;">Loading documents…</div>
+        <div style="color:var(--muted);font-size:var(--fs-body);padding:6px 0;">Loading documents…</div>
       </div>`;
 
   const historyDetailsHtml = `
       <details style="margin-top:18px;margin-bottom:6px;">
-        <summary style="cursor:pointer;font-weight:600;color:var(--text);font-size:13px;padding:6px 0;border-top:1px solid var(--border);">
+        <summary style="cursor:pointer;font-weight:600;color:var(--text);font-size:var(--fs-body);padding:6px 0;border-top:1px solid var(--border);">
           📋 Full history — ${timeline.length} record${timeline.length === 1 ? '' : 's'}${lifetimeSpend > 0 ? ` · ${fmtGbp(lifetimeSpend)} lifetime` : ''}
-          ${timelineSummary ? `<div style="font-weight:400;color:var(--muted);font-size:11px;margin-top:2px;">${escHtml(timelineSummary)}</div>` : ''}
+          ${timelineSummary ? `<div style="font-weight:400;color:var(--muted);font-size:var(--fs-micro);margin-top:2px;">${escHtml(timelineSummary)}</div>` : ''}
         </summary>
         <div style="max-height:300px;overflow-y:auto;margin-top:8px;">${timelineHtml}</div>
       </details>`;
@@ -4113,10 +4113,10 @@ function buildCustomerPanelHtml(c, mode = 'card') {
     bodyHtml = `
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
         <div class="kc-cat-chips">${[chip('all', 'All', timeline.length), ...cats.map(k => chip(k, k, catCounts[k]))].join('')}</div>
-        ${lifetimeSpend > 0 ? `<span style="font-size:12px;color:var(--muted);white-space:nowrap;">${fmtGbp(lifetimeSpend)} lifetime</span>` : ''}
+        ${lifetimeSpend > 0 ? `<span style="font-size:var(--fs-small);color:var(--muted);white-space:nowrap;">${fmtGbp(lifetimeSpend)} lifetime</span>` : ''}
       </div>
       ${shown.length === 0
-        ? `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No activity ${cat === 'all' ? 'yet' : 'in this category yet'}.</div>`
+        ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:6px 0;">No activity ${cat === 'all' ? 'yet' : 'in this category yet'}.</div>`
         : shown.map(e => timelineRow(e, true)).join('')}`;
   } else {
     bodyHtml = overviewHtml + newServiceHtml;
@@ -4200,9 +4200,9 @@ function renderCustomerPage(id) {
     customerPageId = null;
     main.innerHTML = `${crumb}
       <div class="detail-panel" style="text-align:center;padding:40px 20px;">
-        <div style="font-size:28px;margin-bottom:8px;">👤</div>
+        <div style="font-size:var(--fs-hero);margin-bottom:8px;">👤</div>
         <div style="font-weight:500;margin-bottom:4px;">Customer not found</div>
-        <div style="color:var(--muted);font-size:13px;">This link may be old, or the record was merged or deleted.</div>
+        <div style="color:var(--muted);font-size:var(--fs-body);">This link may be old, or the record was merged or deleted.</div>
       </div>`;
     return;
   }
@@ -4244,9 +4244,9 @@ async function loadDocsSection(custId) {
   try {
     const r = await kcFetch(`/api/documents?customerId=${encodeURIComponent(custId)}`);
     const d = await r.json();
-    if (!d.success) { el.innerHTML = `<div style="color:var(--muted);font-size:13px;">${escHtml(d.error || 'Documents unavailable.')}</div>`; return; }
+    if (!d.success) { el.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-body);">${escHtml(d.error || 'Documents unavailable.')}</div>`; return; }
     renderDocsSection(custId, d.documents || []);
-  } catch { el.innerHTML = `<div style="color:var(--muted);font-size:13px;">Couldn’t load documents.</div>`; }
+  } catch { el.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-body);">Couldn’t load documents.</div>`; }
 }
 function renderDocsSection(custId, docs) {
   const el = document.getElementById(`docsSection-${custId}`);
@@ -4255,30 +4255,30 @@ function renderDocsSection(custId, docs) {
   const others = docs.filter(d => !(d.source === 'customer' && d.status === 'pending'));
   const dl = (id) => `window.open('/api/documents/download?id=${encodeURIComponent(id)}','_blank')`;
   const row = (d) => `
-    <div id="doc-row-${escHtml(d.id)}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
+    <div id="doc-row-${escHtml(d.id)}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:var(--fs-body);">
       <span style="flex:1;">${escHtml(d.filename)}
-        <span style="color:var(--muted);font-size:11px;"> · ${d.source === 'customer' ? 'from customer' : 'shared'}${d.status !== 'published' ? ` · ${escHtml(d.status)}` : ''}${d.status === 'rejected' && d.note ? ` — “${escHtml(d.note)}”` : ''}</span></span>
+        <span style="color:var(--muted);font-size:var(--fs-micro);"> · ${d.source === 'customer' ? 'from customer' : 'shared'}${d.status !== 'published' ? ` · ${escHtml(d.status)}` : ''}${d.status === 'rejected' && d.note ? ` — “${escHtml(d.note)}”` : ''}</span></span>
       ${d.status === 'rejected' ? '' : `<button class="action-btn" title="Download" onclick="${dl(d.id)}">⬇︎</button>`}
       <button class="action-btn danger" title="Delete" onclick="deleteCustomerDoc('${custId}','${d.id}')">✕</button>
     </div>`;
   const pendingHtml = pending.length ? `
     <div style="background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:8px 10px;margin-bottom:8px;">
-      <div style="font-size:11px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">⏳ Customer uploads — awaiting review</div>
+      <div style="font-size:var(--fs-micro);font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">⏳ Customer uploads — awaiting review</div>
       ${pending.map(d => `
-        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;">
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:var(--fs-body);">
           <span style="flex:1;">${escHtml(d.filename)}</span>
           <button class="action-btn" title="View" onclick="${dl(d.id)}">👁</button>
-          <button class="btn btn-primary btn-sm" style="font-size:11px;padding:3px 10px;" onclick="reviewCustomerDoc('${custId}','${d.id}','approve')">✓ Approve</button>
-          <button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="reviewCustomerDoc('${custId}','${d.id}','reject')">Reject</button>
+          <button class="btn btn-primary btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="reviewCustomerDoc('${custId}','${d.id}','approve')">✓ Approve</button>
+          <button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="reviewCustomerDoc('${custId}','${d.id}','reject')">Reject</button>
         </div>`).join('')}
     </div>` : '';
   const listHtml = others.length ? others.map(row).join('')
-    : (pending.length ? '' : `<div style="color:var(--muted);font-size:13px;padding:4px 0;">No documents yet.</div>`);
+    : (pending.length ? '' : `<div style="color:var(--muted);font-size:var(--fs-body);padding:4px 0;">No documents yet.</div>`);
   el.innerHTML = pendingHtml + listHtml + `
     <div style="margin-top:10px;" id="docStage-${custId}">
       <input type="file" id="docUpload-${custId}" accept="image/*,application/pdf" style="display:none;" onchange="stageCustomerDoc('${custId}', this)">
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('docUpload-${custId}').click()">⬆︎ Upload &amp; share</button>
-      <span id="docMsg-${custId}" style="font-size:11px;color:var(--muted);margin-left:8px;"></span>
+      <span id="docMsg-${custId}" style="font-size:var(--fs-micro);color:var(--muted);margin-left:8px;"></span>
     </div>`;
 }
 // Picking a file only STAGES it — same contract as the customer's portal
@@ -4293,11 +4293,11 @@ function stageCustomerDoc(custId, input) {
   const st = document.getElementById(`docStage-${custId}`);
   if (!st) return;
   st.innerHTML = `
-    <span style="font-size:13px;">${escHtml(file.name)}
-      <span style="color:var(--muted);font-size:11px;"> · ${Math.max(1, Math.round(file.size / 1024))} KB</span></span>
+    <span style="font-size:var(--fs-body);">${escHtml(file.name)}
+      <span style="color:var(--muted);font-size:var(--fs-micro);"> · ${Math.max(1, Math.round(file.size / 1024))} KB</span></span>
     <button class="btn btn-primary btn-sm" style="margin-left:8px;" onclick="uploadCustomerDoc('${custId}')">✓ Share with customer</button>
     <button class="btn btn-outline btn-sm" onclick="delete kcStagedDoc['${custId}']; loadDocsSection('${custId}')">Cancel</button>
-    <span id="docMsg-${custId}" style="font-size:11px;color:var(--muted);margin-left:8px;"></span>`;
+    <span id="docMsg-${custId}" style="font-size:var(--fs-micro);color:var(--muted);margin-left:8px;"></span>`;
 }
 async function uploadCustomerDoc(custId) {
   const file = kcStagedDoc[custId];
@@ -4389,7 +4389,7 @@ function openPaymentLinkModal(custId) {
   if (!c) return;
   showDynamicModal(`
     <div class="modal-title">🔗 Payment link — ${escHtml(c.firstName)} ${escHtml(c.lastName)}</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Creates a Stripe pay-by-card link tied to this customer. When they pay, it's credited to their wallet automatically. Copy it and send it however you message this customer.</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">Creates a Stripe pay-by-card link tied to this customer. When they pay, it's credited to their wallet automatically. Copy it and send it however you message this customer.</div>
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">Amount (£)</label>
@@ -4402,7 +4402,7 @@ function openPaymentLinkModal(custId) {
     </div>
     <div class="form-group form-full" id="plResultWrap" style="display:none;">
       <label class="form-label">Payment link <span style="color:var(--muted);font-weight:400;">— copy &amp; send</span></label>
-      <input class="form-input" id="plResult" readonly onclick="this.select()" style="font-family:monospace;font-size:12px;">
+      <input class="form-input" id="plResult" readonly onclick="this.select()" style="font-family:monospace;font-size:var(--fs-small);">
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
@@ -4485,7 +4485,7 @@ function openElidModal(customerId) {
   const cid = escHtml(String(customerId));
   showDynamicModal(`
     <div class="modal-title">📡 ELID accounts — ${escHtml(c.firstName)} ${escHtml(c.lastName)}</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Live balance &amp; status on the ELID telecom switch. Read-only. A customer can have more than one line (e.g. a main line and a calling-card) — the ★ primary is summarised on the card.</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Live balance &amp; status on the ELID telecom switch. Read-only. A customer can have more than one line (e.g. a main line and a calling-card) — the ★ primary is summarised on the card.</div>
     <div id="elidLines"></div>
     <div style="display:flex;gap:8px;align-items:flex-end;margin-top:12px;">
       <div class="form-group form-full" style="flex:1;margin:0;">
@@ -4510,11 +4510,11 @@ function renderElidLines(customerId) {
     <div class="elid-line" data-u="${escHtml(u)}" style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
         <div style="min-width:0;"><code>${escHtml(u)}</code> ${i === 0
-          ? '<span title="Primary — summarised on the customer card" style="color:var(--gold);font-size:11px;white-space:nowrap;">★ primary</span>'
-          : `<button style="font-size:11px;background:none;border:0;color:var(--accent);cursor:pointer;padding:0;" onclick="elidSetPrimary('${cid}','${escHtml(u)}')">make primary</button>`}</div>
-        <button class="card-tool" style="width:28px;height:28px;font-size:13px;" title="Unlink this line" aria-label="Unlink line" onclick="elidRemoveLine('${cid}','${escHtml(u)}')">✕</button>
+          ? '<span title="Primary — summarised on the customer card" style="color:var(--gold);font-size:var(--fs-micro);white-space:nowrap;">★ primary</span>'
+          : `<button style="font-size:var(--fs-micro);background:none;border:0;color:var(--accent);cursor:pointer;padding:0;" onclick="elidSetPrimary('${cid}','${escHtml(u)}')">make primary</button>`}</div>
+        <button class="card-tool" style="width:28px;height:28px;font-size:var(--fs-body);" title="Unlink this line" aria-label="Unlink line" onclick="elidRemoveLine('${cid}','${escHtml(u)}')">✕</button>
       </div>
-      <div class="elid-bal" style="margin-top:8px;font-size:13px;color:var(--muted);">Looking up…</div>
+      <div class="elid-bal" style="margin-top:8px;font-size:var(--fs-body);color:var(--muted);">Looking up…</div>
     </div>`).join('');
   lines.forEach(u => elidLoadLine(customerId, u));
 }
@@ -4531,7 +4531,7 @@ async function elidLoadLine(customerId, u) {
     const balTxt = a.balance == null ? '—' : `${owes ? '−' : ''}${fmtGbp(Math.abs(a.balance))}`;
     const balColor = a.balance == null ? 'var(--muted)' : owes ? 'var(--danger)' : 'var(--success)';
     const status = a.blocked ? '<span style="color:var(--danger);">Blocked</span>' : a.active ? '<span style="color:var(--success);">Active</span>' : 'Inactive';
-    cell.innerHTML = `<span style="font-size:18px;font-weight:700;color:${balColor};">${balTxt}</span> <span style="font-size:11px;color:var(--muted);">${a.balance == null ? '' : owes ? 'owing' : 'in credit'}</span> · ${status} · ${escHtml(a.account || '—')} · tariff ${escHtml(String(a.tariffId || '—'))} <span style="color:var(--muted);">· ELID #${escHtml(String(a.userid || '—'))}</span>`;
+    cell.innerHTML = `<span style="font-size:var(--fs-title);font-weight:700;color:${balColor};">${balTxt}</span> <span style="font-size:var(--fs-micro);color:var(--muted);">${a.balance == null ? '' : owes ? 'owing' : 'in credit'}</span> · ${status} · ${escHtml(a.account || '—')} · tariff ${escHtml(String(a.tariffId || '—'))} <span style="color:var(--muted);">· ELID #${escHtml(String(a.userid || '—'))}</span>`;
   } catch { cell.innerHTML = `<span style="color:var(--danger);">Could not reach ELID.</span>`; }
 }
 async function elidAddLine(customerId) {
@@ -4583,8 +4583,8 @@ function openElidMatchModal() {
   elidMatchStop = false;
   showDynamicModal(`
     <div class="modal-title">🔗 Match customers to ELID</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Goes through every customer, guesses their ELID username from the name, and — <strong>only when ELID confirms the account and the name matches</strong> — saves the link on the customer. Read-only against ELID; nothing is mislinked and no new customers are created. Safe to stop anytime.</div>
-    <div id="emProg" style="font-size:13px;margin-bottom:8px;">Ready when you are.</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">Goes through every customer, guesses their ELID username from the name, and — <strong>only when ELID confirms the account and the name matches</strong> — saves the link on the customer. Read-only against ELID; nothing is mislinked and no new customers are created. Safe to stop anytime.</div>
+    <div id="emProg" style="font-size:var(--fs-body);margin-bottom:8px;">Ready when you are.</div>
     <div id="emList" style="max-height:220px;overflow:auto;font-size:var(--fs-body);border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:none;"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="elidMatchStop=true;closeDynamicModal()">Close</button>
@@ -4638,7 +4638,7 @@ async function runElidMatch() {
 // CREATE). Creation pulls each account's real name live from ELID, so imported
 // customers are named correctly; internal/test accounts are pre-unticked.
 async function openElidImportModal() {
-  showDynamicModal(`<div class="modal-title">📥 Import ELID accounts</div><div id="eiBody" style="font-size:13px;color:var(--muted);">Loading ELID accounts…</div>`);
+  showDynamicModal(`<div class="modal-title">📥 Import ELID accounts</div><div id="eiBody" style="font-size:var(--fs-body);color:var(--muted);">Loading ELID accounts…</div>`);
   try {
     const r = await kcFetch('/api/elid/accounts');
     const j = await r.json().catch(() => ({}));
@@ -4727,21 +4727,21 @@ function renderElidImport(accounts) {
   }
   const possible = exact.length + fuzzy.length;
   const linkRow = (a, checked, hint) =>
-    `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;">
+    `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:var(--fs-body);">
       <input type="checkbox" class="ei-link" data-u="${escHtml(a.username)}" data-cid="${escHtml(String(a.match.id))}" ${checked ? 'checked' : ''}>
-      <span style="flex:1;"><code>${escHtml(a.username)}</code> → ${escHtml(a.match.firstName || '')} ${escHtml(a.match.lastName || '')}${hint ? ` <span style="color:var(--warning,#b7791f);font-size:11px;">${hint}</span>` : ''}</span>
+      <span style="flex:1;"><code>${escHtml(a.username)}</code> → ${escHtml(a.match.firstName || '')} ${escHtml(a.match.lastName || '')}${hint ? ` <span style="color:var(--warning,#b7791f);font-size:var(--fs-micro);">${hint}</span>` : ''}</span>
     </label>`;
   const exactRows = exact.map((a) => linkRow(a, true, '')).join('');
   const fuzzyRows = fuzzy.map((a) => linkRow(a, false, 'similar — check')).join('');
-  const possRows = (exactRows + fuzzyRows) || '<div style="color:var(--muted);font-size:12px;">None.</div>';
+  const possRows = (exactRows + fuzzyRows) || '<div style="color:var(--muted);font-size:var(--fs-small);">None.</div>';
   const freshRows = fresh.map((a) =>
-    `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;">
+    `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:var(--fs-body);">
       <input type="checkbox" class="ei-new" data-u="${escHtml(a.username)}" ${a.internal ? '' : 'checked'}>
-      <span style="flex:1;">${escHtml(a.username)}</span>${a.internal ? '<span style="font-size:11px;color:var(--warning,#b7791f);">internal?</span>' : ''}
-    </label>`).join('') || '<div style="color:var(--muted);font-size:12px;">None — every new account is either linked or matched.</div>';
+      <span style="flex:1;">${escHtml(a.username)}</span>${a.internal ? '<span style="font-size:var(--fs-micro);color:var(--warning,#b7791f);">internal?</span>' : ''}
+    </label>`).join('') || '<div style="color:var(--muted);font-size:var(--fs-small);">None — every new account is either linked or matched.</div>';
   showDynamicModal(`
     <div class="modal-title">📥 Import ELID accounts</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">${linked.length} already linked · ${possible} likely existing (${exact.length} same spelling + ${fuzzy.length} similar) · ${fresh.length} new. Nothing happens until you press a button. Names for new customers are pulled live from ELID.</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">${linked.length} already linked · ${possible} likely existing (${exact.length} same spelling + ${fuzzy.length} similar) · ${fresh.length} new. Nothing happens until you press a button. Names for new customers are pulled live from ELID.</div>
     <div class="section-divider" style="margin:6px 0;">Likely already a customer — link instead <span style="color:var(--muted);font-weight:400;">(${possible})</span></div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin:0 0 6px;">Exact matches are pre-ticked; “similar — check” are spelling-variant guesses left un-ticked — tick the ones that are really the same person.</div>
     <div style="max-height:150px;overflow:auto;">${possRows}</div>
@@ -4815,7 +4815,7 @@ function openCustomerById(id) {
 // customers against the whole book and lists likely-duplicate pairs to review.
 // Read-only — nothing merges; click a name to open that customer.
 async function openDupScanModal() {
-  showDynamicModal(`<div class="modal-title">👥 Find duplicate customers</div><div id="dupBody" style="font-size:13px;color:var(--muted);">Scanning the ELID-imported customers against the whole book…</div>`);
+  showDynamicModal(`<div class="modal-title">👥 Find duplicate customers</div><div id="dupBody" style="font-size:var(--fs-body);color:var(--muted);">Scanning the ELID-imported customers against the whole book…</div>`);
   try {
     const r = await kcFetch('/api/customers/duplicates');
     const j = await r.json().catch(() => ({}));
@@ -4842,17 +4842,17 @@ function renderDupScan(j) {
       merge = mBtn(p.b.id, p.a.id, '⌫ merge → keep ' + escHtml(p.a.name));
     }
     return `<div style="padding:8px 0;border-bottom:1px solid var(--border);">
-      <div style="display:flex;align-items:center;gap:8px;font-size:13px;">
+      <div style="display:flex;align-items:center;gap:8px;font-size:var(--fs-body);">
         <button style="flex:1;text-align:start;background:none;border:0;color:var(--accent);cursor:pointer;padding:0;" onclick="openCustomerById('${escHtml(p.a.id)}')">${tag(p.a)}</button>
         <span style="color:var(--muted);">⇄</span>
         <button style="flex:1;text-align:start;background:none;border:0;color:var(--accent);cursor:pointer;padding:0;" onclick="openCustomerById('${escHtml(p.b.id)}')">${tag(p.b)}</button>
       </div>
       ${merge ? `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">${merge}</div>` : ''}
     </div>`;
-  }).join('') || '<div style="color:var(--success);font-size:13px;">No likely duplicates found. 🎉</div>';
+  }).join('') || '<div style="color:var(--success);font-size:var(--fs-body);">No likely duplicates found. 🎉</div>';
   showDynamicModal(`
     <div class="modal-title">👥 Find duplicate customers</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">${j.count} possible duplicate pair${j.count === 1 ? '' : 's'} among the ${j.seeds} ELID-imported customers. Click a name to open the customer. <strong>Merge</strong> moves the ELID line onto the record you keep and deletes the empty import — only offered when one side is an ELID import, and never for a record with money history.</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">${j.count} possible duplicate pair${j.count === 1 ? '' : 's'} among the ${j.seeds} ELID-imported customers. Click a name to open the customer. <strong>Merge</strong> moves the ELID line onto the record you keep and deletes the empty import — only offered when one side is an ELID import, and never for a record with money history.</div>
     <div style="max-height:360px;overflow:auto;">${rows}</div>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
   `);
@@ -4931,7 +4931,7 @@ async function loadWalletSection(customerId) {
   try { data = await window.api.getLedger(customerId); }
   catch { data = null; }
   if (!data || !data.success) {
-    if (el) el.innerHTML = `<div style="color:var(--muted);font-size:12px;">Wallet unavailable${data?.error ? ' — ' + escHtml(data.error) : ''}.</div>`;
+    if (el) el.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-small);">Wallet unavailable${data?.error ? ' — ' + escHtml(data.error) : ''}.</div>`;
     return;
   }
   const bal = data.balance || 0;
@@ -4954,7 +4954,7 @@ async function loadWalletSection(customerId) {
   if (!el) return; // Activity tab: headline stat filled — no wallet box on screen
   const RECEIPTABLE = { phone_sale: 'sale', stock_sale: 'sale', payment: 'payment', top_up: 'payment' };
   const entriesHtml = data.entries.length === 0
-    ? `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No wallet activity yet — record a payment or charge to start the ledger.</div>`
+    ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:6px 0;">No wallet activity yet — record a payment or charge to start the ledger.</div>`
     : data.entries.slice(0, 8).map((e, i) => `
         <div class="history-item">
           <div class="history-main">
@@ -4964,19 +4964,19 @@ async function loadWalletSection(customerId) {
           <div class="history-date" style="margin:0 16px;">${fmtDate(e.at)}</div>
           <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--danger)'};">
             ${e.amount >= 0 ? '+' : '−'}${fmtGbp(Math.abs(e.amount))}</div>
-          ${RECEIPTABLE[e.type] && Math.abs(e.amount) >= 0.005 ? `<button class="btn btn-secondary" style="font-size:11px;padding:3px 8px;margin-left:10px;"
+          ${RECEIPTABLE[e.type] && Math.abs(e.amount) >= 0.005 ? `<button class="btn btn-secondary" style="font-size:var(--fs-micro);padding:3px 8px;margin-left:10px;"
             title="Email a receipt for this entry" onclick="emailLedgerReceipt(this, '${escHtml(customerId)}', ${i})">✉️</button>` : ''}
-          ${e.type === 'payment' && e.method === 'card' && typeof e.reference === 'string' && /^STRIPE-pi_/.test(e.reference) ? `<button class="btn btn-secondary" style="font-size:11px;padding:3px 8px;margin-left:6px;"
+          ${e.type === 'payment' && e.method === 'card' && typeof e.reference === 'string' && /^STRIPE-pi_/.test(e.reference) ? `<button class="btn btn-secondary" style="font-size:var(--fs-micro);padding:3px 8px;margin-left:6px;"
             title="Refund this card payment back to the card" onclick="openRefundModal('${escHtml(customerId)}', ${i})">↩️ Refund</button>` : ''}
         </div>`).join('');
 
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
-      <span class="badge" style="font-size:14px;padding:7px 16px;white-space:nowrap;background:${bal < 0 ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)'};color:${balColor};">
+      <span class="badge" style="font-size:var(--fs-ui);padding:7px 16px;white-space:nowrap;background:${bal < 0 ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)'};color:${balColor};">
         Balance: ${balLabel}</span>
-      <button class="btn btn-primary" style="font-size:12px;padding:6px 14px;"
+      <button class="btn btn-primary" style="font-size:var(--fs-small);padding:6px 14px;"
         onclick="openWalletModal('${escHtml(customerId)}', ${Number(bal) || 0})">💰 Record payment / credit</button>
-      ${data.entries.length > 8 ? `<span style="color:var(--muted);font-size:11px;">showing 8 of ${data.entries.length}</span>` : ''}
+      ${data.entries.length > 8 ? `<span style="color:var(--muted);font-size:var(--fs-micro);">showing 8 of ${data.entries.length}</span>` : ''}
     </div>
     <div class="history-list">${entriesHtml}</div>`;
   renderNextBestAction(customerId, bal);
@@ -5043,11 +5043,11 @@ function openRefundModal(customerId, idx) {
   const max = Math.abs(Number(e.amount) || 0);
   showDynamicModal(`
     <div class="modal-title">↩️ Refund card payment</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Refunds money back to the customer's card via Stripe and removes the matching wallet credit. Original payment: <strong>${fmtGbp(max)}</strong>${e.description ? ' · ' + escHtml(e.description) : ''}.</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">Refunds money back to the customer's card via Stripe and removes the matching wallet credit. Original payment: <strong>${fmtGbp(max)}</strong>${e.description ? ' · ' + escHtml(e.description) : ''}.</div>
     <div class="form-group form-full">
       <label class="form-label">Amount to refund</label>
       <input class="form-input" id="rfAmount" type="number" step="0.01" min="0.01" max="${max}" value="${max.toFixed(2)}">
-      <span style="font-size:11px;color:var(--muted);">Up to ${fmtGbp(max)}. Leave as-is for a full refund.</span>
+      <span style="font-size:var(--fs-micro);color:var(--muted);">Up to ${fmtGbp(max)}. Leave as-is for a full refund.</span>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
@@ -5186,7 +5186,7 @@ function openDraftReminderModal(customerId) {
   const draft = buildReminderDraft(c);
   showDynamicModal(`
     <div class="modal-title">✉️ Draft reminder — ${escHtml(c.firstName)} ${escHtml(c.lastName)}</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Built from what this customer currently owes / has coming up. Edit it, then copy — <strong>nothing is sent</strong>.</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Built from what this customer currently owes / has coming up. Edit it, then copy — <strong>nothing is sent</strong>.</div>
     <textarea class="form-input" id="drText" rows="9" style="font-family:inherit;">${escHtml(draft)}</textarea>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
@@ -5253,7 +5253,7 @@ function openAiReplyModal(customerId) {
   if (!c) return;
   showDynamicModal(`
     <div class="modal-title">💬 Draft a reply — ${escHtml(c.firstName)} ${escHtml(c.lastName)}</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Paste what the customer wrote and the AI drafts a reply in the shop's voice, using their account facts. <strong>Nothing is sent</strong> — read it, edit it, then copy. Don't paste passport/ID numbers (the text goes to Google).</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Paste what the customer wrote and the AI drafts a reply in the shop's voice, using their account facts. <strong>Nothing is sent</strong> — read it, edit it, then copy. Don't paste passport/ID numbers (the text goes to Google).</div>
     <div class="form-group form-full">
       <label class="form-label">Customer's message</label>
       <textarea class="form-input" id="airIn" rows="4" placeholder="Paste the ${WHATSAPP_ENABLED ? 'WhatsApp / ' : ''}SMS or email the customer sent…"></textarea>
@@ -5360,7 +5360,7 @@ function openRentalSmsModal(rentalId) {
   const waC = customers.find(x => x.id === r.customerId) || { phone: r.customerPhone };
   showDynamicModal(`
     <div class="modal-title">✉️ Status SMS — ${escHtml(r.customerName || '')}</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
       Drafted from the rental's current status${r.customerPhone ? ` · 📞 <span class="copy-val">${escHtml(fmtPhone(r.customerPhone))}</span>` : ''}.
       Edit it, then copy — or send it directly once Twilio is connected.</div>
     <textarea class="form-input" id="rsmsText" rows="5" style="font-family:inherit;">${escHtml(buildRentalSms(r))}</textarea>
@@ -5413,7 +5413,7 @@ function openWalletModal(customerId, balance = null) {
   // hand-types it. Owed = negative balance.
   const owed = balance != null && balance < 0 ? Math.round(Math.abs(balance) * 100) / 100 : 0;
   const payFullBtn = owed > 0
-    ? `<button type="button" class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 10px;margin-top:6px;"
+    ? `<button type="button" class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:4px 10px;margin-top:6px;"
         onclick="document.getElementById('wlKind').value='payment';document.getElementById('wlMethodWrap').style.display='block';document.getElementById('wlAmount').value='${owed.toFixed(2)}'">Pay full ${fmtGbp(owed)}</button>`
     : '';
   showDynamicModal(`
@@ -5450,7 +5450,7 @@ function openWalletModal(customerId, balance = null) {
         <input class="form-input" id="wlNote" placeholder="What is this for?">
       </div>
       ${c && c.email && !isOwnAccountEmail(c.email) ? `<div class="form-group form-full">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--fs-body);">
           <input type="checkbox" id="wlEmail"> ✉️ Email a receipt to ${escHtml(c.email)}
         </label>
       </div>` : ''}
@@ -5568,20 +5568,20 @@ async function renderWalletTab() {
       <span style="flex:1;"><strong>${escHtml(b.customerName)}</strong></span>
       <span style="font-feature-settings:'tnum';color:${negative ? 'var(--danger)' : 'var(--success)'};font-weight:600;">
         ${negative ? '−' : '+'}${fmtGbp(Math.abs(b.balance))}</span>
-      ${b.customerId ? `<button class="btn btn-outline btn-sm" style="margin-left:10px;font-size:11px;padding:4px 10px;"
+      ${b.customerId ? `<button class="btn btn-outline btn-sm" style="margin-left:10px;font-size:var(--fs-micro);padding:4px 10px;"
         onclick="event.stopPropagation();openWalletModal('${escHtml(String(b.customerId))}', ${Number(b.balance) || 0})">💰 ${negative ? 'Take payment' : 'Record'}</button>` : ''}
       <span class="feed-go">›</span>
     </div>`;
 
   const arrearsHtml = arrears.length === 0
-    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">Nobody owes money. 🎉</div>`
+    ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">Nobody owes money. 🎉</div>`
     : arrears.map(b => balanceRow(b, true)).join('');
   const creditsHtml = credits.length === 0
-    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No prepaid credit held.</div>`
+    ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">No prepaid credit held.</div>`
     : credits.map(b => balanceRow(b, false)).join('');
 
   const feedHtml = (data.recent || []).length === 0
-    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No wallet activity yet.</div>`
+    ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">No wallet activity yet.</div>`
     : data.recent.map(e => `
         <div class="history-item history-flat${e.customerId ? ' dash-link' : ''}"
           ${e.customerId ? `onclick="goToTab('customers',{customerId:'${escHtml(String(e.customerId))}'})" title="Open customer"` : ''}>
@@ -5616,7 +5616,7 @@ async function renderWalletTab() {
     </div>
 
     <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
-      <select class="form-input" id="wtCustomer" style="width:260px;min-height:0;padding:8px 12px;font-size:13px;">
+      <select class="form-input" id="wtCustomer" style="width:260px;min-height:0;padding:8px 12px;font-size:var(--fs-body);">
         <option value="">Choose a customer…</option>${customerOptions}
       </select>
       <button class="btn btn-primary" onclick="(()=>{const id=document.getElementById('wtCustomer').value;
@@ -5655,24 +5655,24 @@ async function openCashupModal() {
   const methodRows = Object.entries(data.methods)
     .sort((a, b) => b[1] - a[1])
     .map(([m, amt]) => `
-      <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;font-size:var(--fs-body);padding:5px 0;border-bottom:1px solid var(--border);">
         <span>${METHOD_LABELS[m] || escHtml(m)}</span>
         <strong style="font-feature-settings:'tnum';">${fmtGbp(amt)}</strong>
       </div>`).join('') ||
-    `<div style="color:var(--muted);font-size:13px;padding:6px 0;">No money in yet today.</div>`;
+    `<div style="color:var(--muted);font-size:var(--fs-body);padding:6px 0;">No money in yet today.</div>`;
 
   showDynamicModal(`
     <div class="modal-title">🧾 Cash-up — ${fmtDate(today)}</div>
     <div style="margin-bottom:14px;">${methodRows}
-      <div style="display:flex;justify-content:space-between;font-size:13px;padding:7px 0;color:var(--muted);">
+      <div style="display:flex;justify-content:space-between;font-size:var(--fs-body);padding:7px 0;color:var(--muted);">
         <span>Charged out today</span><span style="font-feature-settings:'tnum';">−${fmtGbp(Math.abs(data.totalOut))}</span>
       </div>
     </div>
     <div style="background:var(--bg-secondary);border-radius:10px;padding:12px 14px;margin-bottom:14px;">
-      ${data.openingFloat ? `<div style="display:flex;justify-content:space-between;font-size:13px;padding-bottom:6px;color:var(--muted);">
+      ${data.openingFloat ? `<div style="display:flex;justify-content:space-between;font-size:var(--fs-body);padding-bottom:6px;color:var(--muted);">
         <span>Opening float</span><span style="font-feature-settings:'tnum';">${fmtGbp(Number(data.openingFloat))}</span>
       </div>` : ''}
-      <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;">
+      <div style="display:flex;justify-content:space-between;font-size:var(--fs-ui);font-weight:600;">
         <span>Expected cash in till</span><span>${fmtGbp(data.expectedCash)}</span>
       </div>
     </div>
@@ -5682,7 +5682,7 @@ async function openCashupModal() {
         <input class="form-input" type="number" min="0" step="0.01" id="cuCounted"
           value="${data.count ? data.count.counted.toFixed(2) : ''}" placeholder="0.00"
           oninput="cuUpdateVariance(this, ${data.expectedCash})">
-        <div id="cuVariance" style="font-size:12px;margin-top:4px;font-weight:600;">
+        <div id="cuVariance" style="font-size:var(--fs-small);margin-top:4px;font-weight:600;">
           ${data.count ? (data.count.variance === 0 ? '✓ Till balances' : `${data.count.variance > 0 ? '+' : '−'}${fmtGbp(Math.abs(data.count.variance))} ${data.count.variance > 0 ? 'over' : 'short'}`) : ''}</div>
       </div>
       <div class="form-group">
@@ -5778,36 +5778,36 @@ function bankPaint() {
     const proposalHtml = (t.state === 'unmatched' || t.state === 'proposed') ? (
       best ? `
         <div class="bank-proposal">
-          ${t.match.ambiguous ? `<div style="font-size:12px;color:var(--warning,#b07d10);margin-bottom:4px;">⚠ Two candidates score alike — read the reasons before confirming.</div>` : ''}
+          ${t.match.ambiguous ? `<div style="font-size:var(--fs-small);color:var(--warning,#b07d10);margin-bottom:4px;">⚠ Two candidates score alike — read the reasons before confirming.</div>` : ''}
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span style="font-size:12px;color:var(--muted);">Looks like</span>
+            <span style="font-size:var(--fs-small);color:var(--muted);">Looks like</span>
             <strong>${escHtml(best.name)}</strong>
-            <span style="font-size:11px;padding:2px 8px;border-radius:99px;${CONF_BADGE[best.confidence] || CONF_BADGE.weak}">${escHtml(best.confidence)}</span>
-            ${isIn ? `<button class="btn btn-primary btn-sm" style="font-size:12px;padding:4px 12px;"
+            <span style="font-size:var(--fs-micro);padding:2px 8px;border-radius:99px;${CONF_BADGE[best.confidence] || CONF_BADGE.weak}">${escHtml(best.confidence)}</span>
+            ${isIn ? `<button class="btn btn-primary btn-sm" style="font-size:var(--fs-small);padding:4px 12px;"
               onclick="bankConfirm('${escHtml(t.id)}','${escHtml(String(best.customerId ?? ''))}','${escHtml(best.name).replace(/'/g, '&#39;')}')">✓ Confirm match</button>` : ''}
           </div>
-          <div style="font-size:12px;color:var(--muted);margin-top:3px;">${best.reasons.map(escHtml).join(' · ')}</div>
+          <div style="font-size:var(--fs-small);color:var(--muted);margin-top:3px;">${best.reasons.map(escHtml).join(' · ')}</div>
         </div>` : `
-        <div class="bank-proposal" style="color:var(--muted);font-size:12px;">
+        <div class="bank-proposal" style="color:var(--muted);font-size:var(--fs-small);">
           No candidate found${isIn ? ' — pick the customer yourself if you recognise it' : ''}.</div>`
     ) : '';
 
     const actions = (t.state === 'unmatched' || t.state === 'proposed') ? `
-      ${isIn ? `<button class="btn btn-outline btn-sm" style="font-size:12px;" onclick="bankPick('${escHtml(t.id)}')">Choose customer…</button>` : ''}
-      <button class="btn btn-outline btn-sm" style="font-size:12px;" onclick="bankIgnore('${escHtml(t.id)}')">Not customer money</button>`
+      ${isIn ? `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-small);" onclick="bankPick('${escHtml(t.id)}')">Choose customer…</button>` : ''}
+      <button class="btn btn-outline btn-sm" style="font-size:var(--fs-small);" onclick="bankIgnore('${escHtml(t.id)}')">Not customer money</button>`
       : t.state === 'confirmed' ? `
-      <span style="font-size:12px;color:var(--success);">✓ On the ledger</span>
-      <button class="btn btn-outline btn-sm" style="font-size:12px;" onclick="bankUndo('${escHtml(t.id)}')">Undo</button>`
+      <span style="font-size:var(--fs-small);color:var(--success);">✓ On the ledger</span>
+      <button class="btn btn-outline btn-sm" style="font-size:var(--fs-small);" onclick="bankUndo('${escHtml(t.id)}')">Undo</button>`
       : `
-      <span style="font-size:12px;color:var(--muted);">Ignored${t.note ? ' — ' + escHtml(t.note) : ''}</span>
-      <button class="btn btn-outline btn-sm" style="font-size:12px;" onclick="bankReopen('${escHtml(t.id)}')">Reopen</button>`;
+      <span style="font-size:var(--fs-small);color:var(--muted);">Ignored${t.note ? ' — ' + escHtml(t.note) : ''}</span>
+      <button class="btn btn-outline btn-sm" style="font-size:var(--fs-small);" onclick="bankReopen('${escHtml(t.id)}')">Reopen</button>`;
 
     return `
       <div class="history-item history-flat" style="flex-wrap:wrap;align-items:flex-start;gap:6px 12px;">
         <div style="display:flex;align-items:baseline;gap:10px;flex:1;min-width:220px;">
           <span class="history-date" style="min-width:78px;">${fmtDate(t.bookedAt)}</span>
-          <span style="font-size:11px;padding:2px 8px;border-radius:99px;background:var(--bg-secondary);color:var(--muted);white-space:nowrap;">${escHtml(t.accountRef)}</span>
-          <span class="kc-truncate" style="flex:1;font-size:13px;">
+          <span style="font-size:var(--fs-micro);padding:2px 8px;border-radius:99px;background:var(--bg-secondary);color:var(--muted);white-space:nowrap;">${escHtml(t.accountRef)}</span>
+          <span class="kc-truncate" style="flex:1;font-size:var(--fs-body);">
             ${t.counterparty ? `<strong>${escHtml(t.counterparty)}</strong> · ` : ''}${escHtml(t.description || '—')}</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px 10px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end;max-width:100%;min-width:0;">
@@ -5822,7 +5822,7 @@ function bankPaint() {
   content.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
       <button class="btn btn-outline btn-sm" onclick="renderTab('wallet')">← Wallet</button>
-      <span style="color:var(--muted);font-size:13px;">Upload a statement export; confirm each match yourself — nothing posts on its own.</span>
+      <span style="color:var(--muted);font-size:var(--fs-body);">Upload a statement export; confirm each match yourself — nothing posts on its own.</span>
     </div>
 
     <div class="table-card" style="padding:16px 18px;margin-bottom:16px;">
@@ -5831,30 +5831,30 @@ function bankPaint() {
         <div class="form-group" style="margin:0;">
           <label class="form-label">Account label</label>
           <input class="form-input" id="bankAccLabel" list="bankAccKnown" placeholder="e.g. Revolut main"
-            style="width:200px;min-height:0;padding:8px 12px;font-size:13px;" value="${escHtml(bankAccountFilter)}">
+            style="width:200px;min-height:0;padding:8px 12px;font-size:var(--fs-body);" value="${escHtml(bankAccountFilter)}">
           <datalist id="bankAccKnown">${(d.accounts || []).map(a => `<option value="${escHtml(a.ref)}">`).join('')}</datalist>
         </div>
         <div class="form-group" style="margin:0;">
           <label class="form-label">CSV export</label>
           <input class="form-input" id="bankCsvFile" type="file" accept=".csv,text/csv"
-            style="min-height:0;padding:7px 12px;font-size:13px;">
+            style="min-height:0;padding:7px 12px;font-size:var(--fs-body);">
         </div>
         <button class="btn btn-primary" id="bankUploadBtn" onclick="bankUpload()">⬆ Import</button>
-        <span style="font-size:12px;color:var(--muted);flex-basis:100%;">Re-importing an overlapping window is safe — rows already seen are absorbed, never doubled. One label per bank account.</span>
+        <span style="font-size:var(--fs-small);color:var(--muted);flex-basis:100%;">Re-importing an overlapping window is safe — rows already seen are absorbed, never doubled. One label per bank account.</span>
       </div>
-      <div id="bankUploadNote" style="font-size:12px;margin-top:6px;"></div>
+      <div id="bankUploadNote" style="font-size:var(--fs-small);margin-top:6px;"></div>
     </div>
 
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
       ${stateBtn('open', 'Needs review', open)}
       ${stateBtn('confirmed', 'Confirmed', counts.confirmed || 0)}
       ${stateBtn('ignored', 'Ignored', counts.ignored || 0)}
-      <select class="form-input" style="width:auto;min-height:0;padding:6px 10px;font-size:13px;margin-left:auto;"
+      <select class="form-input" style="width:auto;min-height:0;padding:6px 10px;font-size:var(--fs-body);margin-left:auto;"
         onchange="bankAccountFilter=this.value;bankPaint()">
         <option value="">All accounts</option>${accountOptions}
       </select>
     </div>
-    ${d.proposeCapped ? `<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Showing proposals for the newest rows — ${d.proposeCapped} older open row${d.proposeCapped === 1 ? '' : 's'} will get theirs as these are worked through.</div>` : ''}
+    ${d.proposeCapped ? `<div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Showing proposals for the newest rows — ${d.proposeCapped} older open row${d.proposeCapped === 1 ? '' : 's'} will get theirs as these are worked through.</div>` : ''}
 
     <div class="table-card" style="padding:6px 18px 12px;">
       ${shown.length ? shown.map(row).join('') : `
@@ -5914,7 +5914,7 @@ function bankPick(txnId) {
   if (!t) return;
   showDynamicModal(`
     <div class="modal-title">Who sent this?</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">
+    <div style="font-size:var(--fs-body);color:var(--muted);margin-bottom:10px;">
       ${escHtml(t.counterparty || t.description || '')} · ${fmtDate(t.bookedAt)} ·
       <strong style="color:var(--text);">+${fmtGbp(Math.abs(t.amount))}</strong></div>
     <input class="form-input" id="bankPickSearch" placeholder="Type a name…" autocomplete="off"
@@ -5938,7 +5938,7 @@ function bankPickList(txnId) {
     <div class="feed-item dash-link" onclick="closeDynamicModal();bankConfirm('${escHtml(txnId)}','${escHtml(String(c.customerId))}','${escHtml(c.name).replace(/'/g, '&#39;')}')">
       <span style="flex:1;">${escHtml(c.name)}</span><span class="feed-go">›</span>
     </div>`).join('')
-    : `<div style="color:var(--muted);font-size:13px;padding:10px 0;">No customer matches “${escHtml(q)}”.</div>`;
+    : `<div style="color:var(--muted);font-size:var(--fs-body);padding:10px 0;">No customer matches “${escHtml(q)}”.</div>`;
 }
 
 async function bankIgnore(txnId) {
@@ -6040,9 +6040,9 @@ function setupTopbarButtons() {
     const b = document.createElement('button');
     b.id = 'btnPalette';
     b.className = 'btn btn-outline';
-    b.style.cssText = 'font-size:12px;padding:8px 12px;margin-right:8px;';
+    b.style.cssText = 'font-size:var(--fs-small);padding:8px 12px;margin-right:8px;';
     b.title = 'Search everything (Ctrl+K)';
-    b.innerHTML = '🔍 <span style="color:var(--muted);font-size:11px;">Ctrl K</span>';
+    b.innerHTML = '🔍 <span style="color:var(--muted);font-size:var(--fs-micro);">Ctrl K</span>';
     b.addEventListener('click', openPalette);
     btnNew.parentElement.insertBefore(b, btnNew);
   }
@@ -6052,7 +6052,7 @@ function setupTopbarButtons() {
     const a = document.createElement('button');
     a.id = 'btnAssistant';
     a.className = 'btn btn-outline';
-    a.style.cssText = 'font-size:12px;padding:8px 12px;margin-right:8px;';
+    a.style.cssText = 'font-size:var(--fs-small);padding:8px 12px;margin-right:8px;';
     a.title = 'Ask Kosher Connect — questions or actions, in plain words';
     a.innerHTML = '🤖 Ask';
     a.addEventListener('click', () => openAssistantModal());
@@ -6381,7 +6381,7 @@ function renderSimsTab() {
 
   const bannerHtml = renewing.length > 0 ? `
     <div class="renewal-banner">
-      <span style="font-size:18px;">⚠️</span>
+      <span style="font-size:var(--fs-title);">⚠️</span>
       <span><strong>${renewing.length} SIM${renewing.length > 1 ? 's' : ''} renewing ${renewing.some(s => s.renewalDate === today) ? 'TODAY' : 'TOMORROW'}:</strong>
       ${renewing.map(s => `<span style="margin-left:8px;">· ${escHtml(s.customerName)} (${escHtml(s.simNumber)})</span>`).join('')}</span>
     </div>` : '';
@@ -6439,7 +6439,7 @@ function renderSimsTab() {
         <option value="week" ${simFilterStatus==='week'?'selected':''}>Renews this week</option>
       </select>
       ${simBar}
-      <span id="simCount" style="font-size:12px;color:var(--muted);"></span>
+      <span id="simCount" style="font-size:var(--fs-small);color:var(--muted);"></span>
     </div>
 
     <div class="table-wrap">
@@ -6511,10 +6511,10 @@ function renderSimRows() {
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a'))openManageSimModal('${s.id}')" title="Open SIM">
       <td><div class="customer-name">${escHtml(s.customerName || '—')}</div></td>
       <td>${escHtml(s.provider || '—')}</td>
-      <td style="font-weight:600;font-size:12px;">${escHtml(s.simNumber || '—')}</td>
-      <td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(s.plan || '—')}</td>
-      <td style="font-size:12px;${renewalClass}">${fmtDate(s.renewalDate)}${renewalLabel}</td>
-      <td style="font-size:12px;">${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}</td>
+      <td style="font-weight:600;font-size:var(--fs-small);">${escHtml(s.simNumber || '—')}</td>
+      <td style="font-size:var(--fs-small);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(s.plan || '—')}</td>
+      <td style="font-size:var(--fs-small);${renewalClass}">${fmtDate(s.renewalDate)}${renewalLabel}</td>
+      <td style="font-size:var(--fs-small);">${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}</td>
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
@@ -6590,12 +6590,12 @@ function openSimFormModal(id, preselectCustomerId = null) {
       <div class="form-group" id="simDdGroup" style="display:${(!s || s.paymentType !== 'direct') ? 'block' : 'none'};">
         <label class="form-label">DD Collection Day</label>
         <input class="form-input" id="simDdDate" type="number" min="1" max="31" placeholder="1" value="${s?.ddDate || 1}">
-        <span style="font-size:11px;color:var(--muted);">Day of month DD is collected (e.g. 1 = 1st of each month)</span>
+        <span style="font-size:var(--fs-micro);color:var(--muted);">Day of month DD is collected (e.g. 1 = 1st of each month)</span>
       </div>
       <div class="form-group" id="simCostGroup" style="display:${(!s || s.paymentType !== 'direct') ? 'block' : 'none'};">
         <label class="form-label">Provider Monthly Cost (£)</label>
         <input class="form-input" id="simMonthlyCost" type="number" min="0" step="0.01" placeholder="0.00" value="${s?.simMonthlyCost || ''}">
-        <span style="font-size:11px;color:var(--muted);">What you pay the provider — DD charge = this + 10% (min £2)</span>
+        <span style="font-size:var(--fs-micro);color:var(--muted);">What you pay the provider — DD charge = this + 10% (min £2)</span>
       </div>
       <div class="form-group form-full">
         <label class="form-label">Status</label>
@@ -6696,23 +6696,23 @@ function openManageSimModal(id) {
   const totalCharged = history.reduce((sum, h) => sum + (h.amount || 0), 0);
 
   const historyHtml = history.length === 0
-    ? `<div style="color:var(--muted);font-size:13px;padding:10px 0;">No history yet.</div>`
+    ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:10px 0;">No history yet.</div>`
     : history.slice().reverse().map(h => `
         <div class="history-item">
           <span class="history-dot dot-blue"></span>
           <span class="history-desc">${escHtml(h.desc)}</span>
           <span class="history-date">${escHtml(h.date || '')}</span>
           <span class="history-amount">${h.amount > 0 ? '£'+h.amount : '—'}</span>
-          <button class="action-btn danger" style="margin-left:8px;padding:3px 8px;font-size:11px;"
+          <button class="action-btn danger" style="margin-left:8px;padding:3px 8px;font-size:var(--fs-micro);"
             aria-label="Delete this charge" onclick="deleteSimCharge('${id}','${h.id}')">✕</button>
         </div>`).join('');
 
   showDynamicModal(`
     <div class="modal-title">💳 ${escHtml(s.customerName)} — ${escHtml(s.provider)}</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:13px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:var(--fs-body);">
       <div style="color:var(--muted);">SIM Number</div><div style="font-weight:600;">${escHtml(s.simNumber||'—')}</div>
-      <div style="color:var(--muted);">ICCID</div><div style="font-size:11px;">${escHtml(s.iccid||'—')}</div>
-      <div style="color:var(--muted);">Email</div><div style="font-size:11px;">${escHtml(s.email||'—')}</div>
+      <div style="color:var(--muted);">ICCID</div><div style="font-size:var(--fs-micro);">${escHtml(s.iccid||'—')}</div>
+      <div style="color:var(--muted);">Email</div><div style="font-size:var(--fs-micro);">${escHtml(s.email||'—')}</div>
       <div style="color:var(--muted);">Plan</div><div>${escHtml(s.plan||'—')}</div>
       <div style="color:var(--muted);">Renewal</div><div>${fmtDate(s.renewalDate)}</div>
       <div style="color:var(--muted);">Payment</div><div>${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}</div>
@@ -6729,11 +6729,11 @@ function openManageSimModal(id) {
     <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;">
       <div class="section-divider" style="margin-top:0;">Add Charge</div>
       ${multiSimDiscountPct(sims, s.customerId) > 0
-        ? `<div style="font-size:12px;color:var(--gold);margin-bottom:8px;">🏷️ 3+ active plans — ${multiSimDiscountPct(sims, s.customerId)}% off applied to monthly/annual prefills.</div>` : ''}
+        ? `<div style="font-size:var(--fs-small);color:var(--gold);margin-bottom:8px;">🏷️ 3+ active plans — ${multiSimDiscountPct(sims, s.customerId)}% off applied to monthly/annual prefills.</div>` : ''}
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
         <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;">
-          <label style="font-size:11px;color:var(--muted);font-weight:600;">Type</label>
-          <select class="form-input" id="simChargeType" onchange="onSimChargeTypeChange('${id}')" style="font-size:13px;">
+          <label style="font-size:var(--fs-micro);color:var(--muted);font-weight:600;">Type</label>
+          <select class="form-input" id="simChargeType" onchange="onSimChargeTypeChange('${id}')" style="font-size:var(--fs-body);">
             <option value="activation">🟢 Initial Setup — £${simChargePrice('activation')}</option>
             <!-- Service is the default: setup was already charged when the SIM was created. -->
             <option value="service" selected>🔧 Service (roaming/swap/reactivation) — £${simChargePrice('service')}</option>
@@ -6745,16 +6745,16 @@ function openManageSimModal(id) {
           </select>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;width:80px;">
-          <label style="font-size:11px;color:var(--muted);font-weight:600;">Amount £</label>
-          <input class="form-input" id="simChargeAmount" type="number" value="${simChargePrice('service')}" min="0" step="0.5" style="font-size:13px;">
+          <label style="font-size:var(--fs-micro);color:var(--muted);font-weight:600;">Amount £</label>
+          <input class="form-input" id="simChargeAmount" type="number" value="${simChargePrice('service')}" min="0" step="0.5" style="font-size:var(--fs-body);">
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;flex:2;min-width:140px;">
-          <label style="font-size:11px;color:var(--muted);font-weight:600;">Note (optional)</label>
-          <input class="form-input" id="simChargeNote" type="text" placeholder="e.g. SIM swapped to new number" style="font-size:13px;">
+          <label style="font-size:var(--fs-micro);color:var(--muted);font-weight:600;">Note (optional)</label>
+          <input class="form-input" id="simChargeNote" type="text" placeholder="e.g. SIM swapped to new number" style="font-size:var(--fs-body);">
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;width:150px;">
-          <label style="font-size:11px;color:var(--muted);font-weight:600;">Paid now?</label>
-          <select class="form-input" id="simChargePay" style="font-size:13px;">
+          <label style="font-size:var(--fs-micro);color:var(--muted);font-weight:600;">Paid now?</label>
+          <select class="form-input" id="simChargePay" style="font-size:var(--fs-body);">
             <option value="account">On account</option>
             <option value="cash">💵 Cash</option>
             <option value="card">💳 Card</option>
@@ -6766,7 +6766,7 @@ function openManageSimModal(id) {
     </div>
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
-      <span style="font-size:13px;color:var(--muted);">Total charged: <strong style="color:var(--success);">${fmtGbp(totalCharged)}</strong></span>
+      <span style="font-size:var(--fs-body);color:var(--muted);">Total charged: <strong style="color:var(--success);">${fmtGbp(totalCharged)}</strong></span>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-outline btn-sm" onclick="openEditSimModal('${id}');void(0)">✏️ Edit Details</button>
         <button class="btn btn-outline btn-sm" onclick="closeDynamicModal()">Close</button>
@@ -6980,7 +6980,7 @@ function errorHtml(label = 'Couldn’t load this') {
   return `<div style="text-align:center;padding:48px 30px;color:var(--muted);">
     <div style="font-size:30px;margin-bottom:8px;">⚠️</div>
     <div style="font-size:15px;color:var(--text);margin-bottom:4px;">${escHtml(label)}</div>
-    <div style="font-size:13px;margin-bottom:16px;">Couldn’t reach the server. Your data is safe — this is just the view.</div>
+    <div style="font-size:var(--fs-body);margin-bottom:16px;">Couldn’t reach the server. Your data is safe — this is just the view.</div>
     <button class="btn btn-primary" onclick="renderTab(currentTab)">↻ Try again</button>
   </div>`;
 }
@@ -7160,7 +7160,7 @@ function renderBookingsTab() {
           <button class="action-btn" onclick="openCheckinModal('${escHtml(b.id)}')" title="Online check-in">🛫</button>
           <button class="action-btn" onclick="openPassengersModal('${escHtml(b.id)}')" title="Passengers (DOB, passport)">👥</button>
           <button class="action-btn" onclick="openRemindModal('booking','${escHtml(b.id)}')" title="Remind me">⏰</button>
-          <select class="form-input" style="width:110px;padding:5px 8px;font-size:12px;"
+          <select class="form-input" style="width:110px;padding:5px 8px;font-size:var(--fs-small);"
             aria-label="Status for ${escHtml(b.customerName || b.bookingRef || 'this booking')}"
             onchange="changeBookingStatus('${escHtml(b.id)}', this.value)">
             ${BOOKING_STATUSES.map(s => `<option value="${s}" ${b.status === s ? 'selected' : ''}>${s}</option>`).join('')}
@@ -7208,7 +7208,7 @@ function paxEditorHtml() {
   return bkPassengers.map((p, i) => `
     <div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-        <strong style="font-size:12px;">Passenger ${i + 1}</strong>
+        <strong style="font-size:var(--fs-small);">Passenger ${i + 1}</strong>
         <button type="button" class="action-btn" onclick="bkRemovePax(${i})" title="Remove">✕</button>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -7253,9 +7253,9 @@ function bkOnCustomerChange() {
   if (!last || !editorEmpty) { wrap.innerHTML = ''; return; }
   const n = last.passengers.filter(p => p && p.fullName).length;
   wrap.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;background:rgba(83,58,253,0.06);border:1px solid var(--primary-subdued);border-radius:8px;padding:7px 12px;font-size:12px;">
+    <div style="display:flex;align-items:center;gap:10px;background:rgba(83,58,253,0.06);border:1px solid var(--primary-subdued);border-radius:8px;padding:7px 12px;font-size:var(--fs-small);">
       <span style="flex:1;">↻ Reuse ${n} passenger${n === 1 ? '' : 's'} from their last trip${last.route ? ' (' + escHtml(last.route) + ')' : ''}?</span>
-      <button type="button" class="btn btn-outline btn-sm" style="font-size:11px;padding:4px 10px;" onclick="bkReuseLastTrip('${escHtml(String(cid))}')">Reuse passengers</button>
+      <button type="button" class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:4px 10px;" onclick="bkReuseLastTrip('${escHtml(String(cid))}')">Reuse passengers</button>
     </div>`;
 }
 function bkReuseLastTrip(customerId) {
@@ -7266,7 +7266,7 @@ function bkReuseLastTrip(customerId) {
   if (!bkPassengers.length) bkPassengers = [{}];
   bkRenderPax();
   const wrap = document.getElementById('bkReuseWrap');
-  if (wrap) wrap.innerHTML = `<div style="font-size:11px;color:var(--success);padding:2px 0;">✓ Reused ${bkPassengers.length} passenger${bkPassengers.length === 1 ? '' : 's'} — check passport expiry dates.</div>`;
+  if (wrap) wrap.innerHTML = `<div style="font-size:var(--fs-micro);color:var(--success);padding:2px 0;">✓ Reused ${bkPassengers.length} passenger${bkPassengers.length === 1 ? '' : 's'} — check passport expiry dates.</div>`;
 }
 
 // Post-creation editor: the 👥 button on each booking row.
@@ -7279,7 +7279,7 @@ function openPassengersModal(bookingId) {
     <div class="modal-title">👥 Passengers — ${escHtml(b.route)} ${b.travelDate ? fmtDate(b.travelDate) : ''}</div>
     <div id="bkPaxEditor">${paxEditorHtml()}</div>
     <button type="button" class="btn btn-outline" onclick="bkAddPax()"
-      style="padding:5px 12px;font-size:12px;margin-top:2px;">+ Add passenger</button>
+      style="padding:5px 12px;font-size:var(--fs-small);margin-top:2px;">+ Add passenger</button>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
       <button class="btn btn-primary" onclick="savePassengers('${escHtml(bookingId)}')">Save passengers</button>
@@ -7326,7 +7326,7 @@ async function openNewBookingModal(preselectCustomerId = null) {
         <div id="bkReuseWrap" style="margin-bottom:8px;"></div>
         <div id="bkPaxEditor">${paxEditorHtml()}</div>
         <button type="button" class="btn btn-outline" onclick="bkAddPax()"
-          style="padding:5px 12px;font-size:12px;margin-top:2px;">+ Add passenger</button>
+          style="padding:5px 12px;font-size:var(--fs-small);margin-top:2px;">+ Add passenger</button>
       </div>
       <div class="form-group">
         <label class="form-label">Route *</label>
@@ -7370,7 +7370,7 @@ async function openNewBookingModal(preselectCustomerId = null) {
             <option value="card_on_file">Paid now — card on file (Stripe)</option>
             <option value="bank_transfer">Paid now — 🏦 Transfer</option>
           </select>
-          <span style="font-size:11px;color:var(--muted);">"Paid now" settles it immediately — no wallet debt.</span>
+          <span style="font-size:var(--fs-micro);color:var(--muted);">"Paid now" settles it immediately — no wallet debt.</span>
         </div>
       </div>
       ${svcOptions ? `
@@ -7382,11 +7382,11 @@ async function openNewBookingModal(preselectCustomerId = null) {
           </select>
           <input class="form-input" type="number" id="bkPax" value="1" min="1" step="1"
             oninput="bkCalcFee()" title="Passengers" style="width:80px;">
-          ${startFee ? `<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+          ${startFee ? `<label style="display:flex;align-items:center;gap:6px;font-size:var(--fs-small);cursor:pointer;">
             <input type="checkbox" id="bkStartFee" onchange="bkCalcFee()"> + start fee ${fmtGbp(startFee.price)}
           </label>` : ''}
         </div>
-        <div id="bkFeeBreakdown" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+        <div id="bkFeeBreakdown" style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;"></div>
       </div>` : ''}
       <div class="form-group">
         <label class="form-label">Passport photocopy held?</label>
@@ -7404,22 +7404,22 @@ async function openNewBookingModal(preselectCustomerId = null) {
             <option value="customer">Customer does check-in</option>
             <option value="us">We do check-in</option>
           </select>
-          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:var(--fs-body);cursor:pointer;">
             <input type="checkbox" id="bkCheckinDone"> already done
           </label>
           <span id="bkCheckinDateWrap" style="display:none;align-items:center;gap:6px;">
-            <span style="font-size:12px;color:var(--muted);">do it on</span>
+            <span style="font-size:var(--fs-small);color:var(--muted);">do it on</span>
             <input class="form-input" type="date" id="bkCheckinDate" style="width:150px;">
           </span>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px;">"We do check-in" + a date raises a task reminder for that day.</div>
+        <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">"We do check-in" + a date raises a task reminder for that day.</div>
       </div>
       <div class="form-group form-full">
         <label class="form-label">Notes</label>
         <input class="form-input" id="bkNotes">
       </div>
     </div>
-    <div style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);">
+    <div style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-secondary);font-size:var(--fs-small);color:var(--muted);">
       Saving posts one wallet charge of <strong>price + fee</strong> to the customer's ledger (reference <code>BOOKING-…</code>).
     </div>
     <div class="modal-actions">
@@ -7576,13 +7576,13 @@ async function openCheckinModal(bookingId) {
     p.passportIssueDate && `Issued: ${fmtDate(p.passportIssueDate)}`, p.issuingCountry && `Issuing country: ${p.issuingCountry}`,
   ].filter(Boolean).join('\n');
   const paxHtml = pax.length ? `
-    <div class="section-divider" style="margin:4px 0 8px;">Passenger details <span style="color:var(--muted);font-weight:400;font-size:11px;">— click any value to copy</span></div>
+    <div class="section-divider" style="margin:4px 0 8px;">Passenger details <span style="color:var(--muted);font-weight:400;font-size:var(--fs-micro);">— click any value to copy</span></div>
     <div style="max-height:260px;overflow-y:auto;margin-bottom:12px;">
       ${pax.map((p, i) => `
-        <div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12px;line-height:1.7;">
+        <div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:var(--fs-small);line-height:1.7;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <strong class="copy-val" tabindex="0" role="button" style="font-size:13px;" title="Click to copy name" onclick="copyText('${escJs(p.fullName || '')}','name')">${escHtml(p.fullName || '(no name)')}</strong>
-            <button type="button" class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;"
+            <strong class="copy-val" tabindex="0" role="button" style="font-size:var(--fs-body);" title="Click to copy name" onclick="copyText('${escJs(p.fullName || '')}','name')">${escHtml(p.fullName || '(no name)')}</strong>
+            <button type="button" class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;"
               onclick="copyText(paxCopyBlocks[${i}],'all details')">📋 Copy all</button>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;margin-top:4px;">
@@ -7595,7 +7595,7 @@ async function openCheckinModal(bookingId) {
           </div>
           ${(!p.passportNumber && !p.dob) ? '<div style="color:var(--warning);margin-top:4px;">⚠️ Missing details — open 👥 Passengers to fill them in.</div>' : ''}
         </div>`).join('')}
-    </div>` : `<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">No passenger details yet — add them via the 👥 button.</div>`;
+    </div>` : `<div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">No passenger details yet — add them via the 👥 button.</div>`;
   // Stash the copy-all text keyed by index (avoids quoting a multi-line
   // string into an inline handler).
   window.paxCopyBlocks = pax.map(paxAll);
@@ -7615,7 +7615,7 @@ async function openCheckinModal(bookingId) {
         <input class="form-input" type="date" id="ciDate" value="${escHtml(b.checkinDate || '')}">
       </div>
       <div class="form-group form-full">
-        <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-ui);cursor:pointer;">
           <input type="checkbox" id="ciDone" ${b.checkinDone ? 'checked' : ''}>
           ✅ Check-in is done
         </label>
@@ -7703,7 +7703,7 @@ function openEditBookingModal(id) {
       <div class="form-group form-full"><label class="form-label">Notes</label>
         <input class="form-input" id="ebNotes" value="${escHtml(b.notes || '')}"></div>
     </div>
-    <div style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);">
+    <div style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-secondary);font-size:var(--fs-small);color:var(--muted);">
       💷 Price <strong>${fmtGbp((b.price || 0))}</strong> + fee <strong>${fmtGbp((b.bookingFee || 0))}</strong> (read-only — adjust money via the customer's wallet).
       &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openPassengersModal('${escHtml(b.id)}');return false;">👥 Passengers</a>
       &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openCheckinModal('${escHtml(b.id)}');return false;">🛫 Check-in</a>
@@ -7804,9 +7804,9 @@ async function openTravelReqModal(bookingId) {
       ? `<a href="#" onclick="copyTravelDraft(${JSON.stringify(destName)},${JSON.stringify(r.label)},${JSON.stringify(r.url || '')});return false;">✉️ Copy draft for customer</a>` : '';
 
     if (cov.status === 'not-needed') {
-      cover = `<div style="color:var(--success);font-size:13px;">No entry authorisation needed — passport only.</div>`;
+      cover = `<div style="color:var(--success);font-size:var(--fs-body);">No entry authorisation needed — passport only.</div>`;
     } else if (cov.status === 'check') {
-      cover = `<div style="font-size:13px;color:var(--gold);">${escHtml(r.note || 'Confirm the requirement on the official site before travel.')} ${link}</div>`;
+      cover = `<div style="font-size:var(--fs-body);color:var(--gold);">${escHtml(r.note || 'Confirm the requirement on the official site before travel.')} ${link}</div>`;
     } else if (KC_RECORDABLE.has(r.code)) {
       const covLine = cov.status === 'covered'
         ? `<span style="color:var(--success);">✓ ${escHtml(r.label)} on file — valid until ${escHtml(cov.validUntil || '')}</span>`
@@ -7814,28 +7814,28 @@ async function openTravelReqModal(bookingId) {
           ? `<span style="color:var(--gold);">⚠ ${escHtml(r.label)} ${cov.expiresBeforeTravel ? 'expires BEFORE this trip' : 'expiring soon'} — valid until ${escHtml(cov.validUntil || '')}</span>`
           : `<span style="color:var(--danger);">Not recorded yet — ${escHtml(r.label)} needed${validity}</span>`;
       cover = `
-        <div style="font-size:13px;margin-bottom:6px;">${covLine}</div>
+        <div style="font-size:var(--fs-body);margin-bottom:6px;">${covLine}</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
           <input class="form-input" id="traUntil_${i}" type="date" value="${escHtml(auth ? auth.validUntil : '')}" title="Approved until" style="width:150px;">
           <input class="form-input" id="traRef_${i}" value="${escHtml(auth ? auth.reference : '')}" placeholder="Reference no." style="width:150px;">
-          <button class="btn btn-outline btn-sm" style="font-size:12px;padding:4px 10px;"
+          <button class="btn btn-outline btn-sm" style="font-size:var(--fs-small);padding:4px 10px;"
             onclick="recordTravelAuth('${escHtml(bookingId)}','${escHtml(res.customerId)}',${i},${JSON.stringify(p.name)},'${r.code}','${escHtml(res.destination)}')">
             ${auth ? 'Update' : 'Record'} approved-until</button>
-          ${auth ? `<button class="btn btn-outline btn-sm" style="font-size:12px;padding:4px 10px;color:var(--danger);" onclick="deleteTravelAuthRow('${escHtml(bookingId)}','${escHtml(auth.id)}')">Remove</button>` : ''}
+          ${auth ? `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-small);padding:4px 10px;color:var(--danger);" onclick="deleteTravelAuthRow('${escHtml(bookingId)}','${escHtml(auth.id)}')">Remove</button>` : ''}
         </div>
-        <div style="font-size:12px;margin-top:6px;">${link} ${link && draftBtn ? '&nbsp;·&nbsp;' : ''} ${draftBtn}</div>`;
+        <div style="font-size:var(--fs-small);margin-top:6px;">${link} ${link && draftBtn ? '&nbsp;·&nbsp;' : ''} ${draftBtn}</div>`;
     } else {
-      cover = `<div style="font-size:13px;">${link} ${draftBtn}</div>`;
+      cover = `<div style="font-size:var(--fs-body);">${link} ${draftBtn}</div>`;
     }
 
     return `
       <div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
           <strong>${escHtml(p.name)}</strong>
-          <span style="font-size:12px;color:var(--muted);">${escHtml(p.nationality || 'nationality not set')}</span>
+          <span style="font-size:var(--fs-small);color:var(--muted);">${escHtml(p.nationality || 'nationality not set')}</span>
         </div>
-        <div style="margin-bottom:6px;">${travelReqBadge(r.code, r.label)}${r.note && cov.status !== 'check' ? `<span style="font-size:12px;color:var(--muted);margin-left:8px;">${escHtml(r.note)}</span>` : ''}</div>
-        <div style="font-size:13px;margin-bottom:8px;">${pass}</div>
+        <div style="margin-bottom:6px;">${travelReqBadge(r.code, r.label)}${r.note && cov.status !== 'check' ? `<span style="font-size:var(--fs-small);color:var(--muted);margin-left:8px;">${escHtml(r.note)}</span>` : ''}</div>
+        <div style="font-size:var(--fs-body);margin-bottom:8px;">${pass}</div>
         ${cover}
       </div>`;
   }).join('');
@@ -7846,10 +7846,10 @@ async function openTravelReqModal(bookingId) {
       <label class="form-label">Destination</label>
       <select class="form-input" onchange="saveBookingDestination('${escHtml(bookingId)}', this.value)">${destSel}</select>
     </div>
-    ${!res.destination ? `<div style="color:var(--muted);font-size:13px;margin:6px 0 4px;">Choose the destination to see what each passenger needs.</div>` : ''}
-    ${res.destination && !paxHtml ? `<div style="color:var(--muted);font-size:13px;margin:6px 0;">No passengers on this booking yet — add them under 👥 Passengers.</div>` : ''}
+    ${!res.destination ? `<div style="color:var(--muted);font-size:var(--fs-body);margin:6px 0 4px;">Choose the destination to see what each passenger needs.</div>` : ''}
+    ${res.destination && !paxHtml ? `<div style="color:var(--muted);font-size:var(--fs-body);margin:6px 0;">No passengers on this booking yet — add them under 👥 Passengers.</div>` : ''}
     <div style="margin-top:10px;">${paxHtml}</div>
-    <div style="font-size:12px;color:var(--muted);background:var(--bg-secondary);border-radius:8px;padding:8px 10px;margin-top:4px;">
+    <div style="font-size:var(--fs-small);color:var(--muted);background:var(--bg-secondary);border-radius:8px;padding:8px 10px;margin-top:4px;">
       ℹ️ Guidance based on the rules we've set for common routes — <strong>always confirm on the official site</strong> before travel. Requirements can change.
     </div>
     <div class="modal-actions">
@@ -7960,14 +7960,14 @@ async function renderRepairsTab() {
       <tr>
         <td><div class="customer-name">${escHtml(r.customerName || '—')}</div></td>
         <td>${escHtml(r.device || '—')}${r.kcPurchase ? ' <span class="badge" style="background:rgba(0, 96, 168,0.1);color:var(--accent);font-size:10px;">KC phone</span>' : ''}</td>
-        <td style="font-size:12px;">${r.services.map(s => escHtml(s.name)).join('<br>') || '—'}</td>
+        <td style="font-size:var(--fs-small);">${r.services.map(s => escHtml(s.name)).join('<br>') || '—'}</td>
         <td><strong>${fmtGbp((r.total || 0))}</strong></td>
         <td>${r.openedAt ? fmtDate(r.openedAt) : '—'}</td>
         <td>${repairStatusBadge(r.status)}</td>
         <td style="white-space:nowrap;">
           ${r.status === 'Ready' ? `<button class="action-btn" onclick="openRepairSmsModal('${escHtml(r.id)}')" title="Ready-to-collect message">💬</button>` : ''}
           <button class="action-btn" onclick="openRemindModal('repair','${escHtml(r.id)}')" title="Remind me">⏰</button>
-          <select class="form-input" style="width:120px;padding:5px 8px;font-size:12px;"
+          <select class="form-input" style="width:120px;padding:5px 8px;font-size:var(--fs-small);"
             aria-label="Status for ${escHtml([r.customerName, r.device].filter(Boolean).join(' — ') || 'this repair')}"
             onchange="changeRepairStatus('${escHtml(r.id)}', this.value)">
             ${REPAIR_STATUSES.map(s => `<option value="${s}" ${r.status === s ? 'selected' : ''}>${s}</option>`).join('')}
@@ -8001,7 +8001,7 @@ function openNewRepairModal(preselectCustomerId = null) {
     `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(fmtPhone(c.phone || ''))}</option>`
   ).join('');
   const serviceChecks = repairMenu.map(m => `
-    <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer;">
+    <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:var(--fs-body);cursor:pointer;">
       <input type="checkbox" class="rpService" value="${escHtml(m.id)}"
         data-price="${m.price}" data-reg="${m.price}" data-kc="${m.kcPrice ?? ''}"
         onchange="updateRepairTotal()">
@@ -8024,14 +8024,14 @@ function openNewRepairModal(preselectCustomerId = null) {
       <div class="form-group form-full" style="flex-direction:row;align-items:center;gap:10px;">
         <input type="checkbox" id="rpKC" onchange="rpKCToggle()"
           style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent);">
-        <label for="rpKC" style="font-size:13px;cursor:pointer;">
+        <label for="rpKC" style="font-size:var(--fs-body);cursor:pointer;">
           🏷️ Phone purchased at Kosher Connect — discounted prices
         </label>
       </div>
       <div class="form-group form-full">
         <label class="form-label">Services * <span style="color:var(--muted);font-weight:400;">(prices frozen at open)</span></label>
         <div style="max-height:220px;overflow-y:auto;padding:0 4px;">${serviceChecks ||
-          '<div style="color:var(--muted);font-size:13px;">Price list unavailable.</div>'}</div>
+          '<div style="color:var(--muted);font-size:var(--fs-body);">Price list unavailable.</div>'}</div>
       </div>
       <div class="form-group form-full">
         <label class="form-label">Notes</label>
@@ -8039,8 +8039,8 @@ function openNewRepairModal(preselectCustomerId = null) {
       </div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
-      <div style="font-size:14px;">Total: <strong id="rpTotal" style="color:var(--success);">£0.00</strong>
-        <span style="color:var(--muted);font-size:11px;">— charged to wallet on collection</span></div>
+      <div style="font-size:var(--fs-ui);">Total: <strong id="rpTotal" style="color:var(--success);">£0.00</strong>
+        <span style="color:var(--muted);font-size:var(--fs-micro);">— charged to wallet on collection</span></div>
       <div class="modal-actions" style="margin:0;">
         <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
         <button class="btn btn-primary" onclick="saveNewRepair()">🔧 Open Ticket</button>
@@ -8131,7 +8131,7 @@ function openRepairSmsModal(repairId) {
   const c = customers.find(x => x.id === r.customerId);
   showDynamicModal(`
     <div class="modal-title">✉️ Ready to collect — ${escHtml(r.customerName || '')}</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Edit it, then ${WHATSAPP_ENABLED ? 'copy or open WhatsApp' : 'copy it into your messages'} — <strong>nothing is sent</strong> from here.</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Edit it, then ${WHATSAPP_ENABLED ? 'copy or open WhatsApp' : 'copy it into your messages'} — <strong>nothing is sent</strong> from here.</div>
     <textarea class="form-input" id="rpsmsText" rows="4" style="font-family:inherit;">${escHtml(buildRepairSms(r))}</textarea>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
@@ -8165,7 +8165,7 @@ function openCollectRepairModal(id) {
   if (!r) return;
   showDynamicModal(`
     <div class="modal-title">🔧 Collect repair — ${escHtml(r.customerName || '')}</div>
-    <div style="font-size:14px;margin-bottom:12px;">${escHtml(r.device || 'device')} · total <strong>${fmtGbp((r.total || 0))}</strong></div>
+    <div style="font-size:var(--fs-ui);margin-bottom:12px;">${escHtml(r.device || 'device')} · total <strong>${fmtGbp((r.total || 0))}</strong></div>
     <div class="form-group">
       <label class="form-label">Payment</label>
       <select class="form-input" id="rcPay">
@@ -8175,7 +8175,7 @@ function openCollectRepairModal(id) {
         <option value="card_on_file">Paid now — card on file (Stripe)</option>
         <option value="bank_transfer">Paid now — 🏦 Transfer</option>
       </select>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px;">"Paid now" settles it immediately — no wallet debt.</div>
+      <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">"Paid now" settles it immediately — no wallet debt.</div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
@@ -8428,7 +8428,7 @@ async function renderServicesTab() {
         <td>${escHtml(o.serviceName)}${o.qty > 1 ? ` <span style="color:var(--muted);">× ${o.qty}</span>` : ''}</td>
         <td><strong>${fmtGbp((o.total || 0))}</strong></td>
         <td>${o.createdAt ? fmtDate(o.createdAt) : '—'}</td>
-        <td style="font-size:12px;color:var(--muted);">${escHtml(o.notes || '')}</td>
+        <td style="font-size:var(--fs-small);color:var(--muted);">${escHtml(o.notes || '')}</td>
       </tr>`).join('');
 
   const menuRows = onlineMenu.map(m => `
@@ -8456,10 +8456,10 @@ async function renderServicesTab() {
           <span style="font-size:20px;">${paused ? '⏸' : '⏱'}</span>
           <div style="flex:1;min-width:180px;">
             <div style="font-weight:600;">Helping ${escHtml(t.customerName || 'customer')}</div>
-            <div style="font-size:12px;color:${paused ? 'var(--gold)' : 'var(--muted)'};">${paused ? 'paused — resume to keep counting' : 'running'}</div>
+            <div style="font-size:var(--fs-small);color:${paused ? 'var(--gold)' : 'var(--muted)'};">${paused ? 'paused — resume to keep counting' : 'running'}</div>
           </div>
-          <strong id="svcTimerElapsed" style="font-size:22px;font-feature-settings:'tnum';">0:00</strong>
-          <span id="svcTimerProj" style="font-size:13px;color:var(--muted);"></span>
+          <strong id="svcTimerElapsed" style="font-size:var(--fs-h1);font-feature-settings:'tnum';">0:00</strong>
+          <span id="svcTimerProj" style="font-size:var(--fs-body);color:var(--muted);"></span>
           ${paused
             ? `<button class="btn btn-outline" onclick="svcTimerResume()">▶ Resume</button>`
             : `<button class="btn btn-outline" onclick="svcTimerPause()">⏸ Pause</button>`}
@@ -8474,7 +8474,7 @@ async function renderServicesTab() {
       return `
         <div class="table-card" style="margin-bottom:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <span style="font-size:20px;">⏱</span>
-          <span style="font-size:13px;color:var(--muted);">Hourly help timer (£${settingNum('online_hourly_rate', 45)}/hr, 10-min minimum)</span>
+          <span style="font-size:var(--fs-body);color:var(--muted);">Hourly help timer (£${settingNum('online_hourly_rate', 45)}/hr, 10-min minimum)</span>
           <select class="form-input" id="svcTimerCustomer" style="flex:1;min-width:180px;min-height:0;padding:8px 12px;">
             <option value="">Who are you helping?</option>${opts}
           </select>
@@ -8570,7 +8570,7 @@ async function openNewServiceModal(preselectCustomerId = null) {
         <input class="form-input" id="svNotes" placeholder="e.g. passport ref, printout pages">
       </div>
     </div>
-    <div style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);" id="svBreakdown">
+    <div style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-secondary);font-size:var(--fs-small);color:var(--muted);" id="svBreakdown">
       The charge posts to the customer's wallet (reference <code>SVC-…</code>); ticking "paid now" records the payment alongside.
     </div>
     <div class="modal-actions">
@@ -8695,7 +8695,7 @@ async function renderShopTab() {
   const revenue = shopSales.reduce((s, x) => s + x.total, 0);
 
   const lowBanner = low.length ? `
-    <div style="margin-bottom:14px;padding:10px 14px;border-radius:8px;background:rgba(234,34,97,0.07);border:1px solid rgba(234,34,97,0.25);font-size:13px;">
+    <div style="margin-bottom:14px;padding:10px 14px;border-radius:8px;background:rgba(234,34,97,0.07);border:1px solid rgba(234,34,97,0.25);font-size:var(--fs-body);">
       ⚠️ <strong>Low stock:</strong> ${low.map(i => `${escHtml(i.model)} (${i.quantity} left)`).join(' · ')}
     </div>` : '';
 
@@ -8740,7 +8740,7 @@ async function renderShopTab() {
       <div class="history-item history-flat">
         <div style="flex:1;min-width:0;">
           <div class="history-desc"><strong>${escHtml(r.supplierName || '?')}</strong> — ${escHtml(r.items)}</div>
-          <div style="font-size:11px;color:var(--muted);">
+          <div style="font-size:var(--fs-micro);color:var(--muted);">
             <span style="color:${st.color};font-weight:600;">${st.label}</span>
             ${r.sentAt ? ' · sent ' + fmtDate(r.sentAt) : ''}${r.resolvedAt ? ' · settled ' + fmtDate(r.resolvedAt) : ''}
             ${r.notes ? ' · ' + escHtml(r.notes) : ''}
@@ -8752,7 +8752,7 @@ async function renderShopTab() {
       </div>`;
   };
   const returnRows = supplierReturns.length === 0
-    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">Nothing waiting to go back. When defective stock has to return to a wholesaler, record it here so it isn't forgotten.</div>`
+    ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">Nothing waiting to go back. When defective stock has to return to a wholesaler, record it here so it isn't forgotten.</div>`
     : openReturns.map(returnRow).join('') + doneReturns.slice(0, 5).map(returnRow).join('');
 
   // Goods in: recent deliveries with a paid/unpaid toggle, headed by the
@@ -8762,7 +8762,7 @@ async function renderShopTab() {
     .filter(e => Math.abs(e.owed) >= 0.005);
   const totalOwed = oweEntries.reduce((s, e) => s + e.owed, 0);
   const balanceLine = oweEntries.length
-    ? `<div style="font-size:12px;margin:2px 0 8px;color:var(--muted);">
+    ? `<div style="font-size:var(--fs-small);margin:2px 0 8px;color:var(--muted);">
         ${oweEntries.map(e => `${escHtml(e.name)}: <strong style="color:${e.owed > 0 ? 'var(--danger-ink)' : 'var(--success-ink)'};">${e.owed > 0 ? fmtGbp(e.owed) + ' owed' : fmtGbp(-e.owed) + ' credit'}</strong>`).join(' · ')}
       </div>` : '';
   const deliveryRow = (d) => `
@@ -8770,7 +8770,7 @@ async function renderShopTab() {
       <div style="flex:1;min-width:0;">
         <div class="history-desc"><strong>${escHtml(d.supplierName || '?')}</strong>${d.invoiceRef ? ' — ' + escHtml(d.invoiceRef) : ''}
           — ${d.lines.map(l => `${l.qty}× ${escHtml(l.description)}`).join(', ')}</div>
-        <div style="font-size:11px;color:var(--muted);">
+        <div style="font-size:var(--fs-micro);color:var(--muted);">
           ${fmtDate(d.deliveryDate)}${d.paid ? ` · <span style="color:var(--success-ink);font-weight:600;">✅ Paid${d.paidAt ? ' ' + fmtDate(d.paidAt) : ''}</span>` : d.invoiceTotal !== null ? ' · <span style="color:var(--warning-ink);font-weight:600;">⏳ Unpaid</span>' : ''}
           ${d.notes ? ' · ' + escHtml(d.notes) : ''}
         </div>
@@ -8780,17 +8780,17 @@ async function renderShopTab() {
         onclick="markGoodsInPaid('${d.id}', ${d.paid ? 'false' : 'true'})">${d.paid ? '↩️' : '💷 Pay'}</button>` : ''}
     </div>`;
   const goodsRows = goodsIn.length === 0
-    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No deliveries recorded yet. When stock arrives from a wholesaler, record it here — quantities and cost prices update themselves.</div>`
+    ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">No deliveries recorded yet. When stock arrives from a wholesaler, record it here — quantities and cost prices update themselves.</div>`
     : goodsIn.slice(0, 8).map(deliveryRow).join('');
   const unpaidCount = goodsIn.filter(d => !d.paid && d.invoiceTotal !== null).length;
 
   const saleRows = shopSales.length === 0
-    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No sales recorded yet.</div>`
+    ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">No sales recorded yet.</div>`
     : shopSales.slice(0, 25).map(s => `
       <div class="history-item history-flat">
         <div style="flex:1;min-width:0;">
           <div class="history-desc"><strong>${escHtml(s.item)}</strong>${s.qty > 1 ? ` × ${s.qty}` : ''} — ${escHtml(s.customerName || 'Walk-in')}</div>
-          <div style="font-size:11px;color:var(--muted);">${s.imei ? 'IMEI ' + escHtml(s.imei) + ' · ' : ''}${escHtml(s.notes || '')}</div>
+          <div style="font-size:var(--fs-micro);color:var(--muted);">${s.imei ? 'IMEI ' + escHtml(s.imei) + ' · ' : ''}${escHtml(s.notes || '')}</div>
         </div>
         <div class="history-date" style="margin:0 12px;">${fmtDate(s.createdAt)}</div>
         <div class="history-amount">${fmtGbp(s.total)}</div>
@@ -8886,7 +8886,7 @@ function openSupplierReturnModal(retId = null) {
       </div>` : `
       <div class="form-group">
         <label class="form-label">&nbsp;</label>
-        <div style="font-size:12px;color:var(--muted);padding-top:8px;">Starts as “📦 To send”.</div>
+        <div style="font-size:var(--fs-small);color:var(--muted);padding-top:8px;">Starts as “📦 To send”.</div>
       </div>`}
       <div class="form-group form-full">
         <label class="form-label">Notes</label>
@@ -8994,7 +8994,7 @@ function openGoodsInModal() {
       <div class="form-group form-full">
         <label class="form-label">Lines * <span style="color:var(--muted);font-weight:400;">(pick a stock item to update its quantity and cost, or free-type)</span></label>
         <div id="giLines">${giLineRowHtml(0)}</div>
-        <button type="button" class="btn btn-outline" style="padding:4px 10px;font-size:12px;" onclick="giAddLine()">➕ Add line</button>
+        <button type="button" class="btn btn-outline" style="padding:4px 10px;font-size:var(--fs-small);" onclick="giAddLine()">➕ Add line</button>
       </div>
       <div class="form-group">
         <label class="form-label">Invoice ref</label>
@@ -9236,7 +9236,7 @@ function renderPosView() {
             ${customerOptions}
           </select>
           <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;flex-shrink:0;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:var(--fs-body);cursor:pointer;flex-shrink:0;">
               <input type="checkbox" id="posPaid" checked onchange="posRenderTender()"> Paid now</label>
             <div class="pos-methods" id="posMethods">${posMethodsHtml()}</div>
           </div>
@@ -9294,14 +9294,14 @@ function posRenderTender() {
     const maxW = Math.min(credit, total);
     html += `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
-        <label style="font-size:13px;flex-shrink:0;">👛 From wallet £</label>
+        <label style="font-size:var(--fs-body);flex-shrink:0;">👛 From wallet £</label>
         <input class="form-input" id="posWalletIn" type="number" min="0" step="0.01"
           value="${posWallet ? posWallet.toFixed(2) : ''}" placeholder="0.00"
           oninput="posWalletInput()" style="width:96px;min-height:0;padding:7px 10px;">
         <button class="pos-note" onclick="posWalletMax(${maxW.toFixed(2)})" ${maxW > 0 ? '' : 'disabled'}>Max</button>
-        <span style="font-size:12px;color:var(--muted);margin-left:auto;">${credit > 0 ? `credit ${fmtGbp(credit)}` : 'no credit'}</span>
+        <span style="font-size:var(--fs-small);color:var(--muted);margin-left:auto;">${credit > 0 ? `credit ${fmtGbp(credit)}` : 'no credit'}</span>
       </div>
-      <div id="posSplitInfo" style="font-size:12px;color:var(--ink-secondary);margin-bottom:8px;min-height:15px;">${posSplitText()}</div>`;
+      <div id="posSplitInfo" style="font-size:var(--fs-small);color:var(--ink-secondary);margin-bottom:8px;min-height:15px;">${posSplitText()}</div>`;
   }
 
   if (paid && posMethod === 'cash') {
@@ -9310,7 +9310,7 @@ function posRenderTender() {
         <input class="form-input" id="posTenderIn" type="number" min="0" step="0.01" placeholder="Cash given £"
           oninput="posChangeCalc()" style="width:132px;min-height:0;padding:7px 10px;">
         ${[5, 10, 20, 50].map(n => `<button class="pos-note" onclick="posTenderQuick(${n})">£${n}</button>`).join('')}
-        <span id="posChange" style="font-weight:700;font-size:14px;margin-left:auto;"></span>
+        <span id="posChange" style="font-weight:700;font-size:var(--fs-ui);margin-left:auto;"></span>
       </div>`;
   }
   el.innerHTML = html;
@@ -9423,10 +9423,10 @@ function posRenderTiles() {
     <div class="pos-tile" onclick="posAdd('${i.id}')">
       <div class="pos-tile-name">${escHtml([i.company, i.model].filter(Boolean).join(' '))}</div>
       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:6px;">
-        <span style="color:var(--muted);font-size:12px;">${i.quantity} left</span>
+        <span style="color:var(--muted);font-size:var(--fs-small);">${i.quantity} left</span>
         <span class="pos-tile-price">${fmtGbp((i.sellingPrice || 0))}</span>
       </div>
-    </div>`).join('') || '<div style="color:var(--muted);font-size:13px;padding:6px;">No matching items.</div>';
+    </div>`).join('') || '<div style="color:var(--muted);font-size:var(--fs-body);padding:6px;">No matching items.</div>';
 }
 
 function posAdd(itemId) {
@@ -9461,7 +9461,7 @@ function posRenderBasket() {
   if (!el) return;
   let total = 0;
   el.innerHTML = posBasket.length === 0
-    ? '<div style="color:var(--muted);font-size:13px;padding:10px 2px;">Scan a barcode or tap an item to start.</div>'
+    ? '<div style="color:var(--muted);font-size:var(--fs-body);padding:10px 2px;">Scan a barcode or tap an item to start.</div>'
     : posBasket.map(l => {
         const i = shopItems.find(x => x.id === l.itemId);
         if (!i) return '';
@@ -9470,16 +9470,16 @@ function posRenderBasket() {
         return `
         <div class="pos-line">
           <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;">${escHtml([i.company, i.model].filter(Boolean).join(' '))}</div>
-            <div style="font-size:11px;color:var(--muted);">${fmtGbp((i.sellingPrice || 0))} each</div>
+            <div style="font-size:var(--fs-body);">${escHtml([i.company, i.model].filter(Boolean).join(' '))}</div>
+            <div style="font-size:var(--fs-micro);color:var(--muted);">${fmtGbp((i.sellingPrice || 0))} each</div>
             ${i.category === 'phone' ? `<input class="form-input" placeholder="IMEI (scan)" value="${escHtml(l.imei)}"
-              oninput="posImei('${i.id}', this.value)" style="width:100%;min-height:0;padding:4px 8px;font-size:11px;margin-top:3px;">` : ''}
+              oninput="posImei('${i.id}', this.value)" style="width:100%;min-height:0;padding:4px 8px;font-size:var(--fs-micro);margin-top:3px;">` : ''}
           </div>
-          <button class="action-btn" style="min-width:40px;min-height:40px;font-size:18px;line-height:1;" aria-label="One fewer ${escHtml(i.name || 'item')}" onclick="posQty('${i.id}',-1)">−</button>
-          <strong style="min-width:26px;text-align:center;font-size:16px;">${l.qty}</strong>
-          <button class="action-btn" style="min-width:40px;min-height:40px;font-size:18px;line-height:1;" aria-label="One more ${escHtml(i.name || 'item')}" onclick="posQty('${i.id}',1)">+</button>
+          <button class="action-btn" style="min-width:40px;min-height:40px;font-size:var(--fs-title);line-height:1;" aria-label="One fewer ${escHtml(i.name || 'item')}" onclick="posQty('${i.id}',-1)">−</button>
+          <strong style="min-width:26px;text-align:center;font-size:var(--fs-lead);">${l.qty}</strong>
+          <button class="action-btn" style="min-width:40px;min-height:40px;font-size:var(--fs-title);line-height:1;" aria-label="One more ${escHtml(i.name || 'item')}" onclick="posQty('${i.id}',1)">+</button>
           <strong style="min-width:58px;text-align:right;font-feature-settings:'tnum';">${fmtGbp(lineTotal)}</strong>
-          <button class="action-btn" style="min-width:40px;min-height:40px;color:var(--danger);font-size:16px;" title="Void line" aria-label="Remove ${escHtml(i.name || 'item')} from the sale"
+          <button class="action-btn" style="min-width:40px;min-height:40px;color:var(--danger);font-size:var(--fs-lead);" title="Void line" aria-label="Remove ${escHtml(i.name || 'item')} from the sale"
             onclick="posQty('${i.id}',-999)">✕</button>
         </div>`;
       }).join('');
@@ -9609,8 +9609,8 @@ function posRenderParkedMenu() {
     return `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--border);">
         <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(p.customerName || 'Walk-in')}</div>
-          <div style="font-size:11px;color:var(--muted);">${p.count} item${p.count === 1 ? '' : 's'} · ${fmtGbp(p.total || 0)} · held ${hm}</div>
+          <div style="font-size:var(--fs-body);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(p.customerName || 'Walk-in')}</div>
+          <div style="font-size:var(--fs-micro);color:var(--muted);">${p.count} item${p.count === 1 ? '' : 's'} · ${fmtGbp(p.total || 0)} · held ${hm}</div>
         </div>
         <button class="btn btn-primary" style="padding:6px 12px;" onclick="posResumeSale('${p.id}')">Resume</button>
         <button class="action-btn" style="min-width:36px;min-height:36px;color:var(--danger);" title="Discard this held sale" onclick="posDiscardParked('${p.id}')">✕</button>
@@ -9618,7 +9618,7 @@ function posRenderParkedMenu() {
   }).join('');
   el.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px;">
-      <span style="font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);">Parked sales</span>
+      <span style="font-size:var(--fs-small);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);">Parked sales</span>
       <button class="action-btn" style="min-width:32px;min-height:32px;" title="Close" onclick="posToggleParked()">✕</button>
     </div>
     ${rows}`;
@@ -9938,8 +9938,8 @@ const KT_JOB_BADGE = {
 
 function ktSectionHead(title, sub) {
   return `<div style="display:flex;align-items:baseline;gap:10px;margin:18px 2px 8px;">
-    <h3 style="font-size:14px;font-weight:700;">${title}</h3>
-    <span style="font-size:12px;color:var(--muted);">${sub || ''}</span></div>`;
+    <h3 style="font-size:var(--fs-ui);font-weight:700;">${title}</h3>
+    <span style="font-size:var(--fs-small);color:var(--muted);">${sub || ''}</span></div>`;
 }
 
 async function renderKolTorahTab() {
@@ -9974,14 +9974,14 @@ async function renderKolTorahTab() {
     if (j.status === 'ready') b.push(['open', '↩', 'btn btn-outline']);
     if (j.status === 'cancelled') b.push(['open', '↩ Reopen', 'btn btn-outline']);
     return b.map(([to, label, cls]) =>
-      `<button class="${cls}" style="font-size:11px;padding:4px 8px;" onclick="ktJobStatus('${j.id}','${to}')">${label}</button>`).join(' ');
+      `<button class="${cls}" style="font-size:var(--fs-micro);padding:4px 8px;" onclick="ktJobStatus('${j.id}','${to}')">${label}</button>`).join(' ');
   };
   const jobRows = d.jobs.length === 0
     ? `<tr><td colspan="6"><div class="empty-state"><div class="emoji">🎧</div><p>No conversion jobs yet — add the first drop-off above.</p></div></td></tr>`
     : d.jobs.map(j => `
       <tr>
         <td><div class="customer-name">${escHtml(j.customerName)}</div>
-            <div style="font-size:11px;color:var(--muted);">${fmtDate(j.createdAt)}</div></td>
+            <div style="font-size:var(--fs-micro);color:var(--muted);">${fmtDate(j.createdAt)}</div></td>
         <td>${escHtml(KT_JOB_KINDS[j.kind] || j.kind)}${j.qty > 1 ? ` <span style="color:var(--muted);">× ${j.qty}</span>` : ''}</td>
         <td style="max-width:260px;">${escHtml(j.details || '—')}</td>
         <td><strong>${fmtGbp(j.price)}</strong></td>
@@ -9998,42 +9998,42 @@ async function renderKolTorahTab() {
           const t = d.titles.find(x => x.id === r.titleId);
           return `<span class="badge" style="background:var(--bg-secondary);color:var(--ink-secondary);">${r.qty} × ${escHtml(t ? t.name : '(retired)')}</span>`;
         }).join(' ')
-      : '<span style="font-size:12px;color:var(--muted);">nothing on consignment</span>';
+      : '<span style="font-size:var(--fs-small);color:var(--muted);">nothing on consignment</span>';
     const editing = ktEditShuls.has(s.id);
     return `
       <div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:var(--bg-primary);">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <strong>${escHtml(s.name)}</strong>
-          ${s.contact ? `<span style="font-size:12px;color:var(--muted);">${escHtml(s.contact)}</span>` : ''}
+          ${s.contact ? `<span style="font-size:var(--fs-small);color:var(--muted);">${escHtml(s.contact)}</span>` : ''}
           ${s.customerName ? `<span class="badge" style="background:rgba(14,138,82,0.14);color:var(--success-ink);" title="Settlements post to this wallet">👛 ${escHtml(s.customerName)}</span>`
             : '<span class="badge" style="background:rgba(239,68,68,0.1);color:var(--danger-ink);" title="Link a customer record so settlements hit the ledger">no wallet link</span>'}
-          <span style="margin-left:auto;font-size:12px;color:var(--muted);">${held} CD${held === 1 ? '' : 's'} out</span>
-          <button class="btn btn-outline" style="font-size:11px;padding:4px 8px;" onclick="ktToggleShulEdit('${s.id}')">${editing ? 'Close' : '✎ Edit'}</button>
+          <span style="margin-left:auto;font-size:var(--fs-small);color:var(--muted);">${held} CD${held === 1 ? '' : 's'} out</span>
+          <button class="btn btn-outline" style="font-size:var(--fs-micro);padding:4px 8px;" onclick="ktToggleShulEdit('${s.id}')">${editing ? 'Close' : '✎ Edit'}</button>
         </div>
         <div style="margin:8px 0;display:flex;flex-wrap:wrap;gap:5px;">${chips}</div>
         ${editing ? `
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0;padding:8px;border-radius:6px;background:var(--bg-secondary);">
-          <input class="form-input" id="ktShulContact_${s.id}" value="${escHtml(s.contact || '')}" placeholder="Contact / gabbai" style="min-height:0;padding:6px 9px;font-size:12px;min-width:170px;">
-          <select class="form-input" id="ktShulCust_${s.id}" style="min-height:0;padding:6px 9px;font-size:12px;max-width:220px;">
+          <input class="form-input" id="ktShulContact_${s.id}" value="${escHtml(s.contact || '')}" placeholder="Contact / gabbai" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:170px;">
+          <select class="form-input" id="ktShulCust_${s.id}" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);max-width:220px;">
             <option value="">No wallet link</option>${s.customerId ? customerOptions.replace(`value="${escHtml(String(s.customerId))}"`, '$& selected') : customerOptions}
           </select>
-          <button class="btn btn-outline btn-sm" style="font-size:11px;" onclick="ktSaveShul('${s.id}')">💾 Save</button>
+          <button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);" onclick="ktSaveShul('${s.id}')">💾 Save</button>
         </div>` : ''}
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-          <select class="form-input" id="ktMoveTitle_${s.id}" aria-label="Title to move for ${escHtml(s.name)}" style="min-height:0;padding:6px 9px;font-size:12px;max-width:230px;">${titleOptions}</select>
-          <input class="form-input" id="ktMoveQty_${s.id}" type="number" min="1" step="1" value="1" aria-label="Quantity" style="width:64px;min-height:0;padding:6px 9px;font-size:12px;">
-          <button class="btn btn-outline" style="font-size:11px;padding:5px 9px;" onclick="ktMove('${s.id}','delivery')">📦 Deliver</button>
-          <button class="btn btn-outline" style="font-size:11px;padding:5px 9px;" onclick="ktMove('${s.id}','sold')">💿 Sold</button>
-          <button class="btn btn-outline" style="font-size:11px;padding:5px 9px;" onclick="ktMove('${s.id}','return')">↩ Return</button>
+          <select class="form-input" id="ktMoveTitle_${s.id}" aria-label="Title to move for ${escHtml(s.name)}" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);max-width:230px;">${titleOptions}</select>
+          <input class="form-input" id="ktMoveQty_${s.id}" type="number" min="1" step="1" value="1" aria-label="Quantity" style="width:64px;min-height:0;padding:6px 9px;font-size:var(--fs-small);">
+          <button class="btn btn-outline" style="font-size:var(--fs-micro);padding:5px 9px;" onclick="ktMove('${s.id}','delivery')">📦 Deliver</button>
+          <button class="btn btn-outline" style="font-size:var(--fs-micro);padding:5px 9px;" onclick="ktMove('${s.id}','sold')">💿 Sold</button>
+          <button class="btn btn-outline" style="font-size:var(--fs-micro);padding:5px 9px;" onclick="ktMove('${s.id}','return')">↩ Return</button>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);">
-          <span style="font-size:12px;color:var(--muted);">Settle:</span>
-          <input class="form-input" id="ktSettleSold_${s.id}" type="number" min="0" step="0.01" placeholder="£ sold" style="width:88px;min-height:0;padding:6px 9px;font-size:12px;">
-          <input class="form-input" id="ktSettleRecv_${s.id}" type="number" min="0" step="0.01" placeholder="£ collected" style="width:98px;min-height:0;padding:6px 9px;font-size:12px;">
-          <select class="form-input" id="ktSettleMethod_${s.id}" aria-label="Settlement method for ${escHtml(s.name)}" style="min-height:0;padding:6px 9px;font-size:12px;width:110px;">
+          <span style="font-size:var(--fs-small);color:var(--muted);">Settle:</span>
+          <input class="form-input" id="ktSettleSold_${s.id}" type="number" min="0" step="0.01" placeholder="£ sold" style="width:88px;min-height:0;padding:6px 9px;font-size:var(--fs-small);">
+          <input class="form-input" id="ktSettleRecv_${s.id}" type="number" min="0" step="0.01" placeholder="£ collected" style="width:98px;min-height:0;padding:6px 9px;font-size:var(--fs-small);">
+          <select class="form-input" id="ktSettleMethod_${s.id}" aria-label="Settlement method for ${escHtml(s.name)}" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);width:110px;">
             <option value="cash">💵 Cash</option><option value="bank_transfer">🏦 Transfer</option><option value="card">💳 Card</option><option value="other">Other</option>
           </select>
-          <button class="btn btn-primary" style="font-size:11px;padding:5px 10px;" onclick="ktSettle('${s.id}')">🧾 Settle</button>
+          <button class="btn btn-primary" style="font-size:var(--fs-micro);padding:5px 10px;" onclick="ktSettle('${s.id}')">🧾 Settle</button>
         </div>
       </div>`;
   }).join('');
@@ -10041,12 +10041,12 @@ async function renderKolTorahTab() {
   // ── Titles table ────────────────────────────────────────────────────────
   const titleRows = d.titles.map(t => `
     <tr style="${t.active ? '' : 'opacity:0.55;'}">
-      <td><input class="form-input" id="ktT_code_${t.id}" value="${escHtml(t.code || '')}" style="width:74px;min-height:0;padding:5px 8px;font-size:12px;"></td>
-      <td><input class="form-input" id="ktT_name_${t.id}" value="${escHtml(t.name)}" style="min-width:170px;min-height:0;padding:5px 8px;font-size:12px;"></td>
-      <td><input class="form-input" id="ktT_speaker_${t.id}" value="${escHtml(t.speaker || '')}" style="min-width:130px;min-height:0;padding:5px 8px;font-size:12px;"></td>
-      <td><input class="form-input" id="ktT_price_${t.id}" type="number" min="0" step="0.01" value="${t.price.toFixed(2)}" style="width:84px;min-height:0;padding:5px 8px;font-size:12px;"></td>
+      <td><input class="form-input" id="ktT_code_${t.id}" value="${escHtml(t.code || '')}" style="width:74px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
+      <td><input class="form-input" id="ktT_name_${t.id}" value="${escHtml(t.name)}" style="min-width:170px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
+      <td><input class="form-input" id="ktT_speaker_${t.id}" value="${escHtml(t.speaker || '')}" style="min-width:130px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
+      <td><input class="form-input" id="ktT_price_${t.id}" type="number" min="0" step="0.01" value="${t.price.toFixed(2)}" style="width:84px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
       <td><input type="checkbox" id="ktT_active_${t.id}" ${t.active ? 'checked' : ''} style="accent-color:var(--accent);cursor:pointer;"></td>
-      <td><button class="btn btn-outline" style="font-size:12px;padding:5px 10px;" aria-label="Save title" onclick="ktSaveTitle('${t.id}')">💾</button></td>
+      <td><button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 10px;" aria-label="Save title" onclick="ktSaveTitle('${t.id}')">💾</button></td>
     </tr>`).join('');
 
   content.innerHTML = `
@@ -10059,8 +10059,8 @@ async function renderKolTorahTab() {
         ['💷', fmtGbp(received30), 'collected, last 30 days'],
       ].map(([ico, big, label]) => `
         <div style="flex:1;min-width:140px;border:1px solid var(--border);border-radius:8px;padding:10px 14px;background:var(--bg-primary);">
-          <div style="font-size:18px;font-weight:800;">${ico} ${big}</div>
-          <div style="font-size:11px;color:var(--muted);">${label}</div>
+          <div style="font-size:var(--fs-title);font-weight:800;">${ico} ${big}</div>
+          <div style="font-size:var(--fs-micro);color:var(--muted);">${label}</div>
         </div>`).join('')}
     </div>
 
@@ -10069,14 +10069,14 @@ async function renderKolTorahTab() {
       <thead><tr><th>Customer</th><th>Job</th><th>Details</th><th>£</th><th>Status</th><th></th></tr></thead>
       <tbody>
         <tr style="background:var(--bg-secondary);">
-          <td><select class="form-input" id="ktJobCust" style="min-height:0;padding:6px 9px;font-size:12px;min-width:150px;max-width:180px;">
+          <td><select class="form-input" id="ktJobCust" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:150px;max-width:180px;">
               <option value="walkin">🚶 Walk-in</option>${customerOptions}</select>
-            <input class="form-input" id="ktJobName" placeholder="Name if walk-in" style="margin-top:4px;min-height:0;padding:6px 9px;font-size:12px;min-width:150px;max-width:180px;"></td>
-          <td><select class="form-input" id="ktJobKind" style="min-height:0;padding:6px 9px;font-size:12px;min-width:132px;">
+            <input class="form-input" id="ktJobName" placeholder="Name if walk-in" style="margin-top:4px;min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:150px;max-width:180px;"></td>
+          <td><select class="form-input" id="ktJobKind" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:132px;">
               ${Object.entries(KT_JOB_KINDS).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select>
-            <input class="form-input" id="ktJobQty" type="number" min="1" step="1" value="1" aria-label="Quantity" style="margin-top:4px;width:64px;min-height:0;padding:6px 9px;font-size:12px;"></td>
-          <td><input class="form-input" id="ktJobDetails" placeholder="e.g. 3 CDs of R' Shloime onto one SD" style="min-width:200px;min-height:0;padding:6px 9px;font-size:12px;"></td>
-          <td><input class="form-input" id="ktJobPrice" type="number" min="0" step="0.01" placeholder="£" style="width:80px;min-height:0;padding:6px 9px;font-size:12px;"></td>
+            <input class="form-input" id="ktJobQty" type="number" min="1" step="1" value="1" aria-label="Quantity" style="margin-top:4px;width:64px;min-height:0;padding:6px 9px;font-size:var(--fs-small);"></td>
+          <td><input class="form-input" id="ktJobDetails" placeholder="e.g. 3 CDs of R' Shloime onto one SD" style="min-width:200px;min-height:0;padding:6px 9px;font-size:var(--fs-small);"></td>
+          <td><input class="form-input" id="ktJobPrice" type="number" min="0" step="0.01" placeholder="£" style="width:80px;min-height:0;padding:6px 9px;font-size:var(--fs-small);"></td>
           <td colspan="2"><button class="btn btn-primary btn-sm" onclick="ktAddJob()">+ Add job</button></td>
         </tr>
         ${jobRows}
@@ -10087,10 +10087,10 @@ async function renderKolTorahTab() {
       ${shulCards || '<div class="empty-state" style="grid-column:1/-1;"><div class="emoji">🏛️</div><p>No shuls yet — add the first one below.</p></div>'}
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px;padding:10px 12px;border:1px dashed var(--border);border-radius:8px;">
-      <span style="font-size:12px;font-weight:700;color:var(--accent);">➕ Add a shul</span>
-      <input class="form-input" id="ktNewShulName" placeholder="Shul name" style="min-height:0;padding:6px 9px;font-size:12px;min-width:170px;">
-      <input class="form-input" id="ktNewShulContact" placeholder="Contact / gabbai (optional)" style="min-height:0;padding:6px 9px;font-size:12px;min-width:170px;">
-      <select class="form-input" id="ktNewShulCust" style="min-height:0;padding:6px 9px;font-size:12px;max-width:210px;" title="Link a customer record so settlements hit the ledger">
+      <span style="font-size:var(--fs-small);font-weight:700;color:var(--accent);">➕ Add a shul</span>
+      <input class="form-input" id="ktNewShulName" placeholder="Shul name" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:170px;">
+      <input class="form-input" id="ktNewShulContact" placeholder="Contact / gabbai (optional)" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:170px;">
+      <select class="form-input" id="ktNewShulCust" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);max-width:210px;" title="Link a customer record so settlements hit the ledger">
         <option value="">No wallet link yet</option>${customerOptions}
       </select>
       <button class="btn btn-outline btn-sm" onclick="ktSaveShul()">+ Add shul</button>
@@ -10102,10 +10102,10 @@ async function renderKolTorahTab() {
       <tbody>
         ${titleRows}
         <tr style="background:var(--bg-secondary);">
-          <td><input class="form-input" id="ktNewT_code" placeholder="KT-…" style="width:74px;min-height:0;padding:5px 8px;font-size:12px;"></td>
-          <td><input class="form-input" id="ktNewT_name" placeholder="Title" style="min-width:170px;min-height:0;padding:5px 8px;font-size:12px;"></td>
-          <td><input class="form-input" id="ktNewT_speaker" placeholder="Speaker" style="min-width:130px;min-height:0;padding:5px 8px;font-size:12px;"></td>
-          <td><input class="form-input" id="ktNewT_price" type="number" min="0" step="0.01" placeholder="£" style="width:84px;min-height:0;padding:5px 8px;font-size:12px;"></td>
+          <td><input class="form-input" id="ktNewT_code" placeholder="KT-…" style="width:74px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
+          <td><input class="form-input" id="ktNewT_name" placeholder="Title" style="min-width:170px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
+          <td><input class="form-input" id="ktNewT_speaker" placeholder="Speaker" style="min-width:130px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
+          <td><input class="form-input" id="ktNewT_price" type="number" min="0" step="0.01" placeholder="£" style="width:84px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
           <td></td>
           <td><button class="btn btn-primary btn-sm" onclick="ktSaveTitle()">+ Add</button></td>
         </tr>
@@ -10123,7 +10123,7 @@ async function renderKolTorahTab() {
             <td>${fmtGbp(x.soldValue)}</td>
             <td><strong>${fmtGbp(x.received)}</strong></td>
             <td>${escHtml(x.method || '—')}</td>
-            <td style="max-width:240px;font-size:12px;color:var(--muted);">${escHtml(x.note || '')}</td>
+            <td style="max-width:240px;font-size:var(--fs-small);color:var(--muted);">${escHtml(x.note || '')}</td>
           </tr>`).join('')}</tbody></table></div>`;
 }
 
@@ -10371,9 +10371,9 @@ function openRemindModal(kind, id) {
   tomorrow.setDate(tomorrow.getDate() + 1);
   showDynamicModal(`
     <div class="modal-title">⏰ Remind me</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">${escHtml(ctx.label)}</div>
+    <div style="font-size:var(--fs-body);color:var(--muted);margin-bottom:14px;">${escHtml(ctx.label)}</div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
-      <span style="font-size:12px;color:var(--muted);">Quick (pops up in-app):</span>
+      <span style="font-size:var(--fs-small);color:var(--muted);">Quick (pops up in-app):</span>
       <button type="button" class="btn btn-outline btn-sm" onclick="saveQuickReminder('${escHtml(kind)}','${escHtml(String(id))}',30)">30 min</button>
       <button type="button" class="btn btn-outline btn-sm" onclick="saveQuickReminder('${escHtml(kind)}','${escHtml(String(id))}',60)">1 hour</button>
       <button type="button" class="btn btn-outline btn-sm" onclick="saveQuickReminder('${escHtml(kind)}','${escHtml(String(id))}',180)">3 hours</button>
@@ -10496,7 +10496,7 @@ async function openBusinessSummary() {
         <div class="bizbar-track"><div class="bizbar-fill" style="width:${Math.max(3, (amt / max) * 100).toFixed(1)}%;"></div></div>
         <span class="bizbar-val">${fmtGbp(amt)}</span>
       </div>`).join('')
-      : '<div style="color:var(--muted);font-size:13px;padding:6px 0;">No charges yet.</div>';
+      : '<div style="color:var(--muted);font-size:var(--fs-body);padding:6px 0;">No charges yet.</div>';
     const rate = rep.charged > 0 ? Math.min(100, Math.round((rep.received / rep.charged) * 100)) : 0;
     return `<div class="bizcol">
       <div class="bizcol-title">${title}</div>
@@ -10512,7 +10512,7 @@ async function openBusinessSummary() {
           <div class="bizbar-track"><div class="bizbar-fill received" style="width:${rate}%;"></div></div>
           <span class="bizbar-val">${fmtGbp(rep.received)} <span style="color:var(--muted);font-weight:400;">· ${rate}%</span></span>
         </div>
-        ${rep.refunded ? `<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding-top:4px;"><span>Refunded</span><span>−${fmtGbp(rep.refunded)}</span></div>` : ''}
+        ${rep.refunded ? `<div style="display:flex;justify-content:space-between;font-size:var(--fs-small);color:var(--muted);padding-top:4px;"><span>Refunded</span><span>−${fmtGbp(rep.refunded)}</span></div>` : ''}
       </div>
     </div>`;
   };
@@ -10520,7 +10520,7 @@ async function openBusinessSummary() {
   body.style.padding = '0';
   body.innerHTML = `
     <div style="display:flex;gap:28px;flex-wrap:wrap;">${col('This week (7 days)', wk)}${col('This month', mo)}</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:14px;">Bars show revenue by service. “Billed” is revenue charged; “Received” is money actually taken in (payments + top-ups); the green bar is the collection rate.</div>`;
+    <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:14px;">Bars show revenue by service. “Billed” is revenue charged; “Received” is money actually taken in (payments + top-ups); the green bar is the collection rate.</div>`;
 }
 
 // ── Command palette (Ctrl/Cmd+K) ─────────────────────────────────────────
@@ -10551,7 +10551,7 @@ let assistantPending = null;
 function openAssistantModal(prefill) {
   showDynamicModal(`
     <div class="modal-title">🤖 Ask Kosher Connect</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Ask a question or say what you want to do — e.g. “who owes money?”, “overdue rentals”, “what's Abraham Diamant's balance?”, “draft a reminder for Yoel Kahana”, “create a £50 payment link for Shloime Grinfeld”, “add a task to order chargers”. Anything that makes a change is shown for you to confirm first.</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Ask a question or say what you want to do — e.g. “who owes money?”, “overdue rentals”, “what's Abraham Diamant's balance?”, “draft a reminder for Yoel Kahana”, “create a £50 payment link for Shloime Grinfeld”, “add a task to order chargers”. Anything that makes a change is shown for you to confirm first.</div>
     <div style="display:flex;gap:8px;align-items:flex-end;">
       <input class="form-input" id="askInput" placeholder="Type here…" style="flex:1;" onkeydown="if(event.key==='Enter')runAssistant()">
       <button class="btn btn-primary" id="askGo" onclick="runAssistant()">Ask</button>
@@ -10569,48 +10569,48 @@ async function runAssistant() {
   if (!msg) return;
   assistantBusy = true; assistantPending = null;
   const btn = document.getElementById('askGo'); if (btn) { btn.disabled = true; btn.textContent = '…'; }
-  if (out) out.innerHTML = '<div style="color:var(--muted);font-size:13px;">Thinking…</div>';
+  if (out) out.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-body);">Thinking…</div>';
   try {
     const r = await kcFetch('/api/assistant/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.success) { if (out) out.innerHTML = `<div style="color:var(--danger);font-size:13px;">${escHtml(j.error || 'Could not understand that.')}</div>`; return; }
+    if (!r.ok || !j.success) { if (out) out.innerHTML = `<div style="color:var(--danger);font-size:var(--fs-body);">${escHtml(j.error || 'Could not understand that.')}</div>`; return; }
     await dispatchAssistant(j.plan, out);
-  } catch { if (out) out.innerHTML = '<div style="color:var(--danger);font-size:13px;">Could not reach the assistant.</div>'; }
+  } catch { if (out) out.innerHTML = '<div style="color:var(--danger);font-size:var(--fs-body);">Could not reach the assistant.</div>'; }
   finally { assistantBusy = false; if (btn) { btn.disabled = false; btn.textContent = 'Ask'; } }
 }
 async function dispatchAssistant(plan, out) {
   if (!out) return;
   if (!plan) { out.textContent = 'No answer.'; return; }
-  const reply = plan.reply ? `<div style="font-size:13px;margin-bottom:10px;">${escHtml(plan.reply)}</div>` : '';
+  const reply = plan.reply ? `<div style="font-size:var(--fs-body);margin-bottom:10px;">${escHtml(plan.reply)}</div>` : '';
   const a = plan.action || 'none';
   if (a === 'who_owes') { out.innerHTML = reply + await assistantWhoOwes(); return; }
   if (a === 'customer_info') { out.innerHTML = reply + await assistantCustomerInfo(plan.args && plan.args.name); return; }
   if (a === 'overdue_rentals') { out.innerHTML = reply + assistantOverdue(); return; }
-  if (a === 'todays_takings') { out.innerHTML = reply + '<div style="font-size:13px;">Opening the cash-up screen…</div>'; setTimeout(() => { closeDynamicModal(); goToTab('cashup'); }, 700); return; }
+  if (a === 'todays_takings') { out.innerHTML = reply + '<div style="font-size:var(--fs-body);">Opening the cash-up screen…</div>'; setTimeout(() => { closeDynamicModal(); goToTab('cashup'); }, 700); return; }
   if (['draft_reminder', 'create_payment_link', 'add_task', 'mark_task_done'].includes(a)) { out.innerHTML = reply + await assistantConfirmCard(plan); return; }
-  out.innerHTML = reply || '<div style="font-size:13px;color:var(--muted);">I can help with balances, who owes, overdue rentals, reminders, payment links and tasks.</div>';
+  out.innerHTML = reply || '<div style="font-size:var(--fs-body);color:var(--muted);">I can help with balances, who owes, overdue rentals, reminders, payment links and tasks.</div>';
 }
 function assistantNameOf(id) { const c = customers.find(x => String(x.id) === String(id)); return c ? `${c.firstName || ''} ${c.lastName || ''}`.trim() : ('#' + id); }
 async function assistantWhoOwes() {
   try {
     const r = await kcFetch('/api/ledger');
     const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.success) return '<div style="color:var(--danger);font-size:13px;">Could not load balances.</div>';
+    if (!r.ok || !j.success) return '<div style="color:var(--danger);font-size:var(--fs-body);">Could not load balances.</div>';
     const owers = (j.arrears || []).slice().sort((a, b) => Math.abs(Number(b.balance)) - Math.abs(Number(a.balance)));
-    if (!owers.length) return '<div style="color:var(--success);font-size:13px;">Nobody is in debt right now. 🎉</div>';
+    if (!owers.length) return '<div style="color:var(--success);font-size:var(--fs-body);">Nobody is in debt right now. 🎉</div>';
     const total = owers.reduce((s, b) => s + Math.abs(Number(b.balance) || 0), 0);
     const rows = owers.slice(0, 40).map((b) =>
-      `<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">
+      `<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:var(--fs-body);">
         <button style="background:none;border:0;color:var(--accent);cursor:pointer;padding:0;text-align:start;" onclick="openCustomerById('${escHtml(String(b.customerId))}')">${escHtml(assistantNameOf(b.customerId))}</button>
         <span style="color:var(--danger);font-weight:600;">${fmtGbp(Math.abs(Number(b.balance)))}</span>
       </div>`).join('');
-    return `<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">${owers.length} owing · ${fmtGbp(total)} total</div><div style="max-height:280px;overflow:auto;">${rows}</div>`;
-  } catch { return '<div style="color:var(--danger);font-size:13px;">Could not load balances.</div>'; }
+    return `<div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:6px;">${owers.length} owing · ${fmtGbp(total)} total</div><div style="max-height:280px;overflow:auto;">${rows}</div>`;
+  } catch { return '<div style="color:var(--danger);font-size:var(--fs-body);">Could not load balances.</div>'; }
 }
 async function assistantCustomerInfo(name) {
   const res = assistantResolve(name);
-  if (res.none) return `<div style="color:var(--muted);font-size:13px;">I couldn’t find a customer called “${escHtml(name || '')}”.</div>`;
-  if (res.choices) return `<div style="font-size:13px;margin-bottom:6px;">A few match — open one:</div>${assistantChooserHtml(res.choices)}`;
+  if (res.none) return `<div style="color:var(--muted);font-size:var(--fs-body);">I couldn’t find a customer called “${escHtml(name || '')}”.</div>`;
+  if (res.choices) return `<div style="font-size:var(--fs-body);margin-bottom:6px;">A few match — open one:</div>${assistantChooserHtml(res.choices)}`;
   const c = res.customer;
   let bal = null;
   if (customerLedgerBal && customerLedgerBal.has(String(c.id))) bal = customerLedgerBal.get(String(c.id));
@@ -10618,7 +10618,7 @@ async function assistantCustomerInfo(name) {
   const owes = bal != null && bal < 0;
   const balHtml = bal == null ? '<span style="color:var(--muted);">settled / no balance on file</span>'
     : `<span style="color:${owes ? 'var(--danger)' : 'var(--success)'};font-weight:700;">${owes ? fmtGbp(Math.abs(bal)) + ' owed' : (bal > 0 ? fmtGbp(bal) + ' in credit' : 'settled')}</span>`;
-  return `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:13px;">
+  return `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:var(--fs-body);">
     <div style="font-weight:600;margin-bottom:4px;">${escHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}</div>
     <div style="margin-bottom:8px;">${balHtml}</div>
     <button class="btn btn-outline btn-sm" onclick="openCustomerById('${escHtml(String(c.id))}')">Open customer</button>
@@ -10626,13 +10626,13 @@ async function assistantCustomerInfo(name) {
 }
 function assistantOverdue() {
   const od = rentals.filter((r) => r.status === 'overdue');
-  if (!od.length) return '<div style="color:var(--success);font-size:13px;">No overdue rentals. 🎉</div>';
+  if (!od.length) return '<div style="color:var(--success);font-size:var(--fs-body);">No overdue rentals. 🎉</div>';
   const rows = od.map((r) =>
-    `<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">
+    `<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:var(--fs-body);">
       <button style="background:none;border:0;color:var(--accent);cursor:pointer;padding:0;text-align:start;" onclick="openCustomerById('${escHtml(String(r.customerId))}')">${escHtml(assistantNameOf(r.customerId))}</button>
       <span style="color:var(--muted);">${r.phoneNumber ? escHtml(r.phoneNumber) + ' · ' : ''}due ${r.toDate ? fmtDate(r.toDate) : '—'}</span>
     </div>`).join('');
-  return `<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">${od.length} overdue</div><div style="max-height:280px;overflow:auto;">${rows}</div>`;
+  return `<div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:6px;">${od.length} overdue</div><div style="max-height:280px;overflow:auto;">${rows}</div>`;
 }
 function assistantResolve(name) {
   const q = String(name || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
@@ -10657,11 +10657,11 @@ function assistantChooserHtml(choices) {
 }
 async function assistantConfirmCard(plan) {
   const built = await assistantBuildAction(plan);
-  if (built.error) return `<div style="color:var(--danger);font-size:13px;">${built.error}</div>`;
+  if (built.error) return `<div style="color:var(--danger);font-size:var(--fs-body);">${built.error}</div>`;
   if (built.choicesHtml) return built.choicesHtml;
   assistantPending = built;
   return `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
-    <div style="font-size:13px;margin-bottom:10px;">${built.summary}</div>
+    <div style="font-size:var(--fs-body);margin-bottom:10px;">${built.summary}</div>
     <div style="display:flex;gap:8px;">
       <button class="btn btn-primary btn-sm" onclick="assistantConfirm()">✓ Do it</button>
       <button class="btn btn-outline btn-sm" onclick="assistantPending=null;var o=document.getElementById('askOut');if(o)o.innerHTML='';">Cancel</button>
@@ -10679,7 +10679,7 @@ async function assistantBuildAction(plan) {
   if (needsCust) {
     const res = assistantResolve(args.name);
     if (res.none) return { error: `I couldn’t find a customer called “${escHtml(args.name || '')}”.` };
-    if (res.choices) return { choicesHtml: `<div style="font-size:13px;margin-bottom:6px;">Several match “${escHtml(args.name)}” — say the surname too, or open one:</div>${assistantChooserHtml(res.choices)}` };
+    if (res.choices) return { choicesHtml: `<div style="font-size:var(--fs-body);margin-bottom:6px;">Several match “${escHtml(args.name)}” — say the surname too, or open one:</div>${assistantChooserHtml(res.choices)}` };
     cust = res.customer;
   }
   const cn = cust ? `${cust.firstName || ''} ${cust.lastName || ''}`.trim() : '';
@@ -10698,7 +10698,7 @@ async function assistantBuildAction(plan) {
     const title = String(args.title || '').trim();
     if (!title) return { error: 'What should the task say?' };
     return { summary: `Add a task: <strong>${escHtml(title)}</strong>${cust ? ` (linked to ${escHtml(cn)})` : ''}.`,
-      run: async () => { try { const r = await window.api.addTask({ title, customerId: cust ? cust.id : undefined }); if (r && (r.success || r.task)) { toast('Task added.', 'success'); if (currentTab === 'tasks') renderTasksTab(); const o = document.getElementById('askOut'); if (o) o.innerHTML = '<div style="color:var(--success);font-size:13px;">✓ Task added.</div>'; } else toast('Could not add task.', 'error'); } catch { toast('Could not add task.', 'error'); } } };
+      run: async () => { try { const r = await window.api.addTask({ title, customerId: cust ? cust.id : undefined }); if (r && (r.success || r.task)) { toast('Task added.', 'success'); if (currentTab === 'tasks') renderTasksTab(); const o = document.getElementById('askOut'); if (o) o.innerHTML = '<div style="color:var(--success);font-size:var(--fs-body);">✓ Task added.</div>'; } else toast('Could not add task.', 'error'); } catch { toast('Could not add task.', 'error'); } } };
   }
   if (a === 'mark_task_done') {
     const hint = String(args.task || '').toLowerCase().trim();
@@ -10710,7 +10710,7 @@ async function assistantBuildAction(plan) {
     if (matches.length > 1) return { error: `Several open tasks match “${escHtml(hint)}” — please be more specific.` };
     const tk = matches[0];
     return { summary: `Mark done: <strong>${escHtml(tk.title)}</strong>.`,
-      run: async () => { try { const r = await window.api.updateTask({ id: tk.id, done: true }); if (r && (r.success || r.task)) { toast('Marked done.', 'success'); if (currentTab === 'tasks') renderTasksTab(); const o = document.getElementById('askOut'); if (o) o.innerHTML = '<div style="color:var(--success);font-size:13px;">✓ Done.</div>'; } else toast('Could not update.', 'error'); } catch { toast('Could not update.', 'error'); } } };
+      run: async () => { try { const r = await window.api.updateTask({ id: tk.id, done: true }); if (r && (r.success || r.task)) { toast('Marked done.', 'success'); if (currentTab === 'tasks') renderTasksTab(); const o = document.getElementById('askOut'); if (o) o.innerHTML = '<div style="color:var(--success);font-size:var(--fs-body);">✓ Done.</div>'; } else toast('Could not update.', 'error'); } catch { toast('Could not update.', 'error'); } } };
   }
   return { error: 'I’m not sure how to do that yet.' };
 }
@@ -10868,12 +10868,12 @@ function paletteRender() {
   const list = document.getElementById('paletteList');
   if (!list) return;
   list.innerHTML = paletteResults.length === 0
-    ? `<div style="padding:14px;color:var(--muted);font-size:13px;">No matches.</div>`
+    ? `<div style="padding:14px;color:var(--muted);font-size:var(--fs-body);">No matches.</div>`
     : paletteResults.map((r, i) => `
       <div class="palette-item${i === paletteIndex ? ' active' : ''}" onclick="paletteRun(${i})">
         <span style="width:22px;text-align:center;">${r.icon}</span>
         <span style="flex:1;">${escHtml(r.label)}</span>
-        <span style="color:var(--muted);font-size:11px;">${escHtml(r.sub)}</span>
+        <span style="color:var(--muted);font-size:var(--fs-micro);">${escHtml(r.sub)}</span>
       </div>`).join('');
 }
 
@@ -11023,7 +11023,7 @@ function openPalette() {
         autocomplete="off" spellcheck="false">
       <div id="paletteQuick" class="palette-quick"></div>
       <div id="paletteList"></div>
-      <div style="padding:7px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);">↑↓ navigate · Enter open · 1–9 quick action · Esc close · scan a barcode straight in</div>
+      <div style="padding:7px 14px;border-top:1px solid var(--border);font-size:var(--fs-micro);color:var(--muted);">↑↓ navigate · Enter open · 1–9 quick action · Esc close · scan a barcode straight in</div>
     </div>`;
   el.addEventListener('mousedown', e => { if (e.target === el) closePalette(); });
   document.body.appendChild(el);
@@ -11359,7 +11359,7 @@ else startSvcTimerFloat();
 // then shows the plan grouped Now / Today / Soon with a reason and next step.
 // Advisory: ticking ✓ marks a task done; nothing else is changed automatically.
 async function openTaskTriageModal() {
-  showDynamicModal(`<div class="modal-title">🧠 AI plan for your day</div><div id="aiPlanBody" style="font-size:13px;color:var(--muted);">Reading your open tasks and working out the order…</div>`);
+  showDynamicModal(`<div class="modal-title">🧠 AI plan for your day</div><div id="aiPlanBody" style="font-size:var(--fs-body);color:var(--muted);">Reading your open tasks and working out the order…</div>`);
   try {
     const r = await kcFetch('/api/tasks/prioritize', { method: 'POST' });
     const j = await r.json().catch(() => ({}));
@@ -11378,12 +11378,12 @@ function renderTaskTriage(j) {
       <div style="display:flex;align-items:flex-start;gap:8px;">
         <button title="Mark done" style="background:none;border:1px solid var(--border);border-radius:6px;width:22px;height:22px;cursor:pointer;flex-shrink:0;color:var(--muted);" onclick="triageDone('${escHtml(t.id)}', this)">✓</button>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:600;">${escHtml(t.title)}</div>
-          ${t.reason ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;">${escHtml(t.reason)}</div>` : ''}
-          <div style="font-size:11px;margin-top:3px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <div style="font-size:var(--fs-body);font-weight:600;">${escHtml(t.title)}</div>
+          ${t.reason ? `<div style="font-size:var(--fs-small);color:var(--muted);margin-top:2px;">${escHtml(t.reason)}</div>` : ''}
+          <div style="font-size:var(--fs-micro);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
             ${t.action ? `<span style="color:var(--accent);">→ ${escHtml(t.action)}</span>` : ''}
             ${t.customerId
-              ? `<button style="background:none;border:0;color:var(--accent);cursor:pointer;padding:0;font-size:11px;" onclick="openCustomerById('${escHtml(String(t.customerId))}')">👤 ${escHtml(t.customerName || 'open customer')}</button>`
+              ? `<button style="background:none;border:0;color:var(--accent);cursor:pointer;padding:0;font-size:var(--fs-micro);" onclick="openCustomerById('${escHtml(String(t.customerId))}')">👤 ${escHtml(t.customerName || 'open customer')}</button>`
               : (t.customerName ? `<span style="color:var(--muted);">👤 ${escHtml(t.customerName)}</span>` : '')}
           </div>
         </div>
@@ -11396,9 +11396,9 @@ function renderTaskTriage(j) {
   }).join('');
   showDynamicModal(`
     <div class="modal-title">🧠 AI plan for your day</div>
-    ${j.focus ? `<div style="background:var(--accent-wash);border:1px solid var(--primary-subdued);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:13px;"><strong>Start here:</strong> ${escHtml(j.focus)}</div>` : ''}
-    <div style="max-height:420px;overflow:auto;">${groups || '<div style="color:var(--success);font-size:13px;">Nothing open. 🎉</div>'}</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:8px;">An AI suggestion from your live task list — you decide. Ticking ✓ marks the task done.</div>
+    ${j.focus ? `<div style="background:var(--accent-wash);border:1px solid var(--primary-subdued);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:var(--fs-body);"><strong>Start here:</strong> ${escHtml(j.focus)}</div>` : ''}
+    <div style="max-height:420px;overflow:auto;">${groups || '<div style="color:var(--success);font-size:var(--fs-body);">Nothing open. 🎉</div>'}</div>
+    <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:8px;">An AI suggestion from your live task list — you decide. Ticking ✓ marks the task done.</div>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button><button class="btn btn-primary" onclick="openTaskTriageModal()">↻ Re-plan</button></div>
   `);
 }
@@ -11582,18 +11582,18 @@ async function renderTasksTab() {
           onchange="toggleTaskDone('${escHtml(t.id)}', this.checked)">
         <div style="flex:1;min-width:0;">
           <div class="history-desc" style="${t.done ? 'text-decoration:line-through;' : ''}">${escHtml(t.title)}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+          <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:2px;">
             ${custLabel}${t.source !== 'manual' ? '🤖 auto · ' : ''}${t.dueDate ? `<span style="${overdueDue && !t.done ? 'color:var(--danger);font-weight:600;' : ''}">due ${fmtDate(t.dueDate)}</span>` : ''}
           </div>
-          ${t.notes ? `<div style="font-size:12px;color:var(--text);margin-top:5px;white-space:pre-line;line-height:1.5;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:6px 10px;">${escHtml(t.notes)}</div>` : ''}
+          ${t.notes ? `<div style="font-size:var(--fs-small);color:var(--text);margin-top:5px;white-space:pre-line;line-height:1.5;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:6px 10px;">${escHtml(t.notes)}</div>` : ''}
         </div>
         ${taskPriorityBadge(t.priority)}
       </div>
       ${!t.done ? `
       <div class="task-actions">
-        ${/^New signup:/i.test(t.title || '') && !t.customerId ? `<button class="btn btn-primary btn-sm" style="font-size:11px;padding:3px 10px;" onclick="addCustomerFromTask('${escHtml(t.id)}')">➕ Add as customer</button>` : ''}
-        ${isMoneyTask ? `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="openWalletModal('${escHtml(String(t.customerId))}')">💰 Record</button>` : ''}
-        ${chaseCust && waLink(chaseCust, '') ? `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;" onclick="waChaseCustomer('${escHtml(String(t.customerId))}')" title="Open a chase message in WhatsApp">💬 WhatsApp</button>` : ''}
+        ${/^New signup:/i.test(t.title || '') && !t.customerId ? `<button class="btn btn-primary btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="addCustomerFromTask('${escHtml(t.id)}')">➕ Add as customer</button>` : ''}
+        ${isMoneyTask ? `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="openWalletModal('${escHtml(String(t.customerId))}')">💰 Record</button>` : ''}
+        ${chaseCust && waLink(chaseCust, '') ? `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="waChaseCustomer('${escHtml(String(t.customerId))}')" title="Open a chase message in WhatsApp">💬 WhatsApp</button>` : ''}
         <select class="task-mini" onchange="setTaskPriority('${escHtml(t.id)}', this.value)" title="Priority">
           ${['High', 'Normal', 'Low'].map(p => `<option value="${p}" ${t.priority === p ? 'selected' : ''}>${p === 'High' ? '🔥 Now' : p === 'Normal' ? '📋 Next' : '🌙 Later'}</option>`).join('')}
         </select>
@@ -11609,9 +11609,9 @@ async function renderTasksTab() {
       <div class="task-suggest">
         <span>💡 Suggests <strong>${s.priority === 'High' ? '🔥 Now' : s.priority === 'Normal' ? '📋 Next' : '🌙 Later'}</strong> — ${escHtml(s.reason)}</span>
         <span style="white-space:nowrap;">
-          <button class="btn btn-primary btn-sm" style="font-size:11px;padding:3px 10px;"
+          <button class="btn btn-primary btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;"
             onclick="acceptSuggestion('${escHtml(t.id)}', '${s.priority}')">✓ Accept</button>
-          <button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;"
+          <button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;"
             onclick="rejectSuggestion('${escHtml(t.id)}', '${s.priority}')">✕ Keep ${escHtml(t.priority)}</button>
         </span>
       </div>` : ''}
@@ -11624,9 +11624,9 @@ async function renderTasksTab() {
         <span style="font-size:15px;">💤</span>
         <div style="flex:1;min-width:0;">
           <div class="history-desc">${escHtml(t.title)}</div>
-          <div style="font-size:11px;color:var(--muted);">wakes ${fmtDate(t.snoozedUntil)}</div>
+          <div style="font-size:var(--fs-micro);color:var(--muted);">wakes ${fmtDate(t.snoozedUntil)}</div>
         </div>
-        <button class="btn btn-outline btn-sm" style="font-size:11px;padding:3px 10px;"
+        <button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;"
           onclick="snoozeTask('${escHtml(t.id)}', 'wake')">⏰ Wake now</button>
       </div>
     </div>`;
@@ -11634,7 +11634,7 @@ async function renderTasksTab() {
   const lane = (title, list, empty) => `
     <div class="table-card" style="padding:8px 16px 12px;">
       <div class="section-divider" style="margin-top:10px;">${title} <span style="color:var(--muted);font-weight:400;">· ${list.length}</span></div>
-      ${list.length ? list.map(card).join('') : `<div style="color:var(--muted);font-size:13px;padding:8px 0;">${empty}</div>`}
+      ${list.length ? list.map(card).join('') : `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">${empty}</div>`}
     </div>`;
 
   content.innerHTML = `
@@ -11851,7 +11851,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
         arrears.slice(0, 8).map(a => `
           <div class="dash-hero-row${a.customerId ? ' dash-link' : ''}"${a.customerId
             ? ` onclick="goToTab('customers',{customerId:'${escHtml(String(a.customerId))}'})" title="Open ${escHtml(a.customerName)}"` : ''}>
-            <span>${escHtml(a.customerName)}${a.customerId ? '' : ' <span style="color:var(--muted);font-size:11px;">(walk-in)</span>'}</span>
+            <span>${escHtml(a.customerName)}${a.customerId ? '' : ' <span style="color:var(--muted);font-size:var(--fs-micro);">(walk-in)</span>'}</span>
             <span class="amt">${fmtGbp(Math.abs(a.balance))}${a.customerId ? ' <span class="feed-go" style="opacity:1;">›</span>' : ''}</span>
           </div>`).join('') +
         (arrears.length > 8 ? `<div class="dash-hero-row dash-link" onclick="goToTab('wallet')" title="Open the wallet"
@@ -11926,7 +11926,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   const shown = attention.slice(0, 10);
   dashFeedActions = shown.map(a => a[2]);
   const attentionHtml = shown.length === 0
-    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">All clear. 🎉</div>`
+    ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">All clear. 🎉</div>`
     : shown.map(([icon, html], i) => `
         <div class="feed-item dash-link" onclick="dashFeedActions[${i}]()" title="Open">
           <span class="feed-icon">${icon}</span><span>${html}</span>
@@ -11935,7 +11935,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
 
   // Each row deep-links to its customer (same as the wallet tab's feed).
   const activityHtml = !money || money.recent.length === 0
-    ? `<div style="color:var(--muted);font-size:13px;padding:8px 0;">No wallet activity yet.</div>`
+    ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">No wallet activity yet.</div>`
     : money.recent.slice(0, 8).map(e => `
         <div class="history-item history-flat${e.customerId ? ' dash-link' : ''}"
           ${e.customerId ? `onclick="goToTab('customers',{customerId:'${escHtml(String(e.customerId))}'})" title="Open customer"` : ''}>
@@ -11949,7 +11949,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
             ${e.amount >= 0 ? '+' : '−'}${fmtGbp(Math.abs(e.amount))}</div>
           ${e.customerId ? '<span class="feed-go">›</span>' : ''}
         </div>`).join('') + `
-        <div class="feed-item dash-link" onclick="goToTab('wallet')" style="color:var(--muted);font-size:12px;">
+        <div class="feed-item dash-link" onclick="goToTab('wallet')" style="color:var(--muted);font-size:var(--fs-small);">
           <span style="flex:1;">Full ledger &amp; today's money</span><span class="feed-go">›</span>
         </div>`;
 
@@ -12032,16 +12032,16 @@ async function renderVirtualTab() {
         <td><span class="badge" style="${v.status === 'Active'
           ? 'background:rgba(34,197,94,0.15);color:var(--success-ink);'
           : 'background:rgba(148,163,184,0.15);color:var(--muted);'}">${escHtml(v.status)}</span></td>
-        <td>${v.shortcutUrl ? `<a href="${escHtml(v.shortcutUrl)}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;">open ↗</a>` : '—'}</td>
+        <td>${v.shortcutUrl ? `<a href="${escHtml(v.shortcutUrl)}" target="_blank" rel="noopener" style="color:var(--accent);font-size:var(--fs-small);">open ↗</a>` : '—'}</td>
         <td style="white-space:nowrap;">
-          <button class="action-btn" style="font-size:11px;padding:4px 10px;"
+          <button class="action-btn" style="font-size:var(--fs-micro);padding:4px 10px;"
             onclick="openRemindModal('vn','${escHtml(v.id)}')" title="Remind me">⏰</button>
-          <button class="action-btn" style="font-size:11px;padding:4px 10px;"
+          <button class="action-btn" style="font-size:var(--fs-micro);padding:4px 10px;"
             onclick="openVNBillingModal('${escHtml(v.id)}')">💷 Billing</button>
-          <button class="action-btn" style="font-size:11px;padding:4px 10px;"
+          <button class="action-btn" style="font-size:var(--fs-micro);padding:4px 10px;"
             onclick="toggleVNStatus('${escHtml(v.id)}', '${v.status === 'Active' ? 'Inactive' : 'Active'}')">
             ${v.status === 'Active' ? '⏸ Deactivate' : '▶ Activate'}</button>
-          <button class="action-btn danger" style="font-size:11px;padding:4px 10px;"
+          <button class="action-btn danger" style="font-size:var(--fs-micro);padding:4px 10px;"
             aria-label="Delete this number" onclick="deleteVN('${escHtml(v.id)}', '${escHtml(v.number)}')">✕</button>
         </td>
       </tr>`).join('');
@@ -12167,7 +12167,7 @@ function openVNBillingModal(id) {
     `<option value="${k}" ${v.plan === k ? 'selected' : ''}>${label}</option>`).join('');
   showDynamicModal(`
     <div class="modal-title">💷 Monthly Billing — ${escHtml(fmtPhone(v.number))}</div>
-    <div style="color:var(--muted);font-size:13px;margin-bottom:14px;">
+    <div style="color:var(--muted);font-size:var(--fs-body);margin-bottom:14px;">
       ${v.customerName ? `Customer: <strong style="color:var(--text);">${escHtml(v.customerName)}</strong>` :
         '<span style="color:var(--danger);">⚠ No customer assigned — billing needs one.</span>'}
     </div>
@@ -12191,7 +12191,7 @@ function openVNBillingModal(id) {
       <div class="form-group form-full" style="flex-direction:row;align-items:center;gap:10px;">
         <input type="checkbox" id="vbEnabled" ${v.billingEnabled ? 'checked' : ''}
           style="cursor:pointer;">
-        <label for="vbEnabled" style="font-size:13px;cursor:pointer;">Billing enabled — the daily sweep posts one wallet charge per month</label>
+        <label for="vbEnabled" style="font-size:var(--fs-body);cursor:pointer;">Billing enabled — the daily sweep posts one wallet charge per month</label>
       </div>
     </div>
     <div class="modal-actions">
@@ -12279,26 +12279,26 @@ async function renderSettingsTab() {
             <td><span class="customer-name">${escHtml(m.fullName || '—')}</span>${m.isYou ? ' <span class="badge badge-rental">you</span>' : ''}</td>
             <td>${escHtml(m.email || '—')}</td>
             <td>
-              <select class="form-input" style="width:110px;padding:5px 8px;font-size:13px;min-height:0;"
+              <select class="form-input" style="width:110px;padding:5px 8px;font-size:var(--fs-body);min-height:0;"
                 onchange="changeTeamRole('${escHtml(m.id)}', this.value)" ${m.isYou ? 'disabled' : ''}>
                 <option value="owner" ${m.role === 'owner' ? 'selected' : ''}>Admin</option>
                 <option value="helper" ${m.role === 'helper' ? 'selected' : ''}>Helper</option>
               </select>
             </td>
             <td style="white-space:nowrap;">
-              <button class="action-btn" style="font-size:11px;"
+              <button class="action-btn" style="font-size:var(--fs-micro);"
                 onclick="openResetPasswordModal('${escHtml(m.id)}', '${escJs(m.fullName || m.email)}')">🔑 Reset password</button>
-              <button class="action-btn danger" style="font-size:11px;"
+              <button class="action-btn danger" style="font-size:var(--fs-micro);"
                 onclick="removeTeamMember('${escHtml(m.id)}', '${escJs(m.fullName || m.email)}', ${m.isYou})">✕ Remove${m.isYou ? ' (you)' : ''}</button></td>
           </tr>`).join('')}
         <tr>
-          <td><input class="form-input" id="tmName" placeholder="Full name" style="min-height:0;padding:6px 10px;font-size:13px;"></td>
+          <td><input class="form-input" id="tmName" placeholder="Full name" style="min-height:0;padding:6px 10px;font-size:var(--fs-body);"></td>
           <td style="white-space:nowrap;">
-            <input class="form-input" id="tmEmail" type="email" placeholder="Email" style="min-height:0;padding:6px 10px;font-size:13px;width:46%;display:inline-block;">
-            <input class="form-input" id="tmPassword" type="password" placeholder="Password (8+)" style="min-height:0;padding:6px 10px;font-size:13px;width:46%;display:inline-block;">
+            <input class="form-input" id="tmEmail" type="email" placeholder="Email" style="min-height:0;padding:6px 10px;font-size:var(--fs-body);width:46%;display:inline-block;">
+            <input class="form-input" id="tmPassword" type="password" placeholder="Password (8+)" style="min-height:0;padding:6px 10px;font-size:var(--fs-body);width:46%;display:inline-block;">
           </td>
           <td>
-            <select class="form-input" id="tmRole" style="width:110px;padding:5px 8px;font-size:13px;min-height:0;">
+            <select class="form-input" id="tmRole" style="width:110px;padding:5px 8px;font-size:var(--fs-body);min-height:0;">
               <option value="helper">Helper</option>
               <option value="owner">Admin</option>
             </select>
@@ -12309,12 +12309,12 @@ async function renderSettingsTab() {
       <div class="section-divider" style="margin:14px 14px 4px;">🔓 What helpers can see</div>
       <div style="padding:4px 14px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
         ${['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'shop', 'koltorah', 'virtual', 'tasks', 'settings'].map(t => `
-          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;">
+          <label style="display:flex;align-items:center;gap:5px;font-size:var(--fs-small);cursor:pointer;">
             <input type="checkbox" class="htTab" value="${t}" style="accent-color:var(--accent);cursor:pointer;"
               ${(cfg.settings.find(s => s.key === 'helper_tabs')?.textValue || '').split(',').includes(t) ? 'checked' : ''}>
             ${t}</label>`).join('')}
-        <button class="btn btn-outline btn-sm" style="font-size:11px;" onclick="saveHelperTabs()">💾 Save access</button>
-        <span style="font-size:11px;color:var(--muted);">Wallet, shop &amp; settings are also blocked server-side when unticked.</span>
+        <button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);" onclick="saveHelperTabs()">💾 Save access</button>
+        <span style="font-size:var(--fs-micro);color:var(--muted);">Wallet, shop &amp; settings are also blocked server-side when unticked.</span>
       </div>`) : '';
 
   // ── Automations card (owner-only) — custom "when X, do Y" rules ──
@@ -12324,13 +12324,13 @@ async function renderSettingsTab() {
     `${autos.rules.length} rule${autos.rules.length === 1 ? '' : 's'} — run in the daily sweep`, `
       <table><thead><tr><th>Rule</th><th>When</th><th>Raises</th><th>On</th><th></th></tr></thead>
       <tbody>
-        ${autos.rules.length === 0 ? `<tr><td colspan="5" style="color:var(--muted);font-size:13px;padding:12px 16px;">No custom rules yet. The built-in sweeps (overdue, arrears, flights, passports, SIM renewals, VN billing) always run.</td></tr>` : ''}
+        ${autos.rules.length === 0 ? `<tr><td colspan="5" style="color:var(--muted);font-size:var(--fs-body);padding:12px 16px;">No custom rules yet. The built-in sweeps (overdue, arrears, flights, passports, SIM renewals, VN billing) always run.</td></tr>` : ''}
         ${autos.rules.map(r => `
           <tr style="${r.enabled ? '' : 'opacity:0.5;'}">
             <td><strong>${escHtml(r.name)}</strong></td>
-            <td style="font-size:12px;">${escHtml((autoTriggers[r.trigger]?.label || r.trigger).replace('N', r.threshold))}</td>
-            <td style="font-size:12px;">📋 task <span class="badge badge-${r.priority === 'high' ? 'rental' : 'sim'}" style="font-size:10px;">${escHtml(r.priority)}</span></td>
-            <td><label style="font-size:12px;cursor:pointer;"><input type="checkbox" ${r.enabled ? 'checked' : ''} onchange="toggleAutomation('${escHtml(r.id)}', this.checked)" style="accent-color:var(--accent);"> on</label></td>
+            <td style="font-size:var(--fs-small);">${escHtml((autoTriggers[r.trigger]?.label || r.trigger).replace('N', r.threshold))}</td>
+            <td style="font-size:var(--fs-small);">📋 task <span class="badge badge-${r.priority === 'high' ? 'rental' : 'sim'}" style="font-size:10px;">${escHtml(r.priority)}</span></td>
+            <td><label style="font-size:var(--fs-small);cursor:pointer;"><input type="checkbox" ${r.enabled ? 'checked' : ''} onchange="toggleAutomation('${escHtml(r.id)}', this.checked)" style="accent-color:var(--accent);"> on</label></td>
             <td style="white-space:nowrap;">
               <button class="action-btn" aria-label="Edit this rule" onclick="openAutomationModal('${escHtml(r.id)}')">✏️</button>
               <button class="action-btn danger" aria-label="Delete this rule" onclick="deleteAutomation('${escHtml(r.id)}')">✕</button>
@@ -12339,7 +12339,7 @@ async function renderSettingsTab() {
       </tbody></table>
       <div style="padding:8px 14px 14px;">
         <button class="btn btn-outline btn-sm" onclick="openAutomationModal()">+ New automation rule</button>
-        <span style="font-size:11px;color:var(--muted);margin-left:8px;">e.g. "owes £100+ → urgent task", "flight in 7 days → task".</span>
+        <span style="font-size:var(--fs-micro);color:var(--muted);margin-left:8px;">e.g. "owes £100+ → urgent task", "flight in 7 days → task".</span>
       </div>`) : '';
 
   // ── Email addresses card (owner-only) — Forward Email aliases ──
@@ -12347,13 +12347,13 @@ async function renderSettingsTab() {
     `${aliases.aliases.length} @${escHtml(aliases.domain)} via Forward Email`, `
       <table><thead><tr><th>Address</th><th>Forwards to</th><th>Purpose</th><th>On</th><th></th></tr></thead>
       <tbody>
-        ${aliases.aliases.length === 0 ? `<tr><td colspan="5" style="color:var(--muted);font-size:13px;padding:12px 16px;">No addresses yet — add the first one below (e.g. reminder@, admin@, receipts@).</td></tr>` : ''}
+        ${aliases.aliases.length === 0 ? `<tr><td colspan="5" style="color:var(--muted);font-size:var(--fs-body);padding:12px 16px;">No addresses yet — add the first one below (e.g. reminder@, admin@, receipts@).</td></tr>` : ''}
         ${aliases.aliases.map(a => `
           <tr style="${a.enabled ? '' : 'opacity:0.5;'}">
             <td><strong>${escHtml(a.address)}</strong></td>
-            <td style="font-size:12px;">${a.recipients.map(escHtml).join('<br>') || '—'}</td>
-            <td style="font-size:12px;color:var(--muted);">${escHtml(a.description || '—')}</td>
-            <td><label style="font-size:12px;cursor:pointer;"><input type="checkbox" ${a.enabled ? 'checked' : ''}
+            <td style="font-size:var(--fs-small);">${a.recipients.map(escHtml).join('<br>') || '—'}</td>
+            <td style="font-size:var(--fs-small);color:var(--muted);">${escHtml(a.description || '—')}</td>
+            <td><label style="font-size:var(--fs-small);cursor:pointer;"><input type="checkbox" ${a.enabled ? 'checked' : ''}
               onchange="toggleEmailAlias('${escHtml(a.id)}', this.checked)" style="accent-color:var(--accent);"> on</label></td>
             <td style="white-space:nowrap;">
               <button class="action-btn" title="Edit forwarding / purpose" onclick="openEmailAliasModal('${escHtml(a.id)}')">✏️</button>
@@ -12365,12 +12365,12 @@ async function renderSettingsTab() {
       </tbody></table>
       <div style="padding:8px 14px 14px;">
         <button class="btn btn-outline btn-sm" onclick="openEmailAliasModal()">+ New address</button>
-        <span style="font-size:11px;color:var(--muted);margin-left:8px;">🔑 makes an SMTP password so the app (or Gmail send-as) can send from that address.</span>
+        <span style="font-size:var(--fs-micro);color:var(--muted);margin-left:8px;">🔑 makes an SMTP password so the app (or Gmail send-as) can send from that address.</span>
       </div>`) : settingsCard('emails', '📧 Email addresses', 'not connected yet',
-    `<div style="padding:8px 16px 14px;font-size:13px;color:var(--muted);">${escHtml(aliases.error || 'Unavailable.')}</div>`));
+    `<div style="padding:8px 16px 14px;font-size:var(--fs-body);color:var(--muted);">${escHtml(aliases.error || 'Unavailable.')}</div>`));
 
   const num = (id, val, step = '0.01') =>
-    `<input class="form-input" type="number" step="${step}" id="${id}" value="${val}" style="width:90px;padding:6px 8px;font-size:13px;">`;
+    `<input class="form-input" type="number" step="${step}" id="${id}" value="${val}" style="width:90px;padding:6px 8px;font-size:var(--fs-body);">`;
 
   const rateRows = cfg.rentalRates.map(r => `
     <tr>
@@ -12381,15 +12381,15 @@ async function renderSettingsTab() {
       <td>${num(`rr_period_${r.countryCode}`, r.capPeriodDays, '1')}</td>
       <td>${num(`rr_vnw_${r.countryCode}`, r.vnWeekly ?? '')}</td>
       <td>${num(`rr_vnm_${r.countryCode}`, r.vnPer30Days ?? '')}</td>
-      <td style="white-space:nowrap;"><button class="btn btn-outline" style="font-size:12px;padding:5px 12px;"
+      <td style="white-space:nowrap;"><button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 12px;"
         aria-label="Save this rate" onclick="saveRentalRate('${escHtml(r.countryCode)}')">💾</button>
-        <button class="action-btn danger" style="font-size:11px;" title="Remove country"
+        <button class="action-btn danger" style="font-size:var(--fs-micro);" title="Remove country"
         onclick="deleteRateRow('rental_rates','${escHtml(r.countryCode)}')">✕</button></td>
     </tr>`).join('') + `
     <tr style="background:var(--bg-secondary);">
       <td><div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a country</div>
-        <input class="form-input" id="rrNew_code" placeholder="FR" style="width:70px;padding:5px 7px;font-size:12px;min-height:0;text-transform:uppercase;">
-        <input class="form-input" id="rrNew_name" placeholder="France" style="width:100px;padding:5px 7px;font-size:12px;min-height:0;margin-top:3px;"></td>
+        <input class="form-input" id="rrNew_code" placeholder="FR" style="width:70px;padding:5px 7px;font-size:var(--fs-small);min-height:0;text-transform:uppercase;">
+        <input class="form-input" id="rrNew_name" placeholder="France" style="width:100px;padding:5px 7px;font-size:var(--fs-small);min-height:0;margin-top:3px;"></td>
       <td>${num('rrNew_rate', '')}</td><td>${num('rrNew_min', '')}</td><td>${num('rrNew_cap', '')}</td>
       <td>${num('rrNew_period', '30', '1')}</td><td>${num('rrNew_vnw', '')}</td><td>${num('rrNew_vnm', '')}</td>
       <td><button class="btn btn-primary btn-sm" onclick="addRentalRate()">+ Add</button></td>
@@ -12401,14 +12401,14 @@ async function renderSettingsTab() {
       <td>${num(`dr_phone_${d.countryCode}`, d.phoneDamageLoss)}</td>
       <td>${num(`dr_charger_${d.countryCode}`, d.chargerMissing)}</td>
       <td>${num(`dr_sim_${d.countryCode}`, d.simMissing)}</td>
-      <td style="white-space:nowrap;"><button class="btn btn-outline" style="font-size:12px;padding:5px 12px;"
+      <td style="white-space:nowrap;"><button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 12px;"
         aria-label="Save this rate" onclick="saveDamageRate('${escHtml(d.countryCode)}')">💾</button>
-        <button class="action-btn danger" style="font-size:11px;" title="Remove country"
+        <button class="action-btn danger" style="font-size:var(--fs-micro);" title="Remove country"
         onclick="deleteRateRow('damage_rates','${escHtml(d.countryCode)}')">✕</button></td>
     </tr>`).join('') + `
     <tr style="background:var(--bg-secondary);">
       <td><div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a country</div>
-        <input class="form-input" id="drNew_code" placeholder="FR" style="width:70px;padding:5px 7px;font-size:12px;min-height:0;text-transform:uppercase;"></td>
+        <input class="form-input" id="drNew_code" placeholder="FR" style="width:70px;padding:5px 7px;font-size:var(--fs-small);min-height:0;text-transform:uppercase;"></td>
       <td>${num('drNew_phone', '')}</td><td>${num('drNew_charger', '')}</td><td>${num('drNew_sim', '')}</td>
       <td><button class="btn btn-primary btn-sm" onclick="addDamageRate()">+ Add</button></td>
     </tr>`;
@@ -12443,12 +12443,12 @@ async function renderSettingsTab() {
   });
   const feeRow = ({ s, m }) => `
     <tr>
-      <td style="max-width:340px;"><strong>${escHtml(m.label)}</strong>${m.help ? `<div style="color:var(--muted);font-size:11px;line-height:1.4;margin-top:2px;">${escHtml(m.help)}</div>` : ''}</td>
-      <td style="white-space:nowrap;">${num(`st_${s.key}`, s.numValue)} <span style="color:var(--muted);font-size:11px;">${escHtml(m.unit || '')}</span></td>
-      <td><button class="btn btn-outline" style="font-size:12px;padding:5px 12px;" onclick="saveSettingKey('${escHtml(s.key)}')">💾 Save</button></td>
+      <td style="max-width:340px;"><strong>${escHtml(m.label)}</strong>${m.help ? `<div style="color:var(--muted);font-size:var(--fs-micro);line-height:1.4;margin-top:2px;">${escHtml(m.help)}</div>` : ''}</td>
+      <td style="white-space:nowrap;">${num(`st_${s.key}`, s.numValue)} <span style="color:var(--muted);font-size:var(--fs-micro);">${escHtml(m.unit || '')}</span></td>
+      <td><button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 12px;" onclick="saveSettingKey('${escHtml(s.key)}')">💾 Save</button></td>
     </tr>`;
   const settingRows = Object.entries(feeGroups).map(([group, items]) =>
-    `<tr><td colspan="3" style="background:var(--bg-secondary);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);padding:6px 16px;">${group}</td></tr>` +
+    `<tr><td colspan="3" style="background:var(--bg-secondary);font-size:var(--fs-micro);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);padding:6px 16px;">${group}</td></tr>` +
     items.map(feeRow).join('')).join('');
 
   emailAliasCache = aliases?.success ? aliases.aliases : [];
@@ -12459,7 +12459,7 @@ async function renderSettingsTab() {
   const catLabel = { repair: '🔧 Repairs', online: '🖨️ Online & print', tickets: '✈️ Tickets',
     phone: '📱 Phones', sim: '💳 SIM', other: '📦 Other' };
   const menuNum = (id, val) =>
-    `<input class="form-input" type="number" step="0.01" id="${id}" value="${val ?? ''}" placeholder="—" style="width:76px;padding:5px 7px;font-size:12px;min-height:0;">`;
+    `<input class="form-input" type="number" step="0.01" id="${id}" value="${val ?? ''}" placeholder="—" style="width:76px;padding:5px 7px;font-size:var(--fs-small);min-height:0;">`;
   const menuHtml = !isAdmin || !menu?.success ? '' : settingsCard('pricemenu', '🧾 Service price menu',
     `${menuItemsCache.length} services — what the charging screens offer`, `
       <div class="table-wrap"><table><thead><tr><th>Service</th><th>Price</th><th>KC price</th><th>Repeat</th><th>Bulk (tickets 6th+)</th><th>On</th><th></th></tr></thead>
@@ -12467,24 +12467,24 @@ async function renderSettingsTab() {
         ${['repair','online','tickets','phone','sim','other'].map(cat => {
           const items = menuItemsCache.filter(m => m.category === cat);
           if (!items.length) return '';
-          return `<tr><td colspan="7" style="background:var(--bg-secondary);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);padding:6px 16px;">${catLabel[cat] || cat}</td></tr>` +
+          return `<tr><td colspan="7" style="background:var(--bg-secondary);font-size:var(--fs-micro);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);padding:6px 16px;">${catLabel[cat] || cat}</td></tr>` +
             items.map(m => `
             <tr style="${m.active ? '' : 'opacity:0.45;'}">
-              <td><input class="form-input" id="mi_name_${m.id}" value="${escHtml(m.name)}" style="min-height:0;padding:5px 8px;font-size:12px;min-width:170px;"></td>
+              <td><input class="form-input" id="mi_name_${m.id}" value="${escHtml(m.name)}" style="min-height:0;padding:5px 8px;font-size:var(--fs-small);min-width:170px;"></td>
               <td>${menuNum(`mi_price_${m.id}`, m.price)}</td>
               <td>${menuNum(`mi_kc_${m.id}`, m.kcPrice)}</td>
               <td>${menuNum(`mi_rep_${m.id}`, m.repeatPrice)}</td>
               <td>${menuNum(`mi_bulk_${m.id}`, m.bulkPrice)}</td>
               <td><input type="checkbox" id="mi_active_${m.id}" ${m.active ? 'checked' : ''} style="accent-color:var(--accent);cursor:pointer;"></td>
-              <td><button class="btn btn-outline" style="font-size:12px;padding:5px 12px;" onclick="saveMenuItem('${escHtml(String(m.id))}')">💾 Save</button></td>
+              <td><button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 12px;" onclick="saveMenuItem('${escHtml(String(m.id))}')">💾 Save</button></td>
             </tr>`).join('');
         }).join('')}
         <tr style="background:var(--bg-secondary);">
           <td><div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a service</div>
-            <input class="form-input" id="miNewName" placeholder="New service name" style="min-height:0;padding:5px 8px;font-size:12px;min-width:170px;"></td>
+            <input class="form-input" id="miNewName" placeholder="New service name" style="min-height:0;padding:5px 8px;font-size:var(--fs-small);min-width:170px;"></td>
           <td>${menuNum('miNewPrice', '')}</td>
           <td colspan="3">
-            <select class="form-input" id="miNewCat" style="min-height:0;padding:5px 8px;font-size:12px;width:130px;">
+            <select class="form-input" id="miNewCat" style="min-height:0;padding:5px 8px;font-size:var(--fs-small);width:130px;">
               ${Object.entries(catLabel).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}
             </select>
           </td>
@@ -12492,7 +12492,7 @@ async function renderSettingsTab() {
           <td><button class="btn btn-primary btn-sm" onclick="addMenuItem()">+ Add</button></td>
         </tr>
       </tbody></table></div>
-      <div style="padding:6px 14px 12px;font-size:11px;color:var(--muted);">Prices apply to new charges only. Untick "On" to retire a service — old charges keep their label.</div>`);
+      <div style="padding:6px 14px 12px;font-size:var(--fs-micro);color:var(--muted);">Prices apply to new charges only. Untick "On" to retire a service — old charges keep their label.</div>`);
 
   // ── Extra charges card (owner-defined fees the engine applies for you) ──
   extraChargeCache = extra?.success ? extra.charges : [];
@@ -12500,38 +12500,38 @@ async function renderSettingsTab() {
     sim: '💳 Every SIM setup', repair: '🔧 Every repair', rental: '📱 Every rental', any: '⭐ All of the above' };
   const extraHtml = !isAdmin || !extra?.success ? '' : settingsCard('extras', '➕ Extra charges',
     `${extraChargeCache.length} auto-applied — the app bills these for you`, `
-      <div style="padding:8px 16px 4px;font-size:12px;color:var(--muted);line-height:1.5;">
+      <div style="padding:8px 16px 4px;font-size:var(--fs-small);color:var(--muted);line-height:1.5;">
         Define a fee once and the app adds it <strong>automatically</strong> every time you make that kind of charge —
         e.g. a £5 handling fee on every flight booking. "Automatic" always applies; "optional" you tick per charge.
         Wired for flight bookings, online/print services, SIM setups, repairs and rentals.</div>
       <div class="table-wrap"><table><thead><tr><th>Charge name</th><th>Amount</th><th>Added to</th><th>How</th><th>On</th><th></th></tr></thead>
       <tbody>
-        ${extraChargeCache.length === 0 ? `<tr><td colspan="6" style="color:var(--muted);font-size:13px;padding:12px 16px;">None yet. Add one below — e.g. "Handling fee £5 → every flight booking → automatic".</td></tr>` : ''}
+        ${extraChargeCache.length === 0 ? `<tr><td colspan="6" style="color:var(--muted);font-size:var(--fs-body);padding:12px 16px;">None yet. Add one below — e.g. "Handling fee £5 → every flight booking → automatic".</td></tr>` : ''}
         ${extraChargeCache.map(c => `
           <tr style="${c.active ? '' : 'opacity:0.5;'}">
-            <td><input class="form-input" id="ec_label_${c.id}" value="${escHtml(c.label)}" style="min-height:0;padding:5px 8px;font-size:12px;min-width:150px;"></td>
+            <td><input class="form-input" id="ec_label_${c.id}" value="${escHtml(c.label)}" style="min-height:0;padding:5px 8px;font-size:var(--fs-small);min-width:150px;"></td>
             <td>${num(`ec_amount_${c.id}`, c.amount)}</td>
-            <td><select class="form-input" id="ec_target_${c.id}" style="min-height:0;padding:5px 8px;font-size:12px;">
+            <td><select class="form-input" id="ec_target_${c.id}" style="min-height:0;padding:5px 8px;font-size:var(--fs-small);">
               ${Object.entries(TARGET_LABEL).map(([k, l]) => `<option value="${k}" ${c.appliesTo === k ? 'selected' : ''}>${l}</option>`).join('')}
             </select></td>
-            <td><select class="form-input" id="ec_mode_${c.id}" style="min-height:0;padding:5px 8px;font-size:12px;width:110px;">
+            <td><select class="form-input" id="ec_mode_${c.id}" style="min-height:0;padding:5px 8px;font-size:var(--fs-small);width:110px;">
               <option value="auto" ${c.mode === 'auto' ? 'selected' : ''}>Automatic</option>
               <option value="optional" ${c.mode === 'optional' ? 'selected' : ''}>Optional</option>
             </select></td>
             <td><input type="checkbox" id="ec_active_${c.id}" ${c.active ? 'checked' : ''} style="accent-color:var(--accent);cursor:pointer;"></td>
             <td style="white-space:nowrap;">
-              <button class="btn btn-outline" style="font-size:12px;padding:5px 10px;" aria-label="Save this charge" onclick="saveExtraCharge('${escHtml(c.id)}')">💾</button>
-              <button class="action-btn danger" style="font-size:11px;" aria-label="Delete this charge" onclick="deleteExtraCharge('${escHtml(c.id)}')">✕</button>
+              <button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 10px;" aria-label="Save this charge" onclick="saveExtraCharge('${escHtml(c.id)}')">💾</button>
+              <button class="action-btn danger" style="font-size:var(--fs-micro);" aria-label="Delete this charge" onclick="deleteExtraCharge('${escHtml(c.id)}')">✕</button>
             </td>
           </tr>`).join('')}
         <tr style="background:var(--bg-secondary);">
           <td><div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a charge</div>
-            <input class="form-input" id="ecNew_label" placeholder="e.g. Handling fee" style="min-height:0;padding:5px 8px;font-size:12px;min-width:150px;"></td>
+            <input class="form-input" id="ecNew_label" placeholder="e.g. Handling fee" style="min-height:0;padding:5px 8px;font-size:var(--fs-small);min-width:150px;"></td>
           <td>${num('ecNew_amount', '')}</td>
-          <td><select class="form-input" id="ecNew_target" style="min-height:0;padding:5px 8px;font-size:12px;">
+          <td><select class="form-input" id="ecNew_target" style="min-height:0;padding:5px 8px;font-size:var(--fs-small);">
             ${Object.entries(TARGET_LABEL).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}
           </select></td>
-          <td><select class="form-input" id="ecNew_mode" style="min-height:0;padding:5px 8px;font-size:12px;width:110px;">
+          <td><select class="form-input" id="ecNew_mode" style="min-height:0;padding:5px 8px;font-size:var(--fs-small);width:110px;">
             <option value="auto">Automatic</option><option value="optional">Optional</option>
           </select></td>
           <td></td>
@@ -12550,10 +12550,10 @@ async function renderSettingsTab() {
       </div>
       <div style="padding:8px 16px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <input class="form-input" id="ivrPlatformsInput" value="${escHtml(ivrList.join(', '))}"
-          placeholder="elid, FreePBX, OpenBPX, 3CX…" style="flex:1;min-width:240px;min-height:0;padding:8px 12px;font-size:13px;">
+          placeholder="elid, FreePBX, OpenBPX, 3CX…" style="flex:1;min-width:240px;min-height:0;padding:8px 12px;font-size:var(--fs-body);">
         <button class="btn btn-outline btn-sm" onclick="saveIvrPlatforms()">💾 Save providers</button>
       </div>
-      <div style="padding:0 16px 14px;font-size:11px;color:var(--muted);line-height:1.5;">
+      <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
         Comma-separated. These appear in the <strong>Platform / IVR provider</strong> dropdown when you add a virtual number.
         Existing numbers keep their provider even if you remove it here.</div>`);
 
@@ -12578,7 +12578,7 @@ async function renderSettingsTab() {
           </tbody>
         </table></div>
       </div>
-      <div style="padding:0 16px 14px;font-size:11px;color:var(--muted);line-height:1.5;">
+      <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
         Charge the job with the <strong>Contact Transfer / Phone Setup</strong> line on the Online &amp; Print menu — it lands on the customer's timeline and wallet like any other service. Then save the finished <strong>.vcf</strong> against the customer (Documents on their card), so next phone change their contacts are one click away.</div>`);
 
   // A category eyebrow above its cards — same idea as the sidebar's group
@@ -12616,15 +12616,15 @@ async function renderSettingsTab() {
     `${activeBiz.length} account${activeBiz.length === 1 ? '' : 's'} · ~${fmtGbp(bizTotal)}/month`, `
       <table><thead><tr><th>Account</th><th>Login</th><th>£/month</th><th>Renews</th><th></th></tr></thead>
       <tbody>
-        ${activeBiz.length === 0 ? `<tr><td colspan="5" style="color:var(--muted);font-size:13px;padding:12px 16px;">Nothing registered yet — add Vercel, Supabase, Resend, Twilio, elid, the carrier logins… so nothing lives only in someone's head.</td></tr>` : ''}
+        ${activeBiz.length === 0 ? `<tr><td colspan="5" style="color:var(--muted);font-size:var(--fs-body);padding:12px 16px;">Nothing registered yet — add Vercel, Supabase, Resend, Twilio, elid, the carrier logins… so nothing lives only in someone's head.</td></tr>` : ''}
         ${activeBiz.map(a => `
           <tr>
-            <td><strong>${escHtml(a.name)}</strong><div style="font-size:11px;color:var(--muted);">${BIZ_CAT_LABELS[a.category] || escHtml(a.category)}${a.notes ? ' · ' + escHtml(a.notes.slice(0, 60)) : ''}</div></td>
-            <td style="font-size:12px;">${a.url ? `<a href="${escHtml(a.url)}" target="_blank" rel="noopener" style="color:var(--accent);">open ↗</a> ` : ''}${escHtml(a.loginEmail || '—')}</td>
+            <td><strong>${escHtml(a.name)}</strong><div style="font-size:var(--fs-micro);color:var(--muted);">${BIZ_CAT_LABELS[a.category] || escHtml(a.category)}${a.notes ? ' · ' + escHtml(a.notes.slice(0, 60)) : ''}</div></td>
+            <td style="font-size:var(--fs-small);">${a.url ? `<a href="${escHtml(a.url)}" target="_blank" rel="noopener" style="color:var(--accent);">open ↗</a> ` : ''}${escHtml(a.loginEmail || '—')}</td>
             <td style="font-feature-settings:'tnum';">${a.monthlyCost != null ? fmtGbp(a.monthlyCost) : '—'}</td>
             <td>${a.renewalDate ? `<span style="${a.renewalDate <= soon10 ? 'color:var(--danger);font-weight:600;' : ''}">${fmtDate(a.renewalDate)}${a.renewalDate < today10 ? ' ⚠' : ''}</span>` : '—'}</td>
             <td style="white-space:nowrap;">
-              ${a.hasCred ? `<button class="action-btn" style="font-size:11px;" onclick="revealBizAccount('${escHtml(a.id)}')">🔑 Reveal</button>` : ''}
+              ${a.hasCred ? `<button class="action-btn" style="font-size:var(--fs-micro);" onclick="revealBizAccount('${escHtml(a.id)}')">🔑 Reveal</button>` : ''}
               <button class="action-btn" aria-label="Edit ${escHtml(a.name || 'account')}" onclick="openBizAccountModal('${escHtml(a.id)}')">✏️</button>
               <button class="action-btn danger" aria-label="Retire ${escHtml(a.name || 'account')}" onclick="retireBizAccount('${escHtml(a.id)}', '${escJs(a.name)}')">✕</button>
             </td>
@@ -12632,7 +12632,7 @@ async function renderSettingsTab() {
       </tbody></table>
       <div style="padding:8px 14px 14px;">
         <button class="btn btn-outline btn-sm" onclick="openBizAccountModal()">+ Add account</button>
-        ${bizacc.credVault ? '' : '<span style="font-size:11px;color:var(--warning,#b45309);margin-left:8px;">Credential vault key missing — passwords cannot be stored until SIM_CRED_KEY is set.</span>'}
+        ${bizacc.credVault ? '' : '<span style="font-size:var(--fs-micro);color:var(--warning,#b45309);margin-left:8px;">Credential vault key missing — passwords cannot be stored until SIM_CRED_KEY is set.</span>'}
       </div>`) : '';
 
   // Phone guide — the public handset catalogue (/phone-guide), composed here.
@@ -12645,10 +12645,10 @@ async function renderSettingsTab() {
     `${activeModels.length} model${activeModels.length === 1 ? '' : 's'} on the public guide`, `
       <table><thead><tr><th>Phone</th><th>Price</th><th>Specs</th><th>Pros &amp; cons</th><th></th></tr></thead>
       <tbody>
-        ${activeModels.length === 0 ? '<tr><td colspan="5" style="color:var(--muted);font-size:13px;padding:12px 16px;">No models yet — add the first phone.</td></tr>' : ''}
+        ${activeModels.length === 0 ? '<tr><td colspan="5" style="color:var(--muted);font-size:var(--fs-body);padding:12px 16px;">No models yet — add the first phone.</td></tr>' : ''}
         ${activeModels.map(m => `
           <tr>
-            <td><strong>${escHtml(m.name)}</strong><div style="font-size:11px;color:var(--muted);">order ${m.sortOrder}${m.notes ? ' · ' + escHtml(m.notes.slice(0, 50)) : ''}</div></td>
+            <td><strong>${escHtml(m.name)}</strong><div style="font-size:var(--fs-micro);color:var(--muted);">order ${m.sortOrder}${m.notes ? ' · ' + escHtml(m.notes.slice(0, 50)) : ''}</div></td>
             <td style="font-feature-settings:'tnum';">${m.price != null ? fmtGbp(m.price) : '—'}</td>
             <td style="font-size:var(--fs-small);color:var(--muted);max-width:260px;">${escHtml(['Dual SIM: ' + (m.dualSim || '—'), 'Hebrew: ' + (m.yiddishText || '—'), 'Touch: ' + (m.touchScreen || '—'), 'Text: ' + (m.texting || '—')].join(' · '))}</td>
             <td style="font-size:var(--fs-small);">${m.pros || m.cons ? '✍️ written' : '<span style="color:var(--muted);">not written yet</span>'}</td>
@@ -12661,7 +12661,7 @@ async function renderSettingsTab() {
       <div style="padding:8px 14px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
         <button class="btn btn-outline btn-sm" onclick="openPhoneModelModal()">+ Add phone</button>
         <a class="btn btn-outline btn-sm" href="/phone-guide" target="_blank" rel="noopener">👁 View the public page ↗</a>
-        ${retiredModels.length ? `<span style="font-size:11px;color:var(--muted);">Hidden: ${retiredModels.map(m => `${escHtml(m.name)} <button class="action-btn" style="font-size:10px;" onclick="restorePhoneModel('${escHtml(m.id)}')">↩ restore</button>`).join(' · ')}</span>` : ''}
+        ${retiredModels.length ? `<span style="font-size:var(--fs-micro);color:var(--muted);">Hidden: ${retiredModels.map(m => `${escHtml(m.name)} <button class="action-btn" style="font-size:10px;" onclick="restorePhoneModel('${escHtml(m.id)}')">↩ restore</button>`).join(' · ')}</span>` : ''}
       </div>`) : '';
 
   // ── Messaging status (email + SMS) — reads /api/health, which reports each
@@ -12680,13 +12680,13 @@ async function renderSettingsTab() {
       <tbody>
         <tr>
           <td><strong>📧 Email</strong></td>
-          <td style="font-size:12px;">${escHtml(health?.email?.provider || '—')}</td>
+          <td style="font-size:var(--fs-small);">${escHtml(health?.email?.provider || '—')}</td>
           <td>${chanBadge(health?.email)}</td>
           <td style="font-size:var(--fs-small);color:var(--muted);">HOLD builds &amp; logs but sends nothing · TEST sends everything to your own address · LIVE emails real customers (MAIL_LIVE).</td>
         </tr>
         <tr>
           <td><strong>💬 SMS</strong></td>
-          <td style="font-size:12px;">${escHtml(health?.sms?.provider || 'Twilio (not connected)')}</td>
+          <td style="font-size:var(--fs-small);">${escHtml(health?.sms?.provider || 'Twilio (not connected)')}</td>
           <td>${chanBadge(health?.sms)}</td>
           <td style="font-size:var(--fs-small);color:var(--muted);">${health?.sms?.configured
             ? 'HOLD builds &amp; logs but sends nothing · TEST sends everything to SMS_TEST_TO · LIVE texts real customers (SMS_LIVE).'
@@ -12695,9 +12695,9 @@ async function renderSettingsTab() {
       </tbody></table>
       <div style="padding:8px 14px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
         <input class="form-input" id="smsTestTo" type="tel" dir="ltr" placeholder="+44 7…  (your own number)"
-          style="min-height:0;padding:7px 10px;font-size:13px;width:220px;">
+          style="min-height:0;padding:7px 10px;font-size:var(--fs-body);width:220px;">
         <button class="btn btn-outline btn-sm" onclick="sendTestSms()">📤 Send test SMS</button>
-        <span style="font-size:11px;color:var(--muted);">Safe in every mode — on HOLD it only logs; on TEST it goes to the test number whatever you type.</span>
+        <span style="font-size:var(--fs-micro);color:var(--muted);">Safe in every mode — on HOLD it only logs; on TEST it goes to the test number whatever you type.</span>
       </div>`);
 
   // Shop details — public-facing facts the owner should be able to change
@@ -12707,16 +12707,16 @@ async function renderSettingsTab() {
       <div style="padding:12px 14px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
         <label style="font-size:var(--fs-body);color:var(--muted);">Opening hours</label>
         <input class="form-input" id="stOpeningHours" value="${escHtml(openingHours)}"
-          style="min-height:0;padding:7px 10px;font-size:13px;flex:1;min-width:240px;" placeholder="e.g. Sunday–Thursday, 2:00–6:30pm">
+          style="min-height:0;padding:7px 10px;font-size:var(--fs-body);flex:1;min-width:240px;" placeholder="e.g. Sunday–Thursday, 2:00–6:30pm">
         <button class="btn btn-primary btn-sm" onclick="saveOpeningHours()">💾 Save</button>
-        <span style="flex-basis:100%;font-size:11px;color:var(--muted);">Shown on the public welcome page (Visit-the-shop card and footer). Free text — write it the way you'd say it.</span>
+        <span style="flex-basis:100%;font-size:var(--fs-micro);color:var(--muted);">Shown on the public welcome page (Visit-the-shop card and footer). Free text — write it the way you'd say it.</span>
       </div>`);
 
   // Travel requirements matrix (owner-only) — filled lazily after render.
   const travelRulesHtml = (currentStaff && currentStaff.role !== 'owner') ? '' :
     settingsCard('travel-rules', '🛂 Travel requirements',
       'what each passport needs, per destination', `
-      <div id="travelRulesBody" style="padding:12px 14px 14px;"><div style="color:var(--muted);font-size:13px;">Loading…</div></div>`);
+      <div id="travelRulesBody" style="padding:12px 14px 14px;"><div style="color:var(--muted);font-size:var(--fs-body);">Loading…</div></div>`);
 
   // ELID (telecom upstream) — owner-only. Shows the reseller's live ELID credit
   // balance, read-only. Hidden until ELID is configured (a 503 "not configured"
@@ -12724,16 +12724,16 @@ async function renderSettingsTab() {
   const elidCard = (!elidSummary || /not configured/i.test(elidSummary.error || '')) ? '' :
     settingsCard('elid', '📞 ELID (telecom upstream)',
       elidSummary.success ? `credit £${Number(elidSummary.balance).toFixed(2)}` : 'connection issue', `
-      <div style="padding:12px 14px 14px;font-size:13px;">
+      <div style="padding:12px 14px 14px;font-size:var(--fs-body);">
         ${elidSummary.success
           ? `Account <strong>${escHtml(elidSummary.account)}</strong> — upstream credit balance:
-             <strong style="font-size:16px;">£${Number(elidSummary.balance).toFixed(2)}</strong>
-             <div style="font-size:11px;color:var(--muted);margin-top:6px;">Read live from ELID (Kolmisoft MOR), read-only. Per-customer usage is next.</div>`
+             <strong style="font-size:var(--fs-lead);">£${Number(elidSummary.balance).toFixed(2)}</strong>
+             <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;">Read live from ELID (Kolmisoft MOR), read-only. Per-customer usage is next.</div>`
           : `<span style="color:var(--danger);">Couldn't read ELID: ${escHtml(elidSummary.error || 'unknown error')}</span>`}
       </div>`);
 
   content.innerHTML = `
-    <div style="margin-bottom:8px;padding:10px 14px;border-radius:8px;background:var(--bg-secondary);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div style="margin-bottom:8px;padding:10px 14px;border-radius:8px;background:var(--bg-secondary);font-size:var(--fs-small);color:var(--muted);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <span style="flex:1;">Everything that runs the business — people, prices, messages and automation — lives here. Price edits apply to <strong>new</strong> charges only; existing tickets never reprice.</span>
       <button class="btn btn-outline btn-sm" onclick="openChangePasswordModal()" title="Change your own login password">🔑 My password</button>
       <button class="btn btn-outline btn-sm" onclick="runSweepsNow()" title="Overdue rentals, arrears, passport expiry, SIM renewals">⏰ Run sweeps now</button>
@@ -12774,7 +12774,7 @@ async function loadTravelRulesCard() {
   if (!el) return;
   let d;
   try { d = await kcFetch('/api/travel-rules').then(r => r.json()); } catch { d = null; }
-  if (!d || !d.success) { el.innerHTML = `<div style="color:var(--muted);font-size:13px;">${escHtml(d?.error || 'Could not load rules.')}</div>`; return; }
+  if (!d || !d.success) { el.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-body);">${escHtml(d?.error || 'Could not load rules.')}</div>`; return; }
   const natName = Object.fromEntries((d.nationalities || []).map(n => [n.code, n.name]));
   const destName = Object.fromEntries((d.destinations || []).map(x => [x.code, x.name]));
   const authOpts = (sel) => (d.authTypes || []).map(a => `<option value="${a.code}" ${a.code === sel ? 'selected' : ''}>${escHtml(a.label)}</option>`).join('');
@@ -12784,16 +12784,16 @@ async function loadTravelRulesCard() {
     const rows = (byDest[dd.code] || []).map(r => `
       <tr data-dest="${escHtml(r.destination)}" data-nat="${escHtml(r.nationality)}">
         <td>${escHtml(natName[r.nationality] || r.nationality)}</td>
-        <td><select class="form-input tr-auth" style="min-height:0;padding:6px 8px;font-size:13px;">${authOpts(r.authType)}</select></td>
-        <td><input class="form-input tr-note" value="${escHtml(r.note || '')}" placeholder="optional note" style="min-height:0;padding:6px 8px;font-size:13px;width:100%;"></td>
-        <td><button class="btn btn-outline btn-sm" style="font-size:12px;padding:4px 10px;" onclick="saveTravelRule(this)">Save</button></td>
+        <td><select class="form-input tr-auth" style="min-height:0;padding:6px 8px;font-size:var(--fs-body);">${authOpts(r.authType)}</select></td>
+        <td><input class="form-input tr-note" value="${escHtml(r.note || '')}" placeholder="optional note" style="min-height:0;padding:6px 8px;font-size:var(--fs-body);width:100%;"></td>
+        <td><button class="btn btn-outline btn-sm" style="font-size:var(--fs-small);padding:4px 10px;" onclick="saveTravelRule(this)">Save</button></td>
       </tr>`).join('');
     return `<div style="margin-bottom:14px;">
       <div style="font-weight:600;margin-bottom:4px;">${escHtml(destName[dd.code] || dd.code)}</div>
       <div class="table-wrap"><table><thead><tr><th>Passport</th><th>Needs</th><th>Note</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
     </div>`;
   }).join('');
-  el.innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+  el.innerHTML = `<div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
     Change what each passport needs for each destination — used by the 🛂 panel on bookings and the reminders. New booking views pick up changes within a minute. Guidance only; always confirm on the official site.</div>${blocks}`;
 }
 
@@ -12843,9 +12843,9 @@ function settingsCard(key, title, subtitle, bodyHtml) {
     <div class="table-card settings-card" style="margin-bottom:12px;">
       <div onclick="toggleSettingsCard('${key}')"
         style="display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;user-select:none;">
-        <span id="scChev_${key}" style="font-size:11px;color:var(--muted);transition:transform 0.15s;display:inline-block;${open ? 'transform:rotate(90deg);' : ''}">▶</span>
-        <strong style="font-size:14px;">${title}</strong>
-        ${subtitle ? `<span style="color:var(--muted);font-size:12px;font-weight:400;">${subtitle}</span>` : ''}
+        <span id="scChev_${key}" style="font-size:var(--fs-micro);color:var(--muted);transition:transform 0.15s;display:inline-block;${open ? 'transform:rotate(90deg);' : ''}">▶</span>
+        <strong style="font-size:var(--fs-ui);">${title}</strong>
+        ${subtitle ? `<span style="color:var(--muted);font-size:var(--fs-small);font-weight:400;">${subtitle}</span>` : ''}
       </div>
       <div id="scBody_${key}" style="${open ? '' : 'display:none;'}">${bodyHtml}</div>
     </div>`;
@@ -12993,7 +12993,7 @@ async function revealBizAccount(id) {
   const a = bizAccountsCache.find(x => x.id === id);
   showDynamicModal(`
     <div class="modal-title">🔑 ${escHtml(a?.name || 'Credential')}</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Shown once — close this when you've used it.</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:8px;">Shown once — close this when you've used it.</div>
     <input class="form-input" readonly value="${escHtml(res.credential)}" onclick="this.select()" style="font-family:monospace;">
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="closeDynamicModal()">Close</button>
@@ -13019,7 +13019,7 @@ function openPhoneModelModal(id = null) {
   const m = id ? phoneModelsCache.find(x => x.id === id) : null;
   showDynamicModal(`
     <div class="modal-title">${m ? '✏️ Edit ' + escHtml(m.name) : '➕ Add phone'}</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Everything here shows on the public phone guide, except the internal notes. Pros and cons: one point per line.</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Everything here shows on the public phone guide, except the internal notes. Pros and cons: one point per line.</div>
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">Phone name *</label>
@@ -13278,7 +13278,7 @@ function openEmailAliasModal(id = null) {
         <label class="form-label">Address</label>
         <div style="display:flex;align-items:center;gap:6px;">
           <input class="form-input" id="eaName" placeholder="reminder" style="flex:1;">
-          <span style="font-size:13px;color:var(--muted);white-space:nowrap;">@kosher-connect.com</span>
+          <span style="font-size:var(--fs-body);color:var(--muted);white-space:nowrap;">@kosher-connect.com</span>
         </div>
       </div>`}
       <div class="form-group ${a ? 'form-full' : ''}">
@@ -13353,9 +13353,9 @@ async function generateAliasPassword(id, address) {
   // Shown ONCE — Forward Email never reveals it again, and we don't store it.
   showDynamicModal(`
     <div class="modal-title">🔑 SMTP password — shown once</div>
-    <div style="font-size:13px;line-height:1.7;">
+    <div style="font-size:var(--fs-body);line-height:1.7;">
       <div style="margin-bottom:10px;color:var(--muted);">Copy these now — this password can't be viewed again (only regenerated).</div>
-      <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px;">
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:var(--fs-body);">
         <span style="color:var(--muted);">Server</span><strong>smtp.forwardemail.net : 465 (SSL)</strong>
         <span style="color:var(--muted);">Username</span>
         <strong style="cursor:pointer;" onclick="copyText('${escHtml(res.username)}')" title="Click to copy">${escHtml(res.username)} 📋</strong>
@@ -13413,7 +13413,7 @@ async function saveChangePassword() {
 function openResetPasswordModal(id, label) {
   showDynamicModal(`
     <div class="modal-title">🔑 Reset password — ${escHtml(label)}</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
       Admin reset: no current password needed. Tell them the new one in person.</div>
     <div class="form-group">
       <label class="form-label">New password (8+)</label>
@@ -13551,7 +13551,7 @@ function openAutomationModal(id = null) {
         <input class="form-input" id="auTitle" value="${escHtml(r?.taskTitle || '')}" placeholder="Chase {name} — owes £{n}">
       </div>
     </div>
-    <div style="font-size:11px;color:var(--muted);margin-top:6px;">The rule raises a task in the daily sweep for every matching customer, and closes it automatically when the condition clears.</div>
+    <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;">The rule raises a task in the daily sweep for every matching customer, and closes it automatically when the condition clears.</div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveAutomation(${r ? `'${escHtml(r.id)}'` : 'null'})">💾 Save rule</button>
