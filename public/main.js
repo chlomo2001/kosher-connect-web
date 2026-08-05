@@ -10065,20 +10065,25 @@ async function renderKolTorahTab() {
     </div>
 
     ${ktSectionHead('Conversion jobs', 'CD → MP3 / SD and audio work — drop-off to collection')}
+    ${'' /* The new-job form used to live inside the table's first row, which on
+          a phone meant composing a job by scrolling sideways through cells.
+          Same panel pattern as "Add a shul": the controls wrap instead. Ids
+          unchanged — ktAddJob() reads the same fields. */}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;padding:10px 12px;border:1px dashed var(--border);border-radius:8px;">
+      <span style="font-size:var(--fs-small);font-weight:700;color:var(--accent);">➕ New job</span>
+      <select class="form-input" id="ktJobCust" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:150px;max-width:180px;">
+        <option value="walkin">🚶 Walk-in</option>${customerOptions}</select>
+      <input class="form-input" id="ktJobName" placeholder="Name if walk-in" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:140px;max-width:180px;">
+      <select class="form-input" id="ktJobKind" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:132px;">
+        ${Object.entries(KT_JOB_KINDS).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select>
+      <input class="form-input" id="ktJobQty" type="number" min="1" step="1" value="1" aria-label="Quantity" style="width:64px;min-height:0;padding:6px 9px;font-size:var(--fs-small);">
+      <input class="form-input" id="ktJobDetails" placeholder="e.g. 3 CDs of R' Shloime onto one SD" style="flex:1;min-width:180px;min-height:0;padding:6px 9px;font-size:var(--fs-small);">
+      <input class="form-input" id="ktJobPrice" type="number" min="0" step="0.01" placeholder="£" style="width:80px;min-height:0;padding:6px 9px;font-size:var(--fs-small);">
+      <button class="btn btn-primary btn-sm" onclick="ktAddJob()">+ Add job</button>
+    </div>
     <div class="table-wrap"><table>
       <thead><tr><th>Customer</th><th>Job</th><th>Details</th><th>£</th><th>Status</th><th></th></tr></thead>
       <tbody>
-        <tr style="background:var(--bg-secondary);">
-          <td><select class="form-input" id="ktJobCust" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:150px;max-width:180px;">
-              <option value="walkin">🚶 Walk-in</option>${customerOptions}</select>
-            <input class="form-input" id="ktJobName" placeholder="Name if walk-in" style="margin-top:4px;min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:150px;max-width:180px;"></td>
-          <td><select class="form-input" id="ktJobKind" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:132px;">
-              ${Object.entries(KT_JOB_KINDS).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select>
-            <input class="form-input" id="ktJobQty" type="number" min="1" step="1" value="1" aria-label="Quantity" style="margin-top:4px;width:64px;min-height:0;padding:6px 9px;font-size:var(--fs-small);"></td>
-          <td><input class="form-input" id="ktJobDetails" placeholder="e.g. 3 CDs of R' Shloime onto one SD" style="min-width:200px;min-height:0;padding:6px 9px;font-size:var(--fs-small);"></td>
-          <td><input class="form-input" id="ktJobPrice" type="number" min="0" step="0.01" placeholder="£" style="width:80px;min-height:0;padding:6px 9px;font-size:var(--fs-small);"></td>
-          <td colspan="2"><button class="btn btn-primary btn-sm" onclick="ktAddJob()">+ Add job</button></td>
-        </tr>
         ${jobRows}
       </tbody></table></div>
 
