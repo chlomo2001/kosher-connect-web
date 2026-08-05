@@ -8749,7 +8749,7 @@ async function renderShopTab() {
   const revenue = shopSales.reduce((s, x) => s + x.total, 0);
 
   const lowBanner = low.length ? `
-    <div style="margin-bottom:14px;padding:10px 14px;border-radius:8px;background:rgba(234,34,97,0.07);border:1px solid rgba(234,34,97,0.25);font-size:var(--fs-body);">
+    <div class="banner-lowstock">
       ⚠️ <strong>Low stock:</strong> ${low.map(i => `${escHtml(i.model)} (${i.quantity} left)`).join(' · ')}
     </div>` : '';
 
@@ -8768,7 +8768,7 @@ async function renderShopTab() {
   const itemRows = shopShown.length === 0
     ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🛍️</div><p>${active.length ? 'No stock matches this filter.' : 'No stock yet — add your first item.'}</p>${kcClearFiltersBtn('shop')}</div></td></tr>`
     : shopShown.map(i => `
-      <tr style="${i.quantity <= i.lowStockAt ? 'background:rgba(234,34,97,0.04);' : ''}">
+      <tr class="${i.quantity <= i.lowStockAt ? 'row-lowstock' : ''}">
         <td><strong>${escHtml([i.company, i.model].filter(Boolean).join(' '))}</strong>
           <div class="customer-email">${escHtml(i.code || '')}</div></td>
         <td>${STOCK_CATEGORY_LABELS[i.category] || escHtml(i.category)}</td>

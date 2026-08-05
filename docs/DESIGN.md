@@ -32,8 +32,12 @@ add more.
 ## Radius
 
 `--radius-sm` 4px (badges, micro-tags) · `--radius` 6px (buttons, inputs,
-controls) · `--radius-lg` 8px (cards, panels, modals). No pills except the
-already-established chips (`.pd-chip`, filter chips).
+controls) · `--radius-lg` 8px (cards, panels, modals) · `--radius-xl` 12px (palette cards,
+side panels, the larger modals) · `--radius-2xl` 16px (the biggest feature
+surfaces). The xl pair records radii the flagship surfaces already shipped —
+re-squaring them to 8px would have been a visual regression, so the contract
+grew to fit instead. No pills except the already-established chips
+(`.pd-chip`, filter chips).
 
 ## Elevation & borders
 
@@ -58,7 +62,17 @@ The ramp (tokens in `globals.css`):
 | `--fs-hero` | 28 | hero numbers (dashboard money) |
 | `--fs-overline` | 10 | UPPERCASE tracked section labels only — never body text |
 
+**Display tier** (`--fs-display-1..5` = 20 / 26 / 30 / 40 / 48px, weight 300):
+page titles, the dashboard greeting and hero figures, login and tool headings,
+the till total. This is page furniture, not reading copy — it sets its own
+tracking and sits deliberately above the `--fs-hero` cap. It was shipped and
+internally consistent before it was named; naming it beats squashing the app's
+signature look. Body copy never uses it.
+
 Weights: 400 body · 500 labels/links · 600 emphasis · 700 headings/values.
+400 is a floor for anything read as data: table cells and form inputs were
+300 until Aug 05 — the same "too thin to read" call already made for body.
+The display tier above is the one deliberate exception.
 Money and tabular data set `font-feature-settings: "tnum"`.
 
 **Adoption is done** (sessions 2–3, Aug 05): every staff-app and portal
@@ -127,4 +141,6 @@ Waiting is disguised, not announced:
 | Tab content transitions | ✅ `kcContentEnter()` + `.tab-enter` |
 | Skeleton loading (heavy tabs) | ✅ `skeletonHtml()` on all 8 spinner tabs |
 | Type-ramp tokens | ✅ defined and **adopted** (sessions 2–3, Aug 05) — staff app + portal fully tokenised |
+| Display tier + radius xl/2xl | ✅ named Aug 05 (review batch 5) — contract grew to match shipped reality |
+| Typeface | ✅ Aug 05: "Inter" removed from both stacks — it was named but never loaded, so it had never applied |
 | Inline-style sweep (spacing/colour in `style=""`) | ⏳ pending — collapse opportunistically per surface |

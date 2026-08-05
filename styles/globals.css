@@ -2,7 +2,7 @@
    KosherConnect UI — logo-led design system
    Navy ink (#0A2540) on a WARM IVORY paper canvas (#F7F3EA — a
    whisper of the logo's gold, calmer than white for long sessions) ·
-   logo azure blue (#0060A8) accent + gold highlights · Inter 300
+   logo azure blue (#0060A8) accent + gold highlights · system sans, light weights
    display with tight tracking · tabular figures on money · warm
    hairline borders · flat cards (rounded-md, crisp micro-shadow) ·
    dark-navy sidebar. No gradients, glassmorphic blur, or glow rings.
@@ -29,9 +29,11 @@
   src: url('/fonts/david-libre-700-hebrew.woff2') format('woff2');
   unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
 }
-/* Heebo (variable, Hebrew subset) — the modern sans companion to Inter, used
+/* Heebo (variable, Hebrew subset) — the modern sans companion to the Latin
+   stack, used
    on the public Hebrew welcome page where David Libre's serif feel read as
-   old-fashioned. Hebrew glyphs only; Latin/digits fall through to Inter. */
+   old-fashioned. Hebrew glyphs only; Latin/digits fall through to the
+   system stack. */
 @font-face {
   font-family: 'Heebo KC'; font-style: normal; font-weight: 100 900; font-display: swap;
   src: url('/fonts/heebo-var-hebrew.woff2') format('woff2');
@@ -79,6 +81,10 @@
   --gold: #7c5d24;              /* warm accent text (AA on cream) */
   --sim: #0e7490;               /* #53 — SIM gets its own teal so "SIM" ≠ "warning" */
   --danger: #df1b41;            /* Stripe red */
+  --danger-wash: #fef5f7;       /* faintest red panel — low stock, alerts.
+                                   Kept light enough that 14px cell text on it
+                                   still clears 4.5:1; #fdeef1 measured 4.45. */
+  --danger-edge: #f6c9d3;       /* its hairline */
   /* A red dark enough to carry white text in BOTH themes, deliberately not
      overridden below. --danger lightens for dark cards, which is right for red
      text on a pale wash and wrong for a solid fill: white on the dark-theme
@@ -109,7 +115,9 @@
   /* ── Radius — rounded-md system, no pills ── */
   --radius-sm: 4px;             /* badges, micro-tags */
   --radius: 6px;                /* buttons, inputs, controls */
-  --radius-lg: 8px;             /* cards, panels */
+  --radius-lg: 8px;
+  --radius-xl: 12px;    /* panels, palette cards, modals */
+  --radius-2xl: 16px;   /* the largest feature surfaces */             /* cards, panels */
 
   /* ── Elevation — cards carry a tight crisp micro-shadow; overlays a soft neutral one ── */
   --shadow-1: 0 1px 1px rgba(10, 37, 64, 0.04), 0 1px 2px rgba(10, 37, 64, 0.06);
@@ -137,7 +145,13 @@
   --fs-title: 18px;   /* card titles, big stats */
   --fs-h1: 22px;      /* page headings */
   --fs-hero: 28px;    /* hero numbers (dashboard money) */
-  --fs-overline: 10px; /* UPPERCASE tracked section labels only — never body text */
+  --fs-overline: 10px;
+  /* Display tier — the staff app's signature large, light headings. Separate
+     from the reading ramp above: these are page furniture, not body copy, and
+     they set their own tracking. Legalised in DESIGN.md rather than squashed
+     to the 28px cap, because the shipped tier is internally consistent. */
+  --fs-display-1: 20px; --fs-display-2: 26px; --fs-display-3: 30px;
+  --fs-display-4: 40px; --fs-display-5: 48px; /* UPPERCASE tracked section labels only — never body text */
 }
 
 /* Dark theme — the shop stays open into the evening. Overrides the same
@@ -173,6 +187,8 @@
   --gold: #e0a94a;
   --sim: #38bdf8;
   --danger: #ff5f80;
+  --danger-wash: #2b161c;
+  --danger-edge: #4a2630;
   --magenta: #d878e8;
   --success: #34d399;
   --success-ink: #6ee7b7;
@@ -208,7 +224,7 @@ body {
   /* 'David Libre KC' covers ONLY the Hebrew unicode-range (see @font-face
      above) and sits FIRST: Hebrew glyphs — dates, names, notes, full niqqud —
      render in the classic David face; Latin falls straight through. */
-  font-family: 'David Libre KC', 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif;
+  font-family: 'David Libre KC', 'SF Pro Display', system-ui, -apple-system, sans-serif;
   font-size: 15px;              /* body-md */
   font-weight: 400;             /* #57 — 300 was too thin to read comfortably */
   font-feature-settings: "ss01";
@@ -308,7 +324,7 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
 
 .nav-item {
   display: flex; align-items: center; gap: 10px;
-  margin: 1px 10px; padding: 7px 12px; border-radius: 10px;
+  margin: 1px 10px; padding: 7px 12px; border-radius: var(--radius-lg);
   font-size: var(--fs-ui); font-weight: 300; line-height: 1.35;
   color: rgba(255,255,255,0.65); cursor: pointer;
   transition: background 0.15s, color 0.15s;
@@ -431,13 +447,13 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
 .topbar {
   margin: 14px 14px 0; padding: 12px 20px;
   background: var(--surface);
-  border: 1px solid var(--border); border-radius: 14px;
+  border: 1px solid var(--border); border-radius: var(--radius-xl);
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   flex-shrink: 0;
 }
 
 /* Burger + title read as one left-hand group; actions keep the right edge. */
-.page-title { font-size: 26px; font-weight: 300; letter-spacing: -0.26px; line-height: 1.12; margin-right: auto; }
+.page-title { font-size: var(--fs-display-2); font-weight: 300; letter-spacing: -0.26px; line-height: 1.12; margin-right: auto; }
 .page-title span { color: var(--accent); }
 .topbar-actions { display: flex; gap: 10px; align-items: center; }
 
@@ -459,7 +475,7 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
   border: 1px solid var(--border-input);
   border-radius: var(--radius);
   padding: 8px 16px 8px 38px;
-  font-family: inherit; font-size: var(--fs-ui); font-weight: 300;
+  font-family: inherit; font-size: var(--fs-ui); font-weight: 400;
   color: var(--text); width: 280px; outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   user-select: text;
@@ -569,7 +585,7 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
   /* Topbar: burger + title on the first row, actions wrap below with the
      search stretching to whatever width is left. */
   .topbar { flex-wrap: wrap; gap: 10px; margin: 10px 10px 0; padding: 10px 14px; }
-  .page-title { font-size: 20px; }
+  .page-title { font-size: var(--fs-display-1); }
   /* Wrap, or the Ask/Ctrl-K buttons push off the right edge on phones. */
   .topbar-actions { flex: 1 1 100%; flex-wrap: wrap; }
   .search-box { flex: 1 1 100%; min-width: 0; width: auto; }
@@ -597,7 +613,7 @@ body.pos-mode .content { padding: 14px 18px; }
 }
 .stat-label { font-size: var(--fs-micro); font-weight: 400; letter-spacing: 0.1px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
 .stat-value {
-  font-size: 30px; font-weight: 300; letter-spacing: -0.4px; line-height: 1.1;
+  font-size: var(--fs-display-3); font-weight: 300; letter-spacing: -0.4px; line-height: 1.1;
   font-feature-settings: "ss01", "tnum";
 }
 .stat-sub { font-size: var(--fs-small); color: var(--muted); margin-top: 4px; }
@@ -689,7 +705,7 @@ th {
 }
 td {
   padding: 15px 18px;
-  font-size: var(--fs-ui); font-weight: 300;
+  font-size: var(--fs-ui); font-weight: 400;
   letter-spacing: -0.1px;
   font-feature-settings: "ss01", "tnum";   /* money/numeric cells: tabular figures */
   border-top: 1px solid var(--border);
@@ -730,7 +746,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .nba-strip {
   display: flex; align-items: center; gap: 10px;
   background: var(--accent-wash); border: 1px solid var(--primary-subdued);
-  border-left: 3px solid var(--accent); border-radius: 10px;
+  border-left: 3px solid var(--accent); border-radius: var(--radius-lg);
   padding: 9px 14px; margin-bottom: 16px;
 }
 .nba-icon { font-size: var(--fs-lead); flex-shrink: 0; }
@@ -819,7 +835,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .modal {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   width: 520px; max-width: 95vw; max-height: 90vh;
   overflow-y: auto;
   padding: 28px;
@@ -847,7 +863,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   border: 1px solid var(--border-input);
   border-radius: 6px;
   padding: 8px 12px;
-  font-family: inherit; font-size: var(--fs-ui); font-weight: 300;
+  font-family: inherit; font-size: var(--fs-ui); font-weight: 400;
   color: var(--text); outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   user-select: text;
@@ -889,7 +905,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .kc-view-save:hover { color: var(--accent); border-color: var(--accent); }
 .kc-view-chip .kc-view-apply:focus-visible, .kc-view-chip .kc-view-del:focus-visible,
 .kc-view-save:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0, 96, 168, 0.12); }
+.form-input:focus { border-color: var(--accent); box-shadow: var(--ring); }
 .form-input.error { border-color: var(--danger); }
 .form-input::placeholder { color: var(--muted); }
 
@@ -902,7 +918,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   border: 1px solid var(--border-input);
   border-radius: 6px;
   padding: 8px;
-  font-family: inherit; font-size: var(--fs-body); font-weight: 300;
+  font-family: inherit; font-size: var(--fs-body); font-weight: 400;
   color: var(--text); outline: none; cursor: pointer;
   width: 130px; flex-shrink: 0;
 }
@@ -950,7 +966,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   font-size: var(--fs-title); font-weight: 500; color: #fff; flex-shrink: 0;
   letter-spacing: 0.2px;
 }
-.detail-name { font-size: 20px; font-weight: 300; letter-spacing: -0.2px; }
+.detail-name { font-size: var(--fs-display-1); font-weight: 300; letter-spacing: -0.2px; }
 .detail-meta { font-size: var(--fs-body); color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
 
 /* auto-fit rather than a hard 3, and rather than a media query: this sits in a
@@ -965,7 +981,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   padding: 12px 16px;
 }
 .detail-stat-label { font-size: var(--fs-overline); font-weight: 400; letter-spacing: 0.1px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
-.detail-stat-value { font-size: 20px; font-weight: 300; letter-spacing: -0.2px; font-feature-settings: "ss01", "tnum"; }
+.detail-stat-value { font-size: var(--fs-display-1); font-weight: 300; letter-spacing: -0.2px; font-feature-settings: "ss01", "tnum"; }
 
 /* ─── CUSTOMER-360 PAGE (/customers/<id>) ───
    The card's profile worn as a real page in the content column. The
@@ -1120,7 +1136,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   border: 1px solid var(--border-input);
   border-radius: 6px;
   padding: 7px 10px;
-  font-family: inherit; font-size: var(--fs-body); font-weight: 300;
+  font-family: inherit; font-size: var(--fs-body); font-weight: 400;
   color: var(--text); outline: none;
 }
 .add-payment-row input:focus, .add-payment-row select:focus { border-color: var(--accent); }
@@ -1225,7 +1241,7 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
   height: 100%; flex-direction: column; gap: 12px;
   color: var(--muted);
 }
-.tab-placeholder .big { font-size: 48px; }
+.tab-placeholder .big { font-size: var(--fs-display-5); }
 .tab-placeholder h2 { font-size: var(--fs-h1); font-weight: 300; letter-spacing: -0.22px; color: var(--text); }
 .tab-placeholder p { font-size: var(--fs-ui); }
 
@@ -1420,16 +1436,17 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .eq-slide-track[data-status="lost"]     .eq-slide-lbl-a-lost { opacity: 1; }
 
 .eq-slide-knob {
-  position: absolute; top: 3px;
+  position: absolute; top: 3px; left: 3px;
   width: 24px; height: 24px; border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 5px rgba(13,37,61,0.25), inset 0 1px 0 rgba(255,255,255,0.9);
-  transition: left 0.22s ease;
+  /* transform, not left: animating a layout property reflows every frame. */
+  transition: transform var(--dur-2) var(--ease-in-out);
   z-index: 2; pointer-events: none;
 }
-.eq-slide-track[data-status="undecided"] .eq-slide-knob { left: 70px; }
-.eq-slide-track[data-status="returned"]  .eq-slide-knob { left: 3px; }
-.eq-slide-track[data-status="lost"]      .eq-slide-knob { left: 137px; }
+.eq-slide-track[data-status="undecided"] .eq-slide-knob { transform: translateX(67px); }
+.eq-slide-track[data-status="returned"]  .eq-slide-knob { transform: translateX(0); }
+.eq-slide-track[data-status="lost"]      .eq-slide-knob { transform: translateX(134px); }
 
 .eq-item-pending {
   display: inline-block;
@@ -1513,7 +1530,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .fx-switch {
   position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
   z-index: 5; display: flex; flex-direction: column; gap: 1px; padding: 6px;
-  border-radius: 12px; border: 1px solid var(--border);
+  border-radius: var(--radius-xl); border: 1px solid var(--border);
   background: rgba(255,255,255,0.62);
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   box-shadow: 0 8px 24px -14px rgba(10,37,64,.3);
@@ -1541,13 +1558,13 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   width: 400px; max-width: 100%; padding: 44px 40px 38px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: var(--radius-2xl);
   box-shadow: 0 24px 60px -18px rgba(10,37,64,.28), 0 6px 18px -10px rgba(10,37,64,.14);
   /* On short / landscape viewports the centred card was clipped and unscrollable
      (the shell clips overflow for the mesh). Let the card scroll itself. audit U14. */
   max-height: calc(100vh - 48px); overflow-y: auto;
 }
-.login-title { font-size: 30px; font-weight: 300; letter-spacing: -0.5px; color: var(--text); }
+.login-title { font-size: var(--fs-display-3); font-weight: 300; letter-spacing: -0.5px; color: var(--text); }
 .login-sub { font-size: var(--fs-body); font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); margin-top: 6px; }
 
 /* ─── DASHBOARD ─── */
@@ -1568,7 +1585,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .dash-secs { align-self: baseline; font-size: var(--fs-overline); font-weight: 400; color: var(--gold); opacity: 0.6; font-variant-numeric: tabular-nums; margin-left: 4px; letter-spacing: 0.3px; }
 @keyframes dashPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.28; transform: scale(0.66); } }
 @media (prefers-reduced-motion: reduce) { .dash-pulse { animation: none; } }
-.dash-greeting { font-size: 40px; font-weight: 300; letter-spacing: -1px; line-height: 1.08; }
+.dash-greeting { font-size: var(--fs-display-4); font-weight: 300; letter-spacing: -1px; line-height: 1.08; }
 .dash-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* Business-summary bar charts — magnitude by service in a single hue, with a
@@ -1578,7 +1595,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .bizbar-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: var(--fs-body); }
 .bizbar-label { flex: 0 0 92px; color: var(--ink-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bizbar-track { flex: 1; height: 12px; background: var(--panel); border-radius: 6px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.10); }
-.bizbar-fill { height: 100%; border-radius: 6px; background: linear-gradient(180deg, var(--accent2), var(--accent)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.28); transition: width 0.5s cubic-bezier(0.22,1,0.36,1); }
+.bizbar-fill { height: 100%; border-radius: 6px; background: linear-gradient(180deg, var(--accent2), var(--accent)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.28); }
 .bizbar-fill.received { background: linear-gradient(180deg, #2bb978, var(--success)); }
 .bizbar-val { flex: 0 0 auto; min-width: 74px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 .bizcol-tot { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
@@ -1603,7 +1620,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   color: var(--muted); margin-bottom: 6px;
 }
 .dash-hero-value {
-  font-size: 48px; font-weight: 300; letter-spacing: -1.3px; line-height: 1.02;
+  font-size: var(--fs-display-5); font-weight: 300; letter-spacing: -1.3px; line-height: 1.02;
   font-feature-settings: "ss01", "tnum";
   color: var(--text);   /* navy ink — money reads neutral, not brand-indigo */
 }
@@ -1704,7 +1721,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   display: flex; justify-content: space-between; align-items: baseline;
   font-size: var(--fs-ui); font-weight: 700; margin: 8px 0 10px;
 }
-.pos-total-row strong { font-size: 26px; letter-spacing: -0.3px; font-feature-settings: 'tnum'; }
+.pos-total-row strong { font-size: var(--fs-display-2); letter-spacing: -0.3px; font-feature-settings: 'tnum'; }
 .pos-charge { width: 100%; padding: 14px; font-size: var(--fs-lead); }
 .pos-done {
   background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.35);
@@ -1781,12 +1798,12 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .palette-quick-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .palette-quick-card {
   flex: 1 0 78px; display: flex; flex-direction: column; align-items: center; gap: 6px;
-  padding: 12px 6px; border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 6px; border: 1px solid var(--border); border-radius: var(--radius-xl);
   background: var(--panel); color: var(--text); cursor: pointer;
   transition: border-color 0.12s, background 0.12s, transform 0.12s;
 }
 .palette-quick-card:hover { border-color: var(--accent); background: var(--accent-wash); transform: translateY(-1px); }
-.pq-icon { font-size: 20px; line-height: 1; }
+.pq-icon { font-size: var(--fs-display-1); line-height: 1; }
 .pq-label { font-size: var(--fs-micro); color: var(--ink-secondary); text-align: center; }
 /* Pin toggle in the corner of a Recent/Pinned card. Hidden until hover/focus
    on Recent cards; always visible (gold) on Pinned cards. */
@@ -1807,7 +1824,7 @@ td.cal-active.cal-shabbat { background: var(--accent); }
   display: flex; align-items: center; gap: 6px;
   cursor: grab; touch-action: none; user-select: none;
   background: var(--panel); border: 1px solid var(--border);
-  border-radius: 14px; padding: 8px 10px 8px 12px;
+  border-radius: var(--radius-xl); padding: 8px 10px 8px 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
   animation: svcFloatIn 0.25s ease;
 }
@@ -1970,7 +1987,7 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 
 .w-topbar {
   display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
-  border: 1px solid var(--border); border-radius: 16px; padding: 12px 18px; margin-bottom: 22px;
+  border: 1px solid var(--border); border-radius: var(--radius-2xl); padding: 12px 18px; margin-bottom: 22px;
   box-shadow: 0 12px 32px -18px rgba(10,37,64,.25);
   /* Stays put while the page scrolls — jumping to Services/Contact must not
      take the language switcher away (it lives in this bar). The glass blur
@@ -2009,7 +2026,7 @@ td.cal-active.cal-shabbat { background: var(--accent); }
    hero minis was the only place its two claims lived — they now live in the
    travel and advice cards below, said once, where they belong. */
 .w-hero {
-  border: 1px solid var(--border); border-radius: 16px; padding: 48px 36px 44px;
+  border: 1px solid var(--border); border-radius: var(--radius-2xl); padding: 48px 36px 44px;
   box-shadow: 0 24px 60px -18px rgba(10,37,64,.28), 0 6px 18px -10px rgba(10,37,64,.14);
 }
 .w-hero-inner { max-width: 66ch; margin: 0 auto; text-align: center; }
@@ -2030,7 +2047,7 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 @media (max-width: 980px) { .w-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 620px) { .w-grid { grid-template-columns: 1fr; } }
 .w-card {
-  border: 1px solid var(--border); border-radius: 14px; padding: 20px;
+  border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 20px;
   box-shadow: 0 16px 40px -22px rgba(10,37,64,.28);
   transition: translate .18s var(--ease-out), box-shadow .18s var(--ease-out), border-color .18s var(--ease-out);
 }
@@ -2046,7 +2063,7 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .w-card p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
 .w-card a { color: var(--accent); text-decoration: none; }
 .w-icon {
-  width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center;
+  width: 38px; height: 38px; border-radius: var(--radius-lg); display: grid; place-items: center;
   border: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 55%, transparent);
   margin-bottom: 12px; font-size: 17px; color: var(--accent);
 }
@@ -2131,7 +2148,7 @@ html { scroll-behavior: smooth; }
    left, and without overflow-y the page can't scroll at all. */
 .tool-shell { width: 100%; height: 100vh; overflow-y: auto; background: var(--bg); padding: 34px 18px 60px; }
 .tool-wrap { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
-.tool-head h1 { font-size: 26px; font-weight: 300; letter-spacing: -0.5px; color: var(--text); margin: 6px 0 8px; }
+.tool-head h1 { font-size: var(--fs-display-2); font-weight: 300; letter-spacing: -0.5px; color: var(--text); margin: 6px 0 8px; }
 .tool-head p { margin: 0; color: var(--muted); font-size: var(--fs-body); line-height: 1.55; max-width: 64ch; }
 .tool-back { font-size: var(--fs-small); color: var(--muted); text-decoration: none; }
 .tool-back:hover { color: var(--text); }
@@ -2189,7 +2206,7 @@ html { scroll-behavior: smooth; }
    rather than one paragraph, and a footer that closes the page instead of
    trailing off. Same glass recipe as every other floating surface. */
 .w-proof {
-  margin-top: 18px; border: 1px solid var(--border); border-radius: 16px;
+  margin-top: 18px; border: 1px solid var(--border); border-radius: var(--radius-2xl);
   padding: 20px 24px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
   box-shadow: 0 16px 40px -22px rgba(10,37,64,.28);
 }
@@ -2232,7 +2249,7 @@ html { scroll-behavior: smooth; }
 .w-story-panel {
   position: relative; overflow: hidden; max-width: 76ch;
   border: 1px solid var(--border); border-inline-start: 3px solid var(--gold);
-  border-radius: 14px; padding: 26px clamp(22px, 4vw, 34px) 24px;
+  border-radius: var(--radius-xl); padding: 26px clamp(22px, 4vw, 34px) 24px;
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--canvas-cream) 55%, transparent), transparent 72%),
     rgba(255, 255, 255, 0.66);
@@ -2359,6 +2376,14 @@ html { scroll-behavior: smooth; }
    only, so "bring it in" needs the window attached to it. */
 .rp-hours { margin: 10px 0 0; font-size: var(--fs-body); color: var(--muted); }
 .rp-hours strong { color: var(--text); font-weight: 600; }
+/* Low stock: was a hardcoded #ea2261 pink matching no token, invisible on a
+   dark card. Built from --danger so both themes get a legible wash. */
+.banner-lowstock {
+  margin-bottom: 14px; padding: 10px 14px; border-radius: var(--radius-lg);
+  background: var(--danger-wash); border: 1px solid var(--danger-edge);
+  font-size: var(--fs-body);
+}
+tr.row-lowstock { background: var(--danger-wash); }
 .rp-ok { text-align: center; }
 .rp-ok-ico { display: inline-flex; color: var(--accent); margin-bottom: 6px; }
 .rp-ok h4 { margin: 0 0 8px; font-size: var(--fs-title); }
@@ -2367,7 +2392,7 @@ html { scroll-behavior: smooth; }
 .rp-foot { margin-top: 40px; font-size: 12.5px; color: var(--muted); }
 
 /* The Hebrew welcome AND the Hebrew portal speak Heebo — the modern sans
-   that matches the Inter look — instead of the app-wide David Libre serif.
+   that matches the app's sans look — instead of the David Libre serif.
    Form controls don't inherit font by default, so pull them along too. */
 .welcome-shell .w-wrap[dir="rtl"],
 .welcome-shell .w-wrap[dir="rtl"] :is(button, input, select, textarea),
@@ -2375,13 +2400,13 @@ html { scroll-behavior: smooth; }
 .login-card[dir="rtl"] :is(button, input, select, textarea),
 .pd-shell[dir="rtl"],
 .pd-shell[dir="rtl"] :is(button, input, select, textarea) {
-  font-family: 'Heebo KC', 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Heebo KC', system-ui, -apple-system, sans-serif;
 }
 
 .w-contact-link:hover { text-decoration: underline; }
 
 .w-footer2 {
-  margin-top: 46px; border: 1px solid var(--border); border-radius: 16px;
+  margin-top: 46px; border: 1px solid var(--border); border-radius: var(--radius-2xl);
   padding: 26px 24px 18px; color: var(--muted); font-size: var(--fs-body);
   box-shadow: 0 12px 32px -18px rgba(10,37,64,.25);
   background: rgba(255, 255, 255, 0.66);
@@ -2427,7 +2452,7 @@ html { scroll-behavior: smooth; }
    gives the two ways to actually reach the shop. */
 .portal-card { width: 560px; max-width: 100%; }
 .p-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
-.p-balance { border-radius: 14px; padding: 16px 18px 18px; margin-bottom: 6px; border: 1px solid transparent; }
+.p-balance { border-radius: var(--radius-xl); padding: 16px 18px 18px; margin-bottom: 6px; border: 1px solid transparent; }
 .p-balance.owe { background: rgba(239,68,68,0.07); border-color: rgba(239,68,68,0.28); }
 .p-balance.credit { background: rgba(34,197,94,0.07); border-color: rgba(34,197,94,0.25); }
 .p-balance-label {
@@ -2549,7 +2574,7 @@ html { scroll-behavior: smooth; }
 .pd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
 .pd-card {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; padding: 16px 18px;
+  border-radius: var(--radius-xl); padding: 16px 18px;
 }
 .pd-span2 { grid-column: 1 / -1; }
 @media (max-width: 760px) { .pd-grid { grid-template-columns: 1fr; } .pd-main { padding-top: 20px; } }
@@ -2557,7 +2582,7 @@ html { scroll-behavior: smooth; }
 .pd-hero-num { font-size: 38px; }
 .pd-upconfirm {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  border: 1px dashed var(--border); border-radius: 10px; padding: 10px 12px;
+  border: 1px dashed var(--border); border-radius: var(--radius-lg); padding: 10px 12px;
 }
 .pd-foot {
   margin-top: 24px; font-size: var(--fs-small); color: var(--muted); text-align: center; line-height: 1.7;
