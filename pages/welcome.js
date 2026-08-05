@@ -880,6 +880,14 @@ const SKY_CSS = `
      over this bar at every width — it was sitting on top of "Message us" and
      clipping the word. Reserve its lane instead of letting it overlap. */
   .sk-nav{padding-inline-end:56px}
+  /* At 390px the brand (109) + the pill cluster (214) + the gap + this
+     reserved lane came to 409 against a 390 viewport, so the whole page
+     scrolled sideways. The toggle is ~36px at inset-inline-end:14px, so the
+     lane can be tighter on a phone; the brand may shrink and ellipsise
+     rather than force the row wide. */
+  @media (max-width:560px){
+    .sk-nav{padding-inline-end:44px;gap:8px}
+  }
   .sk-navlink{color:var(--sk-muted);font-weight:600;font-size:14.5px;white-space:nowrap;
     border-bottom:2px solid transparent;padding-bottom:2px}
   .sk-navlink:hover{color:var(--sk-text)}
@@ -1162,6 +1170,7 @@ const SKY_CSS = `
   @media (max-width:640px){
     .sk-nav{padding-inline-start:16px;padding-inline-end:56px}
     .sk-nav .sk-logo{height:26px}
+    @media (max-width:560px){.sk-nav .sk-logo{height:22px}}
     .sk-nav .sk-btn-ghost{display:none}
     .sk-nav .sk-btn-sm{padding:9px 13px;font-size:13.5px}
   }
