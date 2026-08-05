@@ -1156,6 +1156,9 @@ input[type="checkbox"], input[type="radio"] {
   .action-btn, .card-tool { min-width: 24px; }
   /* A 13px checkbox is the browser default and is genuinely hard to hit. */
   input[type="checkbox"], input[type="radio"] { width: 24px; height: 24px; }
+  /* Inline clickable spans (task cards' 👤 customer link rides an 11px meta
+     line) — grow the line box to a hittable height on touch only. */
+  span.dash-link { display: inline-flex; align-items: center; min-height: 24px; }
 }
 
 /* ─── TOAST ─── */
