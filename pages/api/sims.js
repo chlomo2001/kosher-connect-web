@@ -1,5 +1,5 @@
 import { withTab } from '../../lib/auth.js'
-import { db, tablesMode } from '../../lib/db'
+import { db, tablesMode, STORAGE_ERROR } from '../../lib/db'
 import { listSims, syncSims } from '../../lib/tableStore'
 import { parseSyncBody } from '../../lib/syncBody'
 
@@ -58,7 +58,7 @@ async function handler(req, res) {
     res.status(405).end()
   } catch (e) {
     console.error('[api/sims]', e)
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

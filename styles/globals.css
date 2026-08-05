@@ -836,7 +836,13 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
-  width: 520px; max-width: 95vw; max-height: 90vh;
+  width: 520px; max-width: 95vw;
+  /* Progressive pair: with browser toolbars shown vh resolves to the LARGE
+     viewport, so a maxed-out modal is taller than the visible area and, being
+     centre-aligned, bleeds past both edges. dvh tracks the real one. (The
+     modal is its own scroll container, so nothing was ever unreachable —
+     this is comfort, not rescue.) */
+  max-height: 90vh; max-height: 90dvh;
   overflow-y: auto;
   padding: 28px;
   box-shadow: var(--shadow-2);
@@ -1093,6 +1099,13 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
    words instead of nine unrelated glyphs. The divider is drawn between
    groups only, never leading, so a wrapped row never starts with a stray rule. */
 .card-tool-group { display: inline-flex; align-items: center; gap: 4px; }
+/* The group's own name, visible. Emoji tool meanings used to live only in a
+   hover title — no touch equivalent at all, and several glyphs degrade to
+   ambiguous monochrome at 390px. */
+.card-tool-cap {
+  font-size: var(--fs-overline); letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); font-weight: 700; margin-inline-end: 2px; white-space: nowrap;
+}
 .card-tool-group + .card-tool-group {
   margin-inline-start: 8px; padding-inline-start: 8px;
   border-inline-start: 1px solid var(--border);

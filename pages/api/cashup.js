@@ -5,7 +5,7 @@
 //                         server-side from the ledger (cash payments only)
 
 import { withStaff, tabAllowedFor } from '../../lib/auth.js'
-import { db, tablesMode } from '../../lib/db.js'
+import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 import { cashExpected } from '../../lib/money.mjs'
 import { londonDate, londonDayBoundsUtc } from '../../lib/localDay.mjs'
 
@@ -110,7 +110,7 @@ async function handler(req, res) {
     return res.status(405).end()
   } catch (e) {
     console.error('[api/cashup]', e)
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

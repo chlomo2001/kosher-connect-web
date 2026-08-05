@@ -3,7 +3,7 @@
 // for now; SMS/email land with Twilio.
 
 import { withStaff } from '../../lib/auth.js'
-import { db, tablesMode } from '../../lib/db.js'
+import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 
 export const TRIGGERS = {
   balance_over:        { label: 'Customer owes at least £N', unit: '£' },
@@ -78,7 +78,7 @@ async function handler(req, res) {
     return res.status(405).end()
   } catch (e) {
     console.error('[api/automations]', e)
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

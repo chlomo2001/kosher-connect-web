@@ -12,7 +12,7 @@
 // Same gate as the Shop tab: this is stock, whoever runs the shop runs it.
 
 import { withStaff, tabAllowedFor } from '../../lib/auth.js'
-import { db, tablesMode } from '../../lib/db.js'
+import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 import { londonDate } from '../../lib/localDay.mjs'
 
 const STATUSES = ['awaiting_send', 'sent', 'credited', 'replaced', 'written_off']
@@ -141,7 +141,7 @@ async function handler(req, res) {
     return res.status(405).end()
   } catch (e) {
     console.error('[api/supplier-returns]', e)
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

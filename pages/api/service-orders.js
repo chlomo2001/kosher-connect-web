@@ -9,7 +9,7 @@
 //     said 2). Services without a repeat price charge every unit at price.
 
 import { withTab } from '../../lib/auth.js'
-import { db, tablesMode } from '../../lib/db.js'
+import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 import { postAutoCharges } from '../../lib/customCharges.js'
 import { serviceOrderTotal } from '../../lib/money.mjs'
 
@@ -157,7 +157,7 @@ async function handler(req, res) {
     return res.status(405).end()
   } catch (e) {
     console.error('[api/service-orders]', e)
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

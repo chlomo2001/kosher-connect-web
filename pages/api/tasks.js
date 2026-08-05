@@ -6,7 +6,7 @@
 // index, so closed keys can be re-raised later.
 
 import { withStaff, withTab } from '../../lib/auth.js'
-import { db, tablesMode } from '../../lib/db.js'
+import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 
 const PRIORITY_TO_DB = { High: 'high', Normal: 'medium', Low: 'low' }
 const PRIORITY_TO_APP = { high: 'High', medium: 'Normal', low: 'Low' }
@@ -109,7 +109,7 @@ async function handler(req, res) {
     return res.status(405).end()
   } catch (e) {
     console.error('[api/tasks]', e)
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

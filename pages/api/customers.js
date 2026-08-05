@@ -1,5 +1,5 @@
 import { withTab } from '../../lib/auth.js'
-import { tablesMode } from '../../lib/db'
+import { tablesMode, STORAGE_ERROR } from '../../lib/db'
 import { listCustomers, getCustomer, upsertCustomer, deleteCustomer } from '../../lib/tableStore'
 import { uid } from '../../lib/uid.mjs'
 
@@ -66,7 +66,7 @@ async function handler(req, res) {
       return res.status(409).json({ success: false, error: e.message })
     }
     console.error('[api/customers]', e)
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

@@ -69,6 +69,10 @@ tracking and sits deliberately above the `--fs-hero` cap. It was shipped and
 internally consistent before it was named; naming it beats squashing the app's
 signature look. Body copy never uses it.
 
+**Sentence case** for every button, label and heading — "Save changes", not
+"Save Changes". Proper nouns keep their capitals. The app was split between the
+two until Aug 05, which reads as two products stitched together.
+
 Weights: 400 body · 500 labels/links · 600 emphasis · 700 headings/values.
 400 is a floor for anything read as data: table cells and form inputs were
 300 until Aug 05 — the same "too thin to read" call already made for body.

@@ -1,5 +1,5 @@
 import { withTab } from '../../lib/auth.js'
-import { tablesMode } from '../../lib/db'
+import { tablesMode, STORAGE_ERROR } from '../../lib/db'
 import { listPhones, syncPhones } from '../../lib/tableStore'
 import { parseSyncBody } from '../../lib/syncBody'
 
@@ -20,7 +20,7 @@ async function handler(req, res) {
     res.status(405).end()
   } catch (e) {
     console.error('[api/phones]', e)
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

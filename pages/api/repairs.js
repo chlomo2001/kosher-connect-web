@@ -9,7 +9,7 @@
 //   - Cancelled tickets never charge
 
 import { withStaff, withTab } from '../../lib/auth.js'
-import { db, tablesMode } from '../../lib/db.js'
+import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 import { postAutoCharges } from '../../lib/customCharges.js'
 import { money } from '../../lib/money.mjs'
 
@@ -208,7 +208,7 @@ async function handler(req, res) {
     return res.status(405).end()
   } catch (e) {
     console.error('[api/repairs]', e)
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

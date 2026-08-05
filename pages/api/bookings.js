@@ -9,7 +9,7 @@
 //   - balance is never stored: read from the customer_balances view
 
 import { withTab, tabAllowedFor } from '../../lib/auth.js'
-import { db, tablesMode } from '../../lib/db.js'
+import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 import { postAutoCharges } from '../../lib/customCharges.js'
 import { money } from '../../lib/money.mjs'
 
@@ -508,7 +508,7 @@ async function handler(req, res) {
     return res.status(405).end()
   } catch (e) {
     console.error('[api/bookings]', e)
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

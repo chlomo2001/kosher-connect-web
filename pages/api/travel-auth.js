@@ -6,7 +6,7 @@
 // is stored here — only the authorisation reference. Same tab gate as bookings.
 
 import { withTab } from '../../lib/auth.js'
-import { db, tablesMode } from '../../lib/db.js'
+import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 import { requirementFor, passportCheck, coverageStatus } from '../../lib/travelRules.mjs'
 import { loadTravelRules } from '../../lib/travelRulesDb.js'
 
@@ -140,7 +140,7 @@ async function handler(req, res) {
     return res.status(405).end()
   } catch (e) {
     console.error('[api/travel-auth]', e)
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

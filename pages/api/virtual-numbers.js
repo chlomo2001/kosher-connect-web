@@ -2,7 +2,7 @@
 // rental; these are the independently-provisioned numbers).
 
 import { withStaff, withTab } from '../../lib/auth.js'
-import { db, tablesMode } from '../../lib/db.js'
+import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 
 const EMBED = 'customers(legacy_id,first_name,last_name)'
 // IVR / VN providers are owner-managed (settings key ivr_platforms, feature
@@ -147,7 +147,7 @@ async function handler(req, res) {
     return res.status(405).end()
   } catch (e) {
     console.error('[api/virtual-numbers]', e)
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

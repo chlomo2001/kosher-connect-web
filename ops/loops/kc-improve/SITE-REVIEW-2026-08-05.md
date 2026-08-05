@@ -455,3 +455,23 @@ Highest value per unit of effort, confirmed items only.
 | Verified in code | 35 confirmed (3 high, 22 medium, 10 low after verifier re-ranking) |
 | Passed through unverified | 53 (25 medium, 28 low) |
 | Refuted | 1 |
+
+---
+
+## Deliberately not done
+
+**Split the staff stylesheet off the public pages** (finding 38, medium).
+`pages/_app.js` imports the whole 141KB / 722-rule `globals.css` globally, so
+/welcome, /repair, /phone-guide and /portal all ship the staff app's CSS —
+and /welcome then inlines its own complete `SKY_CSS` on top anyway.
+
+The finding is real and the fix is known: move the staff-only bulk into a sheet
+that only `AppShell` links, and teach the harness to load both. It is not done
+because it is a restructuring of every rule in the file, the harness checks
+geometry and contrast rather than "does this still look right", and it was the
+last item in a long session — exactly the combination that ships a subtle
+regression nobody notices for a week. The payoff is a faster first paint on
+pages that already inline what they need.
+
+Worth doing, on its own, with screenshots of every surface before and after.
+Not worth doing tired, at the end of a queue.

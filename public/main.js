@@ -364,6 +364,13 @@ async function initApp() {
     showReloadBanner(`Couldn’t load ${failedKeys.join(', ')} — some data is missing.` +
       (paused.length ? ' Saving is paused to protect your records.' : ' Reload before relying on what you see.'));
   }
+  if (allowedTabs && allowedTabs.length === 0) {
+    document.getElementById('mainContent').innerHTML = `<div class="empty-state">
+      <div class="emoji">🔒</div>
+      <p>No areas are enabled for your account.</p>
+      <small>Ask the owner to set them under Settings → Team, then sign in again.</small></div>`;
+    return;
+  }
   applyTabVisibility();
   reconcilePhoneStatuses();
   // Open the tab named in the URL (/rentals …), defaulting to the dashboard.
@@ -1495,7 +1502,7 @@ function renderRentalsTab() {
 
     <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
       <button class="btn btn-primary" onclick="openNewRentalModal()">📱 New Rental</button>
-      <button class="btn btn-outline" onclick="openManagePhonesModal()">⚙️ Manage Phones</button>
+      <button class="btn btn-outline" onclick="openManagePhonesModal()">⚙️ Manage phones</button>
       <button class="btn ${rentalView === 'calendar' ? 'btn-primary' : 'btn-outline'}"
         onclick="rentalView = rentalView === 'calendar' ? 'list' : 'calendar'; renderRentalsTab();">📅 Availability</button>
       <input class="search-box" style="width:280px;" type="text" id="rentalScan"
@@ -2061,7 +2068,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveNewRental()">💾 Save Rental</button>
+      <button class="btn btn-primary" onclick="saveNewRental()">💾 Save rental</button>
     </div>
   `);
 
@@ -2448,7 +2455,7 @@ function startReservation(rentalId) {
 // ══ MANAGE PHONES MODAL ══
 function openManagePhonesModal() {
   showDynamicModal(`
-    <div class="modal-title">⚙️ Manage Phones</div>
+    <div class="modal-title">⚙️ Manage phones</div>
     <div class="section-divider">Add New Phone</div>
     <div class="form-grid">
       <div class="form-group">
@@ -2504,7 +2511,7 @@ function openManagePhonesModal() {
       </div>
     </div>
     <div style="margin-top:14px;">
-      <button class="btn btn-primary" onclick="saveNewPhone()">➕ Add Phone</button>
+      <button class="btn btn-primary" onclick="saveNewPhone()">➕ Add phone</button>
     </div>
     <div class="section-divider" style="margin-top:20px;">Current Inventory (${phones.length})</div>
     <div style="max-height:200px;overflow-y:auto;">
@@ -2702,7 +2709,7 @@ function openEditPhoneModal(phoneId) {
   if (!p) return;
   const activeRental = rentals.find(r => r.phoneId === phoneId && (r.status === 'active' || r.status === 'overdue'));
   const renterInfo = activeRental
-    ? `<div style="margin-top:6px;font-size:var(--fs-body);color:var(--muted);">Rented to: <strong style="color:var(--text);">${escHtml(activeRental.customerName)}</strong> &nbsp;<button class="btn btn-outline" style="padding:3px 10px;font-size:var(--fs-small);" onclick="closeDynamicModal();openManageRentalModal('${activeRental.id}')">Manage Rental</button></div>`
+    ? `<div style="margin-top:6px;font-size:var(--fs-body);color:var(--muted);">Rented to: <strong style="color:var(--text);">${escHtml(activeRental.customerName)}</strong> &nbsp;<button class="btn btn-outline" style="padding:3px 10px;font-size:var(--fs-small);" onclick="closeDynamicModal();openManageRentalModal('${activeRental.id}')">Manage rental</button></div>`
     : '';
   const statusColor = p.status === 'rented' ? 'var(--accent)' : p.maintenance ? 'var(--gold)' : 'var(--success)';
   const statusLabel = p.status === 'rented' ? '🔴 Rented' : p.maintenance ? '🔧 Maintenance' : '🟢 Available';
@@ -2929,7 +2936,7 @@ function openManageRentalModal(rentalId) {
     <input type="hidden" id="mgFrozenLateFee" value="${r.lateFee || 0}">
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveManageRental('${rentalId}')">💾 Save Changes</button>
+      <button class="btn btn-primary" onclick="saveManageRental('${rentalId}')">💾 Save changes</button>
     </div>
   `);
 
@@ -4076,16 +4083,16 @@ function buildCustomerPanelHtml(c, mode = 'card') {
              The groups are labelled for screen readers too, which a flat row
              could not be. -->
         <div class="card-tools">
-          <span class="card-tool-group" role="group" aria-label="Contact this customer">
+          <span class="card-tool-group" role="group" aria-label="Contact this customer"><span class="card-tool-cap" aria-hidden="true">Contact</span>
             <button class="card-tool" onclick="openDraftReminderModal('${c.id}')" title="Draft a reminder message (does not send)" aria-label="Draft reminder">✉️</button>
             <button class="card-tool" onclick="openAiReplyModal('${c.id}')" title="Draft an AI reply to a customer message (does not send)" aria-label="AI reply">💬</button>
             <button class="card-tool" onclick="openLogCommModal('${c.id}')" title="Log a call or note" aria-label="Log call or note">📞</button>
           </span>
-          <span class="card-tool-group" role="group" aria-label="Money">
+          <span class="card-tool-group" role="group" aria-label="Money"><span class="card-tool-cap" aria-hidden="true">Money</span>
             <button class="card-tool" onclick="chargeCardOnFile('${c.id}')" title="Charge the customer's saved card on file (Stripe)" aria-label="Charge saved card">💳</button>
             <button class="card-tool" onclick="openPaymentLinkModal('${c.id}')" title="Create a Stripe payment link tagged to this customer" aria-label="Create payment link">🔗</button>
           </span>
-          <span class="card-tool-group" role="group" aria-label="Manage">
+          <span class="card-tool-group" role="group" aria-label="Manage"><span class="card-tool-cap" aria-hidden="true">Manage</span>
             <button class="card-tool" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer" aria-label="Set reminder">⏰</button>
             ${(!currentStaff || currentStaff.role === 'owner') ? `<button class="card-tool" onclick="openElidModal('${c.id}')" title="Look up this customer's ELID (telecom) balance & status" aria-label="ELID lookup">📡</button>` : ''}
             <button class="card-tool" onclick="openEditModal('${c.id}')" title="Edit customer" aria-label="Edit customer">✏️</button>
@@ -4145,7 +4152,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         <button class="card-action" onclick="openNewRentalModal('${c.id}')"><span class="ca-icon">📱</span> Rental</button>
         <button class="card-action" onclick="openAddSimModal('${c.id}')"><span class="ca-icon">💳</span> SIM Plan</button>
         <button class="card-action" onclick="openNewBookingModal('${c.id}')"><span class="ca-icon">✈️</span> Flight</button>
-        <button class="card-action" onclick="openNewVNModal('${c.id}')"><span class="ca-icon">🔢</span> Virtual Number</button>
+        <button class="card-action" onclick="openNewVNModal('${c.id}')"><span class="ca-icon">🔢</span> Virtual number</button>
         <button class="card-action" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal('${c.id}')})()"><span class="ca-icon">🔧</span> Repair</button>
         <button class="card-action" onclick="openNewServiceModal('${c.id}')"><span class="ca-icon">🖨️</span> Print / Online</button>
       </div>`;
@@ -5732,8 +5739,15 @@ const METHOD_LABELS = {
   voucher: '🎟️ Voucher', wallet: '👛 Wallet', other: 'Other', unspecified: '— no method recorded',
 };
 
-async function openCashupModal() {
-  const today = localISO();
+async function openCashupModal(dateISO) {
+  const today = dateISO || localISO();
+  const isToday = today === localISO();
+  const prevDay = new Date(`${today}T12:00:00`);
+  prevDay.setDate(prevDay.getDate() - 1);
+  const prevISO = prevDay.toISOString().slice(0, 10);
+  const nextDay = new Date(`${today}T12:00:00`);
+  nextDay.setDate(nextDay.getDate() + 1);
+  const nextISO = nextDay.toISOString().slice(0, 10);
   const data = await kcFetch(`/api/cashup?date=${today}`).then(r => r.json()).catch(() => null);
   if (!data || !data.success) { toast(data?.error || 'Cash-up unavailable.', 'error'); return; }
 
@@ -5747,7 +5761,14 @@ async function openCashupModal() {
     `<div style="color:var(--muted);font-size:var(--fs-body);padding:6px 0;">No money in yet today.</div>`;
 
   showDynamicModal(`
-    <div class="modal-title">🧾 Cash-up — ${fmtDate(today)}</div>
+    <div class="modal-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span>🧾 Cash-up — ${fmtDate(today)}</span>
+      <span style="display:flex;gap:6px;">
+        <button class="btn btn-outline btn-sm" onclick="openCashupModal('${prevISO}')" title="Count an earlier day">‹ ${fmtDate(prevISO)}</button>
+        ${isToday ? '' : `<button class="btn btn-outline btn-sm" onclick="openCashupModal('${nextISO}')" title="Later day">${fmtDate(nextISO)} ›</button>`}
+      </span>
+    </div>
+    ${isToday ? '' : `<div class="p-linkerr" role="status" style="margin-bottom:12px;">Counting an earlier day — today’s figures are not shown.</div>`}
     <div style="margin-bottom:14px;">${methodRows}
       <div style="display:flex;justify-content:space-between;font-size:var(--fs-body);padding:7px 0;color:var(--muted);">
         <span>Charged out today</span><span style="font-feature-settings:'tnum';">−${fmtGbp(Math.abs(data.totalOut))}</span>
@@ -5766,7 +5787,8 @@ async function openCashupModal() {
         <label class="form-label">Counted cash (£)</label>
         <input class="form-input" type="number" min="0" step="0.01" id="cuCounted"
           value="${data.count ? data.count.counted.toFixed(2) : ''}" placeholder="0.00"
-          oninput="cuUpdateVariance(this, ${data.expectedCash})">
+          oninput="cuUpdateVariance(this, ${data.expectedCash})"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();saveCashup('${today}');}">
         <div id="cuVariance" style="font-size:var(--fs-small);margin-top:4px;font-weight:600;">
           ${data.count ? (data.count.variance === 0 ? '✓ Till balances' : `${data.count.variance > 0 ? '+' : '−'}${fmtGbp(Math.abs(data.count.variance))} ${data.count.variance > 0 ? 'over' : 'short'}`) : ''}</div>
       </div>
@@ -6895,7 +6917,7 @@ function openManageSimModal(id) {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
       <span style="font-size:var(--fs-body);color:var(--muted);">Total charged: <strong style="color:var(--success);">${fmtGbp(totalCharged)}</strong></span>
       <div style="display:flex;gap:8px;">
-        <button class="btn btn-outline btn-sm" onclick="openEditSimModal('${id}');void(0)">✏️ Edit Details</button>
+        <button class="btn btn-outline btn-sm" onclick="openEditSimModal('${id}');void(0)">✏️ Edit details</button>
         <button class="btn btn-outline btn-sm" onclick="closeDynamicModal()">Close</button>
       </div>
     </div>
@@ -7317,7 +7339,7 @@ function renderBookingsTab() {
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
       ${bkBar}
-      <button class="btn btn-primary" onclick="openNewBookingModal()">+ New Booking</button>
+      <button class="btn btn-primary" onclick="openNewBookingModal()">+ New booking</button>
     </div>
     <div class="table-card">
       <table>
@@ -7453,7 +7475,7 @@ async function openNewBookingModal(preselectCustomerId = null) {
     .map(s => `<option value="${escHtml(s.id)}">${escHtml(s.name)} — ${fmtGbp(s.price)}</option>`)
     .join('');
   showDynamicModal(`
-    <div class="modal-title">✈️ New Booking</div>
+    <div class="modal-title">✈️ New booking</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
@@ -7564,7 +7586,7 @@ async function openNewBookingModal(preselectCustomerId = null) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveNewBooking()">✈️ Save Booking</button>
+      <button class="btn btn-primary" onclick="saveNewBooking()">✈️ Save booking</button>
     </div>
   `);
   if (preselectCustomerId) bkOnCustomerChange(); // #48 — offer passenger reuse straight away
@@ -8124,7 +8146,7 @@ async function renderRepairsTab() {
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
       ${repBar}
-      <button class="btn btn-primary" onclick="openNewRepairModal()">+ New Repair</button>
+      <button class="btn btn-primary" onclick="openNewRepairModal()">+ New repair</button>
     </div>
     <div class="table-card">
       <table>
@@ -8950,7 +8972,7 @@ async function renderShopTab() {
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
       <button class="btn btn-primary" onclick="openSaleModal()">🧾 Open Till</button>
       <button class="btn btn-outline" onclick="openCashupModal()">💰 Cash up</button>
-      <button class="btn btn-outline" onclick="openStockItemModal()">➕ Add Item</button>
+      <button class="btn btn-outline" onclick="openStockItemModal()">➕ Add item</button>
       <button class="btn btn-outline" onclick="openSupplierReturnModal()">📤 Return to supplier</button>
       <button class="btn btn-outline" onclick="openGoodsInModal()">📥 Goods in</button>
     </div>
@@ -12147,9 +12169,9 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
         <button class="btn btn-outline" onclick="renderDashboardTab()" title="Reload today's money & tasks">↻ Refresh</button>
         ${(!currentStaff || currentStaff.role === 'owner') ? `<button class="btn btn-outline" onclick="openBusinessSummary()" title="Revenue by service — this week & month">📊 Summary</button>` : ''}
         <button class="btn btn-outline" onclick="openNewRentalModal()">📱 New Rental</button>
-        <button class="btn btn-outline" onclick="openNewBookingModal()">✈️ New Booking</button>
+        <button class="btn btn-outline" onclick="openNewBookingModal()">✈️ New booking</button>
         <button class="btn btn-outline" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal()})()">🔧 New Repair</button>
-        <button class="btn btn-outline" onclick="document.querySelector('[data-tab=customers]').click();setTimeout(()=>document.getElementById('btnNewCustomer')?.click(),100)">👤 New Customer</button>
+        <button class="btn btn-outline" onclick="document.querySelector('[data-tab=customers]').click();setTimeout(()=>document.getElementById('btnNewCustomer')?.click(),100)">👤 New customer</button>
       </div>
     </div>
 
@@ -12237,7 +12259,7 @@ async function renderVirtualTab() {
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
       ${vnBar}
-      <button class="btn btn-primary" onclick="openNewVNModal()">+ New Virtual Number</button>
+      <button class="btn btn-primary" onclick="openNewVNModal()">+ New virtual number</button>
     </div>
     <div class="table-card">
       <table>

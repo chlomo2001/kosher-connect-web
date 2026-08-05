@@ -9,7 +9,7 @@
 // their label.
 
 import { withStaff } from '../../lib/auth.js'
-import { db, tablesMode } from '../../lib/db.js'
+import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 
 const CATEGORIES = ['repair', 'online', 'tickets', 'phone', 'sim', 'other']
 const money = (v) => Math.round((Number(v) || 0) * 100) / 100
@@ -113,7 +113,7 @@ async function handler(req, res) {
     return res.status(405).end()
   } catch (e) {
     console.error('[api/services]', e)
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

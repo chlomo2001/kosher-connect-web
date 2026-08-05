@@ -9,7 +9,7 @@
 // demoted or removed.
 
 import { withStaff, adminCreateUser, adminUserEmail, adminSetPassword, adminFindUserByEmail } from '../../lib/auth.js'
-import { db } from '../../lib/db.js'
+import { db, STORAGE_ERROR } from '../../lib/db.js'
 
 const ROLES = ['owner', 'helper']
 
@@ -123,7 +123,7 @@ async function handler(req, res) {
     return res.status(405).end()
   } catch (e) {
     console.error('[api/team]', e)
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

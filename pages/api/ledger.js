@@ -13,7 +13,7 @@
 // each with a stable reference — never from this endpoint.
 
 import { withStaff, tabAllowedFor, requireOwner } from '../../lib/auth.js'
-import { db, tablesMode } from '../../lib/db.js'
+import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 import { londonDate, londonDayStartUtc } from '../../lib/localDay.mjs'
 
 // Wallet actions are reachable from the Wallet tab AND the customer card,
@@ -262,7 +262,7 @@ async function handler(req, res) {
         const existing = await db.select('ledger', `charge_reference=eq.${encodeURIComponent(chargeRef)}&limit=1`)
         row = existing[0]
       }
-      if (!row) return res.status(500).json({ success: false, error: 'Storage error' })
+      if (!row) return res.status(500).json({ success: false, error: STORAGE_ERROR })
 
       return res.json({
         success: true,
@@ -278,7 +278,7 @@ async function handler(req, res) {
     if (/ledger_amount_sign|ledger_amount_nonzero/.test(String(e.message))) {
       return res.status(400).json({ success: false, error: 'Amount sign does not match the entry type.' })
     }
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

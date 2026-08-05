@@ -12,7 +12,7 @@
 //                       ledger (and the cash-up).
 
 import { withStaff, tabAllowedFor } from '../../lib/auth.js'
-import { db, tablesMode } from '../../lib/db.js'
+import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 import { money, settleSale } from '../../lib/money.mjs'
 
 const CATEGORIES = ['phone', 'accessory', 'sim', 'other']
@@ -347,7 +347,7 @@ async function handler(req, res) {
     return res.status(405).end()
   } catch (e) {
     console.error('[api/shop]', e)
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

@@ -16,7 +16,7 @@
 // cost of a wrong confirm, and the reason confirm asks first.
 
 import { withStaff, requireOwner } from '../../lib/auth.js'
-import { db, tablesMode, selectAllPaged } from '../../lib/db.js'
+import { db, tablesMode, selectAllPaged, STORAGE_ERROR } from '../../lib/db.js'
 import { parseStatementCsv } from '../../lib/bankCsv.mjs'
 import { proposeMatches } from '../../lib/bankMatch.mjs'
 import { buildCandidates } from '../../lib/bankCandidates.mjs'
@@ -185,7 +185,7 @@ async function handler(req, res) {
           const existing = await db.select('ledger', `charge_reference=eq.${encodeURIComponent(`BANK-${token}`)}&limit=1`)
           entry = existing[0]
         }
-        if (!entry) return res.status(500).json({ success: false, error: 'Storage error' })
+        if (!entry) return res.status(500).json({ success: false, error: STORAGE_ERROR })
 
         // Claim the bank row — guarded so a double-submit can't re-point it.
         const updated = await db.update('bank_transactions',
@@ -278,7 +278,7 @@ async function handler(req, res) {
     if (/relation "bank_transactions" does not exist|42P01/.test(String(e.message))) {
       return res.status(503).json({ success: false, error: 'The bank_transactions table is not set up yet — apply the 20260731180000_bank_transactions migration first.' })
     }
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

@@ -3,7 +3,7 @@
 // migrations only.
 
 import { withStaff } from '../../lib/auth.js'
-import { db, tablesMode } from '../../lib/db.js'
+import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 
 async function handler(req, res) {
   if (!tablesMode) {
@@ -22,7 +22,7 @@ async function handler(req, res) {
     })))
   } catch (e) {
     console.error('[api/vn-prices]', e)
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 

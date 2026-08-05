@@ -23,7 +23,7 @@ const babel = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/cor
 const presetReact = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/preset-react'))
 const cjs = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/plugin-transform-modules-commonjs'))
 
-export const PAGES = { welcome: 'pages/welcome.js', portal: 'pages/portal.js', 'phone-guide': 'pages/phone-guide.js' }
+export const PAGES = { welcome: 'pages/welcome.js', portal: 'pages/portal.js', 'phone-guide': 'pages/phone-guide.js', repair: 'pages/repair.js' }
 
 // Transpile the page and everything it imports into one browser bundle with a
 // tiny CommonJS shim. next/head and next/script render nothing here; next/link
@@ -94,8 +94,22 @@ window.process = { env: {} };
 try { localStorage.setItem('kcLang', ${JSON.stringify(lang)}) } catch (e) {}
 // These pages fetch their own bits (opening hours, portal session). Answer
 // everything with an empty success so a missing stub degrades, never throws.
-window.fetch = function () {
-  return Promise.resolve({ ok: true, status: 200, json: function(){ return Promise.resolve({ success: true }) },
+window.fetch = function (url) {
+  var u = String(url || '');
+  var body = { success: true };
+  // Two sample handsets, so the guide renders its CARDS — the blanket
+  // success stub meant every screenshot showed the "being written" empty
+  // state, and the spec grid was never actually looked at.
+  if (u.indexOf('/api/public/phone-guide') !== -1) {
+    body = { models: [
+      { name: 'Nokia 105', price: 35, dualSim: 'Yes', yiddishText: 'Yes', touchScreen: 'No',
+        texting: 'Yes — OTP (bank texts only)', pros: 'Big clear buttons\\nBattery lasts all week', cons: 'No camera' },
+      { name: 'Alcatel 2053', price: 42, dualSim: 'Yes', yiddishText: '', touchScreen: 'No',
+        texting: '', pros: 'Loud speaker', cons: 'Screen is small' },
+    ] };
+  }
+  if (u.indexOf('/api/public/info') !== -1) body = { openingHours: 'Sun-Thu 2:00pm-6:30pm · Fri closed' };
+  return Promise.resolve({ ok: true, status: 200, json: function(){ return Promise.resolve(body) },
     text: function(){ return Promise.resolve('{}') } });
 };</script>
 <script>${react}</script>

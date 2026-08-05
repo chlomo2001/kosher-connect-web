@@ -8,7 +8,7 @@
 // and the settings key/value list.
 
 import { withStaff } from '../../lib/auth.js'
-import { db, tablesMode } from '../../lib/db.js'
+import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 
 // Typed rules for editable settings keys. A key not listed here is shown
 // read-only and can never be written from the app.
@@ -312,7 +312,7 @@ async function handler(req, res) {
     return res.status(405).end()
   } catch (e) {
     console.error('[api/settings]', e)
-    return res.status(500).json({ success: false, error: 'Storage error' })
+    return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }
 
