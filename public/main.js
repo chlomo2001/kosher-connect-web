@@ -10106,15 +10106,18 @@ async function renderKolTorahTab() {
       <thead><tr><th>Code</th><th>Title</th><th>Speaker</th><th>£</th><th>Active</th><th></th></tr></thead>
       <tbody>
         ${titleRows}
-        <tr style="background:var(--bg-secondary);">
-          <td><input class="form-input" id="ktNewT_code" placeholder="KT-…" style="width:74px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
-          <td><input class="form-input" id="ktNewT_name" placeholder="Title" style="min-width:170px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
-          <td><input class="form-input" id="ktNewT_speaker" placeholder="Speaker" style="min-width:130px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
-          <td><input class="form-input" id="ktNewT_price" type="number" min="0" step="0.01" placeholder="£" style="width:84px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
-          <td></td>
-          <td><button class="btn btn-primary btn-sm" onclick="ktSaveTitle()">+ Add</button></td>
-        </tr>
       </tbody></table></div>
+    ${'' /* Same move as the new-job form: composing in table cells means
+          sideways scrolling on a phone. Ids unchanged — ktSaveTitle() reads
+          the same fields. */}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px;padding:10px 12px;border:1px dashed var(--border);border-radius:8px;">
+      <span style="font-size:var(--fs-small);font-weight:700;color:var(--accent);">➕ Add a title</span>
+      <input class="form-input" id="ktNewT_code" placeholder="KT-…" style="width:74px;min-height:0;padding:5px 8px;font-size:var(--fs-small);">
+      <input class="form-input" id="ktNewT_name" placeholder="Title" style="flex:1;min-width:150px;min-height:0;padding:5px 8px;font-size:var(--fs-small);">
+      <input class="form-input" id="ktNewT_speaker" placeholder="Speaker" style="min-width:130px;min-height:0;padding:5px 8px;font-size:var(--fs-small);">
+      <input class="form-input" id="ktNewT_price" type="number" min="0" step="0.01" placeholder="£" style="width:84px;min-height:0;padding:5px 8px;font-size:var(--fs-small);">
+      <button class="btn btn-primary btn-sm" onclick="ktSaveTitle()">+ Add</button>
+    </div>
 
     ${ktSectionHead('Takings — recent settlements', 'what each shul sold and what was collected')}
     <div class="table-wrap"><table>
