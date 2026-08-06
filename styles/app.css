@@ -1063,6 +1063,14 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
    .kc-phone — the cell holds a single unit, so it does not wrap. */
 .kc-money { white-space: nowrap; }
 
+/* A date is one value too. fmtDate renders "18 Aug 2026", and any column
+   narrower than that broke it at both spaces — Bookings' Travel column showed
+   a three-line date, Rentals' From→To a five-line pair. The tables already
+   scroll sideways (.table-wrap), so a date column is free to be as wide as a
+   date needs. Carries an optional second line (a time, a renewal note) fine:
+   nowrap stops breaks INSIDE the run, not an explicit <br> or child block. */
+.kc-date { white-space: nowrap; }
+
 
 .kc-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

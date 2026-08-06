@@ -1756,7 +1756,7 @@ function renderRentalRows() {
         <div class="customer-email" style="font-size:var(--fs-micro);">${r.vn ? '🔢 +'+escHtml(r.vnPrefix || '') : ''}</div>
       </td>
       <td class="kc-phone" style="font-weight:600;font-size:var(--fs-small);">${escHtml(r.phoneNumber || '—')}</td>
-      <td style="font-size:var(--fs-micro);white-space:nowrap;">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}</td>
+      <td class="kc-date" style="font-size:var(--fs-micro);">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}</td>
       <td style="text-align:center;">${r.chargeableDays}d</td>
       <td style="color:var(--success);font-weight:700;">${fmtGbp(r.price)}</td>
       <td class="kc-money" style="font-weight:700;${debtColor}">${totalOwed > 0 ? '£'+totalOwed+' owed' : '✓ Paid'}</td>
@@ -6680,7 +6680,7 @@ function renderSimRows() {
       <td>${escHtml(s.provider || '—')}</td>
       <td style="font-weight:600;font-size:var(--fs-small);">${escHtml(s.simNumber || '—')}</td>
       <td style="font-size:var(--fs-small);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(s.plan || '—')}</td>
-      <td style="font-size:var(--fs-small);${renewalClass}">${fmtDate(s.renewalDate)}${renewalLabel}</td>
+      <td class="kc-date" style="font-size:var(--fs-small);${renewalClass}">${fmtDate(s.renewalDate)}${renewalLabel}</td>
       <td style="font-size:var(--fs-small);">${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}</td>
       <td>${statusBadge}</td>
       <td>
@@ -7330,7 +7330,7 @@ function renderBookingsTab() {
             <div class="customer-email">${escHtml(b.passenger || '')}${(b.passengers || []).length ? ` · 👥 ${b.passengers.length}` : ''}</div></td>
         <td style="white-space:nowrap;">${escHtml(b.route)}</td>
         <td>${escHtml(b.airline || '—')}<div class="customer-email">${escHtml(b.bookingReference || '')}</div></td>
-        <td>${b.travelDate ? fmtDate(b.travelDate) : '—'}
+        <td class="kc-date">${b.travelDate ? fmtDate(b.travelDate) : '—'}
             <div class="customer-email">${escHtml(b.departureTime || '')}${b.arrivalTime ? ' → ' + escHtml(b.arrivalTime) : ''}</div></td>
         <td>${fmtGbp((b.price || 0))}</td>
         <td>${fmtGbp((b.bookingFee || 0))}</td>
@@ -8142,7 +8142,7 @@ async function renderRepairsTab() {
         <td>${escHtml(r.device || '—')}${r.kcPurchase ? ' <span class="badge" style="background:rgba(0, 96, 168,0.1);color:var(--accent);font-size:var(--fs-micro);">KC phone</span>' : ''}</td>
         <td style="font-size:var(--fs-small);">${r.services.map(s => escHtml(s.name)).join('<br>') || '—'}</td>
         <td><strong>${fmtGbp((r.total || 0))}</strong></td>
-        <td>${r.openedAt ? fmtDate(r.openedAt) : '—'}</td>
+        <td class="kc-date">${r.openedAt ? fmtDate(r.openedAt) : '—'}</td>
         <td>${repairStatusBadge(r.status)}</td>
         <td style="white-space:nowrap;">
           ${r.status === 'Ready' ? `<button class="action-btn" onclick="openRepairSmsModal('${escHtml(r.id)}')" title="Ready-to-collect message">💬</button>` : ''}
@@ -8607,7 +8607,7 @@ async function renderServicesTab() {
         <td><div class="customer-name">${escHtml(o.customerName || '—')}</div></td>
         <td>${escHtml(o.serviceName)}${o.qty > 1 ? ` <span style="color:var(--muted);">× ${o.qty}</span>` : ''}</td>
         <td><strong>${fmtGbp((o.total || 0))}</strong></td>
-        <td>${o.createdAt ? fmtDate(o.createdAt) : '—'}</td>
+        <td class="kc-date">${o.createdAt ? fmtDate(o.createdAt) : '—'}</td>
         <td style="font-size:var(--fs-small);color:var(--muted);">${escHtml(o.notes || '')}</td>
       </tr>`).join('');
 
@@ -10327,7 +10327,7 @@ async function renderKolTorahTab() {
         ? '<tr><td colspan="6"><div class="empty-state"><div class="emoji">🧾</div><p>No settlements recorded yet.</p></div></td></tr>'
         : d.settlements.map(x => `
           <tr>
-            <td>${fmtDate(x.createdAt)}</td>
+            <td class="kc-date">${fmtDate(x.createdAt)}</td>
             <td>${escHtml(x.shulName)}</td>
             <td>${fmtGbp(x.soldValue)}</td>
             <td><strong>${fmtGbp(x.received)}</strong></td>
@@ -12849,7 +12849,7 @@ async function renderSettingsTab() {
             <td><strong>${escHtml(a.name)}</strong><div style="font-size:var(--fs-micro);color:var(--muted);">${BIZ_CAT_LABELS[a.category] || escHtml(a.category)}${a.notes ? ' · ' + escHtml(a.notes.slice(0, 60)) : ''}</div></td>
             <td style="font-size:var(--fs-small);">${a.url ? `<a href="${escHtml(a.url)}" target="_blank" rel="noopener" style="color:var(--accent);">open ↗</a> ` : ''}${escHtml(a.loginEmail || '—')}</td>
             <td style="font-feature-settings:'tnum';">${a.monthlyCost != null ? fmtGbp(a.monthlyCost) : '—'}</td>
-            <td>${a.renewalDate ? `<span style="${a.renewalDate <= soon10 ? 'color:var(--danger);font-weight:600;' : ''}">${fmtDate(a.renewalDate)}${a.renewalDate < today10 ? ' ⚠' : ''}</span>` : '—'}</td>
+            <td class="kc-date">${a.renewalDate ? `<span style="${a.renewalDate <= soon10 ? 'color:var(--danger);font-weight:600;' : ''}">${fmtDate(a.renewalDate)}${a.renewalDate < today10 ? ' ⚠' : ''}</span>` : '—'}</td>
             <td style="white-space:nowrap;">
               ${a.hasCred ? `<button class="action-btn" style="font-size:var(--fs-micro);" onclick="revealBizAccount('${escHtml(a.id)}')">🔑 Reveal</button>` : ''}
               <button class="action-btn" aria-label="Edit ${escHtml(a.name || 'account')}" onclick="openBizAccountModal('${escHtml(a.id)}')">✏️</button>
