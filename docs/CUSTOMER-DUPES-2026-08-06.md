@@ -1,99 +1,105 @@
-# Duplicate customers — production audit, 2026-08-06
+# Customer duplicates — production audit and cleanup, 2026-08-06
 
-Read-only analysis of `customers` on Kc-Live (`xsrtdwwzxdmnjdtjcdzd`). No writes made.
+Kc-Live (`xsrtdwwzxdmnjdtjcdzd`). Audit first, then the owner's decisions applied.
 
-**788 customer rows total.** Activity = row count across all 15 tables with a
-FK onto `customers` (bookings, customer_documents, email_log, kt_jobs, kt_shuls,
-ledger, rentals, repairs, service_orders, sims, sold_phones, stock_sales, tasks,
-travel_authorisations, virtual_numbers).
+**Customer count: 788 → 741.**
 
-## Headline
+## Undo snapshot
 
-The 77 same-name clusters are mostly **not** duplicates. In 76 of 77, every
-member has its own activity and its own phone — different people sharing a
-common surname. The real duplication is much smaller and has a specific cause:
-the same person imported once per source spreadsheet.
+Taken before any write. Restore from these:
 
-`legacy_id` prefixes carry the provenance:
+| table | holds |
+|---|---|
+| `undo_20260806_customers` | all 788 customer rows as they were |
+| `undo_20260806_links` | all 1,242 `(table, row_id, customer_id)` pointers as they were |
+| `merge_map_20260806` | the 9 winner/loser pairs |
+| `rental_placeholders_20260806` | the 39 deleted "Rental" rows incl. their phone numbers |
+| `elid_map_20260806` | ELID id / username / balance as transcribed |
 
-| prefix | rows | with phone | source |
-|---|---|---|---|
-| `pl-`  | 676 | 608 | All phone plans sheet |
-| `wz-`  | 35  | 17  | Wizz import |
-| `tk-`  | 17  | 0   | (third sheet) |
-| `sub-` | 17  | 0   | Subscriptions sheet |
-| `ua-`  | 6   | 6   | (user accounts) |
+Integrity after: **1,242 links before, 1,242 after, 0 dangling.** The 7 rows with a
+null `customer_id` (3 `tasks`, 4 `email_log`) were null before the work too.
 
-Matching on the base slug across *different* prefixes finds **15 people holding
-34 rows**.
+## What the audit found
 
-## Tier 1 — 10 safe merges (20 rows → 10)
+The 77 same-name clusters were mostly **not** duplicates — in 76 of 77 every member
+had its own activity and its own phone. Real duplication came from one cause: the
+same person imported once per source sheet, visible in the `legacy_id` prefix
+(`pl-` phone plans 676, `wz-` Wizz 35, `tk-` 17, `sub-` subscriptions 17, `ua-` 6).
+Matching base slugs across different prefixes found 15 people holding 34 rows.
 
-Cross-sheet, no conflicting phone: one row carries the phone, its twin has none
-(or neither has one). Keep the higher-activity row, fold the other in.
+Also confirmed: **zero duplicate phone numbers** — there is a unique constraint on
+`(phone_country_code, phone_number)`, so they cannot occur. Zero duplicate emails
+(`email_normalized` is non-null on only a handful of rows).
 
-| person | rows | note |
-|---|---|---|
-| Chaim Shimon Lebrecht | `wz-` (4) + `tk-` (3) | neither has a phone |
-| Eliezer Rapaport | `pl-` (3, phone+email) + `tk-` (2, empty) | |
-| Fishel Thaler | `pl-` (1, phone) + `sub-` (1) | |
-| Lipa Moshkowits | `pl-` (1, phone) + `sub-` (1) | |
-| Mechl Lieber | `pl-` (2, phone) + `sub-` (1) | |
-| Menachem Meir Glick | `pl-` (2, phone) + `sub-` (1) | |
-| Menachem Simon | `pl-` (5, phone) + `sub-` (1) | |
-| Moishe Grinfeld Antwerp | `pl-` (3, phone) + `sub-` (1) | `sub` first_name has a trailing `-` |
-| Nachmen Merlin | `wz-` (4) + `pl-` (1, phone) | |
-| Yochenen Domb | `tk-` (4) + `pl-…-2` (1, phone) | `pl` row is line "2" — least certain of the ten |
+## 1. Nine merges applied
 
-## Tier 2 — 5 needing the owner's call (14 rows)
+Kept the richer row, re-pointed all 15 FK tables, folded in phone/email/address
+where the kept row was empty, deleted the empty row. 37 child records moved, none lost.
 
-Phones conflict. Pattern: the `sub-`/`ua-` row is very likely a duplicate, but
-*which* line it belongs to is ambiguous, and the `pl-…-1`/`-2` rows are
-deliberately separate lines.
+Chaim Shimon Lebrecht · Eliezer Rapaport · Fishel Thaler · Lipa Moshkowits ·
+Mechl Lieber · Menachem Meir Glick · Menachem Simon · Moishe Grinfeld Antwerp ·
+Nachmen Merlin
 
-- **Mailech Sharf** — `pl-1` (phone A), `pl-2` (phone B), `sub-` (no phone)
-- **Menachem Rosen** — `pl-` (phone A), `pl-2` (phone B), `sub-` (no phone)
-- **Yakov Mordche Friedman** — `pl-` + `ua-`, different phones, email only on `ua-`
-- **Yidl Samet** — `ua-` + `pl-`, different phones
-- **Pesachye Kraus** — `pl-1`, `pl-2`, `pl-`, `ua-` — four distinct phones
+Each kept row now carries `notes = 'merged from <loser legacy_id>'`.
 
-## Explicitly NOT duplicates
+**Held back — Yochenen Domb.** The pair was `tk-yochenen-domb` + `pl-yochenen-domb-2`.
+The owner's rule is that sheet-numbered rows (`-1`, `-2`) are separate people, and
+the `pl-` side here is line "2". Not merged pending his word.
 
-- **39 rows named "Rental"** (no surname, 38 distinct phones, created 2026-07-13).
-  All 40 of their activity rows are `sims` and nothing else. These are
-  rental-pool SIMs that each got a placeholder customer record in the Three.xlsx
-  import — 39 real-but-unnamed lines, not 39 copies of one person. Merging them
-  would be wrong; they need renaming or moving off `customers` entirely.
-- **Same-sheet numbered lines** — `…-1`/`-2`, `satmar-37`/`satmar-11`,
-  `yehoishe-gross`/`-2`, `burech-tzvi-kopenhaim-1`/`-2`,
-  `mordche-y-goldberg-shvester-1`/`-2`. The source sheet separated these on
-  purpose; they are distinct plan lines.
-- **40 two-member clusters with two distinct phones, both active** — same name,
-  different people.
+## 2. Tier 2 — left alone by decision
 
-## Separate finding — 35 dormant ELID rows
+Owner confirmed these are **separate people**, not duplicates. No action, and they
+should not be re-flagged: Mailech Sharf, Menachem Rosen, Yakov Mordche Friedman,
+Yidl Samet, Pesachye Kraus.
 
-35 rows created 2026-07-23, `notes = "Imported from ELID (…)"`, numeric
-`legacy_id`. Every one has **no phone, no email, and zero activity across all 15
-tables**. Name-only shells from an import that was never finished. Includes
-`Sholom-Shapiro` / `Sholom-Shapiro2` / `Shulem-Shapiro`, which the ELID source
-itself held as separate entries.
+## 3. Rental pool tidied
 
-Options: finish the import (attach phones), or retire them — they are currently
-4.4% of the customer list and match nothing.
+39 rows named "Rental" (no surname, 38 distinct phones) were not customers — they
+were rental-pool SIMs that each got a placeholder record, because **`sims.customer_id`
+is NOT NULL** and the import had nowhere else to put them. All 40 of their records
+were `sims` and nothing else: Golan (Israel), Red Pocket / Tello / US Mobile (USA),
+Lebara, Three, UK SIM — the international rental handsets.
 
-## Other signals checked and cleared
+Applied the light fix: one internal holder `Kosher Connect — Rental Pool`
+(`legacy_id = internal-rental-pool`), all 40 SIMs re-pointed to it, the 39
+placeholders deleted. Each placeholder's number was copied onto its SIM as
+`legacy_extras.poolHolderNumber` first, so no number was lost.
 
-- **Duplicate emails: zero.** `email_normalized` is non-null on only a handful of
-  rows, so email is not a usable dedupe key on this data.
-- **Duplicate phones: zero.** No two customers share a normalised phone number.
+**Still open (root cause).** `sims` has no typed number column at all — all 840 SIMs
+keep their number in `legacy_extras.simNumber`, untyped JSON. The proper fix is a
+migration making `sims.customer_id` nullable and adding a typed `sim_number`, so a
+pool SIM needs no owner. Backlog, not done here.
 
-## Suggested order of work
+## 4. ELID linked
 
-1. Retire or rename the 39 "Rental" placeholders (biggest distortion of the list).
-2. Merge Tier 1's ten pairs.
-3. Put Tier 2's five in front of the owner one at a time.
-4. Decide the 35 ELID shells: finish or delete.
+The 35 `Imported from ELID` rows are **real customers**, not junk — they came
+through ELID (elid.co.il), the VoIP/billing platform KC resells. The import had
+brought names only.
 
-Any merge needs an undo snapshot first, and must re-point all 15 FK tables
-before deleting the losing row.
+All 35 matched an ELID account exactly (0 unmatched). Each now carries:
+
+```
+legacy_extras.elidUserId, .elidUsername, .elidBalanceGbpAsAt20260806
+notes = 'ELID account <id> (<username>)'
+```
+
+**Balances are recorded as a dated reference only — nothing posted to the ledger.**
+11 of the 35 are in debit, totalling **−£3,330.09** (largest: −660, −594, −480, −456,
+−446, −400). Whether a negative ELID balance means the customer owes KC, or is KC's
+prepaid float with ELID, is not something the data answers — owner to say before any
+of it becomes a wallet or ledger entry.
+
+### Not done, and why
+
+- **No phone numbers.** The ELID users list shows ID, user, username, account type,
+  tariff and balance — no numbers. The 35 still have none. Numbers live per-user
+  under DIDs; that page has an **Export to CSV** button, which is the way to get them.
+- **The wider reconciliation.** ELID holds roughly 150 accounts across 3 pages; only
+  35 were ever imported. Several of the rest clearly belong to people already in KC
+  under `pl-` (e.g. `fishel-thaler` 5858, `mechl lieber` 4771, `mechl- lieber` 5023,
+  `Mechl-lieber-rental` 4992, `moishe-grinfeld-antwerp` 4888, `Satmar11` 5047) — so
+  some KC customers have an ELID account nobody has linked. ELID also contains test
+  accounts (`test test`, `test company`, `test_kc`, `not in use`) which must not be
+  imported. A CSV export of the full users list would let this be done properly.
+- **A device password and PIN were visible** in one of the supplied screenshots.
+  Deliberately not transcribed here or anywhere in the repo, per the secrets rule.
