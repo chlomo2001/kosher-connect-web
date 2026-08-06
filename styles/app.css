@@ -1074,6 +1074,17 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 
 .kc-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* Two lines, then ellipsis. The ledger feeds read
+   "name · type · description (method)" and one-line truncation always ate the
+   END — which is the description, the only part saying what the money was
+   for. Rows showed "Menachem Adler · Payment · Rental…" and the reader had to
+   click through to learn anything. A second line costs ~18px and usually
+   carries the whole description. */
+.kc-clamp-2 {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  line-clamp: 2; overflow: hidden;
+}
+
 @media (max-width: 560px) {
   .kc-truncate { overflow: visible; text-overflow: clip; white-space: normal; }
 }
