@@ -199,6 +199,14 @@ function fmtPhone(raw) {
   if (!n.startsWith('+')) {
     if (n.startsWith('44') && digits.length >= 11) n = '+' + n;
     else if (n.startsWith('0') && digits.length >= 10 && digits.length <= 12) n = '+44' + n.slice(1);
+    // Bare international digits — the rental inventory stores handsets this
+    // way ("17185998801"), so US/Canada/Israel numbers were rendering raw on
+    // the availability calendar. Mirrors formatPhoneDisplay in lib/ukPhone.mjs;
+    // change both together. Only an explicit country code with the right digit
+    // count is promoted — a bare 10-digit number stays as it is, because it is
+    // genuinely ambiguous.
+    else if (/^1\d{10}$/.test(digits)) n = '+' + digits;
+    else if (/^972\d{8,9}$/.test(digits)) n = '+' + digits;
     else return s;
   }
   const cc = ['+972', '+44', '+1'].find(c => n.startsWith(c));

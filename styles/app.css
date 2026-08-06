@@ -142,8 +142,15 @@
    the same space below everything reads as background. shrink:1 + min-height:0
    keeps the scroll region for short windows and heavy zoom. */
 
+/* flex-GROW 1, not 0: the nav takes the rail's spare height so Sign out and the
+   version line are pushed to the floor. At 0 the nav was only as tall as its
+   items, the slack piled up BELOW .sidebar-bottom, and on a tall screen the
+   sign-out block floated mid-rail with ~170px of dead navy under it — which
+   is not what its own "collects in one place at the bottom" comment intends.
+   min-height:0 + overflow-y keep the scroll behaviour when items outgrow the
+   rail, so the tall case is unchanged. */
 .sidebar-nav {
-  flex: 0 1 auto; min-height: 0; overflow-y: auto;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
   scrollbar-color: rgba(255,255,255,0.28) transparent;
 }
 
@@ -1879,7 +1886,16 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 /* Scoped under .cal-table so it outranks the 10px muted `.cal-table th` rule —
    the row header is a <th> now (it names the phone the row belongs to). */
 
-.cal-table .cal-phone { text-align: left !important; white-space: nowrap; padding: 4px 10px 4px 0 !important; font-size: var(--fs-small); font-weight: 400; color: var(--text); position: sticky; left: 0; background: var(--surface); }
+/* A fixed 150px, and fixed on purpose. The table is width:100% while every day
+   cell asks for 22px, so the browser handed ALL the slack to this auto-width
+   column: on a 1280 screen the phone label ran to ~1100px and the month grid
+   was crushed against the right edge with a gulf of white between the two.
+   The shrink-to-content idiom (width:1%) is wrong HERE — the table also
+   carries min-width:max-content, and a percentage resolved against that
+   indefinite size blew the table out to 13490px. A px width is stable under
+   max-content, fits the longest number we format (+972 54 400 0111), and
+   leaves the rest of the row to the day columns. */
+.cal-table .cal-phone { width: 150px; text-align: left !important; white-space: nowrap; padding: 4px 10px 4px 0 !important; font-size: var(--fs-small); font-weight: 400; color: var(--text); position: sticky; left: 0; background: var(--surface); }
 
 .cal-cell { width: 22px; height: 24px; border: 1px solid var(--border); padding: 0 !important; }
 

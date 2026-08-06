@@ -43,3 +43,20 @@ test('display output round-trips to the same storage key', () => {
     assert.equal(phoneKey(formatPhoneDisplay(raw)), phoneKey(raw), raw)
   }
 })
+
+test('bare international digits — the rental inventory stores handsets this way', () => {
+  // No leading +, no leading 0: these fell straight through unformatted, so
+  // the availability calendar showed "17185998801".
+  assert.equal(formatPhoneDisplay('17185998801'), '+1 718 599 8801')
+  assert.equal(formatPhoneDisplay('13472632157'), '+1 347 263 2157')
+  assert.equal(formatPhoneDisplay('972525115445'), '+972 52 511 5445')
+  assert.equal(formatPhoneDisplay('97225005656'), '+972 2 500 5656')
+})
+
+test('an ambiguous bare number is left exactly as it was', () => {
+  // 10 digits with no country code could be a US number missing its 1, or a
+  // national number from anywhere. Guessing would be worse than not grouping.
+  assert.equal(formatPhoneDisplay('7185998801'), '7185998801')
+  assert.equal(formatPhoneDisplay('12345'), '12345')          // short code
+  assert.equal(formatPhoneDisplay('1718599880'), '1718599880') // 1 + only 9
+})

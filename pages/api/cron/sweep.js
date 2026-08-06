@@ -20,6 +20,7 @@ import crypto from 'node:crypto'
 import { db, tablesMode } from '../../../lib/db.js'
 import { resolveStaff } from '../../../lib/auth.js'
 import { advanceOneMonth, advancePastDate } from '../../../lib/money.mjs'
+import { displayDate } from '../../../lib/localDay.mjs'
 import { requirementFor, coverageStatus, KNOWN_DESTINATIONS } from '../../../lib/travelRules.mjs'
 import { loadTravelRules } from '../../../lib/travelRulesDb.js'
 
@@ -232,7 +233,7 @@ async function handler(req, res) {
       const name = r.customers ? `${r.customers.first_name || ''} ${r.customers.last_name || ''}`.trim() : '?'
       await upsertOpenTask({
         reference: `OVERDUE-${r.id}`,
-        title: `Rental overdue — ${name} (due ${r.end_date})`,
+        title: `Rental overdue — ${name} (due ${displayDate(r.end_date)})`,
         customerUuid: r.customer_id,
         notes: `Rental ${r.legacy_id || r.id} was due back ${r.end_date}.`,
       })
@@ -309,7 +310,7 @@ async function handler(req, res) {
       const name = b.passenger || (b.customers ? `${b.customers.first_name || ''} ${b.customers.last_name || ''}`.trim() : '?')
       await upsertOpenTask({
         reference: `PASSPORT-${b.id}`,
-        title: `Passport expires ${b.passport_expiry} — ${name}`,
+        title: `Passport expires ${displayDate(b.passport_expiry)} — ${name}`,
         customerUuid: b.customer_id,
         notes: 'Passport on file expires within 90 days.',
         dueDate: b.passport_expiry,
@@ -398,7 +399,7 @@ async function handler(req, res) {
       const name = r.customers ? `${r.customers.first_name || ''} ${r.customers.last_name || ''}`.trim() : '?'
       await upsertOpenTask({
         reference: `PICKUP-${r.id}`,
-        title: `Reservation pickup — ${name} (from ${r.start_date})`,
+        title: `Reservation pickup — ${name} (from ${displayDate(r.start_date)})`,
         customerUuid: r.customer_id,
         notes: 'Press ▶ Start on the rental when the phone is handed over.',
         dueDate: r.start_date,
@@ -515,7 +516,7 @@ async function handler(req, res) {
       const name = s.customers ? `${s.customers.first_name || ''} ${s.customers.last_name || ''}`.trim() : '?'
       await upsertOpenTask({
         reference: `SIMDUE-${s.id}`,
-        title: `SIM renews ${s.next_renewal_date} — ${name} (${s.provider || 'SIM'})${s.paid_by === 'kc' ? ' — KC pays' : ''}`,
+        title: `SIM renews ${displayDate(s.next_renewal_date)} — ${name} (${s.provider || 'SIM'})${s.paid_by === 'kc' ? ' — KC pays' : ''}`,
         customerUuid: s.customer_id,
         priority: s.paid_by === 'kc' ? 'high' : 'medium',
         notes: 'Renewal due — check payment goes through.',

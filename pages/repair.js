@@ -20,10 +20,10 @@ const T = {
     tag: 'Repairs',
     back: '← Back to the main page', account: 'My account',
     homeAria: 'Kosher Connect — back to the main page',
-    strap: 'Screens · batteries · charging · buttons',
+    strap: 'Screens · mic · charging · housing · buttons',
     h3: 'Book a repair',
     lead: 'Tell us what’s broken and how to reach you — we’ll come back with an honest price, and if it isn’t worth fixing, we’ll say so. Most jobs are done quickly.',
-    fName: 'Your name', fContact: 'Phone number or email', fDevice: 'Which phone or device? (e.g. Nokia 105, iPhone 8)',
+    fName: 'Your name', fContact: 'Phone number or email', fDevice: 'Which phone or device? (e.g. Nokia 105, Fig Core)',
     fIssue: 'What’s wrong with it?',
     send: 'Send it in',
     sending: 'Sending…',
@@ -51,10 +51,10 @@ const T = {
     tag: 'תיקונים',
     homeAria: 'כשר קונקט — חזרה לעמוד הראשי',
     back: '→ חזרה לעמוד הראשי', account: 'האזור האישי',
-    strap: 'מסכים · סוללות · טעינה · כפתורים',
+    strap: 'מסכים · מיקרופון · טעינה · מארז · כפתורים',
     h3: 'לקבוע תיקון',
     lead: 'ספרו לנו מה התקלקל ואיך להשיג אתכם — נחזור אליכם עם מחיר הוגן, ואם לא שווה לתקן נגיד ביושר. את רוב התיקונים מסיימים מהר.',
-    fName: 'השם שלכם', fContact: 'טלפון או אימייל', fDevice: 'איזה מכשיר? (למשל Nokia 105, iPhone 8)',
+    fName: 'השם שלכם', fContact: 'טלפון או אימייל', fDevice: 'איזה מכשיר? (למשל Nokia 105, Fig Core)',
     fIssue: 'מה הבעיה?',
     send: 'לשלוח',
     sending: 'שולח…',
@@ -128,7 +128,7 @@ export default function RepairBooking() {
     <>
       <Head>
         <title>Book a repair — Kosher Connect</title>
-        <meta name="description" content="Phone repairs in Salford — screens, batteries, charging trouble. Tell us what's wrong and we'll come back with an honest price. Kosher Connect, 421 Bury New Road." />
+        <meta name="description" content="Phone repairs in Salford — screens, mic, charging, housing. Tell us what's wrong and we'll come back with an honest price. Kosher Connect, 421 Bury New Road." />
         <link rel="canonical" href="https://www.kosher-connect.com/repair" />
       </Head>
       <div className="welcome-shell">
