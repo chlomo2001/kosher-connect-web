@@ -1756,7 +1756,7 @@ function renderRentalRows() {
         <div class="customer-email" style="font-size:var(--fs-micro);">${r.vn ? '🔢 +'+escHtml(r.vnPrefix || '') : ''}</div>
       </td>
       <td class="kc-phone" style="font-weight:600;font-size:var(--fs-small);">${escHtml(r.phoneNumber || '—')}</td>
-      <td style="font-size:var(--fs-micro);">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}</td>
+      <td style="font-size:var(--fs-micro);white-space:nowrap;">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}</td>
       <td style="text-align:center;">${r.chargeableDays}d</td>
       <td style="color:var(--success);font-weight:700;">${fmtGbp(r.price)}</td>
       <td style="font-weight:700;${debtColor}">${totalOwed > 0 ? '£'+totalOwed+' owed' : '✓ Paid'}</td>
@@ -8994,7 +8994,7 @@ async function renderShopTab() {
       <button class="btn btn-outline" onclick="openSupplierReturnModal()">📤 Return to supplier</button>
       <button class="btn btn-outline" onclick="openGoodsInModal()">📥 Goods in</button>
     </div>
-    <div class="dash-cols">
+    <div class="dash-cols dash-cols-table">
       <div class="table-card">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:0 14px;">
           <div class="section-divider" style="margin:12px 0 4px;">Inventory</div>

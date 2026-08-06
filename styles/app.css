@@ -1398,24 +1398,33 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 /* SPLIT LAYOUT for Rentals */
 
 
-/* minmax(0, …), not 1fr: a bare 1fr floors the track at its content's
+/* ONE COLUMN, always — Active & Recent Rentals stacks above Phone Inventory.
+   This was a 50/50 split with a stack-below-1150px escape hatch, which sounds
+   reasonable and never once helped: the rentals table has eight columns and
+   measures 1034px of content, while half the shell gives it 500px at 1280 and
+   still only 820px at 1920. So it was clipped and side-scrolling at EVERY
+   desktop width, and the squeeze pushed "20 Aug 2026" down to one word per
+   line — a date rendered as five stacked lines, per row.
+   Side-by-side would need a ~2280px viewport to stop clipping. Stacked, the
+   table gets the full content column (~1050px at 1280) and simply fits.
+   minmax(0, …), not 1fr: a bare 1fr floors the track at its content's
    min-content width, and the section header above made that 1066px. */
 
-.rentals-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.rentals-split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
 
 .rentals-split-col { display: flex; flex-direction: column; min-width: 0; }
 
 .rentals-split-col .table-wrap { overflow-y: auto; max-height: 420px; }
 
 
-/* The rentals column carries a filter/sort toolbar; the Phone Inventory column
-   carries an equal-height spacer so both tables line up side-by-side. The
-   shared min-height guarantees they match; the spacer is dropped once the two
-   columns stack (≤1150px), where alignment no longer applies. */
+/* The rentals column carries a filter/sort toolbar. The Phone Inventory column
+   used to carry an equal-height spacer so the two tables lined up side-by-side;
+   now that the split always stacks there is nothing to line up with, and the
+   spacer only opened a dead 38px gap under the "Phone Inventory" heading. */
 
 .rentals-filter-row { min-height: 38px; margin-bottom: 10px; }
 
-@media (max-width: 1150px) { .rentals-inv-spacer { display: none; } }
+.rentals-inv-spacer { display: none; }
 
 
 
@@ -1679,6 +1688,17 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 
 
 .dash-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+
+/* Shop's Inventory is a seven-column table needing 671px, so in a plain
+   .dash-cols half it side-scrolls until the viewport passes ~1750px — item
+   names broke to one word per line ("Belkin / Car / charger / 20W") and the
+   Qty column sat outside the card. This modifier keeps the table full-width
+   until there is genuinely room for both panels side by side. */
+.dash-cols-table { grid-template-columns: minmax(0, 1fr); }
+
+@media (min-width: 1750px) {
+  .dash-cols-table { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
 
 .feed-item {
   display: flex; gap: 10px; align-items: baseline;
@@ -2072,9 +2092,8 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 @media (max-width: 1150px) {
   .dash-grid { grid-template-columns: 1fr; }
   .dash-cols { grid-template-columns: 1fr; }
-  /* Rentals: stack the two tables so each gets full width instead of
-     squeezing side-by-side and clipping columns. */
-  .rentals-split { grid-template-columns: minmax(0, 1fr); }
+  /* .rentals-split is single-column at every width now — see its own rule for
+     the measurement that retired this breakpoint's rentals escape hatch. */
 }
 
 .pos-tile:active, .pos-cat:active, .pos-method:active,
