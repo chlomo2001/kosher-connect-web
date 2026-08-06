@@ -458,6 +458,28 @@ Highest value per unit of effort, confirmed items only.
 
 ---
 
+## Done since: /portal and /login were 448px wide on a phone
+
+Found while measuring the welcome header, reported rather than fixed at the
+time, then fixed on the owner's say-so.
+
+The sign-in card is `width: 400px`, and a flex item's automatic minimum size
+floors at its content's minimum — which a specified width sets to that width.
+So `#__next` grew to fit the card, the card's `max-width: 100%` then resolved
+against the grown wrapper, and nothing ever shrank: **448px of page on a 320px
+phone**, the card hanging off both edges, in both languages. /login shares the
+card and had it too.
+
+The fix is a definite `max-width: calc(100vw - 48px)` (the 48px is
+`.login-shell`'s gutter). It has to be *purely* definite: the first attempt used
+`min(100%, calc(100vw - 48px))`, which still contains a percentage resolving
+against the very wrapper whose width is in question, so the clamp was ignored —
+the card shrank to 272px while the page stayed 448. Viewport units only.
+
+The card is now fluid from 320 to 448 and pinned at 400 above that, with a 24px
+gutter throughout; desktop is byte-identical apart from the computed max-width
+value itself.
+
 ## Done since: the 320px welcome header — and what it was hiding
 
 Also written up below as a design decision left to the owner. Built, and the
