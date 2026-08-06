@@ -18,8 +18,10 @@ Safe UX quick-wins (one kc-improve cycle, no money risk, offline-verifiable):
 - [x] **P2 · M** — Modal dialog semantics + focus trap — DONE (b4150a0, B7).
 
 Correctness (human-reviewed, NOT loop-autofixed — touches money/inventory):
-- [ ] **P1 · S** — Shop oversell: guarded/atomic stock decrement
-      (`shop.js:149,195`) — two tills can both sell the last unit. **Real bug.**
+- [x] **P1 · S** — Shop oversell: guarded/atomic stock decrement — **DONE**.
+      Verified 08-06: `pages/api/shop.js:212` reserves stock atomically for every
+      distinct item *before* posting anything, with a re-read guard at :244.
+      Two tills can no longer both sell the last unit.
 - [x] **P2 · S** — Cash-up/revenue day uses UTC not `Europe/London` — **already
       done**; the checkbox was stale. Verified 07-31: every day boundary in
       `pages/api/cashup.js` and `pages/api/ledger.js` goes through
@@ -96,14 +98,21 @@ Safe (loop-eligible), ranked value ÷ effort:
       time-of-day + the ⏰ remind modal can adopt the parser later.*
 
 ⚠ Money / consent / comms — human-reviewed, NOT loop-autofixed:
-- [ ] **P1 · M** ⚠ — **Idempotency key on every charge/ledger write** (client-generated)
-      so retries/double-clicks can't double-charge. (Stripe.) *Highest-leverage
-      safety pattern; overlaps review A2. Do with owner.*
-- [ ] **P2 · M** ⚠ — **Wallet balance as a tender** at the till (store credit). (Square.)
-- [ ] **P2 · S** ⚠ — **Cash pay-in/pay-out log** + **Z-report variance** (expected vs
-      counted) at shift close. (Loyverse.) *internal cash reconciliation.*
+- [x] **P1 · M** ⚠ — **Idempotency key on every charge/ledger write** — **DONE**.
+      Verified 08-06: `idempotency_keys` table live in production (holding rows),
+      and the key is threaded through `ledger.js`, `charge-card.js`,
+      `refund-card.js`, `payment-link.js`, `bookings.js`, `service-orders.js`,
+      `shop.js`, `bank.js`. Retries and double-clicks can't double-charge.
+- [x] **P2 · M** ⚠ — **Wallet balance as a tender** at the till — **DONE**.
+      Verified 08-06: `posWallet` in `public/main.js:9390` carries the wallet
+      portion of a split tender.
+- [x] **P2 · S** ⚠ — **Cash pay-in/pay-out log** + **Z-report variance** — **DONE**.
+      Verified 08-06: `pages/api/cashup.js` computes `expectedCash` via
+      `lib/money.mjs` and reports `variance` (counted − expected) at shift close.
 - [ ] **P2 · M** ⚠ — **Status-change auto-SMS** ("ready for collection", "conversion
-      done") + **reply-to-approve**. (RepairShopr.) *gated on the email/SMS decision.*
+      done") + **reply-to-approve**. (RepairShopr.) **Drafts BUILT 08-04** and
+      HOLD-gated — they generate but never send. Genuinely open only in the sense
+      that the send is off; unblocks with the email/SMS go-live decision below.
 - [x] **P2 · S** ⚠ — ~~Non-refundable damage waiver~~ — built 17 Jul, then **REMOVED
       by owner decision 20 Jul** (never confirmed; damage-charges schedule covers it).
       **Do not rebuild.**
@@ -163,15 +172,12 @@ Safe (loop-eligible), ranked value ÷ effort:
       approval step) → 3 keys + TID into Vercel env. No code work left.
 - [ ] **P2 · L** 🔒 — **Stripe** save-card + off-session charge + webhook (test keys
       first). Least urgent of the three; card-present already works.
-- [ ] **P2 · S** — **Phone-migration job logging**: "Contact transfer / phone
-      setup" service line + attach exported `.vcf` to the customer + a Settings
-      "Contact Tools" reference card. (Suggestions already written; build them.)
-- [ ] **P2 · M** — **Public repair-booking page** (owner spotted figphones'
-      RepairDesk widget 08-04, asked "can/should we do same?" — yes). A
-      `/repair` public page in the `/join` pattern: name + phone + device +
-      what's wrong (EN+HE), lands as an enquiry in the Repairs tab for staff
-      to triage. Keep it two steps max — the RepairDesk widget demands a full
-      postal address before hearing the problem; ours shouldn't.
+- [x] **P2 · S** — **Phone-migration job logging** — **DONE**. Verified 08-06:
+      the Settings "Contact Tools" reference card is live (`public/main.js:12824`)
+      as the phone-migration workbench SOP.
+- [x] **P2 · M** — **Public repair-booking page** — **DONE and SHIPPED**.
+      Verified 08-06: `pages/repair.js` exists and is live on production; staff
+      sign-in was demoted from the welcome page in the same round.
 - [ ] **P3 · S** 🔒 — **Gmail / Drive scan** — needs explicit owner go-ahead +
       scope (which accounts, read-only, what we're hunting) before any sweep.
 
@@ -254,10 +260,9 @@ deliberate.
       Reference, Fee netting, DECLINED/REVERTED dropped, bank ID as the
       idempotency key) and still rejects unknown shapes with a plain
       explanation.
-- [ ] **P2 · S** — **Apply `20260731180000_bank_transactions.sql` at next
-      ship.** The UI now exists dark; the route answers 503 with the
-      apply-this-migration instruction until the table is there. Apply via
-      Supabase MCP `apply_migration` as part of the next "ff it".
+- [x] **P2 · S** — **Apply `20260731180000_bank_transactions.sql`** — **DONE**.
+      Verified 08-06: `bank_transactions` exists in production, so the route no
+      longer answers 503 and the triage UI is lit.
 - [ ] **P3 · M** — **Provider client** (GoCardless Bank Account Data — free UK
       account-information tier; you connect under their FCA licence, not your
       own). Budget for **90-day consent expiry**: someone re-authenticates
@@ -495,3 +500,83 @@ deliberately not in the repo). Read all 25,393 provider messages in
   mean something; the other 13 prove nothing (1pMobile never prints the number).
 Not loop work — it's data about live customer plans and money. Needs the owner
 to say which are his, which have ceased, and which should be entered.
+
+---
+
+## Reconcile 2026-08-06
+
+The list had drifted: seven items were shipped but still showing open, so the
+backlog was over-reporting remaining work by about a quarter. Each is now ticked
+with the file/line or the production table that proves it — shop oversell,
+idempotency keys, wallet-as-tender, Z-report variance, phone-migration logging,
+the public repair page, and the `bank_transactions` migration. The status-SMS
+item was reworded: it is built, it just doesn't send.
+
+**Read this section before planning.** Items above with no "verified" note have
+not been re-checked against the code and may have drifted the same way.
+
+### Pre-launch, in the order I'd do them
+
+- [ ] **P1 · S** 🔒 — **Un-hold email.** Resend is configured and in TEST; every
+      message redirects to the test inbox. Receipts, reminders and sign-in links
+      reach nobody until `MAIL_TEST_TO` is removed and `MAIL_LIVE=true`
+      (`docs/EMAIL-GO-LIVE.md`). Owner's flip. This also unblocks the status-SMS
+      drafts and the review-ask on receipts.
+- [ ] **P1 · S** 🔒 — **Open a business bank account.** Unchanged and still the
+      blocker: the shop's money runs through Shloime's personal account, so no
+      bank feed can be connected without pulling his personal transactions in.
+- [ ] **P1 · S** 🔒 — **Fill in the Google Business Profile** (~20 min, owner).
+- [ ] **P1 · M** 🔒 — **241 SIM numbers with 2026 provider mail that the app has
+      no record of**, plus 119 rows marked `active` with no mail since before
+      2026. The SIM list is what the business runs on and it is out of step with
+      the shop's own mailbox. Full write-up in `docs/GMAIL-SWEEP-2026-07-31.md`.
+
+### Money not being collected
+
+- [ ] **P1 · M** 🔒 — **77 virtual numbers bill nobody.** `billing_enabled` is
+      false on every row. The ELID subscription list shows roughly **£772/month**
+      of recurring revenue across ~30 accounts. Blocked on the balance question
+      below — turning billing on before that is settled risks double-charging
+      people who already pay in the shop.
+- [ ] **P1 · S** 🔒 — **The −£3,330.09 question** (Shloime, Sunday 08-09). Do the
+      ELID customers pay in the shop? The arithmetic in
+      `docs/ELID-IMPORT-2026-08-06.md` shows the balances are accrued
+      subscription charges with **no payment ever posted in ELID**, which points
+      to an unmaintained meter rather than real arrears. Needs confirming before
+      any balance touches the wallet ledger.
+
+### ELID leftovers (detail in `docs/ELID-IMPORT-2026-08-06.md`)
+
+- [ ] **P2 · S** — mrs-feld's number sits on two devices (hers and a
+      Phone-Rentals one); 3 customers have two UK numbers each; 15 have only a
+      foreign number, where a `1…`/`972…` is as likely to be a forwarding
+      destination as a contact number.
+- [ ] **P2 · S** — 12 DIDs whose owner is ambiguous (Grinfeld ×15, Gross ×9,
+      Glick ×8 candidates). `chaskel lamm` → probably **Yechezkel Lamm**, but
+      that is an inference.
+- [ ] **P2 · S** — The 3 pre-existing `virtual_numbers` rows on `+44 20 7000 100X`
+      match no real DID. Placeholders; confirm before overwriting.
+- [ ] **P3 · S** — Drop the undo/staging tables (`undo_20260806_*`,
+      `merge_map_20260806`, `rental_placeholders_20260806`, `elid_*_20260806`,
+      and the older `zz_snapshot_*`) once the above are signed off.
+
+### Engineering hygiene
+
+- [ ] **P1 · S** — **Turn on branch protection requiring the `verify` check.**
+      `ci.yml` has said this since it was written; without it a red CI blocks
+      nothing, as 08-06 demonstrated when two runs died in a GitHub Actions
+      incident and neither stopped a merge.
+- [ ] **P2 · M** — **`sims` has no typed number column.** All 840 SIM numbers
+      live in `legacy_extras.simNumber` as untyped JSON, and `customer_id` is
+      NOT NULL — which is what forced 39 fake "Rental" customers into the list.
+      Migration: make `customer_id` nullable, add `sim_number`, backfill.
+- [ ] **P2 · S** — Supabase auth: **leaked-password protection is off** (one
+      toggle), and `current_staff_role()` is a `SECURITY DEFINER` function any
+      signed-in user can call over RPC. Check that's intended.
+- [x] **P1 · S** — **16 public tables had RLS off and full `anon` CRUD** —
+      **FIXED 08-06**. Every ad-hoc snapshot since 07-29, including a complete
+      copy of the customers table, was readable and writable by anyone holding
+      the publishable key. Revoked and RLS enabled; migration
+      `20260806210000_lock_snapshot_tables.sql`. `CREATE TABLE … AS SELECT`
+      against production is the trap — it inherits schema defaults and starts
+      with RLS off. Re-run the migration after any new hand-made table.
