@@ -663,7 +663,14 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 
 /* ─── ROW ACTIONS ─── */
 
-.row-actions { display: flex; gap: 8px; }
+/* wrap, so the cell's MINIMUM width is the widest single button rather than
+   the sum of all of them. Without it a five-button rentals row (Start, remind,
+   message, Manage, Delete) pinned the Actions column at 357px — wider than
+   Customer and Phone together — and pushed the table 49px past the content
+   column at 1280, where the last button then sat under the scroll edge. Now a
+   tight width stacks the buttons onto a second line and the table fits; from
+   1440 up they sit on one line exactly as before. */
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .action-btn {
   padding: 5px 12px;
