@@ -41,6 +41,7 @@
       "Bash(git branch:*)",
       "Bash(git checkout:*)",
       "Bash(git merge:*)",
+      "Bash(git push:*)",
       "Bash(npm test:*)",
       "Bash(npm run build:*)",
       "Bash(node --check:*)",
