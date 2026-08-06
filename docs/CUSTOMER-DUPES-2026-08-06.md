@@ -2,7 +2,7 @@
 
 Kc-Live (`xsrtdwwzxdmnjdtjcdzd`). Audit first, then the owner's decisions applied.
 
-**Customer count: 788 → 741.**
+**Customer count: 788 → 740.**
 
 ## Undo snapshot
 
@@ -12,7 +12,7 @@ Taken before any write. Restore from these:
 |---|---|
 | `undo_20260806_customers` | all 788 customer rows as they were |
 | `undo_20260806_links` | all 1,242 `(table, row_id, customer_id)` pointers as they were |
-| `merge_map_20260806` | the 9 winner/loser pairs |
+| `merge_map_20260806` | the 10 winner/loser pairs |
 | `rental_placeholders_20260806` | the 39 deleted "Rental" rows incl. their phone numbers |
 | `elid_map_20260806` | ELID id / username / balance as transcribed |
 
@@ -31,20 +31,21 @@ Also confirmed: **zero duplicate phone numbers** — there is a unique constrain
 `(phone_country_code, phone_number)`, so they cannot occur. Zero duplicate emails
 (`email_normalized` is non-null on only a handful of rows).
 
-## 1. Nine merges applied
+## 1. Ten merges applied
 
 Kept the richer row, re-pointed all 15 FK tables, folded in phone/email/address
-where the kept row was empty, deleted the empty row. 37 child records moved, none lost.
+where the kept row was empty, deleted the empty row. 42 child records moved, none lost.
 
 Chaim Shimon Lebrecht · Eliezer Rapaport · Fishel Thaler · Lipa Moshkowits ·
 Mechl Lieber · Menachem Meir Glick · Menachem Simon · Moishe Grinfeld Antwerp ·
-Nachmen Merlin
+Nachmen Merlin · Yochenen Domb
 
 Each kept row now carries `notes = 'merged from <loser legacy_id>'`.
 
-**Held back — Yochenen Domb.** The pair was `tk-yochenen-domb` + `pl-yochenen-domb-2`.
-The owner's rule is that sheet-numbered rows (`-1`, `-2`) are separate people, and
-the `pl-` side here is line "2". Not merged pending his word.
+Yochenen Domb was done in a second pass. His pair was `tk-yochenen-domb` +
+`pl-yochenen-domb-2`, and a `-2` suffix normally means a separate person on these
+sheets — so it was held until the owner confirmed he is only one man. Note that the
+numbered-row rule is a good default but not absolute: check before assuming either way.
 
 ## 2. Tier 2 — left alone by decision
 
