@@ -134,7 +134,10 @@ export default function RepairBooking() {
       </Head>
       <div className="welcome-shell">
         <AuthBackdrop />
-        <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
+        {/* Physical side from the page language, not `right` — this button is
+            outside the dir="rtl" wrapper, so in Hebrew the mirrored topbar puts
+            the logo on the right and a right-pinned toggle lands on top of it. */}
+        <ThemeToggle style={{ position: 'fixed', top: 16, [t.dir === 'rtl' ? 'left' : 'right']: 16, zIndex: 10 }} />
         <div className="w-wrap" dir={t.dir} lang={lang}>
           <div className="w-topbar">
             <a className="w-brand w-brand-link" href="/welcome" aria-label={t.homeAria}>

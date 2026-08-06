@@ -458,6 +458,49 @@ Highest value per unit of effort, confirmed items only.
 
 ---
 
+## Done since: the 320px welcome header — and what it was hiding
+
+Also written up below as a design decision left to the owner. Built, and the
+premise turned out to be wrong in a way worth recording.
+
+**It was never a 320px edge case.** The bar laid out logo + language + CTA in
+386px and only fitted from ~387px up, so it overflowed 320 by 66px, 360 by 26,
+and the 375 of an iPhone SE. 390 "passed" with nothing to spare. That is most
+phones, not an old-device footnote.
+
+**The fix.** On phones the bar keeps identity and language; every action moves
+to the chip row directly beneath it — the row that is already this page's phone
+navigation, sits inside the same sticky header, and needs no scrolling to see.
+The CTA is filled and first in the row so it still reads as the action. Shaving
+the logo, pill, gap and button all at once could just about have reached 320
+and would have left every one of them one translation from breaking again.
+
+**What it was hiding.** With the bar fixed, 320 still overflowed by 17px — and
+the header was innocent. `body` is a flex container, the page wrapper is a flex
+item with `min-width:auto`, and `support@kosher-connect.com` is a single 151px
+unbreakable token that floored the footer's auto-sized grid track. The whole
+page inflated to 337px and every section stretched to match; the header had
+simply been wider still, so it took the blame. `overflow-wrap:anywhere` on the
+footer contact lines fixes it at the root (only `anywhere` lowers min-content —
+`break-word` would wrap the text and leave the track wedged open), and the
+footer is now one column on phones.
+
+**And a third thing, found while measuring.** The theme toggle is rendered
+outside the `dir="rtl"` wrapper, so its `inset-inline-end` resolved against the
+document — always the right — while the bar reserves its 56px lane at the
+logical end, which in Hebrew is the LEFT. The toggle therefore sat directly on
+top of the Hebrew logo, at 320px and at 1440px alike, on /welcome, /phone-guide
+and /repair. It now takes its side from the page language. This was never a
+width problem and no width-based check would ever have found it.
+
+A dead `padding-inline-end:44px` was also removed: it never fired (a later
+`max-width:640px` block re-states 56px and wins on source order) and would have
+put the last item under the toggle if it had.
+
+Verified with `ops/harness/css-diff.mjs`: the changed scenes are exactly
+/welcome in both languages and /phone-guide + /repair in Hebrew only. No staff
+scene and no portal scene moved.
+
 ## Done since: the stylesheet split (finding 38)
 
 This was written up below as deliberately deferred. It has since been built.

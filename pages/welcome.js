@@ -480,7 +480,14 @@ export default function Welcome() {
         }) }} />
       </Head>
       <style dangerouslySetInnerHTML={{ __html: SKY_CSS }} />
-      <ThemeToggle style={{ position: 'fixed', top: 14, insetInlineEnd: 14, zIndex: 60 }} />
+      {/* Physical side, chosen from the page's language — NOT insetInlineEnd.
+          This button is rendered outside the dir="rtl" wrapper below, so a
+          logical inset resolves against the document (always LTR) and pinned it
+          to the right at every width, while .sk-nav reserves its 56px lane at
+          the bar's logical end — the LEFT in Hebrew. The toggle therefore sat
+          directly on top of the Hebrew logo, at 320px and at 1440px alike.
+          Measured overlapping at every width tested before this line changed. */}
+      <ThemeToggle style={{ position: 'fixed', top: 14, [t.dir === 'rtl' ? 'left' : 'right']: 14, zIndex: 60 }} />
 
       <div className="sk" dir={t.dir} lang={lang === 'en' ? 'en' : lang}>
         <header className="sk-nav-wrap">
@@ -509,6 +516,10 @@ export default function Welcome() {
               swipeable chip strip so the sections stay one tap away. */}
           <div className="sk-mobnav-wrap">
           <nav className="sk-mobnav" aria-label="Site sections">
+            {/* On phones the bar has no room for the CTA, so it rides here —
+                first, so it is never what has scrolled out of view. Hidden by
+                CSS above 640px, where it sits in the bar instead. */}
+            <a href="#contact" className="sk-mobnav-cta">{t.nav.message}</a>
             <a href="#mobile">{t.nav.mobile}</a>
             <a href="#travel">{t.nav.travel}</a>
             <a href="#intl">{t.nav.intl}</a>
@@ -880,13 +891,17 @@ const SKY_CSS = `
      over this bar at every width — it was sitting on top of "Message us" and
      clipping the word. Reserve its lane instead of letting it overlap. */
   .sk-nav{padding-inline-end:56px}
-  /* At 390px the brand (109) + the pill cluster (214) + the gap + this
-     reserved lane came to 409 against a 390 viewport, so the whole page
-     scrolled sideways. The toggle is ~36px at inset-inline-end:14px, so the
-     lane can be tighter on a phone; the brand may shrink and ellipsise
-     rather than force the row wide. */
+  /* 56px is a floor, not a preference: .theme-toggle is 38px wide at
+     inset-inline-end:14px, so it occupies the last 52px of the bar at every
+     width. A tighter lane puts the last item under it.
+
+     This block used to also say padding-inline-end:44px, which would have
+     done exactly that — it never fired only because the max-width:640px
+     block further down re-states 56px and wins on source order. A dead
+     declaration that was also wrong; removed rather than left to be
+     "restored" by someone tidying the cascade. */
   @media (max-width:560px){
-    .sk-nav{padding-inline-end:44px;gap:8px}
+    .sk-nav{gap:8px}
   }
   .sk-navlink{color:var(--sk-muted);font-weight:600;font-size:14.5px;white-space:nowrap;
     border-bottom:2px solid transparent;padding-bottom:2px}
@@ -1109,7 +1124,15 @@ const SKY_CSS = `
   .sk-foot{background:var(--sk-band);border-top:1px solid var(--sk-line);padding:48px 0 40px}
   .sk-foot-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:26px;align-items:start;text-align:start}
   .sk-foot-logo{height:36px;margin-bottom:12px}
-  .sk-foot-brand p{margin:6px 0 0;color:var(--sk-muted);font-size:13.5px}
+  /* overflow-wrap:anywhere, not break-word: only "anywhere" lowers the
+     element's MIN-CONTENT contribution, and min-content is what a track
+     floors at. (No backticks in this comment — the whole stylesheet is a JS
+     template literal, and one would end the string mid-file.)
+     support@kosher-connect.com is a single 151px unbreakable token, so the
+     footer's auto-sized column could not go below it — and at 320px that made
+     the whole page 337px wide, every section stretched to match. break-word
+     would wrap the text on screen and still leave the track wedged open. */
+  .sk-foot-brand p{margin:6px 0 0;color:var(--sk-muted);font-size:13.5px;overflow-wrap:anywhere}
   .sk-foot-brand a{color:var(--sk-muted)}
   .sk-foot-brand a:hover{color:var(--sk-text)}
   .sk-foot-col{display:flex;flex-direction:column;gap:9px}
@@ -1134,6 +1157,10 @@ const SKY_CSS = `
   }
 
   @media (max-width:960px){ .sk-foot-grid{grid-template-columns:1fr 1fr} }
+  /* One column on phones. Two 130px-ish tracks made "International numbers"
+     wrap onto three lines and left the columns reading as a puzzle; a footer
+     is a list, and on a phone a list is one column. */
+  @media (max-width:560px){ .sk-foot-grid{grid-template-columns:1fr;gap:22px} }
   /* The link row needs 1009px beside the logo; the container only offers that
      from 1280px up once the toggle's lane is reserved. Hand over to the chip
      strip below that rather than let the bar overflow — the old 960 breakpoint
@@ -1141,6 +1168,8 @@ const SKY_CSS = `
   @media (max-width:1279px){ .sk-navlink{display:none} }
   /* Mobile section chips (hidden on desktop, where the nav links exist) */
   .sk-mobnav{display:none}
+  /* The CTA only joins the chips on phones — above 640px it is in the bar. */
+  .sk-mobnav-cta{display:none}
   @media (max-width:1279px){
     /* Must not grow to the chip row's content width — the nav scrolls
        INSIDE it. Without these the wrapper stretched to 679px and took
@@ -1171,8 +1200,26 @@ const SKY_CSS = `
     .sk-nav{padding-inline-start:16px;padding-inline-end:56px}
     .sk-nav .sk-logo{height:26px}
     @media (max-width:560px){.sk-nav .sk-logo{height:22px}}
-    .sk-nav .sk-btn-ghost{display:none}
-    .sk-nav .sk-btn-sm{padding:9px 13px;font-size:13.5px}
+    /* Phones: the bar keeps identity and language, and every ACTION moves to
+       the chip row directly beneath it.
+
+       Laying out logo + language + CTA needed 386px, so the bar overflowed
+       every common phone and only fitted from ~387px up: 320 by 66px, 360 by
+       26, and the 375 of an iPhone SE. 390 "passed" with nothing to spare,
+       which is not passing — one longer translation and it breaks again.
+       Shaving the logo, the pill, the gap and the button all at once could
+       just about reach 320 and would leave every one of them one word from
+       overflowing. Moving the CTA out buys 133px in one move, and the row it
+       moves to is already this page's phone navigation, is inside the same
+       sticky header, and needs no scrolling to see. */
+    .sk-nav .sk-btn-ghost, .sk-nav .sk-btn-sky{display:none}
+    /* Filled, so it still reads as the action and not as a section link.
+       First in the DOM, so it is the one chip that is always in view. */
+    .sk-mobnav a.sk-mobnav-cta{display:block;background:var(--sk-sky);
+      border-color:var(--sk-sky);color:#fff;font-weight:700}
+    /* The scrollspy only lights ids it tracks and #contact is not one, but
+       keep the filled treatment if that ever changes. */
+    .sk-mobnav a.sk-mobnav-cta.on{color:#fff;border-color:var(--sk-sky)}
   }
   @media (max-width:820px){ .sk-grid{grid-template-columns:1fr} .sk-visit-grid{grid-template-columns:1fr} .sk-map-card{min-height:300px} .sk-map-card iframe{min-height:300px} }
 `
