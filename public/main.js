@@ -5657,7 +5657,7 @@ async function saveWalletEntry(customerId) {
 
 async function renderWalletTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml();
+  content.innerHTML = skeletonHtml('wallet');
 
   const today = localISO();
   const data = await kcFetch(`/api/ledger?since=${today}&recent=50`)
@@ -5889,7 +5889,7 @@ function bankPatchRow(txnId, patch) {
 async function renderBankRecon() {
   const content = document.getElementById('mainContent');
   document.getElementById('pageTitle').innerHTML = 'Bank <span>Reconciliation</span>';
-  content.innerHTML = skeletonHtml();
+  content.innerHTML = skeletonHtml('bank');
   const data = await kcFetch('/api/bank').then(r => r.json()).catch(() => null);
   if (!data || !data.success) {
     content.innerHTML = `<div class="empty-state"><div class="emoji">🏦</div>
@@ -7134,7 +7134,26 @@ function loadingHtml(label = 'Loading…') {
 // announcing itself (DESIGN.md §Loading). 'stats' ghosts the usual
 // stats-row + table page; 'columns' ghosts a two-column card tab. The
 // spinner (loadingHtml) stays for modals and small inline areas.
-function skeletonHtml(kind = 'stats') {
+// Each tab passes its OWN shape. A skeleton is only worth having if it is the
+// silhouette of the thing arriving — otherwise it is a second layout that
+// flashes and is replaced, which reads as the page changing its mind. The two
+// fixed shapes this used to offer meant Tasks (four cards, a toolbar and two
+// columns) ghosted as three cards over one list, so nothing landed where the
+// ghost had put it. TAB_SKELETON below carries the measured shape of every
+// tab; passing a string still works for the two legacy kinds.
+const TAB_SKELETON = {
+  wallet:   { cards: 4, toolbar: true, cols: 2 },
+  repairs:  { cards: 4, toolbar: true, cols: 1 },
+  services: { cards: 3, toolbar: true, cols: 2 },
+  shop:     { cards: 4, toolbar: true, cols: 1 },
+  koltorah: { cards: 0, toolbar: true, cols: 1 },
+  tasks:    { cards: 4, toolbar: true, cols: 2 },
+  virtual:  { cards: 2, toolbar: true, cols: 1 },
+  settings: { cards: 0, toolbar: true, cols: 1 },
+  bank:     { cards: 0, toolbar: true, cols: 1 },
+};
+
+function skeletonHtml(shape = 'stats') {
   // The ghosts are aria-hidden noise, so a real (visually hidden) "Loading…"
   // rides along — the spinner it replaced announced itself as text, and a
   // screen reader must not land on an empty main region.
@@ -7142,10 +7161,20 @@ function skeletonHtml(kind = 'stats') {
   const rows = (n, panel = '') =>
     `<div class="kc-skel-panel">${panel}${'<div class="kc-skel"></div>'.repeat(n)}</div>`;
   const card = `<div class="kc-skel-card"><div class="kc-skel kc-skel-label"></div><div class="kc-skel kc-skel-big"></div></div>`;
-  if (kind === 'columns') {
-    return `${sr}<div class="kc-skel-cols" aria-hidden="true">${rows(5, '<div class="kc-skel kc-skel-title"></div>')}${rows(5, '<div class="kc-skel kc-skel-title"></div>')}</div>`;
-  }
-  return `${sr}<div aria-hidden="true"><div class="stats-row">${card.repeat(3)}</div>${rows(7, '<div class="kc-skel kc-skel-title"></div>')}</div>`;
+  const title = '<div class="kc-skel kc-skel-title"></div>';
+
+  const cfg = typeof shape === 'string'
+    ? (TAB_SKELETON[shape] || (shape === 'columns'
+        ? { cards: 0, toolbar: false, cols: 2 }
+        : { cards: 3, toolbar: false, cols: 1 }))
+    : shape;
+
+  const stats = cfg.cards ? `<div class="stats-row">${card.repeat(cfg.cards)}</div>` : '';
+  const bar = cfg.toolbar ? '<div class="kc-skel kc-skel-bar"></div>' : '';
+  const body = cfg.cols === 2
+    ? `<div class="kc-skel-cols">${rows(5, title)}${rows(5, title)}</div>`
+    : rows(7, title);
+  return `${sr}<div aria-hidden="true">${stats}${bar}${body}</div>`;
 }
 
 // An error state with a Retry — never a dead-end, and never a reassuring
@@ -8114,7 +8143,7 @@ function repairStatusBadge(status) {
 
 async function renderRepairsTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml();
+  content.innerHTML = skeletonHtml('repairs');
   try {
     [repairs, repairMenu] = await Promise.all([
       window.api.getRepairs(),
@@ -8580,7 +8609,7 @@ function svcFloatDragStart(e) {
 
 async function renderServicesTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml();
+  content.innerHTML = skeletonHtml('services');
   if (svcTimerInterval) { clearInterval(svcTimerInterval); svcTimerInterval = null; }
   try {
     [serviceOrders, onlineMenu] = await Promise.all([
@@ -8860,7 +8889,7 @@ const STOCK_TYPE_SUGGESTIONS = [
 
 async function renderShopTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml();
+  content.innerHTML = skeletonHtml('shop');
   const [data, retData, giData] = await Promise.all([
     kcFetch('/api/shop').then(r => r.json()).catch(() => null),
     // Returns and goods-in are additive: if either fetch fails the shop still renders.
@@ -10153,7 +10182,7 @@ function ktSectionHead(title, sub) {
 
 async function renderKolTorahTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml('columns');
+  content.innerHTML = skeletonHtml('koltorah');
   const res = await kcFetch('/api/kol-torah').then(r => r.json()).catch(() => null);
   if (!res || !res.success) { content.innerHTML = errorHtml('Couldn’t load Kol Torah'); return; }
   ktData = res;
@@ -11768,7 +11797,7 @@ async function snoozeTask(id, choice) {
 
 async function renderTasksTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml();
+  content.innerHTML = skeletonHtml('tasks');
   tasksList = await window.api.getTasks();
   if (!Array.isArray(tasksList)) tasksList = [];
 
@@ -12230,7 +12259,7 @@ let vnPriceMatrix = []; // bundle price matrix (also drives the billing modal)
 
 async function renderVirtualTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml();
+  content.innerHTML = skeletonHtml('virtual');
   try {
     [virtualNumbers, vnPriceMatrix] = await Promise.all([
       window.api.getVirtualNumbers(),
@@ -12485,7 +12514,7 @@ async function deleteVN(id, number) {
 
 async function renderSettingsTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml('columns');
+  content.innerHTML = skeletonHtml('settings');
   const [cfg, team, autos, aliases, menu, extra, bizacc, pguide, health, elidSummary] = await Promise.all([
     window.api.getSettings(),
     kcFetch('/api/team').then(r => r.status === 403 ? null : r.json()).catch(() => null),
