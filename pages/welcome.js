@@ -808,32 +808,10 @@ export default function Welcome() {
   )
 }
 
+// The --sk-* tokens this page is built from now live in styles/globals.css, so
+// sign-in, the portal, /repair and /phone-guide render on the same scale
+// instead of falling back to the app's ivory. Only page-specific rules below.
 const SKY_CSS = `
-  :root{
-    --sk-ink:#0d1526; --sk-sky:#07639e; --sk-sky-bright:#2f95d8; --sk-gold:#c19161;
-    /* The same gold reads 2.80:1 on white paper and 6.51:1 on the dark one,
-       so text needs its own value while decoration keeps the brand tan.
-       This is --sk-gold darkened until 17px copy clears AA; the dark theme
-       overrides it back to --sk-gold, which already passes there. */
-    --sk-gold-ink:#8d612b;
-    --sk-text:#0d1526; --sk-muted:#566079; --sk-line:#dbe3f0;
-    --sk-paper:#ffffff; --sk-canvas:#f4f7fc; --sk-band:#ffffff; --sk-band-alt:#eef2fb;
-    --sk-maxw:1320px; /* Sky-scale desktop container (owner comparison, 27 Jul) */
-    /* Motion tokens (animation playbook, plans/002): entrances decelerate hard,
-       on-screen movement eases both ends. Values verbatim — do not approximate. */
-    --sk-ease-out:cubic-bezier(0.23, 1, 0.32, 1);
-    --sk-ease-io:cubic-bezier(0.77, 0, 0.175, 1);
-    --sk-fdisp:"Heebo KC","Helvetica Neue",Arial,system-ui,-apple-system,"Segoe UI",sans-serif;
-    --sk-fbody:"Heebo KC",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
-  }
-  @media (prefers-color-scheme:dark){:root:not([data-theme]){
-    --sk-text:#eaf0fb; --sk-muted:#9aa6c4; --sk-line:#26305c;
-    --sk-paper:#0c1330; --sk-canvas:#080d24; --sk-band:#0b1230; --sk-band-alt:#080d24;
-  }}
-  :root[data-theme="dark"]{
-    --sk-text:#eaf0fb; --sk-muted:#9aa6c4; --sk-line:#26305c;
-    --sk-paper:#0c1330; --sk-canvas:#080d24; --sk-band:#0b1230; --sk-band-alt:#080d24;
-  }
   /* overflow-x must live on <html> only: any overflow value on <body> turns it
      into its own scroll container, which silently disables the sticky nav. */
   html{height:auto;overflow-x:hidden;overflow-y:auto}
@@ -851,8 +829,6 @@ const SKY_CSS = `
   .sk-eyebrow{font-family:var(--sk-fbody);font-weight:700;font-size:12.5px;letter-spacing:.14em;
     text-transform:uppercase;color:var(--sk-sky);display:block;margin-bottom:14px}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-eyebrow{color:var(--sk-sky-bright)}}
-  :root[data-theme="dark"]{--sk-gold-ink:var(--sk-gold)}
-  @media (prefers-color-scheme:dark){:root:not([data-theme]){--sk-gold-ink:var(--sk-gold)}}
   :root[data-theme="dark"] .sk-eyebrow{color:var(--sk-sky-bright)}
 
   /* nav */

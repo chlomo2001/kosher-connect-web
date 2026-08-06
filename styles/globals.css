@@ -58,10 +58,24 @@
   --border-subtle: #f0e9da;     /* faint warm divider */
   --border-input: #d8ceba;      /* warm input hairline */
 
+  /* ══ ONE BRAND — the single source of truth for KC's colours ══
+     Every surface in the product reads from these five values: the staff app,
+     the public site, sign-in, the customer portal, repair and the phone guide.
+     They are taken from the logo itself, so "same site" is enforced by the
+     token layer rather than by remembering to keep two palettes in step.
+     The public pages used to carry their own near-miss copies (#07639e blue,
+     #0d1526 ink) which is precisely why the product read as two products.
+     Change a value here and it moves everywhere — do not re-declare them. */
+  --kc-blue: #0060a8;           /* logo azure — primary action, links, eyebrows */
+  --kc-blue-bright: #57a6e6;    /* its dark-theme voice (AA on dark surfaces) */
+  --kc-navy: #0a2540;           /* ink / display / deep button states */
+  --kc-gold: #c19161;           /* the logo's warm tan — DECORATION only */
+  --kc-gold-ink: #8d612b;       /* the same gold darkened until 17px copy clears AA */
+
   /* ── Brand — the logo's own colours: azure blue + gold, navy ink ── */
-  --accent: #0060a8;            /* logo azure blue (primary) */
+  --accent: var(--kc-blue);     /* logo azure blue (primary) */
   --accent2: #1c7bc4;           /* blue-soft */
-  --primary-deep: #0a2540;      /* button hover → navy */
+  --primary-deep: var(--kc-navy); /* button hover → navy */
   --primary-press: #061a2e;     /* button active */
   --primary-subdued: #b6d4ea;   /* light blue fill */
   --accent-wash: #eef4fa;       /* faintest blue panel */
@@ -76,7 +90,7 @@
   --vn: #7c3aed;                /* virtual-number violet */
 
   /* ── Text — navy ink on warm paper ── */
-  --text: #0a2540;              /* ink / display */
+  --text: var(--kc-navy);       /* ink / display */
   --ink-secondary: #46505c;     /* body (warm slate) */
   /* Tuned against --bg ivory, but every table column header sits on
      --surface2, which is darker — 4.38:1 on 11px text across nine tabs.
@@ -176,7 +190,7 @@
   --border-subtle: #20252d;
   --border-input: #3b434e;
 
-  --accent: #57a6e6;           /* lightened logo blue for dark */
+  --accent: var(--kc-blue-bright); /* lightened logo blue for dark */
   --accent2: #7dbdf0;
   --primary-deep: #7dbdf0;     /* on dark, button hover lightens */
   --primary-press: #a0d2f6;
@@ -202,7 +216,11 @@
      dark contrast failures — so the inks are the same colour there. */
   --danger-ink: #ff5f80;
   --warning-ink: #f0a04b;
-  --on-accent: #101319;   /* dark ink on the lightened accent — 7.1:1 */
+  /* Dark ink on the lightened accent — 7.1:1. Anything painted on --accent
+     must use this, never a literal #fff: on dark, --accent lightens to
+     #57a6e6 and white text falls to 2.62:1. The public pages' pill, language
+     switch and repair button each hardcoded #fff and failed exactly that way. */
+  --on-accent: #101319;
   --warning: #f0a04b;
 
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
@@ -483,89 +501,22 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .password-wrap .pw-toggle { position: absolute; right: 10px; }
 .password-wrap .pw-toggle:hover, .pw-toggle:hover { color: var(--text); }
 
-/* ─── LOGIN — clean, flat, enterprise sign-in (no gradient mesh) ─── */
+/* ─── LOGIN — the same paper the public site is printed on ───
+   Was: a rotating wireframe-globe <canvas> under a blurred five-stop colour
+   mesh, with a PNG orb replacing the mouse pointer. Removed 06/08/2026 on the
+   owner's ask — it was the loudest thing in the product and it appeared on
+   exactly the pages a customer meets first, so /welcome and sign-in looked
+   like two different companies. Sign-in now sits on --sk-canvas, the same
+   surface as every other public page. */
 .login-shell {
   min-height: 100vh; width: 100%;
   display: flex; align-items: center; justify-content: center;
-  background: var(--bg);
-  position: relative; overflow: hidden;
+  background: var(--sk-canvas);
+  color: var(--sk-text);
+  font-family: var(--sk-fbody);
+  position: relative;
   padding: 24px;
 }
-/* The orb pointer: a plain circle with a dot at the hotspot — no logo, no
-   arrow. Blue on the light theme, gold on dark, and the canvas halo breathes
-   around it. Form controls keep natural cursors. */
-.login-shell { cursor: url("/cursor-orb.png") 16 16, auto; }
-.login-card { cursor: default; }
-.login-card input, .login-card textarea, .login-card select { cursor: text; }
-.login-shell button, .login-card a, .login-card [role="button"] { cursor: pointer; }
-:root[data-theme="dark"] .login-shell {
-  cursor: url("/cursor-orb-dark.png") 16 16, auto;
-}
-/* The welcome page shares the scene — and the cursor. */
-.welcome-shell { cursor: url("/cursor-orb.png") 16 16, auto; }
-:root[data-theme="dark"] .welcome-shell { cursor: url("/cursor-orb-dark.png") 16 16, auto; }
-.welcome-shell a, .welcome-shell button { cursor: pointer; }
-@media (prefers-reduced-motion: reduce) { .login-shell, .welcome-shell { cursor: auto; } }
-/* Kept as a decorative hook, but the rainbow blur is gone. A single flat
-   hairline band frames the top of the canvas — structure, not glow. */
-/* Premium sign-in: a slow flowing gradient behind a crisp floating card —
-   the signature colour-mesh, applied where it belongs (the public entry), while
-   the working app stays flat and fast. */
-.login-mesh {
-  position: absolute; inset: -25%; z-index: 0;
-  filter: blur(70px); opacity: 0.85; pointer-events: none;
-  /* Brand-only mesh (navy · sky · gold) so the split-second it shows before the
-     globe canvas paints is on-brand, never the old purple/cyan/pink flash. */
-  background:
-    radial-gradient(38% 52% at 20% 28%, #0a5c93 0%, rgba(10,92,147,0) 60%),
-    radial-gradient(32% 46% at 64% 16%, #3ba0dd 0%, rgba(59,160,221,0) 62%),
-    radial-gradient(42% 52% at 82% 40%, #07639e 0%, rgba(7,99,158,0) 60%),
-    radial-gradient(48% 58% at 44% 74%, #0a2f5e 0%, rgba(10,47,94,0) 64%),
-    radial-gradient(30% 40% at 90% 82%, #c19161 0%, rgba(193,145,97,0) 60%);
-  animation: loginDrift 22s ease-in-out infinite alternate;
-}
-@keyframes loginDrift {
-  0%   { transform: translate3d(-2%,-1%,0) scale(1.05) rotate(-2deg); }
-  100% { transform: translate3d(3%,2%,0) scale(1.12) rotate(3deg); }
-}
-:root[data-theme="dark"] .login-mesh { opacity: 0.55; }
-@media (prefers-reduced-motion: reduce) { .login-mesh { animation: none; } }
-
-/* Live "sunburst" canvas (Stripe-hero effect in brand colours). Sits above the
-   blurred mesh (kept as a no-JS fallback) and below the login card. */
-.login-fx {
-  position: absolute; inset: 0; z-index: 0;
-  width: 100%; height: 100%; display: block; pointer-events: none;
-}
-
-/* Phase switcher for the sunburst (Pre-dawn … Night + Auto), right-centre like
-   the Stripe hero. Hidden on small screens and under reduced-motion (where the
-   background is a single static frame that wouldn't repaint on change). */
-.fx-switch {
-  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
-  z-index: 5; display: flex; flex-direction: column; gap: 1px; padding: 6px;
-  border-radius: var(--radius-xl); border: 1px solid var(--border);
-  background: rgba(255,255,255,0.62);
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 8px 24px -14px rgba(10,37,64,.3);
-}
-:root[data-theme="dark"] .fx-switch { background: rgba(16,20,34,0.55); }
-.fx-item {
-  display: flex; align-items: center; gap: 9px;
-  padding: 6px 14px 6px 9px; border: none; background: transparent;
-  border-radius: 8px; font: inherit; font-size: var(--fs-body); font-weight: 400;
-  color: var(--text); cursor: pointer; white-space: nowrap; text-align: left;
-  transition: background .15s, color .15s;
-}
-.fx-item:hover { background: var(--bg-secondary); }
-.fx-item.active { background: rgba(0,96,168,0.12); color: #0060a8; font-weight: 600; }
-:root[data-theme="dark"] .fx-item.active { background: rgba(90,160,220,0.16); color: #7db8e6; }
-.fx-dot {
-  width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
-}
-@media (max-width: 780px) { .fx-switch { display: none; } }
-@media (prefers-reduced-motion: reduce) { .fx-switch { display: none; } }
 
 .login-card {
   position: relative; z-index: 1;
@@ -639,47 +590,94 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   }
 }
 
-/* ─── WELCOME — the public site (owner's vision, login-page polish) ───
-   The globe scene rides fixed behind the content; every surface floats over it
-   like the login card does — frosted glass + the login card's shadow — so the
-   scene (and its Pre-dawn…Night moods) washes the WHOLE page, not just the
-   gaps between opaque cards. */
+/* ═══ PUBLIC-SITE SURFACES (the `sk` layer) ═══════════════════════════
+   The paper/canvas/band scale every public page is built on: /welcome, the
+   sign-in card, the customer portal, /repair and /phone-guide. It used to be
+   declared inside welcome.js, so only that one page could speak it and the
+   rest fell back to the app's warm ivory — the visible seam the owner hit.
+   Declared once here, the whole public face is the same site.
+
+   Colour comes from the --kc-* brand block; only SURFACES and TYPE live here.
+   The staff app deliberately keeps its own warm ivory canvas (easier on the
+   eyes over an all-day shift) while sharing the identical brand values. */
+:root{
+  --sk-ink:var(--kc-navy); --sk-sky:var(--kc-blue); --sk-sky-bright:var(--kc-blue-bright);
+  --sk-gold:var(--kc-gold); --sk-gold-ink:var(--kc-gold-ink);
+  --sk-text:var(--kc-navy); --sk-muted:#566079; --sk-line:#dbe3f0;
+  --sk-paper:#ffffff; --sk-canvas:#f4f7fc; --sk-band:#ffffff; --sk-band-alt:#eef2fb;
+  --sk-maxw:1320px; /* Sky-scale desktop container (owner comparison, 27 Jul) */
+  /* Motion tokens (animation playbook, plans/002): entrances decelerate hard,
+     on-screen movement eases both ends. Values verbatim — do not approximate. */
+  --sk-ease-out:cubic-bezier(0.23, 1, 0.32, 1);
+  --sk-ease-io:cubic-bezier(0.77, 0, 0.175, 1);
+  --sk-fdisp:"Heebo KC","Helvetica Neue",Arial,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --sk-fbody:"Heebo KC",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+}
+/* On dark the gold already clears AA, so text reverts to the decorative tan. */
+:root[data-theme="dark"]{
+  --sk-text:#eaf0fb; --sk-muted:#9aa6c4; --sk-line:#26305c;
+  --sk-paper:#0c1330; --sk-canvas:#080d24; --sk-band:#0b1230; --sk-band-alt:#080d24;
+  --sk-gold-ink:var(--kc-gold);
+}
+/* OS-dark is honoured on /welcome ONLY, and deliberately so. This stylesheet
+   has no OS-dark palette (see the logo-swap note below): --accent, --gold and
+   the wordmark artwork all flip on [data-theme="dark"] alone. Letting the
+   surfaces here follow prefers-color-scheme darkened the paper on sign-in,
+   /repair and /phone-guide while the ink and links stayed in their light
+   values — measured 2.8:1 on the phone-number links, i.e. unreadable.
+   /welcome carries its own complete prefers-color-scheme palette inside
+   pages/welcome.js, so it alone can safely track the OS. */
+@media (prefers-color-scheme:dark){ :root:not([data-theme]) .sk{
+  --sk-text:#eaf0fb; --sk-muted:#9aa6c4; --sk-line:#26305c;
+  --sk-paper:#0c1330; --sk-canvas:#080d24; --sk-band:#0b1230; --sk-band-alt:#080d24;
+  --sk-gold-ink:var(--kc-gold);
+}}
+
+/* Public pages are built from the same component rules as the app (.btn,
+   .form-input, .w-card …), which read the app's WARM IVORY semantics. On the
+   cool public paper those warm hairlines and ink read as a different site —
+   the exact seam this round is closing. Rather than fork every rule, the
+   public shells re-point the semantic tokens at the sk scale, so existing and
+   future component CSS lands on the right surface automatically. Brand colour
+   (--accent, --gold) is deliberately NOT remapped: it is already one value. */
+.login-shell, .welcome-shell {
+  --bg: var(--sk-canvas);
+  --surface: var(--sk-paper);
+  --surface2: var(--sk-band-alt);
+  --bg-secondary: var(--sk-band-alt);
+  --panel: var(--sk-band-alt);
+  --panel-2: var(--sk-band-alt);
+  --border: var(--sk-line);
+  --border-subtle: var(--sk-line);
+  --border-input: var(--sk-line);
+  --text: var(--sk-text);
+  --ink-secondary: var(--sk-text);
+  --muted: var(--sk-muted);
+}
+
+/* ─── The secondary public pages: /repair and /phone-guide ───
+   These used to float frosted-glass panels over the fixed globe canvas, which
+   is why every surface here was a translucent rgba() with a 14px backdrop
+   blur. The globe is gone (06/08/2026), and glass over a flat colour reads as
+   murky grey rather than as depth — so the surfaces are now the same solid
+   paper, hairline and canvas that /welcome and sign-in use. */
 /* The shell is its own scroll container (like .tool-shell): body/#__next are
    overflow:hidden for the app frame, which silently made this page
    UNSCROLLABLE — everything below the first viewport was unreachable. */
-.welcome-shell { position: relative; height: 100vh; width: 100%; overflow-y: auto; background: var(--bg); scroll-behavior: smooth; }
-.welcome-shell .login-fx { position: fixed; inset: 0; }
-/* Phones (/phone-guide): the globe's line-work otherwise runs straight
-   through the body text on the narrow column — fade it to a hint. */
-@media (max-width: 640px) { .welcome-shell .login-fx { opacity: 0.3; } }
-/* Anchor jumps must land BELOW the sticky glass topbar, with the section
-   heading clearly at the top of the view — not buried under the bar. */
+.welcome-shell {
+  position: relative; height: 100vh; width: 100%; overflow-y: auto;
+  background: var(--sk-canvas); color: var(--sk-text);
+  font-family: var(--sk-fbody); scroll-behavior: smooth;
+}
+/* Anchor jumps must land BELOW the sticky topbar, with the section heading
+   clearly at the top of the view — not buried under the bar. */
 .welcome-shell section[id] { scroll-margin-top: 106px; }
 @media (max-width: 640px) { .welcome-shell section[id] { scroll-margin-top: 86px; } }
 .w-wrap { position: relative; z-index: 1; width: 100%; padding: 22px clamp(20px, 4.5vw, 64px) 70px; }
 
-/* One glass recipe, shared by every floating surface (matches .fx-switch). */
+/* One surface recipe, shared by every panel on these pages. */
 .w-topbar, .w-hero, .w-card, .w-pills a, .w-lang, .w-proof {
-  background: rgba(255, 255, 255, 0.66);
-  backdrop-filter: blur(14px) saturate(1.15); -webkit-backdrop-filter: blur(14px) saturate(1.15);
-}
-:root[data-theme="dark"] .w-topbar, :root[data-theme="dark"] .w-hero,
-:root[data-theme="dark"] .w-card, :root[data-theme="dark"] .w-pills a,
-:root[data-theme="dark"] .w-lang, :root[data-theme="dark"] .w-proof { background: rgba(16, 20, 34, 0.55); }
-
-/* The story panel's cream warmth, carried across every card surface on the
-   page — same 135° wash, mixed a step lighter so small cards glow warm
-   instead of going yellow. Nav chrome (topbar, pills) stays neutral glass. */
-.w-hero, .w-proof, .w-card {
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--canvas-cream) 45%, transparent), transparent 70%),
-    rgba(255, 255, 255, 0.66);
-}
-:root[data-theme="dark"] .w-hero, :root[data-theme="dark"] .w-proof,
-:root[data-theme="dark"] .w-card {
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--canvas-cream) 45%, transparent), transparent 70%),
-    rgba(16, 20, 34, 0.55);
+  background: var(--sk-paper);
 }
 
 .w-topbar {
@@ -702,11 +700,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   text-decoration: none; transition: transform .15s, background .15s, color .15s, border-color .15s;
 }
 .w-pills a:hover { transform: translateY(-1px); color: var(--text); border-color: var(--border-input); }
-.w-pills a.w-pill-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.w-pills a.w-pill-primary:hover { background: var(--primary-deep); border-color: var(--primary-deep); color: #fff; }
+.w-pills a.w-pill-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.w-pills a.w-pill-primary:hover { background: var(--primary-deep); border-color: var(--primary-deep); color: var(--on-accent); }
 /* Staff door: present but quiet — customers get the blue button (My account),
    the counter gets a plain text link. */
-.w-pills a.w-staff { border-color: transparent; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.w-pills a.w-staff { border-color: transparent; background: transparent; }
 .w-pills a.w-staff:hover { color: var(--text); }
 
 /* Language switch — EN / HE as one segmented pill. */
@@ -717,7 +715,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 }
 .w-lang button + button { border-inline-start: 1px solid var(--border); }
 .w-lang button:hover { color: var(--text); }
-.w-lang button.active { background: var(--accent); color: #fff; }
+.w-lang button.active { background: var(--accent); color: var(--on-accent); }
 
 /* Centred hero: one column of type over the globe. The old side panel of
    hero minis was the only place its two claims lived — they now live in the
@@ -828,16 +826,6 @@ html { scroll-behavior: smooth; }
 .w-wrap[dir="rtl"] .w-section h3 { letter-spacing: 0; }
 .w-wrap[dir="rtl"] .w-hero h2 { font-weight: 400; }
 
-/* The phase switcher shrinks to a quiet dot rail on the public page — the
-   full labelled card read as a striking UI block that didn't belong. */
-.welcome-shell .fx-switch {
-  position: fixed; right: 12px; padding: 7px 6px; gap: 6px; border-radius: 999px;
-}
-.welcome-shell .fx-item { font-size: 0; gap: 0; padding: 4px; border-radius: 999px; line-height: 0; }
-.welcome-shell .fx-item .fx-dot { width: 13px; height: 13px; }
-.welcome-shell .fx-item.active { background: transparent; box-shadow: 0 0 0 2px var(--accent); }
-:root[data-theme="dark"] .welcome-shell .fx-item.active { background: transparent; box-shadow: 0 0 0 2px #7db8e6; }
-
 /* ─── WELCOME premium pass — proof strip, contact tiles, real footer ───
    Benchmarked against the way high-end service sites sell: concrete numbers
    up front (the proof strip), contact as three doors (visit / call / write)
@@ -890,14 +878,13 @@ html { scroll-behavior: smooth; }
   border-radius: var(--radius-xl); padding: 26px clamp(22px, 4vw, 34px) 24px;
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--canvas-cream) 55%, transparent), transparent 72%),
-    rgba(255, 255, 255, 0.66);
-  backdrop-filter: blur(14px) saturate(1.15); -webkit-backdrop-filter: blur(14px) saturate(1.15);
+    var(--sk-paper);
   box-shadow: 0 16px 40px -22px rgba(10,37,64,.28);
 }
 :root[data-theme="dark"] .w-story-panel {
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--canvas-cream) 55%, transparent), transparent 72%),
-    rgba(16, 20, 34, 0.55);
+    var(--sk-paper);
 }
 .w-story-panel::before {
   content: '\201C';
@@ -1003,7 +990,7 @@ html { scroll-behavior: smooth; }
 .rp-hp { position: absolute; inset-inline-start: -9999px; width: 1px; height: 1px; opacity: 0; }
 .rp-btn {
   margin-top: 4px; padding: 12px 18px; border: none; border-radius: var(--radius);
-  background: var(--accent); color: #fff; font: inherit; font-size: 15px; font-weight: 600;
+  background: var(--accent); color: var(--on-accent); font: inherit; font-size: 15px; font-weight: 600;
 }
 .rp-btn:hover { background: var(--primary-deep); }
 .rp-btn:disabled { opacity: 0.6; cursor: default; }
@@ -1039,10 +1026,8 @@ html { scroll-behavior: smooth; }
   margin-top: 46px; border: 1px solid var(--border); border-radius: var(--radius-2xl);
   padding: 26px 24px 18px; color: var(--muted); font-size: var(--fs-body);
   box-shadow: 0 12px 32px -18px rgba(10,37,64,.25);
-  background: rgba(255, 255, 255, 0.66);
-  backdrop-filter: blur(14px) saturate(1.15); -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  background: var(--sk-paper);
 }
-:root[data-theme="dark"] .w-footer2 { background: rgba(16, 20, 34, 0.55); }
 .w-footer-grid { display: grid; grid-template-columns: 1.3fr 0.7fr 1fr; gap: 26px; margin-bottom: 22px; }
 @media (max-width: 760px) { .w-footer-grid { grid-template-columns: 1fr; gap: 20px; } }
 .w-footer-brand { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 8px; }

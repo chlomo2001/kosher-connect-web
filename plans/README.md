@@ -4,12 +4,16 @@ Produced by the `improve-animations` audit on commit `c54b10d` (2 Aug 2026).
 
 **Scope note.** The current `/welcome` is the Sky telecom redesign (task #141).
 The heavy motion from the earlier design — services ticker, self-drawing hairline,
-logo cursor orb — is **no longer on the page**. The wireframe-globe parallax now
-lives only in `components/AuthBackdrop.js`, used on `/login`, `/portal`,
-`/phone-guide` and `/auth/google` (not `/welcome`), and it audits clean:
-reduced-motion draws a single static frame with no rAF loop or listeners, the
-loop pauses while the tab is hidden, and resizes are coalesced to one per frame.
-So the live motion surface is small, and these three plans cover it.
+logo cursor orb — is **no longer on the page**.
+
+> **Superseded 6 Aug 2026.** `components/AuthBackdrop.js` (the wireframe-globe
+> canvas) and the orb cursor have been **deleted**, along with the blurred
+> colour mesh behind the sign-in card. They ran on `/login`, `/portal`,
+> `/repair`, `/phone-guide` and `/auth/google` but never on the redesigned
+> `/welcome`, so a customer met one look on the front page and a different one
+> everywhere else. Those pages now render on the shared `--sk-*` public surface
+> defined in `styles/globals.css`. References to AuthBackdrop below are kept
+> for history — there is no longer any such component to audit or avoid.
 
 | # | Title | Severity | Status |
 | --- | --- | --- | --- |

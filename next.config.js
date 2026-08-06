@@ -38,7 +38,7 @@ const nextConfig = {
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
       {
-        source: '/:img(logo-full-tight-dark|logo-full-tight|logo-full|logo|cursor-orb-dark|cursor-orb).png',
+        source: '/:img(logo-full-tight-dark|logo-full-tight|logo-full|logo).png',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
     ]

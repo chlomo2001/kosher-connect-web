@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
-import AuthBackdrop from '../components/AuthBackdrop'
 import { FlipPhoneIcon } from '../components/kcIcons'
 
 // The public phone guide — every handset the shop stands behind, with price,
@@ -108,7 +107,6 @@ export default function PhoneGuide() {
         <link rel="canonical" href="https://www.kosher-connect.com/phone-guide" />
       </Head>
       <div className="welcome-shell">
-        <AuthBackdrop />
         {/* Physical side from the page language, not `right` — this button is
             outside the dir="rtl" wrapper, so in Hebrew the mirrored topbar puts
             the logo on the right and a right-pinned toggle lands on top of it. */}

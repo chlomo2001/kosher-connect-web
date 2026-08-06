@@ -11,7 +11,6 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
 import { formatPhoneDisplay } from '../lib/ukPhone.mjs'
-import AuthBackdrop from '../components/AuthBackdrop'
 import { CardIcon, FlipPhoneIcon, PlaneIcon, DocIcon, TicketIcon, SimIcon, ChatIcon } from '../components/kcIcons'
 
 // Portal copy in English + lashon hakodesh — some customers are Israelis who
@@ -606,8 +605,6 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       <>
         <Head><title>{L.title}</title></Head>
         <div className="login-shell">
-          <div className="login-mesh" aria-hidden="true" />
-          <AuthBackdrop />
           <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
           {langBtn}
           <div className="login-card" dir={dir}>
@@ -933,8 +930,6 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       <>
         <Head><title>{L.title}</title></Head>
         <div className="login-shell" dir={dir}>
-          <div className="login-mesh" aria-hidden="true" />
-          <AuthBackdrop />
           <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
           <div className="login-card" role="alert">
             <div style={{ textAlign: 'center' }}>
@@ -958,8 +953,6 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     <>
       <Head><title>{L.title}</title></Head>
       <div className="login-shell">
-        <div className="login-mesh" aria-hidden="true" />
-        <AuthBackdrop />
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         {langBtn}
         <form className="login-card" dir={dir} onSubmit={submit}>

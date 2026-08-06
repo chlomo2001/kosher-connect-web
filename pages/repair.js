@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
-import AuthBackdrop from '../components/AuthBackdrop'
 import { WrenchIcon } from '../components/kcIcons'
 
 // Public repair booking — the online front door for the repair bench. One
@@ -133,7 +132,6 @@ export default function RepairBooking() {
         <link rel="canonical" href="https://www.kosher-connect.com/repair" />
       </Head>
       <div className="welcome-shell">
-        <AuthBackdrop />
         {/* Physical side from the page language, not `right` — this button is
             outside the dir="rtl" wrapper, so in Hebrew the mirrored topbar puts
             the logo on the right and a right-pinned toggle lands on top of it. */}
