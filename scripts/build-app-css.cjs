@@ -15,14 +15,21 @@
 // because a stylesheet that has been proved identical is worth more than one
 // that is a few hundred bytes smaller.
 //
-// Runs from `npm run build` and `npm run dev` (prebuild/predev), so the file is
-// always there and never committed. The offline harness reads the SOURCE, so
-// what it measures and what ships stay the same rules either way.
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+// Required from next.config.js, which is loaded however the build is started —
+// `next build`, `next dev`, or `npm run build`. The npm prebuild/predev hooks
+// call it too, so a bare `npm run dev` also refreshes it.
+//
+// CommonJS on purpose: next.config.js is CommonJS, and `require()` of an ESM
+// module only works on newer Node versions. The build host does not necessarily
+// run the same Node as this laptop, and a stylesheet that fails to generate is
+// a staff app with no styles.
+//
+// The offline harness reads the SOURCE, so what it measures and what ships stay
+// the same rules either way.
+const { readFileSync, writeFileSync, mkdirSync } = require('node:fs')
+const path = require('node:path')
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const ROOT = path.resolve(__dirname, '..')
 const SRC = path.join(ROOT, 'styles/app.css')
 const OUT = path.join(ROOT, 'public/app.css')
 

@@ -1,3 +1,16 @@
+// The staff stylesheet is generated, not committed: styles/app.css (commented,
+// reviewable) becomes public/app.css (comment-free, downloaded). It is built
+// HERE, at config load, because that is the only hook that fires however the
+// build is started.
+//
+// The npm `prebuild`/`predev` hooks alone were not enough, and shipped a
+// production break: Vercel does not run `npm run build`, it detects Next and
+// runs `next build` directly, so npm lifecycle scripts never execute. The file
+// was missing from the deployment, /app.css fell through to the [tab] dynamic
+// route, and the staff app served its own sign-in page as a stylesheet. The
+// public pages were fine, which is exactly why it was easy to miss.
+require('./scripts/build-app-css.cjs')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async redirects() {
@@ -37,7 +50,7 @@ const nextConfig = {
     // check with the owner present).
     //
     // /app.css is the staff-only half of the stylesheet, generated from
-    // styles/app.css by scripts/build-app-css.mjs so the public pages never
+    // styles/app.css by scripts/build-app-css.cjs so the public pages never
     // download it. See components/AppStyles.js for why it is linked from the
     // body rather than the head.
   },

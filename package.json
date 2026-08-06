@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/build-app-css.mjs",
+    "predev": "node scripts/build-app-css.cjs",
     "dev": "next dev",
-    "prebuild": "node scripts/build-app-css.mjs",
+    "prebuild": "node scripts/build-app-css.cjs",
     "build": "next build",
     "start": "next start",
     "test": "node --test test/*.test.mjs"

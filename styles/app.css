@@ -14,7 +14,7 @@
    from /public and linking it from the staff shell is how those pages stop
    paying for it. Same arrangement, and the same trade-off, as /main.js.
 
-   THIS FILE IS THE SOURCE. scripts/build-app-css.mjs copies it to
+   THIS FILE IS THE SOURCE. scripts/build-app-css.cjs copies it to
    public/app.css with the comments stripped, on prebuild and predev — static
    files skip Next's minifier, so the commentary would otherwise be downloaded
    by every member of staff on every load. Edit here; public/app.css is
