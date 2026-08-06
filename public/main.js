@@ -6281,8 +6281,14 @@ function openEditModal(id) {
 // Every word in a name gets a capital first letter ("moshe chaim" →
 // "Moshe Chaim", "cohen-levi" → "Cohen-Levi"). Only lowercase first letters
 // are touched, so "McDonald" and all-caps entries stay as typed.
+// Kept in step with lib/mappers' capName, which is the enforcement copy that
+// runs on every write — test/nameCase.test.mjs holds the two to the same
+// answers. The apostrophe only breaks a word when two or more letters follow,
+// so "o'brien" capitalises but the "m" in "I'm" does not.
 function capName(s) {
-  return String(s || '').trim().replace(/(^|[\s\-'’])([a-zà-ÿ])/g, (m, sep, ch) => sep + ch.toUpperCase());
+  return String(s || '').trim()
+    .replace(/(^|[\s\-])([a-zà-ÿ])/g, (m, sep, ch) => sep + ch.toUpperCase())
+    .replace(/(['’])([a-zà-ÿ])(?=[a-zà-ÿ])/g, (m, sep, ch) => sep + ch.toUpperCase());
 }
 
 const OWN_EMAIL_BASES = ['gittbilig', 'kosherconnect', 'ch7023518'];
@@ -12117,9 +12123,12 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   travel7.forEach(b => attention.push(['✈️',
     `<strong>${escHtml(b.customerName || '?')}</strong> — flies ${fmtDate(b.travelDate)} (${escHtml(b.route)})`,
     () => goToTab('bookings')]));
+  // Straight to the plan that is renewing, not to the list of every plan.
+  // The line names one SIM, so landing on the tab and leaving you to find it
+  // again is the app forgetting what you just clicked.
   renewals7.forEach(s => attention.push(['💳',
     `<strong>${escHtml(s.customerName || '?')}</strong> — SIM renews ${fmtDate(s.renewalDate)}`,
-    () => goToTab('sim')]));
+    () => openOnTab('sim', () => openManageSimModal(s.id))]));
   // Low-stock accessories/phones (display-only; the Shop tab holds the editable
   // per-SKU threshold + the full list). One rolled-up line → opens Shop.
   const lowStock = (shopList || []).filter(i => i.active && i.quantity <= i.lowStockAt);
