@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../../components/ThemeToggle'
 import ToolDrop from '../../components/ToolDrop'
+import AppStyles from '../../components/AppStyles'
 import { makeZip } from '../../lib/zipLite.mjs'
 import { requireStaffCookie } from '../../lib/pageAuth'
 
@@ -181,6 +182,7 @@ export default function Converter() {
   return (
     <>
       <Head><title>File Converter · Kosher Connect</title></Head>
+      <AppStyles />
       <div className="tool-shell">
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         <div className="tool-wrap">

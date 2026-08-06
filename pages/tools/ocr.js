@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../../components/ThemeToggle'
 import ToolDrop from '../../components/ToolDrop'
+import AppStyles from '../../components/AppStyles'
 import { requireStaffCookie } from '../../lib/pageAuth'
 
 // Scan Reader (OCR) — drop a photo or scan a customer sent in and get its
@@ -151,6 +152,7 @@ export default function ScanReader() {
   return (
     <>
       <Head><title>Scan Reader · Kosher Connect</title></Head>
+      <AppStyles />
       <div className="tool-shell">
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         <div className="tool-wrap">

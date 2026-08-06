@@ -29,11 +29,17 @@ const nextConfig = {
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
     ]
-    // NOTE: /main.js is deliberately NOT long-cached here — it changes on every
-    // deploy and is served from a stable path, so `immutable` would pin a stale
-    // build and break the app after a release. Hard-caching it needs a
-    // content-hashed filename (prebuild minify → main.<hash>.js), tracked as an
-    // owner-verify item (that one wants a deploy check with the owner present).
+    // NOTE: /main.js and /app.css are deliberately NOT long-cached here — both
+    // change on every deploy and are served from stable paths, so `immutable`
+    // would pin a stale build and break the app after a release. Hard-caching
+    // them needs content-hashed filenames (prebuild → main.<hash>.js,
+    // app.<hash>.css), tracked as an owner-verify item (that one wants a deploy
+    // check with the owner present).
+    //
+    // /app.css is the staff-only half of the stylesheet, generated from
+    // styles/app.css by scripts/build-app-css.mjs so the public pages never
+    // download it. See components/AppStyles.js for why it is linked from the
+    // body rather than the head.
   },
 }
 module.exports = nextConfig

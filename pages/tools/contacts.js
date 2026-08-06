@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../../components/ThemeToggle'
 import ToolDrop from '../../components/ToolDrop'
+import AppStyles from '../../components/AppStyles'
 import { requireStaffCookie } from '../../lib/pageAuth'
 import { parseVcf, buildCard, parseCard, dedupeCards, rewriteVcfTels } from '../../lib/vcard.mjs'
 import { parseCsv, parseXlsx } from '../../lib/sheetLite.mjs'
@@ -143,6 +144,7 @@ export default function ContactsConverter() {
   return (
     <>
       <Head><title>Contacts Converter · Kosher Connect</title></Head>
+      <AppStyles />
       <div className="tool-shell">
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         <div className="tool-wrap">

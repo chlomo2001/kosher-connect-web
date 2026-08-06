@@ -146,3 +146,45 @@ Worth stating, because it is the argument for keeping it:
   a one-line row always eats the end and the end was "(cash)".
 
 None of the three was visible by reading the CSS.
+
+## css-diff.mjs — proving a refactor changed nothing
+
+Everything above answers "is this broken?". This one answers a different
+question: **"is this the same?"**
+
+    node ops/harness/css-diff.mjs --save     # before
+    …refactor…
+    node ops/harness/css-diff.mjs --check    # after
+
+It renders 80 scenes — 13 tabs at two sizes and themes, 19 modals in both
+themes, 4 public pages in both languages at two sizes — walks every element in
+each, and records 103 computed properties plus the box. ~29,000 elements. A
+change that is genuinely presentational-neutral comes back identical; anything
+else names the element and the property that moved.
+
+Use it for stylesheet surgery: splitting a file, reordering rules, renaming a
+token, deduplicating selectors. The rest of the harness measures whether the
+page still fits and still contrasts, and will happily pass a page whose
+headings have quietly lost 100 of their font-weight. This is the check that
+catches that.
+
+Two things worth knowing:
+
+- **It freezes time before sampling.** Finite animations and transitions are
+  run to their end, endless ones pinned to frame zero, through the Web
+  Animations API. Without that, the welcome page's scroll-reveal and the login
+  mesh sample a different frame every run — the first version reported 240
+  changed elements against a completely unmodified build.
+- **The baseline is dated.** Some screens render today's date, so a snapshot
+  taken before midnight will differ from a check taken after it on exactly the
+  date-driven screens (dashboard, rentals, the rental modals, cash-up) and
+  nowhere else. That shape is the tell; re-baseline rather than go hunting.
+
+The 22MB of snapshots live in `.css-snapshot/` and are gitignored — a local
+yardstick, regenerated whenever you need one.
+
+It found the regression that justified writing it. Splitting `globals.css` in
+two left the iOS zoom guard — `@media (max-width:768px)` bumping small inputs
+to 16px, written to sit last in the file — being overridden by the staff sheet
+that now loaded after it. 730 elements, the zoom trap back on every phone at
+the counter, and `audit-all.sh` passed the whole thing clean.

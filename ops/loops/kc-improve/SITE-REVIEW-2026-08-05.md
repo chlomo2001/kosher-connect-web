@@ -458,7 +458,50 @@ Highest value per unit of effort, confirmed items only.
 
 ---
 
-## Deliberately not done
+## Done since: the stylesheet split (finding 38)
+
+This was written up below as deliberately deferred. It has since been built.
+
+`pages/_app.js` still imports `styles/globals.css` for every route, but that
+file is now the shared and public half only. The staff-only half lives in
+`styles/app.css`, is copied comment-free to `public/app.css` at build time, and
+is linked by `components/AppStyles.js` from the three AppShell routes and the
+four `/tools/*` pages. Nothing else changed — no rule was rewritten, no
+selector renamed.
+
+**Which rules moved was decided by evidence, not by eye.** A rule left
+globals.css only when its selector names at least one class that the public
+pages never render — and because a selector matches only elements carrying
+*every* class it names, one such class proves the whole selector can never
+match a public page. Functional pseudo-classes were cut out first, since the
+class inside `:not()` is the one that must be absent. 682 rules qualified.
+
+**What it cost, honestly.** The public pages drop from 17.2KB to 8.8KB of
+gzipped CSS — a 49% cut on a render-blocking resource, though the raw 141KB
+quoted below was source size, not shipped size. The staff app pays 2.3KB
+gzipped more, because it now fetches two sheets and the second one skips Next's
+minifier; that is 0.3% of what that page already downloads alongside 764KB of
+`main.js`.
+
+**The verification the original deferral said was missing now exists.**
+`ops/harness/css-diff.mjs` renders every screen, walks every element, and
+records 103 computed properties for each — the "does this still look right"
+check that geometry and contrast could not give. Baseline before, compare
+after: **80 scenes, 28,908 elements, identical**. It earned its keep
+immediately, catching a real regression the whole audit battery passed clean
+over: the iOS zoom guard, written to sit last in the single stylesheet, was
+being beaten by the staff sheet once the two were separated, which would have
+put the zoom trap back on every phone at the counter. 730 elements, invisible
+to every other check. That rule is now stated in both sheets, with the reason
+written where someone will find it.
+
+Two things had to be got right and are recorded where they matter: the staff
+sheet loads from the top of `<body>`, because Next emits its own stylesheet
+last in `<head>` and the staff rules have to win ties; and the harness inlines
+the two sheets in that same order, or it would be testing a cascade that does
+not exist.
+
+## Deliberately not done (superseded — see above)
 
 **Split the staff stylesheet off the public pages** (finding 38, medium).
 `pages/_app.js` imports the whole 141KB / 722-rule `globals.css` globally, so

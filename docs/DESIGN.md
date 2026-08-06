@@ -135,6 +135,32 @@ Waiting is disguised, not announced:
 - Async repaints must not blank what's already painted — paint over, never
   clear-then-load (the dashboard's `dashPaint` is the precedent).
 
+## Where a rule lives
+
+The stylesheet is in two halves, and which half a new rule belongs in is
+decided by one question: **can this selector ever match on a public page?**
+
+- `styles/globals.css` — imported by `pages/_app.js`, so every route gets it.
+  Design tokens, `@font-face`, `@keyframes`, the reset, and everything /welcome,
+  /portal, /phone-guide, /repair, /login and the legal pages use. **All tokens
+  and all keyframes belong here**, including ones only the staff app consumes:
+  the other sheet may use them, but must never be the only place they are
+  defined.
+- `styles/app.css` — the staff app's own chrome: sidebar, tables, till, modals,
+  command palette, `/tools/*`. Copied comment-free to `public/app.css` at build
+  time and linked by `components/AppStyles.js`, so the public pages never
+  download it. A rule qualifies only if its selector names at least one class
+  the public pages never render.
+
+The staff sheet loads **after** globals.css and therefore wins ties. If you
+write a rule in globals.css that has to beat the staff chrome — an accessibility
+guard, say — it has to be stated in `styles/app.css` as well; there is a worked
+example at the bottom of that file explaining why.
+
+After any structural change to either sheet, run
+`node ops/harness/css-diff.mjs --check` against a baseline taken before it.
+Geometry and contrast checks pass things this catches.
+
 ## Adoption ledger
 
 | Area | State |

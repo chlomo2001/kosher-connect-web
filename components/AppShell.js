@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import Script from 'next/script'
+import AppStyles from './AppStyles'
 import { Fragment } from 'react'
 import { WHATSAPP_ENABLED } from '../lib/flags'
 
@@ -70,6 +71,8 @@ export default function AppShell({ initialTab = 'dashboard' }) {
           rel="stylesheet"
         />
       </Head>
+
+      <AppStyles />
 
       {/* Full-page boot loader — shows from first paint until the first tab
           renders, then fades out (removed by initApp / the safety timeout). */}

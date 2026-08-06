@@ -59,7 +59,14 @@ export function loadComponent(file) {
 export function buildAppHtml(out = path.join(HERE, 'app.html')) {
   const AppShell = loadComponent('components/AppShell.js').default
   const shell = renderToStaticMarkup(React.createElement(AppShell, { initialTab: 'customers' }))
-  const css = readFileSync(path.join(ROOT, 'styles/globals.css'), 'utf8')
+  // Both sheets, in the order the browser really gets them: globals.css comes
+  // from Next's own <link> at the end of <head>, and components/AppStyles puts
+  // /app.css at the top of <body>, which is later in document order. So the
+  // staff sheet wins ties — the same way it did when both halves lived in one
+  // file. Get this order wrong here and the harness tests a cascade that does
+  // not exist in production.
+  const css = readFileSync(path.join(ROOT, 'styles/globals.css'), 'utf8') +
+    '\n' + readFileSync(path.join(ROOT, 'styles/app.css'), 'utf8')
   const main = readFileSync(path.join(ROOT, 'public/main.js'), 'utf8')
   const seed = readFileSync(path.join(HERE, 'seed.json'), 'utf8')
   writeFileSync(out, `<!doctype html>

@@ -18,3 +18,11 @@ ops/harness/app.html
 ops/harness/shot_*.png
 ops/harness/modal_*.png
 ops/harness/public_*.html
+
+# css-diff baseline: 22MB of computed styles, regenerated on demand
+# (node ops/harness/css-diff.mjs --save). A local yardstick, not a deliverable.
+ops/harness/.css-snapshot/
+
+# Generated from styles/app.css by scripts/build-app-css.mjs (prebuild/predev).
+# The commented source is the one to edit and review.
+public/app.css
