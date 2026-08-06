@@ -552,7 +552,7 @@ function setupNav() {
     document.body.classList.toggle('nav-collapsed', on);
     burger?.setAttribute('aria-label', on ? 'Expand menu' : 'Collapse menu');
     // Rail rows show icons only — surface each label as a native tooltip.
-    document.querySelectorAll('.sidebar .nav-item, .sidebar .sb-row').forEach(el => {
+    document.querySelectorAll('.sidebar .nav-item, .sidebar .nav-link, .sidebar .sb-row').forEach(el => {
       if (on) el.title = el.textContent.trim();
       else el.removeAttribute('title');
     });
@@ -571,7 +571,7 @@ function setupNav() {
     if (e.key === 'Escape' && document.body.classList.contains('nav-open')) setNavOpen(false);
   });
   document.getElementById('appSidebar')?.addEventListener('click', (e) => {
-    if (e.target.closest('.nav-item, .sb-row')) setNavOpen(false);
+    if (e.target.closest('.nav-item, .nav-link, .sb-row')) setNavOpen(false);
   });
   // U15 — click-only chips (equipment toggles, click-to-copy values) carry
   // role=button tabindex=0 in their markup; activate them on Enter/Space too.
@@ -621,6 +621,18 @@ function applyTabVisibility() {
   document.querySelectorAll('.nav-item').forEach(item => {
     item.style.display = (allowedTabs && !allowedTabs.includes(item.dataset.tab)) ? 'none' : '';
   });
+  // A group heading names the rows beneath it, so it has to go when they all
+  // do. Hiding the items alone left a helper looking at "SERVICES" with
+  // nothing under it and the next heading directly below — a label for an
+  // empty set. Walk the list in order: each heading owns every row until the
+  // next heading, and survives only if one of them is still on screen.
+  let label = null, kept = false;
+  const settle = () => { if (label) label.style.display = kept ? '' : 'none'; };
+  for (const el of document.querySelectorAll('.sidebar-nav > *')) {
+    if (el.classList.contains('nav-group-label')) { settle(); label = el; kept = false; }
+    else if (el.style.display !== 'none') kept = true;
+  }
+  settle();
 }
 
 // #49 / #58 — ONE source of truth per destination: its human label, its page

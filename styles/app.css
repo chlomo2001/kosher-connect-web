@@ -103,23 +103,47 @@
 /* ─── SIDEBAR — the dark-app track ─── */
 
 .sidebar {
-  width: 220px;
+  width: 208px;
   background: var(--brand-dark);
   display: flex; flex-direction: column;
-  padding: 16px 0; flex-shrink: 0;
+  padding: 13px 0 0; flex-shrink: 0;
   min-height: 0;
   /* Labels never wrap — so the rail-collapse width transition stays clean. */
   overflow-x: hidden;
 }
 
-.nav-item, .sb-row { white-space: nowrap; }
+.nav-item, .nav-link, .sb-row { white-space: nowrap; }
+
+
+/* Brand lockup — horizontal, so it costs one row of height rather than four.
+   Stacked, it spent ~90px of the rail before the first destination. */
+
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 15px 12px; margin-bottom: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.11);
+}
+
+.logo img {
+  width: 31px; height: 31px; border-radius: 50%; flex-shrink: 0;
+  border: 1.5px solid rgba(255,255,255,0.28);
+}
+
+.logo-text { display: flex; flex-direction: column; min-width: 0; }
 
 
 /* The nav list scrolls between the pinned logo and the pinned footer, so
    "Sign out" is never pushed off the bottom of a short or zoomed screen. */
 
+/* flex-grow:0, so the list is exactly as tall as its rows and the footer sits
+   directly under the last one. Growing it to fill (flex:1) pushed the footer
+   to the floor and left a band of empty navy in the middle of the rail on any
+   screen taller than the nav — space between two things reads as a fault,
+   the same space below everything reads as background. shrink:1 + min-height:0
+   keeps the scroll region for short windows and heavy zoom. */
+
 .sidebar-nav {
-  flex: 1; min-height: 0; overflow-y: auto;
+  flex: 0 1 auto; min-height: 0; overflow-y: auto;
   scrollbar-color: rgba(255,255,255,0.28) transparent;
 }
 
@@ -131,42 +155,56 @@
 
 .sidebar-bottom { flex-shrink: 0; }
 
-.logo-title { font-size: var(--fs-lead); font-weight: 400; color: #ffffff; letter-spacing: -0.2px; line-height: 1.25; }
+.logo-title { font-size: var(--fs-ui); font-weight: 500; color: #ffffff; letter-spacing: -0.1px; line-height: 1.2; }
 
-.logo-sub { font-size: var(--fs-overline); font-weight: 400; letter-spacing: 0.1px; text-transform: uppercase; color: rgba(255,255,255,0.45); margin-top: 3px; }
+/* Truncates rather than wraps: the lockup is one row tall by design, and a
+   second line here would put the brand back in the nav's way. */
+.logo-sub {
+  font-size: var(--fs-overline); font-weight: 400; letter-spacing: 0.04em;
+  text-transform: uppercase; color: rgba(255,255,255,0.58); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis;
+}
 
 
-.nav-item {
-  display: flex; align-items: center; gap: 10px;
-  margin: 1px 10px; padding: 7px 12px; border-radius: var(--radius-lg);
-  font-size: var(--fs-ui); font-weight: 300; line-height: 1.35;
-  color: rgba(255,255,255,0.65); cursor: pointer;
+/* .nav-link is a tool row: an <a> to a real page, styled as a nav row but
+   deliberately not .nav-item, which main.js binds to renderTab(). */
+
+.nav-item, .nav-link {
+  display: flex; align-items: center; gap: 9px;
+  margin: 1px 8px; padding: 6px 10px; border-radius: var(--radius-lg);
+  font-size: var(--fs-body); font-weight: 400; line-height: 1.35;
+  color: rgba(255,255,255,0.74); cursor: pointer; text-decoration: none;
   transition: background 0.15s, color 0.15s;
 }
 
-.nav-item:hover { color: #ffffff; background: rgba(255,255,255,0.07); }
+.nav-item:hover, .nav-link:hover { color: #ffffff; background: rgba(255,255,255,0.08); }
 
 
 /* Rimless selected state — a soft frosted panel (no accent bar), like the
    Travel-Planner reference: the highlight reads as a calm shade, not a rule. */
 
-.nav-item.active { color: #ffffff; background: rgba(255,255,255,0.13); }
+.nav-item.active { color: #ffffff; background: rgba(255,255,255,0.15); font-weight: 500; }
 
-.nav-icon { width: 20px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0.85; }
+.nav-icon { width: 18px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0.88; }
 
-.nav-icon svg { display: block; }
+.nav-icon svg { display: block; width: 18px; height: 18px; }
 
-.nav-item.active .nav-icon, .nav-item:hover .nav-icon { opacity: 1; }
+.nav-item.active .nav-icon, .nav-item:hover .nav-icon, .nav-link:hover .nav-icon { opacity: 1; }
 
 
 
 /* #74 — a quiet section label + slight indent groups SIM Plans & Virtual
    Numbers as one "Connectivity" pair without changing where they navigate. */
 
+/* The gap above a heading is what separates one group from the next, so it
+   does the work a divider rule would — 12px above, 3px below, which binds the
+   label to the rows it names. At 0.35 white these read at 3.1:1 and looked
+   switched off; 0.55 on the lighter track measures 4.7:1. */
+
 .nav-group-label {
-  padding: 8px 20px 2px; font-size: var(--fs-overline); font-weight: 600;
+  padding: 12px 18px 3px; font-size: var(--fs-overline); font-weight: 600;
   letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.2;
-  color: rgba(255,255,255,0.35);
+  color: rgba(255,255,255,0.55);
 }
 
 .nav-item.nav-nested { padding-left: 26px; }
@@ -194,39 +232,39 @@
 
 
 
-/* Sidebar footer — same rhythm as the nav above it: a group label, rows of
-   one consistent height, hairline-separated identity block, quiet version
-   line. Every row is 28px tall so the spacing reads even. */
+/* Sidebar footer — who you are and how to leave, nothing else. The four
+   converter tools used to live down here, which is what put the rail's only
+   slack in the MIDDLE of it: the nav ended at Settings, the footer was pinned
+   to the floor, and the empty band between them read as a fault rather than
+   breathing room. With the tools back in the nav where they belong, the slack
+   collects in one place at the bottom, under the last thing in the list. */
 
 .sidebar-bottom {
-  margin-top: auto; padding: 8px 20px 10px;
-  border-top: 1px solid rgba(255,255,255,0.12);
-  font-size: var(--fs-small); color: rgba(255,255,255,0.45);
+  padding: 7px 18px 9px;
+  border-top: 1px solid rgba(255,255,255,0.11);
+  font-size: var(--fs-body); color: rgba(255,255,255,0.62);
   display: flex; flex-direction: column;
 }
 
-.sidebar-bottom a:hover { color: rgba(255,255,255,0.85) !important; }
-
-.sb-label {
-  font-size: var(--fs-overline); font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
-  color: rgba(255,255,255,0.32); padding: 4px 0 3px;
-}
+.sidebar-bottom a:hover { color: #ffffff !important; }
 
 .sb-row {
-  display: flex; align-items: center; gap: 9px; height: 28px;
+  display: flex; align-items: center; gap: 9px; height: 30px;
   color: inherit; text-decoration: none;
 }
 
-.sb-version { padding-top: 6px; font-size: var(--fs-micro); color: rgba(255,255,255,0.30); }
+.sb-version { padding-top: 4px; font-size: var(--fs-micro); color: rgba(255,255,255,0.56); }
 
 
 
 /* "Signed in as" identity in the sidebar footer — who's on the counter now. */
 
+/* No border-top: .sidebar-bottom's own rule sits 7px above this, and the two
+   together drew a double hairline under the last tool. */
+
 .sidebar-user {
   display: flex; align-items: center; gap: 9px;
-  padding: 6px 0; margin: 4px 0;
-  border-top: 1px solid rgba(255,255,255,0.10);
+  padding: 2px 0 7px; margin: 0 0 4px;
   border-bottom: 1px solid rgba(255,255,255,0.10);
 }
 
@@ -248,33 +286,41 @@
 
 .su-role {
   font-size: var(--fs-overline); font-weight: 500; text-transform: uppercase;
-  letter-spacing: 0.06em; color: rgba(255,255,255,0.4);
+  letter-spacing: 0.06em; color: rgba(255,255,255,0.56);
 }
+/* Short-screen tiers — the whole rail (16 rows + 5 group labels + footer) has
+   to fit at default zoom with NO vertical scrolling. The sizing above fits a
+   1080p monitor; these two tiers tighten the same rhythm for 1440×900 /
+   1280×800 laptops and then 1366×768. The nav's own scroll region stays as the
+   last-resort fallback (tiny windows, big zoom). */
+
 @media (max-height: 920px) {
 
-  .sidebar { padding: 10px 0; }
+  .sidebar { padding: 9px 0 0; }
 
-  .logo-title { font-size: var(--fs-lead); }
+  .logo { padding-bottom: 10px; margin-bottom: 4px; }
 
-  .nav-item { padding: 5px 12px; }
+  .logo img { width: 28px; height: 28px; }
 
-  .nav-group-label { padding: 6px 20px 2px; }
+  .nav-item, .nav-link { padding: 5px 10px; }
 
-  .sidebar-bottom { padding: 6px 20px 8px; }
+  .nav-group-label { padding: 9px 18px 2px; }
 
-  .sb-row { height: 26px; }
+  .sidebar-bottom { padding: 6px 18px 8px; }
+
+  .sb-row { height: 28px; }
 
   .sidebar-user { padding: 4px 0; margin: 3px 0; }
 
-  .sb-version { padding-top: 4px; }
+  .sb-version { padding-top: 3px; }
 }
 
 
 @media (max-height: 760px) {
   .logo-sub { display: none; }
-  .nav-item { padding: 2px 12px; }
-  .nav-group-label { padding: 4px 20px 1px; }
-  .sb-row { height: 24px; }
+  .nav-item, .nav-link { padding: 3px 10px; }
+  .nav-group-label { padding: 6px 18px 1px; }
+  .sb-row { height: 26px; }
   .sb-version { display: none; }
 }
 
@@ -363,17 +409,18 @@
 @media (min-width: 821px) {
   .sidebar { transition: width 0.2s var(--ease-out); }
   body.nav-collapsed .sidebar { width: 66px; }
-  body.nav-collapsed .logo { padding: 0 8px 14px; margin-bottom: 12px; }
-  body.nav-collapsed .logo img { width: 38px; height: 38px; margin-bottom: 0; }
-  body.nav-collapsed .logo-title, body.nav-collapsed .logo-sub { display: none; }
+  body.nav-collapsed .logo { padding: 0 8px 12px; margin-bottom: 8px; justify-content: center; }
+  body.nav-collapsed .logo img { width: 34px; height: 34px; }
+  body.nav-collapsed .logo-text { display: none; }
   /* font-size:0 hides the raw text node beside the icon without extra markup. */
-  body.nav-collapsed .nav-item { justify-content: center; gap: 0; padding: 10px 0; margin: 2px 8px; font-size: 0; }
+  body.nav-collapsed .nav-item,
+  body.nav-collapsed .nav-link { justify-content: center; gap: 0; padding: 9px 0; margin: 2px 8px; font-size: 0; }
   body.nav-collapsed .nav-group-label {
     height: 0; padding: 0; margin: 9px 16px 8px; overflow: hidden;
     border-top: 1px solid rgba(255,255,255,0.10);
   }
   body.nav-collapsed .sidebar-bottom { padding: 10px 8px 12px; }
-  body.nav-collapsed .sb-label, body.nav-collapsed .sb-version { display: none; }
+  body.nav-collapsed .sb-version { display: none; }
   body.nav-collapsed .sb-row { justify-content: center; gap: 0; font-size: 0; }
   body.nav-collapsed .sidebar-user { justify-content: center; }
   body.nav-collapsed .su-meta { display: none; }

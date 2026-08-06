@@ -31,15 +31,37 @@ const ICONS = {
   settings: <I><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></I>,
   signout: <I><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></I>,
 }
-// #20 — grouped sections (People / Counter / Connectivity / Travel / Manage),
-// not a flat list of 12 peers; Dashboard + Manage stay pinned at the ends.
+// #20 — grouped sections, not a flat list of 12 peers; Dashboard and Manage
+// stay pinned at the ends.
+//
+// The grouping answers "what kind of thing is this", so four labels carry
+// twelve destinations at 2/4/4/2. The earlier cut had a Travel heading over a
+// single row — a label that names one item is pure overhead, and it made the
+// list read as six groups when there are really four ideas: the people, what
+// we hand over the counter, what we run for a customer on an account, and the
+// back office. Tickets & Flights and Online & Print are both the third kind,
+// which is also why neither ever sat right under Counter.
 const NAV = [
   { items: [['dashboard', 'Dashboard']] },
   { label: 'People', items: [['customers', 'Customers'], ['wallet', 'Wallet']] },
-  { label: 'Counter', items: [['rentals', 'Phone Rentals'], ['repairs', 'Repairs'], ['services', 'Online & Print'], ['shop', 'Shop'], ['koltorah', 'Kol Torah']] },
-  { label: 'Connectivity', items: [['sim', 'SIM Plans'], ['virtual', 'Virtual Numbers']] },
-  { label: 'Travel', items: [['bookings', 'Tickets & Flights']] },
+  { label: 'Counter', items: [['rentals', 'Phone Rentals'], ['repairs', 'Repairs'], ['shop', 'Shop'], ['koltorah', 'Kol Torah']] },
+  { label: 'Services', items: [['sim', 'SIM Plans'], ['virtual', 'Virtual Numbers'], ['services', 'Online & Print'], ['bookings', 'Tickets & Flights']] },
   { label: 'Manage', items: [['tasks', 'Tasks'], ['settings', 'Settings']] },
+]
+
+// The converter tools. Real pages, not SPA tabs, so they are <a> links and
+// deliberately NOT .nav-item — main.js binds every .nav-item to renderTab()
+// through its data-tab, and a tool row has no tab to render. .nav-link gives
+// them the nav's box and colour without its behaviour.
+const TOOLS = [
+  ['/tools/contacts', 'Contacts converter',
+    <I key="c"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><polyline points="16 11 18 13 22 9" /></I>],
+  ['/tools/transfer', 'Phone transfer',
+    <I key="t"><polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" /><polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" /></I>],
+  ['/tools/ocr', 'Scan reader (OCR)',
+    <I key="o"><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><line x1="7" y1="12" x2="17" y2="12" /></I>],
+  ['/tools/convert', 'File converter',
+    <I key="f"><polyline points="16 3 21 3 21 8" /><line x1="4" y1="20" x2="21" y2="3" /><polyline points="21 16 21 21 16 21" /><line x1="15" y1="15" x2="21" y2="21" /><line x1="4" y1="4" x2="9" y2="9" /></I>],
 ]
 
 // Every routable tab id — the single source used by pages/[tab].js to accept
@@ -85,15 +107,24 @@ export default function AppShell({ initialTab = 'dashboard' }) {
       {/* SIDEBAR — on phones it becomes an off-canvas drawer (body.nav-open),
           driven by the topbar burger; the scrim below catches outside taps. */}
       <div className="sidebar" id="appSidebar">
+        {/* A horizontal lockup, not a stacked crest. The centred version spent
+            about 90px of the rail on a mark and two centred lines before the
+            first destination — this says the same in ~46px and leaves the
+            nav's left edge as the one vertical line the eye follows down. */}
         <div className="logo">
-          <img src="/logo.png" alt="Kosher Connect" style={{ background: '#fff', padding: 5 }} />
-          <div className="logo-title">Kosher Connect</div>
-          <div className="logo-sub">Business Management System</div>
+          <img src="/logo.png" alt="Kosher Connect" style={{ background: '#fff', padding: 4 }} />
+          <span className="logo-text">
+            <span className="logo-title">Kosher Connect</span>
+            <span className="logo-sub">Business Management</span>
+          </span>
         </div>
 
         {/* #20 grouped sections, with monochrome SVG line icons (no emoji).
             The nav is its own scroll region so the identity/sign-out footer
-            stays reachable on short or zoomed screens instead of clipping. */}
+            stays reachable on short or zoomed screens instead of clipping.
+            Tools are part of this list, not the footer: they are places you go,
+            and parking them below the fold left a hand-sized hole in the middle
+            of the rail on any screen taller than the nav. */}
         <div className="sidebar-nav" role="navigation" aria-label="Main">
           {NAV.map((section, si) => (
             <Fragment key={si}>
@@ -105,21 +136,16 @@ export default function AppShell({ initialTab = 'dashboard' }) {
               ))}
             </Fragment>
           ))}
+          <div className="nav-group-label">Tools</div>
+          {TOOLS.map(([href, label, icon]) => (
+            <a className="nav-link" key={href} href={href}>
+              <span className="nav-icon">{icon}</span> {label}
+            </a>
+          ))}
         </div>
 
+        {/* The footer is now only who you are and how to leave. */}
         <div className="sidebar-bottom">
-          {/* Converter tools live on their own pages (not SPA tabs) — plain
-              links under their own group label so the footer reads like the
-              nav above it, with one consistent row rhythm. */}
-          <div className="sb-label">Tools</div>
-          <a className="sb-row" href="/tools/contacts">
-            <span className="nav-icon"><I><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><polyline points="16 11 18 13 22 9" /></I></span> Contacts converter</a>
-          <a className="sb-row" href="/tools/transfer">
-            <span className="nav-icon"><I><polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" /><polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" /></I></span> Phone transfer</a>
-          <a className="sb-row" href="/tools/ocr">
-            <span className="nav-icon"><I><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><line x1="7" y1="12" x2="17" y2="12" /></I></span> Scan reader (OCR)</a>
-          <a className="sb-row" href="/tools/convert">
-            <span className="nav-icon"><I><polyline points="16 3 21 3 21 8" /><line x1="4" y1="20" x2="21" y2="3" /><polyline points="21 16 21 21 16 21" /><line x1="15" y1="15" x2="21" y2="21" /><line x1="4" y1="4" x2="9" y2="9" /></I></span> File converter</a>
           {/* Who's signed in — filled by main.js once /api/auth/me resolves
               (auth is client-side, so the server can't render it). Hidden until
               then, and stays hidden when auth is disabled. */}

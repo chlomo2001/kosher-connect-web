@@ -66,7 +66,13 @@
   --primary-subdued: #b6d4ea;   /* light blue fill */
   --accent-wash: #eef4fa;       /* faintest blue panel */
   --warning-wash: #fdf6ec;      /* faintest amber panel — advisory notices */
-  --brand-dark: #0a2540;        /* sidebar dark track — navy */
+  /* The sidebar track. Lifted off the ink navy (#0a2540) it used to share with
+     --text: a rail painted in the same colour as the body copy beside it reads
+     as a hole in the page rather than a surface on it. Six points of lightness
+     is enough to separate them and still be unmistakably the logo's navy.
+     White text on it is 11.8:1; the nav's own alphas were re-tuned to match
+     (see .nav-item / .nav-group-label). */
+  --brand-dark: #14395f;        /* sidebar track — navy, one step off the ink */
   --vn: #7c3aed;                /* virtual-number violet */
 
   /* ── Text — navy ink on warm paper ── */
@@ -177,7 +183,7 @@
   --primary-subdued: #143247;
   --accent-wash: #10202e;
   --warning-wash: #2a2113;
-  --brand-dark: #101319;       /* sidebar track */
+  --brand-dark: #1a1f28;       /* sidebar track — lifted off the dark canvas */
   --vn: #a78bfa;
 
   --text: #f2f0ea;
@@ -246,29 +252,11 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
 }
 
 #__next { display: flex; width: 100%; height: 100%; overflow: hidden; }
-.logo {
-  padding: 0 20px 14px; border-bottom: 1px solid rgba(255,255,255,0.12);
-  margin-bottom: 12px; display: flex; flex-direction: column;
-  align-items: center; text-align: center;
-}
-.logo img { width: 44px; height: 44px; border-radius: 50%; margin-bottom: 8px; border: 2px solid rgba(255,255,255,0.25); }
 
-/* Short-screen tiers — the full nav (13 tabs + 5 group labels + footer) must
-   fit at default zoom with NO vertical scrolling. The default sizing above
-   fits ≥920px-tall viewports (a 1080p monitor); these two tiers tighten the
-   same rhythm for 1440×900/1280×800 laptops and then 1366×768. The nav's own
-   scroll region remains as the last-resort fallback (tiny windows, big zoom). */@media (max-height: 920px) {
-  .sidebar { padding: 10px 0; }
-  .logo { padding-bottom: 10px; margin-bottom: 8px; }
-  .logo img { width: 32px; height: 32px; margin-bottom: 5px; }
-  .logo-title { font-size: var(--fs-lead); }
-  .nav-item { padding: 5px 12px; }
-  .nav-group-label { padding: 6px 20px 2px; }
-  .sidebar-bottom { padding: 6px 20px 8px; }
-  .sb-row { height: 26px; }
-  .sidebar-user { padding: 4px 0; margin: 3px 0; }
-  .sb-version { padding-top: 4px; }
-}
+/* The sidebar's own rules — including .logo and the short-screen tiers that
+   tighten it — live in styles/app.css with the rest of the staff chrome. They
+   were left behind here by the split, which is why this file carried a whole
+   media query no public page could ever use. */
 
 /* ─── MAIN ─── */
 .main {

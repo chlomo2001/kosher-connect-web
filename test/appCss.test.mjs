@@ -48,6 +48,30 @@ test('the generated sheet carries the staff chrome, not the public pages', () =>
   }
 })
 
+test('the sidebar is entirely in the staff sheet, not half in globals', () => {
+  // The split left .logo, .logo img and a whole max-height media query behind
+  // in globals.css: rules only components/AppShell.js can ever match, shipped
+  // to every visitor of /welcome. The leak was invisible because both sheets
+  // load together for staff, so nothing looked wrong. Named selectors here
+  // because "does globals mention the sidebar" is exactly the check that would
+  // have caught it.
+  // Two things have to come out before a substring check means anything.
+  // Comments, because globals.css explains in prose where the sidebar rules
+  // went and the note would fail the test that documents it. And the contents
+  // of :where() / :is() / :not(), because naming a class inside one of those
+  // does not style it — globals.css lists .nav-item in a shared :where() focus
+  // rule that costs a public page nothing, and that is not a leak.
+  const globals = readFileSync(path.join(ROOT, 'styles/globals.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/:(?:where|is|not)\([^)]*\)/g, '')
+  const app = readFileSync(OUT, 'utf8')
+
+  for (const sel of ['.logo ', '.logo-title', '.nav-item', '.nav-link', '.nav-group-label', '.sidebar-bottom']) {
+    assert.ok(app.includes(sel), `${sel} belongs in the staff sheet`)
+    assert.ok(!globals.includes(sel), `${sel} is staff-only and must not sit in globals.css`)
+  }
+})
+
 test('the iOS zoom guard survives in both sheets', () => {
   // globals.css declares it for the public pages; the staff sheet has to repeat
   // it, because it loads last and would otherwise beat it with .search-box's
