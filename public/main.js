@@ -1759,7 +1759,7 @@ function renderRentalRows() {
       <td style="font-size:var(--fs-micro);white-space:nowrap;">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}</td>
       <td style="text-align:center;">${r.chargeableDays}d</td>
       <td style="color:var(--success);font-weight:700;">${fmtGbp(r.price)}</td>
-      <td style="font-weight:700;${debtColor}">${totalOwed > 0 ? '£'+totalOwed+' owed' : '✓ Paid'}</td>
+      <td class="kc-money" style="font-weight:700;${debtColor}">${totalOwed > 0 ? '£'+totalOwed+' owed' : '✓ Paid'}</td>
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
@@ -3778,7 +3778,7 @@ function renderTableRows() {
       </td>
       <td class="kc-phone">${c.phone ? escHtml(fmtPhone(c.phone)) : '—'}</td>
       <td>${services || '<span style="color:var(--muted);font-size:var(--fs-small);">None</span>'}</td>
-      <td style="color: ${customerDebt > 0 ? 'var(--danger)' : (customerCredit > 0 ? 'var(--accent)' : 'var(--success)')}; font-weight: 700;">${
+      <td class="kc-money" style="color: ${customerDebt > 0 ? 'var(--danger)' : (customerCredit > 0 ? 'var(--accent)' : 'var(--success)')}; font-weight: 700;">${
         customerDebt > 0 ? `${fmtGbp(customerDebt)} debt`
         : customerCredit > 0 ? `${fmtGbp(customerCredit)} credit`
         : ledgerBal !== null ? 'Settled'

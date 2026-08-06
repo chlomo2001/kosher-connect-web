@@ -1057,6 +1057,12 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 
 .kc-phone { white-space: nowrap; }
 
+/* A balance is one value, and its qualifier is part of it: "£45.00 debt" must
+   never break to "£45.00" over "debt", which is what the Customers and
+   Rentals balance columns did on any narrow-ish column. Same idea as
+   .kc-phone — the cell holds a single unit, so it does not wrap. */
+.kc-money { white-space: nowrap; }
+
 
 .kc-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
