@@ -489,7 +489,7 @@ export default function Welcome() {
           Measured overlapping at every width tested before this line changed. */}
       <ThemeToggle style={{ position: 'fixed', top: 14, [t.dir === 'rtl' ? 'left' : 'right']: 14, zIndex: 60 }} />
 
-      <div className="sk" dir={t.dir} lang={lang === 'en' ? 'en' : lang}>
+      <div className="sk" dir={t.dir} lang={lang === 'en' ? 'en-GB' : lang}>
         <header className="sk-nav-wrap">
           <div className="sk-wrap sk-nav">
             <a className="sk-brand" href="#top">
