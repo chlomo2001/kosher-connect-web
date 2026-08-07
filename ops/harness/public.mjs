@@ -30,7 +30,7 @@ const babel = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/cor
 const presetReact = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/preset-react'))
 const cjs = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/plugin-transform-modules-commonjs'))
 
-export const PAGES = { welcome: 'pages/welcome.js', portal: 'pages/portal.js', 'phone-guide': 'pages/phone-guide.js', repair: 'pages/repair.js' }
+export const PAGES = { welcome: 'pages/welcome.js', portal: 'pages/portal.js', 'phone-guide': 'pages/phone-guide.js', repair: 'pages/repair.js', login: 'pages/login.js' }
 
 // Transpile the page and everything it imports into one browser bundle with a
 // tiny CommonJS shim. next/head and next/script render nothing here; next/link
