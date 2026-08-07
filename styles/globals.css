@@ -1031,7 +1031,14 @@ html { scroll-behavior: smooth; }
 .rp-hours strong { color: var(--text); font-weight: 600; }
 .rp-ok { text-align: center; }
 .rp-ok-ico { display: inline-flex; color: var(--accent); margin-bottom: 6px; }
-.rp-ok h4 { margin: 0 0 8px; font-size: var(--fs-title); }
+/* The confirmation headline is an <h3>; this rule named an <h4>, so it never
+   applied and the line fell through to `.w-section h3` — the small uppercase
+   muted KICKER rule. The one sentence telling a customer their request arrived
+   rendered smaller, greyer and shoutier than the paragraph beneath it. */
+.rp-ok h3 {
+  margin: 0 0 8px; font-size: var(--fs-title); font-weight: 700;
+  text-transform: none; letter-spacing: normal; color: var(--text);
+}
 .rp-ok p { margin: 0 0 8px; font-size: 14.5px; line-height: 1.6; color: var(--ink-secondary); }
 .rp-ok a { color: var(--accent); text-decoration: none; font-weight: 600; }
 /* Centred with the column above it — flush left under a centred form left the
