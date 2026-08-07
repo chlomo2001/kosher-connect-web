@@ -78,8 +78,9 @@ stub strips query strings so `?customerId=` cannot select a different body.
 ## Public pages (`public.mjs`)
 
 ```bash
-node ops/harness/public.mjs                       # welcome/portal/phone-guide × en+he
+node ops/harness/public.mjs                       # welcome/portal/phone-guide/repair × en+he
 node ops/harness/public.mjs --shot welcome --lang he --width 390
+node ops/harness/public.mjs --shot repair --lang en --width 390 --theme dark
 ```
 
 The staff harness renders to static markup, which is fine because main.js paints
@@ -89,6 +90,26 @@ always English and the entire right-to-left half of the product is invisible to
 it. So this one ships React + ReactDOM as UMD from `node_modules`, transpiles
 the page into a browser bundle, sets `kcLang` before mounting, and lets React
 run for real.
+
+Three things it has to get right to be worth trusting, each paid for:
+
+- **It mounts on `#__next`.** globals.css styles that id, and a `width:100%`
+  shell only fills the viewport because of it. On any other id the shell
+  shrink-wraps and every page reads as though its background stops mid-screen —
+  a defect that exists nowhere but here.
+- **Assets are inlined as data URIs.** Every asset these pages name is an
+  absolute path, which on `file://` resolves to the filesystem root and 404s.
+  Uninlined, the brand renders as broken-image alt text and Hebrew falls back
+  out of Heebo — the two things a screenshot is *for*. The `content:` swap that
+  gives dark mode its own wordmark is keyed on `img[src="/logo-full-tight.png"]`,
+  and survives because the selector and the attribute get the same data URI.
+- **`--theme dark` sets `data-theme` on `<html>`, not just the OS preference.**
+  globals.css deliberately carries no `prefers-color-scheme` palette (the
+  reasoning sits beside the `:root[data-theme="dark"]` block), so a browser-level
+  dark scheme changes *nothing* on these pages. Before this, `--theme dark`
+  rendered a light page and the dark half of /repair, /phone-guide and /portal
+  had never once been looked at. Screenshots carry the theme in the filename so
+  a run can no longer overwrite its own light shot.
 
 It fails a page that does not render, throws, or shows no `dir="rtl"` in Hebrew.
 

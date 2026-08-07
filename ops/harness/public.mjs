@@ -1,6 +1,13 @@
 // Render a PUBLIC page (welcome / portal / phone-guide) in the browser,
 // for real, with effects running — which is the only way to see Hebrew.
 //
+// The mount point is `#__next` and must stay that way. globals.css styles that
+// id — `#__next { display:flex; width:100%; height:100% }` — which is what lets
+// a `width:100%` shell fill the viewport inside the flex `body`. Mounted on any
+// other id the shell shrink-wraps its content, and every page reads as if its
+// background stops mid-screen. That cost a round of chasing a defect that only
+// existed here.
+//
 //   node ops/harness/public.mjs --audit
 //   node ops/harness/public.mjs --shot welcome --lang he --width 390
 //
@@ -76,15 +83,37 @@ window.__page = __req('', ${JSON.stringify(entry)}).default;
 `
 }
 
-export function buildPublicHtml(page, lang = 'en', out) {
+// Every asset these pages name is an absolute path (`/logo-full-tight.png`,
+// `/fonts/heebo-var-hebrew.woff2`). On a file:// page that resolves to the
+// filesystem root and 404s, so the harness used to render the brand as broken-
+// image alt text and every Hebrew glyph in a fallback face — i.e. the two things
+// a screenshot is FOR were the two things it could not show. The dark wordmark
+// swap is invisible that way. Inline them instead: small files, exact bytes.
+const MIME = { png: 'image/png', svg: 'image/svg+xml', woff2: 'font/woff2' }
+function inlineAssets(html) {
+  return html.replace(/\/(?:fonts\/)?[a-z0-9-]+\.(?:png|svg|woff2)/g, (ref) => {
+    try {
+      const buf = readFileSync(path.join(ROOT, 'public', ref.slice(1)))
+      return `data:${MIME[ref.split('.').pop()]};base64,${buf.toString('base64')}`
+    } catch { return ref }   // not a real asset — leave the string alone
+  })
+}
+
+export function buildPublicHtml(page, lang = 'en', out, theme = 'light') {
   const entry = PAGES[page]
   if (!entry) throw new Error(`unknown page "${page}" — one of ${Object.keys(PAGES).join(', ')}`)
   const react = readFileSync(path.join(ROOT, 'node_modules/react/umd/react.production.min.js'), 'utf8')
   const reactDom = readFileSync(path.join(ROOT, 'node_modules/react-dom/umd/react-dom.production.min.js'), 'utf8')
   const css = readFileSync(path.join(ROOT, 'styles/globals.css'), 'utf8')
   const file = out || path.join(HERE, `public_${page}_${lang}.html`)
-  writeFileSync(file, `<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
+  // data-theme is how these pages actually go dark — the toggle sets it and the
+  // pre-paint script in _document.js restores it. globals.css deliberately has
+  // NO prefers-color-scheme palette (the reasoning is written out beside the
+  // :root[data-theme="dark"] block), so a browser-level `colorScheme: dark`
+  // changes nothing here and the dark half of /repair, /phone-guide and /portal
+  // went four months without ever being rendered.
+  writeFileSync(file, inlineAssets(`<!doctype html>
+<html lang="en"${theme === 'dark' ? ' data-theme="dark"' : ''}><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>${css}</style>
 <script>
@@ -114,10 +143,10 @@ window.fetch = function (url) {
 };</script>
 <script>${react}</script>
 <script>${reactDom}</script>
-</head><body><div id="root"></div>
+</head><body><div id="__next"></div>
 <script>${bundle(entry)}</script>
-<script>ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(window.__page));</script>
-</body></html>`)
+<script>ReactDOM.createRoot(document.getElementById('__next')).render(React.createElement(window.__page));</script>
+</body></html>`))
   return file
 }
 
@@ -131,18 +160,19 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   let bad = 0
   const contrastAll = []
 
+  const theme = arg('--theme', 'light')
   for (const page of (only ? [only] : Object.keys(PAGES))) {
     for (const lang of langs) {
-      const file = buildPublicHtml(page, lang)
+      const file = buildPublicHtml(page, lang, null, theme)
       for (const w of widths) {
-        const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, colorScheme: arg('--theme', 'light') })
+        const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, colorScheme: theme })
         const p = await ctx.newPage()
         const errs = []
         p.on('pageerror', (e) => errs.push(String(e).split('\n')[0]))
         await p.goto('file://' + file, { waitUntil: 'load' })
         await p.waitForTimeout(700)
         const r = await p.evaluate(() => {
-          const root = document.getElementById('root')
+          const root = document.getElementById('__next')
           const de = document.documentElement
           const rtl = [...root.querySelectorAll('[dir]')].some((el) => el.getAttribute('dir') === 'rtl')
           const stray = []
@@ -170,13 +200,15 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         // rendering, page errors and RTL do. Widths are printed to be looked at
         // with that in mind, not treated as defects.
         if (process.argv.includes('--contrast')) {
-          const found = (await measure(p, '#root')).map((f) => ({ ...f, where: `${page}/${lang}/${w}` }))
+          const found = (await measure(p, '#__next')).map((f) => ({ ...f, where: `${page}/${lang}/${w}` }))
           contrastAll.push(...found)
         }
         const ok = r.painted && !errs.length && (lang === 'en' || r.rtl)
         if (!ok) bad++
         if (only) {
-          await p.screenshot({ path: path.join(HERE, `shot_${page}_${lang}_${w}.png`), fullPage: true })
+          // Theme is in the filename: without it a dark run silently overwrote
+          // the light shot and the pair could never be compared side by side.
+          await p.screenshot({ path: path.join(HERE, `shot_${page}_${lang}_${w}_${theme}.png`), fullPage: true })
         }
         const why = [
           r.painted ? '' : 'DID NOT RENDER',
