@@ -461,6 +461,11 @@ input[type="checkbox"], input[type="radio"] {
   /* Inline clickable spans (task cards' 👤 customer link rides an 11px meta
      line) — grow the line box to a hittable height on touch only. */
   span.dash-link { display: inline-flex; align-items: center; min-height: 24px; }
+  /* Same rule, public side: the phone-guide's per-handset "Call us about the
+     Nokia 105" is a standalone call to action on a 19px line box, tapped by a
+     customer on a phone. 2.5.8 exempts a link sitting inside a sentence — the
+     phone and email links in body copy — so those are deliberately left alone. */
+  .pg-call { display: inline-flex; align-items: center; min-height: 24px; }
 }
 
 /* ─── TOAST ─── */

@@ -1132,6 +1132,22 @@ const SKY_CSS = `
     .sk-reveal,.js-on .sk-reveal:not(.in){opacity:1;transform:none;transition:none}
   }
 
+  /* WCAG 2.5.8 — 24×24. The footer's link columns are seven stacked standalone
+     links (Mobile & SIM, Questions, Privacy…) at a 22px line box with a 9px
+     gap: a list of thumb targets on the page most visitors meet on a phone.
+     The exception 2.5.8 grants to a link inside a sentence does not cover a
+     nav list. Scoped to a coarse pointer, matching the staff-side rule — the
+     case that matters is a touch device, not a narrow window. min-height only,
+     so the type and spacing are unchanged; each link grows by 2px. */
+  @media (pointer:coarse){
+    .sk-foot-col a{display:flex;align-items:center;min-height:24px}
+    .sk-brand{min-height:24px}
+    /* The two standalone links under the services grid ("Choosing a handset?
+       See the phone guide", "Something broken? Book a repair") are their own
+       centred rows, not links inside a paragraph, so the exception does not
+       reach them either. */
+    .sk-guide a{display:inline-flex;align-items:center;min-height:24px}
+  }
   @media (max-width:960px){ .sk-foot-grid{grid-template-columns:1fr 1fr} }
   /* One column on phones. Two 130px-ish tracks made "International numbers"
      wrap onto three lines and left the columns reading as a puzzle; a footer
