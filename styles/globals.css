@@ -995,7 +995,12 @@ html { scroll-behavior: smooth; }
 }
 
 /* ─── /repair — public repair booking (shares the w- chrome) ─── */
-.rp-form-wrap { max-width: 560px; }
+/* This page is one 560px form and nothing else. Pinned to the left of a 1320px
+   shell it read as a layout missing its right-hand column — 660px of empty
+   canvas beside a lone card. Centred, it reads as what it is. The head block
+   travels with it so the heading stays flush with the card's left edge.
+   /phone-guide needs none of this: its cards fill the shell. */
+.rp-head, .rp-form-wrap { max-width: 560px; margin-inline: auto; }
 .rp-card { padding: 24px 26px; }
 .rp-form { display: flex; flex-direction: column; gap: 14px; }
 .rp-form label { display: flex; flex-direction: column; gap: 6px; }
@@ -1029,7 +1034,9 @@ html { scroll-behavior: smooth; }
 .rp-ok h4 { margin: 0 0 8px; font-size: var(--fs-title); }
 .rp-ok p { margin: 0 0 8px; font-size: 14.5px; line-height: 1.6; color: var(--ink-secondary); }
 .rp-ok a { color: var(--accent); text-decoration: none; font-weight: 600; }
-.rp-foot { margin-top: 40px; font-size: 12.5px; color: var(--muted); }
+/* Centred with the column above it — flush left under a centred form left the
+   page looking as though the footer belonged to something else. */
+.rp-foot { margin-top: 40px; font-size: 12.5px; color: var(--muted); text-align: center; }
 
 /* The Hebrew welcome AND the Hebrew portal speak Heebo — the modern sans
    that matches the app's sans look — instead of the David Libre serif.
