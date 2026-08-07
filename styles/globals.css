@@ -1022,7 +1022,12 @@ html { scroll-behavior: smooth; }
 }
 .rp-btn:hover { background: var(--primary-deep); }
 .rp-btn:disabled { opacity: 0.6; cursor: default; }
-.rp-err { margin: 0; font-size: var(--fs-ui); font-weight: 600; color: var(--danger-ink, #b3261e); }
+/* Scoped to the card on purpose. `.w-card p` sets muted grey at 13.5px and
+   outranks a bare `.rp-err` (0,1,1 against 0,1,0), so the line telling a
+   customer their repair request did NOT send — the line carrying the phone
+   number to call instead — rendered in the same quiet grey as helper text and
+   never once showed the danger colour this rule has always named. */
+.rp-card .rp-err { margin: 0; font-size: var(--fs-ui); font-weight: 600; color: var(--danger-ink, #b3261e); }
 .rp-err a, .rp-urgent a { color: var(--accent); text-decoration: none; font-weight: 600; }
 .rp-urgent { margin: 4px 0 0; font-size: var(--fs-body); color: var(--muted); }
 /* Live opening hours on the repair success card — the shop opens afternoons
