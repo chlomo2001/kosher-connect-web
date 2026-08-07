@@ -139,11 +139,13 @@ export default function RepairBooking() {
         <div className="w-wrap" dir={t.dir} lang={lang}>
           <div className="w-topbar">
             <a className="w-brand w-brand-link" href="/welcome" aria-label={t.homeAria}>
+              {/* The artwork IS the wordmark — it reads "KOSHER CONNECT". A text
+                  copy beside it printed the name twice and cost 162px, which on
+                  a phone is what pushed this bar onto a second row. Only the
+                  section tag stays. The alt text and the link's aria-label keep
+                  the brand for anyone who can't see the mark. */}
               <img src="/logo-full-tight.png" alt="Kosher Connect" />
-              <div>
-                <h1>Kosher Connect</h1>
-                <p>{t.tag}</p>
-              </div>
+              <p className="w-brand-tag">{t.tag}</p>
             </a>
             <nav className="w-pills" aria-label="Site">
               <div className="w-lang" role="group" aria-label="Language">
@@ -160,7 +162,7 @@ export default function RepairBooking() {
 
           <section className="w-section rp-head" id="top">
             <div className="w-strap">{t.strap}</div>
-            <h2 className="w-show">{t.h3}</h2>
+            <h1 className="w-page-title w-show">{t.h3}</h1>
             <p className="w-lead">{t.lead}</p>
           </section>
 

@@ -114,11 +114,11 @@ export default function PhoneGuide() {
         <div className="w-wrap" dir={t.dir} lang={lang}>
           <div className="w-topbar">
             <a className="w-brand w-brand-link" href="/welcome" aria-label={t.homeAria}>
+              {/* Wordmark artwork + the section tag only — see the note on
+                  /repair: a text "Kosher Connect" beside a mark that already
+                  says it is a repeat, and it cost this bar a second row. */}
               <img src="/logo-full-tight.png" alt="Kosher Connect" />
-              <div>
-                <h1>Kosher Connect</h1>
-                <p>{t.tag}</p>
-              </div>
+              <p className="w-brand-tag">{t.tag}</p>
             </a>
             <nav className="w-pills" aria-label="Site">
               <div className="w-lang" role="group" aria-label="Language">
@@ -135,7 +135,7 @@ export default function PhoneGuide() {
 
           <section className="w-section pg-head" id="top">
             <div className="w-strap">{t.strap}</div>
-            <h2 className="w-show">{t.h3}</h2>
+            <h1 className="w-page-title w-show">{t.h3}</h1>
             {hasModels && (
               <p className="w-lead">
                 {t.lead1}{hasVerdicts && t.leadVerdicts}{t.lead2}

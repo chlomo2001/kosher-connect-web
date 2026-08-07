@@ -680,19 +680,40 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   background: var(--sk-paper);
 }
 
+/* The theme toggle is position:fixed 16px from the viewport's inline edge and
+   38px wide, so it lands ON this bar wherever the wrap's own padding is under
+   ~54px — i.e. every width below about 1200px. Measured: it sat on top of "My
+   account", the page's primary call to action, at 390, 640 and 768 in both
+   languages. Reserve the difference at the bar's inline END, which is the
+   physical side the toggle takes in each direction (right in English, left in
+   Hebrew, where the page mirrors and the toggle mirrors with it). /welcome
+   settles the same collision the same way, by keeping its nav clear. */
+.welcome-shell { --w-toggle-clear: max(18px, calc(62px - clamp(20px, 4.5vw, 64px))); }
 .w-topbar {
   display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
   border: 1px solid var(--border); border-radius: var(--radius-2xl); padding: 12px 18px; margin-bottom: 22px;
+  padding-inline-end: var(--w-toggle-clear);
   box-shadow: 0 12px 32px -18px rgba(10,37,64,.25);
   /* Stays put while the page scrolls — jumping to Services/Contact must not
      take the language switcher away (it lives in this bar). The glass blur
      recipe above keeps content readable underneath. */
   position: sticky; top: 12px; z-index: 20;
 }
-.w-brand { display: flex; align-items: center; gap: 14px; min-width: 240px; }
-.w-brand img { height: 32px; width: auto; display: block; }
-.w-brand h1 { font-size: var(--fs-title); margin: 0; line-height: 1.1; color: var(--text); letter-spacing: 0.2px; }
-.w-brand p { margin: 3px 0 0; font-size: 12.5px; color: var(--muted); }
+/* The brand block is the wordmark artwork plus the section tag ("Repairs",
+   "Phone guide") — nothing else. It used to carry a text "Kosher Connect"
+   heading too, beside a mark that already spells it: the name twice over, 162px
+   of a 350px bar, and the reason the bar needed two rows on a phone. min-width
+   goes with it — 240px was reserving room for text that is no longer there. */
+.w-brand { display: flex; align-items: baseline; gap: 12px; }
+.w-brand img { height: 32px; width: auto; display: block; align-self: center; }
+.w-brand-tag { margin: 0; font-size: 12.5px; color: var(--muted); }
+
+/* The page's own subject, and now its <h1> — until this it was an <h2> under a
+   brand-name <h1>, so the outline of a page built to be found in search led
+   with the shop's name rather than "Book a repair". Size is pinned to the ramp
+   (--fs-h1, 22px) because a bare h2→h1 swap would otherwise inherit the UA's
+   2em and jump a third larger. */
+.w-page-title { margin: 0; font-size: var(--fs-h1); font-weight: 700; line-height: 1.45; color: var(--text); }
 .w-pills { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
 .w-pills a {
   border: 1px solid var(--border);
@@ -912,7 +933,6 @@ html { scroll-behavior: smooth; }
 .w-guide-link { margin: 22px 0 0; text-align: center; }
 .w-guide-link a { font-size: var(--fs-ui); font-weight: 600; color: var(--accent); text-decoration: none; }
 .w-guide-link a:hover { color: var(--gold); }
-.pg-head h3 { margin-bottom: 10px; }
 .pg-note { color: var(--muted); font-size: var(--fs-ui); }
 .pg-note a { color: var(--accent); text-decoration: none; font-weight: 600; }
 .pg-list { display: grid; gap: 14px; }
@@ -950,8 +970,12 @@ html { scroll-behavior: smooth; }
 .pg-call:hover { text-decoration: underline; }
 /* The logo is the way home on both sub-pages — at <=640px the anchor pill that
    used to be the only exit is hidden. */
-.w-brand-link { text-decoration: none; color: inherit; }
-.w-brand-link:hover h1 { color: var(--accent); }
+.w-brand-link { text-decoration: none; color: inherit; transition: opacity .15s var(--ease-out); }
+/* The affordance used to live on the h1 beside the mark. With that gone the
+   only way home would have had no hover state at all, so it moves onto the
+   mark itself and the tag follows in accent. */
+.w-brand-link:hover { opacity: 0.82; }
+.w-brand-link:hover .w-brand-tag { color: var(--accent); }
 .pg-spec dt { font-size: var(--fs-micro); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .pg-spec dd { margin: 0; font-size: 12.5px; font-weight: 600; color: var(--ink-secondary); }
 .pg-verdict { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 22px; margin-top: 14px; }
@@ -971,7 +995,6 @@ html { scroll-behavior: smooth; }
 }
 
 /* ─── /repair — public repair booking (shares the w- chrome) ─── */
-.rp-head h3 { margin-bottom: 10px; }
 .rp-form-wrap { max-width: 560px; }
 .rp-card { padding: 24px 26px; }
 .rp-form { display: flex; flex-direction: column; gap: 14px; }
@@ -1051,10 +1074,10 @@ html { scroll-behavior: smooth; }
    screen. Drop the tag line and the in-page anchor pills (the content they
    jump to is one thumb-flick away) — brand, language, account, sign-in stay. */
 @media (max-width: 640px) {
-  .w-topbar { padding: 10px 14px; gap: 10px; }
-  .w-brand { min-width: 0; gap: 10px; }
+  .w-topbar { padding: 10px 14px; gap: 10px; padding-inline-end: var(--w-toggle-clear); }
+  .w-brand { gap: 10px; }
   .w-brand img { height: 26px; }
-  .w-brand p { display: none; }
+  .w-brand-tag { display: none; }
   .w-pills a.w-anchor { display: none; }
   .w-pills { gap: 6px; }
   .w-pills a { padding: 8px 12px; font-size: 12.5px; }
