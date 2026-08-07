@@ -32,6 +32,11 @@ const cjs = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/plugi
 
 export const PAGES = { welcome: 'pages/welcome.js', portal: 'pages/portal.js', 'phone-guide': 'pages/phone-guide.js', repair: 'pages/repair.js', login: 'pages/login.js' }
 
+// The RTL assertion only means something on a page that offers Hebrew. /login
+// is the staff door — no language switcher, English by design — so requiring
+// dir=rtl there would fail it for doing the right thing.
+const BILINGUAL = new Set(['welcome', 'portal', 'phone-guide', 'repair'])
+
 // Transpile the page and everything it imports into one browser bundle with a
 // tiny CommonJS shim. next/head and next/script render nothing here; next/link
 // and next/router are stubbed to the minimum these pages touch.
@@ -121,6 +126,10 @@ export function buildPublicHtml(page, lang = 'en', out, theme = 'light') {
 // replaces those at build time and we are not Next, so give them a home.
 window.process = { env: {} };
 try { localStorage.setItem('kcLang', ${JSON.stringify(lang)}) } catch (e) {}
+// The portal reads its access token from sessionStorage before it will ask
+// /api/portal/me for anything. Without one it renders the sign-in card and
+// stops, which is why the customer dashboard was never in a screenshot.
+try { sessionStorage.setItem('kc_portal_token', 'harness') } catch (e) {}
 // These pages fetch their own bits (opening hours, portal session). Answer
 // everything with an empty success so a missing stub degrades, never throws.
 window.fetch = function (url) {
@@ -138,6 +147,27 @@ window.fetch = function (url) {
     ] };
   }
   if (u.indexOf('/api/public/info') !== -1) body = { openingHours: 'Sun-Thu 2:00pm-6:30pm · Fri closed' };
+  // Signed-in portal. Without a session the only thing this harness could ever
+  // render was the sign-in card — the dashboard a customer actually lives in
+  // (balance, rentals, SIM renewals, statement) had never been screenshotted.
+  // Shape copied field for field from pages/api/portal/me.js; an unfaithful
+  // seed invents defects, and this one carries money rows.
+  if (u.indexOf('/api/portal/me') !== -1) {
+    body = { success: true, customer: { firstName: 'Yoel', lastName: 'Klein' },
+      balance: -45, payRef: 'KC-1042', cardOnFile: false,
+      rentals: [{ phoneNumber: '+1 518 555 0102', country: 'USA', fromDate: '2026-08-02',
+                  toDate: '2026-08-16', status: 'out' }],
+      bookings: [{ route: 'MAN → TLV', airline: 'Wizz Air', bookingReference: 'BNKYRW',
+                   travelDate: '2026-08-18', status: 'Confirmed' }],
+      sims: [{ provider: 'Lebara', tier: 'Unlimited calls + data', status: 'active',
+               renewalDate: '2026-08-12' }],
+      statement: [
+        { at: '2026-08-02T10:00:00Z', description: 'Nokia 105 rental — 2 weeks', amount: -120, type: 'rental', balanceAfter: -45 },
+        { at: '2026-07-24T15:30:00Z', description: 'Part payment at the counter', amount: 45, type: 'payment', balanceAfter: 75 },
+        { at: '2026-07-20T09:15:00Z', description: 'Charger + SIM tray tool', amount: -12, type: 'sale', balanceAfter: 30 },
+      ] };
+  }
+  if (u.indexOf('/api/portal/documents') !== -1) body = { success: true, documents: [] };
   return Promise.resolve({ ok: true, status: 200, json: function(){ return Promise.resolve(body) },
     text: function(){ return Promise.resolve('{}') } });
 };</script>
@@ -203,7 +233,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
           const found = (await measure(p, '#__next')).map((f) => ({ ...f, where: `${page}/${lang}/${w}` }))
           contrastAll.push(...found)
         }
-        const ok = r.painted && !errs.length && (lang === 'en' || r.rtl)
+        const wantsRtl = lang === 'he' && BILINGUAL.has(page)
+        const ok = r.painted && !errs.length && (!wantsRtl || r.rtl)
         if (!ok) bad++
         if (only) {
           // Theme is in the filename: without it a dark run silently overwrote
@@ -213,7 +244,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         const why = [
           r.painted ? '' : 'DID NOT RENDER',
           r.overflow ? `content ${r.overflow}px wider than the viewport — see the font caveat` : '',
-          lang === 'he' && !r.rtl ? 'NO dir=rtl anywhere' : '',
+          wantsRtl && !r.rtl ? 'NO dir=rtl anywhere' : '',
           r.stray.length ? `outside viewport: ${r.stray.join(' ')}` : '',
           errs.length ? `err: ${errs[0].slice(0, 70)}` : '',
         ].filter(Boolean).join('  ')
