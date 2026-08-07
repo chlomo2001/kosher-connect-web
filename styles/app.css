@@ -381,10 +381,25 @@
    opened record reads as part of the system rather than a plain white box.
    Its inner sub-cards sit on their own surface, so the dots show in the gaps. */
 
+/* The card is the most-opened dialog in the app and one of the tallest, so it
+   needs the scroll cue below as much as any modal — but it has its own dotted
+   surface and wins on specificity, which would have left it the one dialog
+   with no signal. Both, then: the dots stay the top layer and their gaps let
+   the shadow through, and the surface-coloured masks sit under them so a
+   reached edge still cancels its shadow. Dots keep `scroll` so they stay put
+   while the content moves, exactly as before. */
 #customerCard .modal {
   background-color: var(--surface);
-  background-image: radial-gradient(var(--dot) 1.3px, transparent 1.6px);
-  background-size: 15px 15px; background-position: -1px -1px;
+  background-image:
+    radial-gradient(var(--dot) 1.3px, transparent 1.6px),
+    linear-gradient(to bottom, var(--surface) 30%, rgba(0, 0, 0, 0)),
+    linear-gradient(to top,    var(--surface) 30%, rgba(0, 0, 0, 0)),
+    linear-gradient(to bottom, var(--scroll-shadow), rgba(0, 0, 0, 0)),
+    linear-gradient(to top,    var(--scroll-shadow), rgba(0, 0, 0, 0));
+  background-size: 15px 15px, 100% 34px, 100% 34px, 100% 15px, 100% 15px;
+  background-position: -1px -1px, center top, center bottom, center top, center bottom;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  background-attachment: scroll, local, local, scroll, scroll;
 }
 
 
