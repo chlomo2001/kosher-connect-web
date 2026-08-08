@@ -2180,6 +2180,17 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .stat-card.dash-link { transition: border-color 0.12s, background 0.12s; }
 
 .stat-card.dash-link:hover { border-color: var(--accent); background: var(--accent-wash); }
+/* The global keyboard ring in globals.css is written as
+   `:where(…, [tabindex]):focus-visible { box-shadow: var(--ring) }` — :where()
+   holds it at zero specificity ON PURPOSE, so component rules win. But
+   `.stat-card` sets its own box-shadow, that is also 0,1,0, and app.css is
+   loaded after globals.css (see components/AppStyles.js), so the tie went to
+   the card's resting shadow and these drill-downs were the one keyboard target
+   in the app with no visible focus at all. Verified by tabbing to it: it
+   matches :focus-visible and paints --shadow-1.
+   Any future component that sets box-shadow AND is focusable needs this line
+   too — the zero-specificity ring cannot beat it. */
+.stat-card.dash-link:focus-visible { box-shadow: var(--ring); border-color: var(--accent); }
 
 .dash-hero-row.dash-link { border-radius: 6px; margin: 0 -6px; padding-left: 6px; padding-right: 6px; transition: background 0.12s; }
 
