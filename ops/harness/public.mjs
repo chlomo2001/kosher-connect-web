@@ -30,7 +30,13 @@ const babel = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/cor
 const presetReact = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/preset-react'))
 const cjs = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/plugin-transform-modules-commonjs'))
 
-export const PAGES = { welcome: 'pages/welcome.js', portal: 'pages/portal.js', 'phone-guide': 'pages/phone-guide.js', repair: 'pages/repair.js', login: 'pages/login.js' }
+export const PAGES = { welcome: 'pages/welcome.js', portal: 'pages/portal.js', 'phone-guide': 'pages/phone-guide.js', repair: 'pages/repair.js', login: 'pages/login.js',
+  // The four staff TOOLS pages. They are ordinary Next pages behind a
+  // server-side cookie gate, so they render here fine — and until now neither
+  // harness knew about them, which meant four screens in the sidebar had never
+  // been looked at once.
+  'tool-contacts': 'pages/tools/contacts.js', 'tool-convert': 'pages/tools/convert.js',
+  'tool-ocr': 'pages/tools/ocr.js', 'tool-transfer': 'pages/tools/transfer.js' }
 
 // The RTL assertion only means something on a page that offers Hebrew. /login
 // is the staff door — no language switcher, English by design — so requiring
@@ -110,6 +116,17 @@ export function buildPublicHtml(page, lang = 'en', out, theme = 'light') {
   const react = readFileSync(path.join(ROOT, 'node_modules/react/umd/react.production.min.js'), 'utf8')
   const reactDom = readFileSync(path.join(ROOT, 'node_modules/react-dom/umd/react-dom.production.min.js'), 'utf8')
   const css = readFileSync(path.join(ROOT, 'styles/globals.css'), 'utf8')
+  // Pages that render staff chrome pull in <AppStyles/>, which is a bare
+  // <link href="/app.css"> — generated from styles/app.css at build time and,
+  // on a file:// page, a 404. Without it the four /tools/* screens paint with
+  // tokens but no layout: no card, no padding, text flush to x=0. That is not
+  // what production looks like, and it is why they had never been reviewed.
+  // Inlined AFTER globals.css because that is the production cascade order —
+  // app.css is deliberately loaded from <body> so it wins ties (see the note
+  // in components/AppStyles.js).
+  const script = bundle(entry)
+  const appCss = script.includes('components/AppStyles.js')
+    ? readFileSync(path.join(ROOT, 'styles/app.css'), 'utf8') : ''
   const file = out || path.join(HERE, `public_${page}_${lang}.html`)
   // data-theme is how these pages actually go dark — the toggle sets it and the
   // pre-paint script in _document.js restores it. globals.css deliberately has
@@ -121,6 +138,7 @@ export function buildPublicHtml(page, lang = 'en', out, theme = 'light') {
 <html lang="en"${theme === 'dark' ? ' data-theme="dark"' : ''}><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>${css}</style>
+<style>${appCss}</style>
 <script>
 // pages/welcome.js and AppShell inline process.env.NEXT_PUBLIC_* values; Next
 // replaces those at build time and we are not Next, so give them a home.
@@ -174,7 +192,7 @@ window.fetch = function (url) {
 <script>${react}</script>
 <script>${reactDom}</script>
 </head><body><div id="__next"></div>
-<script>${bundle(entry)}</script>
+<script>${script}</script>
 <script>ReactDOM.createRoot(document.getElementById('__next')).render(React.createElement(window.__page));</script>
 </body></html>`))
   return file
