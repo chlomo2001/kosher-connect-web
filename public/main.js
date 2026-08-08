@@ -7373,7 +7373,8 @@ function renderBookingsTab() {
         <td>${fmtGbp((b.bookingFee || 0))}</td>
         <td>${bookingStatusBadge(b.status)}</td>
         <td style="cursor:pointer;" onclick="openCheckinModal('${escHtml(b.id)}')" title="Set check-in">${checkinChip(b)}</td>
-        <td style="white-space:nowrap;">
+        <td>
+          <div class="row-actions">
           <button class="action-btn" onclick="openCheckinModal('${escHtml(b.id)}')" title="Online check-in">🛫</button>
           <button class="action-btn" onclick="openPassengersModal('${escHtml(b.id)}')" title="Passengers (DOB, passport)">👥</button>
           <button class="action-btn" onclick="openRemindModal('booking','${escHtml(b.id)}')" title="Remind me">⏰</button>
@@ -7382,6 +7383,7 @@ function renderBookingsTab() {
             onchange="changeBookingStatus('${escHtml(b.id)}', this.value)">
             ${BOOKING_STATUSES.map(s => `<option value="${s}" ${b.status === s ? 'selected' : ''}>${s}</option>`).join('')}
           </select>
+          </div>
         </td>
       </tr>`).join('');
 
