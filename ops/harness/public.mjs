@@ -207,13 +207,19 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const only = arg('--shot', null)
   let bad = 0
   const contrastAll = []
+  const targetsBad = []
+  const wantTargets = process.argv.includes('--targets')
 
   const theme = arg('--theme', 'light')
   for (const page of (only ? [only] : Object.keys(PAGES))) {
     for (const lang of langs) {
       const file = buildPublicHtml(page, lang, null, theme)
       for (const w of widths) {
-        const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, colorScheme: theme })
+        const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, colorScheme: theme,
+          // --targets needs a touch device: the 24px rules are scoped to
+          // `pointer: coarse`, because the case that matters is a customer's
+          // phone, not a narrow desktop window.
+          ...(wantTargets ? { hasTouch: true, isMobile: true } : {}) })
         const p = await ctx.newPage()
         const errs = []
         p.on('pageerror', (e) => errs.push(String(e).split('\n')[0]))
@@ -247,6 +253,40 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         // 65px on the welcome nav alone. So a width does not fail a page here;
         // rendering, page errors and RTL do. Widths are printed to be looked at
         // with that in mind, not treated as defects.
+        if (wantTargets) {
+          const small = await p.evaluate(() => {
+            const out = []
+            document.querySelectorAll('a,button,input,select,textarea,[role="button"]').forEach((el) => {
+              if (el.closest('[aria-hidden="true"]') || el.tabIndex < 0) return
+              const r = el.getBoundingClientRect()
+              if (!r.width || !r.height || r.width >= 24 && r.height >= 24) return
+              // WCAG 2.5.8 exempts a target that sits inline in a sentence.
+              // Test that by looking at the ADJACENT TEXT NODES, not the whole
+              // parent: a block parent almost always holds more text, which
+              // silently exempted everything — including a standalone "Back to
+              // the app" that this check exists to catch.
+              // ...stepping over whitespace-only nodes, which JSX leaves
+              // between prose and a link ("Urgent? Call <a>0161…</a>").
+              const proseSide = (n, dir) => {
+                while (n && n.nodeType === 3 && !n.textContent.trim()) n = n[dir]
+                return n && n.nodeType === 3 && n.textContent.trim().length > 1
+              }
+              if (proseSide(el.previousSibling, 'previousSibling')
+               || proseSide(el.nextSibling, 'nextSibling')) return
+              // A control wrapped in a <label> is hit by pressing the label —
+              // the visually-hidden file input inside .tool-drop is 1x1 on
+              // purpose and its drop zone is the target.
+              const lab = el.closest('label')
+              if (lab && lab !== el) {
+                const lr = lab.getBoundingClientRect()
+                if (lr.width >= 24 && lr.height >= 24) return
+              }
+              out.push(`${Math.round(r.width)}x${Math.round(r.height)} ${el.textContent.trim().slice(0, 24) || el.className}`)
+            })
+            return [...new Set(out)]
+          })
+          if (small.length) { targetsBad.push(`${page}/${lang}/${w}: ${small.join(' · ')}`) }
+        }
         if (process.argv.includes('--contrast')) {
           const found = (await measure(p, '#__next')).map((f) => ({ ...f, where: `${page}/${lang}/${w}` }))
           contrastAll.push(...found)
@@ -272,6 +312,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     }
   }
   if (process.argv.includes('--contrast')) report(contrastAll, `the public pages (${arg('--theme', 'light')})`)
+  if (wantTargets) {
+    if (targetsBad.length) { bad += targetsBad.length; targetsBad.forEach((t) => console.log('✗ ' + t)) }
+    else console.log('no public target under 24x24 on a coarse pointer')
+  }
   console.log(bad ? `\n${bad} public-page check(s) failed` : '\nevery public page renders clean in both languages')
   await browser.close()
 }

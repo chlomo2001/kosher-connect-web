@@ -470,6 +470,13 @@ input[type="checkbox"], input[type="radio"] {
      sidebar there — and it rides a 14px line box. Nothing on those four pages
      matters more to hit. */
   .tool-back { display: inline-flex; align-items: center; min-height: 24px; }
+  /* The portal footer's support address stands on its own line — the thing a
+     customer taps when something has gone wrong — and is not inside a
+     sentence, so 2.5.8's inline exemption does not reach it. Found by
+     `node ops/harness/public.mjs --targets`; four more of this shape are
+     still open on /welcome and /phone-guide (logged in BACKLOG.md, their
+     containers need locating first — a guessed selector fixes nothing). */
+  .pd-foot a { display: inline-flex; align-items: center; min-height: 24px; }
 }
 
 /* ─── TOAST ─── */
