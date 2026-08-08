@@ -466,6 +466,10 @@ input[type="checkbox"], input[type="radio"] {
      customer on a phone. 2.5.8 exempts a link sitting inside a sentence — the
      phone and email links in body copy — so those are deliberately left alone. */
   .pg-call { display: inline-flex; align-items: center; min-height: 24px; }
+  /* "← Back to the app" is the ONLY way out of a /tools/* page — there is no
+     sidebar there — and it rides a 14px line box. Nothing on those four pages
+     matters more to hit. */
+  .tool-back { display: inline-flex; align-items: center; min-height: 24px; }
 }
 
 /* ─── TOAST ─── */
