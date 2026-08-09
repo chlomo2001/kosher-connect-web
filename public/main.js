@@ -1095,12 +1095,6 @@ function filterCustomerDropdown() {
 // Enter commits the one visible match — the same bargain posScanEnter already
 // makes at the till. With several matches it does nothing rather than guess,
 // because guessing here attaches a rental to the wrong person.
-// The till's most-repeated action had no keyboard path — every POS handler
-// refocuses the scan field, and Enter there is a no-op. Ctrl/Cmd+Enter charges.
-function posScanCharge(e) {
-  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveSale(); }
-}
-
 function rentalPickerKey(e) {
   if (e.key !== 'Enter') return;
   e.preventDefault();
