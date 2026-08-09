@@ -1,3 +1,5 @@
+import ThemeToggle from './ThemeToggle'
+
 // Shared chrome for the public legal pages (privacy, terms). Brand-styled,
 // theme-aware, self-contained — no auth, so Google's review and customers can
 // reach them.
@@ -6,6 +8,12 @@ export function LegalShell({ title, updated, children }) {
     <div className="legal-wrap">
       <header className="legal-top">
         <a className="legal-home" href="/welcome">← Kosher Connect</a>
+        {/* Every other public page offers the theme toggle; these three did
+            not, and they are the pages a search result drops someone straight
+            into. In the header row rather than position:fixed, which is how
+            the other public pages carry it and how it ended up sitting on top
+            of /repair's "My account" button. */}
+        <ThemeToggle />
       </header>
       <main className="legal-main">
         <h1>{title}</h1>
@@ -45,7 +53,12 @@ export const LEGAL_CSS = `
   body{margin:0;background:var(--canvas);color:var(--text);
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.7;font-size:16px}
   .legal-wrap{max-width:760px;margin:0 auto;padding:0 22px}
-  .legal-top{padding:20px 0}
+  .legal-top{padding:20px 0;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  /* The toggle's own rules come from globals.css, whose tokens only go dark
+     under [data-theme="dark"] — on a dark OS with no choice stored this page
+     is dark and those are not. Point it at this sheet's palette instead, so
+     it matches in all four theme states. */
+  .theme-toggle{background:var(--paper);border-color:var(--line);color:var(--text)}
   .legal-home{color:var(--link);font-weight:700;text-decoration:none;font-size:15px}
   .legal-home:hover{text-decoration:underline}
   .legal-main{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:34px 30px;margin-bottom:24px}

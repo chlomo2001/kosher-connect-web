@@ -7,21 +7,26 @@ import { useEffect, useState } from 'react'
 export default function ThemeToggle({ style }) {
   const [dark, setDark] = useState(false)
   useEffect(() => {
-    setDark(document.documentElement.getAttribute('data-theme') === 'dark')
+    const stored = document.documentElement.getAttribute('data-theme')
+    if (stored) { setDark(stored === 'dark'); return }
+    // No choice stored yet, and whether the page is dark RIGHT NOW depends on
+    // whether this particular page carries an OS-dark palette — /welcome and
+    // the legal pages do, the app deliberately does not. So read what the
+    // customer is actually looking at instead of guessing per page; otherwise
+    // the button offers "go dark" on an already-dark page and the first press
+    // does nothing visible.
+    const rgb = (getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g) || []).map(Number)
+    const opaque = rgb.length >= 3 && (rgb[3] === undefined || rgb[3] > 0)
+    setDark(opaque && 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2] < 128)
   }, [])
   function flip() {
-    const el = document.documentElement
-    const nowDark = el.getAttribute('data-theme') === 'dark'
-    if (nowDark) {
-      // Written, not removed — an absent attribute means "no choice yet", and
-      // the OS-dark palettes key on :root:not([data-theme]). See _document.js.
-      el.setAttribute('data-theme', 'light')
-      try { localStorage.setItem('kcTheme', 'light') } catch {}
-    } else {
-      el.setAttribute('data-theme', 'dark')
-      try { localStorage.setItem('kcTheme', 'dark') } catch {}
-    }
-    setDark(!nowDark)
+    // Both states are written out, never removed: an absent attribute means
+    // "no choice yet", which is what the OS-dark palettes key on. See the note
+    // in _document.js.
+    const next = dark ? 'light' : 'dark'
+    document.documentElement.setAttribute('data-theme', next)
+    try { localStorage.setItem('kcTheme', next) } catch {}
+    setDark(!dark)
   }
   return (
     <button
