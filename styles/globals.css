@@ -460,25 +460,6 @@ tbody tr:hover td { background: var(--bg); }
 .btn-vn { background: rgba(124,58,237,0.09); color: var(--vn); border: 1px solid rgba(124,58,237,0.28); }
 .btn-vn:hover { background: rgba(124,58,237,0.16); border-color: var(--vn); }
 
-.add-payment-row {
-  display: flex; gap: 8px; align-items: center;
-  margin-top: 10px; padding: 12px 14px;
-  background: var(--bg);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-}
-.add-payment-row input, .add-payment-row select {
-  background: var(--surface);
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  padding: 7px 10px;
-  font-family: inherit; font-size: var(--fs-body); font-weight: 400;
-  color: var(--text); outline: none;
-}
-.add-payment-row input:focus, .add-payment-row select:focus { border-color: var(--accent); }
-.add-payment-row input[type=number] { width: 90px; font-feature-settings: "tnum"; }
-.add-payment-row input[type=text] { flex: 1; }
-
 /* Checkboxes and radios are sized here, not inline at each of seven call
    sites — inline wins over any stylesheet rule, which is what stopped the
    touch-target bump below reaching them. */
@@ -637,8 +618,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
    handset at the counter. Bump sub-16px controls to 16px on phones only;
    the POS scan box (17px) is already safe. */
 @media (max-width: 768px) {
-  .form-input, .search-box, .palette-input,
-  .add-payment-row input, .add-payment-row select { font-size: var(--fs-lead); }
+  .form-input, .search-box, .palette-input { font-size: var(--fs-lead); }
 }
 
 /* One place to honour "reduce motion": collapse every transition,

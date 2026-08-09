@@ -2538,6 +2538,5 @@ tr.row-lowstock { background: var(--danger-wash); }
    ============================================================ */
 
 @media (max-width: 768px) {
-  .form-input, .search-box, .palette-input,
-  .add-payment-row input, .add-payment-row select { font-size: var(--fs-lead); }
+  .form-input, .search-box, .palette-input { font-size: var(--fs-lead); }
 }
