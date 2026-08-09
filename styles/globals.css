@@ -1033,8 +1033,6 @@ html { scroll-behavior: smooth; }
    a real account page: balance hero, kicker-labelled sections, flex rows with
    status chips (no floats — RTL flips for free), and a contact line that
    gives the two ways to actually reach the shop. */
-.portal-card { width: 560px; max-width: 100%; }
-.p-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
 .p-balance { border-radius: var(--radius-xl); padding: 16px 18px 18px; margin-bottom: 6px; border: 1px solid transparent; }
 .p-balance.owe { background: rgba(239,68,68,0.07); border-color: rgba(239,68,68,0.28); }
 .p-balance.credit { background: rgba(34,197,94,0.07); border-color: rgba(34,197,94,0.25); }
@@ -1053,8 +1051,6 @@ html { scroll-behavior: smooth; }
 .p-payerr { font-size: var(--fs-small); color: #dc2626; margin-top: 8px; }
 :root[data-theme="dark"] .p-payerr { color: #f87171; }
 
-.p-section { padding: 15px 0 13px; }
-.p-section + .p-section { border-top: 1px solid var(--border); }
 .p-kicker {
   display: flex; align-items: center; gap: 8px;
   font-size: var(--fs-micro); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
@@ -1091,12 +1087,6 @@ html { scroll-behavior: smooth; }
 
 .p-empty { font-size: var(--fs-body); color: var(--muted); }
 .p-msg { font-size: var(--fs-small); color: var(--muted); margin-top: 8px; display: inline-block; }
-.p-foot {
-  margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);
-  font-size: var(--fs-small); color: var(--muted); text-align: center; line-height: 1.7;
-}
-.p-foot a { color: var(--accent); text-decoration: none; }
-.p-foot a:hover { text-decoration: underline; }
 /* The renewal line is red (.p-renew-over) — the call has to stay legible as a
    link inside it rather than inheriting the alarm colour. */
 .p-renew-call { color: inherit; text-decoration: underline; font-weight: 700; white-space: nowrap; }
