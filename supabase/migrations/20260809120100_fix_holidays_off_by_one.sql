@@ -12,6 +12,19 @@
 --
 -- Regenerated with: node scripts/generate-holidays.mjs --sql
 -- Shabbos is a day-of-week check, never stored.
+--
+-- APPLIED TO Kc-Live 9 Aug 2026 IN AN EQUIVALENT FORM. Production already held
+-- the previous seed, so re-inserting 2,226 rows to change every one of them by
+-- a day was the long way round: it was applied as "+1 day, then reconcile the
+-- 19 clock-change anomalies". The pre-state was first proved identical to
+-- 20260712120300_seed_holidays.sql, and the post-state proved identical to this
+-- file, both by md5 of the sorted dates per region:
+--   diaspora 1378 rows  c6a66732bddc9f48ceebca40d484f0b9
+--   israel    848 rows  5a7ccc43fb0a6571db3f8ffc77f22f8c
+-- This file is what a FRESH database runs, and it lands on the same two
+-- checksums. If you ever need to check, that is the check.
+--
+-- UNDO: 20260712120300_seed_holidays.sql restores the previous contents exactly.
 
 delete from holidays;
 
