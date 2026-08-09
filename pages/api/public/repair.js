@@ -9,7 +9,7 @@ import { db, tablesMode } from '../../../lib/db.js'
 import { normalizeEmail } from '../../../lib/mappers.js'
 import { phoneKey } from '../../../lib/ukPhone.mjs'
 import { rateLimit } from '../../../lib/rateLimit.js'
-import { cap, hasLetter, isEmail, digitCount } from '../../../lib/publicForm.mjs'
+import { cap, hasLetter, isEmail, digitCount, findCustomerMatch } from '../../../lib/publicForm.mjs'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
@@ -54,20 +54,7 @@ export default async function handler(req, res) {
     // Best-effort match against existing customers — a hint for staff, never
     // revealed to the sender (this endpoint must not become a membership
     // oracle — same rule as /api/public/message).
-    let match = null
-    try {
-      if (emailNorm) {
-        const rows = await db.select('customers',
-          `select=legacy_id,first_name,last_name&email_normalized=eq.${encodeURIComponent(emailNorm)}&limit=1`)
-        if (rows.length) match = rows[0]
-      }
-      if (!match && key && key.length >= 7) {
-        const tail = key.slice(-4)
-        const rows = await db.select('customers',
-          `select=legacy_id,first_name,last_name,phone_country_code,phone_number&phone_number=ilike.*${encodeURIComponent(tail)}*&limit=25`)
-        match = rows.find((r) => phoneKey(`${r.phone_country_code || ''} ${r.phone_number || ''}`) === key) || null
-      }
-    } catch { /* matching is advisory */ }
+    const match = await findCustomerMatch(db, phoneKey, emailNorm, key)
 
     const open = await db.select('tasks', `select=id&reference=eq.${encodeURIComponent(reference)}&done=is.false&limit=1`)
     if (!open.length) {
