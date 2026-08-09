@@ -31,8 +31,10 @@ run "staff app · touch targets (coarse pointer)" \
 run "staff app · modals open + geometry, 390px both themes" \
   bash -c 'for t in light dark; do node ops/harness/modals.mjs --width 390 --theme $t | tail -1; done'
 
+# 320 as well as the default 390/1280: the portal's top bar was overflowing at
+# 320 in English and up to 375 in Hebrew, and no sweep had ever run below 390.
 run "public pages · render + RTL, en and he" \
-  bash -c 'node ops/harness/public.mjs | tail -1'
+  bash -c 'node ops/harness/public.mjs --width 320,390,1280 | tail -1'
 
 run "public pages · touch targets (coarse pointer)" \
   bash -c 'node ops/harness/public.mjs --targets --width 390 | tail -3 | head -1'
