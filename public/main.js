@@ -7057,6 +7057,35 @@ let simSearchTerm = '';
 let simFilterPay = 'all';     // all | through-me | direct
 let simFilterStatus = 'all';  // all | active | renewing
 
+// Provider badge — the provider column is a wall of identical grey text, and
+// a quiet tint per provider lets the eye sweep for "the Lebara ones" without
+// reading every row (owner, 9 Aug 2026). Same colour for the same provider
+// everywhere, however it was typed ("Lebara"/"lebara"): the providers the shop
+// actually deals with carry a fixed colour and tidy label; anything new hashes
+// into the same 8-tint palette (.kc-prov in the stylesheet). App-palette tints
+// on purpose, not the brands' own logo colours — a column of loud brand reds
+// would fight the flat design and falsely read as trouble.
+const KNOWN_PROVIDERS = {
+  lebara: ['Lebara', 0], '1pmobile': ['1pMobile', 1], o2: ['O2', 2],
+  vodafone: ['Vodafone', 3], ee: ['EE', 4], three: ['Three', 5],
+  giffgaff: ['giffgaff', 6], lycamobile: ['Lycamobile', 7],
+};
+function providerBadge(name) {
+  const raw = String(name || '').trim();
+  if (!raw) return '—';
+  const norm = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const known = KNOWN_PROVIDERS[norm];
+  let tint, label;
+  if (known) { [label, tint] = known; }
+  else {
+    let h = 0;
+    for (let i = 0; i < norm.length; i++) h = (h * 31 + norm.charCodeAt(i)) >>> 0;
+    tint = h % 8;
+    label = raw[0].toUpperCase() + raw.slice(1);
+  }
+  return `<span class="kc-prov kc-prov-${tint}">${escHtml(label)}</span>`;
+}
+
 function renderSimsTab() {
   const content  = document.getElementById('mainContent');
   const today    = localISO();
@@ -7197,7 +7226,7 @@ function renderSimRows() {
 
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a'))openManageSimModal('${s.id}')" title="Open SIM">
       <td><div class="customer-name">${escHtml(s.customerName || '—')}</div></td>
-      <td>${escHtml(s.provider || '—')}</td>
+      <td>${providerBadge(s.provider)}</td>
       <td style="font-weight:600;font-size:var(--fs-small);">${escHtml(s.simNumber || '—')}</td>
       <td style="font-size:var(--fs-small);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(s.plan || '—')}</td>
       <td class="kc-date" style="font-size:var(--fs-small);${renewalClass}">${fmtDate(s.renewalDate)}${renewalLabel}</td>
@@ -7395,7 +7424,7 @@ function openManageSimModal(id) {
         </div>`).join('');
 
   showDynamicModal(`
-    <div class="modal-title">💳 ${escHtml(s.customerName)} — ${escHtml(s.provider)}</div>
+    <div class="modal-title">💳 ${escHtml(s.customerName)} ${providerBadge(s.provider)}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:var(--fs-body);">
       <div style="color:var(--muted);">SIM Number</div><div style="font-weight:600;">${escHtml(s.simNumber||'—')}</div>
       <div style="color:var(--muted);">ICCID</div><div style="font-size:var(--fs-micro);">${escHtml(s.iccid||'—')}</div>

@@ -1740,6 +1740,28 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 
 
 
+/* PROVIDER BADGES — one quiet tint per provider (Lebara, 1pMobile, …) so the
+   SIM table's provider column can be swept by eye instead of read row by row.
+   Which tint a provider gets is decided in main.js (providerBadge); here are
+   the 8 tints. The hex hues are literal but ALWAYS mixed with --surface/--text,
+   so unlike the badges #159 fixed they derive both themes correctly. */
+.kc-prov {
+  display: inline-block; padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-micro); font-weight: 500; line-height: 1.6;
+  background: color-mix(in srgb, var(--kc-prov-tint) 12%, var(--surface));
+  color: color-mix(in srgb, var(--kc-prov-tint) 70%, var(--text));
+}
+.modal-title .kc-prov { vertical-align: 4px; margin-inline-start: 6px; }
+.kc-prov-0 { --kc-prov-tint: #0d9488; } /* teal — Lebara */
+.kc-prov-1 { --kc-prov-tint: #b45309; } /* amber — 1pMobile */
+.kc-prov-2 { --kc-prov-tint: #0060a8; } /* blue — O2 */
+.kc-prov-3 { --kc-prov-tint: #be185d; } /* raspberry — Vodafone */
+.kc-prov-4 { --kc-prov-tint: #4f46e5; } /* indigo — EE */
+.kc-prov-5 { --kc-prov-tint: #475569; } /* slate — Three */
+.kc-prov-6 { --kc-prov-tint: #15803d; } /* green — giffgaff */
+.kc-prov-7 { --kc-prov-tint: #7e22ce; } /* purple — Lycamobile */
+
 /* SIM STATUS BADGES */
 
 .badge-suspended { background: var(--canvas-cream); color: var(--gold); }
