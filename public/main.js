@@ -57,7 +57,6 @@ window.api = {
     return { success: true };
   }),
 
-  getAllRentals: () => kcFetch('/api/rentals').then(r => r.json()),
   // Whole-array save. `deletedIds` names the ids the user actually removed;
   // the server deletes ONLY those (nothing is wiped just for being absent).
   saveAllRentals: (data, deletedIds = []) => kcFetch('/api/rentals', {
@@ -66,14 +65,12 @@ window.api = {
     body: JSON.stringify({ items: data, deletedIds }),
   }).then(r => r.json()),
 
-  getAllPhones: () => kcFetch('/api/phones').then(r => r.json()),
   saveAllPhones: (data, deletedIds = []) => kcFetch('/api/phones', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ items: data, deletedIds }),
   }).then(r => r.json()),
 
-  getAllSims: () => kcFetch('/api/sims').then(r => r.json()),
   saveAllSims: (data, deletedIds = []) => kcFetch('/api/sims', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -86,7 +83,6 @@ window.api = {
     body: JSON.stringify({ op: 'charge', ...p }),
   }).then(r => r.json()),
 
-  getAllBookings: () => kcFetch('/api/bookings').then(r => r.ok ? r.json() : []),
   addBooking: (b) => kcFetch('/api/bookings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
