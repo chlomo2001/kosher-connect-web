@@ -748,7 +748,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .w-wrap { position: relative; z-index: 1; width: 100%; padding: 22px clamp(20px, 4.5vw, 64px) 70px; }
 
 /* One surface recipe, shared by every panel on these pages. */
-.w-topbar, .w-hero, .w-card, .w-pills a, .w-lang, .w-proof {
+.w-topbar, .w-card, .w-pills a, .w-lang {
   background: var(--sk-paper);
 }
 
@@ -810,30 +810,12 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .w-lang button:hover { color: var(--text); }
 .w-lang button.active { background: var(--accent); color: var(--on-accent); }
 
-/* Centred hero: one column of type over the globe. The old side panel of
-   hero minis was the only place its two claims lived — they now live in the
-   travel and advice cards below, said once, where they belong. */
-.w-hero {
-  border: 1px solid var(--border); border-radius: var(--radius-2xl); padding: 48px 36px 44px;
-  box-shadow: 0 24px 60px -18px rgba(10,37,64,.28), 0 6px 18px -10px rgba(10,37,64,.14);
-}
-.w-hero-inner { max-width: 66ch; margin: 0 auto; text-align: center; }
-/* Hero title speaks the login card's language: large, light, tight. */
-.w-hero h2 { font-size: clamp(28px, 3.6vw, 42px); font-weight: 300; margin: 0 0 10px; letter-spacing: -0.8px; color: var(--text); line-height: 1.12; }
-.w-hero p { margin: 0 0 14px; color: var(--ink-secondary); font-size: 15px; line-height: 1.65; max-width: 62ch; margin-inline: auto; margin-bottom: 14px; }
-.w-quote { font-size: 13.5px; font-style: italic; color: var(--muted); margin: 0 0 20px; }
-.w-cta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: center; }
-.w-cta .btn { text-decoration: none; }
-
 .w-section { margin-top: 34px; }
 /* Section headings as quiet kickers — the app's voice, not marketing shout. */
 .w-section h3 {
   margin: 0 0 14px; font-size: var(--fs-small); font-weight: 600; color: var(--muted);
   text-transform: uppercase; letter-spacing: 0.09em;
 }
-.w-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-@media (max-width: 980px) { .w-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 620px) { .w-grid { grid-template-columns: 1fr; } }
 .w-card {
   border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 20px;
   box-shadow: 0 16px 40px -22px rgba(10,37,64,.28);
@@ -855,16 +837,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   border: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 55%, transparent);
   margin-bottom: 12px; font-size: 17px; color: var(--accent);
 }
-/* Scroll-reveal (ported from the owner's original site). */
-.w-reveal { opacity: 0; transform: translateY(22px) scale(0.98); transition: opacity 550ms var(--ease-out), transform 550ms var(--ease-out); }
-.w-reveal.w-show { opacity: 1; transform: translateY(0) scale(1); }
-/* Revealed cards keep the fast hover channels alongside the slow reveal. */
-.w-card.w-reveal {
-  transition: opacity 550ms var(--ease-out), transform 550ms var(--ease-out),
-              translate .18s var(--ease-out), box-shadow .18s var(--ease-out), border-color .18s var(--ease-out);
-}
-@media (prefers-reduced-motion: reduce) { .w-reveal { opacity: 1; transform: none; transition: none; } }
-
 /* Heading hairline that draws itself — a gold 1px line under each section
    kicker, drawn left-to-right (right-to-left in Hebrew) the first time the
    heading scrolls into view. Deliberately unhurried; once drawn it's still. */
@@ -886,28 +858,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   .w-section > h3.w-show:hover::after { animation: none; }
 }
 
-/* Hero entrance — strap, heading, body, quote and CTAs land as a quiet 90ms
-   cascade once the globe has painted. Pure CSS, runs once. */
-@keyframes w-enter { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-.w-hero .w-strap, .w-hero h2, .w-hero p, .w-hero .w-quote, .w-hero .w-cta {
-  animation: w-enter 500ms var(--ease-out) both;
-}
-.w-hero .w-strap { animation-delay: 140ms; }
-.w-hero h2 { animation-delay: 230ms; }
-.w-hero p { animation-delay: 320ms; }
-.w-hero .w-quote { animation-delay: 410ms; }
-.w-hero .w-cta { animation-delay: 500ms; }
-@media (prefers-reduced-motion: reduce) {
-  .w-hero .w-strap, .w-hero h2, .w-hero p, .w-hero .w-quote, .w-hero .w-cta { animation: none; }
-}
-
-.w-footer {
-  margin-top: 30px; border-top: 1px solid var(--border); padding-top: 16px;
-  color: var(--muted); font-size: var(--fs-body);
-  display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;
-}
-.w-footer a { color: var(--muted); text-decoration: none; }
-.w-footer a:hover { color: var(--text); }
 html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
@@ -915,96 +865,14 @@ html { scroll-behavior: smooth; }
 .w-strap { font-size: var(--fs-small); font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--gold); margin: 0 0 10px; }
 
 /* RTL (lashon hakodesh): Hebrew script hates tracking. */
-.w-wrap[dir="rtl"] .w-strap, .w-wrap[dir="rtl"] .w-hero h2,
+.w-wrap[dir="rtl"] .w-strap,
 .w-wrap[dir="rtl"] .w-section h3 { letter-spacing: 0; }
-.w-wrap[dir="rtl"] .w-hero h2 { font-weight: 400; }
-
-/* ─── WELCOME premium pass — proof strip, contact tiles, real footer ───
-   Benchmarked against the way high-end service sites sell: concrete numbers
-   up front (the proof strip), contact as three doors (visit / call / write)
-   rather than one paragraph, and a footer that closes the page instead of
-   trailing off. Same glass recipe as every other floating surface. */
-.w-proof {
-  margin-top: 18px; border: 1px solid var(--border); border-radius: var(--radius-2xl);
-  padding: 20px 24px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
-  box-shadow: 0 16px 40px -22px rgba(10,37,64,.28);
-}
-.w-proof-item + .w-proof-item { border-inline-start: 1px solid var(--border); padding-inline-start: 20px; }
-.w-proof-num { font-size: 23px; font-weight: 300; letter-spacing: -0.4px; color: var(--text); margin-bottom: 5px; white-space: nowrap; }
-.w-wrap[dir="rtl"] .w-proof-num { letter-spacing: 0; }
-.w-proof-cap { font-size: 12.5px; color: var(--muted); line-height: 1.55; max-width: 34ch; }
-@media (max-width: 760px) {
-  .w-proof { grid-template-columns: 1fr; gap: 14px; padding: 18px 20px; }
-  .w-proof-item + .w-proof-item { border-inline-start: 0; padding-inline-start: 0; border-top: 1px solid var(--border); padding-top: 14px; }
-}
-
-/* Services ticker — a whisper-weight reel under the hero. Deliberately much
-   lighter than body text (small, muted, faint gold dots, slow) so it adds
-   life without adding noise; pauses on hover; still under reduced motion. */
-.w-ticker {
-  overflow: hidden; padding: 11px 0; margin-top: 6px;
-  border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle);
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-}
-.w-ticker-track { display: inline-flex; white-space: nowrap; animation: w-tick 46s linear infinite; }
-.w-ticker:hover .w-ticker-track { animation-play-state: paused; }
-.w-ticker-set { display: inline-flex; align-items: center; }
-.w-ticker-set span { font-size: var(--fs-small); letter-spacing: 0.02em; color: var(--muted); opacity: 0.8; }
-.w-ticker-set i {
-  font-style: normal; color: var(--gold); opacity: 0.4; font-size: 6px;
-  vertical-align: 2px; padding: 0 13px;
-}
-@keyframes w-tick { to { transform: translateX(-50%); } }
-.w-wrap[dir="rtl"] .w-ticker-track { animation-direction: reverse; }
-@media (prefers-reduced-motion: reduce) { .w-ticker-track { animation: none; } }
 
 .w-lead { margin: -4px 0 16px; color: var(--ink-secondary); font-size: var(--fs-ui); line-height: 1.6; max-width: 62ch; }
-/* The story band — the owner's voice. The only pure-prose section on the page
-   was disappearing between the card grids around it, so it gets a surface of
-   its own: the shared glass recipe warmed with a cream tint, a gold spine on
-   the reading edge, an oversized quote mark, and the opening line set larger —
-   it should read as the owner speaking, not as filler between cards. */
-.w-story-panel {
-  position: relative; overflow: hidden; max-width: 76ch;
-  border: 1px solid var(--border); border-inline-start: 3px solid var(--gold);
-  border-radius: var(--radius-xl); padding: 26px clamp(22px, 4vw, 34px) 24px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--canvas-cream) 55%, transparent), transparent 72%),
-    var(--sk-paper);
-  box-shadow: 0 16px 40px -22px rgba(10,37,64,.28);
-}
-:root[data-theme="dark"] .w-story-panel {
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--canvas-cream) 55%, transparent), transparent 72%),
-    var(--sk-paper);
-}
-.w-story-panel::before {
-  content: '\201C';
-  position: absolute; top: -28px; inset-inline-end: 12px;
-  font-size: 150px; line-height: 1; font-family: Georgia, 'Times New Roman', serif;
-  color: var(--gold); opacity: 0.14; pointer-events: none;
-}
-.w-story-panel p { position: relative; margin: 0 0 14px; color: var(--ink-secondary); font-size: 15px; line-height: 1.75; max-width: 64ch; }
-.w-story-panel p:last-child { margin-bottom: 0; }
-.w-story-panel p:first-of-type { color: var(--text); font-size: 17.5px; line-height: 1.65; }
-.w-contact-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-@media (max-width: 860px) { .w-contact-grid { grid-template-columns: 1fr; } }
-.w-contact-link {
-  display: inline-block; margin-top: 12px; font-size: 13.5px; font-weight: 600;
-  color: var(--accent); text-decoration: none;
-}
-/* Opening hours line on the Visit card — quiet, under the address. */
-.w-hours { margin: 8px 0 0; font-size: var(--fs-body); color: var(--muted); }
-.w-hours strong { font-weight: 600; color: var(--ink-secondary); }
 /* Legal trading-name line in the footer bottom bar. */
 .w-legal { color: var(--muted); }
 
 /* ── Phone guide (/phone-guide) — the handset catalogue, welcome-styled ── */
-/* Link row under the services grid pointing at the guide. */
-.w-guide-link { margin: 22px 0 0; text-align: center; }
-.w-guide-link a { font-size: var(--fs-ui); font-weight: 600; color: var(--accent); text-decoration: none; }
-.w-guide-link a:hover { color: var(--gold); }
 .pg-note { color: var(--muted); font-size: var(--fs-ui); }
 .pg-note a { color: var(--accent); text-decoration: none; font-weight: 600; }
 .pg-list { display: grid; gap: 14px; }
@@ -1134,26 +1002,12 @@ html { scroll-behavior: smooth; }
   font-family: 'Heebo KC', system-ui, -apple-system, sans-serif;
 }
 
-.w-contact-link:hover { text-decoration: underline; }
-
 .w-footer2 {
   margin-top: 46px; border: 1px solid var(--border); border-radius: var(--radius-2xl);
   padding: 26px 24px 18px; color: var(--muted); font-size: var(--fs-body);
   box-shadow: 0 12px 32px -18px rgba(10,37,64,.25);
   background: var(--sk-paper);
 }
-.w-footer-grid { display: grid; grid-template-columns: 1.3fr 0.7fr 1fr; gap: 26px; margin-bottom: 22px; }
-@media (max-width: 760px) { .w-footer-grid { grid-template-columns: 1fr; gap: 20px; } }
-.w-footer-brand { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
-.w-footer-blurb { margin: 0; line-height: 1.6; max-width: 46ch; }
-.w-footer-grid h5 {
-  margin: 0 0 10px; font-size: var(--fs-micro); font-weight: 600; color: var(--muted);
-  text-transform: uppercase; letter-spacing: 0.09em;
-}
-.w-wrap[dir="rtl"] .w-footer-grid h5 { letter-spacing: 0; }
-.w-footer-grid a { display: block; padding: 3px 0; color: var(--muted); text-decoration: none; width: fit-content; }
-.w-footer-grid a:hover { color: var(--text); }
-.w-footer-line { margin: 0 0 6px; line-height: 1.6; }
 .w-footer-bottom {
   border-top: 1px solid var(--border); padding-top: 15px;
   display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;
