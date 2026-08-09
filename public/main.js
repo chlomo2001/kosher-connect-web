@@ -7099,7 +7099,7 @@ function renderSimsTab() {
     <div class="renewal-banner">
       <span style="font-size:var(--fs-title);">⚠️</span>
       <span><strong>${renewing.length} SIM${renewing.length > 1 ? 's' : ''} renewing ${renewing.some(s => s.renewalDate === today) ? 'TODAY' : 'TOMORROW'}:</strong>
-      ${renewing.map(s => `<span style="margin-left:8px;">· ${escHtml(s.customerName)} (${escHtml(s.simNumber)})</span>`).join('')}</span>
+      ${renewing.map(s => `<span style="margin-left:8px;">· ${escHtml(capName(s.customerName))} (${escHtml(s.simNumber)})</span>`).join('')}</span>
     </div>` : '';
 
   const simBar = kcFilterSort('sim', [
@@ -7225,7 +7225,7 @@ function renderSimRows() {
     const renewalLabel = isRenewingToday ? ' ⚠️ Today!' : isRenewingTomorrow ? ' ⚠️ Tomorrow' : '';
 
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a'))openManageSimModal('${s.id}')" title="Open SIM">
-      <td><div class="customer-name">${escHtml(s.customerName || '—')}</div></td>
+      <td><div class="customer-name">${escHtml(capName(s.customerName) || '—')}</div></td>
       <td>${providerBadge(s.provider)}</td>
       <td style="font-weight:600;font-size:var(--fs-small);">${escHtml(s.simNumber || '—')}</td>
       <td style="font-size:var(--fs-small);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(s.plan || '—')}</td>
@@ -7424,7 +7424,7 @@ function openManageSimModal(id) {
         </div>`).join('');
 
   showDynamicModal(`
-    <div class="modal-title">💳 ${escHtml(s.customerName)} ${providerBadge(s.provider)}</div>
+    <div class="modal-title">💳 ${escHtml(capName(s.customerName))} ${providerBadge(s.provider)}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:var(--fs-body);">
       <div style="color:var(--muted);">SIM Number</div><div style="font-weight:600;">${escHtml(s.simNumber||'—')}</div>
       <div style="color:var(--muted);">ICCID</div><div style="font-size:var(--fs-micro);">${escHtml(s.iccid||'—')}</div>
@@ -7611,7 +7611,7 @@ async function deleteSim(id) {
   // #64 — money-affecting delete: confirm through the amount-aware modal.
   if (!(await kcConfirm({
     title: 'Delete SIM plan?',
-    body: `<strong>${escHtml(s.customerName || 'SIM plan')}</strong>${s.provider ? ' · ' + escHtml(s.provider) : ''}<br>Any SIM charges on the wallet are reversed. This can’t be undone.`,
+    body: `<strong>${escHtml(capName(s.customerName) || 'SIM plan')}</strong>${s.provider ? ' · ' + escHtml(s.provider) : ''}<br>Any SIM charges on the wallet are reversed. This can’t be undone.`,
     okLabel: 'Delete SIM plan',
   }))) return;
   sims = sims.filter(x => x.id !== id);
