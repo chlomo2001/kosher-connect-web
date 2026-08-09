@@ -36,7 +36,29 @@ export const PAGES = { welcome: 'pages/welcome.js', portal: 'pages/portal.js', '
   // harness knew about them, which meant four screens in the sidebar had never
   // been looked at once.
   'tool-contacts': 'pages/tools/contacts.js', 'tool-convert': 'pages/tools/convert.js',
-  'tool-ocr': 'pages/tools/ocr.js', 'tool-transfer': 'pages/tools/transfer.js' }
+  'tool-ocr': 'pages/tools/ocr.js', 'tool-transfer': 'pages/tools/transfer.js',
+  // The three LEGAL pages. They are linked from the welcome footer and from the
+  // sign-up form's privacy line, so a customer reaches them from the most-read
+  // page on the site — and neither harness had ever rendered one.
+  privacy: 'pages/privacy.js', terms: 'pages/terms.js', refund: 'pages/refund.js' }
+
+// The product has THREE theme states, not two, and conflating the last two is
+// how a page can look right here and wrong on a phone:
+//   light    — no choice stored, OS light.
+//   dark     — the customer pressed the toggle. `_document.js` writes
+//              data-theme="dark" before first paint; the OS may well still be
+//              light. This is the state globals.css is built for.
+//   dark-os  — no choice stored, OS dark. Nothing sets data-theme, so only a
+//              `prefers-color-scheme` rule can paint it. globals.css has none
+//              on purpose; /welcome carries a complete one.
+// The dark run used to set BOTH data-theme and colorScheme:dark, which meant a
+// stylesheet that answers only to the OS preference passed the dark run while
+// being wrong for every customer who has actually pressed the toggle.
+const THEMES = {
+  light: { attr: false, os: 'light' },
+  dark: { attr: true, os: 'light' },
+  'dark-os': { attr: false, os: 'dark' },
+}
 
 // The RTL assertion only means something on a page that offers Hebrew. /login
 // is the staff door — no language switcher, English by design — so requiring
@@ -135,7 +157,7 @@ export function buildPublicHtml(page, lang = 'en', out, theme = 'light') {
   // changes nothing here and the dark half of /repair, /phone-guide and /portal
   // went four months without ever being rendered.
   writeFileSync(file, inlineAssets(`<!doctype html>
-<html lang="en"${theme === 'dark' ? ' data-theme="dark"' : ''}><head><meta charset="utf-8">
+<html lang="en"${THEMES[theme]?.attr ? ' data-theme="dark"' : ''}><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>${css}</style>
 <style>${appCss}</style>
@@ -211,11 +233,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const wantTargets = process.argv.includes('--targets')
 
   const theme = arg('--theme', 'light')
+  if (!THEMES[theme]) throw new Error(`unknown --theme "${theme}" — one of ${Object.keys(THEMES).join(', ')}`)
   for (const page of (only ? [only] : Object.keys(PAGES))) {
     for (const lang of langs) {
       const file = buildPublicHtml(page, lang, null, theme)
       for (const w of widths) {
-        const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, colorScheme: theme,
+        const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, colorScheme: THEMES[theme].os,
           // --targets needs a touch device: the 24px rules are scoped to
           // `pointer: coarse`, because the case that matters is a customer's
           // phone, not a narrow desktop window.
