@@ -1397,15 +1397,16 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 
 
 
-/* #76 — demote the card's ✕ from a full button to a quiet icon */
-
+/* The card's ✕ wears the same red as .modal-x (owner, 9 Aug 2026) — every
+   "way out" in the app should look like the same control, wherever it sits. */
 .card-close {
-  width: 30px; height: 30px; border-radius: var(--radius); border: 1px solid var(--border);
-  background: transparent; color: var(--muted); cursor: pointer; font-size: var(--fs-ui);
+  width: 34px; height: 34px; border-radius: var(--radius-lg); border: none;
+  background: transparent; color: var(--danger); cursor: pointer; font-size: 18px;
   line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+  transition: background var(--dur-1) ease;
 }
 
-.card-close:hover { background: var(--bg-secondary); color: var(--text); }
+.card-close:hover { background: color-mix(in srgb, var(--danger) 12%, var(--surface)); }
 
 .btn-rental { background: var(--accent-wash); color: var(--accent); border: 1px solid var(--primary-subdued); }
 
