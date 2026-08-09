@@ -485,10 +485,18 @@ input[type="checkbox"], input[type="radio"] {
 }
 
 /* ─── TOAST ─── */
+/* `left` as well as `right`, not just right: the toast is capped at 360px, so
+   on a phone a full-length message (the rental-scan one runs to two lines)
+   ends up hard against the left edge — measured flush at x=0 on a 320px
+   screen, 6px at 390 — while keeping its 24px on the right. Lopsided, and on
+   a handset that edge is where the rounded corner and the gesture strip live.
+   Pinning both sides keeps the gutter even and lets the toast narrow instead. */
 #toast-container {
-  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-  display: flex; flex-direction: column; gap: 8px;
+  position: fixed; bottom: 24px; right: 24px; left: 24px; z-index: 9999;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  pointer-events: none;   /* the strip now spans the screen — don't let it eat clicks */
 }
+#toast-container > * { pointer-events: auto; }
 @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes kcShimmer { to { background-position: -200% 0; } }
 
