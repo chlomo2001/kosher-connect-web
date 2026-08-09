@@ -1300,7 +1300,14 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 
 .toast-success { background: var(--brand-dark); color: #fff; }
 
+/* --danger is lightened for dark mode, so white on it measures 4.80:1 in light
+   and 2.92:1 in dark — the exact bug 4d9f4d0 fixed on .btn-danger and the
+   reload banner with --danger-solid, which is deliberately NOT overridden for
+   dark. Toasts had escaped every contrast sweep because they only exist while
+   one is on screen, and the audit renders a static page. Measured with a real
+   toast open: 2.92:1 → 7.51:1 dark; light is untouched at 4.80:1. */
 .toast-error { background: var(--danger); color: #fff; }
+:root[data-theme="dark"] .toast-error { background: var(--danger-solid); }
 
 .toast-warning { background: var(--canvas-cream); color: var(--gold); border: 1px solid #e5d3b0; }
 
