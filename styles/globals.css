@@ -360,13 +360,6 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
 .btn-primary:disabled { opacity: 0.55; cursor: default; }
 .btn-outline { background: var(--surface); border: 1px solid var(--border-input); color: var(--ink-secondary); }
 .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
-/* Light is already fine at 4.80:1 and stays as it was. Dark is not: --danger
-   lightens for dark cards, so white on it is 2.92:1 — that theme only takes
-   the deeper red. */
-.btn-danger { background: var(--danger); color: #fff; }
-:root[data-theme="dark"] .btn-danger { background: var(--danger-solid); }
-.btn-danger:hover { filter: brightness(0.92); }
-
 /* ─── CONTENT ─── */
 .content { flex: 1; overflow-y: auto; padding: 22px 24px; background: transparent; }
 /* Tab switches enter, they don't pop — DESIGN.md §Motion "Enter": fade + 5px
@@ -452,11 +445,6 @@ tbody tr:hover td { background: var(--bg); }
 .form-input.error { border-color: var(--danger); }
 .form-input::placeholder { color: var(--muted); }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
-.btn-sim { background: rgba(14,116,144,0.10); color: var(--sim); border: 1px solid rgba(14,116,144,0.30); }
-.btn-sim:hover { border-color: var(--sim); }
-.btn-vn { background: rgba(124,58,237,0.09); color: var(--vn); border: 1px solid rgba(124,58,237,0.28); }
-.btn-vn:hover { background: rgba(124,58,237,0.16); border-color: var(--vn); }
-
 /* Checkboxes and radios are sized here, not inline at each of seven call
    sites — inline wins over any stylesheet rule, which is what stopped the
    touch-target bump below reaching them. */
@@ -521,8 +509,9 @@ input[type="checkbox"], input[type="radio"] {
 @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes kcShimmer { to { background-position: -200% 0; } }
 
-/* legacy inline spinner kept for any older markup */
-.kc-spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: kcSpin 0.7s linear infinite; flex-shrink: 0; }
+/* kcSpin drives the arc on .kc-logo-loader::before (styles/app.css) — the
+   boot splash and its .kc-spinner sibling both used it; only the keyframes
+   are still live. */
 @keyframes kcSpin { to { transform: rotate(360deg); } }
 @keyframes kcLogoPulse { 0%, 100% { opacity: 0.7; transform: scale(0.92); } 50% { opacity: 1; transform: scale(1); } }
 

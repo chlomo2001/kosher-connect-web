@@ -1523,8 +1523,6 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 /* Branded loading indicator — the KC mark, still and readable, with a
    brand-coloured arc sweeping around it. */
 
-.kc-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--muted); padding: 48px 30px; font-size: var(--fs-ui); }
-
 .kc-logo-loader { position: relative; width: 54px; height: 54px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
 .kc-logo-loader img { width: 34px; height: 34px; object-fit: contain; animation: kcLogoPulse 1.6s ease-in-out infinite; }
