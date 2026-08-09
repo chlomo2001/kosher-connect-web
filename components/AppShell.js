@@ -196,6 +196,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
       {/* ADD / EDIT CUSTOMER MODAL */}
       <div className="modal-overlay hidden" id="customerModal">
         <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+          <button type="button" className="modal-x" id="btnCloseCustomerModal" aria-label="Close" title="Close (Esc)">✕</button>
           <div className="modal-title" id="modalTitle">➕ Add New Customer</div>
           <input type="hidden" id="editId" />
 

@@ -3752,7 +3752,7 @@ function showDynamicModal(html) {
   } else {
     wasOpen = !overlay.classList.contains('hidden');
   }
-  overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:560px;">${html}</div>`;
+  overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:560px;"><button type="button" class="modal-x" aria-label="Close" title="Close (Esc)" onclick="closeDynamicModal()">✕</button>${html}</div>`;
   // Name the dialog from the title the payload already renders. Without this
   // all 49 call sites announce as an unnamed dialog — and because focus jumps
   // straight into the first field, the visible title is never read aloud.
@@ -6729,6 +6729,7 @@ function setupTopbarButtons() {
 // ─────────────────────────────────────────────
 function setupModal() {
   document.getElementById('btnCancelModal').addEventListener('click', closeModal);
+  document.getElementById('btnCloseCustomerModal').addEventListener('click', closeModal);
   document.getElementById('customerModal').addEventListener('click', e => {
     if (e.target === document.getElementById('customerModal')) closeModal();
   });

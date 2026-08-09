@@ -971,6 +971,26 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 
 .modal-title { font-size: var(--fs-h1); font-weight: 300; letter-spacing: -0.22px; margin-bottom: 20px; }
 
+/* Close ✕ in every popup's top-right (owner request, 9 Aug 2026). The Cancel
+   button sits below the fold on long forms and the backdrop/Esc routes are
+   invisible, so this is the one visible way out. Sticky + float keeps it in
+   the corner even after the modal body has scrolled; the surface background
+   stops form fields showing through it mid-scroll. */
+.modal-x {
+  position: sticky; top: 0; float: right;
+  margin: -12px -12px 0 12px;
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface);
+  border: none; border-radius: var(--radius-lg);
+  color: var(--danger);
+  font-size: 18px; line-height: 1;
+  cursor: pointer;
+  z-index: 3;
+  transition: background var(--dur-1) ease;
+}
+.modal-x:hover { background: color-mix(in srgb, var(--danger) 12%, var(--surface)); }
+
 
 
 /* ─── FORM ─── */
