@@ -746,6 +746,72 @@ function fmtDayDate(iso) {
   return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
 
+// ── Device chip ───────────────────────────────────────────────────────────
+// One way to show a rental handset, everywhere one appears.
+//
+// The same device was being rendered several different ways on one screen. The
+// Rentals table printed the raw stored string — "+15185550101" — while the
+// Phone Inventory table two sections below it printed "+1 518 555 0101" for
+// the same handset, because one call site ran fmtPhone and the other did not.
+// The model, which is what staff actually say out loud at the counter ("the
+// Nokia"), appeared on the inventory row and nowhere else. And the country was
+// a flag emoji built by a ternary chain written out three separate times.
+//
+// A chip fixes all of that by being the only thing that knows how to draw a
+// device: number formatted once, model attached, country named. Nothing here is
+// new information — it is the same fields, said the same way twice.
+const COUNTRY_FLAGS = { USA: '🇺🇸', Israel: '🇮🇱', UK: '🇬🇧', Canada: '🇨🇦', EU: '🇪🇺' };
+
+// Flags are decoration: they read as a blank or as "regional indicator symbol"
+// to a screen reader, so the country always travels as text beside them.
+function countryFlag(country) {
+  return COUNTRY_FLAGS[country] || '🌍';
+}
+
+// `device` is a phone object, or a bare number string — the rental record
+// carries phoneNumber but the inventory carries the whole handset, and both
+// call sites want the same chip. A string is looked up so it gains the model
+// and country the record never had; an unknown number still renders, formatted.
+function deviceChip(device, { flag = true, model = true, stacked = false, extra = '' } = {}) {
+  const p = (device && typeof device === 'object')
+    ? device
+    : ((typeof phones !== 'undefined' && phones) || []).find(x => x.number === device) || { number: device };
+  const number = fmtPhone(p.number) || '—';
+  const country = p.country || '';
+  return `<span class="kc-device${stacked ? ' is-stacked' : ''}">` +
+    `<span class="kc-device-num">` +
+      (flag && country ? `<span aria-hidden="true">${countryFlag(country)}</span> ` : '') +
+      escHtml(number) +
+      (flag && country ? `<span class="kc-sr-only"> (${escHtml(country)})</span>` : '') +
+    `</span>` +
+    (model && p.model ? `<span class="kc-device-model">${escHtml(p.model)}</span>` : '') +
+    (extra ? `<span class="kc-device-model">${extra}</span>` : '') +
+    `</span>`;
+}
+
+// The chip for a rental's handset.
+//
+// The NUMBER always comes from the rental. It is that rental's record of which
+// handset actually went out, it survives the phone being edited or deleted from
+// stock, and a contract that quietly starts naming a different device than the
+// one handed over is worse than one with an out-of-date model on it.
+//
+// The inventory is consulted only to add the model and the country, and only
+// when it still agrees about the number: a phoneId whose record now reads
+// differently is a line that was re-keyed or a handset that was replaced, and
+// borrowing its model would put the wrong device on the row. (The offline seed
+// has exactly this shape by accident — three rentals, three numbers, one
+// phoneId — which is how the rule got written down.)
+function rentalDeviceChip(rental, opts = {}) {
+  const live = ((typeof phones !== 'undefined' && phones) || [])
+    .find(x => x.id === rental.phoneId && x.number === rental.phoneNumber);
+  return deviceChip({
+    number: rental.phoneNumber,
+    country: live?.country || rental.country,
+    model: live?.model,
+  }, opts);
+}
+
 // ── DateStamp ─────────────────────────────────────────────────────────────
 // A date, plus — when there is one — the reason it was left out of a charge.
 //
@@ -1991,7 +2057,7 @@ function renderRentalRows() {
         <div class="customer-name">${nameHtml(r.customerName || '—')}</div>
         <div class="customer-email" style="font-size:var(--fs-micro);">${r.vn ? '🔢 +'+escHtml(r.vnPrefix || '') : ''}</div>
       </td>
-      <td class="kc-phone" style="font-weight:600;font-size:var(--fs-small);">${escHtml(r.phoneNumber || '—')}</td>
+      <td class="kc-phone">${rentalDeviceChip(r, { stacked: true })}</td>
       <td class="kc-date" style="font-size:var(--fs-micro);">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}</td>
       <td style="text-align:center;">${r.chargeableDays}d</td>
       <td style="color:var(--success);font-weight:700;">${fmtGbp(r.price)}</td>
@@ -2034,8 +2100,11 @@ function renderPhoneRows() {
     const poolDisplay   = isUSA ? (p.pool || '—') : 'N/A';
     const expiryDisplay = isUSA ? (p.poolExpiry || '—') : 'N/A';
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('.action-btn'))openEditPhoneModal('${p.id}')">
-      <td class="kc-phone" style="font-weight:600;font-size:var(--fs-small);">${escHtml(fmtPhone(p.number))}${p.model ? `<div class="customer-email">${escHtml(p.model)}</div>` : ''}</td>
-      <td>${p.country === 'USA' ? '🇺🇸' : p.country === 'Israel' ? '🇮🇱' : p.country === 'UK' ? '🇬🇧' : p.country === 'Canada' ? '🇨🇦' : '🇪🇺'} ${escHtml(p.country)}</td>
+      ${/* No flag on the chip here — this table gives the country its own
+            column right beside it, and the same fact twice in two cells reads
+            as two facts. */''}
+      <td class="kc-phone">${deviceChip(p, { flag: false, stacked: true })}</td>
+      <td>${countryFlag(p.country)} ${escHtml(p.country)}</td>
       <td style="font-size:var(--fs-small);color:${isUSA?'':'var(--muted)'};">${isUSA ? escHtml(poolDisplay) : poolDisplay}</td>
       <td style="font-size:var(--fs-micro);color:${poolExpired?'var(--danger-ink)':isUSA?'var(--muted)':'var(--muted)'};">${isUSA ? expiryDisplay : '<span style="color:var(--muted);">N/A</span>'}</td>
       <td>${statusBadge}</td>
@@ -2450,7 +2519,7 @@ function updateRentalCalc() {
     const best = ranked[0];
     if (best && best.phone.id !== (phone && phone.id)) {
       poolLine = `<div style="margin-top:6px;font-size:var(--fs-micro);line-height:1.5;">
-        💡 <span style="color:var(--accent);font-weight:600;">Best pool match: ${escHtml(fmtPhone(best.phone.number))}</span>
+        💡 <span style="color:var(--accent);font-weight:600;">Best pool match:</span> ${deviceChip(best.phone)}
         <button type="button" class="btn btn-outline" style="padding:1px 8px;font-size:var(--fs-micro);margin-left:4px;"
           onclick="document.getElementById('rPhone').value='${best.phone.id}';updateRentalPhoneInfo();updateRentalCalc();">Use</button>
         <br><span style="color:var(--muted);">${escHtml(best.reason)}</span></div>`;
@@ -3079,7 +3148,10 @@ function openManageRentalModal(rentalId) {
   }).join('');
 
   showDynamicModal(`
-    <div class="modal-title">⚙ Manage Rental — ${escHtml(r.phoneNumber)}</div>
+    ${/* The device gets its own line rather than an em dash, which dangled at
+          the end of the title whenever the chip wrapped — which at 390px is
+          every time. A deliberate second line reads the same at both widths. */''}
+    <div class="modal-title">⚙ Manage Rental<span class="kc-title-device">${rentalDeviceChip(r)}</span></div>
     <div style="color:var(--muted);font-size:var(--fs-body);margin-bottom:16px;">
       Customer: <strong style="color:var(--text);">${escHtml(r.customerName)}</strong>
     </div>
@@ -3990,7 +4062,7 @@ function renderTableRows() {
     const cUpcomingFlights = customerUpcomingBookings(c).length;
     const otherServices = (c.services || []).filter(s => s.type !== 'rental' && s.type !== 'sim' && s.type !== 'vn');
     const services = [
-      ...activeCustomerRentals.map(r => `<span class="badge badge-rental">Rental ${r.country === 'USA' ? '🇺🇸' : r.country === 'UK' ? '🇬🇧' : r.country === 'Israel' ? '🇮🇱' : '🌍'}</span>`),
+      ...activeCustomerRentals.map(r => `<span class="badge badge-rental">Rental ${countryFlag(r.country)}</span>`),
       ...(cUpcomingFlights ? [`<span class="badge badge-booking">✈️ Flight${cUpcomingFlights > 1 ? ' ×' + cUpcomingFlights : ''}</span>`] : []),
       ...(cSimCount ? [`<span class="badge badge-sim">💳 SIM${cSimCount > 1 ? ' ×' + cSimCount : ''}</span>`] : []),
       ...(cVnCount ? [`<span class="badge badge-vn">🔢 VN${cVnCount > 1 ? ' ×' + cVnCount : ''}</span>`] : []),
@@ -4218,7 +4290,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
 
   const cUpcoming = customerUpcomingBookings(c);
   const allActiveServices = [
-    ...cActiveRentals.map(r => ({ type: 'rental', label: `Rental ${r.country === 'USA' ? '🇺🇸' : r.country === 'UK' ? '🇬🇧' : r.country === 'Israel' ? '🇮🇱' : '🌍'}${r.depositHeld > 0 ? ' · 🔒£' + Number(r.depositHeld).toFixed(0) : ''}${r.termsAck ? ' · ✍️' : ''}` })),
+    ...cActiveRentals.map(r => ({ type: 'rental', label: `Rental ${countryFlag(r.country)}${r.depositHeld > 0 ? ' · 🔒£' + Number(r.depositHeld).toFixed(0) : ''}${r.termsAck ? ' · ✍️' : ''}` })),
     ...cUpcoming.map(b => ({ type: 'booking', label: `✈️ ${b.route}${b.travelDate ? ' · ' + fmtDate(b.travelDate) : ''}` })),
     ...cSims.map(s => ({ type: 'sim', simId: s.id, label: `SIM · ${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}` })),
     ...cVNs.map(v => ({ type: 'vn', label: `VN ${fmtPhone(v.number || '')}` })),
@@ -4261,7 +4333,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
       <div style="background:var(--bg-secondary);border-radius:10px;padding:10px 14px;margin-bottom:18px;">
         ${item(true, `Flight booked${nextTrip.airline ? ' — ' + escHtml(nextTrip.airline) : ''}${nextTrip.bookingReference ? ' (' + escHtml(nextTrip.bookingReference) + ')' : ''}`, '', '')}
         ${item(!!phoneCover,
-          `Phone covered — ${escHtml(phoneCover?.phoneNumber || '')} until ${fmtDate(phoneCover?.toDate)}`,
+          `Phone covered — ${phoneCover ? rentalDeviceChip(phoneCover) : ''} until ${fmtDate(phoneCover?.toDate)}`,
           'No rental phone covering the travel date',
           `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="openNewRentalModal('${c.id}')">📱 Book a phone</button>`)}
         ${item(!!simCover,

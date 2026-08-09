@@ -567,6 +567,53 @@ body.pos-mode .content { padding: 14px 18px; }
 }
 
 
+/* ── Device chip — one handset, drawn the same way everywhere ─────────────
+   The Rentals table used to print the raw stored number while the Phone
+   Inventory two sections below printed the formatted one for the same handset,
+   and the model appeared on exactly one of them. See deviceChip() in main.js.
+
+   Two shapes, same chip: inline for prose (a modal title, a card line) and
+   stacked for a table cell, where the model belongs under the number rather
+   than pushing the column wider. */
+.kc-device { display: inline-flex; align-items: baseline; gap: 7px; min-width: 0; }
+
+.kc-device.is-stacked { flex-direction: column; align-items: flex-start; gap: 1px; }
+
+/* Tabular figures: a column of numbers is read by scanning down the digits,
+   and proportional ones make that column ragged. */
+/* position:relative is load-bearing, not decoration. The country travels beside
+   the flag as .kc-sr-only text, which is absolutely positioned — and an
+   absolutely positioned box resolves against its nearest POSITIONED ancestor,
+   so without this it escaped the chip entirely and landed a few pixels past the
+   right edge of the page. Clipping does not help: a clipped box still counts
+   towards scrollable overflow. It was 7px of horizontal scroll on the Rentals
+   tab at 320px, caused by text nobody can see. Anchoring it here is the fix. */
+.kc-device-num {
+  position: relative;
+  font-weight: 600; font-size: var(--fs-small); font-feature-settings: "tnum";
+}
+
+/* The model is the quiet half — "the Nokia" is how staff refer to a handset,
+   but the number is what identifies it. */
+.kc-device-model {
+  font-size: var(--fs-micro); color: var(--muted); font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+/* A chip under a modal title: always its own line, never a wrapped tail. */
+.kc-title-device { display: block; margin-top: 5px; }
+
+/* Below 360px the flag goes. On a screen that narrow the dialling code already
+   says the country, and the emoji costs about 24px of a column competing with
+   the number itself — enough, measured, to push the Rentals table past what
+   the page can absorb at the largest Simple Mode step. The country still
+   travels as .kc-sr-only text, so nothing is lost to a screen reader; only the
+   decoration goes. */
+@media (max-width: 359px) {
+  .kc-device-num [aria-hidden="true"] { display: none; }
+}
+
+
 /* Metric values stay monochrome navy ink (Stripe keeps money/counts neutral;
    colour is reserved for semantic states — debt red, money-in green — set inline). */
 
@@ -1511,9 +1558,18 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 /* Screen-reader-only text — the skeleton ghosts are aria-hidden, so a hidden
    "Loading…" keeps the wait announced (skeletonHtml prepends one). */
 
+/* clip-path, not just the deprecated clip: an absolutely-positioned sr-only
+   span resolves against the nearest POSITIONED ancestor, so inside a plain
+   static box it lands wherever that turns out to be — and a 1px box a few
+   pixels past the right edge still makes the page scroll. That is exactly what
+   the country name inside a device chip did: 7px of horizontal scroll on the
+   Rentals tab at 320px, from text nobody can see. clip-path takes it out of
+   layout wherever it ends up. Both are kept — clip for anything old enough not
+   to know clip-path, clip-path for everything that does. */
 .kc-sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%);
+  white-space: nowrap; border: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
