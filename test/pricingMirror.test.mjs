@@ -15,17 +15,11 @@
 // year apart) — it lifts each browser function out of main.js, runs it, and
 // holds it to lib/rentalMath's answers.
 //
-// KNOWN GAP, deliberately tolerated for now: the browser copies return the
-// raw float and let the caller display it, while the lib copies round2() to
-// the penny (half away from zero — the audited money rounding from
-// lib/money.mjs). So client priceFromDays(3, …, 5.35/day) says
-// 16.049999999999997 where the server maths says 16.05, and a half-penny rate
-// like 2.675 splits a full penny (2.675 vs 2.68). The formula comparisons
-// below therefore pass the client result through lib round2() before
-// comparing — that pins the actual formulas (rate × days, min-charge lift,
-// per-window cap scaling, ticket tiers, surcharge floor) while the rounding
-// question is with the owner. If the client copies are ever re-synced to
-// round like the canon, tighten these to plain equality.
+// The browser copies round2() to the penny exactly like the canon (the gap
+// where they returned raw floats — 16.049999999999997 for 3 days at £5.35 —
+// was closed on the owner's decision, 9 Aug 2026), so every comparison here
+// is PLAIN EQUALITY. If one of these fails, someone edited one copy of the
+// maths without the other: fix the drift, do not loosen the assertion.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -35,6 +29,11 @@ import { round2, priceFromDays, ticketFeeFor, ddSurcharge, poolScore } from '../
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const SRC = readFileSync(path.join(ROOT, 'public/main.js'), 'utf8')
+
+// The client's own rounding helper, lifted so the money functions below run
+// against the client's rounding, not the lib's.
+const CLIENT_ROUND2 = (SRC.match(/function round2\s*\([^)]*\)\s*\{[\s\S]*?\n\}/) || [])[0]
+assert.ok(CLIENT_ROUND2, 'public/main.js must define its round2 mirror')
 
 // Lift one top-level `function name(...) { … }` out of the classic script.
 // Same technique (and the same justification) as nameCase.test.mjs: the
@@ -58,30 +57,28 @@ const RATES = [
 ]
 const DAY_COUNTS = [0, 1, 3, 6, 13, 29, 30, 31, 60, 100]
 
-test('public/main.js priceFromDays agrees with lib/rentalMath on the formula', () => {
-  const clientPriceFromDays = lift('priceFromDays')()
+test('public/main.js round2 IS lib/rentalMath round2', () => {
+  // eslint-disable-next-line no-new-func
+  const clientRound2 = new Function(`${CLIENT_ROUND2}; return round2`)()
+  for (const v of [0, 0.004, 0.005, 1.005, 2.675, 16.049999999999997, -1.005, -2.675, 99.999, NaN, '3.505']) {
+    assert.equal(clientRound2(v), round2(v),
+      `round2(${v}) differs between public/main.js and lib/rentalMath`)
+  }
+})
+
+test('public/main.js priceFromDays agrees with lib/rentalMath to the penny', () => {
+  const clientPriceFromDays = lift('priceFromDays', CLIENT_ROUND2)()
   for (const rate of RATES) {
     for (const cd of DAY_COUNTS) {
       const totalDays = cd + 2 // a couple of free (Shabbos) days in the range
-      const got = clientPriceFromDays(cd, totalDays, rate)
-      const want = priceFromDays(cd, totalDays, rate)
-      assert.equal(round2(got), want,
+      assert.equal(clientPriceFromDays(cd, totalDays, rate), priceFromDays(cd, totalDays, rate),
         `public/main.js priceFromDays(${cd}, ${totalDays}, ${JSON.stringify(rate)}) has drifted from lib/rentalMath`)
     }
   }
 })
 
-test('public/main.js priceFromDays matches exactly where no rounding is involved', () => {
-  const clientPriceFromDays = lift('priceFromDays')()
-  const rate = { ratePerDay: 5, minCharge: 10, cap: 90, capPeriodDays: 30 }
-  for (const cd of DAY_COUNTS) {
-    assert.equal(clientPriceFromDays(cd, cd, rate), priceFromDays(cd, cd, rate),
-      `integer-rate priceFromDays(${cd}) must be penny-identical in both copies`)
-  }
-})
-
 test('public/main.js ticketFeeFor agrees with lib/rentalMath on the tiers', () => {
-  const clientTicketFeeFor = lift('ticketFeeFor')()
+  const clientTicketFeeFor = lift('ticketFeeFor', CLIENT_ROUND2)()
   const SERVICES = [
     { price: 25,   repeatPrice: 10,   bulkPrice: 8 },         // full tier ladder
     { price: 25,   repeatPrice: null },                        // flat service (start fee)
@@ -90,7 +87,7 @@ test('public/main.js ticketFeeFor agrees with lib/rentalMath on the tiers', () =
   ]
   for (const svc of SERVICES) {
     for (const n of [1, 2, 3, 5, 6, 9, 12]) {
-      assert.equal(round2(clientTicketFeeFor(svc, n)), ticketFeeFor(svc, n),
+      assert.equal(clientTicketFeeFor(svc, n), ticketFeeFor(svc, n),
         `public/main.js ticketFeeFor(${JSON.stringify(svc)}, ${n}) has drifted from lib/rentalMath`)
     }
   }
@@ -102,8 +99,8 @@ test('public/main.js ddMonthlyAmount agrees with lib/rentalMath ddSurcharge', ()
   for (const [cost, pct, min] of [[10, 10, 2], [30, 10, 2], [7.37, 10, 2], [0, 10, 2], [25.55, 12.5, 3]]) {
     const settingNum = (key, dflt) =>
       key === 'sim_dd_surcharge_pct' ? pct : key === 'sim_dd_surcharge_min' ? min : dflt
-    const clientDd = lift('ddMonthlyAmount', 'const settingNum = arguments[0]')(settingNum)
-    assert.equal(round2(clientDd(cost)), ddSurcharge(cost, pct / 100, min),
+    const clientDd = lift('ddMonthlyAmount', `const settingNum = arguments[0]; ${CLIENT_ROUND2}`)(settingNum)
+    assert.equal(clientDd(cost), ddSurcharge(cost, pct / 100, min),
       `public/main.js ddMonthlyAmount(${cost}) with ${pct}%/£${min} has drifted from lib/rentalMath`)
   }
 })

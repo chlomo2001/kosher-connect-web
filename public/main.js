@@ -1561,6 +1561,14 @@ function ivrPlatforms() {
 // lib/rentalMath.mjs::priceFromDays exactly (that module is the canonical,
 // unit-tested statement of the maths — see test/rentalMath.test.mjs). Kept as
 // a mirror here only because the browser has no bundler to import the module.
+// Round half away from zero with an epsilon to defeat the IEEE-754 half-penny
+// boundary — mirrors round2 in lib/rentalMath.mjs exactly (change both
+// together; test/pricingMirror.test.mjs holds the pair to the penny).
+function round2(v) {
+  const n = Number(v) || 0;
+  return (n < 0 ? -1 : 1) * Math.round(Math.abs(n) * 100 + 1e-7) / 100;
+}
+
 function priceFromDays(chargeableDays, totalDays, rate) {
   let price = chargeableDays * rate.ratePerDay;
   if (chargeableDays > 0 && price < rate.minCharge) price = rate.minCharge;
@@ -1571,7 +1579,7 @@ function priceFromDays(chargeableDays, totalDays, rate) {
     const capTotal = rate.cap * Math.max(1, Math.ceil(totalDays / (rate.capPeriodDays || 30)));
     if (price > capTotal) price = capTotal;
   }
-  return price;
+  return round2(price);
 }
 
 function calcRentalPrice(fromDate, toDate, country = 'USA', ukPlan = 'standard', simGiven = true) {
@@ -1613,10 +1621,10 @@ function multiPhoneDiscountPct(allRentals, customerId, from, to, excludeId = nul
 function ticketFeeFor(svc, passengers) {
   const n = Math.max(1, Math.floor(Number(passengers)) || 1);
   const single = Number(svc.price) || 0;
-  if (svc.repeatPrice === null || svc.repeatPrice === undefined) return single;
+  if (svc.repeatPrice === null || svc.repeatPrice === undefined) return round2(single);
   const upTo5 = Math.min(n - 1, 4) * Number(svc.repeatPrice);
   const from6 = Math.max(n - 5, 0) * Number(svc.bulkPrice ?? svc.repeatPrice);
-  return single + upTo5 + from6;
+  return round2(single + upTo5 + from6);
 }
 
 // Price list: "3 or more plans — 10% Off" (SIM setup). Applies to the
@@ -7464,7 +7472,7 @@ function ddMonthlyAmount(cost) {
   // charge for paying later is ribis — so there is no fallback to it now.)
   const pct = settingNum('sim_dd_surcharge_pct', 10) / 100;
   const min = settingNum('sim_dd_surcharge_min', 2);
-  return cost + Math.max(cost * pct, min);
+  return round2(cost + Math.max(cost * pct, min));
 }
 
 const SIM_CHARGE_DESCS  = {
