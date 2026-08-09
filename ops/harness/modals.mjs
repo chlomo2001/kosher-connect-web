@@ -6,9 +6,11 @@
 //   node ops/harness/modals.mjs                          # all, 390px light
 //   node ops/harness/modals.mjs --width 390 --theme dark
 //   node ops/harness/modals.mjs --only customer-card
+//   node ops/harness/modals.mjs --fs largest              # Simple Mode, 17px body
 //
 // Each modal is opened, screenshotted (modal_<name>_<theme>_<width>.png in
-// this directory), and measured: does the box sit inside the viewport, does
+// this directory, with _large/_largest appended when --fs is not standard so a
+// Simple Mode run cannot overwrite the standard shot), and measured: does the box sit inside the viewport, does
 // anything inside it overhang its right edge, does it scroll sideways. A ✗
 // is worth a look; a ✓ only means the geometry is sane, not that it reads
 // well — the screenshots are the point.
@@ -30,6 +32,10 @@ const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? proce
 const width = Number(arg('--width', 390))
 const theme = arg('--theme', 'light')
 const only = arg('--only', null)
+// Simple Mode (--fs-scale). A third dimension beside width and theme, and the
+// one most likely to break a modal: every box in here is sized for 13px body
+// copy, and `largest` is 17px. Standard / large / largest — see docs/DESIGN.md.
+const fsSize = arg('--fs', 'standard')
 
 // name → [tab, opener, root?, closer?]. Ids are looked up from the seed at
 // runtime so the seed stays the single source of fixture truth. `root` and
@@ -94,6 +100,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   await page.goto('file://' + file, { waitUntil: 'load' })
   await page.waitForTimeout(900)
   await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)
+  // …and Simple Mode, the same way the app does it: an attribute on <html>.
+  await page.evaluate((s) => {
+    if (s === 'standard') document.documentElement.removeAttribute('data-fs')
+    else document.documentElement.setAttribute('data-fs', s)
+  }, fsSize)
   await page.evaluate(async () => {
     // Routes differ on envelope ({customers:[…]} vs a bare array) — take either.
     const first = async (u, k) => { const d = await (await fetch(u)).json(); return (d[k] || d || [])[0]?.id }
@@ -146,7 +157,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         .map((f) => ({ ...f, where: `${name}/${theme}` }))
       contrastAll.push(...found)
     }
-    await page.screenshot({ path: path.join(HERE, `modal_${name}_${theme}_${width}.png`), fullPage: false })
+    await page.screenshot({ path: path.join(HERE, `modal_${name}_${theme}_${width}${fsSize === 'standard' ? '' : '_' + fsSize}.png`), fullPage: false })
     const flags = []
     if (geo.offRight || geo.offLeft) flags.push(`off-screen L${geo.offLeft}/R${geo.offRight}`)
     if (geo.scrollX > 0) flags.push(`sideways scroll +${geo.scrollX}px`)
@@ -164,6 +175,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
   if (wantContrast) { report(contrastAll, `the modals (${theme})`); bad += contrastAll.length }
   await browser.close()
-  console.log(bad ? `\n${bad} modal(s) flagged at ${width}px ${theme}` : `\nall modals geometrically clean at ${width}px ${theme} — now look at the screenshots`)
+  console.log(bad ? `\n${bad} modal(s) flagged at ${width}px${fsSize === 'standard' ? '' : ' / text ' + fsSize} ${theme}` : `\nall modals geometrically clean at ${width}px ${theme} — now look at the screenshots`)
   process.exit(bad ? 1 : 0)
 }

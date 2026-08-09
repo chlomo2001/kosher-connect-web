@@ -62,6 +62,29 @@ The ramp (tokens in `globals.css`):
 | `--fs-hero` | 28 | hero numbers (dashboard money) |
 | `--fs-overline` | 10 | UPPERCASE tracked section labels only — never body text |
 
+**Simple Mode** (`--fs-scale`, Aug 09): every step above is written as
+`calc(<px> * var(--fs-scale))`, and `data-fs` on `<html>` sets the multiplier —
+absent = 1 (Standard, 13px body), `large` = 1.15 (15px), `largest` = 1.3 (17px).
+The 🔠 button in the topbar and the till cycles it; `_document.js` applies the
+saved choice before first paint, alongside the theme.
+
+This is the whole of Simple Mode, and it is why the ramp exists. The app is
+dense on purpose and that density is wrong for some of the people working
+behind this counter; the cheap fix is a set of hand-picked "make these bigger"
+rules, which yields 15px body copy beside 11px badges it no longer matches.
+Because adoption is complete — every staff-app font-size is on a token — one
+multiplier moves the entire product with its proportions intact, and there is
+no second stylesheet and nothing to keep in step. **Any new off-ramp size
+silently opts that text out of Simple Mode**, which is a second reason not to
+add one.
+
+The display tier scales too: a 48px heading over 17px body reads differently
+from 48px over 13px, and holding it back is what would look like a bug. The
+scale stops at 1.3 because past it the Rentals grid stops fitting a 390px
+phone. Fixed-size chrome is exempt where growing it would be wrong — the 🔠
+button itself keeps a literal 16px glyph, because a control that grows as you
+press it walks out from under the pointer, and it is how you get back.
+
 **Display tier** (`--fs-display-1..5` = 20 / 26 / 30 / 40 / 48px, weight 300):
 page titles, the dashboard greeting and hero figures, login and tool headings,
 the till total. This is page furniture, not reading copy — it sets its own

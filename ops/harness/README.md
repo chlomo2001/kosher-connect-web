@@ -58,6 +58,7 @@ needs nothing but the repo.
 ```bash
 node ops/harness/modals.mjs                       # all big modals, 390px light
 node ops/harness/modals.mjs --theme dark --only customer-card
+node ops/harness/modals.mjs --fs largest          # Simple Mode: 17px body copy
 ```
 
 The tab audits stop at the tab: four rounds of eyeballing never opened a
@@ -70,6 +71,13 @@ here, gitignored),
 and flags a box that leaves the viewport, scrolls sideways, or has children
 overhanging its right edge. A ✓ means the geometry is sane — it does NOT
 mean the modal reads well. The screenshots are the deliverable; look at them.
+
+`--fs` is the third dimension, beside width and theme: Simple Mode's text-size
+steps (`standard` / `large` / `largest`, docs/DESIGN.md §Type). Worth a pass
+whenever a modal changes — every box in there was laid out against 13px body
+copy and `largest` is 17px. Non-standard runs suffix the screenshot filename so
+they cannot overwrite the standard shot. The tab sweep takes the same setting
+by hand: set `data-fs` on `<html>` before calling `audit`.
 
 The seed's `/api/ledger` carries both the dashboard shape (`recent`) and the
 customer-card shape (`balance`/`entries`) in one object, because the fetch

@@ -1855,8 +1855,14 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
   .dash-cols-table { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 }
 
+/* Wraps rather than overflows. The wallet arrears row carries four things —
+   name, balance, "💰 Take payment", chevron — and they fit a 390px phone at
+   Standard with nothing to spare. Under Simple Mode's larger steps the button
+   and the chevron were pushed off the right edge of the card, which is how the
+   button that takes the money becomes unreachable. Wrapping is the honest
+   answer: the row gets a second line rather than hiding a control. */
 .feed-item {
-  display: flex; gap: 10px; align-items: baseline;
+  display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline;
   padding: 9px 0; font-size: var(--fs-body);
   border-bottom: 1px solid var(--border);
 }
@@ -1864,6 +1870,11 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 .feed-item:last-child { border-bottom: none; }
 
 .feed-item .feed-icon { flex-shrink: 0; }
+
+/* The label half of a feed row: takes the slack, and min-width:0 so a long
+   customer name wraps inside its own box instead of jacking the row wider than
+   the card. Replaces a repeated inline style:"flex:1". */
+.feed-item .feed-label { flex: 1; min-width: 0; }
 
 
 
@@ -2212,11 +2223,20 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .task-mini:hover { border-color: var(--accent); }
 
 .task-suggest {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 10px;
   margin: 8px 0 0 25px; padding: 7px 10px; border-radius: 8px;
   background: rgba(0, 96, 168, 0.06); border: 1px solid rgba(0, 96, 168, 0.18);
   font-size: var(--fs-small); color: var(--text);
 }
+
+/* Accept / Keep, as a pair that wraps as a pair. They were held on one line by
+   an inline white-space:nowrap, which at 320px under Simple Mode pushed "Keep
+   Normal" 51px off the card — an accept/reject choice with the reject half
+   unreachable. The buttons still refuse to break their own labels; it is the
+   ROW that is allowed to give. */
+.task-suggest-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.task-suggest-actions .btn { white-space: nowrap; }
 
 
 

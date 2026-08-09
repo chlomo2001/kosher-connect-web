@@ -156,23 +156,50 @@
 
   /* ── Type ramp — the only font sizes new UI may use (docs/DESIGN.md §Type).
      Half-steps in older code (11.5/12.5/13.5px) collapse onto this ramp as
-     surfaces get touched — don't add new ones. ── */
-  --fs-micro: 11px;   /* badges, table meta, timestamps */
-  --fs-small: 12px;   /* secondary text, dense tables */
-  --fs-body: 13px;    /* app default — body copy, controls, table cells */
-  --fs-ui: 14px;      /* emphasised body, inputs, buttons */
-  --fs-lead: 16px;    /* section leads, modal titles */
-  --fs-title: 18px;   /* card titles, big stats */
-  --fs-h1: 22px;      /* page headings */
-  --fs-hero: 28px;    /* hero numbers (dashboard money) */
-  --fs-overline: 10px;
+     surfaces get touched — don't add new ones.
+
+     Every step is expressed through --fs-scale, which is Simple Mode. The app
+     is dense on purpose — 13px body, 11px table meta — and that density is
+     exactly wrong for some of the people who work behind this counter. The
+     cheap version of a fix is a handful of hand-picked "make these bigger"
+     rules, which produces an app at two different scales at once: big body
+     text beside 11px badges it no longer matches.
+
+     One multiplier avoids that. The ramp already IS the app's typography —
+     every surface was tokenised in the August adoption sweeps — so scaling the
+     ramp scales the whole product with its proportions intact, and there is no
+     second stylesheet, no Simple Mode markup, and nothing new to keep in step.
+
+     The display tier scales too. It is page furniture rather than body copy,
+     but a 48px heading over 17px body reads differently from 48px over 13px,
+     and holding it back is what would look like a bug. ── */
+  --fs-scale: 1;
+
+  --fs-micro: calc(11px * var(--fs-scale));   /* badges, table meta, timestamps */
+  --fs-small: calc(12px * var(--fs-scale));   /* secondary text, dense tables */
+  --fs-body: calc(13px * var(--fs-scale));    /* app default — body copy, controls, table cells */
+  --fs-ui: calc(14px * var(--fs-scale));      /* emphasised body, inputs, buttons */
+  --fs-lead: calc(16px * var(--fs-scale));    /* section leads, modal titles */
+  --fs-title: calc(18px * var(--fs-scale));   /* card titles, big stats */
+  --fs-h1: calc(22px * var(--fs-scale));      /* page headings */
+  --fs-hero: calc(28px * var(--fs-scale));    /* hero numbers (dashboard money) */
+  --fs-overline: calc(10px * var(--fs-scale));
   /* Display tier — the staff app's signature large, light headings. Separate
      from the reading ramp above: these are page furniture, not body copy, and
      they set their own tracking. Legalised in DESIGN.md rather than squashed
      to the 28px cap, because the shipped tier is internally consistent. */
-  --fs-display-1: 20px; --fs-display-2: 26px; --fs-display-3: 30px;
-  --fs-display-4: 40px; --fs-display-5: 48px; /* UPPERCASE tracked section labels only — never body text */
+  --fs-display-1: calc(20px * var(--fs-scale)); --fs-display-2: calc(26px * var(--fs-scale));
+  --fs-display-3: calc(30px * var(--fs-scale)); --fs-display-4: calc(40px * var(--fs-scale));
+  --fs-display-5: calc(48px * var(--fs-scale)); /* UPPERCASE tracked section labels only — never body text */
 }
+
+/* Simple Mode — three steps, on <html> so it survives the theme toggle and is
+   applied before first paint by the script in _document.js.
+   Standard 13px body / Large 15px / Largest 17px. The top step was measured,
+   not guessed: past 1.3 the Rentals grid stops fitting a 390px phone even with
+   its wrapper scrolling, and a step nobody can use is not a step. */
+:root[data-fs="large"] { --fs-scale: 1.15; }
+:root[data-fs="largest"] { --fs-scale: 1.3; }
 
 /* Dark theme — the shop stays open into the evening. Overrides the same
    tokens the UI is built on; hard-coded inline colours (a few dots/badges)
@@ -298,6 +325,22 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
 }
 .theme-toggle:hover { border-color: var(--accent); background: var(--bg-secondary); }
 .theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Simple Mode button — same chassis as the theme toggle, with a gold dot when
+   the size is not Standard. The counter tablet is shared; whoever picks it up
+   next should be able to see it has been changed rather than discover it by
+   pressing. The dot is deliberately absent on Standard: a marker that is always
+   there marks nothing.
+
+   Fixed 38px like its neighbour, and its glyph deliberately does NOT ride
+   --fs-scale — a control that grows as you press it walks out from under the
+   pointer, and the button is how you get back to Standard. */
+.kc-textsize { position: relative; font-size: 16px; }
+.kc-textsize[data-size="large"]::after,
+.kc-textsize[data-size="largest"]::after {
+  content: ''; position: absolute; top: 5px; right: 5px;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--gold);
+}
 
 /* ─── BUTTONS — tight-radius pills ─── */
 .btn {

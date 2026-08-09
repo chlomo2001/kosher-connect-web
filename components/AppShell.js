@@ -177,6 +177,16 @@ export default function AppShell({ initialTab = 'dashboard' }) {
               onClick={() => window.toggleTheme && window.toggleTheme()}
               title="Light / dark mode" aria-label="Toggle light or dark mode"
             >🌙</button>
+            {/* Simple Mode — cycles the whole type ramp through Standard /
+                Large / Largest. Sits beside the theme toggle because it is the
+                same kind of thing: a per-device display preference, set once by
+                whoever is standing at that screen. updateTextSizeBtns() fills
+                in the label once main.js loads. */}
+            <button
+              className="theme-toggle kc-textsize" data-textsize-btn suppressHydrationWarning
+              onClick={() => window.cycleTextSize && window.cycleTextSize()}
+              title="Text size" aria-label="Text size. Press to change."
+            >🔠</button>
           </div>
         </div>
 

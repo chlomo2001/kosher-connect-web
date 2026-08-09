@@ -24,9 +24,14 @@ export default function Document() {
             :root:not([data-theme]), which cannot tell "never chose" from
             "chose light" if light leaves no mark. Someone who pressed ☀️ on a
             dark phone was getting the dark page back on the next load. */}
+        {/* Simple Mode rides along in the same pre-paint script. Text size has
+            to be settled before first paint for the same reason theme does —
+            the app reflowing a beat after it appears is worse than the density
+            it is fixing, and it is the people who need the larger step who
+            would notice the jump most. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('kcTheme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}`,
+            __html: `try{var t=localStorage.getItem('kcTheme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);var s=localStorage.getItem('kcTextSize');if(s==='large'||s==='largest')document.documentElement.setAttribute('data-fs',s);}catch(e){}`,
           }}
         />
       </Head>

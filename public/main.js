@@ -406,6 +406,7 @@ async function initApp() {
   setupModal();
   setupTopbarButtons();
   updateThemeBtns(); // sync the persistent topbar toggle's icon to the saved theme
+  updateTextSizeBtns(); // …and the Simple Mode button's label to the saved size
   document.addEventListener('click', e => {
     if (!e.target.closest('.cs-wrap')) {
       document.querySelectorAll('.cs-list.open').forEach(el => el.classList.remove('open'));
@@ -5854,7 +5855,7 @@ async function renderWalletTab() {
     <div class="feed-item${b.customerId ? ' dash-link' : ''}"${b.customerId
       ? ` onclick="goToTab('customers',{customerId:'${escHtml(String(b.customerId))}'})" title="Open customer"` : ''}>
       <span class="feed-icon">${negative ? '🔴' : '🟢'}</span>
-      <span style="flex:1;"><strong>${escHtml(b.customerName)}</strong></span>
+      <span class="feed-label"><strong>${escHtml(b.customerName)}</strong></span>
       <span style="font-feature-settings:'tnum';color:${negative ? 'var(--danger-ink)' : 'var(--success)'};font-weight:600;">
         ${negative ? '−' : '+'}${fmtGbp(Math.abs(b.balance))}</span>
       ${b.customerId ? `<button class="btn btn-outline btn-sm" style="margin-left:10px;font-size:var(--fs-micro);padding:4px 10px;"
@@ -5874,7 +5875,7 @@ async function renderWalletTab() {
     : data.recent.map(e => `
         <div class="history-item history-flat${e.customerId ? ' dash-link' : ''}"
           ${e.customerId ? `onclick="goToTab('customers',{customerId:'${escHtml(String(e.customerId))}'})" title="Open customer"` : ''}>
-          <div style="display:flex;align-items:center;flex:1;min-width:0;">
+          <div class="history-main">
             <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>
             <div class="history-desc kc-clamp-2">
               <strong>${escHtml(e.customerName || '—')}</strong> · ${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}${e.method ? ` <span style="color:var(--muted);">(${escHtml(e.method.replace('_', ' '))})</span>` : ''}</div>
@@ -6268,7 +6269,7 @@ function bankPickList(txnId) {
     .slice(0, 30);
   box.innerHTML = hits.length ? hits.map(c => `
     <div class="feed-item dash-link" onclick="closeDynamicModal();bankConfirm('${escHtml(txnId)}','${escHtml(String(c.customerId))}','${escHtml(c.name).replace(/'/g, '&#39;')}')">
-      <span style="flex:1;">${escHtml(c.name)}</span><span class="feed-go">›</span>
+      <span class="feed-label">${escHtml(c.name)}</span><span class="feed-go">›</span>
     </div>`).join('')
     : `<div style="color:var(--muted);font-size:var(--fs-body);padding:10px 0;">No customer matches “${escHtml(q)}”.</div>`;
 }
@@ -7405,6 +7406,49 @@ function toggleTheme() {
 function updateThemeBtns() {
   const dark = document.documentElement.getAttribute('data-theme') === 'dark';
   document.querySelectorAll('[data-theme-btn]').forEach(b => { b.textContent = dark ? '☀️' : '🌙'; });
+}
+
+// Simple Mode — text size. Three steps of one multiplier (--fs-scale in
+// globals.css), which scales the whole type ramp and therefore the whole app,
+// rather than a handful of hand-picked "make these bigger" rules that leave
+// 15px body copy sitting beside 11px badges.
+//
+// A device preference like the theme, not an account setting: the counter
+// tablet and the owner's laptop want different answers, and the same person
+// signs in on both.
+const TEXT_SIZES = [
+  { key: 'standard', label: 'Standard', mark: '' },
+  { key: 'large', label: 'Large', mark: 'large' },
+  { key: 'largest', label: 'Largest', mark: 'largest' },
+];
+
+function currentTextSize() {
+  const mark = document.documentElement.getAttribute('data-fs') || '';
+  return TEXT_SIZES.find(s => s.mark === mark) || TEXT_SIZES[0];
+}
+
+// Cycles rather than opening a menu. Three steps is few enough that pressing
+// through them is faster than choosing from a list, and the whole app resizing
+// under the press is its own preview.
+function cycleTextSize() {
+  const next = TEXT_SIZES[(TEXT_SIZES.indexOf(currentTextSize()) + 1) % TEXT_SIZES.length];
+  if (next.mark) document.documentElement.setAttribute('data-fs', next.mark);
+  else document.documentElement.removeAttribute('data-fs');
+  try { localStorage.setItem('kcTextSize', next.key); } catch {}
+  updateTextSizeBtns();
+  toast(`Text size: ${next.label}`, 'success');
+}
+
+function updateTextSizeBtns() {
+  const size = currentTextSize();
+  document.querySelectorAll('[data-textsize-btn]').forEach(b => {
+    b.title = `Text size: ${size.label}`;
+    // The label names the state, not the action, because the action is "cycle"
+    // and "cycle text size" tells a screen-reader user nothing about where they
+    // currently are.
+    b.setAttribute('aria-label', `Text size: ${size.label}. Press to change.`);
+    b.dataset.size = size.key;
+  });
 }
 
 // Copy text to the clipboard with a confirmation toast. Used by the
@@ -9626,6 +9670,9 @@ function renderPosView() {
             onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();saveSale();}else if(event.key==='Enter'){event.preventDefault();posScanEnter();}">
           <button class="theme-toggle" data-theme-btn onclick="toggleTheme()" title="Light / dark mode"
             aria-label="Toggle light or dark mode">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙'}</button>
+          <button class="theme-toggle kc-textsize" data-textsize-btn onclick="cycleTextSize()"
+            data-size="${escHtml(currentTextSize().key)}" title="Text size: ${escHtml(currentTextSize().label)}"
+            aria-label="Text size: ${escHtml(currentTextSize().label)}. Press to change.">🔠</button>
         </div>
         <div class="pos-cats">
           <button class="pos-cat${posCat === 'all' ? ' on' : ''}" onclick="posSetCat('all')">All</button>
@@ -11173,6 +11220,7 @@ const PALETTE_COMMANDS = [
   { icon: '⏰', label: 'New reminder', sub: 'tool', run: () => openRemindModal('note', '') },
   { icon: '🔑', label: 'Change my password', sub: 'tool', run: () => openChangePasswordModal() },
   { icon: '🌓', label: 'Toggle dark mode', sub: 'tool', run: () => toggleTheme() },
+  { icon: '🔠', label: 'Text size (Simple Mode)', sub: 'tool', keys: ['text size', 'bigger', 'larger', 'font', 'simple mode', 'accessibility'], run: () => cycleTextSize() },
   // ── Find (saved-filter views) ──
   { icon: '⏰', label: 'Show overdue rentals', sub: 'view', run: () => filterView('rentals', () => { kcView('rentals').dims = { balance: 'all', status: 'overdue' }; }, renderRentalRows) },
   { icon: '💷', label: 'Rentals with a balance owing', sub: 'view', run: () => filterView('rentals', () => { kcView('rentals').dims = { balance: 'debt', status: 'all' }; }, renderRentalRows) },
@@ -12065,7 +12113,7 @@ async function renderTasksTab() {
       ${s && !t.done ? `
       <div class="task-suggest">
         <span>💡 Suggests <strong>${s.priority === 'High' ? '🔥 Now' : s.priority === 'Normal' ? '📋 Next' : '🌙 Later'}</strong> — ${escHtml(s.reason)}</span>
-        <span style="white-space:nowrap;">
+        <span class="task-suggest-actions">
           <button class="btn btn-primary btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;"
             onclick="acceptSuggestion('${escHtml(t.id)}', '${s.priority}')">✓ Accept</button>
           <button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;"
@@ -12399,7 +12447,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
     : money.recent.slice(0, 8).map(e => `
         <div class="history-item history-flat${e.customerId ? ' dash-link' : ''}"
           ${e.customerId ? `onclick="goToTab('customers',{customerId:'${escHtml(String(e.customerId))}'})" title="Open customer"` : ''}>
-          <div style="display:flex;align-items:center;flex:1;min-width:0;">
+          <div class="history-main">
             <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>
             <div class="history-desc kc-clamp-2">
               ${escHtml(e.customerName || '—')} · ${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}</div>
@@ -12410,7 +12458,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
           ${e.customerId ? '<span class="feed-go">›</span>' : ''}
         </div>`).join('') + `
         <div class="feed-item dash-link" onclick="goToTab('wallet')" style="color:var(--muted);font-size:var(--fs-small);">
-          <span style="flex:1;">Full ledger &amp; today's money</span><span class="feed-go">›</span>
+          <span class="feed-label">Full ledger &amp; today's money</span><span class="feed-go">›</span>
         </div>`;
 
   content.innerHTML = `
