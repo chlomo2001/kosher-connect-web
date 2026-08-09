@@ -14055,16 +14055,6 @@ async function deleteRateRow(table, code) {
   renderSettingsTab();
 }
 
-async function deleteSettingKey(key) {
-  const ok = await window.api.confirmDelete(`Remove the custom value "${key}"?`);
-  if (!ok) return;
-  const res = await window.api.deleteSetting('settings', key);
-  if (!res.success) { toast(res.error || 'Could not remove.', 'error'); return; }
-  toast('Removed.', 'warning');
-  pricingConfig = await window.api.getSettings().catch(() => pricingConfig);
-  renderSettingsTab();
-}
-
 // The daily 06:00 cron runs these on production; this button runs them on
 // demand (and is how previews exercise them — crons don't fire on previews).
 async function runSweepsNow() {
