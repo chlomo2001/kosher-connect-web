@@ -42,22 +42,26 @@ export const PAGES = { welcome: 'pages/welcome.js', portal: 'pages/portal.js', '
   // page on the site — and neither harness had ever rendered one.
   privacy: 'pages/privacy.js', terms: 'pages/terms.js', refund: 'pages/refund.js' }
 
-// The product has THREE theme states, not two, and conflating the last two is
-// how a page can look right here and wrong on a phone:
+// The product has FOUR theme states, not two, and conflating them is how a
+// page can look right here and wrong on a phone:
 //   light    — no choice stored, OS light.
 //   dark     — the customer pressed the toggle. `_document.js` writes
 //              data-theme="dark" before first paint; the OS may well still be
 //              light. This is the state globals.css is built for.
 //   dark-os  — no choice stored, OS dark. Nothing sets data-theme, so only a
 //              `prefers-color-scheme` rule can paint it. globals.css has none
-//              on purpose; /welcome carries a complete one.
+//              on purpose; /welcome and the legal shell carry complete ones.
+//   light-os — the customer pressed the toggle for LIGHT on a dark phone.
+//              Distinguishable from "no choice" only because the toggle now
+//              writes data-theme="light" rather than removing the attribute.
 // The dark run used to set BOTH data-theme and colorScheme:dark, which meant a
 // stylesheet that answers only to the OS preference passed the dark run while
 // being wrong for every customer who has actually pressed the toggle.
 const THEMES = {
-  light: { attr: false, os: 'light' },
-  dark: { attr: true, os: 'light' },
-  'dark-os': { attr: false, os: 'dark' },
+  light: { attr: null, os: 'light' },
+  dark: { attr: 'dark', os: 'light' },
+  'dark-os': { attr: null, os: 'dark' },
+  'light-os': { attr: 'light', os: 'dark' },
 }
 
 // The RTL assertion only means something on a page that offers Hebrew. /login
@@ -157,7 +161,7 @@ export function buildPublicHtml(page, lang = 'en', out, theme = 'light') {
   // changes nothing here and the dark half of /repair, /phone-guide and /portal
   // went four months without ever being rendered.
   writeFileSync(file, inlineAssets(`<!doctype html>
-<html lang="en"${THEMES[theme]?.attr ? ' data-theme="dark"' : ''}><head><meta charset="utf-8">
+<html lang="en"${THEMES[theme]?.attr ? ` data-theme="${THEMES[theme].attr}"` : ''}><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>${css}</style>
 <style>${appCss}</style>

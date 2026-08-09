@@ -7219,7 +7219,9 @@ function fmtGbp(v) {
 function toggleTheme() {
   const el = document.documentElement;
   const dark = el.getAttribute('data-theme') === 'dark';
-  if (dark) { el.removeAttribute('data-theme'); try { localStorage.setItem('kcTheme', 'light'); } catch {} }
+  // 'light' is set, not removed: an absent attribute means "no choice yet",
+  // which is what the OS-dark palettes on /welcome and the legal pages key on.
+  if (dark) { el.setAttribute('data-theme', 'light'); try { localStorage.setItem('kcTheme', 'light'); } catch {} }
   else { el.setAttribute('data-theme', 'dark'); try { localStorage.setItem('kcTheme', 'dark'); } catch {} }
   updateThemeBtns();
 }

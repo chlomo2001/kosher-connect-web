@@ -13,7 +13,9 @@ export default function ThemeToggle({ style }) {
     const el = document.documentElement
     const nowDark = el.getAttribute('data-theme') === 'dark'
     if (nowDark) {
-      el.removeAttribute('data-theme')
+      // Written, not removed — an absent attribute means "no choice yet", and
+      // the OS-dark palettes key on :root:not([data-theme]). See _document.js.
+      el.setAttribute('data-theme', 'light')
       try { localStorage.setItem('kcTheme', 'light') } catch {}
     } else {
       el.setAttribute('data-theme', 'dark')

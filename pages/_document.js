@@ -18,10 +18,15 @@ export default function Document() {
         <link rel="apple-touch-icon" href="/logo.png" />
         <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f3ea" />
         <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0d11" />
-        {/* Apply the saved theme before first paint — no flash of light. */}
+        {/* Apply the saved theme before first paint — no flash of light.
+            Light is written out too, not left as an absent attribute: pages
+            that carry an OS-dark palette (/welcome, the legal shell) key it on
+            :root:not([data-theme]), which cannot tell "never chose" from
+            "chose light" if light leaves no mark. Someone who pressed ☀️ on a
+            dark phone was getting the dark page back on the next load. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('kcTheme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}`,
+            __html: `try{var t=localStorage.getItem('kcTheme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}`,
           }}
         />
       </Head>
