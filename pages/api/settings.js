@@ -32,6 +32,20 @@ const SETTING_RULES = {
   till_opening_float:        { type: 'money',   unit: '£' },
   sim_dd_surcharge_pct:      { type: 'percent', unit: '%' },
   sim_dd_surcharge_min:      { type: 'money',   unit: '£' },
+  // Dashboard colour thresholds. Editable like a fee, but they change nothing
+  // about what is charged — only when a number on a stat card stops being
+  // neutral and starts being a warning. 'count' rejects 2.5 overdue rentals;
+  // arrears is money because it is measured in pounds owed.
+  dash_arrears_amber:        { type: 'money',   unit: '£ owed' },
+  dash_arrears_red:          { type: 'money',   unit: '£ owed' },
+  dash_overdue_amber:        { type: 'count',   unit: 'rentals' },
+  dash_overdue_red:          { type: 'count',   unit: 'rentals' },
+  dash_tasks_amber:          { type: 'count',   unit: 'tasks' },
+  dash_tasks_red:            { type: 'count',   unit: 'tasks' },
+  dash_phones_amber:         { type: 'count',   unit: 'phones left' },
+  dash_phones_red:           { type: 'count',   unit: 'phones left' },
+  dash_returning_amber:      { type: 'count',   unit: 'returns' },
+  dash_returning_red:        { type: 'count',   unit: 'returns' },
 }
 
 // A key is editable if it's in the known-rules whitelist OR it's a custom_

@@ -1279,6 +1279,59 @@ function settingNum(key, fallback) {
   return (s && Number.isFinite(s.numValue)) ? s.numValue : fallback;
 }
 
+// ── Stat-card thresholds ──────────────────────────────────────────────────
+// When a number on a stat card stops being neutral and starts being a warning.
+//
+// Every one of these was `> 0`, which is not a threshold — it is "any at all".
+// Outstanding went red the moment a single pound was owed, so in a shop where
+// some arrears are always in flight the card was red every day of the year. A
+// card that is always red is a card nobody reads, and the day it means
+// something it gets ignored along with all the others.
+//
+// Where "normal" stops is a question about this shop's trading rather than
+// about software, so the steps are owner-editable (Settings → Dashboard,
+// seeded by 20260809120000_dashboard_stat_thresholds.sql). The numbers below
+// are the offline fallback and MUST mirror that migration — same rule as
+// FALLBACK_RATES.
+//
+// `lowerIsWorse` inverts the comparison for the counts where running out is
+// the problem: three phones left is worse than thirty.
+const STAT_BANDS = {
+  arrears:   { amber: 'dash_arrears_amber',   red: 'dash_arrears_red',   amberDefault: 250, redDefault: 1000 },
+  overdue:   { amber: 'dash_overdue_amber',   red: 'dash_overdue_red',   amberDefault: 1,   redDefault: 3 },
+  highTasks: { amber: 'dash_tasks_amber',     red: 'dash_tasks_red',     amberDefault: 1,   redDefault: 5 },
+  returning: { amber: 'dash_returning_amber', red: 'dash_returning_red', amberDefault: 1,   redDefault: 6 },
+  phonesFree:{ amber: 'dash_phones_amber',    red: 'dash_phones_red',    amberDefault: 3,   redDefault: 1, lowerIsWorse: true },
+};
+
+// '' (neutral) | 'clear' | 'amber' | 'red'.
+function statBand(name, value) {
+  const b = STAT_BANDS[name];
+  if (!b) return '';
+  const n = Number(value) || 0;
+  const amber = settingNum(b.amber, b.amberDefault);
+  const red = settingNum(b.red, b.redDefault);
+  if (b.lowerIsWorse) {
+    if (n <= red) return 'red';
+    if (n <= amber) return 'amber';
+    return '';
+  }
+  if (n >= red) return 'red';
+  if (n >= amber) return 'amber';
+  // Nothing owed, nothing overdue, nothing waiting: worth saying so in green.
+  // Only reachable when the amber step is above zero — an owner who sets it to
+  // 0 has asked for the warning to be permanent, and gets it.
+  return n === 0 ? 'clear' : '';
+}
+
+const STAT_BAND_INK = { clear: 'var(--success)', amber: 'var(--gold)', red: 'var(--danger-ink)' };
+
+// Inline style for a stat value, or '' to leave it the default navy ink.
+function statBandStyle(name, value) {
+  const ink = STAT_BAND_INK[statBand(name, value)];
+  return ink ? `color:${ink};` : '';
+}
+
 // The owner-managed IVR / VN provider list (settings key ivr_platforms,
 // feature #10). Falls back to the built-in defaults before settings load.
 function ivrPlatforms() {
@@ -1672,12 +1725,12 @@ function renderRentalsTab() {
       </div>
       <div class="stat-card">
         <div class="stat-label">Available Phones</div>
-        <div class="stat-value blue">${availablePhones}</div>
+        <div class="stat-value" style="${statBandStyle('phonesFree', availablePhones)}">${availablePhones}</div>
         <div class="stat-sub">Ready to rent</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Returning Today</div>
-        <div class="stat-value ${returningToday > 0 ? 'gold' : 'purple'}">${returningToday}</div>
+        <div class="stat-value" style="${statBandStyle('returning', returningToday)}">${returningToday}</div>
         <div class="stat-sub">Expected back</div>
       </div>
       ${needsReviewCount > 0 ? `
@@ -1690,7 +1743,7 @@ function renderRentalsTab() {
       </div>` : ''}
       <div class="stat-card">
         <div class="stat-label">Outstanding Debt</div>
-        <div class="stat-value" style="color:${outstandingDebt>0?'var(--danger-ink)':'var(--success)'};">${fmtGbp(outstandingDebt)}</div>
+        <div class="stat-value" style="${statBandStyle('arrears', outstandingDebt)}">${fmtGbp(outstandingDebt)}</div>
         <div class="stat-sub">Unpaid balances</div>
       </div>
     </div>
@@ -5898,7 +5951,7 @@ async function renderWalletTab() {
       <div class="stat-card"><div class="stat-label">Charged Out Today</div>
         <div class="stat-value">${fmtGbp(Math.abs(data.todayOut || 0))}</div></div>
       <div class="stat-card"><div class="stat-label">Outstanding</div>
-        <div class="stat-value" style="color:${arrearsTotal > 0 ? 'var(--danger-ink)' : 'var(--success)'};">${fmtGbp(arrearsTotal)}</div>
+        <div class="stat-value" style="${statBandStyle('arrears', arrearsTotal)}">${fmtGbp(arrearsTotal)}</div>
         <div class="stat-sub">${arrears.length} customer${arrears.length === 1 ? '' : 's'} in arrears</div></div>
       <div class="stat-card"><div class="stat-label">Credit Held</div>
         <div class="stat-value">${fmtGbp(creditsTotal)}</div>
@@ -12374,7 +12427,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   const metricsHtml = `
     <div class="dash-metrics">
       ${metric('Active Rentals', activeRentals.length,
-        [overdue.length ? `<span style="color:var(--danger-ink);">${overdue.length} overdue</span>` : '',
+        [overdue.length ? `<span style="${statBandStyle('overdue', overdue.length) || 'color:var(--danger-ink);'}">${overdue.length} overdue</span>` : '',
          dueToday.length ? `${dueToday.length} due today` : ''].filter(Boolean).join(' · ') || 'all on schedule', 'rentals')}
       ${metric('Open Repairs', openRepairs.length,
         readyRepairs.length ? `<span style="color:var(--accent);">${readyRepairs.length} ready to collect</span>` : 'nothing waiting', 'repairs')}
@@ -12387,8 +12440,8 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
           ? ` · <span class="dash-link" style="color:var(--gold);" onclick="event.stopPropagation();goToTab('sim')">${renewals7.length} SIM renewal${renewals7.length === 1 ? '' : 's'} ›</span>` : ''}`,
         'bookings')}
       ${metric('Open Tasks', openTasks.length,
-        highTasks.length ? `<span style="color:var(--danger-ink);">${highTasks.length} high priority</span>` : 'none urgent', 'tasks',
-        highTasks.length ? 'color:var(--danger-ink);' : '')}
+        highTasks.length ? `<span style="${statBandStyle('highTasks', highTasks.length) || 'color:var(--danger-ink);'}">${highTasks.length} high priority</span>` : 'none urgent', 'tasks',
+        statBand('highTasks', highTasks.length) === 'clear' ? '' : statBandStyle('highTasks', highTasks.length))}
     </div>`;
 
   // ── Needs-attention feed — each line deep-links to its problem page.
@@ -12942,6 +12995,19 @@ async function renderSettingsTab() {
     online_hourly_rate:        { group: '🖨️ Online & print', label: 'Help / online rate', help: 'Charged per hour for hands-on help (10-minute minimum).', unit: '£ / hour' },
     online_min_charge:         { group: '🖨️ Online & print', label: 'Minimum online charge', help: 'The smallest charge for any online service.', unit: '£' },
     online_repeat_from:        { group: '🖨️ Online & print', label: 'Bulk discount starts at', help: 'From this many applications, the cheaper "repeat" price applies (your price list says 4).', unit: 'th one' },
+    // These change nothing about what anybody is charged — they decide when a
+    // number on the dashboard turns amber, and when it turns red. Worth saying
+    // so in the help text, since they sit in a table of fees.
+    dash_arrears_amber:        { group: '📊 Dashboard colours', label: 'Outstanding — amber above', help: 'Total owed across all customers. Below this the figure shows green when it is zero, and plain otherwise. Nothing here changes a charge.', unit: '£ owed' },
+    dash_arrears_red:          { group: '📊 Dashboard colours', label: 'Outstanding — red above', help: 'The point at which the money owed is a problem rather than the ordinary flow of the week.', unit: '£ owed' },
+    dash_overdue_amber:        { group: '📊 Dashboard colours', label: 'Overdue rentals — amber above', help: 'Phones still out past their return date.', unit: 'rentals' },
+    dash_overdue_red:          { group: '📊 Dashboard colours', label: 'Overdue rentals — red above', help: 'How many overdue phones means somebody should be chasing today.', unit: 'rentals' },
+    dash_tasks_amber:          { group: '📊 Dashboard colours', label: 'High-priority tasks — amber above', help: 'Open tasks marked 🔥 Now.', unit: 'tasks' },
+    dash_tasks_red:            { group: '📊 Dashboard colours', label: 'High-priority tasks — red above', help: 'The backlog size that counts as behind.', unit: 'tasks' },
+    dash_phones_amber:         { group: '📊 Dashboard colours', label: 'Phones left — amber at or below', help: 'Rental phones on the shelf and ready to go out. This one counts DOWN: fewer is worse.', unit: 'phones' },
+    dash_phones_red:           { group: '📊 Dashboard colours', label: 'Phones left — red at or below', help: 'The point at which the next customer through the door may go away empty-handed.', unit: 'phones' },
+    dash_returning_amber:      { group: '📊 Dashboard colours', label: 'Returning today — amber above', help: 'Phones expected back today, so the counter knows what kind of day it is.', unit: 'returns' },
+    dash_returning_red:        { group: '📊 Dashboard colours', label: 'Returning today — red above', help: 'A busy enough return day to need a second pair of hands.', unit: 'returns' },
   };
   const editable = cfg.settings.filter(s => s.numValue !== null && s.editable && !s.custom);
   const feeGroups = {};
