@@ -9,11 +9,7 @@ import { db, tablesMode } from '../../../lib/db.js'
 import { normalizeEmail } from '../../../lib/mappers.js'
 import { phoneKey } from '../../../lib/ukPhone.mjs'
 import { rateLimit } from '../../../lib/rateLimit.js'
-
-const cap = (v, n) => String(v || '').trim().slice(0, n)
-const hasLetter = (s) => /[a-zA-Z֐-׿]/.test(s)
-const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s)
-const digitCount = (s) => (String(s).match(/\d/g) || []).length
+import { cap, hasLetter, isEmail, digitCount } from '../../../lib/publicForm.mjs'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()

@@ -15,6 +15,7 @@ import { normalizeEmail } from '../../../lib/mappers.js'
 import { phoneKey } from '../../../lib/ukPhone.mjs'
 import { rateLimit } from '../../../lib/rateLimit.js'
 import { WHATSAPP_ENABLED } from '../../../lib/flags.js'
+import { cap, hasLetter, isEmail, digitCount } from '../../../lib/publicForm.mjs'
 
 // "Best way to reach you" chips — anything else is dropped. WhatsApp is only
 // accepted while the channel is on; with it off the chip isn't offered, so a
@@ -26,14 +27,6 @@ const PREFERRED_CONTACT = {
   email: 'Email',
   ...(WHATSAPP_ENABLED ? { whatsapp: 'WhatsApp' } : {}),
 }
-
-const cap = (v, n) => String(v || '').trim().slice(0, n)
-// A name must carry at least one real letter (Latin or Hebrew) — blocks "/",
-// "123", punctuation-only, etc. An email needs local@domain.tld; a phone needs
-// at least 7 digits. This is the authoritative guard (the client mirrors it).
-const hasLetter = (s) => /[a-zA-Z֐-׿]/.test(s)
-const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s)
-const digitCount = (s) => (String(s).match(/\d/g) || []).length
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
