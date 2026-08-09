@@ -3747,7 +3747,13 @@ function showDynamicModal(html) {
     overlay = document.createElement('div');
     overlay.id = 'dynamicModal';
     overlay.className = 'modal-overlay';
-    overlay.addEventListener('click', e => { if (e.target === overlay) closeDynamicModal(); });
+    // Close on a backdrop click — but only when the press STARTED on the
+    // backdrop too. A drag that merely ends there (pulling the resize corner
+    // past the edge, selecting text and overshooting) still fires a click with
+    // the overlay as target, and treating that as "close" throws away a
+    // half-filled form.
+    overlay.addEventListener('pointerdown', e => { overlay._pressedOnBackdrop = e.target === overlay; });
+    overlay.addEventListener('click', e => { if (e.target === overlay && overlay._pressedOnBackdrop) closeDynamicModal(); });
     document.body.appendChild(overlay);
   } else {
     wasOpen = !overlay.classList.contains('hidden');
@@ -6730,9 +6736,11 @@ function setupTopbarButtons() {
 function setupModal() {
   document.getElementById('btnCancelModal').addEventListener('click', closeModal);
   document.getElementById('btnCloseCustomerModal').addEventListener('click', closeModal);
-  document.getElementById('customerModal').addEventListener('click', e => {
-    if (e.target === document.getElementById('customerModal')) closeModal();
-  });
+  // Same started-on-backdrop guard as the dynamic modal: a resize-corner or
+  // text-selection drag that ends on the backdrop must not close the form.
+  const custOverlay = document.getElementById('customerModal');
+  custOverlay.addEventListener('pointerdown', e => { custOverlay._pressedOnBackdrop = e.target === custOverlay; });
+  custOverlay.addEventListener('click', e => { if (e.target === custOverlay && custOverlay._pressedOnBackdrop) closeModal(); });
   document.getElementById('btnSaveCustomer').addEventListener('click', saveCustomer);
   document.getElementById('fPhoneNumber').addEventListener('blur', checkPhoneDuplicate);
   document.getElementById('fEmail').addEventListener('blur', checkEmailDuplicate);
@@ -9992,7 +10000,7 @@ function renderPosView() {
             aria-label="Toggle light or dark mode">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙'}</button>
           <button class="theme-toggle kc-textsize" data-textsize-btn onclick="cycleTextSize()"
             data-size="${escHtml(currentTextSize().key)}" title="Text size: ${escHtml(currentTextSize().label)}"
-            aria-label="Text size: ${escHtml(currentTextSize().label)}. Press to change.">🔠</button>
+            aria-label="Text size: ${escHtml(currentTextSize().label)}. Press to change.">Aa</button>
         </div>
         <div class="pos-cats">
           <button class="pos-cat${posCat === 'all' ? ' on' : ''}" onclick="posSetCat('all')">All</button>

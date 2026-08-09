@@ -946,6 +946,13 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   overflow-y: auto;
   padding: 28px;
   box-shadow: var(--shadow-2);
+  /* Owner request, 9 Aug 2026: any popup can be pulled bigger or smaller by
+     its bottom-right corner (the browser's native resize grip — mouse only;
+     touch keeps the fixed size). max-width/height still cap it, the mins stop
+     it collapsing to nothing, and a fresh open resets the size — a one-off
+     enlargement shouldn't haunt every later popup. */
+  resize: both;
+  min-width: 280px; min-height: 160px;
 }
 
 /* A modal that has outgrown 90dvh scrolls inside itself and said nothing about
