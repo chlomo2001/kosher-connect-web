@@ -746,6 +746,180 @@ function fmtDayDate(iso) {
   return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
 
+// ── Charge Gate (client mirror) ───────────────────────────────────────────
+// Mirrors lib/chargeGate.mjs EXACTLY. That module is the canonical, unit-tested
+// statement of the rules and the server enforces it in syncRentals; this is the
+// same logic again because the browser has no bundler to import it — the same
+// arrangement priceFromDays has with lib/rentalMath.mjs. Change both together.
+//
+// The gate asks the questions that must be answered before a rental can be
+// closed and charged. It is here rather than only on the server so the operator
+// finds out while the customer is still at the counter, which is the only
+// moment the questions can actually be answered.
+const GATE_BLOCK = 'block', GATE_VERIFY = 'verify', GATE_PASS = 'pass';
+const GATE_ITEM_LABELS = { phone: 'the phone', sim: 'the SIM', charger: 'the charger' };
+
+function gateItemStatus(r, key) {
+  const st = r.itemStatus || {}, legacy = r.returnedItems || {};
+  if (key === 'charger') {
+    const parts = ['plug', 'cable'].map(k =>
+      st[k] !== undefined ? st[k] : (legacy[k] === true ? 'returned' : 'undecided'));
+    if (parts.includes('undecided')) return 'undecided';
+    return parts.includes('lost') ? 'lost' : 'returned';
+  }
+  if (st[key] !== undefined) return st[key];
+  return legacy[key] === true ? 'returned' : 'undecided';
+}
+
+function gateWasGiven(r, key) {
+  const eq = r.equipmentGiven;
+  if (!eq) return true;
+  if (key === 'charger') return (eq.plug ?? false) || (eq.cable ?? false);
+  return eq[key] ?? false;
+}
+
+function gateLostAmount(r, key) {
+  const lost = r.lostCharges || {};
+  if (key === 'charger') return Number(lost.plug) || Number(lost.cable) || 0;
+  return Number(lost[key]) || 0;
+}
+
+function gateFor(rental, { today, verifications = [] } = {}) {
+  const r = rental || {};
+  const signed = new Set(verifications);
+  const checks = [];
+  const add = (id, state, label, detail) => checks.push({ id, state, label, detail });
+  const round2 = v => Math.round(((Number(v) || 0) + Number.EPSILON) * 100) / 100;
+
+  const undecided = [], unpriced = [];
+  for (const key of ['phone', 'sim', 'charger']) {
+    if (!gateWasGiven(r, key)) continue;
+    const st = gateItemStatus(r, key);
+    if (st === 'undecided') undecided.push(GATE_ITEM_LABELS[key]);
+    else if (st === 'lost' && !(gateLostAmount(r, key) > 0)) unpriced.push(GATE_ITEM_LABELS[key]);
+  }
+  if (undecided.length) add('equipment', GATE_BLOCK, 'Equipment accounted for',
+    `Still undecided: ${undecided.join(', ')}. Mark each one returned or lost.`);
+  else if (unpriced.length) add('equipment', GATE_BLOCK, 'Equipment accounted for',
+    `Marked lost with no charge: ${unpriced.join(', ')}. Put a figure on it, or £0 if you are waiving it.`);
+  else add('equipment', GATE_PASS, 'Equipment accounted for', 'Every item that went out is settled.');
+
+  if (r.fromDate && r.toDate && r.toDate < r.fromDate)
+    add('dates', GATE_BLOCK, 'Dates make sense', 'The return date is before the pickup date.');
+  else if (today && r.toDate && r.toDate > today)
+    add('dates', GATE_VERIFY, 'Dates make sense',
+      `Closing a rental that runs until ${fmtDate(r.toDate)}. Confirm the phone is back early.`);
+  else add('dates', GATE_PASS, 'Dates make sense', 'Pickup and return dates are in order.');
+
+  const deposit = Number(r.depositHeld) || 0;
+  if (deposit > 0 && !r.depositSettled)
+    add('deposit', GATE_BLOCK, 'Deposit settled',
+      `${fmtGbp(deposit)} is still held. Refund it or apply it to the bill.`);
+  else if (deposit > 0) add('deposit', GATE_PASS, 'Deposit settled', 'The deposit has been refunded or applied.');
+  else add('deposit', GATE_PASS, 'Deposit settled', 'No deposit was taken.');
+
+  const owed = round2((Number(r.price) || 0) + (Number(r.lateFee) || 0) +
+    (Number(r.lostChargesTotal) || 0) - (Number(r.amountPaid) || 0));
+  if (owed > 0) add('balance', signed.has('balance') ? GATE_PASS : GATE_VERIFY, 'Balance agreed',
+    `${fmtGbp(owed)} will stay on the customer's account.`);
+  else if (owed < 0) add('balance', signed.has('balance') ? GATE_PASS : GATE_VERIFY, 'Balance agreed',
+    `${fmtGbp(Math.abs(owed))} overpaid — it will sit as credit on the account.`);
+  else add('balance', GATE_PASS, 'Balance agreed', 'Paid in full.');
+
+  for (const c of checks) if (c.state === GATE_VERIFY && signed.has(c.id)) c.state = GATE_PASS;
+
+  const blockers = checks.filter(c => c.state === GATE_BLOCK);
+  const needsVerification = checks.filter(c => c.state === GATE_VERIFY);
+  return { checks, blockers, needsVerification, canClose: !blockers.length && !needsVerification.length };
+}
+
+// Sign-offs given in this Manage session, cleared when the modal opens. They
+// are per-rental and deliberately not persisted client-side: a sign-off is
+// about the numbers in front of you, so reopening the modal asks again.
+let mgGateVerified = new Set();
+let mgGateRentalId = null;
+
+// The rental as the operator is ABOUT TO SAVE it — not as it is stored. The
+// gate has to judge the pending edit, or it approves the previous state and
+// blocks nothing.
+function mgDraftRental(rentalId) {
+  const r = rentals.find(x => x.id === rentalId);
+  if (!r) return null;
+  const lost = mgComputeLostCharges();
+  const draft = {
+    ...r,
+    fromDate: document.getElementById('mgFrom')?.value || r.fromDate,
+    toDate: document.getElementById('mgTo')?.value || r.toDate,
+    price: parseFloat(document.getElementById('mgPrice')?.value) || 0,
+    amountPaid: parseFloat(document.getElementById('mgPaid')?.value) || 0,
+    lateFee: mgComputeLateFee(),
+    lostChargesTotal: lost.total,
+    depositSettled: document.getElementById('mgDepositSettled')?.checked || r.depositSettled || false,
+    itemStatus: {},
+    lostCharges: {},
+    equipmentGiven: {
+      phone: document.getElementById('mgGivenPhone')?.dataset.given === '1',
+      sim: document.getElementById('mgGivenSim')?.dataset.given === '1',
+      plug: document.getElementById('mgGivenCharger')?.dataset.given === '1',
+      cable: document.getElementById('mgGivenCharger')?.dataset.given === '1',
+    },
+  };
+  // Same charger fan-out the save does: one UI control, two stored keys.
+  MG_UI_ITEMS.forEach(item => {
+    const st = document.getElementById('mgItemStatus_' + item)?.value || 'undecided';
+    const amt = st === 'lost' ? (parseFloat(document.getElementById('mgLostAmt_' + item)?.value) || null) : null;
+    if (item === 'charger') {
+      draft.itemStatus.plug = st; draft.itemStatus.cable = st;
+      draft.lostCharges.plug = amt; draft.lostCharges.cable = null;
+    } else {
+      draft.itemStatus[item] = st;
+      draft.lostCharges[item] = amt;
+    }
+  });
+  return draft;
+}
+
+const GATE_ICON = { block: '⛔', verify: '✍️', pass: '✓' };
+
+// The panel. Shown only while the Returned toggle is on — the gate is about
+// closing, and a rental still running has nothing to answer for yet.
+function mgRenderGate(rentalId) {
+  const box = document.getElementById('mgGateBox');
+  const btn = document.getElementById('mgSaveBtn');
+  if (!box) return;
+  const closing = document.getElementById('mgReturned')?.value === '1';
+  if (!closing) {
+    box.innerHTML = '';
+    box.style.display = 'none';
+    if (btn) { btn.disabled = false; btn.title = ''; }
+    return;
+  }
+  const draft = mgDraftRental(rentalId);
+  const gate = gateFor(draft, { today: localISO(), verifications: [...mgGateVerified] });
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div class="kc-gate-head">${gate.canClose
+      ? '✓ Ready to close'
+      : gate.blockers.length ? '⛔ Not ready to close' : '✍️ Needs a sign-off'}</div>
+    ${gate.checks.map(c => `
+      <div class="kc-gate-row is-${c.state}">
+        <span class="kc-gate-icon" aria-hidden="true">${GATE_ICON[c.state]}</span>
+        <span class="kc-gate-text"><strong>${escHtml(c.label)}</strong>
+          <span class="kc-gate-detail">${escHtml(c.detail)}</span></span>
+        ${c.state === GATE_VERIFY ? `<button type="button" class="btn btn-outline btn-sm kc-gate-sign"
+          onclick="mgSignGate('${escHtml(rentalId)}','${escHtml(c.id)}')">Sign off</button>` : ''}
+      </div>`).join('')}`;
+  if (btn) {
+    btn.disabled = !gate.canClose;
+    btn.title = gate.canClose ? '' : (gate.blockers[0] || gate.needsVerification[0])?.detail || '';
+  }
+}
+
+function mgSignGate(rentalId, checkId) {
+  mgGateVerified.add(checkId);
+  mgRenderGate(rentalId);
+}
+
 // ── Device chip ───────────────────────────────────────────────────────────
 // One way to show a rental handset, everywhere one appears.
 //
@@ -3254,11 +3428,29 @@ function openManageRentalModal(rentalId) {
     <input type="hidden" id="mgVnPrice" value="${(r.vn && r.vnSub !== 'monthly' ? r.vnPrice : 0) || 0}">
     <input type="hidden" id="mgWasReturned" value="${r.status === 'returned' ? '1' : '0'}">
     <input type="hidden" id="mgFrozenLateFee" value="${r.lateFee || 0}">
+    ${/* Deposit: money the shop is holding that belongs to somebody else. The
+         gate blocks the close until this is answered, so the answer needs a
+         control — the field only appears when there is actually one held. */''}
+    ${(Number(r.depositHeld) || 0) > 0 ? `
+    <div class="form-group" style="margin-bottom:16px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--fs-body);">
+        <input type="checkbox" id="mgDepositSettled" style="accent-color:var(--accent);"
+          ${r.depositSettled ? 'checked' : ''} onchange="mgUpdateCalc()">
+        🔒 The ${escHtml(fmtGbp(r.depositHeld))} deposit has been refunded or put against the bill
+      </label>
+    </div>` : ''}
+    ${/* The Charge Gate. Empty and hidden until the Returned toggle goes on —
+         a rental still running has nothing to answer for yet. */''}
+    <div id="mgGateBox" class="kc-gate" style="display:none;"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveManageRental('${rentalId}')">💾 Save changes</button>
+      <button class="btn btn-primary" id="mgSaveBtn" onclick="saveManageRental('${rentalId}')">💾 Save changes</button>
     </div>
   `);
+  // Sign-offs are per Manage session: reopening asks again, because a sign-off
+  // is a statement about the numbers currently in front of you.
+  mgGateVerified = new Set();
+  mgGateRentalId = rentalId;
 
   showHebrewDate('mgFrom','mgFromHeb');
   showHebrewDate('mgTo','mgToHeb');
@@ -3324,6 +3516,9 @@ function mgUpdateCalc() {
     freeDayStamps(from, to);
   document.getElementById('mgPrice').value    = finalPrice.toFixed(2);
   document.getElementById('mgBasePrice').value = price;
+  // Every edit that can move the gate — dates, price, paid, item states, the
+  // deposit — funnels through here, so this is the one place it re-runs.
+  if (mgGateRentalId) mgRenderGate(mgGateRentalId);
 
   // Build itemised charge breakdown (A3)
   const lostInfo   = mgComputeLostCharges();
@@ -3361,6 +3556,8 @@ function toggleReturned() {
   knob.style.left = isNowReturned ? '25px' : '3px';
   label.style.color = isNowReturned ? 'var(--success)' : 'var(--muted)';
   label.textContent = isNowReturned ? 'Returned ✅' : 'Not returned yet';
+  // The Charge Gate is about closing, so it appears with the toggle.
+  if (typeof mgGateRentalId !== 'undefined' && mgGateRentalId) mgRenderGate(mgGateRentalId);
 }
 
 function mgUpdateDebt() {
@@ -3392,7 +3589,26 @@ async function saveManageRental(rentalId) {
   const newPaid    = parseFloat(document.getElementById('mgPaid').value)  || 0;
   const { chargeableDays, totalDays } = calcRentalPrice(newFrom, newTo, r.country, r.ukPlan || 'standard');
 
-  // No hard block on undecided items — undecided items show ⚠️ badge (getComputedStatus)
+  // The Charge Gate. This used to read "No hard block on undecided items —
+  // undecided items show ⚠️ badge", which is the whole reason the gate exists:
+  // a rental could be closed with the charger neither returned nor written off,
+  // and the ambiguity was recorded as a badge on a row nobody goes back to.
+  //
+  // The button is already disabled when the gate is not satisfied; this is the
+  // check behind it, because a disabled button is a hint and not a rule. (The
+  // rule is on the server, in syncRentals — this is the third layer, and the
+  // one that can explain itself.)
+  if (isReturned) {
+    const gate = gateFor(mgDraftRental(rentalId), {
+      today: localISO(), verifications: [...mgGateVerified],
+    });
+    if (!gate.canClose) {
+      const first = gate.blockers[0] || gate.needsVerification[0];
+      toast(first ? `${first.label}: ${first.detail}` : 'This rental is not ready to close.', 'error');
+      mgRenderGate(rentalId);
+      return;
+    }
+  }
 
   const today = localISO();
   let newStatus;
@@ -3428,6 +3644,12 @@ async function saveManageRental(rentalId) {
   r.chargeableDays = chargeableDays;
   r.totalDays      = totalDays;
   r.notes          = document.getElementById('mgNotes').value.trim();
+  // The deposit answer, and the sign-offs, ride along to the server: syncRentals
+  // re-runs the same gate and will undo the close if they do not add up there.
+  // Recorded on the rental rather than sent as a side-channel, so a close and
+  // the reasons it was allowed can never be separated.
+  r.depositSettled = document.getElementById('mgDepositSettled')?.checked || r.depositSettled || false;
+  r.gateVerifications = isReturned ? [...mgGateVerified] : [];
   // Per-item status and per-item loss amounts (A1 data model). The single
   // charger UI row fans out to the stored plug+cable pair — but ONLY when the
   // operator actually changed it: an untouched charger keeps the genuine

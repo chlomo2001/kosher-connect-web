@@ -603,6 +603,50 @@ body.pos-mode .content { padding: 14px 18px; }
 /* A chip under a modal title: always its own line, never a wrapped tail. */
 .kc-title-device { display: block; margin-top: 5px; }
 
+
+/* ── Charge Gate ──────────────────────────────────────────────────────────
+   The questions that must be answered before a rental is closed and charged.
+   Sits directly above Save, because that is the button it governs — a checklist
+   somewhere further up the modal is a checklist that gets scrolled past.
+
+   Every check is listed, including the ones that pass. A panel that shows only
+   problems tells the operator what is wrong; one that shows the whole list also
+   tells them what the app checked, which is what makes it trustworthy the tenth
+   time rather than only the first. */
+.kc-gate {
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--bg-secondary); padding: 12px 14px; margin-bottom: 16px;
+}
+
+.kc-gate-head {
+  font-size: var(--fs-micro); font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.4px; color: var(--muted); margin-bottom: 8px;
+}
+
+.kc-gate-row {
+  display: flex; align-items: flex-start; gap: 9px; flex-wrap: wrap;
+  padding: 6px 0; border-top: 1px solid var(--border);
+}
+
+.kc-gate-row:first-of-type { border-top: 0; }
+
+.kc-gate-icon { flex-shrink: 0; line-height: 1.5; }
+
+.kc-gate-text { flex: 1; min-width: 0; font-size: var(--fs-small); line-height: 1.5; }
+
+.kc-gate-detail { display: block; color: var(--muted); font-size: var(--fs-micro); }
+
+/* A passed check is quiet: it is there to be counted, not read. The two that
+   are not passed carry the app's existing meanings — gold for "your call",
+   red for "the app will not do this". */
+.kc-gate-row.is-pass .kc-gate-text strong { font-weight: 500; color: var(--muted); }
+
+.kc-gate-row.is-verify .kc-gate-text strong { color: var(--gold); }
+
+.kc-gate-row.is-block .kc-gate-text strong { color: var(--danger-ink); }
+
+.kc-gate-sign { flex-shrink: 0; font-size: var(--fs-micro); padding: 3px 10px; }
+
 /* Below 360px the flag goes. On a screen that narrow the dialling code already
    says the country, and the emoji costs about 24px of a column competing with
    the number itself — enough, measured, to push the Rentals table past what

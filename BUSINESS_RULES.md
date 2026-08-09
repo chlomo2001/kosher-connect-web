@@ -71,6 +71,31 @@ so the renter lost the day. `test/yomTov.test.mjs` now pins the dates against a
 printed calendar, and every free day is named on screen rather than counted, so
 a wrong calendar is visible at the counter instead of silent.
 
+### 1.2b The Charge Gate (added 9 Aug 2026)
+
+A rental cannot be marked **Returned** until these questions are answered.
+The rules live in `lib/chargeGate.mjs`; the server re-checks them on every save.
+
+| Check | Blocks the close | What it asks |
+| --- | --- | --- |
+| Equipment accounted for | yes | Every item that went out is marked returned or lost. An item marked lost must carry a figure — £0 is a valid answer (a waiver), no answer is not. |
+| Dates make sense | yes, if reversed | The return date is not before the pickup date. |
+| Dates — early close | sign-off | Closing a rental whose end date is still in the future. |
+| Deposit settled | yes | A held deposit has been refunded or applied to the bill. |
+| Balance agreed | sign-off | The customer is leaving with money owing, or in credit. |
+
+**Sign-off, not override.** A sign-off is a named member of staff saying the
+outcome is intended; it is recorded in `gate_verifications`. Blocking checks
+have no override at all — the answer has to exist.
+
+Owing money at close is allowed: this shop runs accounts. What is not allowed
+is it happening without anyone noticing.
+
+**Why:** before this, a rental could be closed with an item neither returned
+nor written off, and the app recorded the ambiguity as a ⚠️ on a table row
+nobody goes back to. The customer had gone, and there was no longer anybody to
+ask. The gate asks while they are still at the counter.
+
 ### 1.3 Virtual Number Add-On
 
 Per-country (customer price list, 30 Jun 2026), minimum 1 week:
