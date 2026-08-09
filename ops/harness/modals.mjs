@@ -77,6 +77,10 @@ export const TRANSIENTS = [
   ['undo-toast',    'customers',
     `kcUndoable({ label: 'Deleted Miriam Cohen', commit: () => {}, restore: () => {}, seconds: 600 })`,
     '.kc-undo-toast', `kcUndoFlush()`],
+  // The till. Not a dialog either — it takes the whole page over (pos-mode),
+  // which is exactly why the tab sweep never reaches it: the sweep renders
+  // tabs, and the till is what the shop tab becomes once you press Sell.
+  ['till',          'shop', `openSaleModal()`, 'body.pos-mode #mainContent', `closePosView()`],
 ]
 
 // Run directly to audit the modals; import it (css-diff.mjs does) to reuse

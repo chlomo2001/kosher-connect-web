@@ -894,9 +894,13 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 
 .kc-view-chip.on { background: var(--accent); border-color: var(--accent); }
 
-.kc-view-chip.on .kc-view-apply { color: #fff; }
+/* Same accent ground as the till chips, same reason for --on-accent. Not
+   measured by the sweep — a saved view has to exist before the chip renders,
+   and the seed has none — so this is fixed by matching the pattern, not by a
+   reading. */
+.kc-view-chip.on .kc-view-apply { color: var(--on-accent); }
 
-.kc-view-chip.on .kc-view-del { color: rgba(255, 255, 255, 0.75); }
+.kc-view-chip.on .kc-view-del { color: var(--on-accent); opacity: 0.75; }
 
 .kc-view-chip.on .kc-view-del:hover { color: #fff; }
 
@@ -1288,6 +1292,12 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   margin-inline-start: 6px; font-size: var(--fs-micro); font-weight: 500;
   color: var(--muted); white-space: nowrap;
 }
+
+/* Inside a filled button the chord sits on the button's ground, not the page's,
+   and --muted is close enough to --accent in dark that "Ctrl ⏎" on the till's
+   Charge button measured 1.01:1 — the same ink as what was behind it. Inherit
+   the button's own ink; the 11px size already carries the hierarchy. */
+.btn .kc-chord { color: inherit; }
 
 @media (max-width: 768px) { .kc-chord { display: none; } }
 
@@ -1855,7 +1865,10 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
   color: var(--ink-secondary);
 }
 
-.pos-cat.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+/* --on-accent, not #fff: --accent lightens for dark surfaces, so the selected
+   category measured 2.62:1 at the till in the evening. The till had escaped
+   every contrast sweep because it is a page takeover, not a tab. */
+.pos-cat.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 
 
 /* Big shopfloor tiles that fill the space and are easy to tap. */
@@ -1907,7 +1920,7 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
   white-space: nowrap; color: var(--ink-secondary);
 }
 
-.pos-method.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pos-method.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 
 .pos-note {
   border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
