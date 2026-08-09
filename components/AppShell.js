@@ -186,7 +186,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
               className="theme-toggle kc-textsize" data-textsize-btn suppressHydrationWarning
               onClick={() => window.cycleTextSize && window.cycleTextSize()}
               title="Text size" aria-label="Text size. Press to change."
-            >🔠</button>
+            >Aa</button>
           </div>
         </div>
 

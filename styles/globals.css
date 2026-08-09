@@ -334,8 +334,11 @@ td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
 
    Fixed 38px like its neighbour, and its glyph deliberately does NOT ride
    --fs-scale — a control that grows as you press it walks out from under the
-   pointer, and the button is how you get back to Standard. */
-.kc-textsize { position: relative; font-size: 16px; }
+   pointer, and the button is how you get back to Standard.
+
+   The glyph is a plain "Aa" in the app's quiet grey, not an emoji — the blue
+   🔠 block shouted from every page's topbar (owner, 9 Aug 2026). */
+.kc-textsize { position: relative; font-size: 15px; font-weight: 600; letter-spacing: -0.3px; color: var(--muted); }
 .kc-textsize[data-size="large"]::after,
 .kc-textsize[data-size="largest"]::after {
   content: ''; position: absolute; top: 5px; right: 5px;
