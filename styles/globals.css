@@ -563,16 +563,6 @@ input[type="date"] { color-scheme: light; font-feature-settings: "tnum"; }
 input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; }
 input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 
-/* PASSWORD FIELD */
-.password-wrap { position: relative; display: flex; align-items: center; }
-.password-wrap .form-input { flex: 1; padding-right: 42px; }
-.password-wrap .pw-toggle, .pw-toggle {
-  background: none; border: none; cursor: pointer;
-  color: var(--muted); font-size: 15px; padding: 0; line-height: 1;
-}
-.password-wrap .pw-toggle { position: absolute; right: 10px; }
-.password-wrap .pw-toggle:hover, .pw-toggle:hover { color: var(--text); }
-
 /* ─── LOGIN — the same paper the public site is printed on ───
    Was: a rotating wireframe-globe <canvas> under a blurred five-stop colour
    mesh, with a PNG orb replacing the mouse pointer. Removed 06/08/2026 on the
