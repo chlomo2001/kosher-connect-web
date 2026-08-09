@@ -1641,7 +1641,6 @@ function multiSimDiscountPct(allSims, customerId) {
 // return risks the customer losing service mid-trip; expiring long after
 // wastes pool life. Already-live pool lines get a bonus (saves the
 // activation fee). Pure (takes phones/rentals) so it's unit-testable.
-const POOL_KEEP_DAYS = 7;      // >7 days of expiry left ⇒ worth keeping pooled
 const POOL_ACTIVATION_FEE = 8; // £ saved by reusing an already-active line
 
 function poolScore(overlap, alreadyActive) {
