@@ -245,6 +245,15 @@
 
 .settings-section .sh-sub { color: var(--muted); font-size: var(--fs-small); }
 
+/* On a phone the short subtitles fit beside their label and the long ones
+   wrap to a line of their own, so the same header renders two different ways
+   down one screen — SHOP inline, BUSINESS and PEOPLE & ACCESS stacked. Stack
+   all of them below 640px. Desktop is untouched: at 1280 every subtitle fits
+   inline already, which is why this only shows up on the small screen. */
+@media (max-width: 640px) {
+  .settings-section { flex-direction: column; align-items: flex-start; gap: 3px; }
+}
+
 
 
 /* Sidebar footer — who you are and how to leave, nothing else. The four
