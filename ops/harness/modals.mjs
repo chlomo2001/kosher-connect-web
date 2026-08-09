@@ -19,6 +19,7 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { buildAppHtml } from './render.mjs'
+import { measure, report } from './contrast.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '../..')
@@ -81,6 +82,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   })
 
   let bad = 0
+  const contrastAll = []
+  const wantContrast = process.argv.includes('--contrast')
   for (const [name, tab, js] of MODALS) {
     if (only && name !== only) continue
     await page.evaluate((t) => window.renderTab(t), tab).catch(() => {})
@@ -110,6 +113,15 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       }
     })
     if (!geo) { console.log(`✗ ${name}: no visible modal after opener`); bad++; continue }
+    // Contrast, while the dialog is actually on screen. The --contrast sweep
+    // renders a static page, so every dialog, the palette and the toasts were
+    // never measured at all — that is how a 2.92:1 error toast survived every
+    // clean audit. Measured here, where the thing exists.
+    if (wantContrast) {
+      const found = (await measure(page, '.modal-overlay:not(.hidden), .modal:not(.hidden), .kc-cpage'))
+        .map((f) => ({ ...f, where: `${name}/${theme}` }))
+      contrastAll.push(...found)
+    }
     await page.screenshot({ path: path.join(HERE, `modal_${name}_${theme}_${width}.png`), fullPage: false })
     const flags = []
     if (geo.offRight || geo.offLeft) flags.push(`off-screen L${geo.offLeft}/R${geo.offRight}`)
@@ -125,6 +137,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     })
     await page.waitForTimeout(120)
   }
+  if (wantContrast) { report(contrastAll, `the modals (${theme})`); bad += contrastAll.length }
   await browser.close()
   console.log(bad ? `\n${bad} modal(s) flagged at ${width}px ${theme}` : `\nall modals geometrically clean at ${width}px ${theme} — now look at the screenshots`)
   process.exit(bad ? 1 : 0)

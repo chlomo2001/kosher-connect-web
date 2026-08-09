@@ -983,7 +983,10 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   border-radius: var(--radius-lg);
   background: var(--accent);   /* flat indigo — no gradient */
   display: flex; align-items: center; justify-content: center;
-  font-size: var(--fs-title); font-weight: 500; color: #fff; flex-shrink: 0;
+  /* --on-accent, not #fff: --accent is lightened for dark surfaces, so white
+     initials on it measure 2.62:1 there — the same figure .btn-primary hit in
+     4d9f4d0, which is why the token exists. Light is unchanged (#fff). */
+  font-size: var(--fs-title); font-weight: 500; color: var(--on-accent); flex-shrink: 0;
   letter-spacing: 0.2px;
 }
 
@@ -1055,7 +1058,8 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 
 .kc-cat-chip:hover { border-color: var(--accent); color: var(--accent); }
 
-.kc-cat-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+/* Same as .avatar above: white on the dark-mode --accent is 2.62:1. */
+.kc-cat-chip.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 
 .kc-cat-chip.on:hover { color: #fff; }
 
@@ -1613,7 +1617,10 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
   opacity: 0; transition: opacity 0.18s; z-index: 0;
 }
 
-.eq-slide-lbl-n { font-size: var(--fs-micro); color: var(--muted); }
+/* --muted on the slider track measures 4.26:1 at 11px. These two labels name
+   what the slider does ("Returned" / "Lost") — the smallest type in the app
+   should not also be the faintest. */
+.eq-slide-lbl-n { font-size: var(--fs-micro); color: var(--ink-secondary); }
 
 .eq-slide-lbl-n-ret  { left: 7px; }
 

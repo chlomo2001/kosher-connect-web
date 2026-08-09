@@ -1515,7 +1515,7 @@ function renderRentalsTab() {
       </div>` : ''}
       <div class="stat-card">
         <div class="stat-label">Outstanding Debt</div>
-        <div class="stat-value" style="color:${outstandingDebt>0?'var(--danger)':'var(--success)'};">${fmtGbp(outstandingDebt)}</div>
+        <div class="stat-value" style="color:${outstandingDebt>0?'var(--danger-ink)':'var(--success)'};">${fmtGbp(outstandingDebt)}</div>
         <div class="stat-sub">Unpaid balances</div>
       </div>
     </div>
@@ -1757,7 +1757,7 @@ function renderRentalRows() {
 
     const paid = r.amountPaid || 0;
     const totalOwed = rentalGrandTotal(r) - paid;
-    const debtColor = totalOwed > 0 ? 'color:var(--danger);' : 'color:var(--success);';
+    const debtColor = totalOwed > 0 ? 'color:var(--danger-ink);' : 'color:var(--success);';
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('.action-btn'))openManageRentalModal('${r.id}')">
       <td>
         <div class="customer-name">${nameHtml(r.customerName || '—')}</div>
@@ -1809,7 +1809,7 @@ function renderPhoneRows() {
       <td class="kc-phone" style="font-weight:600;font-size:var(--fs-small);">${escHtml(fmtPhone(p.number))}${p.model ? `<div class="customer-email">${escHtml(p.model)}</div>` : ''}</td>
       <td>${p.country === 'USA' ? '🇺🇸' : p.country === 'Israel' ? '🇮🇱' : p.country === 'UK' ? '🇬🇧' : p.country === 'Canada' ? '🇨🇦' : '🇪🇺'} ${escHtml(p.country)}</td>
       <td style="font-size:var(--fs-small);color:${isUSA?'':'var(--muted)'};">${isUSA ? escHtml(poolDisplay) : poolDisplay}</td>
-      <td style="font-size:var(--fs-micro);color:${poolExpired?'var(--danger)':isUSA?'var(--muted)':'var(--muted)'};">${isUSA ? expiryDisplay : '<span style="color:var(--muted);">N/A</span>'}</td>
+      <td style="font-size:var(--fs-micro);color:${poolExpired?'var(--danger-ink)':isUSA?'var(--muted)':'var(--muted)'};">${isUSA ? expiryDisplay : '<span style="color:var(--muted);">N/A</span>'}</td>
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
@@ -2866,7 +2866,7 @@ function openManageRentalModal(rentalId) {
         <input class="form-input" type="date" id="mgTo" value="${r.toDate}" onchange="mgUpdateCalc(); mgCheckConflict('${escJs(r.id)}')">
         <div class="hebrew-date-label" id="mgToHeb"></div>
       </div>
-      <div class="form-group form-full" id="mgConflictWarn" role="alert" style="display:none;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.35);border-radius:8px;padding:10px 14px;font-size:var(--fs-body);color:var(--danger);"></div>
+      <div class="form-group form-full" id="mgConflictWarn" role="alert" style="display:none;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.35);border-radius:8px;padding:10px 14px;font-size:var(--fs-body);color:var(--danger-ink);"></div>
       <div class="form-group form-full" id="mgCalcBox">
         <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:var(--fs-body);">
           <div id="mgCalcText"></div>
@@ -2906,7 +2906,7 @@ function openManageRentalModal(rentalId) {
           Mark as fully paid
         </label>
       </div>
-      <div id="mgDebtDisplay" style="font-size:var(--fs-body);font-weight:600;color:${debt>0?'var(--danger)':'var(--success)'};">
+      <div id="mgDebtDisplay" style="font-size:var(--fs-body);font-weight:600;color:${debt>0?'var(--danger-ink)':'var(--success)'};">
         ${debt > 0 ? 'Remaining debt: £'+debt : '✓ Fully paid'}
       </div>
     </div>
@@ -3034,7 +3034,7 @@ function mgUpdateCalc() {
   if (vnPrice > 0)     html += row('Virtual number', vnPrice, 'var(--accent)');
   if (lateFee > 0)     html += row('Late fee', lateFee, 'var(--gold)');
   lostInfo.items.forEach(({ label, amount }) => {
-    html += row(label + ' — lost', amount, 'var(--danger)');
+    html += row(label + ' — lost', amount, 'var(--danger-ink)');
   });
   html += `<div style="display:flex;justify-content:space-between;font-size:var(--fs-body);font-weight:700;
               margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">
@@ -3067,7 +3067,7 @@ function mgUpdateDebt() {
   const el    = document.getElementById('mgDebtDisplay');
   if (!el) return;
   if (diff > 0.005) {
-    el.style.color = 'var(--danger)';
+    el.style.color = 'var(--danger-ink)';
     el.textContent = 'Remaining debt: ' + fmtGbp(diff);
   } else if (diff < -0.005) {
     el.style.color = 'var(--warning)';
@@ -3786,7 +3786,7 @@ function renderTableRows() {
       </td>
       <td class="kc-phone">${c.phone ? escHtml(fmtPhone(c.phone)) : '—'}</td>
       <td>${services || '<span style="color:var(--muted);font-size:var(--fs-small);">None</span>'}</td>
-      <td class="kc-money" style="color: ${customerDebt > 0 ? 'var(--danger)' : (customerCredit > 0 ? 'var(--accent)' : 'var(--success)')}; font-weight: 700;">${
+      <td class="kc-money" style="color: ${customerDebt > 0 ? 'var(--danger-ink)' : (customerCredit > 0 ? 'var(--accent)' : 'var(--success)')}; font-weight: 700;">${
         customerDebt > 0 ? `${fmtGbp(customerDebt)} debt`
         : customerCredit > 0 ? `${fmtGbp(customerCredit)} credit`
         : ledgerBal !== null ? 'Settled'
@@ -4635,14 +4635,14 @@ async function elidLoadLine(customerId, u) {
   try {
     const r = await kcFetch('/api/elid/user?username=' + encodeURIComponent(u));
     const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.success) { cell.innerHTML = `<span style="color:var(--danger);">${escHtml(j.error || 'Lookup failed')}</span>`; return; }
+    if (!r.ok || !j.success) { cell.innerHTML = `<span style="color:var(--danger-ink);">${escHtml(j.error || 'Lookup failed')}</span>`; return; }
     const a = j.account;
     const owes = (a.balance != null && a.balance < 0);
     const balTxt = a.balance == null ? '—' : `${owes ? '−' : ''}${fmtGbp(Math.abs(a.balance))}`;
-    const balColor = a.balance == null ? 'var(--muted)' : owes ? 'var(--danger)' : 'var(--success)';
-    const status = a.blocked ? '<span style="color:var(--danger);">Blocked</span>' : a.active ? '<span style="color:var(--success);">Active</span>' : 'Inactive';
+    const balColor = a.balance == null ? 'var(--muted)' : owes ? 'var(--danger-ink)' : 'var(--success)';
+    const status = a.blocked ? '<span style="color:var(--danger-ink);">Blocked</span>' : a.active ? '<span style="color:var(--success);">Active</span>' : 'Inactive';
     cell.innerHTML = `<span style="font-size:var(--fs-title);font-weight:700;color:${balColor};">${balTxt}</span> <span style="font-size:var(--fs-micro);color:var(--muted);">${a.balance == null ? '' : owes ? 'owing' : 'in credit'}</span> · ${status} · ${escHtml(a.account || '—')} · tariff ${escHtml(String(a.tariffId || '—'))} <span style="color:var(--muted);">· ELID #${escHtml(String(a.userid || '—'))}</span>`;
-  } catch { cell.innerHTML = `<span style="color:var(--danger);">Could not reach ELID.</span>`; }
+  } catch { cell.innerHTML = `<span style="color:var(--danger-ink);">Could not reach ELID.</span>`; }
 }
 async function elidAddLine(customerId) {
   const c = customers.find(x => x.id === customerId); if (!c) return;
@@ -4654,7 +4654,7 @@ async function elidAddLine(customerId) {
   try {
     const r = await kcFetch('/api/elid/user?username=' + encodeURIComponent(uname));
     const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.success) { if (msg) msg.innerHTML = `<span style="color:var(--danger);">${escHtml(j.error || 'That username was not found on ELID.')}</span>`; return; }
+    if (!r.ok || !j.success) { if (msg) msg.innerHTML = `<span style="color:var(--danger-ink);">${escHtml(j.error || 'That username was not found on ELID.')}</span>`; return; }
     const lines = elidLinesOf(c);
     if (lines.some(x => x.toLowerCase() === uname.toLowerCase())) { if (msg) msg.textContent = 'That line is already linked.'; }
     else {
@@ -4731,7 +4731,7 @@ async function runElidMatch() {
         list.innerHTML = found.slice(-250).map((l) =>
           `<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px solid var(--border);">
             <span>${escHtml(l.name)} → <code>${escHtml(l.username)}</code></span>
-            <span style="color:${l.balance != null && l.balance < 0 ? 'var(--danger)' : 'var(--muted)'};">${l.balance != null ? fmtGbp(l.balance) : ''}</span>
+            <span style="color:${l.balance != null && l.balance < 0 ? 'var(--danger-ink)' : 'var(--muted)'};">${l.balance != null ? fmtGbp(l.balance) : ''}</span>
           </div>`).join('');
       }
       if (j.done) break;
@@ -4897,7 +4897,7 @@ async function applyElidCreate() {
       const chunk = usernames.slice(i, i + 20);
       const r = await kcFetch('/api/elid/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usernames: chunk }) });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok || !j.success) { if (out) out.innerHTML = `<span style="color:var(--danger);">${escHtml(j.error || 'Import failed.')}</span>`; break; }
+      if (!r.ok || !j.success) { if (out) out.innerHTML = `<span style="color:var(--danger-ink);">${escHtml(j.error || 'Import failed.')}</span>`; break; }
       created += (j.created || []).length;
       (j.skipped || []).forEach((s) => skipped.push(s));
       if (out) out.textContent = `Created ${created}${skipped.length ? ` · skipped ${skipped.length}` : ''}…`;
@@ -5047,7 +5047,7 @@ async function loadWalletSection(customerId) {
     return;
   }
   const bal = data.balance || 0;
-  const balColor = bal < 0 ? 'var(--danger)' : 'var(--success)';
+  const balColor = bal < 0 ? 'var(--danger-ink)' : 'var(--success)';
   const balLabel = bal < 0 ? `owes ${fmtGbp(Math.abs(bal))}` : `${fmtGbp(bal)} in credit`;
   // #7/#16/#70 — the card headline used to show a rental-only "Total Debt"
   // that contradicted this true ledger balance. Fill the headline stat from
@@ -5056,7 +5056,7 @@ async function loadWalletSection(customerId) {
   const statLbl = document.getElementById('cardBalanceLabel');
   if (stat) {
     stat.textContent = bal < 0 ? `−${fmtGbp(Math.abs(bal))}` : `${fmtGbp(bal)}`;
-    stat.style.color = bal < 0 ? 'var(--danger)' : bal > 0 ? 'var(--success)' : 'var(--muted)';
+    stat.style.color = bal < 0 ? 'var(--danger-ink)' : bal > 0 ? 'var(--success)' : 'var(--muted)';
   }
   if (statLbl) statLbl.textContent = bal < 0 ? 'Owes (wallet)' : bal > 0 ? 'In credit' : 'Wallet balance';
   // Receiptable rows get an ✉️ action: sales re-send an itemised receipt,
@@ -5074,7 +5074,7 @@ async function loadWalletSection(customerId) {
             <div class="history-desc">${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}</div>
           </div>
           <div class="history-date" style="margin:0 16px;">${fmtDate(e.at)}</div>
-          <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--danger)'};">
+          <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--danger-ink)'};">
             ${e.amount >= 0 ? '+' : '−'}${fmtGbp(Math.abs(e.amount))}</div>
           ${RECEIPTABLE[e.type] && Math.abs(e.amount) >= 0.005 ? `<button class="btn btn-secondary" style="font-size:var(--fs-micro);padding:3px 8px;margin-left:10px;"
             title="Email a receipt for this entry" onclick="emailLedgerReceipt(this, '${escHtml(customerId)}', ${i})">✉️</button>` : ''}
@@ -5678,7 +5678,7 @@ async function renderWalletTab() {
       ? ` onclick="goToTab('customers',{customerId:'${escHtml(String(b.customerId))}'})" title="Open customer"` : ''}>
       <span class="feed-icon">${negative ? '🔴' : '🟢'}</span>
       <span style="flex:1;"><strong>${escHtml(b.customerName)}</strong></span>
-      <span style="font-feature-settings:'tnum';color:${negative ? 'var(--danger)' : 'var(--success)'};font-weight:600;">
+      <span style="font-feature-settings:'tnum';color:${negative ? 'var(--danger-ink)' : 'var(--success)'};font-weight:600;">
         ${negative ? '−' : '+'}${fmtGbp(Math.abs(b.balance))}</span>
       ${b.customerId ? `<button class="btn btn-outline btn-sm" style="margin-left:10px;font-size:var(--fs-micro);padding:4px 10px;"
         onclick="event.stopPropagation();openWalletModal('${escHtml(String(b.customerId))}', ${Number(b.balance) || 0})">💰 ${negative ? 'Take payment' : 'Record'}</button>` : ''}
@@ -5720,7 +5720,7 @@ async function renderWalletTab() {
       <div class="stat-card"><div class="stat-label">Charged Out Today</div>
         <div class="stat-value">${fmtGbp(Math.abs(data.todayOut || 0))}</div></div>
       <div class="stat-card"><div class="stat-label">Outstanding</div>
-        <div class="stat-value" style="color:${arrearsTotal > 0 ? 'var(--danger)' : 'var(--success)'};">${fmtGbp(arrearsTotal)}</div>
+        <div class="stat-value" style="color:${arrearsTotal > 0 ? 'var(--danger-ink)' : 'var(--success)'};">${fmtGbp(arrearsTotal)}</div>
         <div class="stat-sub">${arrears.length} customer${arrears.length === 1 ? '' : 's'} in arrears</div></div>
       <div class="stat-card"><div class="stat-label">Credit Held</div>
         <div class="stat-value">${fmtGbp(creditsTotal)}</div>
@@ -5832,7 +5832,7 @@ function cuUpdateVariance(inputEl, expected) {
   const d = +(v - expected).toFixed(2);
   el.textContent = d === 0 ? '✓ Till balances'
     : `${d > 0 ? '+' : '−'}${fmtGbp(Math.abs(d))} ${d > 0 ? 'over' : 'short'}`;
-  el.style.color = d === 0 ? 'var(--success)' : 'var(--danger)';
+  el.style.color = d === 0 ? 'var(--success)' : 'var(--danger-ink)';
 }
 
 async function saveCashup(date) {
@@ -6679,7 +6679,7 @@ function renderSimRows() {
 
     const isRenewingToday    = s.renewalDate === today;
     const isRenewingTomorrow = s.renewalDate === tomorrow;
-    const renewalClass = isRenewingToday ? 'color:var(--danger);font-weight:700;' :
+    const renewalClass = isRenewingToday ? 'color:var(--danger-ink);font-weight:700;' :
                          isRenewingTomorrow ? 'color:var(--warning);font-weight:700;' : '';
     const renewalLabel = isRenewingToday ? ' ⚠️ Today!' : isRenewingTomorrow ? ' ⚠️ Tomorrow' : '';
 
@@ -8012,7 +8012,7 @@ async function openTravelReqModal(bookingId) {
     // passport readiness line
     let pass = '';
     if (p.passport.ok === true) pass = `<span style="color:var(--success);">✓ Passport valid long enough</span>`;
-    else if (p.passport.ok === false) pass = `<span style="color:var(--danger);">⚠ ${escHtml(p.passport.note)}</span>`;
+    else if (p.passport.ok === false) pass = `<span style="color:var(--danger-ink);">⚠ ${escHtml(p.passport.note)}</span>`;
     else pass = `<span style="color:var(--muted);">Passport expiry not on file</span>`;
 
     // coverage + actions
@@ -8031,7 +8031,7 @@ async function openTravelReqModal(bookingId) {
         ? `<span style="color:var(--success);">✓ ${escHtml(r.label)} on file — valid until ${escHtml(cov.validUntil || '')}</span>`
         : cov.status === 'expiring'
           ? `<span style="color:var(--gold);">⚠ ${escHtml(r.label)} ${cov.expiresBeforeTravel ? 'expires BEFORE this trip' : 'expiring soon'} — valid until ${escHtml(cov.validUntil || '')}</span>`
-          : `<span style="color:var(--danger);">Not recorded yet — ${escHtml(r.label)} needed${validity}</span>`;
+          : `<span style="color:var(--danger-ink);">Not recorded yet — ${escHtml(r.label)} needed${validity}</span>`;
       cover = `
         <div style="font-size:var(--fs-body);margin-bottom:6px;">${covLine}</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
@@ -8040,7 +8040,7 @@ async function openTravelReqModal(bookingId) {
           <button class="btn btn-outline btn-sm" style="font-size:var(--fs-small);padding:4px 10px;"
             onclick="recordTravelAuth('${escHtml(bookingId)}','${escHtml(res.customerId)}',${i},${JSON.stringify(p.name)},'${r.code}','${escHtml(res.destination)}')">
             ${auth ? 'Update' : 'Record'} approved-until</button>
-          ${auth ? `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-small);padding:4px 10px;color:var(--danger);" onclick="deleteTravelAuthRow('${escHtml(bookingId)}','${escHtml(auth.id)}')">Remove</button>` : ''}
+          ${auth ? `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-small);padding:4px 10px;color:var(--danger-ink);" onclick="deleteTravelAuthRow('${escHtml(bookingId)}','${escHtml(auth.id)}')">Remove</button>` : ''}
         </div>
         <div style="font-size:var(--fs-small);margin-top:6px;">${link} ${link && draftBtn ? '&nbsp;·&nbsp;' : ''} ${draftBtn}</div>`;
     } else {
@@ -8939,9 +8939,9 @@ async function renderShopTab() {
         <td>${STOCK_CATEGORY_LABELS[i.category] || escHtml(i.category)}</td>
         <td style="color:var(--muted);">${i.netPrice === null ? '—' : fmtGbp(i.netPrice)}</td>
         <td><strong>${fmtGbp((i.sellingPrice || 0))}</strong></td>
-        <td style="color:${i.profit === null ? 'var(--muted)' : i.profit >= 0 ? 'var(--success)' : 'var(--danger)'};">
+        <td style="color:${i.profit === null ? 'var(--muted)' : i.profit >= 0 ? 'var(--success)' : 'var(--danger-ink)'};">
           ${i.profit === null ? '—' : fmtGbp(i.profit)}</td>
-        <td style="font-weight:700;${i.quantity <= i.lowStockAt ? 'color:var(--danger);' : ''}">${i.quantity}</td>
+        <td style="font-weight:700;${i.quantity <= i.lowStockAt ? 'color:var(--danger-ink);' : ''}">${i.quantity}</td>
         <td style="white-space:nowrap;">
           <button class="action-btn" onclick="openSaleModal('${i.id}')">💷 Sell</button>
           <button class="action-btn" aria-label="Edit ${escHtml(i.name || 'item')}" onclick="openStockItemModal('${i.id}')">✏️</button>
@@ -9019,7 +9019,7 @@ async function renderShopTab() {
     <div class="stats-row">
       <div class="stat-card"><div class="stat-label">Units In Stock</div><div class="stat-value">${inStock}</div></div>
       <div class="stat-card"><div class="stat-label">Low Stock</div>
-        <div class="stat-value" style="color:${low.length ? 'var(--danger)' : 'var(--success)'};">${low.length}</div></div>
+        <div class="stat-value" style="color:${low.length ? 'var(--danger-ink)' : 'var(--success)'};">${low.length}</div></div>
       <div class="stat-card"><div class="stat-label">Sold Today</div>
         <div class="stat-value">${fmtGbp(todaySales.reduce((s, x) => s + x.total, 0))}</div>
         <div class="stat-sub">${todaySales.length} sale${todaySales.length === 1 ? '' : 's'}</div></div>
@@ -9601,7 +9601,7 @@ function posChangeCalc() {
   const given = parseFloat(document.getElementById('posTenderIn')?.value);
   if (!Number.isFinite(given)) { out.textContent = ''; return; }
   const change = given - posCashDue();   // change is against the cash due, not the gross total
-  out.style.color = change < 0 ? 'var(--danger)' : 'var(--success)';
+  out.style.color = change < 0 ? 'var(--danger-ink)' : 'var(--success)';
   out.textContent = change < 0 ? `${fmtGbp(Math.abs(change))} short` : `Change ${fmtGbp(change)}`;
 }
 
@@ -9699,7 +9699,7 @@ function posRenderBasket() {
           <strong style="min-width:26px;text-align:center;font-size:var(--fs-lead);">${l.qty}</strong>
           <button class="action-btn" style="min-width:40px;min-height:40px;font-size:var(--fs-title);line-height:1;" aria-label="One more ${escHtml(i.name || 'item')}" onclick="posQty('${i.id}',1)">+</button>
           <strong style="min-width:58px;text-align:right;font-feature-settings:'tnum';">${fmtGbp(lineTotal)}</strong>
-          <button class="action-btn" style="min-width:40px;min-height:40px;color:var(--danger);font-size:var(--fs-lead);" title="Void line" aria-label="Remove ${escHtml(i.name || 'item')} from the sale"
+          <button class="action-btn" style="min-width:40px;min-height:40px;color:var(--danger-ink);font-size:var(--fs-lead);" title="Void line" aria-label="Remove ${escHtml(i.name || 'item')} from the sale"
             onclick="posQty('${i.id}',-999)">✕</button>
         </div>`;
       }).join('');
@@ -9833,7 +9833,7 @@ function posRenderParkedMenu() {
           <div style="font-size:var(--fs-micro);color:var(--muted);">${p.count} item${p.count === 1 ? '' : 's'} · ${fmtGbp(p.total || 0)} · held ${hm}</div>
         </div>
         <button class="btn btn-primary" style="padding:6px 12px;" onclick="posResumeSale('${p.id}')">Resume</button>
-        <button class="action-btn" style="min-width:36px;min-height:36px;color:var(--danger);" title="Discard this held sale" onclick="posDiscardParked('${p.id}')">✕</button>
+        <button class="action-btn" style="min-width:36px;min-height:36px;color:var(--danger-ink);" title="Discard this held sale" onclick="posDiscardParked('${p.id}')">✕</button>
       </div>`;
   }).join('');
   el.innerHTML = `
@@ -10729,7 +10729,7 @@ async function openBusinessSummary() {
   const body = document.getElementById('bizSummaryBody');
   if (!body) return;
   if (!wk?.success || !mo?.success) {
-    body.innerHTML = `<div style="color:var(--danger);padding:6px 0;">${(wk && wk.error) || (mo && mo.error) || 'Could not load the summary.'}</div>`;
+    body.innerHTML = `<div style="color:var(--danger-ink);padding:6px 0;">${(wk && wk.error) || (mo && mo.error) || 'Could not load the summary.'}</div>`;
     return;
   }
   // Revenue by service is a magnitude-by-category read → horizontal bars in a
@@ -10821,9 +10821,9 @@ async function runAssistant() {
   try {
     const r = await kcFetch('/api/assistant/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg }) });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.success) { if (out) out.innerHTML = `<div style="color:var(--danger);font-size:var(--fs-body);">${escHtml(j.error || 'Could not understand that.')}</div>`; return; }
+    if (!r.ok || !j.success) { if (out) out.innerHTML = `<div style="color:var(--danger-ink);font-size:var(--fs-body);">${escHtml(j.error || 'Could not understand that.')}</div>`; return; }
     await dispatchAssistant(j.plan, out);
-  } catch { if (out) out.innerHTML = '<div style="color:var(--danger);font-size:var(--fs-body);">Could not reach the assistant.</div>'; }
+  } catch { if (out) out.innerHTML = '<div style="color:var(--danger-ink);font-size:var(--fs-body);">Could not reach the assistant.</div>'; }
   finally { assistantBusy = false; if (btn) { btn.disabled = false; btn.textContent = 'Ask'; } }
 }
 async function dispatchAssistant(plan, out) {
@@ -10846,17 +10846,17 @@ async function assistantWhoOwes() {
   try {
     const r = await kcFetch('/api/ledger');
     const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.success) return '<div style="color:var(--danger);font-size:var(--fs-body);">Could not load balances.</div>';
+    if (!r.ok || !j.success) return '<div style="color:var(--danger-ink);font-size:var(--fs-body);">Could not load balances.</div>';
     const owers = (j.arrears || []).slice().sort((a, b) => Math.abs(Number(b.balance)) - Math.abs(Number(a.balance)));
     if (!owers.length) return '<div style="color:var(--success);font-size:var(--fs-body);">Nobody is in debt right now. 🎉</div>';
     const total = owers.reduce((s, b) => s + Math.abs(Number(b.balance) || 0), 0);
     const rows = owers.slice(0, 40).map((b) =>
       `<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:var(--fs-body);">
         <button style="background:none;border:0;color:var(--accent);cursor:pointer;padding:0;text-align:start;" onclick="openCustomerById('${escHtml(String(b.customerId))}')">${escHtml(assistantNameOf(b.customerId))}</button>
-        <span style="color:var(--danger);font-weight:600;">${fmtGbp(Math.abs(Number(b.balance)))}</span>
+        <span style="color:var(--danger-ink);font-weight:600;">${fmtGbp(Math.abs(Number(b.balance)))}</span>
       </div>`).join('');
     return `<div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:6px;">${owers.length} owing · ${fmtGbp(total)} total</div><div style="max-height:280px;overflow:auto;">${rows}</div>`;
-  } catch { return '<div style="color:var(--danger);font-size:var(--fs-body);">Could not load balances.</div>'; }
+  } catch { return '<div style="color:var(--danger-ink);font-size:var(--fs-body);">Could not load balances.</div>'; }
 }
 async function assistantCustomerInfo(name) {
   const res = assistantResolve(name);
@@ -10868,7 +10868,7 @@ async function assistantCustomerInfo(name) {
   else { try { const r = await kcFetch('/api/ledger'); const j = await r.json().catch(() => ({})); if (j && j.success) { const hit = [...(j.arrears || []), ...(j.credits || [])].find((b) => String(b.customerId) === String(c.id)); if (hit) bal = Number(hit.balance); } } catch {} }
   const owes = bal != null && bal < 0;
   const balHtml = bal == null ? '<span style="color:var(--muted);">settled / no balance on file</span>'
-    : `<span style="color:${owes ? 'var(--danger)' : 'var(--success)'};font-weight:700;">${owes ? fmtGbp(Math.abs(bal)) + ' owed' : (bal > 0 ? fmtGbp(bal) + ' in credit' : 'settled')}</span>`;
+    : `<span style="color:${owes ? 'var(--danger-ink)' : 'var(--success)'};font-weight:700;">${owes ? fmtGbp(Math.abs(bal)) + ' owed' : (bal > 0 ? fmtGbp(bal) + ' in credit' : 'settled')}</span>`;
   return `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:var(--fs-body);">
     <div style="font-weight:600;margin-bottom:4px;">${escHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}</div>
     <div style="margin-bottom:8px;">${balHtml}</div>
@@ -10908,7 +10908,7 @@ function assistantChooserHtml(choices) {
 }
 async function assistantConfirmCard(plan) {
   const built = await assistantBuildAction(plan);
-  if (built.error) return `<div style="color:var(--danger);font-size:var(--fs-body);">${built.error}</div>`;
+  if (built.error) return `<div style="color:var(--danger-ink);font-size:var(--fs-body);">${built.error}</div>`;
   if (built.choicesHtml) return built.choicesHtml;
   assistantPending = built;
   return `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
@@ -11632,7 +11632,7 @@ async function openTaskTriageModal() {
 }
 function renderTaskTriage(j) {
   const buckets = [
-    { key: 'now', label: '🔴 Now', color: 'var(--danger)' },
+    { key: 'now', label: '🔴 Now', color: 'var(--danger-ink)' },
     { key: 'today', label: '🟡 Today', color: 'var(--warning,#b7791f)' },
     { key: 'soon', label: '⚪ Soon', color: 'var(--muted)' },
   ];
@@ -11846,7 +11846,7 @@ async function renderTasksTab() {
         <div style="flex:1;min-width:0;">
           <div class="history-desc" style="${t.done ? 'text-decoration:line-through;' : ''}">${escHtml(t.title)}</div>
           <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:2px;">
-            ${custLabel}${t.source !== 'manual' ? '🤖 auto · ' : ''}${t.dueDate ? `<span style="${overdueDue && !t.done ? 'color:var(--danger);font-weight:600;' : ''}">due ${fmtDate(t.dueDate)}</span>` : ''}
+            ${custLabel}${t.source !== 'manual' ? '🤖 auto · ' : ''}${t.dueDate ? `<span style="${overdueDue && !t.done ? 'color:var(--danger-ink);font-weight:600;' : ''}">due ${fmtDate(t.dueDate)}</span>` : ''}
           </div>
           ${t.notes ? `<div style="font-size:var(--fs-small);color:var(--text);margin-top:5px;white-space:pre-line;line-height:1.5;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:6px 10px;">${escHtml(t.notes)}</div>` : ''}
         </div>
@@ -11902,7 +11902,7 @@ async function renderTasksTab() {
 
   content.innerHTML = `
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-label">🔥 Now</div><div class="stat-value" style="color:${nowLane.length ? 'var(--danger)' : 'var(--success)'};">${nowLane.length}</div></div>
+      <div class="stat-card"><div class="stat-label">🔥 Now</div><div class="stat-value" style="color:${nowLane.length ? 'var(--danger-ink)' : 'var(--success)'};">${nowLane.length}</div></div>
       <div class="stat-card"><div class="stat-label">📋 Next</div><div class="stat-value">${nextLane.length}</div></div>
       <div class="stat-card"><div class="stat-label">💤 Snoozed</div><div class="stat-value">${snoozed.length}</div></div>
       <div class="stat-card"><div class="stat-label">💡 Suggestions</div><div class="stat-value" style="color:${suggestions.length ? 'var(--accent)' : 'var(--text)'};">${suggestions.length}</div>
@@ -12132,7 +12132,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   const metricsHtml = `
     <div class="dash-metrics">
       ${metric('Active Rentals', activeRentals.length,
-        [overdue.length ? `<span style="color:var(--danger);">${overdue.length} overdue</span>` : '',
+        [overdue.length ? `<span style="color:var(--danger-ink);">${overdue.length} overdue</span>` : '',
          dueToday.length ? `${dueToday.length} due today` : ''].filter(Boolean).join(' · ') || 'all on schedule', 'rentals')}
       ${metric('Open Repairs', openRepairs.length,
         readyRepairs.length ? `<span style="color:var(--accent);">${readyRepairs.length} ready to collect</span>` : 'nothing waiting', 'repairs')}
@@ -12145,8 +12145,8 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
           ? ` · <span class="dash-link" style="color:var(--gold);" onclick="event.stopPropagation();goToTab('sim')">${renewals7.length} SIM renewal${renewals7.length === 1 ? '' : 's'} ›</span>` : ''}`,
         'bookings')}
       ${metric('Open Tasks', openTasks.length,
-        highTasks.length ? `<span style="color:var(--danger);">${highTasks.length} high priority</span>` : 'none urgent', 'tasks',
-        highTasks.length ? 'color:var(--danger);' : '')}
+        highTasks.length ? `<span style="color:var(--danger-ink);">${highTasks.length} high priority</span>` : 'none urgent', 'tasks',
+        highTasks.length ? 'color:var(--danger-ink);' : '')}
     </div>`;
 
   // ── Needs-attention feed — each line deep-links to its problem page.
@@ -12435,7 +12435,7 @@ function openVNBillingModal(id) {
     <div class="modal-title">💷 Monthly Billing — ${escHtml(fmtPhone(v.number))}</div>
     <div style="color:var(--muted);font-size:var(--fs-body);margin-bottom:14px;">
       ${v.customerName ? `Customer: <strong style="color:var(--text);">${escHtml(v.customerName)}</strong>` :
-        '<span style="color:var(--danger);">⚠ No customer assigned — billing needs one.</span>'}
+        '<span style="color:var(--danger-ink);">⚠ No customer assigned — billing needs one.</span>'}
     </div>
     <div class="form-grid">
       <div class="form-group">
@@ -12888,7 +12888,7 @@ async function renderSettingsTab() {
             <td><strong>${escHtml(a.name)}</strong><div style="font-size:var(--fs-micro);color:var(--muted);">${BIZ_CAT_LABELS[a.category] || escHtml(a.category)}${a.notes ? ' · ' + escHtml(a.notes.slice(0, 60)) : ''}</div></td>
             <td style="font-size:var(--fs-small);">${a.url ? `<a href="${escHtml(a.url)}" target="_blank" rel="noopener" style="color:var(--accent);">open ↗</a> ` : ''}${escHtml(a.loginEmail || '—')}</td>
             <td style="font-feature-settings:'tnum';">${a.monthlyCost != null ? fmtGbp(a.monthlyCost) : '—'}</td>
-            <td class="kc-date">${a.renewalDate ? `<span style="${a.renewalDate <= soon10 ? 'color:var(--danger);font-weight:600;' : ''}">${fmtDate(a.renewalDate)}${a.renewalDate < today10 ? ' ⚠' : ''}</span>` : '—'}</td>
+            <td class="kc-date">${a.renewalDate ? `<span style="${a.renewalDate <= soon10 ? 'color:var(--danger-ink);font-weight:600;' : ''}">${fmtDate(a.renewalDate)}${a.renewalDate < today10 ? ' ⚠' : ''}</span>` : '—'}</td>
             <td style="white-space:nowrap;">
               ${a.hasCred ? `<button class="action-btn" style="font-size:var(--fs-micro);" onclick="revealBizAccount('${escHtml(a.id)}')">🔑 Reveal</button>` : ''}
               <button class="action-btn" aria-label="Edit ${escHtml(a.name || 'account')}" onclick="openBizAccountModal('${escHtml(a.id)}')">✏️</button>
@@ -12995,7 +12995,7 @@ async function renderSettingsTab() {
           ? `Account <strong>${escHtml(elidSummary.account)}</strong> — upstream credit balance:
              <strong style="font-size:var(--fs-lead);">£${Number(elidSummary.balance).toFixed(2)}</strong>
              <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;">Read live from ELID (Kolmisoft MOR), read-only. Per-customer usage is next.</div>`
-          : `<span style="color:var(--danger);">Couldn't read ELID: ${escHtml(elidSummary.error || 'unknown error')}</span>`}
+          : `<span style="color:var(--danger-ink);">Couldn't read ELID: ${escHtml(elidSummary.error || 'unknown error')}</span>`}
       </div>`);
 
   content.innerHTML = `
@@ -13606,7 +13606,7 @@ async function generateAliasPassword(id, address) {
   const ok = await kcConfirm({
     title: 'Generate SMTP password',
     body: `New sending password for <strong>${escHtml(address)}</strong>.<br>
-      <span style="color:var(--danger);">Any previous password for this address stops working immediately</span> — you'll need to update it wherever it's used (Vercel SMTP_PASS, Gmail send-as).`,
+      <span style="color:var(--danger-ink);">Any previous password for this address stops working immediately</span> — you'll need to update it wherever it's used (Vercel SMTP_PASS, Gmail send-as).`,
     okLabel: 'Generate password',
   });
   if (!ok) return;
