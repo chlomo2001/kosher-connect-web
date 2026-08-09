@@ -37,8 +37,11 @@ run "public pages · render + RTL, en and he" \
 run "public pages · touch targets (coarse pointer)" \
   bash -c 'node ops/harness/public.mjs --targets --width 390 | tail -3 | head -1'
 
-run "public pages · contrast, both themes" \
-  bash -c 'for t in light dark; do node ops/harness/public.mjs --contrast --theme $t | tail -3 | head -1; done'
+# All three states a public page can be painted in. dark-os is not a duplicate
+# of dark: /welcome and the legal shell carry their own prefers-color-scheme
+# palettes, so it exercises a different set of rules entirely.
+run "public pages · contrast, every theme state" \
+  bash -c 'for t in light dark dark-os; do node ops/harness/public.mjs --contrast --theme $t | tail -3 | head -1; done'
 
 run "dark rules written only once" \
   node ops/harness/theme-pairs.mjs
