@@ -452,9 +452,6 @@ tbody tr:hover td { background: var(--bg); }
 .form-input.error { border-color: var(--danger); }
 .form-input::placeholder { color: var(--muted); }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
-.dot-gold { background: var(--gold); }
-
-.service-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .btn-sim { background: rgba(14,116,144,0.10); color: var(--sim); border: 1px solid rgba(14,116,144,0.30); }
 .btn-sim:hover { border-color: var(--sim); }
 .btn-vn { background: rgba(124,58,237,0.09); color: var(--vn); border: 1px solid rgba(124,58,237,0.28); }
