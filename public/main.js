@@ -7101,6 +7101,15 @@ function setInputErr(id, isErr) {
   else el.removeAttribute('aria-invalid');
 }
 
+// Placeholders get written for the desk, where the field is wide. On a phone
+// the same box is a third of the width and the long ones are cut mid-word —
+// the till's scan box showed "🔍 Scan a barc", which reads as a broken field
+// rather than a hint. Ask for the short form when the screen is narrow.
+// Evaluated when the field renders, which is when these two are opened.
+function kcHint(long, short) {
+  return window.matchMedia('(max-width: 640px)').matches ? short : long;
+}
+
 function escHtml(str) {
   return String(str)
     .replace(/&/g,'&amp;')
@@ -9433,7 +9442,7 @@ function renderPosView() {
           <button class="btn btn-outline" onclick="closePosView()" style="white-space:nowrap;">← Exit till</button>
           <button id="posParkedBtn" class="btn btn-outline" onclick="posToggleParked()" title="Resume a held sale"
             style="white-space:nowrap;${parkedN ? '' : 'display:none;'}">⏸ Parked (<span id="posParkedN">${parkedN}</span>)</button>
-          <input class="form-input pos-scan" id="posScan" placeholder="🔍 Scan a barcode, or type to search…"
+          <input class="form-input pos-scan" id="posScan" placeholder="${kcHint('🔍 Scan a barcode, or type to search…', '🔍 Scan or search')}"
             autocomplete="off" oninput="posRenderTiles()"
             onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();saveSale();}else if(event.key==='Enter'){event.preventDefault();posScanEnter();}">
           <button class="theme-toggle" data-theme-btn onclick="toggleTheme()" title="Light / dark mode"
@@ -11287,7 +11296,7 @@ function openPalette() {
   el.className = 'palette-overlay';
   el.innerHTML = `
     <div class="palette-box">
-      <input class="palette-input" id="paletteInput" placeholder="Search customers, phones, IMEI… or type a command"
+      <input class="palette-input" id="paletteInput" placeholder="${kcHint('Search customers, phones, IMEI… or type a command', 'Search or type a command')}"
         autocomplete="off" spellcheck="false">
       <div id="paletteQuick" class="palette-quick"></div>
       <div id="paletteList"></div>
