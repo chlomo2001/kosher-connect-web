@@ -60,4 +60,12 @@ export const LEGAL_CSS = `
   .legal-foot a{color:var(--muted);text-decoration:none;margin:0 2px}
   .legal-foot a:hover{color:var(--link);text-decoration:underline}
   .legal-legal{font-size:12.5px;margin-top:10px;line-height:1.6}
+  /* WCAG 2.5.8 — 24x24 on a coarse pointer. These six stand alone on their own
+     line (the footer's separator is a middot, not prose), so the inline
+     exemption the in-sentence tel:/mailto: links get does not reach them.
+     Coarse pointer and min-height only: type, colour and spacing unchanged,
+     and the desktop layout is untouched. */
+  @media (pointer:coarse){
+    .legal-home,.legal-foot a{display:inline-block;min-height:24px;line-height:24px}
+  }
 `
