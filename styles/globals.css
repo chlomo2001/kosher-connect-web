@@ -1261,13 +1261,33 @@ html { scroll-behavior: smooth; }
 .pd-greet { margin-bottom: 18px; }
 .pd-greet h1 { margin: 0; font-size: 24px; font-weight: 300; letter-spacing: -0.26px; }
 .pd-greet-sub { margin-top: 3px; font-size: var(--fs-body); color: var(--muted); }
-.pd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+/* minmax(0,…), not a bare 1fr: a grid item's default min-width is auto, so a
+   track refuses to go below its content's min-content width and the card
+   grew 23px wider than .pd-main at 320px — every card on the customer's
+   account page hanging past the right edge. Identical at every width where
+   the content fits, which is why it only showed on the smallest phone. */
+.pd-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .pd-card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-xl); padding: 16px 18px;
 }
 .pd-span2 { grid-column: 1 / -1; }
-@media (max-width: 760px) { .pd-grid { grid-template-columns: 1fr; } .pd-main { padding-top: 20px; } }
+@media (max-width: 760px) { .pd-grid { grid-template-columns: minmax(0, 1fr); } .pd-main { padding-top: 20px; } }
+/* The bar carries a wordmark plus three controls, and on a narrow phone they
+   do not fit on one line: "Sign out" — the way a customer leaves a page
+   showing their balance — ran 26px past the edge at 320px in English and, in
+   Hebrew, off the leading edge at every width up to and including 375px, which
+   is an iPhone SE/mini. No breakpoint: the width it stops fitting at depends on
+   how long the labels are in the language being read (Hebrew needs 15px more
+   than English), so let the row wrap when it genuinely does not fit and stay
+   one line when it does. margin-inline-start keeps the actions at the trailing
+   edge on the wrapped line, mirrored correctly for RTL. */
+.pd-top { flex-wrap: wrap; }
+.pd-top-actions { margin-inline-start: auto; }
+/* Buying the row back a line on a phone before it resorts to wrapping: 22px of
+   side padding is a desktop measure, and at 390px it is the difference between
+   one line and two for a Hebrew reader. */
+@media (max-width: 420px) { .pd-top { padding-inline: 14px; gap: 8px; } }
 .pd-hero { padding: 20px 22px; margin-bottom: 0; }
 .pd-hero-num { font-size: 38px; }
 .pd-upconfirm {
