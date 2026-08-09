@@ -61,6 +61,16 @@ calendar applies to **all** rentals, including Israel phones — guests renting
 for Eretz Yisroel keep both days of Yom Tov, so there is no separate 1-day
 Israel calendar in pricing.
 
+**The Yom Tov the rule means is the day itself, not erev (corrected 9 Aug
+2026).** Yom Tov comes in the night before, but the free day is the calendar
+day the festival falls on — the same way Shabbos here means Saturday, not
+Friday. Until this date the app's generated calendar had every Yom Tov one day
+early: it charged for Yom Tov and gave erev Yom Tov away free, and where Yom
+Tov fell on a Sunday the free day landed on the Shabbos that was already free,
+so the renter lost the day. `test/yomTov.test.mjs` now pins the dates against a
+printed calendar, and every free day is named on screen rather than counted, so
+a wrong calendar is visible at the counter instead of silent.
+
 ### 1.3 Virtual Number Add-On
 
 Per-country (customer price list, 30 Jun 2026), minimum 1 week:

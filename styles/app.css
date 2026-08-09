@@ -532,6 +532,40 @@ body.pos-mode .content { padding: 14px 18px; }
 
 .stat-sub { font-size: var(--fs-small); color: var(--muted); margin-top: 4px; }
 
+/* ── DateStamp — a date, and why it was not charged ───────────────────────
+   The rental breakdown used to report only HOW MANY days were free. Naming
+   each one is what makes the number checkable at the counter, and it is how
+   the yom tov table being a day out would have been caught years earlier: a
+   free day labelled "Wed 1 Apr · Pesach — 1st day" is wrong on its face to
+   anyone in this community, where "3 free days" is not.
+
+   Struck-through date + gold reason. Gold is already this app's colour for a
+   day excluded from a charge (the running total in the rental modal uses it),
+   so the stamp inherits a meaning staff have rather than teaching a new one. */
+.kc-datestamp {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  font-size: var(--fs-micro); line-height: 1.5;
+}
+
+/* Tabular figures so a column of stamps lines up on the day number — they are
+   read as a set, not one at a time. */
+.kc-ds-date { color: var(--text); font-feature-settings: "tnum"; }
+
+.kc-ds-why { color: var(--gold); font-weight: 600; }
+
+.kc-datestamp.is-excluded .kc-ds-date {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+/* Wraps rather than scrolls: a long rental can exclude a dozen days and every
+   one of them has to be visible at 320px, which is the width the counter's
+   phone actually is. */
+.kc-ds-list {
+  display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 5px;
+}
+
 
 /* Metric values stay monochrome navy ink (Stripe keeps money/counts neutral;
    colour is reserved for semantic states — debt red, money-in green — set inline). */
