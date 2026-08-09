@@ -1119,16 +1119,6 @@ function selectRentalCustomer(id) {
   updateRentalCalc(); // customer drives the multi-phone (3rd+) auto-discount
 }
 
-function onCustomerSelectChange() {
-  document.getElementById('rCustomerSearch').value = '';
-  document.getElementById('rCustomerDropdown').classList.remove('open');
-  const sel = document.getElementById('rCustomer');
-  const c = customers.find(x => x.id === sel.value);
-  const div = document.getElementById('rCustomerSelected');
-  if (c && div) div.textContent = '✓ ' + fmtPhone(c.phone || '');
-  else if (div) div.textContent = '';
-}
-
 document.addEventListener('click', e => {
   if (!e.target.closest('.customer-search-wrap')) {
     const dd = document.getElementById('rCustomerDropdown');
