@@ -477,6 +477,11 @@ input[type="checkbox"], input[type="radio"] {
      still open on /welcome and /phone-guide (logged in BACKLOG.md, their
      containers need locating first — a guessed selector fixes nothing). */
   .pd-foot a { display: inline-flex; align-items: center; min-height: 24px; }
+  /* Same shape on /phone-guide: the site link sits alone in its own div at the
+     bottom of .w-footer-bottom. NOT .pg-foot — that block's phone number is
+     inside a sentence and 2.5.8 exempts it. Locating the real container is
+     what last night's guessed selector failed to do. */
+  .w-footer-bottom a { display: inline-flex; align-items: center; min-height: 24px; }
 }
 
 /* ─── TOAST ─── */

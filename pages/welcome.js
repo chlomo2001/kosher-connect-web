@@ -1147,6 +1147,11 @@ const SKY_CSS = `
        centred rows, not links inside a paragraph, so the exception does not
        reach them either. */
     .sk-guide a{display:inline-flex;align-items:center;min-height:24px}
+    /* The phone number and support address, in the "Visit us" block and again
+       in the footer's brand column. Each stands alone in its own <p>, so the
+       inline-in-a-sentence exemption does not reach them — and these two are
+       what a customer taps when something has gone wrong. */
+    .sk-visit-row a, .sk-foot-brand a{display:inline-flex;align-items:center;min-height:24px}
   }
   @media (max-width:960px){ .sk-foot-grid{grid-template-columns:1fr 1fr} }
   /* One column on phones. Two 130px-ish tracks made "International numbers"
