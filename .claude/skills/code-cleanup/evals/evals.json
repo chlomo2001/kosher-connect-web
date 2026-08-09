@@ -1,0 +1,44 @@
+{
+  "skill_name": "code-cleanup",
+  "evals": [
+    {
+      "id": 0,
+      "name": "main-js-dead-code",
+      "prompt": "main.js is getting massive, can you go through it and clear out anything thats not used any more? dont break anything",
+      "expected_output": "Only provably-dead code removed from public/main.js; string-referenced handlers (onclick in template literals) survive; tests pass; report separates removed vs left alone.",
+      "files": [],
+      "assertions": [
+        "Tests pass after the changes: applying changes.patch to a clean tree and running npm test reports 0 failures",
+        "No deleted function is still referenced: every function removed from public/main.js has zero remaining references anywhere in the repo after the patch, including quoted string references (onclick handlers in template literals)",
+        "Deliberate client mirrors survive: priceFromDays, DIASPORA_YOM_TOV and the charge-gate client mirror are still present in public/main.js after the patch",
+        "The report separates categories: cleanup-report.md clearly distinguishes what was removed from what was left alone or is uncertain"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "deliberate-mirror-trap",
+      "prompt": "i think we have the same pricing logic written out twice — once in lib/ and once in public/main.js. can you dedupe that / clean it up?",
+      "expected_output": "Recognises the client mirror is deliberate (no bundler — public/main.js cannot import lib/*.mjs), leaves both copies, explains why, and points at (or strengthens) the drift tests instead of deleting.",
+      "files": [],
+      "assertions": [
+        "Tests pass after the changes: applying changes.patch to a clean tree and running npm test reports 0 failures",
+        "The client mirror was not deleted: public/main.js still contains its own pricing logic (priceFromDays / calcRentalPrice), not replaced by an import of lib/rentalMath.mjs (which the browser could not load — lib/ is not served)",
+        "The server module is intact: lib/rentalMath.mjs still exists and server code still imports it",
+        "The report explains the duplication is deliberate (no bundler; the client cannot import the lib module) rather than claiming to have deduplicated it"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "whole-repo-spring-clean",
+      "prompt": "give the whole codebase a spring clean — dead code, files we dont need, duplicates, whatever. small commits please",
+      "expected_output": "Repo-wide inventory; proven-dead items removed in small separate commits; migrations/seeds/generated files untouched; honest 'left alone / needs your decision' sections in the report; tests pass.",
+      "files": [],
+      "assertions": [
+        "Tests pass after the changes: applying changes.patch to a clean tree and running npm test reports 0 failures",
+        "Small commits: the work is split across two or more focused commits (commits.txt), unless the total change is itself tiny",
+        "Protected files untouched: no files under supabase/migrations/ are deleted, and the generated public/app.css is not edited or deleted except together with its source styles/app.css",
+        "Honest report: cleanup-report.md contains a left-alone / needs-your-decision section, and nothing uncertain is presented as removed"
+      ]
+    }
+  ]
+}
