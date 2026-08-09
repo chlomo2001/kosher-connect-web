@@ -11036,7 +11036,13 @@ function paletteSearch(q) {
   const digits = needle.replace(/\D/g, '');
   const out = [];
   const commands = visibleCommands();
-  if (!needle) return commands.slice(0, 9);
+  // Empty query: the Quick-actions tiles right above this list are exactly the
+  // "create" commands, so slicing the top 9 printed New Rental … Add Stock Item
+  // twice, one block under the other, and pushed everything else out of sight.
+  // The tiles were added after this line and nobody came back to it. Show what
+  // the tiles don't — the tools and saved views, which are the entries you
+  // can't find any other way without knowing their name.
+  if (!needle) return commands.filter(c => c.sub !== 'create').slice(0, 9);
 
   // Verbs for the open customer card outrank everything: with a card open,
   // "pay" should mean THIS customer's payment before any generic command.

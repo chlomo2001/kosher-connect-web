@@ -31,8 +31,10 @@ const width = Number(arg('--width', 390))
 const theme = arg('--theme', 'light')
 const only = arg('--only', null)
 
-// name → [tab, opener]. Ids are looked up from the seed at runtime so the
-// seed stays the single source of fixture truth.
+// name → [tab, opener, root?, closer?]. Ids are looked up from the seed at
+// runtime so the seed stays the single source of fixture truth. `root` and
+// `closer` are only for the transient surfaces below — a dialog is found by
+// shape and closed by the standard close functions.
 export const MODALS = [
   ['customer-new',  'customers', `showModal()`],
   ['customer-card', 'customers', `openCustomerById(window.__kc.customer)`],
@@ -57,6 +59,24 @@ export const MODALS = [
   // geometry selector below so both sub-tabs get measured and screenshotted.
   ['customer-page',     'customers', `openCustomerPage(window.__kc.customer)`],
   ['customer-page-log', 'customers', `openCustomerPage(window.__kc.customer); kcCustomerPageTab('activity')`],
+]
+
+// The surfaces that exist only while you are using them. They are not modals —
+// no overlay shape, no closeModal() — so the loop above never saw them, which
+// is the same blind spot that let a 2.92:1 error toast pass every audit. Each
+// one names the box to measure and how to put it away again.
+export const TRANSIENTS = [
+  ['palette',       'dashboard', `openPalette()`, '.palette-box', `closePalette()`],
+  // With a query typed: the quick-action tiles hide and the result rows appear,
+  // a different set of text entirely. "co" matches seeded customers and phones.
+  ['palette-hits',  'dashboard',
+    `openPalette(); const i = document.getElementById('paletteInput'); i.value = 'co'; i.dispatchEvent(new Event('input'))`,
+    '.palette-box', `closePalette()`],
+  // A real undo toast, held open long enough to measure. commit/restore are
+  // no-ops: this is the toast's paint job, not the delete path behind it.
+  ['undo-toast',    'customers',
+    `kcUndoable({ label: 'Deleted Miriam Cohen', commit: () => {}, restore: () => {}, seconds: 600 })`,
+    '.kc-undo-toast', `kcUndoFlush()`],
 ]
 
 // Run directly to audit the modals; import it (css-diff.mjs does) to reuse
@@ -84,16 +104,16 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   let bad = 0
   const contrastAll = []
   const wantContrast = process.argv.includes('--contrast')
-  for (const [name, tab, js] of MODALS) {
+  for (const [name, tab, js, root, closer] of [...MODALS, ...TRANSIENTS]) {
     if (only && name !== only) continue
     await page.evaluate((t) => window.renderTab(t), tab).catch(() => {})
     await page.waitForTimeout(250)
     try { await page.evaluate(js) } catch (e) { console.log(`✗ ${name}: opener threw — ${String(e.message).split('\n')[0]}`); bad++; continue }
     await page.waitForTimeout(350)
-    const geo = await page.evaluate(() => {
+    const geo = await page.evaluate((sel) => {
       // The visible dialog: last modal-shaped box that isn't inside .hidden.
       // .modal is included because the customer card renders one directly.
-      const cards = [...document.querySelectorAll('.modal-content, .modal-card, .modal, [role="dialog"], .kc-cpage')]
+      const cards = [...document.querySelectorAll(sel || '.modal-content, .modal-card, .modal, [role="dialog"], .kc-cpage')]
         .filter((el) => el.getBoundingClientRect().width && !el.closest('.hidden'))
       const el = cards[cards.length - 1]
       if (!el) return null
@@ -111,14 +131,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         scrollX: el.scrollWidth - el.clientWidth,
         overflowers: [...new Set(overflowers)].slice(0, 5),
       }
-    })
+    }, root)
     if (!geo) { console.log(`✗ ${name}: no visible modal after opener`); bad++; continue }
     // Contrast, while the dialog is actually on screen. The --contrast sweep
     // renders a static page, so every dialog, the palette and the toasts were
     // never measured at all — that is how a 2.92:1 error toast survived every
     // clean audit. Measured here, where the thing exists.
     if (wantContrast) {
-      const found = (await measure(page, '.modal-overlay:not(.hidden), .modal:not(.hidden), .kc-cpage'))
+      const found = (await measure(page, root || '.modal-overlay:not(.hidden), .modal:not(.hidden), .kc-cpage'))
         .map((f) => ({ ...f, where: `${name}/${theme}` }))
       contrastAll.push(...found)
     }
@@ -129,7 +149,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     if (geo.overflowers.length) flags.push(`overflowers: ${geo.overflowers.join(', ')}`)
     if (flags.length) bad++
     console.log(`${flags.length ? '✗' : '✓'} ${name.padEnd(14)} ${geo.w}×${geo.h}  ${flags.join('  ') || 'clean'}`)
-    await page.evaluate(() => {
+    if (closer) await page.evaluate(closer).catch(() => {})
+    else await page.evaluate(() => {
       document.querySelectorAll('.modal-overlay, .modal').forEach((m) => m.classList.add('hidden'))
       if (typeof closeDynamicModal === 'function') try { closeDynamicModal() } catch {}
       if (typeof closeModal === 'function') try { closeModal() } catch {}
