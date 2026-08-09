@@ -1885,12 +1885,6 @@ function mgApplyItemStatus(item, resolved) {
   }
   mgUpdateCalc();
 }
-function mgSIMReturnChanged() {
-  const checked = document.getElementById('mgSIM')?.checked;
-  const current = document.getElementById('mgReturned')?.value;
-  if (checked && current !== '1') toggleReturned();
-  else if (!checked && current === '1') toggleReturned();
-}
 function nrToggleGiven(item) {
   const el = document.getElementById('nrGiven_' + item);
   if (!el) return;
