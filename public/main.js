@@ -94,9 +94,6 @@ window.api = {
     body: JSON.stringify(b),
   }).then(r => r.json()),
 
-  getTravelAuth: (customerId) =>
-    kcFetch(`/api/travel-auth?customerId=${encodeURIComponent(customerId)}`)
-      .then(r => (r.ok ? r.json() : { success: true, authorisations: [] })),
   getTravelReqView: (bookingId) =>
     kcFetch(`/api/travel-auth?bookingId=${encodeURIComponent(bookingId)}`)
       .then(r => (r.ok ? r.json() : { success: false, error: 'Travel view unavailable.' })),
