@@ -4,24 +4,9 @@
 // 'payment' row keyed on the PaymentIntent id (idempotent).
 import { db } from '../../../lib/db.js'
 import { verifyWebhook } from '../../../lib/stripe.js'
+import { readRaw } from '../../../lib/rawBody.js'
 
 export const config = { api: { bodyParser: false } }
-
-// Cap the unauthenticated raw body BEFORE the signature check — with
-// bodyParser off there's otherwise no limit at all. Stripe events are KBs.
-function readRaw(req, maxBytes = 1_000_000) {
-  return new Promise((resolve, reject) => {
-    const chunks = []
-    let size = 0
-    req.on('data', (c) => {
-      size += c.length
-      if (size > maxBytes) { req.destroy(); reject(new Error('payload-too-large')); return }
-      chunks.push(c)
-    })
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
-    req.on('error', reject)
-  })
-}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()

@@ -8,25 +8,9 @@
 
 import { db, tablesMode } from '../../../lib/db.js'
 import { verifySvixSignature, normalizeEmail } from '../../../lib/emailGuards.mjs'
+import { readRaw } from '../../../lib/rawBody.js'
 
 export const config = { api: { bodyParser: false } }
-
-// Cap the unauthenticated raw body BEFORE the signature check — with
-// bodyParser off there's otherwise no limit at all. Real Resend events are
-// a few KB; 1 MB is generous.
-function readRaw(req, maxBytes = 1_000_000) {
-  return new Promise((resolve, reject) => {
-    const chunks = []
-    let size = 0
-    req.on('data', (c) => {
-      size += c.length
-      if (size > maxBytes) { req.destroy(); reject(new Error('payload-too-large')); return }
-      chunks.push(c)
-    })
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
-    req.on('error', reject)
-  })
-}
 
 // Quarantine every recipient of a bounced/complained message, then flip the
 // original email_log row (matched on the provider message id). Both writes are
