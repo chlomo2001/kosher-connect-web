@@ -7629,15 +7629,9 @@ function escJs(str) {
   return escHtml(String(str == null ? '' : str).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
 }
 
-// A consistent spinner + label for tab/section loading states.
-function loadingHtml(label = 'Loading…') {
-  return `<div class="kc-loading"><span class="kc-logo-loader"><img src="/logo-112.png" alt="" width="34" height="34"></span><span>${escHtml(label)}</span></div>`;
-}
-
 // Skeleton loading — the wait mirrors the incoming layout instead of
 // announcing itself (DESIGN.md §Loading). 'stats' ghosts the usual
-// stats-row + table page; 'columns' ghosts a two-column card tab. The
-// spinner (loadingHtml) stays for modals and small inline areas.
+// stats-row + table page; 'columns' ghosts a two-column card tab.
 // Each tab passes its OWN shape. A skeleton is only worth having if it is the
 // silhouette of the thing arriving — otherwise it is a second layout that
 // flashes and is replaced, which reads as the page changing its mind. The two
