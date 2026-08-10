@@ -13655,6 +13655,14 @@ async function renderSettingsTab() {
           style="min-height:0;padding:7px 10px;font-size:var(--fs-body);width:220px;">
         <button class="btn btn-outline btn-sm" onclick="sendTestSms()">📤 Send test SMS</button>
         <span style="font-size:var(--fs-micro);color:var(--muted);">Safe in every mode — on HOLD it only logs; on TEST it goes to the test number whatever you type.</span>
+      </div>
+      <div style="padding:0 14px 14px;border-top:1px solid var(--border);">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 0 4px;">
+          <strong style="font-size:var(--fs-body);">📜 Message log</strong>
+          <span style="font-size:var(--fs-micro);color:var(--muted);">every email &amp; SMS the system built — including ones the safety gate held back</span>
+          <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadMessageLog()">↻ Load the log</button>
+        </div>
+        <div id="msgLogWrap" style="font-size:var(--fs-small);color:var(--muted);padding:6px 0;">Not loaded yet — press “Load the log”.</div>
       </div>`);
 
   // Shop details — public-facing facts the owner should be able to change
@@ -13855,6 +13863,48 @@ async function sendTestSms() {
   if (res.held) toast('Twilio is connected, but SMS is on HOLD — the test was built and logged, nothing sent. Set SMS_TEST_TO or SMS_LIVE to send for real.', 'success');
   else if (res.redirectedTo) toast(`Sent — redirected to the test number ${res.redirectedTo} (TEST mode).`, 'success');
   else toast(`Sent to ${res.sentTo} ✔ The Twilio connection works.`, 'success');
+}
+
+// Settings → Messaging: the message log. One table (email_log) records every
+// email AND SMS the system built, so this is the single place to review what
+// went out — or what WOULD have gone out while a channel sits on HOLD/TEST.
+const MSG_STATUS_LABEL = {
+  held: ['HELD', 'badge-rental', 'built but not sent — the safety gate is on'],
+  sent: ['SENT', 'badge-active', 'delivered to the customer'],
+  redirected: ['TEST', 'badge-sim', 'sent to the test inbox/number instead of the customer'],
+  delivered: ['DELIVERED', 'badge-active', 'the provider confirmed delivery'],
+  failed: ['FAILED', '', 'the provider rejected it'],
+  suppressed: ['SUPPRESSED', '', 'address previously bounced or complained — never mailed'],
+  bounced: ['BOUNCED', '', 'the address bounced it back'],
+  complained: ['SPAM', '', 'the recipient marked it as spam'],
+};
+async function loadMessageLog() {
+  const wrap = document.getElementById('msgLogWrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<span style="color:var(--muted);">Loading…</span>';
+  const res = await kcFetch('/api/message-log?limit=150').then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { wrap.innerHTML = `<span style="color:var(--danger-ink);">${escHtml(res?.error || 'Could not load the log.')}</span>`; return; }
+  if (!res.entries.length) { wrap.innerHTML = '<span style="color:var(--muted);">Nothing yet — no email or SMS has been built.</span>'; return; }
+  const rows = res.entries.map(e => {
+    const [label, cls, meaning] = MSG_STATUS_LABEL[e.status] || [e.status.toUpperCase(), '', ''];
+    const badge = cls
+      ? `<span class="badge ${cls}" title="${escHtml(meaning)}">${label}</span>`
+      : `<span class="badge" style="background:color-mix(in srgb, var(--danger-ink) 12%, transparent);color:var(--danger-ink);" title="${escHtml(meaning)}">${label}</span>`;
+    const when = new Date(e.at);
+    return `<tr>
+      <td style="white-space:nowrap;font-size:var(--fs-small);color:var(--muted);">${when.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} ${when.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</td>
+      <td>${e.channel === 'sms' ? '💬 SMS' : '📧 Email'}${e.kind && e.kind !== 'sms' ? `<div style="font-size:var(--fs-micro);color:var(--muted);">${escHtml(e.kind)}</div>` : ''}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${e.customerName ? `<strong>${escHtml(e.customerName)}</strong><div style="font-size:var(--fs-micro);color:var(--muted);" dir="ltr">${escHtml(e.to)}</div>` : `<span dir="ltr">${escHtml(e.to)}</span>`}</td>
+      <td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;font-size:var(--fs-small);" title="${escHtml(e.subject)}">${escHtml(e.subject || '—')}</td>
+      <td>${badge}${e.actualTo && e.actualTo !== e.to ? `<div style="font-size:var(--fs-micro);color:var(--muted);" dir="ltr">→ ${escHtml(e.actualTo)}</div>` : ''}${e.error ? `<div style="font-size:var(--fs-micro);color:var(--danger-ink);max-width:220px;">${escHtml(e.error.slice(0, 120))}</div>` : ''}</td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML = `
+    <div style="overflow-x:auto;">
+      <table><thead><tr><th>When</th><th>Channel</th><th>To</th><th>Subject / message</th><th>Outcome</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    </div>
+    <div style="font-size:var(--fs-micro);color:var(--muted);padding-top:6px;">Latest ${res.entries.length} entries. HELD = the safety gate stopped it; TEST = it went to your test inbox/number, not the customer.</div>`;
 }
 
 // ── Collapsible settings cards ───────────────────────────────────────────
