@@ -7273,10 +7273,18 @@ function renderSimsTab() {
       <span id="simCount" style="font-size:var(--fs-small);color:var(--muted);"></span>
     </div>
 
+    <div id="simBulkBar" style="display:none;margin:0 0 10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary);align-items:center;gap:10px;flex-wrap:wrap;">
+      <strong id="simBulkCount" style="font-size:var(--fs-body);"></strong>
+      <button class="btn btn-outline btn-sm" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedSims()">🗑 Delete selected</button>
+      <button class="btn btn-outline btn-sm" onclick="clearSimSel()">Clear selection</button>
+    </div>
+
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
+            <th style="width:28px;"><input type="checkbox" id="simSelAll" aria-label="Select every SIM plan in this view"
+              onclick="toggleAllSimSel(this.checked)"></th>
             <th>Customer</th><th>Provider</th><th>SIM Number</th><th>Plan</th>
             <th>Renewal</th><th>Payment</th><th>Status</th><th>Actions</th>
           </tr>
@@ -7320,10 +7328,12 @@ function renderSimRows() {
     // Same trap as Rentals: with 800+ SIMs on file, "No SIM plans yet" reads
     // as the list having been wiped rather than filtered.
     const narrowed = sims.length > 0;
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="emoji">💳</div>
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="emoji">💳</div>
       <p>${narrowed ? 'No SIM plans match this view.' : 'No SIM plans yet.'}</p>
       <small>${narrowed ? '' : 'Click "+ New SIM Plan" to add one.'}</small>
       ${narrowed ? kcClearFiltersBtn('sim') : ''}</div></td></tr>`;
+    simVisibleIds = [];
+    syncSimSelUi();
     return;
   }
 
@@ -7339,7 +7349,11 @@ function renderSimRows() {
                          isRenewingTomorrow ? 'color:var(--warning);font-weight:700;' : '';
     const renewalLabel = isRenewingToday ? ' ⚠️ Today!' : isRenewingTomorrow ? ' ⚠️ Tomorrow' : '';
 
-    return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a'))openManageSimModal('${s.id}')" title="Open SIM">
+    return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a,input'))openManageSimModal('${s.id}')" title="Open SIM">
+      <td onclick="event.stopPropagation()">
+        <input type="checkbox" aria-label="Select this SIM plan" ${simSelected.has(s.id) ? 'checked' : ''}
+          onclick="toggleSimSel('${s.id}', this.checked)">
+      </td>
       <td><div class="customer-name">${escHtml(capName(s.customerName) || '—')}</div></td>
       <td>${providerBadge(s.provider)}</td>
       <td style="font-weight:600;font-size:var(--fs-small);">${escHtml(s.simNumber || '—')}</td>
@@ -7356,6 +7370,59 @@ function renderSimRows() {
       </td>
     </tr>`;
   }).join('');
+  simVisibleIds = sorted.map(s => s.id);
+  syncSimSelUi();
+}
+
+// Bulk selection on the SIM table — same shape as the rentals one, for the
+// family whose whole set of SIMs comes back together.
+let simSelected = new Set();
+let simVisibleIds = [];
+function toggleSimSel(id, on) {
+  if (on) simSelected.add(id); else simSelected.delete(id);
+  syncSimSelUi();
+}
+function toggleAllSimSel(on) {
+  simVisibleIds.forEach(id => on ? simSelected.add(id) : simSelected.delete(id));
+  renderSimRows();
+}
+function clearSimSel() {
+  simSelected.clear();
+  renderSimRows();
+}
+function syncSimSelUi() {
+  const live = new Set(sims.map(s => s.id));
+  [...simSelected].forEach(id => { if (!live.has(id)) simSelected.delete(id); });
+  const all = document.getElementById('simSelAll');
+  if (all) {
+    const selInView = simVisibleIds.filter(id => simSelected.has(id)).length;
+    all.checked = simVisibleIds.length > 0 && selInView === simVisibleIds.length;
+    all.indeterminate = selInView > 0 && selInView < simVisibleIds.length;
+  }
+  const bar = document.getElementById('simBulkBar');
+  if (bar) {
+    bar.style.display = simSelected.size ? 'flex' : 'none';
+    const count = document.getElementById('simBulkCount');
+    if (count) count.textContent = `${simSelected.size} SIM plan${simSelected.size === 1 ? '' : 's'} selected`;
+  }
+}
+async function deleteSelectedSims() {
+  const picked = sims.filter(s => simSelected.has(s.id));
+  if (!picked.length) return;
+  const names = [...new Set(picked.map(s => capName(s.customerName) || '—'))];
+  if (!(await kcConfirm({
+    title: `Delete ${picked.length} SIM plans?`,
+    body: `<strong>${escHtml(names.slice(0, 4).join(', '))}${names.length > 4 ? ` +${names.length - 4} more` : ''}</strong><br>` +
+      `Any SIM charges on the wallet are reversed. This can't be undone.`,
+    okLabel: `Delete ${picked.length} SIM plans`,
+  }))) return;
+  const ids = picked.map(s => s.id);
+  sims = sims.filter(s => !ids.includes(s.id));
+  simSelected.clear();
+  const res = await saveSims(sims, ids);
+  renderSimsTab();
+  if (res && res.success === false) return; // reportSave already warned
+  toast(`${ids.length} SIM plans deleted.`, 'warning');
 }
 
 function openAddSimModal(preselectCustomerId = null) { openSimFormModal(null, preselectCustomerId); }
@@ -14814,6 +14881,7 @@ addPayment       = guardReentry(addPayment);
 deleteCustomer   = guardReentry(deleteCustomer);
 deleteRental     = guardReentry(deleteRental);
 deleteSelectedRentals = guardReentry(deleteSelectedRentals);
+deleteSelectedSims    = guardReentry(deleteSelectedSims);
 
 // Fade out and remove the full-page boot loader. Safe to call more than once.
 function hideBootLoader() {
