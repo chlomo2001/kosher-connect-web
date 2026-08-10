@@ -6842,7 +6842,12 @@ function capName(s) {
 }
 
 // Mirror of lib/ownEmails.mjs — change both together.
-const OWN_EMAIL_BASES = ['gittbilig', 'kosherconnect', 'ch7023518', 'hashomrimmcr'];
+const OWN_EMAIL_BASES = [
+  'gittbilig', 'gittbili', 'kosherconnect', 'ch7023518', 'hashomrimmcr',
+  'redfarbilig', 'shevabruches111', 'heimishecentre', 'elimelechgrunnfeld',
+  'yehoishebroier', 'mendlhersh', 'shloimea1', 'shlomeshnek', 'shmuelbleier1',
+  'eliezeroppmann', 'touchdesignsstudio',
+];
 function isOwnAccountEmail(email) {
   const m = String(email || '').toLowerCase().trim().match(/^([^@]+)@(gmail|googlemail)\.com$/);
   if (!m) return false;
