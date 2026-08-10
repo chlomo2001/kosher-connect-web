@@ -2630,3 +2630,52 @@ td { border-top-color: color-mix(in srgb, var(--border) 55%, transparent); }
 .stat-card, .table-wrap, .table-card {
   border-color: color-mix(in srgb, var(--border) 70%, transparent);
 }
+
+
+/* ─── Settings rail (owner-judged prototype): index + finder ─── */
+
+.settings-shell { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
+
+/* The rail earns its column only where there's width to spare; phones and
+   narrow windows keep the plain one-column directory unchanged. */
+.settings-rail { display: none; }
+
+@media (min-width: 1100px) {
+  .settings-shell { grid-template-columns: 230px minmax(0, 1fr); }
+  .settings-rail {
+    display: flex; flex-direction: column; gap: 2px;
+    position: sticky; top: 6px;
+    max-height: calc(100vh - 140px); overflow-y: auto;
+    padding-right: 4px;
+  }
+}
+
+.settings-find { min-height: 0; padding: 8px 10px; font-size: var(--fs-body); margin-bottom: 6px; }
+
+.rail-group {
+  font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--muted); margin: 12px 0 3px 10px;
+}
+
+.rail-item {
+  text-align: left; background: transparent; border: none;
+  border-radius: var(--radius); padding: 6px 10px;
+  font-size: var(--fs-body); color: var(--text); cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.rail-item:hover { background: var(--accent-wash); }
+
+.rail-item.active { background: var(--accent-wash); color: var(--accent); font-weight: 600; }
+
+.rail-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Landing flash: a ring that fades, so the jump's target is unmistakable. */
+.settings-card { scroll-margin-top: 10px; }
+
+.settings-flash { animation: kcSettingsFlash 1.2s ease; }
+
+@keyframes kcSettingsFlash {
+  0% { box-shadow: 0 0 0 2px var(--accent); }
+  100% { box-shadow: 0 0 0 2px transparent; }
+}

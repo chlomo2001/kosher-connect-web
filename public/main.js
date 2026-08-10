@@ -13684,6 +13684,9 @@ async function renderSettingsTab() {
       </div>`);
 
   content.innerHTML = `
+  <div class="settings-shell">
+    <nav class="settings-rail" id="settingsRail" aria-label="Settings sections"></nav>
+    <div class="settings-main" id="settingsMain">
     <div style="margin-bottom:8px;padding:10px 14px;border-radius:8px;background:var(--bg-secondary);font-size:var(--fs-small);color:var(--muted);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <span style="flex:1;">Everything that runs the business — people, prices, messages and automation — lives here. Price edits apply to <strong>new</strong> charges only; existing tickets never reprice.</span>
       <button class="btn btn-outline btn-sm" onclick="openChangePasswordModal()" title="Change your own login password">🔑 My password</button>
@@ -13712,9 +13715,76 @@ async function renderSettingsTab() {
 
     ${travelRulesHtml ? sectionHead('Travel', 'entry requirements the booking panel &amp; reminders use') + travelRulesHtml : ''}
 
-    ${automationsHtml ? sectionHead('Automation', 'jobs the daily sweep runs for you') + automationsHtml : ''}`;
+    ${automationsHtml ? sectionHead('Automation', 'jobs the daily sweep runs for you') + automationsHtml : ''}
+    </div>
+  </div>`;
 
+  buildSettingsRail();
   if (travelRulesHtml) loadTravelRulesCard();
+}
+
+// ── Settings navigation rail ─────────────────────────────────────────────
+// The page is a directory of ~18 cards; the rail is its index. Built by
+// scanning what actually rendered (cards vary by role), so it can never
+// drift from the page. Click = open that card and land on it; the finder
+// filters the whole page down to cards whose CONTENT matches, so typing
+// "late fee" finds the Fees card even though the words are inside it.
+function buildSettingsRail() {
+  const rail = document.getElementById('settingsRail');
+  const main = document.getElementById('settingsMain');
+  if (!rail || !main) return;
+  let html = `<input class="form-input settings-find" id="settingsFind" type="search"
+    placeholder="🔎 Find a setting…" aria-label="Find a setting" oninput="filterSettings(this.value)">`;
+  for (const el of main.children) {
+    if (el.classList.contains('settings-section')) {
+      html += `<div class="rail-group">${escHtml(el.querySelector('.sh-label')?.textContent || '')}</div>`;
+    } else if (el.classList.contains('settings-card')) {
+      const key = el.querySelector('[id^="scBody_"]')?.id.slice(7) || '';
+      const title = el.querySelector('strong')?.textContent || '';
+      html += `<button type="button" class="rail-item" data-key="${escHtml(key)}"
+        onclick="settingsJump('${escHtml(key)}')">${escHtml(title)}</button>`;
+    }
+  }
+  rail.innerHTML = html;
+}
+
+function settingsJump(key) {
+  const body = document.getElementById(`scBody_${key}`);
+  if (!body) return;
+  if (body.style.display === 'none') toggleSettingsCard(key);
+  const card = body.closest('.settings-card');
+  document.querySelectorAll('#settingsRail .rail-item.active').forEach(b => b.classList.remove('active'));
+  document.querySelector(`#settingsRail .rail-item[data-key="${CSS.escape(key)}"]`)?.classList.add('active');
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  card.classList.remove('settings-flash'); void card.offsetWidth; card.classList.add('settings-flash');
+}
+
+function filterSettings(q) {
+  const needle = String(q || '').trim().toLowerCase();
+  const main = document.getElementById('settingsMain');
+  if (!main) return;
+  let head = null, hits = 0;
+  const closeGroup = () => { if (head) head.style.display = hits ? '' : 'none'; };
+  for (const el of main.children) {
+    if (el.classList.contains('settings-section')) { closeGroup(); head = el; hits = 0; }
+    else if (el.classList.contains('settings-card')) {
+      const show = !needle || el.textContent.toLowerCase().includes(needle);
+      el.style.display = show ? '' : 'none';
+      if (show) hits++;
+      const key = el.querySelector('[id^="scBody_"]')?.id.slice(7) || '';
+      const item = document.querySelector(`#settingsRail .rail-item[data-key="${CSS.escape(key)}"]`);
+      if (item) item.style.display = show ? '' : 'none';
+    }
+  }
+  closeGroup();
+  document.querySelectorAll('#settingsRail .rail-group').forEach(g => {
+    let sib = g.nextElementSibling, any = false;
+    while (sib && !sib.classList.contains('rail-group')) {
+      if (sib.classList.contains('rail-item') && sib.style.display !== 'none') any = true;
+      sib = sib.nextElementSibling;
+    }
+    g.style.display = any ? '' : 'none';
+  });
 }
 
 // Settings → Travel: edit the destination × passport matrix the booking panel
