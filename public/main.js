@@ -2359,12 +2359,43 @@ function renderPhoneRows() {
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
+          ${phoneOutWithoutRental(p) ? `<button class="action-btn" style="color:var(--success);font-weight:600;" onclick="markPhoneBack('${p.id}')" title="Record the return${p.heldByNote ? ' from ' + escHtml(p.heldByNote) : ''}">📥 It's back</button>` : ''}
           <button class="action-btn" onclick="openEditPhoneModal('${p.id}')">Edit</button>
           <button class="action-btn danger" onclick="deletePhone('${p.id}')">Delete</button>
         </div>
       </td>
     </tr>`;
   }).join('');
+}
+
+// A phone that is OUT but has no rental record — imported lines whose holder
+// is only a note ("with moishe"), or permanent loans. Returns via Manage
+// Rental don't apply (there is no rental), so these get a direct one-tap
+// return that frees the line and keeps the holder as history.
+function phoneOutWithoutRental(p) {
+  if (rentals.some(r => r.phoneId === p.id && r.status !== 'returned')) return false;
+  return p.status === 'rented' || p.status === 'permanent' || !!(p.heldByNote || '').trim();
+}
+
+async function markPhoneBack(phoneId) {
+  const p = phones.find(x => x.id === phoneId);
+  if (!p) return;
+  const who = (p.heldByNote || '').trim();
+  if (!(await kcConfirm({
+    title: 'Phone returned?',
+    body: `<strong>${escHtml(fmtPhone(p.number))}</strong>${who ? ` — back from <strong>${escHtml(who)}</strong>` : ''}.<br>The line goes back to available${who ? '; the holder is kept as history on the phone' : ''}. No charges are made — this is for phones with no rental attached.`,
+    okLabel: '📥 It’s back',
+  }))) return;
+  p.lastHeldByNote = who || p.lastHeldByNote || '';
+  p.heldByNote = '';
+  p.status = 'available';
+  p.dueDate = null;
+  clearReviewFlags(p, ['due-date-past', 'due-date-missing', 'holder-missing', 'holder-uncertain']);
+  const res = await savePhones(phones);
+  if (res && res.success === false) return; // reportSave already warned
+  toast(`${fmtPhone(p.number)} is back in stock.`, 'success');
+  closeDynamicModal();
+  if (currentTab === 'rentals') renderRentalsTab();
 }
 
 // ══ NEW RENTAL MODAL ══
@@ -3278,6 +3309,9 @@ function openEditPhoneModal(phoneId) {
   const activeRental = rentals.find(r => r.phoneId === phoneId && (r.status === 'active' || r.status === 'overdue'));
   const renterInfo = activeRental
     ? `<div style="margin-top:6px;font-size:var(--fs-body);color:var(--muted);">Rented to: <strong style="color:var(--text);">${escName(activeRental.customerName)}</strong> &nbsp;<button class="btn btn-outline" style="padding:3px 10px;font-size:var(--fs-small);" onclick="closeDynamicModal();openManageRentalModal('${activeRental.id}')">Manage rental</button></div>`
+    : phoneOutWithoutRental(p)
+    ? `<div style="margin-top:6px;font-size:var(--fs-body);color:var(--muted);">${p.heldByNote ? `With: <strong style="color:var(--text);">${escHtml(p.heldByNote)}</strong> (no rental attached)` : 'Out with no rental attached'}
+        &nbsp;<button class="btn btn-outline" style="padding:3px 10px;font-size:var(--fs-small);color:var(--success);" onclick="markPhoneBack('${p.id}')">📥 It’s back</button></div>`
     : '';
   const statusColor = p.status === 'rented' ? 'var(--accent)' : p.maintenance ? 'var(--gold)' : 'var(--success)';
   const statusLabel = p.status === 'rented' ? '🔴 Rented' : p.maintenance ? '🔧 Maintenance' : '🟢 Available';
