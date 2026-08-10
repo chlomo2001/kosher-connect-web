@@ -724,6 +724,17 @@ body.pos-mode .content { padding: 14px 18px; }
 
 .table-card > table { display: block; overflow-x: auto; }
 
+/* On wide screens the card can be WIDER than the table's natural width —
+   display:block tables only paint their rows as wide as the columns, so the
+   stripes stopped mid-card and left a dead white gutter (owner, 10 Aug).
+   Here the card becomes the scroll box instead: the table stretches to fill
+   it when there's room and keeps its columns (max-content) with a card
+   scroll when there isn't — reachability is preserved either way. */
+@media (min-width: 1320px) {
+  .table-card { overflow-x: auto; }
+  .table-card > table { display: table; width: 100%; }
+}
+
 
 .table-wrap,
 .table-card > table {
