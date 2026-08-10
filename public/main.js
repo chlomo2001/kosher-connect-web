@@ -6712,7 +6712,10 @@ function setupTopbarButtons() {
     b.className = 'btn btn-outline';
     b.style.cssText = 'font-size:var(--fs-small);padding:8px 12px;margin-right:8px;';
     b.title = 'Search everything (Ctrl+K)';
-    b.innerHTML = '🔍 Search<span class="kc-chord">Ctrl K</span>';
+    b.setAttribute('aria-label', 'Search everything');
+    // The word is in a span so phones can drop it and keep the icon — the
+    // topbar was wrapping to three rows at 390px just to say "Ask"/"Search".
+    b.innerHTML = '🔍<span class="kc-btn-label"> Search</span><span class="kc-chord">Ctrl K</span>';
     b.addEventListener('click', openPalette);
     btnNew.parentElement.insertBefore(b, btnNew);
   }
@@ -6724,7 +6727,8 @@ function setupTopbarButtons() {
     a.className = 'btn btn-outline';
     a.style.cssText = 'font-size:var(--fs-small);padding:8px 12px;margin-right:8px;';
     a.title = 'Ask Kosher Connect — questions or actions, in plain words';
-    a.innerHTML = '🤖 Ask';
+    a.setAttribute('aria-label', 'Ask Kosher Connect');
+    a.innerHTML = '🤖<span class="kc-btn-label"> Ask</span>';
     a.addEventListener('click', () => openAssistantModal());
     btnNew.parentElement.insertBefore(a, document.getElementById('btnPalette'));
   }

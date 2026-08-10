@@ -1331,6 +1331,10 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   /* Two-column forms are unusable in a ~95vw modal on a handset — collapse to
      a single column so every field gets full width. */
   .form-grid { grid-template-columns: minmax(0, 1fr); }
+  /* Topbar on a handset: the Ask/Search buttons drop their words and keep
+     their icons (aria-labels carry the names), so the bar stops wrapping to
+     three rows just to say "Ask" and "Search". */
+  .kc-btn-label, #btnPalette .kc-chord { display: none; }
 }
 
 .card-action {

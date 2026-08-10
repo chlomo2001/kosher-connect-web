@@ -618,3 +618,19 @@ not been re-checked against the code and may have drifted the same way.
       `20260806210000_lock_snapshot_tables.sql`. `CREATE TABLE … AS SELECT`
       against production is the trap — it inherits schema defaults and starts
       with RLS off. Re-run the migration after any new hand-made table.
+
+---
+
+## UX loop — night of 2026-08-10
+
+| Item | Commit | Screens |
+|------|--------|---------|
+| Capitals tidied on every displayed name (escName wraps all 85 name sites; imports showed lowercase) | 3d61e82 | all tables, cards, modal titles, pickers |
+| Provider tints on the Virtual Numbers platform column (same badges as SIM Plans) | 611601a | Virtual Numbers |
+| 390px: wallet arrears row — name no longer paints under the −£ amount; action button gets its own line | 09eef9f | Wallet, dashboard feed rows |
+| 390px: topbar Ask/Search collapse to icons (aria-labels kept) — bar stops wrapping to three rows | (this commit) | every staff page |
+
+Verified per item: gate (251 tests ×2 + build) green, harness screenshots
+light+dark at 1280/390. Nothing skipped. Owner decisions pending: none from
+this loop — but see the day's thread: 14 import-created customers may need
+merging, and the "Card details" sheet with CCVs should be retired.
