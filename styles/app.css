@@ -2599,3 +2599,34 @@ tr.row-lowstock { background: var(--danger-wash); }
 @media (max-width: 768px) {
   .form-input, .search-box, .palette-input { font-size: var(--fs-lead); }
 }
+
+
+/* ─── AIR PASS (owner-judged prototype) ─── */
+
+/* 1. The working column stops stretching wall-to-wall: emptiness at the
+   sides is most of what makes a page feel airy, and at 1600px+ nothing
+   was using that width anyway. POS keeps the full bleed — a till wants
+   every pixel it can get. */
+.content > * { max-width: 1220px; margin-inline: auto; }
+
+body.pos-mode .content > * { max-width: none; }
+
+/* 2. A wider spacing scale on desktop only: more ground around the column,
+   more distance between sections. Phones keep the compact scale — small
+   screens have no spare space to spend on air. */
+@media (min-width: 1100px) {
+  .content { padding: 34px 44px; }
+  .stats-row { gap: 24px; margin-bottom: 40px; }
+  .section-header { margin-bottom: 18px; margin-top: 6px; }
+  .detail-panel { padding: 26px; }
+  .page-title { font-size: var(--fs-display-3); letter-spacing: -0.4px; }
+}
+
+/* 3. Space separates, lines whisper: row dividers and card edges drop to a
+   fraction of the border tone (mixed with transparent so both themes
+   derive their own value — the #159 rule). */
+td { border-top-color: color-mix(in srgb, var(--border) 55%, transparent); }
+
+.stat-card, .table-wrap, .table-card {
+  border-color: color-mix(in srgb, var(--border) 70%, transparent);
+}
