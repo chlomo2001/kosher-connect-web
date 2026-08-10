@@ -4615,6 +4615,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
     : timeline.map(e => timelineRow(e, false)).join('');
 
   const headerHtml = `
+      ${isPage ? '' : `<button type="button" class="modal-x" aria-label="Close" title="Close (Esc)" onclick="dismissCustomerCard()">✕</button>`}
       <div class="detail-header">
         <div class="avatar">${initials}</div>
         <div class="detail-headline">
@@ -4643,7 +4644,6 @@ function buildCustomerPanelHtml(c, mode = 'card') {
             <button class="card-tool" onclick="openEditModal('${c.id}')" title="Edit customer" aria-label="Edit customer">✏️</button>
             ${isPage ? '' : `<button class="card-tool" onclick="openCustomerPage('${c.id}')" title="Open as a full page — own link, refresh-safe, shareable with a colleague" aria-label="Open full profile page">⤢</button>`}
           </span>
-          ${isPage ? '' : `<button class="card-close" onclick="dismissCustomerCard()" title="Close" aria-label="Close">✕</button>`}
         </div>
       </div>`;
 

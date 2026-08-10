@@ -10,8 +10,10 @@ copy is British English and imagery/tone must fit the community.
 ## Deploy ritual
 - Develop on the session dev branch; never commit straight to `main`.
 - Before any ship: `bash ops/loops/green-keeper/gate.sh` must print `GATE: PASS — branch is shippable.`
-- Ship to production ONLY on the owner's explicit "ff it": `--ff-only` merge of the dev branch
-  into `main`, push, switch back. Vercel auto-deploys `main`.
+- Ship to production without waiting to be asked (owner, 2026-08-10: "dont ask before ff"):
+  once the gate passes, `--ff-only` merge the dev branch into `main`, push, switch back.
+  Vercel auto-deploys `main`. Exception: work the owner explicitly asked to judge first
+  (before/after prototypes) stays on the dev branch until their verdict.
 
 ## Standing approvals (granted by owner in chat)
 - 2026-07-28: run Supabase `execute_sql` against production (Kc-Live, project
