@@ -280,7 +280,7 @@ let customerPageId = null;
 let customerPageTab = 'overview'; // overview | activity
 let customerPageCat = 'all';      // activity-log category filter
 let searchTerm = '';
-let customerSort = 'name'; // name | name_desc | owed | recent | services
+let customerSort = 'name'; // name | surname | name_desc | owed | recent | services
 let customerFilter = 'all'; // all | rental | flight | sim | vn | repair | arrears | passport
 
 // ─────────────────────────────────────────────
@@ -4135,6 +4135,7 @@ function renderCustomersTab() {
         <select class="form-input" style="width:170px;padding:6px 10px;font-size:var(--fs-body);min-height:0;"
           onchange="customerSort=this.value; renderTableRows()">
           <option value="name" ${customerSort==='name'?'selected':''}>Sort: Name A–Z</option>
+          <option value="surname" ${customerSort==='surname'?'selected':''}>Surname A–Z</option>
           <option value="name_desc" ${customerSort==='name_desc'?'selected':''}>Name Z–A</option>
           <option value="owed" ${customerSort==='owed'?'selected':''}>Most owed first</option>
           <option value="recent" ${customerSort==='recent'?'selected':''}>Recently added</option>
@@ -4200,8 +4201,12 @@ function customerServiceCount(c) {
 }
 function sortCustomers(list) {
   const nm = c => `${c.firstName || ''} ${c.lastName || ''}`.trim().toLowerCase();
+  // Surname sort: records with no real surname (labels, single-word names)
+  // fall back to their first name so they don't all clump at the top.
+  const sn = c => ((c.lastName || '').trim() || (c.firstName || '')).toLowerCase();
   const arr = [...list];
   switch (customerSort) {
+    case 'surname':   arr.sort((a, b) => sn(a).localeCompare(sn(b)) || nm(a).localeCompare(nm(b))); break;
     case 'name_desc': arr.sort((a, b) => nm(b).localeCompare(nm(a))); break;
     case 'owed':      arr.sort((a, b) => customerOwed(b) - customerOwed(a)); break;
     case 'recent':    arr.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))); break;
@@ -4295,7 +4300,7 @@ function renderTableRows() {
     return `
     <tr class="${selected}" data-id="${c.id}">
       <td>
-        <div class="customer-name">${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file">🛂</span>' : ''}</div>
+        <div class="customer-name">${c.title ? `<span class="cust-title">${escHtml(capName(c.title))}</span> ` : ''}${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file">🛂</span>' : ''}</div>
         <div class="customer-email">${escHtml(c.email || '')}${c.accountEmail ? `${c.email ? '<br>' : ''}<span title="Account/login email (Lebara etc.) — not for contacting the customer" style="color:var(--muted);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''}</div>
       </td>
       <td class="kc-phone">${c.phone ? escHtml(fmtPhone(c.phone)) : '—'}</td>
@@ -4613,7 +4618,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
       <div class="detail-header">
         <div class="avatar">${initials}</div>
         <div class="detail-headline">
-          <div class="detail-name">${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:var(--fs-lead);">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
+          <div class="detail-name">${c.title ? `<span class="cust-title">${escHtml(capName(c.title))}</span> ` : ''}${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:var(--fs-lead);">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
           <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${waLink(c, '') ? ` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
         </div>
         <!-- Grouped by what the button DOES, not by the order they were added.
@@ -6795,6 +6800,7 @@ function openEditModal(id) {
     }
   }
 
+  { const t = document.getElementById('fTitle'); if (t) t.value = c.title || ''; }
   document.getElementById('fFirstName').value = c.firstName || '';
   document.getElementById('fLastName').value  = c.lastName  || '';
   document.getElementById('fCountryCode').value = code;
@@ -6835,7 +6841,7 @@ function isOwnAccountEmail(email) {
 }
 
 function clearModal() {
-  ['fFirstName','fLastName','fPhoneNumber','fEmail','fAddress'].forEach(id => {
+  ['fTitle','fFirstName','fLastName','fPhoneNumber','fEmail','fAddress'].forEach(id => {
     const el = document.getElementById(id);
     el.value = '';
     el.classList.remove('error');
@@ -6899,6 +6905,7 @@ function checkNameDuplicate() {
 
 async function saveCustomer() {
   let valid = true;
+  const title     = capName(document.getElementById('fTitle')?.value || '');
   const firstName = capName(document.getElementById('fFirstName').value);
   const lastName  = capName(document.getElementById('fLastName').value);
   const phoneNum  = document.getElementById('fPhoneNumber').value.trim();
@@ -6950,7 +6957,7 @@ async function saveCustomer() {
     if (move) { if (!accountEmail) accountEmail = contactEmail; contactEmail = ''; }
   }
 
-  const payload = { firstName, lastName, phone: fullPhone, email: contactEmail, address, notes,
+  const payload = { title, firstName, lastName, phone: fullPhone, email: contactEmail, address, notes,
     accountEmail,
     // Only sent when the field is on screen — the PUT merges over the stored
     // row, so omitting it while the WhatsApp channel is off preserves whatever

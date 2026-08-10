@@ -765,6 +765,10 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 
 .customer-name { font-weight: 500; letter-spacing: 0; }
 
+/* Honorific before a name ("Harav", "Mrs") — quieter than the name itself so
+   the eye still lands on the surname it sorts by. */
+.cust-title { color: var(--muted); font-weight: 400; }
+
 .customer-email { color: var(--muted); font-size: var(--fs-body); letter-spacing: -0.13px; }
 
 

@@ -202,6 +202,14 @@ export default function AppShell({ initialTab = 'dashboard' }) {
 
           <div className="form-grid">
             <div className="form-group">
+              <label className="form-label" htmlFor="fTitle">Title</label>
+              <input className="form-input" id="fTitle" type="text" placeholder="Harav / Mrs / Reb…" autoComplete="off" list="kcTitleOptions" />
+              <datalist id="kcTitleOptions">
+                <option value="Harav" /><option value="Mrs" /><option value="Mr" />
+                <option value="Reb" /><option value="Rabbi" /><option value="Rebbetzin" /><option value="Dr" />
+              </datalist>
+            </div>
+            <div className="form-group">
               <label className="form-label" htmlFor="fFirstName">First Name *</label>
               <input className="form-input" id="fFirstName" type="text" placeholder="Menachem" autoComplete="off" aria-describedby="errFirstName" />
               <span className="form-error" id="errFirstName">Required</span>
