@@ -8,7 +8,7 @@
 // capture money that never reaches the wallet (same reasoning as charge-card).
 import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
-import { stripeEnabled, webhookConfigured, getOrCreateCustomer, createCheckoutLink } from '../../lib/stripe.js'
+import { stripeEnabled, webhookConfigured, getOrCreateCustomer, createCheckoutLink, createOpenCheckoutLink } from '../../lib/stripe.js'
 
 async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
@@ -18,12 +18,14 @@ async function handler(req, res) {
     return res.status(503).json({ success: false, error: 'Payment links need the Stripe webhook configured first (otherwise a paid link wouldn’t reach the wallet).' })
   }
 
-  const { customerId, amount, description, clientRef } = req.body || {}
+  const { customerId, amount, description, clientRef, openAmount } = req.body || {}
   const ref = (typeof clientRef === 'string' && /^[\w-]{8,64}$/.test(clientRef)) ? clientRef : null
   if (!ref) return res.status(400).json({ success: false, error: 'Missing idempotency token — refresh and try again.' })
   if (!customerId) return res.status(400).json({ success: false, error: 'customerId required.' })
   const amt = Math.round((Number(amount) || 0) * 100) / 100
-  if (!(amt > 0)) return res.status(400).json({ success: false, error: 'Enter an amount greater than £0.' })
+  // openAmount: the customer types the amount on the Stripe page — any given
+  // amount is just the suggestion prefilled there, so zero/blank is fine.
+  if (!openAmount && !(amt > 0)) return res.status(400).json({ success: false, error: 'Enter an amount greater than £0.' })
   if (amt > 5000) return res.status(400).json({ success: false, error: 'That amount is too large.' })
 
   const rows = await db.select('customers',
@@ -43,16 +45,19 @@ async function handler(req, res) {
       await db.update('customers', `id=eq.${c.id}`, { stripe_customer_id: stripeCustomerId })
     }
 
-    const session = await createCheckoutLink({
-      amountPence: Math.round(amt * 100), currency: 'gbp',
+    const linkArgs = {
+      currency: 'gbp',
       appCustomerId: c.id, customerId: stripeCustomerId,
       reference: `STRIPE-LINK-${c.id}-${ref}`,
       description: (typeof description === 'string' && description.trim()) ? description.trim().slice(0, 200) : `Payment — ${name || 'Kosher Connect'}`,
       successUrl: `${base}/welcome?paid=1`,
       cancelUrl: `${base}/welcome`,
-    })
+    }
+    const session = openAmount
+      ? await createOpenCheckoutLink({ ...linkArgs, suggestedPence: Math.round(amt * 100) })
+      : await createCheckoutLink({ ...linkArgs, amountPence: Math.round(amt * 100) })
     if (!session.url) return res.status(502).json({ success: false, error: 'Stripe did not return a link.' })
-    return res.json({ success: true, url: session.url, amount: amt })
+    return res.json({ success: true, url: session.url, amount: amt, openAmount: !!openAmount })
   } catch (e) {
     const msg = typeof e.message === 'string' && e.message.startsWith('[stripe]')
       ? e.message.replace(/^\[stripe\][^:]*:\s*/, '')

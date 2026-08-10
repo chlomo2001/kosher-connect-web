@@ -5027,12 +5027,18 @@ function openPaymentLinkModal(custId) {
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">Creates a Stripe pay-by-card link tied to this customer. When they pay, it's credited to their wallet automatically. Copy it and send it however you message this customer.</div>
     <div class="form-grid">
       <div class="form-group">
-        <label class="form-label">Amount (£)</label>
+        <label class="form-label" id="plAmountLabel">Amount (£)</label>
         <input class="form-input" id="plAmount" type="number" step="0.01" min="0.01" placeholder="0.00">
       </div>
       <div class="form-group">
         <label class="form-label">What it's for (optional)</label>
         <input class="form-input" id="plDesc" type="text" maxlength="120" placeholder="e.g. SIM top-up">
+      </div>
+      <div class="form-group form-full" style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="plOpenAmount" onchange="
+          document.getElementById('plAmountLabel').textContent = this.checked ? 'Suggested amount (£, optional)' : 'Amount (£)';
+          document.getElementById('plAmount').placeholder = this.checked ? 'they decide' : '0.00';">
+        <label for="plOpenAmount" style="font-size:var(--fs-body);cursor:pointer;">Customer chooses the amount — for part-payments (min £1)</label>
       </div>
     </div>
     <div class="form-group form-full" id="plResultWrap" style="display:none;">
@@ -5049,7 +5055,8 @@ function openPaymentLinkModal(custId) {
 }
 async function createPaymentLink(custId) {
   const amount = Number(document.getElementById('plAmount')?.value);
-  if (!(amount > 0)) { toast('Enter an amount greater than £0.', 'error'); return; }
+  const openAmount = !!document.getElementById('plOpenAmount')?.checked;
+  if (!openAmount && !(amount > 0)) { toast('Enter an amount greater than £0 — or tick "Customer chooses the amount".', 'error'); return; }
   const description = document.getElementById('plDesc')?.value || '';
   const guard = 'plink:' + custId;
   if (!kcBeginWrite(guard)) { toast('Already creating a link…', 'warning'); return; }
@@ -5058,7 +5065,7 @@ async function createPaymentLink(custId) {
   try {
     const r = await kcFetch('/api/payment-link', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customerId: custId, amount, description, clientRef: kcRef() }),
+      body: JSON.stringify({ customerId: custId, amount: openAmount && !(amount > 0) ? 0 : amount, openAmount, description, clientRef: kcRef() }),
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok || !j.success) { toast(j.error || 'Could not create the link.', 'error'); return; }
@@ -5067,7 +5074,9 @@ async function createPaymentLink(custId) {
     const copy = document.getElementById('plCopy'); if (copy) copy.style.display = '';
     const wa = document.getElementById('plWa'); if (wa) wa.style.display = '';
     if (btn) btn.textContent = 'New link';
-    recordComm(custId, { type: 'note', text: `Payment link created — ${fmtGbp(amount)}` });
+    recordComm(custId, { type: 'note', text: openAmount
+      ? `Payment link created — customer chooses the amount${amount > 0 ? ` (suggested ${fmtGbp(amount)})` : ''}`
+      : `Payment link created — ${fmtGbp(amount)}` });
   } catch {
     toast('Could not reach the payment-link service.', 'error');
   } finally {
