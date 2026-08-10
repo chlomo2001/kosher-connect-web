@@ -9676,8 +9676,8 @@ async function renderShopTab() {
       <button class="btn btn-primary" onclick="openSaleModal()">🧾 Open Till</button>
       <button class="btn btn-outline" onclick="openCashupModal()">💰 Cash up</button>
       <button class="btn btn-outline" onclick="openStockItemModal()">➕ Add item</button>
-      <button class="btn btn-outline" onclick="openSupplierReturnModal()">📤 Return to supplier</button>
-      <button class="btn btn-outline" onclick="openGoodsInModal()">📥 Goods in</button>
+      <button class="btn btn-outline" onclick="openSupplierReturnModal()">↩️ Return to supplier</button>
+      <button class="btn btn-outline" onclick="openGoodsInModal()">📦 Goods in</button>
     </div>
     <div class="dash-cols dash-cols-table">
       <div class="table-card">
