@@ -7462,12 +7462,12 @@ function openManageSimModal(id) {
       ${multiSimDiscountPct(sims, s.customerId) > 0
         ? `<div style="font-size:var(--fs-small);color:var(--gold);margin-bottom:8px;">🏷️ 3+ active plans — ${multiSimDiscountPct(sims, s.customerId)}% off applied to monthly/annual prefills.</div>` : ''}
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
-        <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;">
+        <div style="display:flex;flex-direction:column;gap:4px;flex:2;min-width:min(100%, 28ch);">
           <label style="font-size:var(--fs-micro);color:var(--muted);font-weight:600;">Type</label>
           <select class="form-input" id="simChargeType" onchange="onSimChargeTypeChange('${id}')" style="font-size:var(--fs-body);">
             <option value="activation">🟢 Initial Setup — £${simChargePrice('activation')}</option>
             <!-- Service is the default: setup was already charged when the SIM was created. -->
-            <option value="service" selected>🔧 Service (roaming/swap/reactivation) — £${simChargePrice('service')}</option>
+            <option value="service" selected>🔧 Service (swap/roaming) — £${simChargePrice('service')}</option>
             <option value="sim-replacement">📦 SIM Replacement — £${simChargePrice('sim-replacement')}</option>
             <option value="monthly">${s.paymentType !== 'direct' && s.simMonthlyCost ? `📅 Monthly DD — ${fmtGbp(ddMonthlyAmount(s.simMonthlyCost))}` : '📅 Monthly Subscription'}</option>
             <option value="annual">📅 Annual Subscription — £${simChargePrice('annual')}</option>
@@ -7481,7 +7481,7 @@ function openManageSimModal(id) {
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;flex:2;min-width:140px;">
           <label style="font-size:var(--fs-micro);color:var(--muted);font-weight:600;">Note (optional)</label>
-          <input class="form-input" id="simChargeNote" type="text" placeholder="e.g. SIM swapped to new number" style="font-size:var(--fs-body);">
+          <input class="form-input" id="simChargeNote" type="text" placeholder="e.g. SIM swap" style="font-size:var(--fs-body);">
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;width:150px;">
           <label style="font-size:var(--fs-micro);color:var(--muted);font-weight:600;">Paid now?</label>
