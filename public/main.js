@@ -1974,6 +1974,7 @@ function renderRentalsTab() {
     <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
       <button class="btn btn-primary" onclick="openNewRentalModal()">📱 New Rental</button>
       <button class="btn btn-outline" onclick="openManagePhonesModal()">⚙️ Manage phones</button>
+      <button class="btn btn-outline" onclick="openPoolsModal()">🏊 Pools</button>
       <button class="btn ${rentalView === 'calendar' ? 'btn-primary' : 'btn-outline'}"
         onclick="rentalView = rentalView === 'calendar' ? 'list' : 'calendar'; renderRentalsTab();">📅 Availability</button>
       <input class="search-box" style="width:280px;" type="text" id="rentalScan"
@@ -3354,6 +3355,100 @@ function saveEditPhone(phoneId) {
   toast('Phone updated!', 'success');
   closeDynamicModal();
   renderRentalsTab();
+}
+
+// ══ POOLS MANAGER ══
+// A pool is one carrier plan shared by several USA lines: activating it
+// "from X till Y" makes every line in the pool live for that window. This is
+// the pool-level view — open a pool, see all its phones, stamp the window
+// ONCE — and everything downstream (the New-Rental ranking, "already active
+// saves the activation fee", mid-trip expiry warnings, the Expires column)
+// reads the same per-phone poolExpiry it always did.
+function openPoolsModal() {
+  const today = localISO();
+  const groups = new Map();
+  phones.forEach(p => {
+    const name = (p.pool || '').trim();
+    if (!name) return;
+    if (!groups.has(name)) groups.set(name, []);
+    groups.get(name).push(p);
+  });
+  const unpooled = phones.filter(p => (p.country || '').toUpperCase() === 'USA' && !(p.pool || '').trim()).length;
+  const names = [...groups.keys()].sort((a, b) => a.localeCompare(b));
+
+  const poolCard = (name) => {
+    const ps = groups.get(name);
+    const expiries = [...new Set(ps.map(p => p.poolExpiry).filter(Boolean))].sort();
+    const live = expiries.length > 0 && expiries[expiries.length - 1] >= today;
+    const rented = ps.filter(p => p.status === 'rented').length;
+    const key = name.replace(/[^a-z0-9]/gi, '_');
+    const summary = !expiries.length ? 'no expiry on record'
+      : expiries.length === 1 ? `all till ${fmtDate(expiries[0])}`
+      : `expiries ${fmtDate(expiries[0])} – ${fmtDate(expiries[expiries.length - 1])} (mixed)`;
+    return `
+      <div class="table-card" style="margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;flex-wrap:wrap;">
+          <strong style="font-size:var(--fs-ui);">🏊 ${escHtml(name)}</strong>
+          <span class="badge ${live ? 'badge-active' : 'badge-rental'}">${live ? 'ACTIVE' : 'not active'}</span>
+          <span style="font-size:var(--fs-small);color:var(--muted);">${ps.length} phone${ps.length === 1 ? '' : 's'} · ${rented} out · ${summary}</span>
+        </div>
+        <table>
+          <thead><tr><th>Number</th><th>Model</th><th>Status</th><th>Active from</th><th>Till</th></tr></thead>
+          <tbody>
+          ${ps.map(p => {
+            const expired = p.poolExpiry && p.poolExpiry < today;
+            return `<tr style="cursor:pointer;" onclick="closeDynamicModal();openEditPhoneModal('${p.id}')" title="Edit this phone">
+              <td class="kc-phone">${escHtml(fmtPhone(p.number))}</td>
+              <td style="font-size:var(--fs-small);">${escHtml(p.model || '—')}</td>
+              <td>${p.status === 'rented' ? '<span class="badge badge-rental">Rented</span>' : p.maintenance ? '<span class="badge">🔧</span>' : '<span class="badge badge-active">Free</span>'}</td>
+              <td class="kc-date" style="font-size:var(--fs-small);color:var(--muted);">${p.poolActiveFrom ? fmtDate(p.poolActiveFrom) : '—'}</td>
+              <td class="kc-date" style="font-size:var(--fs-small);${expired ? 'color:var(--danger-ink);font-weight:700;' : ''}">${p.poolExpiry ? fmtDate(p.poolExpiry) + (expired ? ' ⚠️ expired' : '') : '—'}</td>
+            </tr>`;
+          }).join('')}
+          </tbody>
+        </table>
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding:10px 14px 14px;border-top:1px solid var(--border);">
+          <label style="display:flex;flex-direction:column;gap:2px;font-size:var(--fs-micro);color:var(--muted);">Activated from
+            <input class="form-input" id="poolFrom_${key}" type="date" value="${today}" style="min-height:0;padding:6px 8px;"></label>
+          <label style="display:flex;flex-direction:column;gap:2px;font-size:var(--fs-micro);color:var(--muted);">till
+            <input class="form-input" id="poolTill_${key}" type="date" value="${escHtml(expiries[expiries.length - 1] || '')}" style="min-height:0;padding:6px 8px;"></label>
+          <button class="btn btn-primary btn-sm" onclick="applyPoolWindow('${escJs(name)}','${key}')">✓ Apply to all ${ps.length}</button>
+        </div>
+      </div>`;
+  };
+
+  showDynamicModal(`
+    <div class="modal-title">🏊 Pools</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
+      One carrier plan shared by several lines. Set the activation window once and every phone in the
+      pool carries it — New Rental then prefers already-active pool phones (no activation fee) and
+      warns when a pool would run out mid-trip.
+    </div>
+    ${names.length ? names.map(poolCard).join('')
+      : `<div class="empty-state"><div class="emoji">🏊</div><p>No pools yet.</p><small>Give USA phones a Pool Name in ✏️ Edit Phone and they’ll group here.</small></div>`}
+    ${unpooled ? `<div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">${unpooled} USA phone${unpooled === 1 ? '' : 's'} have no pool name yet — open ✏️ Edit Phone to assign one.</div>` : ''}
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
+  `);
+}
+
+async function applyPoolWindow(name, key) {
+  const from = document.getElementById('poolFrom_' + key)?.value || '';
+  const till = document.getElementById('poolTill_' + key)?.value || '';
+  if (!till) { toast('Pick the till date — that is what drives availability.', 'warning'); return; }
+  if (from && till < from) { toast('The till date is before the from date.', 'error'); return; }
+  const members = phones.filter(p => (p.pool || '').trim() === name);
+  if (!members.length) return;
+  if (!(await kcConfirm({
+    title: `Activate pool “${name}”?`,
+    body: `<strong>${members.length} phone${members.length === 1 ? '' : 's'}</strong> will be marked active ${from ? fmtDate(from) + ' → ' : 'till '}${fmtDate(till)}.<br>Rentals and availability suggestions pick this up immediately.`,
+    okLabel: 'Set the window',
+  }))) return;
+  members.forEach(p => { p.poolActiveFrom = from || null; p.poolExpiry = till; });
+  const res = await savePhones(phones);
+  if (res && res.success === false) return; // reportSave already warned
+  toast(`Pool “${name}” active till ${fmtDate(till)} — ${members.length} phones updated.`, 'success');
+  openPoolsModal();
+  if (currentTab === 'rentals') renderPhoneRows();
 }
 
 // ══ MANAGE RENTAL MODAL ══
