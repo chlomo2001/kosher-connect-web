@@ -12899,7 +12899,7 @@ async function renderVirtualTab() {
       <tr>
         <td class="kc-phone"><strong>${escHtml(fmtPhone(v.number))}</strong></td>
         <td>${escName(v.customerName || '—')}</td>
-        <td>${escHtml(v.platform || '—')}</td>
+        <td>${providerBadge(v.platform)}</td>
         <td>${v.billingEnabled && v.monthlyPrice
           ? `<strong>${fmtGbp(v.monthlyPrice)}</strong><div class="customer-email">next ${fmtDate(v.nextBillingDate) || '—'}</div>`
           : '<span style="color:var(--muted);">—</span>'}</td>
