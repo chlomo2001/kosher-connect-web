@@ -2100,8 +2100,8 @@ function availabilityCalendarHtml() {
       const word = { active: 'out', booked: 'reserved', overdue: 'overdue' }[state];
       const mark = state === 'overdue' ? '<span class="cal-mark" aria-hidden="true">!</span>' : '';
       return `<td class="cal-cell cal-${state}${dIso === today ? ' cal-today' : ''}"
-        title="${escHtml(hit.r.customerName || '')} · ${fmtDate(hit.r.fromDate)} → ${fmtDate(hit.r.toDate)}${hit.r.status === 'booked' ? ' (reserved)' : ''}"
-        aria-label="${fmtDate(dIso)}: ${word} — ${escHtml(hit.r.customerName || 'no name')}"
+        title="${escName(hit.r.customerName || '')} · ${fmtDate(hit.r.fromDate)} → ${fmtDate(hit.r.toDate)}${hit.r.status === 'booked' ? ' (reserved)' : ''}"
+        aria-label="${fmtDate(dIso)}: ${word} — ${escName(hit.r.customerName || 'no name')}"
         onclick="openManageRentalModal('${hit.r.id}')">${mark}</td>`;
     }).join('');
     // th+scope, not td: it makes the phone the row header, so a screen reader
@@ -2785,7 +2785,7 @@ async function saveNewRental() {
   if (payAmt > totalPrice) payAmt = totalPrice; // never overpay the rental here
   if (!(await kcConfirm({
     title: isReservation ? 'Confirm reservation' : 'Confirm rental charge',
-    body: `<strong>${escHtml(customer.firstName)} ${escHtml(customer.lastName)}</strong><br>
+    body: `<strong>${escName(customer.firstName)} ${escName(customer.lastName)}</strong><br>
       ${escHtml(phone.number)} (${escHtml(phone.country)}) · ${fmtDate(from)} → ${fmtDate(to)} · ${chargeableDays} chargeable days${addVN ? '<br>+ virtual number' : ''}${discountValue > 0 ? '<br>discount applied' : ''}`,
     amount: totalPrice,
     okLabel: isReservation ? 'Reserve & charge' : 'Charge rental',
@@ -3178,7 +3178,7 @@ function openEditPhoneModal(phoneId) {
   if (!p) return;
   const activeRental = rentals.find(r => r.phoneId === phoneId && (r.status === 'active' || r.status === 'overdue'));
   const renterInfo = activeRental
-    ? `<div style="margin-top:6px;font-size:var(--fs-body);color:var(--muted);">Rented to: <strong style="color:var(--text);">${escHtml(activeRental.customerName)}</strong> &nbsp;<button class="btn btn-outline" style="padding:3px 10px;font-size:var(--fs-small);" onclick="closeDynamicModal();openManageRentalModal('${activeRental.id}')">Manage rental</button></div>`
+    ? `<div style="margin-top:6px;font-size:var(--fs-body);color:var(--muted);">Rented to: <strong style="color:var(--text);">${escName(activeRental.customerName)}</strong> &nbsp;<button class="btn btn-outline" style="padding:3px 10px;font-size:var(--fs-small);" onclick="closeDynamicModal();openManageRentalModal('${activeRental.id}')">Manage rental</button></div>`
     : '';
   const statusColor = p.status === 'rented' ? 'var(--accent)' : p.maintenance ? 'var(--gold)' : 'var(--success)';
   const statusLabel = p.status === 'rented' ? '🔴 Rented' : p.maintenance ? '🔧 Maintenance' : '🟢 Available';
@@ -3305,7 +3305,7 @@ function openManageRentalModal(rentalId) {
           every time. A deliberate second line reads the same at both widths. */''}
     <div class="modal-title">⚙ Manage Rental<span class="kc-title-device">${rentalDeviceChip(r)}</span></div>
     <div style="color:var(--muted);font-size:var(--fs-body);margin-bottom:16px;">
-      Customer: <strong style="color:var(--text);">${escHtml(r.customerName)}</strong>
+      Customer: <strong style="color:var(--text);">${escName(r.customerName)}</strong>
     </div>
     <div class="form-grid">
       <div class="form-group">
@@ -3603,7 +3603,7 @@ async function saveManageRental(rentalId) {
   const oldGrand = (r.price || 0) + (r.lateFee || 0) + (r.lostChargesTotal || 0);
   if (grandTotal !== oldGrand && !(await kcConfirm({
     title: 'Confirm rental charge change',
-    body: `<strong>${escHtml(r.customerName || 'Customer')}</strong><br>
+    body: `<strong>${escName(r.customerName || 'Customer')}</strong><br>
       Rental ${fmtGbp(newPrice)}${savedLateFee > 0 ? ` + late fee ${fmtGbp(savedLateFee)}` : ''}${lostInfo.total > 0 ? ` + lost items ${fmtGbp(lostInfo.total)}` : ''}<br>
       <span style="color:var(--muted);font-size:var(--fs-small);">was ${fmtGbp(oldGrand)}</span>`,
     amount: grandTotal,
@@ -5007,7 +5007,7 @@ function openPaymentLinkModal(custId) {
   const c = customers.find(x => x.id === custId);
   if (!c) return;
   showDynamicModal(`
-    <div class="modal-title">🔗 Payment link — ${escHtml(c.firstName)} ${escHtml(c.lastName)}</div>
+    <div class="modal-title">🔗 Payment link — ${escName(c.firstName)} ${escName(c.lastName)}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">Creates a Stripe pay-by-card link tied to this customer. When they pay, it's credited to their wallet automatically. Copy it and send it however you message this customer.</div>
     <div class="form-grid">
       <div class="form-group">
@@ -5103,7 +5103,7 @@ function openElidModal(customerId) {
   const guess = elidLinesOf(c).length ? '' : elidGuessUsername(c);
   const cid = escHtml(String(customerId));
   showDynamicModal(`
-    <div class="modal-title">📡 ELID accounts — ${escHtml(c.firstName)} ${escHtml(c.lastName)}</div>
+    <div class="modal-title">📡 ELID accounts — ${escName(c.firstName)} ${escName(c.lastName)}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Live balance &amp; status on the ELID telecom switch. Read-only. A customer can have more than one line (e.g. a main line and a calling-card) — the ★ primary is summarised on the card.</div>
     <div id="elidLines"></div>
     <div style="display:flex;gap:8px;align-items:flex-end;margin-top:12px;">
@@ -5348,7 +5348,7 @@ function renderElidImport(accounts) {
   const linkRow = (a, checked, hint) =>
     `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:var(--fs-body);">
       <input type="checkbox" class="ei-link" data-u="${escHtml(a.username)}" data-cid="${escHtml(String(a.match.id))}" ${checked ? 'checked' : ''}>
-      <span style="flex:1;"><code>${escHtml(a.username)}</code> → ${escHtml(a.match.firstName || '')} ${escHtml(a.match.lastName || '')}${hint ? ` <span style="color:var(--warning,#b7791f);font-size:var(--fs-micro);">${hint}</span>` : ''}</span>
+      <span style="flex:1;"><code>${escHtml(a.username)}</code> → ${escName(a.match.firstName || '')} ${escName(a.match.lastName || '')}${hint ? ` <span style="color:var(--warning,#b7791f);font-size:var(--fs-micro);">${hint}</span>` : ''}</span>
     </label>`;
   const exactRows = exact.map((a) => linkRow(a, true, '')).join('');
   const fuzzyRows = fuzzy.map((a) => linkRow(a, false, 'similar — check')).join('');
@@ -5746,7 +5746,7 @@ async function recordComm(customerId, entry) {
 function openLogCommModal(customerId) {
   const c = customers.find(x => x.id === customerId);
   showDynamicModal(`
-    <div class="modal-title">📞 Log a call / note${c ? ' — ' + escHtml(c.firstName) + ' ' + escHtml(c.lastName) : ''}</div>
+    <div class="modal-title">📞 Log a call / note${c ? ' — ' + escName(c.firstName) + ' ' + escName(c.lastName) : ''}</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Type</label>
@@ -5806,7 +5806,7 @@ function openDraftReminderModal(customerId) {
   if (!c) return;
   const draft = buildReminderDraft(c);
   showDynamicModal(`
-    <div class="modal-title">✉️ Draft reminder — ${escHtml(c.firstName)} ${escHtml(c.lastName)}</div>
+    <div class="modal-title">✉️ Draft reminder — ${escName(c.firstName)} ${escName(c.lastName)}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Built from what this customer currently owes / has coming up. Edit it, then copy — <strong>nothing is sent</strong>.</div>
     <textarea class="form-input" id="drText" rows="9" style="font-family:inherit;">${escHtml(draft)}</textarea>
     <div class="modal-actions">
@@ -5873,7 +5873,7 @@ function openAiReplyModal(customerId) {
   const c = customers.find(x => x.id === customerId);
   if (!c) return;
   showDynamicModal(`
-    <div class="modal-title">💬 Draft a reply — ${escHtml(c.firstName)} ${escHtml(c.lastName)}</div>
+    <div class="modal-title">💬 Draft a reply — ${escName(c.firstName)} ${escName(c.lastName)}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Paste what the customer wrote and the AI drafts a reply in the shop's voice, using their account facts. <strong>Nothing is sent</strong> — read it, edit it, then copy. Don't paste passport/ID numbers (the text goes to Google).</div>
     <div class="form-group form-full">
       <label class="form-label">Customer's message</label>
@@ -5980,7 +5980,7 @@ function openRentalSmsModal(rentalId) {
   if (!r) return;
   const waC = customers.find(x => x.id === r.customerId) || { phone: r.customerPhone };
   showDynamicModal(`
-    <div class="modal-title">✉️ Status SMS — ${escHtml(r.customerName || '')}</div>
+    <div class="modal-title">✉️ Status SMS — ${escName(r.customerName || '')}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
       Drafted from the rental's current status${r.customerPhone ? ` · 📞 <span class="copy-val">${escHtml(fmtPhone(r.customerPhone))}</span>` : ''}.
       Edit it, then copy — or send it directly once Twilio is connected.</div>
@@ -6038,7 +6038,7 @@ function openWalletModal(customerId, balance = null) {
         onclick="document.getElementById('wlKind').value='payment';document.getElementById('wlMethodWrap').style.display='block';document.getElementById('wlAmount').value='${owed.toFixed(2)}'">Pay full ${fmtGbp(owed)}</button>`
     : '';
   showDynamicModal(`
-    <div class="modal-title">💰 Record payment / credit — ${c ? escHtml(c.firstName) + ' ' + escHtml(c.lastName) : ''}</div>
+    <div class="modal-title">💰 Record payment / credit — ${c ? escName(c.firstName) + ' ' + escName(c.lastName) : ''}</div>
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">Type</label>
@@ -6101,7 +6101,7 @@ async function saveWalletEntry(customerId) {
       const wlCust = customers.find(x => x.id === customerId);
       if (!(await kcConfirm({
         title: 'Confirm adjustment (charge)',
-        body: `<strong>${wlCust ? escHtml(wlCust.firstName) + ' ' + escHtml(wlCust.lastName) : 'Customer'}</strong><br>${note ? escHtml(note) : 'Manual adjustment — reduces their balance'}`,
+        body: `<strong>${wlCust ? escName(wlCust.firstName) + ' ' + escName(wlCust.lastName) : 'Customer'}</strong><br>${note ? escHtml(note) : 'Manual adjustment — reduces their balance'}`,
         amount: Math.abs(amount),
         okLabel: 'Apply adjustment',
       }))) return;
@@ -6111,7 +6111,7 @@ async function saveWalletEntry(customerId) {
       const wlCust = customers.find(x => x.id === customerId);
       if (!(await kcConfirm({
         title: 'Confirm refund paid out',
-        body: `<strong>${wlCust ? escHtml(wlCust.firstName) + ' ' + escHtml(wlCust.lastName) : 'Customer'}</strong><br>${note ? escHtml(note) : 'Money handed back — uses up the credit they were owed'}`,
+        body: `<strong>${wlCust ? escName(wlCust.firstName) + ' ' + escName(wlCust.lastName) : 'Customer'}</strong><br>${note ? escHtml(note) : 'Money handed back — uses up the credit they were owed'}`,
         amount: Math.abs(amount),
         okLabel: 'Record payout',
       }))) return;
@@ -6186,7 +6186,7 @@ async function renderWalletTab() {
     <div class="feed-item${b.customerId ? ' dash-link' : ''}"${b.customerId
       ? ` onclick="goToTab('customers',{customerId:'${escHtml(String(b.customerId))}'})" title="Open customer"` : ''}>
       <span class="feed-icon">${negative ? '🔴' : '🟢'}</span>
-      <span class="feed-label"><strong>${escHtml(b.customerName)}</strong></span>
+      <span class="feed-label"><strong>${escName(b.customerName)}</strong></span>
       <span style="font-feature-settings:'tnum';color:${negative ? 'var(--danger-ink)' : 'var(--success)'};font-weight:600;">
         ${negative ? '−' : '+'}${fmtGbp(Math.abs(b.balance))}</span>
       ${b.customerId ? `<button class="btn btn-outline btn-sm" style="margin-left:10px;font-size:var(--fs-micro);padding:4px 10px;"
@@ -6209,7 +6209,7 @@ async function renderWalletTab() {
           <div class="history-main">
             <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>
             <div class="history-desc kc-clamp-2">
-              <strong>${escHtml(e.customerName || '—')}</strong> · ${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}${e.method ? ` <span style="color:var(--muted);">(${escHtml(e.method.replace('_', ' '))})</span>` : ''}</div>
+              <strong>${escName(e.customerName || '—')}</strong> · ${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}${e.method ? ` <span style="color:var(--muted);">(${escHtml(e.method.replace('_', ' '))})</span>` : ''}</div>
           </div>
           <div class="history-date" style="margin:0 12px;">${fmtDate(e.at)}</div>
           <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--text)'};font-feature-settings:'tnum';">
@@ -6219,7 +6219,7 @@ async function renderWalletTab() {
 
   const customerOptions = [...customers]
     .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))
-    .map(c => `<option value="${escHtml(c.id)}">${escHtml(c.firstName)} ${escHtml(c.lastName)}</option>`)
+    .map(c => `<option value="${escHtml(c.id)}">${escName(c.firstName)} ${escName(c.lastName)}</option>`)
     .join('');
 
   content.innerHTML = `
@@ -7367,7 +7367,7 @@ async function saveSimForm(editId) {
     setupFee = simChargePrice('activation'); // settings-driven, £20 fallback
     if (!(await kcConfirm({
       title: 'Confirm SIM setup charge',
-      body: `<strong>${customer ? escHtml(customer.firstName) + ' ' + escHtml(customer.lastName) : 'Customer'}</strong><br>
+      body: `<strong>${customer ? escName(customer.firstName) + ' ' + escName(customer.lastName) : 'Customer'}</strong><br>
         ${escHtml(provider)} SIM — initial setup`,
       amount: setupFee,
       okLabel: 'Charge setup',
@@ -7563,7 +7563,7 @@ async function addSimCharge(simId) {
   const desc   = note ? `${baseDesc} — ${note}` : baseDesc;
   if (!(await kcConfirm({
     title: 'Confirm SIM charge',
-    body: `<strong>${escHtml(s.customerName || 'Customer')}</strong><br>${escHtml(desc)}${payLabel ? `<br>Paid now — ${payLabel}` : ''}`,
+    body: `<strong>${escName(s.customerName || 'Customer')}</strong><br>${escHtml(desc)}${payLabel ? `<br>Paid now — ${payLabel}` : ''}`,
     amount,
     okLabel: 'Add charge',
   }))) return;
@@ -7657,6 +7657,15 @@ function escHtml(str) {
     .replace(/</g,'&lt;')
     .replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;');
+}
+
+// escHtml for people's names: also tidies capitals ("elishe halbershtam" →
+// "Elishe Halbershtam"). The sheet/ELID imports stored names as the
+// spreadsheets had them, and capName only runs when a name is SAVED through
+// the form — so every table and title that echoes a stored name goes through
+// this instead of plain escHtml. Display-only; the stored data is untouched.
+function escName(str) {
+  return escHtml(capName(str));
 }
 
 // Escape a name AND isolate its text direction. <bdi> stops a mixed
@@ -7952,8 +7961,8 @@ function renderBookingsTab() {
     ? `<tr><td colspan="9"><div class="empty-state"><div class="emoji">✈️</div><p>${bookings.length ? 'No bookings match this filter.' : 'No bookings yet.'}</p><small>${bookings.length ? 'Change the filter above.' : 'Click "New Booking" to add the first one.'}</small>${kcClearFiltersBtn('bookings')}</div></td></tr>`
     : bkShown.map(b => `
       <tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a'))openEditBookingModal('${escHtml(b.id)}')" title="Open booking">
-        <td><div class="customer-name">${escHtml(b.customerName || '—')}</div>
-            <div class="customer-email">${escHtml(b.passenger || '')}${(b.passengers || []).length ? ` · 👥 ${b.passengers.length}` : ''}</div></td>
+        <td><div class="customer-name">${escName(b.customerName || '—')}</div>
+            <div class="customer-email">${escName(b.passenger || '')}${(b.passengers || []).length ? ` · 👥 ${b.passengers.length}` : ''}</div></td>
         <td style="white-space:nowrap;">${escHtml(b.route)}</td>
         <td>${escHtml(b.airline || '—')}<div class="customer-email">${escHtml(b.bookingReference || '')}</div></td>
         <td class="kc-date">${b.travelDate ? fmtDate(b.travelDate) : '—'}
@@ -8020,7 +8029,7 @@ function paxEditorHtml() {
         <button type="button" class="action-btn" onclick="bkRemovePax(${i})" title="Remove">✕</button>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        ${fld('Full name (as on passport)', `<input class="form-input" value="${escHtml(p.fullName || '')}" oninput="bkPassengers[${i}].fullName=this.value" autocomplete="off" style="width:200px;">`)}
+        ${fld('Full name (as on passport)', `<input class="form-input" value="${escName(p.fullName || '')}" oninput="bkPassengers[${i}].fullName=this.value" autocomplete="off" style="width:200px;">`)}
         ${fld('Date of birth', `<input class="form-input" type="date" value="${escHtml(p.dob || '')}" onchange="bkPassengers[${i}].dob=this.value" autocomplete="off" style="width:150px;">`)}
         ${fld('Nationality', `<input class="form-input" value="${escHtml(p.nationality || '')}" oninput="bkPassengers[${i}].nationality=this.value" autocomplete="off" placeholder="e.g. British" style="width:140px;">`)}
         ${fld('Passport №', `<input class="form-input" value="${escHtml(p.passportNumber || '')}" oninput="bkPassengers[${i}].passportNumber=this.value" autocomplete="off" placeholder="${helperMasked ? 'hidden — check-in screen' : ''}" style="width:150px;">`)}
@@ -8113,7 +8122,7 @@ async function openNewBookingModal(preselectCustomerId = null) {
     if (!Array.isArray(ticketsMenu)) ticketsMenu = [];
   }
   const customerOptions = customers.map(c =>
-    `<option value="${c.id}" ${c.id === preselectCustomerId ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(fmtPhone(c.phone || ''))}</option>`
+    `<option value="${c.id}" ${c.id === preselectCustomerId ? 'selected' : ''}>${escName(c.firstName)} ${escName(c.lastName)} · ${escHtml(fmtPhone(c.phone || ''))}</option>`
   ).join('');
   const startFee = ticketsMenu.find(s => /start fee/i.test(s.name));
   const svcOptions = ticketsMenu
@@ -8311,7 +8320,7 @@ async function saveNewBooking() {
     const bkCust = customers.find(c => c.id === payload.customerId);
     if (!(await kcConfirm({
       title: 'Confirm booking charge',
-      body: `<strong>${bkCust ? escHtml(bkCust.firstName) + ' ' + escHtml(bkCust.lastName) : 'Customer'}</strong><br>
+      body: `<strong>${bkCust ? escName(bkCust.firstName) + ' ' + escName(bkCust.lastName) : 'Customer'}</strong><br>
         ${escHtml(payload.route)}${payload.airline ? ' · ' + escHtml(payload.airline) : ''} · ${fmtDate(payload.travelDate)}<br>
         Ticket ${fmtGbp(payload.price)}${payload.bookingFee ? ` + fee ${fmtGbp(payload.bookingFee)}` : ''}${payload.payment === 'paid' ? ' · paid now' : ' · on account'}`,
       amount: payload.price + (payload.bookingFee || 0),
@@ -8389,7 +8398,7 @@ async function openCheckinModal(bookingId) {
       ${pax.map((p, i) => `
         <div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:var(--fs-small);line-height:1.7;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <strong class="copy-val" tabindex="0" role="button" style="font-size:var(--fs-body);" title="Click to copy name" onclick="copyText('${escJs(p.fullName || '')}','name')">${escHtml(p.fullName || '(no name)')}</strong>
+            <strong class="copy-val" tabindex="0" role="button" style="font-size:var(--fs-body);" title="Click to copy name" onclick="copyText('${escJs(p.fullName || '')}','name')">${escName(p.fullName || '(no name)')}</strong>
             <button type="button" class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;"
               onclick="copyText(paxCopyBlocks[${i}],'all details')">📋 Copy all</button>
           </div>
@@ -8477,11 +8486,11 @@ function openEditBookingModal(id) {
   const b = bookings.find(x => x.id === id);
   if (!b) return;
   showDynamicModal(`
-    <div class="modal-title">✈️ ${escHtml(b.customerName || 'Booking')} — ${escHtml(b.route || '')}</div>
+    <div class="modal-title">✈️ ${escName(b.customerName || 'Booking')} — ${escHtml(b.route || '')}</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Passenger(s) summary</label>
-        <input class="form-input" id="ebPassenger" value="${escHtml(b.passenger || '')}" placeholder="Names">
+        <input class="form-input" id="ebPassenger" value="${escName(b.passenger || '')}" placeholder="Names">
       </div>
       <div class="form-group"><label class="form-label">Route *</label>
         <input class="form-input" id="ebRoute" value="${escHtml(b.route || '')}"></div>
@@ -8766,7 +8775,7 @@ async function renderRepairsTab() {
     ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔧</div><p>${emptyMsg}</p><small>${repairs.length ? 'Change the filter above.' : 'Click "New Repair" to open the first ticket.'}</small>${kcClearFiltersBtn('repairs')}</div></td></tr>`
     : shown.map(r => `
       <tr>
-        <td><div class="customer-name">${escHtml(r.customerName || '—')}</div></td>
+        <td><div class="customer-name">${escName(r.customerName || '—')}</div></td>
         <td>${escHtml(r.device || '—')}${r.kcPurchase ? ' <span class="badge" style="background:rgba(0, 96, 168,0.1);color:var(--accent);font-size:var(--fs-micro);">KC phone</span>' : ''}</td>
         <td style="font-size:var(--fs-small);">${r.services.map(s => escHtml(s.name)).join('<br>') || '—'}</td>
         <td><strong>${fmtGbp((r.total || 0))}</strong></td>
@@ -8806,7 +8815,7 @@ async function renderRepairsTab() {
 
 function openNewRepairModal(preselectCustomerId = null) {
   const customerOptions = customers.map(c =>
-    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(fmtPhone(c.phone || ''))}</option>`
+    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escName(c.firstName)} ${escName(c.lastName)} · ${escHtml(fmtPhone(c.phone || ''))}</option>`
   ).join('');
   const serviceChecks = repairMenu.map(m => `
     <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:var(--fs-body);cursor:pointer;">
@@ -8892,7 +8901,7 @@ async function saveNewRepair() {
     .reduce((s, el) => s + (parseFloat(el.dataset.price) || 0), 0);
   if (!(await kcConfirm({
     title: 'Confirm repair charge',
-    body: `<strong>${rpCust ? escHtml(rpCust.firstName) + ' ' + escHtml(rpCust.lastName) : 'Customer'}</strong><br>
+    body: `<strong>${rpCust ? escName(rpCust.firstName) + ' ' + escName(rpCust.lastName) : 'Customer'}</strong><br>
       ${serviceIds.length} service${serviceIds.length === 1 ? '' : 's'} · payable on collection`,
     amount: rpTotal,
     okLabel: 'Open ticket & charge',
@@ -8938,7 +8947,7 @@ function openRepairSmsModal(repairId) {
   if (!r) return;
   const c = customers.find(x => x.id === r.customerId);
   showDynamicModal(`
-    <div class="modal-title">✉️ Ready to collect — ${escHtml(r.customerName || '')}</div>
+    <div class="modal-title">✉️ Ready to collect — ${escName(r.customerName || '')}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Edit it, then ${WHATSAPP_ENABLED ? 'copy or open WhatsApp' : 'copy it into your messages'} — <strong>nothing is sent</strong> from here.</div>
     <textarea class="form-input" id="rpsmsText" rows="4" style="font-family:inherit;">${escHtml(buildRepairSms(r))}</textarea>
     <div class="modal-actions">
@@ -8972,7 +8981,7 @@ function openCollectRepairModal(id) {
   const r = repairs.find(x => x.id === id);
   if (!r) return;
   showDynamicModal(`
-    <div class="modal-title">🔧 Collect repair — ${escHtml(r.customerName || '')}</div>
+    <div class="modal-title">🔧 Collect repair — ${escName(r.customerName || '')}</div>
     <div style="font-size:var(--fs-ui);margin-bottom:12px;">${escHtml(r.device || 'device')} · total <strong>${fmtGbp((r.total || 0))}</strong></div>
     <div class="form-group">
       <label class="form-label">Payment</label>
@@ -9114,7 +9123,7 @@ function svcTimerFloatFrame(t) {
     <div class="svc-float-main" onclick="if(!document.getElementById('svcTimerFloat')?.dataset.dragged)goToTab('services')" title="Open Services (drag to move)">
       <span class="svc-float-icon">${paused ? '⏸' : '⏱'}</span>
       <div class="svc-float-info">
-        <div class="svc-float-name">${escHtml(t.customerName || 'customer')}</div>
+        <div class="svc-float-name">${escName(t.customerName || 'customer')}</div>
         <div class="svc-float-time"><b id="svcFloatElapsed">0:00</b><span id="svcFloatProj" class="svc-float-proj"></span></div>
       </div>
     </div>
@@ -9232,7 +9241,7 @@ async function renderServicesTab() {
     ? `<tr><td colspan="5"><div class="empty-state"><div class="emoji">🖨️</div><p>${serviceOrders.length ? 'No orders match this filter.' : 'No services charged yet.'}</p>${kcClearFiltersBtn('services')}</div></td></tr>`
     : svcShown.map(o => `
       <tr>
-        <td><div class="customer-name">${escHtml(o.customerName || '—')}</div></td>
+        <td><div class="customer-name">${escName(o.customerName || '—')}</div></td>
         <td>${escHtml(o.serviceName)}${o.qty > 1 ? ` <span style="color:var(--muted);">× ${o.qty}</span>` : ''}</td>
         <td><strong>${fmtGbp((o.total || 0))}</strong></td>
         <td class="kc-date">${o.createdAt ? fmtDate(o.createdAt) : '—'}</td>
@@ -9263,7 +9272,7 @@ async function renderServicesTab() {
         <div class="table-card" style="margin-bottom:14px;padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;${paused ? 'border-color:var(--gold);' : ''}">
           <span style="font-size:20px;">${paused ? '⏸' : '⏱'}</span>
           <div style="flex:1;min-width:180px;">
-            <div style="font-weight:600;">Helping ${escHtml(t.customerName || 'customer')}</div>
+            <div style="font-weight:600;">Helping ${escName(t.customerName || 'customer')}</div>
             <div style="font-size:var(--fs-small);color:${paused ? 'var(--gold)' : 'var(--muted)'};">${paused ? 'paused — resume to keep counting' : 'running'}</div>
           </div>
           <strong id="svcTimerElapsed" style="font-size:var(--fs-h1);font-feature-settings:'tnum';">0:00</strong>
@@ -9278,7 +9287,7 @@ async function renderServicesTab() {
       const opts = [...customers]
         .sort((a, b) => `${a.firstName || ''} ${a.lastName || ''}`.trim()
           .localeCompare(`${b.firstName || ''} ${b.lastName || ''}`.trim(), undefined, { sensitivity: 'base' }))
-        .map(c => `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)}</option>`).join('');
+        .map(c => `<option value="${c.id}">${escName(c.firstName)} ${escName(c.lastName)}</option>`).join('');
       return `
         <div class="table-card" style="margin-bottom:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <span style="font-size:20px;">⏱</span>
@@ -9335,7 +9344,7 @@ async function openNewServiceModal(preselectCustomerId = null) {
     if (!Array.isArray(onlineMenu)) onlineMenu = [];
   }
   const customerOptions = customers.map(c =>
-    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)} · ${escHtml(fmtPhone(c.phone || ''))}</option>`).join('');
+    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escName(c.firstName)} ${escName(c.lastName)} · ${escHtml(fmtPhone(c.phone || ''))}</option>`).join('');
   const svcOptions = onlineMenu.map(m =>
     `<option value="${escHtml(String(m.id))}">${escHtml(m.name)} — ${fmtGbp(m.price)}${m.repeatPrice !== null ? ` (${onlineRepeatFrom()}+ ${fmtGbp(m.repeatPrice)})` : ''}</option>`).join('');
   showDynamicModal(`
@@ -9420,7 +9429,7 @@ async function saveNewServiceOrder() {
   try {
     if (!(await kcConfirm({
       title: 'Confirm service charge',
-      body: `<strong>${svCust ? escHtml(svCust.firstName) + ' ' + escHtml(svCust.lastName) : 'Customer'}</strong><br>
+      body: `<strong>${svCust ? escName(svCust.firstName) + ' ' + escName(svCust.lastName) : 'Customer'}</strong><br>
         ${escHtml(svLabel.trim())}${svPaid ? ' · paid now' : ' · on account'}`,
       amount: Number.isFinite(svTotal) ? svTotal : 0,
       okLabel: 'Charge service',
@@ -9597,7 +9606,7 @@ async function renderShopTab() {
     : shopSales.slice(0, 25).map(s => `
       <div class="history-item history-flat">
         <div style="flex:1;min-width:0;">
-          <div class="history-desc"><strong>${escHtml(s.item)}</strong>${s.qty > 1 ? ` × ${s.qty}` : ''} — ${escHtml(s.customerName || 'Walk-in')}</div>
+          <div class="history-desc"><strong>${escHtml(s.item)}</strong>${s.qty > 1 ? ` × ${s.qty}` : ''} — ${escName(s.customerName || 'Walk-in')}</div>
           <div style="font-size:var(--fs-micro);color:var(--muted);">${s.imei ? 'IMEI ' + escHtml(s.imei) + ' · ' : ''}${escHtml(s.notes || '')}</div>
         </div>
         <div class="history-date" style="margin:0 12px;">${fmtDate(s.createdAt)}</div>
@@ -10011,7 +10020,7 @@ function renderPosView() {
   // display like a real POS. Any tab switch clears it (renderTab guard).
   document.body.classList.add('pos-mode');
   const customerOptions = customers.map(c =>
-    `<option value="${c.id}">${escHtml(c.firstName)} ${escHtml(c.lastName)}</option>`).join('');
+    `<option value="${c.id}">${escName(c.firstName)} ${escName(c.lastName)}</option>`).join('');
   const cats = [...new Set(shopItems.filter(i => i.active && i.quantity > 0).map(i => i.category))];
   const parkedN = posParkedCount();
   content.innerHTML = `
@@ -10421,7 +10430,7 @@ function posRenderParkedMenu() {
     return `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--border);">
         <div style="flex:1;min-width:0;">
-          <div style="font-size:var(--fs-body);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(p.customerName || 'Walk-in')}</div>
+          <div style="font-size:var(--fs-body);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escName(p.customerName || 'Walk-in')}</div>
           <div style="font-size:var(--fs-micro);color:var(--muted);">${p.count} item${p.count === 1 ? '' : 's'} · ${fmtGbp(p.total || 0)} · held ${hm}</div>
         </div>
         <button class="btn btn-primary" style="padding:6px 12px;" onclick="posResumeSale('${p.id}')">Resume</button>
@@ -10791,7 +10800,7 @@ async function renderKolTorahTab() {
     .reduce((s, x) => s + x.received, 0);
 
   const customerOptions = customers.map(c =>
-    `<option value="${escHtml(String(c.id))}">${escHtml(c.firstName)} ${escHtml(c.lastName)}</option>`).join('');
+    `<option value="${escHtml(String(c.id))}">${escName(c.firstName)} ${escName(c.lastName)}</option>`).join('');
   const titleOptions = activeTitles.map(t =>
     `<option value="${t.id}">${escHtml(t.name)}${t.price ? ` — ${fmtGbp(t.price)}` : ''}</option>`).join('');
 
@@ -10812,7 +10821,7 @@ async function renderKolTorahTab() {
     ? `<tr><td colspan="6"><div class="empty-state"><div class="emoji">🎧</div><p>No conversion jobs yet — add the first drop-off above.</p></div></td></tr>`
     : d.jobs.map(j => `
       <tr>
-        <td><div class="customer-name">${escHtml(j.customerName)}</div>
+        <td><div class="customer-name">${escName(j.customerName)}</div>
             <div style="font-size:var(--fs-micro);color:var(--muted);">${fmtDate(j.createdAt)}</div></td>
         <td>${escHtml(KT_JOB_KINDS[j.kind] || j.kind)}${j.qty > 1 ? ` <span style="color:var(--muted);">× ${j.qty}</span>` : ''}</td>
         <td style="max-width:260px;">${escHtml(j.details || '—')}</td>
@@ -10837,7 +10846,7 @@ async function renderKolTorahTab() {
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <strong>${escHtml(s.name)}</strong>
           ${s.contact ? `<span style="font-size:var(--fs-small);color:var(--muted);">${escHtml(s.contact)}</span>` : ''}
-          ${s.customerName ? `<span class="badge" style="background:rgba(14,138,82,0.14);color:var(--success-ink);" title="Settlements post to this wallet">👛 ${escHtml(s.customerName)}</span>`
+          ${s.customerName ? `<span class="badge" style="background:rgba(14,138,82,0.14);color:var(--success-ink);" title="Settlements post to this wallet">👛 ${escName(s.customerName)}</span>`
             : '<span class="badge" style="background:rgba(239,68,68,0.1);color:var(--danger-ink);" title="Link a customer record so settlements hit the ledger">no wallet link</span>'}
           <span style="margin-left:auto;font-size:var(--fs-small);color:var(--muted);">${held} CD${held === 1 ? '' : 's'} out</span>
           <button class="btn btn-outline" style="font-size:var(--fs-micro);padding:4px 8px;" onclick="ktToggleShulEdit('${s.id}')">${editing ? 'Close' : '✎ Edit'}</button>
@@ -11111,7 +11120,7 @@ async function ktJobStatus(id, to) {
   }))) return;
   if (to === 'collected' && job && job.price > 0 && !(await kcConfirm({
     title: 'Confirm collection',
-    body: `<strong>${escHtml(job.customerName)}</strong> — ${escHtml(KT_JOB_KINDS[job.kind] || '')}${job.qty > 1 ? ` × ${job.qty}` : ''}.<br>${job.customerId ? 'Charges their wallet on collection.' : '<em>Walk-in — take the money at the till.</em>'}`,
+    body: `<strong>${escName(job.customerName)}</strong> — ${escHtml(KT_JOB_KINDS[job.kind] || '')}${job.qty > 1 ? ` × ${job.qty}` : ''}.<br>${job.customerId ? 'Charges their wallet on collection.' : '<em>Walk-in — take the money at the till.</em>'}`,
     amount: job.price,
     okLabel: 'Mark collected',
   }))) return;
@@ -12245,8 +12254,8 @@ function renderTaskTriage(j) {
           <div style="font-size:var(--fs-micro);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
             ${t.action ? `<span style="color:var(--accent);">→ ${escHtml(t.action)}</span>` : ''}
             ${t.customerId
-              ? `<button style="background:none;border:0;color:var(--accent);cursor:pointer;padding:0;font-size:var(--fs-micro);" onclick="openCustomerById('${escHtml(String(t.customerId))}')">👤 ${escHtml(t.customerName || 'open customer')}</button>`
-              : (t.customerName ? `<span style="color:var(--muted);">👤 ${escHtml(t.customerName)}</span>` : '')}
+              ? `<button style="background:none;border:0;color:var(--accent);cursor:pointer;padding:0;font-size:var(--fs-micro);" onclick="openCustomerById('${escHtml(String(t.customerId))}')">👤 ${escName(t.customerName || 'open customer')}</button>`
+              : (t.customerName ? `<span style="color:var(--muted);">👤 ${escName(t.customerName)}</span>` : '')}
           </div>
         </div>
       </div>
@@ -12433,8 +12442,8 @@ async function renderTasksTab() {
     const chaseCust = isChaseTask ? customers.find(c => c.id === t.customerId) : null;
     const custLabel = t.customerName
       ? (t.customerId
-          ? `<span class="dash-link" style="color:var(--accent);cursor:pointer;" onclick="goToTab('customers',{customerId:'${escHtml(String(t.customerId))}'})">👤 ${escHtml(t.customerName)}</span> · `
-          : '👤 ' + escHtml(t.customerName) + ' · ')
+          ? `<span class="dash-link" style="color:var(--accent);cursor:pointer;" onclick="goToTab('customers',{customerId:'${escHtml(String(t.customerId))}'})">👤 ${escName(t.customerName)}</span> · `
+          : '👤 ' + escName(t.customerName) + ' · ')
       : '';
     return `
     <div class="task-card${t.done ? ' task-done' : ''}">
@@ -12712,8 +12721,8 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
       ${arrears.length ? `<div class="dash-hero-divider"></div>` +
         arrears.slice(0, 8).map(a => `
           <div class="dash-hero-row${a.customerId ? ' dash-link' : ''}"${a.customerId
-            ? ` onclick="goToTab('customers',{customerId:'${escHtml(String(a.customerId))}'})" title="Open ${escHtml(a.customerName)}"` : ''}>
-            <span>${escHtml(a.customerName)}${a.customerId ? '' : ' <span style="color:var(--muted);font-size:var(--fs-micro);">(walk-in)</span>'}</span>
+            ? ` onclick="goToTab('customers',{customerId:'${escHtml(String(a.customerId))}'})" title="Open ${escName(a.customerName)}"` : ''}>
+            <span>${escName(a.customerName)}${a.customerId ? '' : ' <span style="color:var(--muted);font-size:var(--fs-micro);">(walk-in)</span>'}</span>
             <span class="amt">${fmtGbp(Math.abs(a.balance))}${a.customerId ? ' <span class="feed-go" style="opacity:1;">›</span>' : ''}</span>
           </div>`).join('') +
         (arrears.length > 8 ? `<div class="dash-hero-row dash-link" onclick="goToTab('wallet')" title="Open the wallet"
@@ -12753,19 +12762,19 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   // customer names with quotes can't break the HTML.
   const attention = [];
   overdue.forEach(r => attention.push(['📱',
-    `<strong>${escHtml(r.customerName || '?')}</strong> — rental overdue since ${fmtDate(r.toDate)}`,
+    `<strong>${escName(r.customerName || '?')}</strong> — rental overdue since ${fmtDate(r.toDate)}`,
     () => goToTab('rentals', { rentalSearch: r.customerName || '' })]));
   readyRepairs.forEach(r => attention.push(['🔧',
-    `<strong>${escHtml(r.customerName || '?')}</strong> — repair ready to collect (${fmtGbp((r.total || 0))})`,
+    `<strong>${escName(r.customerName || '?')}</strong> — repair ready to collect (${fmtGbp((r.total || 0))})`,
     () => goToTab('repairs')]));
   travel7.forEach(b => attention.push(['✈️',
-    `<strong>${escHtml(b.customerName || '?')}</strong> — flies ${fmtDate(b.travelDate)} (${escHtml(b.route)})`,
+    `<strong>${escName(b.customerName || '?')}</strong> — flies ${fmtDate(b.travelDate)} (${escHtml(b.route)})`,
     () => goToTab('bookings')]));
   // Straight to the plan that is renewing, not to the list of every plan.
   // The line names one SIM, so landing on the tab and leaving you to find it
   // again is the app forgetting what you just clicked.
   renewals7.forEach(s => attention.push(['💳',
-    `<strong>${escHtml(s.customerName || '?')}</strong> — SIM renews ${fmtDate(s.renewalDate)}`,
+    `<strong>${escName(s.customerName || '?')}</strong> — SIM renews ${fmtDate(s.renewalDate)}`,
     () => openOnTab('sim', () => openManageSimModal(s.id))]));
   // Low-stock accessories/phones (display-only; the Shop tab holds the editable
   // per-SKU threshold + the full list). One rolled-up line → opens Shop.
@@ -12807,7 +12816,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
           <div class="history-main">
             <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>
             <div class="history-desc kc-clamp-2">
-              ${escHtml(e.customerName || '—')} · ${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}</div>
+              ${escName(e.customerName || '—')} · ${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}</div>
           </div>
           <div class="history-date" style="margin:0 12px;">${fmtDate(e.at)}</div>
           <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--text)'};">
@@ -12889,7 +12898,7 @@ async function renderVirtualTab() {
     : vnShown.map(v => `
       <tr>
         <td class="kc-phone"><strong>${escHtml(fmtPhone(v.number))}</strong></td>
-        <td>${escHtml(v.customerName || '—')}</td>
+        <td>${escName(v.customerName || '—')}</td>
         <td>${escHtml(v.platform || '—')}</td>
         <td>${v.billingEnabled && v.monthlyPrice
           ? `<strong>${fmtGbp(v.monthlyPrice)}</strong><div class="customer-email">next ${fmtDate(v.nextBillingDate) || '—'}</div>`
@@ -12945,7 +12954,7 @@ async function renderVirtualTab() {
 
 function openNewVNModal(preselectCustomerId) {
   const customerOptions = customers.map(c =>
-    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escHtml(c.firstName)} ${escHtml(c.lastName)}</option>`
+    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escName(c.firstName)} ${escName(c.lastName)}</option>`
   ).join('');
   showDynamicModal(`
     <div class="modal-title">🔢 New Virtual Number</div>
@@ -13033,7 +13042,7 @@ function openVNBillingModal(id) {
   showDynamicModal(`
     <div class="modal-title">💷 Monthly Billing — ${escHtml(fmtPhone(v.number))}</div>
     <div style="color:var(--muted);font-size:var(--fs-body);margin-bottom:14px;">
-      ${v.customerName ? `Customer: <strong style="color:var(--text);">${escHtml(v.customerName)}</strong>` :
+      ${v.customerName ? `Customer: <strong style="color:var(--text);">${escName(v.customerName)}</strong>` :
         '<span style="color:var(--danger-ink);">⚠ No customer assigned — billing needs one.</span>'}
     </div>
     <div class="form-grid">
@@ -13075,7 +13084,7 @@ async function saveVNBilling(id) {
   const vnRec = virtualNumbers.find(x => x.id === id);
   if (enabled && !(await kcConfirm({
     title: 'Confirm recurring VN charge',
-    body: `<strong>${vnRec?.customerName ? escHtml(vnRec.customerName) : 'Customer'}</strong><br>
+    body: `<strong>${vnRec?.customerName ? escName(vnRec.customerName) : 'Customer'}</strong><br>
       ${vnRec ? escHtml(vnRec.number) : ''} — billed monthly from ${fmtDate(document.getElementById('vbDate').value)} (posted by the daily sweep)`,
     amount: price,
     okLabel: 'Enable monthly billing',
@@ -13141,7 +13150,7 @@ async function renderSettingsTab() {
       <tbody>
         ${team.members.map(m => `
           <tr>
-            <td><span class="customer-name">${escHtml(m.fullName || '—')}</span>${m.isYou ? ' <span class="badge badge-rental">you</span>' : ''}</td>
+            <td><span class="customer-name">${escName(m.fullName || '—')}</span>${m.isYou ? ' <span class="badge badge-rental">you</span>' : ''}</td>
             <td>${escHtml(m.email || '—')}</td>
             <td>
               <select class="form-input" style="width:110px;padding:5px 8px;font-size:var(--fs-body);min-height:0;"
