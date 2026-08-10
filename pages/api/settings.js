@@ -222,6 +222,41 @@ async function handler(req, res) {
         return res.json({ success: true, warnings, list })
       }
 
+      // Rental phone pools (JSON). A pool is one carrier plan shared by
+      // several lines, activated for a window: [{name, from, till}]. The
+      // client mirrors the window onto member phones' poolExpiry — the field
+      // all rental availability/ranking logic already reads.
+      if (table === 'settings' && key === 'rental_pools') {
+        let pools
+        try { pools = JSON.parse(String(values?.textValue || '[]')) } catch { pools = null }
+        if (!Array.isArray(pools)) return res.status(400).json({ success: false, error: 'Bad pool list.' })
+        if (pools.length > 30) return res.status(400).json({ success: false, error: 'That is a lot of pools — keep it under 30.' })
+        const seen = new Set()
+        const clean = []
+        const iso = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : ''
+        for (const p of pools) {
+          const name = String(p?.name || '').replace(/[^\w .+\-\/&]/g, '').trim().slice(0, 40)
+          if (!name) continue
+          const k = name.toLowerCase()
+          if (seen.has(k)) continue
+          seen.add(k)
+          clean.push({ name, from: iso(p?.from), till: iso(p?.till) })
+        }
+        const text = JSON.stringify(clean)
+        const updated = await db.update('settings', `key=eq.rental_pools`, {
+          text_value: text,
+          updated_at: new Date().toISOString(),
+        })
+        if (!updated.length) {
+          await db.insert('settings', [{
+            key: 'rental_pools',
+            text_value: text,
+            description: 'Rental phone pools — name + activation window (owner-managed)',
+          }])
+        }
+        return res.json({ success: true, warnings, pools: clean })
+      }
+
       // Shop opening hours — free text, shown on the public welcome page.
       // Owner edits it in Settings; no code change needed to update the site.
       if (table === 'settings' && key === 'opening_hours') {

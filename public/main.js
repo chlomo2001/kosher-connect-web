@@ -3055,12 +3055,12 @@ function openManagePhonesModal() {
       </div>
       <div id="pPoolGroup" style="display:contents;">
       <div class="form-group">
-        <label class="form-label">Pool Name (USA)</label>
-        <input class="form-input" id="pPool" type="text" placeholder="Pool 24">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Pool Expiry Date</label>
-        <input class="form-input" id="pPoolExpiry" type="date">
+        <label class="form-label">Pool (USA)</label>
+        <select class="form-input" id="pPool">
+          <option value="">— no pool —</option>
+          ${rentalPools().map(pl => `<option value="${escHtml(pl.name)}">${escHtml(pl.name)}${pl.till ? ' · till ' + fmtDate(pl.till) : ''}</option>`).join('')}
+        </select>
+        <span style="font-size:var(--fs-micro);color:var(--muted);">Add pools in 🏊 Pools — the phone adopts the pool's window.</span>
       </div>
       </div>
       <div class="form-group">
@@ -3107,7 +3107,9 @@ function saveNewPhone() {
     company:    document.getElementById('pCompany').value.trim(),
     model:      document.getElementById('pModel').value.trim(),
     pool:       document.getElementById('pPool').value.trim(),
-    poolExpiry: document.getElementById('pPoolExpiry').value || null,
+    // Window comes from the pool registry (see saveEditPhone) — never typed.
+    poolExpiry: rentalPools().find(pl => pl.name === document.getElementById('pPool').value.trim())?.till || null,
+    poolActiveFrom: rentalPools().find(pl => pl.name === document.getElementById('pPool').value.trim())?.from || null,
     simId:      document.getElementById('pSIMID').value.trim(),
     imei:       document.getElementById('pIMEI').value.trim(),
     email:      document.getElementById('pEmail').value.trim(),
@@ -3284,12 +3286,19 @@ function openEditPhoneModal(phoneId) {
     <div class="form-grid">
       ${p.country === 'USA' ? `
       <div class="form-group">
-        <label class="form-label">Pool Name</label>
-        <input class="form-input" id="epPool" type="text" value="${escHtml(p.pool||'')}">
+        <label class="form-label">Pool</label>
+        <select class="form-input" id="epPool">
+          <option value="">— no pool —</option>
+          ${rentalPools().map(pl => `<option value="${escHtml(pl.name)}" ${p.pool === pl.name ? 'selected' : ''}>${escHtml(pl.name)}${pl.till ? ' · till ' + fmtDate(pl.till) : ''}</option>`).join('')}
+          ${p.pool && !rentalPools().some(pl => pl.name === p.pool) ? `<option value="${escHtml(p.pool)}" selected>${escHtml(p.pool)} (not in the pool list)</option>` : ''}
+        </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Pool Expiry</label>
-        <input class="form-input" id="epExpiry" type="date" value="${escHtml(p.poolExpiry||'')}">
+        <label class="form-label">Pool window</label>
+        <div style="font-size:var(--fs-body);padding:8px 0;color:${p.poolExpiry ? 'var(--text)' : 'var(--muted)'};">
+          ${p.poolExpiry ? `${p.poolActiveFrom ? fmtDate(p.poolActiveFrom) + ' → ' : 'till '}${fmtDate(p.poolExpiry)}` : '—'}
+          <div style="font-size:var(--fs-micro);color:var(--muted);">Set per pool in 🏊 Pools — picking a pool adopts its window.</div>
+        </div>
       </div>` : ''}
       <div class="form-group">
         <label class="form-label">Company</label>
@@ -3336,8 +3345,13 @@ function saveEditPhone(phoneId) {
   const p = phones.find(x => x.id === phoneId);
   if (!p) return;
   if (p.country === 'USA') {
-    p.pool       = document.getElementById('epPool')?.value.trim() || '';
-    p.poolExpiry = document.getElementById('epExpiry')?.value || null;
+    p.pool = document.getElementById('epPool')?.value.trim() || '';
+    // The window comes from the pool registry, never typed per phone: picking
+    // a pool adopts its window, clearing the pool clears it. A legacy name
+    // not in the registry keeps whatever the phone already had.
+    const reg = rentalPools().find(pl => pl.name === p.pool);
+    if (reg) { p.poolExpiry = reg.till || null; p.poolActiveFrom = reg.from || null; }
+    else if (!p.pool) { p.poolExpiry = null; p.poolActiveFrom = null; }
   }
   p.company = document.getElementById('epCompany').value.trim();
   const epModel = document.getElementById('epModel');
@@ -3358,40 +3372,70 @@ function saveEditPhone(phoneId) {
 }
 
 // ══ POOLS MANAGER ══
-// A pool is one carrier plan shared by several USA lines: activating it
-// "from X till Y" makes every line in the pool live for that window. This is
-// the pool-level view — open a pool, see all its phones, stamp the window
-// ONCE — and everything downstream (the New-Rental ranking, "already active
-// saves the activation fee", mid-trip expiry warnings, the Expires column)
-// reads the same per-phone poolExpiry it always did.
+// A pool is one carrier plan shared by several USA lines, activated for a
+// window. Pools are REAL entities: the registry lives in the settings key
+// rental_pools ([{name, from, till}]) and this modal is where they're added
+// and managed. Phones pick a pool from a dropdown (✏️ Edit Phone); applying
+// a window here mirrors it onto every member phone's poolExpiry — the field
+// the New-Rental ranking, activation-fee logic and expiry warnings already
+// read — so one update drives all the downstream logic.
+function rentalPools() {
+  const s = pricingConfig?.settings?.find(x => x.key === 'rental_pools');
+  try {
+    const arr = JSON.parse(s?.textValue || '[]');
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+
+async function saveRentalPools(pools) {
+  const ok = await applySettingUpdate({
+    table: 'settings', key: 'rental_pools',
+    values: { textValue: JSON.stringify(pools) },
+  });
+  if (ok && pricingConfig?.settings) {
+    const s = pricingConfig.settings.find(x => x.key === 'rental_pools');
+    if (s) s.textValue = JSON.stringify(pools);
+    else pricingConfig.settings.push({ key: 'rental_pools', textValue: JSON.stringify(pools) });
+  }
+  return ok;
+}
+
 function openPoolsModal() {
   const today = localISO();
-  const groups = new Map();
+  const registry = rentalPools();
+  const byName = new Map();
   phones.forEach(p => {
     const name = (p.pool || '').trim();
     if (!name) return;
-    if (!groups.has(name)) groups.set(name, []);
-    groups.get(name).push(p);
+    if (!byName.has(name)) byName.set(name, []);
+    byName.get(name).push(p);
   });
+  // Show every registered pool (even empty) plus any legacy names still on
+  // phones — applying a window to a legacy name adopts it into the registry.
+  const names = [...new Set([...registry.map(r => r.name), ...byName.keys()])]
+    .sort((a, b) => a.localeCompare(b));
   const unpooled = phones.filter(p => (p.country || '').toUpperCase() === 'USA' && !(p.pool || '').trim()).length;
-  const names = [...groups.keys()].sort((a, b) => a.localeCompare(b));
 
   const poolCard = (name) => {
-    const ps = groups.get(name);
-    const expiries = [...new Set(ps.map(p => p.poolExpiry).filter(Boolean))].sort();
-    const live = expiries.length > 0 && expiries[expiries.length - 1] >= today;
+    const reg = registry.find(r => r.name === name);
+    const ps = byName.get(name) || [];
+    const live = !!(reg?.till && reg.till >= today);
     const rented = ps.filter(p => p.status === 'rented').length;
+    const outOfSync = reg?.till ? ps.filter(p => p.poolExpiry !== reg.till).length : 0;
     const key = name.replace(/[^a-z0-9]/gi, '_');
-    const summary = !expiries.length ? 'no expiry on record'
-      : expiries.length === 1 ? `all till ${fmtDate(expiries[0])}`
-      : `expiries ${fmtDate(expiries[0])} – ${fmtDate(expiries[expiries.length - 1])} (mixed)`;
     return `
       <div class="table-card" style="margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;flex-wrap:wrap;">
           <strong style="font-size:var(--fs-ui);">🏊 ${escHtml(name)}</strong>
           <span class="badge ${live ? 'badge-active' : 'badge-rental'}">${live ? 'ACTIVE' : 'not active'}</span>
-          <span style="font-size:var(--fs-small);color:var(--muted);">${ps.length} phone${ps.length === 1 ? '' : 's'} · ${rented} out · ${summary}</span>
+          <span style="font-size:var(--fs-small);color:var(--muted);">
+            ${ps.length} phone${ps.length === 1 ? '' : 's'} · ${rented} out
+            ${reg ? ` · window ${reg.from ? fmtDate(reg.from) + ' → ' : 'till '}${reg.till ? fmtDate(reg.till) : '—'}` : ' · not in the pool list yet'}
+            ${outOfSync ? ` · ⚠️ ${outOfSync} phone${outOfSync === 1 ? '' : 's'} out of sync — press Apply` : ''}
+          </span>
+          ${!ps.length && reg ? `<button class="action-btn danger" style="margin-left:auto;" onclick="deleteRentalPool('${escJs(name)}')" aria-label="Remove this pool">✕ Remove</button>` : ''}
         </div>
+        ${ps.length ? `
         <table>
           <thead><tr><th>Number</th><th>Model</th><th>Status</th><th>Active from</th><th>Till</th></tr></thead>
           <tbody>
@@ -3406,13 +3450,13 @@ function openPoolsModal() {
             </tr>`;
           }).join('')}
           </tbody>
-        </table>
+        </table>` : `<div style="padding:4px 14px 10px;font-size:var(--fs-small);color:var(--muted);">No phones assigned yet — pick this pool in ✏️ Edit Phone.</div>`}
         <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding:10px 14px 14px;border-top:1px solid var(--border);">
           <label style="display:flex;flex-direction:column;gap:2px;font-size:var(--fs-micro);color:var(--muted);">Activated from
-            <input class="form-input" id="poolFrom_${key}" type="date" value="${today}" style="min-height:0;padding:6px 8px;"></label>
+            <input class="form-input" id="poolFrom_${key}" type="date" value="${escHtml(reg?.from || today)}" style="min-height:0;padding:6px 8px;"></label>
           <label style="display:flex;flex-direction:column;gap:2px;font-size:var(--fs-micro);color:var(--muted);">till
-            <input class="form-input" id="poolTill_${key}" type="date" value="${escHtml(expiries[expiries.length - 1] || '')}" style="min-height:0;padding:6px 8px;"></label>
-          <button class="btn btn-primary btn-sm" onclick="applyPoolWindow('${escJs(name)}','${key}')">✓ Apply to all ${ps.length}</button>
+            <input class="form-input" id="poolTill_${key}" type="date" value="${escHtml(reg?.till || '')}" style="min-height:0;padding:6px 8px;"></label>
+          <button class="btn btn-primary btn-sm" onclick="applyPoolWindow('${escJs(name)}','${key}')">✓ Apply${ps.length ? ` to all ${ps.length}` : ''}</button>
         </div>
       </div>`;
   };
@@ -3420,33 +3464,78 @@ function openPoolsModal() {
   showDynamicModal(`
     <div class="modal-title">🏊 Pools</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
-      One carrier plan shared by several lines. Set the activation window once and every phone in the
-      pool carries it — New Rental then prefers already-active pool phones (no activation fee) and
-      warns when a pool would run out mid-trip.
+      One carrier plan shared by several lines. Add the pool here, pick it on each phone
+      (✏️ Edit Phone → Pool dropdown), and set the activation window once — every phone in the pool
+      carries it, New Rental prefers already-active pool phones (no activation fee), and it warns
+      when a pool would run out mid-trip.
+    </div>
+    <div class="table-card" style="margin-bottom:12px;">
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding:12px 14px;">
+        <label style="display:flex;flex-direction:column;gap:2px;font-size:var(--fs-micro);color:var(--muted);">New pool name
+          <input class="form-input" id="npName" type="text" placeholder="e.g. US Mobile A" style="min-height:0;padding:6px 8px;width:170px;"></label>
+        <label style="display:flex;flex-direction:column;gap:2px;font-size:var(--fs-micro);color:var(--muted);">Activated from
+          <input class="form-input" id="npFrom" type="date" value="${today}" style="min-height:0;padding:6px 8px;"></label>
+        <label style="display:flex;flex-direction:column;gap:2px;font-size:var(--fs-micro);color:var(--muted);">till
+          <input class="form-input" id="npTill" type="date" style="min-height:0;padding:6px 8px;"></label>
+        <button class="btn btn-primary btn-sm" onclick="addRentalPool()">+ Add pool</button>
+      </div>
     </div>
     ${names.length ? names.map(poolCard).join('')
-      : `<div class="empty-state"><div class="emoji">🏊</div><p>No pools yet.</p><small>Give USA phones a Pool Name in ✏️ Edit Phone and they’ll group here.</small></div>`}
-    ${unpooled ? `<div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">${unpooled} USA phone${unpooled === 1 ? '' : 's'} have no pool name yet — open ✏️ Edit Phone to assign one.</div>` : ''}
+      : `<div class="empty-state"><div class="emoji">🏊</div><p>No pools yet.</p><small>Add the first pool above, then pick it on each phone.</small></div>`}
+    ${unpooled ? `<div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">${unpooled} USA phone${unpooled === 1 ? '' : 's'} have no pool yet — open ✏️ Edit Phone to assign one.</div>` : ''}
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
   `);
 }
 
+async function addRentalPool() {
+  const name = document.getElementById('npName')?.value.trim() || '';
+  const from = document.getElementById('npFrom')?.value || '';
+  const till = document.getElementById('npTill')?.value || '';
+  if (!name) { toast('Give the pool a name.', 'warning'); return; }
+  const pools = rentalPools();
+  if (pools.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+    toast('A pool with that name already exists.', 'error'); return;
+  }
+  if (!(await saveRentalPools([...pools, { name, from, till }]))) return;
+  toast(`Pool “${name}” added.`, 'success');
+  openPoolsModal();
+}
+
+async function deleteRentalPool(name) {
+  if (phones.some(p => (p.pool || '').trim() === name)) {
+    toast('Phones are still assigned to this pool — move them first.', 'error'); return;
+  }
+  if (!(await kcConfirm({ title: `Remove pool “${name}”?`, body: 'No phones are assigned — this just removes it from the list.', okLabel: 'Remove' }))) return;
+  if (!(await saveRentalPools(rentalPools().filter(p => p.name !== name)))) return;
+  toast(`Pool “${name}” removed.`, 'warning');
+  openPoolsModal();
+}
+
+// Set the window on the pool AND mirror it onto every member phone so all
+// existing per-phone logic sees it immediately. Applying to a legacy name
+// (assigned on phones but never registered) adopts it into the registry.
 async function applyPoolWindow(name, key) {
   const from = document.getElementById('poolFrom_' + key)?.value || '';
   const till = document.getElementById('poolTill_' + key)?.value || '';
   if (!till) { toast('Pick the till date — that is what drives availability.', 'warning'); return; }
   if (from && till < from) { toast('The till date is before the from date.', 'error'); return; }
   const members = phones.filter(p => (p.pool || '').trim() === name);
-  if (!members.length) return;
-  if (!(await kcConfirm({
+  if (members.length && !(await kcConfirm({
     title: `Activate pool “${name}”?`,
     body: `<strong>${members.length} phone${members.length === 1 ? '' : 's'}</strong> will be marked active ${from ? fmtDate(from) + ' → ' : 'till '}${fmtDate(till)}.<br>Rentals and availability suggestions pick this up immediately.`,
     okLabel: 'Set the window',
   }))) return;
-  members.forEach(p => { p.poolActiveFrom = from || null; p.poolExpiry = till; });
-  const res = await savePhones(phones);
-  if (res && res.success === false) return; // reportSave already warned
-  toast(`Pool “${name}” active till ${fmtDate(till)} — ${members.length} phones updated.`, 'success');
+  const pools = rentalPools();
+  const reg = pools.find(p => p.name === name);
+  if (reg) { reg.from = from; reg.till = till; }
+  else pools.push({ name, from, till });
+  if (!(await saveRentalPools(pools))) return;
+  if (members.length) {
+    members.forEach(p => { p.poolActiveFrom = from || null; p.poolExpiry = till; });
+    const res = await savePhones(phones);
+    if (res && res.success === false) return; // reportSave already warned
+  }
+  toast(`Pool “${name}” active till ${fmtDate(till)}${members.length ? ` — ${members.length} phones updated` : ''}.`, 'success');
   openPoolsModal();
   if (currentTab === 'rentals') renderPhoneRows();
 }
