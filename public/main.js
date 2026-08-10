@@ -93,6 +93,11 @@ window.api = {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(b),
   }).then(r => r.json()),
+  deleteBooking: (id) => kcFetch('/api/bookings', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  }).then(r => r.json()),
 
   getTravelReqView: (bookingId) =>
     kcFetch(`/api/travel-auth?bookingId=${encodeURIComponent(bookingId)}`)
@@ -4355,31 +4360,36 @@ function toggleDetail(id) {
 function buildCustomerTimeline(c) {
   const cid = c.id;
   const ev = [];
+  // Every row carries {fn, id} for its record's manage/edit surface, so the
+  // timeline is a way IN to each record (edit, delete), not just a listing —
+  // before this, imported history was visible here but unreachable.
   for (const r of rentals.filter(x => x.customerId === cid)) {
     ev.push({ date: r.fromDate || r.createdAt, icon: '📱', cat: 'Rental',
       title: `Rental${r.phoneNumber ? ' — ' + r.phoneNumber : r.country ? ' — ' + r.country : ''}`,
       sub: `${r.status}${r.fromDate ? ' · ' + fmtDate(r.fromDate) + (r.toDate ? ' → ' + fmtDate(r.toDate) : '') : ''}`,
-      amount: rentalGrandTotal(r) });
+      amount: rentalGrandTotal(r), open: { fn: 'openManageRentalModal', id: r.id } });
   }
   for (const b of bookings.filter(x => x.customerId === cid)) {
     ev.push({ date: b.travelDate || b.createdAt, icon: '✈️', cat: 'Flight',
       title: `${b.route || 'Flight'}${b.passenger ? ' — ' + b.passenger : ''}`,
       sub: `${b.status || ''}${b.travelDate ? ' · ' + fmtDate(b.travelDate) : ''}`,
-      amount: Number(b.price || b.total || 0) });
+      amount: Number(b.price || b.total || 0), open: { fn: 'openEditBookingModal', id: b.id } });
   }
   for (const s of sims.filter(x => x.customerId === cid)) {
     ev.push({ date: s.createdAt || s.renewalDate, icon: '📶', cat: 'SIM',
       title: `SIM — ${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}`,
-      sub: `${s.status || ''}${s.renewalDate ? ' · renews ' + fmtDate(s.renewalDate) : ''}` });
+      sub: `${s.status || ''}${s.renewalDate ? ' · renews ' + fmtDate(s.renewalDate) : ''}`,
+      open: { fn: 'openManageSimModal', id: s.id } });
   }
   for (const v of virtualNumbers.filter(x => x.customerId === cid)) {
     ev.push({ date: v.createdAt, icon: '🔢', cat: 'Virtual number',
-      title: `VN ${fmtPhone(v.number || '')}`.trim(), sub: v.status || '' });
+      title: `VN ${fmtPhone(v.number || '')}`.trim(), sub: v.status || '',
+      open: { fn: 'openVNBillingModal', id: v.id } });
   }
   for (const r of repairs.filter(x => x.customerId === cid)) {
     ev.push({ date: r.openedAt || r.createdAt, icon: '🔧', cat: 'Repair',
       title: `Repair${r.device ? ' — ' + r.device : ''}`, sub: r.status || '',
-      amount: Number(r.total || 0) });
+      amount: Number(r.total || 0), open: { fn: 'goToTab', id: 'repairs' } });
   }
   for (const o of serviceOrders.filter(x => x.customerId === cid)) {
     ev.push({ date: o.createdAt, icon: '🖨️', cat: 'Service',
@@ -4585,7 +4595,8 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   const timelineSummary = Object.entries(catCounts).map(([k, n]) => `${n} ${k.toLowerCase()}${n === 1 ? '' : 's'}`).join(' · ');
   const lifetimeSpend = timeline.reduce((s, e) => s + (Number(e.amount) || 0), 0);
   const timelineRow = (e, withDate) => `
-        <div class="history-item" style="align-items:flex-start;gap:8px;">
+        <div class="history-item${e.open ? ' dash-link' : ''}" style="align-items:flex-start;gap:8px;${e.open ? 'cursor:pointer;' : ''}"
+          ${e.open ? `onclick="${e.open.fn}('${escHtml(String(e.open.id))}')" title="Open this ${escHtml(e.cat.toLowerCase())}"` : ''}>
           <span style="width:20px;flex-shrink:0;text-align:center;">${e.icon}</span>
           <div style="flex:1;min-width:0;">
             <div style="font-size:var(--fs-body);color:var(--text);">${escHtml(e.title)}</div>
@@ -7979,6 +7990,7 @@ function renderBookingsTab() {
           <div class="row-actions">
           <button class="action-btn" onclick="openCheckinModal('${escHtml(b.id)}')" title="Online check-in">🛫</button>
           <button class="action-btn" onclick="openPassengersModal('${escHtml(b.id)}')" title="Passengers (DOB, passport)">👥</button>
+          <button class="action-btn danger" onclick="deleteBookingRow('${escHtml(b.id)}')" title="Delete booking" aria-label="Delete booking">✕</button>
           <button class="action-btn" onclick="openRemindModal('booking','${escHtml(b.id)}')" title="Remind me">⏰</button>
           <select class="form-input" style="width:110px;padding:5px 8px;font-size:var(--fs-small);"
             aria-label="Status for ${escHtml(b.customerName || b.bookingRef || 'this booking')}"
@@ -8486,6 +8498,34 @@ async function changeBookingStatus(id, status) {
 // Open a booking to edit its flight details. Money (price + fee) is shown
 // read-only — corrections go through a wallet adjustment so the ledger
 // stays honest. Passengers and check-in have their own dedicated editors.
+// Delete a booking outright — for rows that should never have existed
+// (imported junk, duplicates, typos). Real charged bookings are protected:
+// the server refuses when wallet charges are linked and points at Cancelled,
+// which reverses the money. Same undo-toast pattern as deletePhone: the row
+// vanishes immediately, the server delete waits out the undo window.
+function deleteBookingRow(id) {
+  const idx = bookings.findIndex(x => x.id === id);
+  const b = bookings[idx];
+  if (!b) return;
+  const putBack = () => {
+    bookings.splice(Math.min(idx, bookings.length), 0, b);
+    if (currentTab === 'bookings') renderBookingsTab();
+  };
+  bookings.splice(idx, 1);
+  if (currentTab === 'bookings') renderBookingsTab();
+  kcUndoable({
+    label: `Booking ${b.route || ''} deleted.`.replace('  ', ' '),
+    restore: putBack,
+    commit: async () => {
+      const res = await window.api.deleteBooking(id);
+      if (!res || !res.success) {
+        toast((res && res.error) || 'Could not delete the booking.', 'error');
+        putBack();
+      }
+    },
+  });
+}
+
 function openEditBookingModal(id) {
   const b = bookings.find(x => x.id === id);
   if (!b) return;
@@ -8522,7 +8562,7 @@ function openEditBookingModal(id) {
           </div>
         </div></div>
       <div class="form-group form-full"><label class="form-label">Notes</label>
-        <input class="form-input" id="ebNotes" value="${escHtml(b.notes || '')}"></div>
+        <textarea class="form-input" id="ebNotes" rows="2">${escHtml(b.notes || '')}</textarea></div>
     </div>
     <div style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-secondary);font-size:var(--fs-small);color:var(--muted);">
       💷 Price <strong>${fmtGbp((b.price || 0))}</strong> + fee <strong>${fmtGbp((b.bookingFee || 0))}</strong> (read-only — adjust money via the customer's wallet).
@@ -8530,9 +8570,13 @@ function openEditBookingModal(id) {
       &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openCheckinModal('${escHtml(b.id)}');return false;">🛫 Check-in</a>
       &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openTravelReqModal('${escHtml(b.id)}');return false;">🛂 Travel requirements</a>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveEditBooking('${escHtml(b.id)}')">💾 Save</button>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button class="btn btn-outline" style="color:var(--danger);border-color:color-mix(in srgb, var(--danger) 40%, var(--border));"
+        onclick="closeDynamicModal();deleteBookingRow('${escHtml(b.id)}')">🗑 Delete</button>
+      <span style="display:flex;gap:10px;">
+        <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEditBooking('${escHtml(b.id)}')">💾 Save</button>
+      </span>
     </div>
   `);
 }

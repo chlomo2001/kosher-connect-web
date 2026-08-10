@@ -505,6 +505,26 @@ async function handler(req, res) {
       return res.json({ success: true, booking: toApp(full, req.staff) })
     }
 
+    if (req.method === 'DELETE') {
+      // Deleting is for rows that should never have existed — imported junk,
+      // duplicates, typos. A booking with money on the ledger must be
+      // CANCELLED instead (cancelling reverses the charges); deleting it
+      // would orphan the ledger rows, so the server refuses.
+      const { id } = req.body || {}
+      if (!id) return res.status(400).json({ success: false, error: 'Booking id is required.' })
+      const bid = encodeURIComponent(String(id))
+      const linked = await db.select('ledger', `select=id&related_booking_id=eq.${bid}&limit=1`)
+      if (linked.length) {
+        return res.status(409).json({
+          success: false,
+          error: 'This booking has wallet charges — set it to Cancelled instead (that reverses the money).',
+        })
+      }
+      await db.delete('booking_passengers', `booking_id=eq.${bid}`)
+      await db.delete('bookings', `id=eq.${bid}`)
+      return res.json({ success: true })
+    }
+
     return res.status(405).end()
   } catch (e) {
     console.error('[api/bookings]', e)
