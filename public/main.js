@@ -1999,10 +1999,17 @@ function renderRentalsTab() {
           ${rentalBar}
           <button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 12px;" onclick="clearRentalFilters()">Clear</button>
         </div>
+        <div id="rentalBulkBar" style="display:none;margin:8px 0 0;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary);align-items:center;gap:10px;flex-wrap:wrap;">
+          <strong id="rentalBulkCount" style="font-size:var(--fs-body);"></strong>
+          <button class="btn btn-outline btn-sm" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedRentals()">🗑 Delete selected</button>
+          <button class="btn btn-outline btn-sm" onclick="clearRentalSel()">Clear selection</button>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
+                <th style="width:28px;"><input type="checkbox" id="rentalSelAll" aria-label="Select every rental in this view"
+                  onclick="toggleAllRentalSel(this.checked)"></th>
                 <th>Customer</th><th>Phone</th><th>From → To</th>
                 <th>Days</th><th>Price</th><th>Balance</th><th>Status</th><th>Actions</th>
               </tr>
@@ -2193,6 +2200,8 @@ function renderRentalRows() {
       <p>${narrowed ? 'No rentals match this view.' : 'No rentals yet.'}</p>
       <small>${narrowed ? '' : 'Click "New Rental" to get started.'}</small>
       ${narrowed ? kcClearFiltersBtn('rentals') : ''}</div></td></tr>`;
+    rentalVisibleIds = [];
+    syncRentalSelUi();
     return;
   }
 
@@ -2209,7 +2218,11 @@ function renderRentalRows() {
     const paid = r.amountPaid || 0;
     const totalOwed = rentalGrandTotal(r) - paid;
     const debtColor = totalOwed > 0 ? 'color:var(--danger-ink);' : 'color:var(--success);';
-    return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('.action-btn'))openManageRentalModal('${r.id}')">
+    return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('.action-btn')&&!event.target.closest('input[type=checkbox]'))openManageRentalModal('${r.id}')">
+      <td onclick="event.stopPropagation()">
+        <input type="checkbox" aria-label="Select this rental" ${rentalSelected.has(r.id) ? 'checked' : ''}
+          onclick="toggleRentalSel('${r.id}', this.checked)">
+      </td>
       <td>
         <div class="customer-name">${nameHtml(r.customerName || '—')}</div>
         <div class="customer-email" style="font-size:var(--fs-micro);">${r.vn ? '🔢 +'+escHtml(r.vnPrefix || '') : ''}</div>
@@ -2231,6 +2244,71 @@ function renderRentalRows() {
       </td>
     </tr>`;
   }).join('');
+  rentalVisibleIds = filtered.map(r => r.id);
+  syncRentalSelUi();
+}
+
+// Bulk selection on the rentals table — for the family that brings every
+// phone back at once. Selection survives filter/search re-renders (the boxes
+// are redrawn from this set) and is pruned when a rental disappears.
+let rentalSelected = new Set();
+let rentalVisibleIds = [];
+function toggleRentalSel(id, on) {
+  if (on) rentalSelected.add(id); else rentalSelected.delete(id);
+  syncRentalSelUi();
+}
+function toggleAllRentalSel(on) {
+  rentalVisibleIds.forEach(id => on ? rentalSelected.add(id) : rentalSelected.delete(id));
+  renderRentalRows();
+}
+function clearRentalSel() {
+  rentalSelected.clear();
+  renderRentalRows();
+}
+function syncRentalSelUi() {
+  const live = new Set(rentals.map(r => r.id));
+  [...rentalSelected].forEach(id => { if (!live.has(id)) rentalSelected.delete(id); });
+  const all = document.getElementById('rentalSelAll');
+  if (all) {
+    const selInView = rentalVisibleIds.filter(id => rentalSelected.has(id)).length;
+    all.checked = rentalVisibleIds.length > 0 && selInView === rentalVisibleIds.length;
+    all.indeterminate = selInView > 0 && selInView < rentalVisibleIds.length;
+  }
+  const bar = document.getElementById('rentalBulkBar');
+  if (bar) {
+    bar.style.display = rentalSelected.size ? 'flex' : 'none';
+    const count = document.getElementById('rentalBulkCount');
+    if (count) count.textContent = `${rentalSelected.size} rental${rentalSelected.size === 1 ? '' : 's'} selected`;
+  }
+}
+async function deleteSelectedRentals() {
+  const picked = rentals.filter(r => rentalSelected.has(r.id));
+  if (!picked.length) return;
+  const totalPrice = picked.reduce((s, r) => s + (Number(r.price) || 0), 0);
+  const names = [...new Set(picked.map(r => r.customerName || '—'))];
+  // Same amount-showing confirm as the single delete — one decision for the
+  // whole batch, with the combined wallet reversal in plain sight.
+  if (!(await kcConfirm({
+    title: `Delete ${picked.length} rentals?`,
+    body: `<strong>${escHtml(names.slice(0, 4).join(', '))}${names.length > 4 ? ` +${names.length - 4} more` : ''}</strong><br>` +
+      `Each rental's wallet charge is reversed to £0. This can't be undone.`,
+    amount: totalPrice,
+    okLabel: `Delete ${picked.length} rentals`,
+  }))) return;
+  const ids = picked.map(r => r.id);
+  picked.forEach(r => {
+    if (r.status === 'active') {
+      const phone = phones.find(p => p.id === r.phoneId);
+      if (phone) { phone.status = 'available'; phone.currentRental = null; }
+    }
+  });
+  savePhones(phones);
+  rentals = rentals.filter(r => !ids.includes(r.id));
+  rentalSelected.clear();
+  const res = await saveRentals(rentals, ids);
+  renderRentalsTab();
+  if (res && res.success === false) return; // reportSave already warned
+  toast(`${ids.length} rentals deleted.`, 'warning');
 }
 
 function renderPhoneRows() {
@@ -14735,6 +14813,7 @@ addSimCharge     = guardReentry(addSimCharge);
 addPayment       = guardReentry(addPayment);
 deleteCustomer   = guardReentry(deleteCustomer);
 deleteRental     = guardReentry(deleteRental);
+deleteSelectedRentals = guardReentry(deleteSelectedRentals);
 
 // Fade out and remove the full-page boot loader. Safe to call more than once.
 function hideBootLoader() {
