@@ -6841,7 +6841,8 @@ function capName(s) {
     .replace(/(['’])([a-zà-ÿ])(?=[a-zà-ÿ])/g, (m, sep, ch) => sep + ch.toUpperCase());
 }
 
-const OWN_EMAIL_BASES = ['gittbilig', 'kosherconnect', 'ch7023518'];
+// Mirror of lib/ownEmails.mjs — change both together.
+const OWN_EMAIL_BASES = ['gittbilig', 'kosherconnect', 'ch7023518', 'hashomrimmcr'];
 function isOwnAccountEmail(email) {
   const m = String(email || '').toLowerCase().trim().match(/^([^@]+)@(gmail|googlemail)\.com$/);
   if (!m) return false;

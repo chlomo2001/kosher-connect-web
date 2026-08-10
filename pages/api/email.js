@@ -24,15 +24,7 @@ const METHOD_LABEL = {
 // every customer-facing email goes through it so they all read as one house.
 const shell = (title, bodyRows, footNote) => brandShell({ title, bodyRows, footNote })
 
-// The business's OWN Gmail bases: any dot/plus variant of these (including
-// the bare address) is a carrier-login "account email" — Shloime's inbox,
-// not the customer's. Deterministic list, no guessing.
-const OWN_EMAIL_BASES = ['gittbilig', 'kosherconnect', 'ch7023518']
-function isOwnAccountEmail(email) {
-  const m = String(email || '').toLowerCase().trim().match(/^([^@]+)@(gmail|googlemail)\.com$/)
-  if (!m) return false
-  return OWN_EMAIL_BASES.includes(m[1].split('+')[0].replace(/\./g, ''))
-}
+import { isOwnAccountEmail } from '../../lib/ownEmails.mjs'
 
 async function customerEmail(customerId) {
   if (!customerId || customerId === 'walkin') return null

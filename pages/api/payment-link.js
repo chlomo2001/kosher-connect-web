@@ -8,7 +8,8 @@
 // capture money that never reaches the wallet (same reasoning as charge-card).
 import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
-import { stripeEnabled, webhookConfigured, getOrCreateCustomer, createCheckoutLink, createOpenCheckoutLink } from '../../lib/stripe.js'
+import { stripeEnabled, webhookConfigured, getOrCreateCustomer, createCheckoutLink, createOpenCheckoutLink, updateCustomerEmail } from '../../lib/stripe.js'
+import { isOwnAccountEmail } from '../../lib/ownEmails.mjs'
 
 async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
@@ -36,13 +37,25 @@ async function handler(req, res) {
   const base = `https://${req.headers.host}`
   const name = `${c.first_name || ''} ${c.last_name || ''}`.trim()
   try {
+    // Never hand Stripe one of OUR carrier-login Gmail aliases as the
+    // customer's email — Checkout shows it locked on the pay page and the
+    // receipt goes to the shop's inbox instead of the customer.
+    const rawEmail = (c.email_raw || c.email_normalized || '').trim()
+    const contactEmail = rawEmail && !isOwnAccountEmail(rawEmail) ? rawEmail : ''
+
     // Ensure a Stripe customer so the saved card (setup_future_usage) attaches to
     // the right person; persist the id so we don't remint it next time.
     const stripeCustomerId = await getOrCreateCustomer({
-      existingId: c.stripe_customer_id, email: c.email_raw || c.email_normalized, name, appCustomerId: c.id,
+      existingId: c.stripe_customer_id, email: contactEmail || undefined, name, appCustomerId: c.id,
     })
     if (stripeCustomerId && stripeCustomerId !== c.stripe_customer_id) {
       await db.update('customers', `id=eq.${c.id}`, { stripe_customer_id: stripeCustomerId })
+    }
+    // Heal customers minted before the guard: point Stripe's stored email at
+    // the real contact address, or clear it so Checkout asks the customer.
+    // Best-effort — a failure here shouldn't block the link.
+    if (stripeCustomerId) {
+      try { await updateCustomerEmail(stripeCustomerId, contactEmail) } catch { /* non-fatal */ }
     }
 
     const linkArgs = {
