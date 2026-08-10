@@ -2181,13 +2181,26 @@ function renderRentalRows() {
   if (!tbody) return;
   const today = localISO();
 
-  const term = rentalSearchTerm.toLowerCase();
+  const term = rentalSearchTerm.toLowerCase().trim();
   let filtered = rentals;
   if (term) {
-    filtered = filtered.filter(r =>
-      (r.customerName || '').toLowerCase().includes(term) ||
-      (r.phoneNumber  || '').toLowerCase().includes(term)
-    );
+    // Digits compare digit-to-digit ("+1 518 555 0102" finds "+15185550102"
+    // and vice versa) — a formatted paste used to match nothing. Also reaches
+    // the customer's own mobile, the handset IMEI, and the model name.
+    const digits = term.replace(/\D/g, '');
+    filtered = filtered.filter(r => {
+      if ((r.customerName || '').toLowerCase().includes(term)) return true;
+      if ((r.phoneNumber  || '').toLowerCase().includes(term)) return true;
+      const phone = phones.find(p => p.id === r.phoneId);
+      if (phone && (phone.model || '').toLowerCase().includes(term)) return true;
+      if (digits.length >= 3) {
+        const hay = [r.phoneNumber, phone?.number, phone?.imei]
+          .map(x => String(x || '').replace(/\D/g, ''));
+        if (hay.some(h => h && h.includes(digits))) return true;
+        if (phoneDigitsMatch(term, customers.find(c => c.id === r.customerId))) return true;
+      }
+      return false;
+    });
   }
   // Balance + status now live in the shared control's dimensions (B5).
   filtered = kcViewApply('rentals', filtered);
@@ -8137,12 +8150,18 @@ function renderBookingsTab() {
     { value: 'price', label: 'Price (high–low)', cmp: kcCmpNum(b => (b.price || 0) + (b.bookingFee || 0)) },
   ], renderBookingsTab);
   const bkShown = kcViewApply('bookings', bookings);
+  const liveBkIds = new Set(bookings.map(b => String(b.id)));
+  [...bkSelected].forEach(id => { if (!liveBkIds.has(id)) bkSelected.delete(id); });
+  bkVisibleIds = bkShown.map(b => String(b.id));
   const rows = loadFailed.bookings
-    ? `<tr><td colspan="9">${errorHtml('Couldn’t load your bookings')}</td></tr>`
+    ? `<tr><td colspan="10">${errorHtml('Couldn’t load your bookings')}</td></tr>`
     : bkShown.length === 0
-    ? `<tr><td colspan="9"><div class="empty-state"><div class="emoji">✈️</div><p>${bookings.length ? 'No bookings match this filter.' : 'No bookings yet.'}</p><small>${bookings.length ? 'Change the filter above.' : 'Click "New Booking" to add the first one.'}</small>${kcClearFiltersBtn('bookings')}</div></td></tr>`
+    ? `<tr><td colspan="10"><div class="empty-state"><div class="emoji">✈️</div><p>${bookings.length ? 'No bookings match this filter.' : 'No bookings yet.'}</p><small>${bookings.length ? 'Change the filter above.' : 'Click "New Booking" to add the first one.'}</small>${kcClearFiltersBtn('bookings')}</div></td></tr>`
     : bkShown.map(b => `
-      <tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a'))openEditBookingModal('${escHtml(b.id)}')" title="Open booking">
+      <tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a,input'))openEditBookingModal('${escHtml(b.id)}')" title="Open booking">
+        <td onclick="event.stopPropagation()">
+          <input type="checkbox" aria-label="Select this booking" ${bkSelected.has(String(b.id)) ? 'checked' : ''}
+            onclick="toggleBkSel('${escHtml(String(b.id))}', this.checked)"></td>
         <td><div class="customer-name">${escName(b.customerName || '—')}</div>
             <div class="customer-email">${escName(b.passenger || '')}${(b.passengers || []).length ? ` · 👥 ${b.passengers.length}` : ''}</div></td>
         <td style="white-space:nowrap;">${escHtml(b.route)}</td>
@@ -8179,15 +8198,62 @@ function renderBookingsTab() {
       ${bkBar}
       <button class="btn btn-primary" onclick="openNewBookingModal()">+ New booking</button>
     </div>
+    <div id="bkBulkBar" style="display:${bkSelected.size ? 'flex' : 'none'};margin:0 0 10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary);align-items:center;gap:10px;flex-wrap:wrap;">
+      <strong id="bkBulkCount" style="font-size:var(--fs-body);">${bkSelected.size} booking${bkSelected.size === 1 ? '' : 's'} selected</strong>
+      <button class="btn btn-outline btn-sm" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedBookings()">🗑 Delete selected</button>
+      <button class="btn btn-outline btn-sm" onclick="bkSelected.clear(); renderBookingsTab()">Clear selection</button>
+    </div>
     <div class="table-card">
       <table>
         <thead><tr>
+          <th style="width:28px;"><input type="checkbox" aria-label="Select every booking in this view"
+            ${bkVisibleIds.length && bkVisibleIds.every(id => bkSelected.has(id)) ? 'checked' : ''}
+            onclick="toggleAllBkSel(this.checked)"></th>
           <th>Customer</th><th>Route</th><th>Airline / Ref</th><th>Travel</th>
           <th>Price</th><th>Fee</th><th>Status</th><th>Check-in</th><th></th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
+}
+
+// Bulk selection for bookings — same shape as rentals/SIMs. The single-row
+// delete keeps its undo toast; the bulk path confirms once up front instead.
+let bkSelected = new Set();
+let bkVisibleIds = [];
+function toggleBkSel(id, on) {
+  if (on) bkSelected.add(id); else bkSelected.delete(id);
+  const bar = document.getElementById('bkBulkBar');
+  if (bar) {
+    bar.style.display = bkSelected.size ? 'flex' : 'none';
+    const count = document.getElementById('bkBulkCount');
+    if (count) count.textContent = `${bkSelected.size} booking${bkSelected.size === 1 ? '' : 's'} selected`;
+  }
+}
+function toggleAllBkSel(on) {
+  bkVisibleIds.forEach(id => on ? bkSelected.add(id) : bkSelected.delete(id));
+  renderBookingsTab();
+}
+async function deleteSelectedBookings() {
+  const picked = bookings.filter(b => bkSelected.has(String(b.id)));
+  if (!picked.length) return;
+  const names = [...new Set(picked.map(b => b.customerName || b.route || '—'))];
+  if (!(await kcConfirm({
+    title: `Delete ${picked.length} bookings?`,
+    body: `<strong>${escHtml(names.slice(0, 4).join(', '))}${names.length > 4 ? ` +${names.length - 4} more` : ''}</strong><br>This can't be undone.`,
+    okLabel: `Delete ${picked.length} bookings`,
+  }))) return;
+  let failed = 0;
+  for (const b of picked) {
+    const res = await window.api.deleteBooking(b.id).catch(() => null);
+    if (res && res.success) {
+      bookings = bookings.filter(x => x.id !== b.id);
+      bkSelected.delete(String(b.id));
+    } else failed++;
+  }
+  renderBookingsTab();
+  toast(failed ? `Deleted ${picked.length - failed}; ${failed} failed.` : `${picked.length} bookings deleted.`,
+    failed ? 'error' : 'warning');
 }
 
 let ticketsMenu = [];
@@ -13108,10 +13174,15 @@ async function renderVirtualTab() {
     { value: 'recent', label: 'Recently added', cmp: kcCmpDate(v => v.createdAt || '', -1) },
   ], renderVirtualTab);
   const vnShown = kcViewApply('virtual', virtualNumbers);
+  const liveVnIds = new Set(virtualNumbers.map(v => String(v.id)));
+  [...vnSelected].forEach(id => { if (!liveVnIds.has(id)) vnSelected.delete(id); });
+  vnVisibleIds = vnShown.map(v => String(v.id));
   const rows = vnShown.length === 0
-    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔢</div><p>${virtualNumbers.length ? 'No numbers match this filter.' : 'No virtual numbers yet.'}</p>${kcClearFiltersBtn('virtual')}</div></td></tr>`
+    ? `<tr><td colspan="8"><div class="empty-state"><div class="emoji">🔢</div><p>${virtualNumbers.length ? 'No numbers match this filter.' : 'No virtual numbers yet.'}</p>${kcClearFiltersBtn('virtual')}</div></td></tr>`
     : vnShown.map(v => `
       <tr>
+        <td><input type="checkbox" aria-label="Select this number" ${vnSelected.has(String(v.id)) ? 'checked' : ''}
+          onclick="toggleVnSel('${escHtml(String(v.id))}', this.checked)"></td>
         <td class="kc-phone"><strong>${escHtml(fmtPhone(v.number))}</strong></td>
         <td>${escName(v.customerName || '—')}</td>
         <td>${providerBadge(v.platform)}</td>
@@ -13144,9 +13215,18 @@ async function renderVirtualTab() {
       ${vnBar}
       <button class="btn btn-primary" onclick="openNewVNModal()">+ New virtual number</button>
     </div>
+    <div id="vnBulkBar" style="display:${vnSelected.size ? 'flex' : 'none'};margin:0 0 10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary);align-items:center;gap:10px;flex-wrap:wrap;">
+      <strong id="vnBulkCount" style="font-size:var(--fs-body);">${vnSelected.size} number${vnSelected.size === 1 ? '' : 's'} selected</strong>
+      <button class="btn btn-outline btn-sm" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedVNs()">🗑 Delete selected</button>
+      <button class="btn btn-outline btn-sm" onclick="vnSelected.clear(); renderVirtualTab()">Clear selection</button>
+    </div>
     <div class="table-card">
       <table>
-        <thead><tr><th>Number</th><th>Customer</th><th>Platform</th><th>Monthly</th><th>Status</th><th>Shortcut</th><th></th></tr></thead>
+        <thead><tr>
+          <th style="width:28px;"><input type="checkbox" aria-label="Select every number in this view"
+            ${vnVisibleIds.length && vnVisibleIds.every(id => vnSelected.has(id)) ? 'checked' : ''}
+            onclick="toggleAllVnSel(this.checked)"></th>
+          <th>Number</th><th>Customer</th><th>Platform</th><th>Monthly</th><th>Status</th><th>Shortcut</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -13330,6 +13410,46 @@ async function deleteVN(id, number) {
   const res = await window.api.deleteVirtualNumber(id);
   if (!res.success) { toast(res.error || 'Could not delete.', 'error'); return; }
   toast('Virtual number deleted.', 'warning');
+  renderVirtualTab();
+}
+
+// Bulk selection for virtual numbers. This tab re-fetches on every full
+// render, so the toggles patch the DOM in place instead of re-rendering.
+let vnSelected = new Set();
+let vnVisibleIds = [];
+function syncVnBar() {
+  const bar = document.getElementById('vnBulkBar');
+  if (!bar) return;
+  bar.style.display = vnSelected.size ? 'flex' : 'none';
+  const count = document.getElementById('vnBulkCount');
+  if (count) count.textContent = `${vnSelected.size} number${vnSelected.size === 1 ? '' : 's'} selected`;
+}
+function toggleVnSel(id, on) {
+  if (on) vnSelected.add(id); else vnSelected.delete(id);
+  syncVnBar();
+}
+function toggleAllVnSel(on) {
+  vnVisibleIds.forEach(id => on ? vnSelected.add(id) : vnSelected.delete(id));
+  document.querySelectorAll('#mainContent input[aria-label="Select this number"]')
+    .forEach(cb => { cb.checked = on; });
+  syncVnBar();
+}
+async function deleteSelectedVNs() {
+  const picked = virtualNumbers.filter(v => vnSelected.has(String(v.id)));
+  if (!picked.length) return;
+  if (!(await kcConfirm({
+    title: `Delete ${picked.length} virtual numbers?`,
+    body: `<strong>${picked.slice(0, 4).map(v => escHtml(fmtPhone(v.number))).join(', ')}${picked.length > 4 ? ` +${picked.length - 4} more` : ''}</strong><br>This cannot be undone.`,
+    okLabel: `Delete ${picked.length} numbers`,
+  }))) return;
+  let failed = 0;
+  for (const v of picked) {
+    const res = await window.api.deleteVirtualNumber(v.id).catch(() => null);
+    if (res && res.success) vnSelected.delete(String(v.id));
+    else failed++;
+  }
+  toast(failed ? `Deleted ${picked.length - failed}; ${failed} failed.` : `${picked.length} virtual numbers deleted.`,
+    failed ? 'error' : 'warning');
   renderVirtualTab();
 }
 
@@ -14882,6 +15002,8 @@ deleteCustomer   = guardReentry(deleteCustomer);
 deleteRental     = guardReentry(deleteRental);
 deleteSelectedRentals = guardReentry(deleteSelectedRentals);
 deleteSelectedSims    = guardReentry(deleteSelectedSims);
+deleteSelectedVNs     = guardReentry(deleteSelectedVNs);
+deleteSelectedBookings = guardReentry(deleteSelectedBookings);
 
 // Fade out and remove the full-page boot loader. Safe to call more than once.
 function hideBootLoader() {
