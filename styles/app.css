@@ -1991,7 +1991,11 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 .dash-cols-table { grid-template-columns: minmax(0, 1fr); }
 
 @media (min-width: 1750px) {
-  .dash-cols-table { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  /* Unequal on purpose: the air pass caps the content at 1220px, and an even
+     split leaves the inventory table ~80px short — its row ends clipped under
+     the scroll fade. The table column takes the lion's share; the side panels
+     are lists and read fine at ~470px. */
+  .dash-cols-table { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); }
 }
 
 /* Wraps rather than overflows. The wallet arrears row carries four things —
