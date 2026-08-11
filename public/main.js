@@ -280,7 +280,7 @@ let customerPageId = null;
 let customerPageTab = 'overview'; // overview | activity
 let customerPageCat = 'all';      // activity-log category filter
 let searchTerm = '';
-let customerSort = 'name'; // name | surname | name_desc | owed | recent | services
+let customerSort = 'surname'; // name | surname | name_desc | surname_desc | owed | recent | services
 let customerFilter = 'all'; // all | rental | flight | sim | vn | repair | arrears | passport
 
 // ─────────────────────────────────────────────
@@ -4738,10 +4738,10 @@ function renderCustomersTab() {
         </select>
         <select class="form-input" style="width:170px;padding:6px 10px;font-size:var(--fs-body);min-height:0;"
           onchange="customerSort=this.value; renderTableRows()">
-          <option value="name" ${customerSort==='name'?'selected':''}>Sort: Name A–Z</option>
-          <option value="name_desc" ${customerSort==='name_desc'?'selected':''}>Name Z–A</option>
-          <option value="surname" ${customerSort==='surname'?'selected':''}>Surname A–Z</option>
+          <option value="surname" ${customerSort==='surname'?'selected':''}>Sort: Surname A–Z</option>
           <option value="surname_desc" ${customerSort==='surname_desc'?'selected':''}>Surname Z–A</option>
+          <option value="name" ${customerSort==='name'?'selected':''}>Name A–Z</option>
+          <option value="name_desc" ${customerSort==='name_desc'?'selected':''}>Name Z–A</option>
           <option value="owed" ${customerSort==='owed'?'selected':''}>Most owed first</option>
           <option value="recent" ${customerSort==='recent'?'selected':''}>Recently added</option>
           <option value="services" ${customerSort==='services'?'selected':''}>Most services</option>
