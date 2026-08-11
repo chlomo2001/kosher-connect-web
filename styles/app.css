@@ -2712,3 +2712,13 @@ td { border-top-color: color-mix(in srgb, var(--border) 55%, transparent); }
    takes its own full row under the month pager instead of squeezing beside it. */
 .cal-legend { margin-left: auto; font-size: var(--fs-micro); color: var(--muted); display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; justify-content: flex-end; }
 @media (max-width: 640px) { .cal-legend { flex-basis: 100%; margin-left: 0; justify-content: flex-start; } }
+
+/* Sticky column headers wherever a table's wrap actually scrolls (the
+   rentals/inventory split columns cap at 420px; settings cards and modal
+   statement boxes already scroll). With hundreds of rows the header must
+   never scroll out of sight. Where no wrap scrolls, sticky never engages —
+   harmless. The base th is transparent (thead carries the tint), so the
+   stuck header needs its own surface to cover rows sliding beneath. */
+.table-wrap thead th, .table-card thead th {
+  position: sticky; top: 0; z-index: 2; background: var(--surface2);
+}
