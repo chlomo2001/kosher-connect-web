@@ -2246,7 +2246,7 @@ function renderRentalRows() {
         <div class="customer-email" style="font-size:var(--fs-micro);">${r.vn ? '🔢 +'+escHtml(r.vnPrefix || '') : ''}</div>
       </td>
       <td class="kc-phone">${rentalDeviceChip(r, { stacked: true })}</td>
-      <td class="kc-date" style="font-size:var(--fs-micro);">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}</td>
+      <td class="kc-date" style="font-size:var(--fs-micro);">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}${r.pickupDate && r.pickupDate !== r.fromDate ? `<br><span style="color:var(--muted);" title="Physically taken — the charge runs from here">↳ took ${fmtDate(r.pickupDate)}</span>` : ''}</td>
       <td style="text-align:center;">${r.chargeableDays}d</td>
       <td style="color:var(--success);font-weight:700;">${fmtGbp(r.price)}</td>
       <td class="kc-money" style="font-weight:700;${debtColor}">${totalOwed > 0 ? '£'+totalOwed+' owed' : '✓ Paid'}</td>
@@ -3071,7 +3071,7 @@ async function applyExtraCharges(appliesTo, refBase, customerId, paidNow) {
 }
 
 // Reservation pickup: the customer is here, the phone goes out.
-function startReservation(rentalId) {
+async function startReservation(rentalId) {
   const r = rentals.find(x => x.id === rentalId);
   if (!r || r.status !== 'booked') return;
   const phone = phones.find(p => p.id === r.phoneId);
@@ -3079,6 +3079,34 @@ function startReservation(rentalId) {
     toast(`${phone.number} is still out on another rental — return it first.`, 'error');
     return;
   }
+  // Owner #11 — the charge window starts when the phone is PHYSICALLY taken,
+  // not on the reserved from-date. Starting stamps today as the pickup date
+  // and reprices from there; the ledger charge (held back while reserved —
+  // see bucketTargets) posts against the real window.
+  const today = localISO();
+  const pickup = today <= r.toDate ? today : r.toDate;
+  const oldPrice = Number(r.price) || 0;
+  let newPrice = oldPrice;
+  let newDays = r.chargeableDays;
+  let priceNote = '';
+  if (pickup !== r.fromDate && phone) {
+    const calc = calcRentalPrice(pickup, r.toDate, phone.country, phone.ukPlan || 'standard', r.equipmentGiven?.sim);
+    newPrice = calc.price;
+    newDays = calc.chargeableDays;
+    if (Math.abs(newPrice - oldPrice) >= 0.005) {
+      priceNote = `Charge reworked from the real pickup: ${fmtGbp(newPrice)} (was ${fmtGbp(oldPrice)} for the reserved dates).`;
+    }
+  }
+  if (!(await kcConfirm({
+    title: 'Start rental — charge begins now',
+    body: `<strong>${escName(r.customerName || '')}</strong> takes ${escHtml(fmtPhone(r.phoneNumber || ''))} today.<br>
+      Charged window: <strong>${fmtDate(pickup)} → ${fmtDate(r.toDate)}</strong> · ${newDays} chargeable days.${priceNote ? '<br>' + priceNote : ''}`,
+    amount: newPrice,
+    okLabel: '▶ Start & charge',
+  }))) return;
+  r.pickupDate = pickup;
+  r.chargeableDays = newDays;
+  r.price = newPrice;
   r.status = 'active';
   saveRentals(rentals);
   if (phone) {
@@ -3086,7 +3114,7 @@ function startReservation(rentalId) {
     phone.currentRental = r.id;
     savePhones(phones);
   }
-  toast(`Rental started — ${r.customerName} has ${r.phoneNumber} until ${fmtDate(r.toDate)}.`, 'success');
+  toast(`Rental started — ${r.customerName} has ${r.phoneNumber} until ${fmtDate(r.toDate)}.${priceNote ? ' ' + priceNote : ''}`, 'success');
   renderRentalsTab();
 }
 
@@ -3108,8 +3136,8 @@ function openManagePhonesModal() {
           <option value="USA">USA</option>
           <option value="UK">UK</option>
           <option value="Israel">Israel</option>
-          <option value="EU">🇪🇺 EU</option>
-          <option value="Canada">🇨🇦 Canada</option>
+          <option value="EU">EU</option>
+          <option value="Canada">Canada</option>
         </select>
       </div>
       <div class="form-group" id="pUKPlanGroup" style="display:none;">
