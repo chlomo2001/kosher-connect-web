@@ -128,6 +128,11 @@ export default function Login({ supabaseUrl, googleEnabled }) {
                     style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                     <span style={{ fontWeight: 700 }}>G</span> Continue with Google
                   </button>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', marginTop: 10, lineHeight: 1.5 }}>
+                    Kosher Connect is our staff dashboard for running the shop — rentals, SIM plans, repairs and bookings.
+                    Signing in with Google only confirms your name and email address to identify your staff account;
+                    we never access your Gmail, Drive, or anything else in your Google account.
+                  </div>
                 </>
               )}
             </>
