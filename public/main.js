@@ -1986,10 +1986,10 @@ function renderRentalsTab() {
       <input class="search-box" style="width:280px;" type="text" id="rentalSearch"
         placeholder="Search customer or phone…"
         value="${rentalSearchTerm}"
-        oninput="rentalSearchTerm=this.value; renderRentalRows()">
+        oninput="rentalSearchTerm=this.value; renderRentalRows(); renderAvailabilityCalendar();">
     </div>
 
-    ${rentalView === 'calendar' ? availabilityCalendarHtml() : ''}
+    <div id="availCalWrap">${rentalView === 'calendar' ? availabilityCalendarHtml() : ''}</div>
 
     <div class="rentals-split" style="${rentalView === 'calendar' ? 'display:none;' : ''}">
       <div class="rentals-split-col">
@@ -2093,13 +2093,29 @@ function availabilityCalendarHtml() {
     rentals.filter(r => r.phoneId === p.id && r.status !== 'returned' && r.fromDate && r.toDate)
       .map(r => ({ r, end: (r.status !== 'booked' && r.toDate < today) ? today : r.toDate }))]));
 
+  // Same search box as the list view, applied to which phone rows show —
+  // number, IMEI, model, or the name/mobile of whoever currently holds it.
+  const term = rentalSearchTerm.toLowerCase().trim();
+  const digits = term.replace(/\D/g, '');
+  const rowPhones = !term ? phones : phones.filter(p => {
+    if ((p.model || '').toLowerCase().includes(term)) return true;
+    const holder = rentals.find(r => r.phoneId === p.id && r.status !== 'returned');
+    if ((holder?.customerName || '').toLowerCase().includes(term)) return true;
+    if (digits.length >= 3) {
+      const hay = [p.number, p.imei].map(x => String(x || '').replace(/\D/g, ''));
+      if (hay.some(h => h && h.includes(digits))) return true;
+      if (holder && phoneDigitsMatch(term, customers.find(c => c.id === holder.customerId))) return true;
+    }
+    return false;
+  });
+
   const dayHead = Array.from({ length: daysInMonth }, (_, i) => {
     const d = i + 1;
     const dow = new Date(y, m - 1, d).getDay();
     return `<th scope="col" class="cal-day${dow === 6 ? ' cal-shabbat' : ''}${iso(d) === today ? ' cal-today' : ''}">${d}</th>`;
   }).join('');
 
-  const rows = phones.map(p => {
+  const rows = rowPhones.map(p => {
     const cells = Array.from({ length: daysInMonth }, (_, i) => {
       const dIso = iso(i + 1);
       const hit = (blocks.get(p.id) || []).find(b => b.r.fromDate <= dIso && b.end >= dIso);
@@ -2154,7 +2170,7 @@ function availabilityCalendarHtml() {
       <div class="cal-scroll" style="padding:0 14px 6px;">
         <table class="cal-table">
           <thead><tr><th class="cal-phone">Phone</th>${dayHead}</tr></thead>
-          <tbody>${rows.length ? rows : `<tr><td colspan="${daysInMonth + 1}" style="color:var(--muted);padding:14px;">No phones in the fleet yet.</td></tr>`}</tbody>
+          <tbody>${rows.length ? rows : `<tr><td colspan="${daysInMonth + 1}" style="color:var(--muted);padding:14px;">${term ? 'No phone matches that search.' : 'No phones in the fleet yet.'}</td></tr>`}</tbody>
         </table>
       </div>
     </div>`;
@@ -2188,6 +2204,16 @@ function phoneConflicts(allRentals, phoneId, from, to, todayISO, excludeId = nul
     const blockEnd = (r.status !== 'booked' && r.toDate < todayISO) ? todayISO : r.toDate;
     return r.fromDate <= to && blockEnd >= from;
   });
+}
+
+// The search box sits above both views, but the calendar re-renders itself
+// separately from the list (its rows are phones, not rentals) — otherwise
+// typing while on Availability silently did nothing, since renderRentalRows
+// only ever touched the (hidden) list table.
+function renderAvailabilityCalendar() {
+  const wrap = document.getElementById('availCalWrap');
+  if (!wrap) return;
+  wrap.innerHTML = rentalView === 'calendar' ? availabilityCalendarHtml() : '';
 }
 
 function renderRentalRows() {
