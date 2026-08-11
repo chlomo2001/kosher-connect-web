@@ -658,5 +658,12 @@ merging, and the "Card details" sheet with CCVs should be retired.
 | New Rental picker greets returning customers: lines they held before sort first with "↺ had <date>"; hint shows the count | (this commit) | Rentals · New Rental modal |
 
 Verified: gate (255 tests ×2 TZ + build) exit 0; harness shots light+dark of
-both modals. Reviewer sub-agent pass in flight; owner live-judges on the dev
-branch before any ship (their explicit ask, so no auto-ff).
+both modals. Reviewer sub-agent BLOCKed round 1 (3 findings, all fixed same
+cycle: --danger-ink on the Not-working badge per the repo's measured AA
+standard; Edit-modal status header taught the five non-available states so it
+can't contradict the select; lastHeldByNote preserved on the available flip
+like markPhoneBack). Also took its recommendations: retire/not_working blocked
+while a live rental sits on the line (reconcile would silently undo it), picker
+resort cleared when the customer is retyped, hint copy degendered + count from
+data not glyph-sniffing. Owner live-judges on the dev branch before any ship
+(their explicit ask, so no auto-ff).

@@ -1116,9 +1116,13 @@ function filterCustomerDropdown() {
   if (!input || !dropdown) return;
 
   const term = input.value.trim().toLowerCase();
+  const hadCustomer = !!hiddenInput.value;
   selectedRentalCustomerId = '';
   hiddenInput.value = '';
   selectedDiv.textContent = '';
+  // Retyping clears the pick, so the phone list must forget that customer's
+  // "↺ had before" ordering too — otherwise the hint and sort go stale.
+  if (hadCustomer) refreshRentalPhoneOptions();
 
   if (!term) { dropdown.classList.remove('open'); return; }
 
@@ -2482,7 +2486,7 @@ function renderPhoneRows() {
     // Out-of-stock line states each get their own words — before this they
     // all wore the green "Available" badge, which is the one thing they are not.
     else if (p.status === 'retired')    statusBadge = `<span class="badge" style="background:rgba(107,114,128,0.15);color:var(--muted);">🗄️ Retired</span>`;
-    else if (p.status === 'not_working')statusBadge = `<span class="badge" style="background:rgba(220,38,38,0.12);color:var(--danger);">⛔ Not working</span>`;
+    else if (p.status === 'not_working')statusBadge = `<span class="badge" style="background:rgba(220,38,38,0.12);color:var(--danger-ink);">⛔ Not working</span>`;
     else if (p.status === 'permanent')  statusBadge = `<span class="badge" style="background:rgba(99,102,241,0.12);color:var(--accent);">🏠 Permanent</span>`;
     else if (p.status === 'suspended')  statusBadge = `<span class="badge" style="background:rgba(217,119,6,0.14);color:var(--gold);">⏸ Suspended</span>`;
     else if (p.status === 'unknown')    statusBadge = `<span class="badge" style="background:rgba(107,114,128,0.15);color:var(--muted);">❓ Unknown</span>`;
@@ -2596,11 +2600,13 @@ function refreshRentalPhoneOptions() {
   if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
   else if (prev) { sel.value = ''; toast('That phone is not free for these dates — pick another.', 'warning'); }
   const hint = document.getElementById('rPhoneHint');
-  const hadCount = customerId ? [...sel.options].filter(o => o.text.includes('↺')).length : 0;
+  // Count from the data, not by sniffing option text for the ↺ glyph.
+  const had = customerPastPhoneDates(customerId);
+  const hadCount = [...sel.options].filter(o => had.has(o.value)).length;
   if (hint && from && to && to >= from) {
-    hint.textContent = `(${sel.options.length - 1} free ${fmtDate(from)} → ${fmtDate(to)}${hadCount ? ` · ↺ ${hadCount} he had before` : ''})`;
+    hint.textContent = `(${sel.options.length - 1} free ${fmtDate(from)} → ${fmtDate(to)}${hadCount ? ` · ↺ ${hadCount} they had before` : ''})`;
   } else if (hint && hadCount) {
-    hint.textContent = `(↺ ${hadCount} number${hadCount === 1 ? '' : 's'} he had before — listed first)`;
+    hint.textContent = `(↺ ${hadCount} number${hadCount === 1 ? '' : 's'} this customer had before — listed first)`;
   }
 }
 
@@ -3634,8 +3640,18 @@ function openEditPhoneModal(phoneId) {
     ? `<div style="margin-top:6px;font-size:var(--fs-body);color:var(--muted);">${p.heldByNote ? `With: <strong style="color:var(--text);">${escHtml(p.heldByNote)}</strong> (no rental attached)` : 'Out with no rental attached'}
         &nbsp;<button class="btn btn-outline" style="padding:3px 10px;font-size:var(--fs-small);color:var(--success);" onclick="markPhoneBack('${p.id}')">📥 It’s back</button></div>`
     : '';
-  const statusColor = p.status === 'rented' ? 'var(--accent)' : p.maintenance ? 'var(--gold)' : 'var(--success)';
-  const statusLabel = p.status === 'rented' ? '🔴 Rented' : p.maintenance ? '🔧 Maintenance' : '🟢 Available';
+  // The read-only row and the Line state select describe the same fact — they
+  // must never disagree (a "🟢 Available" header over a Retired select did).
+  const statusFace = {
+    rented:      ['var(--accent)',     '🔴 Rented'],
+    permanent:   ['var(--accent)',     '🏠 Permanent'],
+    not_working: ['var(--danger-ink)', '⛔ Not working'],
+    retired:     ['var(--muted)',      '🗄️ Retired'],
+    suspended:   ['var(--gold)',       '⏸ Suspended'],
+    unknown:     ['var(--muted)',      '❓ Unknown'],
+  }[p.status] || ['var(--success)', '🟢 Available'];
+  const statusColor = p.maintenance && p.status !== 'rented' ? 'var(--gold)' : statusFace[0];
+  const statusLabel = p.maintenance && p.status !== 'rented' ? '🔧 Maintenance' : statusFace[1];
   // Line state is editable only while the phone is not out on a rental — a
   // rented phone's status belongs to the rental cycle, not this dropdown.
   // 'rented' therefore never appears as a choice; 'unknown' (import couldn't
@@ -3742,8 +3758,21 @@ function saveEditPhone(phoneId) {
   // Absent while the phone is rented — the rental cycle owns status then.
   const epLineState = document.getElementById('epLineState');
   if (epLineState && epLineState.value !== p.status) {
-    p.status = epLineState.value;
-    if (p.status === 'available') p.heldByNote = '';
+    const next = epLineState.value;
+    // A line with a live rental record (active, booked, overdue…) can't go
+    // out of stock from here: reconcilePhoneStatuses would silently flip it
+    // back on the next render, so the retire would only LOOK saved.
+    const live = rentals.some(r => r.phoneId === p.id && r.status !== 'returned' && r.status !== 'cancelled');
+    if (live && (next === 'retired' || next === 'not_working')) {
+      toast('This line still has a rental or reservation on it — return or delete that first, then retire the line.', 'warning');
+    } else {
+      p.status = next;
+      if (p.status === 'available') {
+        // Same courtesy as markPhoneBack: who last had it survives the flip.
+        p.lastHeldByNote = p.heldByNote || p.lastHeldByNote || '';
+        p.heldByNote = '';
+      }
+    }
   }
   savePhones(phones);
   toast('Phone updated!', 'success');
