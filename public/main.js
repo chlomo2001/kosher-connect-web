@@ -3121,7 +3121,7 @@ function openManagePhonesModal() {
       </div>
       <div class="form-group">
         <label class="form-label">Company</label>
-        <input class="form-input" id="pCompany" type="text" placeholder="USMobile, Lebara...">
+        <input class="form-input" id="pCompany" type="text" list="kcProviderList" autocomplete="off" placeholder="Type the first letters — US Mobile, Lebara…">${providerDatalist()}
       </div>
       <div class="form-group">
         <label class="form-label">Phone Model <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
@@ -3379,7 +3379,7 @@ function openEditPhoneModal(phoneId) {
       </div>` : ''}
       <div class="form-group">
         <label class="form-label">Company</label>
-        <input class="form-input" id="epCompany" type="text" value="${escHtml(p.company||'')}">
+        <input class="form-input" id="epCompany" type="text" list="kcProviderList" autocomplete="off" value="${escHtml(p.company||'')}">${providerDatalist()}
       </div>
       <div class="form-group">
         <label class="form-label">Phone Model <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
@@ -5808,6 +5808,67 @@ async function applyElidCreate() {
   }
 }
 
+// Owner #1 — provider fields are comboboxes: a dropdown of every company the
+// system already knows (from SIM plans + the phone fleet + the staples),
+// filtered as you type the first letters, but still free text for a new one.
+// Native <input list=datalist> gives exactly that with no widget code.
+const PROVIDER_STAPLES = ['Lebara', 'O2', 'Vodafone', 'EE', 'Three', 'giffgaff',
+  'US Mobile', 'Lucky Mobile', 'Lycamobile', 'HOT Mobile', 'Golan Telecom', 'Partner', 'Cellcom', '019 Mobile'];
+function knownProviders() {
+  const seen = new Map(); // lower → display
+  [...PROVIDER_STAPLES,
+    ...(typeof sims !== 'undefined' ? sims.map(s => s.provider) : []),
+    ...(typeof phones !== 'undefined' ? phones.map(p => p.company) : []),
+  ].forEach(n => {
+    const name = String(n || '').trim();
+    if (name && !seen.has(name.toLowerCase())) seen.set(name.toLowerCase(), name);
+  });
+  return [...seen.values()].sort((a, b) => a.localeCompare(b));
+}
+function providerDatalist(id = 'kcProviderList') {
+  return `<datalist id="${id}">${knownProviders().map(n => `<option value="${escHtml(n)}"></option>`).join('')}</datalist>`;
+}
+
+// Owner #1 (part 2) — a generic type-ahead customer combo, same look as the
+// rentals picker: type the first letters of a name (or phone digits) and pick.
+// The hidden field keeps the ORIGINAL element id, so save paths don't change.
+function customerComboHtml(valueId, preselectId = null) {
+  const pre = preselectId ? customers.find(c => c.id === preselectId) : null;
+  return `<div class="customer-search-wrap">
+    <input type="hidden" id="${valueId}" value="${pre ? escHtml(pre.id) : ''}">
+    <input class="form-input" type="text" id="${valueId}_search"
+      placeholder="Type a name or number…" autocomplete="off"
+      value="${pre ? escName(pre.firstName) + ' ' + escName(pre.lastName || '') : ''}"
+      oninput="kcComboFilter('${valueId}')" onfocus="kcComboFilter('${valueId}')"
+      onblur="setTimeout(() => { const d = document.getElementById('${valueId}_dd'); if (d) d.style.display = 'none'; }, 150)">
+    <div class="customer-dropdown" id="${valueId}_dd"></div>
+  </div>`;
+}
+function kcComboFilter(valueId) {
+  const q = (document.getElementById(valueId + '_search')?.value || '').toLowerCase().trim();
+  const dd = document.getElementById(valueId + '_dd');
+  if (!dd) return;
+  // Typing again invalidates the previous pick — the hidden value only holds
+  // an id the operator actually chose from the list.
+  document.getElementById(valueId).value = '';
+  const list = customers.filter(c => !q ||
+    `${c.firstName} ${c.lastName || ''}`.toLowerCase().includes(q) || phoneDigitsMatch(q, c)
+  ).slice(0, 12);
+  dd.innerHTML = list.length
+    ? list.map(c => `<div class="customer-dropdown-item" onmousedown="kcComboPick('${valueId}','${c.id}')">
+        ${escName(c.firstName)} ${escName(c.lastName || '')} <span style="color:var(--muted);font-size:var(--fs-micro);">${escHtml(c.phone || '')}</span></div>`).join('')
+    : `<div class="customer-dropdown-item" style="color:var(--muted);">No match — check the spelling</div>`;
+  dd.style.display = 'block';
+}
+function kcComboPick(valueId, id) {
+  const c = customers.find(x => x.id === id);
+  document.getElementById(valueId).value = id;
+  const s = document.getElementById(valueId + '_search');
+  if (s && c) s.value = `${capName(c.firstName)} ${capName(c.lastName || '')}`.trim();
+  const dd = document.getElementById(valueId + '_dd');
+  if (dd) dd.style.display = 'none';
+}
+
 // #8 — a customer's name on any card is a doorway to their customer card,
 // not dead text. Wrap the rendered name wherever the record carries the
 // customer id; records without one (walk-ins, unlinked imports) stay plain.
@@ -7737,16 +7798,13 @@ function openSimFormModal(id, preselectCustomerId = null) {
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
-        <select class="form-input" id="simCustomer">
-          <option value="">— Select customer —</option>
-          ${customerOptions}
-        </select>
+        ${customerComboHtml('simCustomer', preselect)}
         <span class="form-error" id="errSimCustomer">Required</span>
       </div>
       <div class="form-group">
         <label class="form-label">Provider *</label>
-        <input class="form-input" id="simProvider" type="text" placeholder="Lebara, O2, Vodafone..."
-          value="${escHtml(s?.provider || '')}" autocomplete="off">
+        <input class="form-input" id="simProvider" type="text" list="kcProviderList" autocomplete="off" placeholder="Type the first letters — Lebara, O2…"
+          value="${escHtml(s?.provider || '')}">${providerDatalist()}
         <span class="form-error" id="errSimProvider">Required</span>
       </div>
       <div class="form-group">
