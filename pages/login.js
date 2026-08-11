@@ -69,7 +69,10 @@ export default function Login({ supabaseUrl, googleEnabled }) {
 
   return (
     <>
-      <Head><title>Sign in · Kosher Connect</title></Head>
+      <Head>
+        <title>Kosher Connect — Sign in</title>
+        <meta property="og:site_name" content="Kosher Connect" />
+      </Head>
       <div className="login-shell">
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         <form className="login-card" onSubmit={ticket ? submitCode : submit}>
