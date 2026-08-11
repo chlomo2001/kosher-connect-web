@@ -621,6 +621,21 @@ not been re-checked against the code and may have drifted the same way.
 
 ---
 
+## UX loop — night of 2026-08-11
+
+| Item | Commit | Screens |
+|------|--------|---------|
+| Availability: Today button appears when viewing another month; legend wraps as whole chips and takes its own row ≤640px | 0c3119c | Rentals → Availability |
+| 390px topbar: all five controls (Ask/Search/primary/theme/Aa) fit one row — Aa no longer strands on line two | 6a2fd3d | every staff page |
+| Sticky column headers in every scrolling table wrap (rentals + inventory split columns, settings cards, modal statement boxes) | cb36cd5 | Rentals, Settings, modals |
+
+Discovery sweeps, both clean (no fix needed): 13-tab overflow audit at 390px;
+new surfaces (pools modal, void modal, customer-card passport/house strips,
+bulk bars) eyeballed at 390 light+dark; full public-page render EN+HE at
+320/390/1280 light+dark — every page geometrically clean and RTL correct.
+Verified per item: gate (tests ×2 TZ + build) exit 0, harness screenshots.
+Owner decisions pending: none from this loop.
+
 ## UX loop — night of 2026-08-10
 
 | Item | Commit | Screens |
