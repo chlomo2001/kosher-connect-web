@@ -4,6 +4,8 @@ import ThemeToggle from '../../components/ThemeToggle'
 import ToolDrop from '../../components/ToolDrop'
 import AppStyles from '../../components/AppStyles'
 import { requireStaffCookie } from '../../lib/pageAuth'
+import { parseMRZ } from '../../lib/mrz.mjs'
+import { capName } from '../../lib/mappers.js'
 
 // Scan Reader (OCR) — drop a photo or scan a customer sent in and get its
 // text out, ready to copy. English + Hebrew. Everything runs IN THE BROWSER
@@ -21,13 +23,85 @@ function download(name, text) {
 }
 
 export default function ScanReader() {
-  const [items, setItems] = useState([]) // { name, url, text?, error? }
+  const [items, setItems] = useState([]) // { name, url, text?, error?, mrz?, fileDataUrl?, fileType?, saved?, dismissed? }
   const [busy, setBusy] = useState(false)
   const [stage, setStage] = useState('')
   const [progress, setProgress] = useState(0)
   const [copied, setCopied] = useState(false)
   const [mode, setMode] = useState('device') // 'device' (private tesseract) | 'ai' (Gemini)
+  const [customers, setCustomers] = useState(null) // lazy: loaded when a passport is detected
   const workerRef = useRef(null)
+
+  // The passport flow needs the customer list; fetch once, on first detection.
+  async function loadCustomers() {
+    if (customers) return customers
+    try {
+      const r = await fetch('/api/customers')
+      const list = await r.json()
+      const sorted = (Array.isArray(list) ? list : []).sort((a, b) =>
+        `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))
+      setCustomers(sorted)
+      return sorted
+    } catch { setCustomers([]); return [] }
+  }
+
+  function patchItem(idx, patch) {
+    setItems((p) => p.map((it, i) => (i === idx ? { ...it, ...patch } : it)))
+  }
+
+  // Save the scan into the customer's documents and file the extracted
+  // passport details (DOB, expiry, number → owner data on the customer;
+  // passport_on_file flips on). "new" first creates the customer from the
+  // passport's own name fields.
+  async function savePassportTo(idx) {
+    const it = items[idx]
+    const m = it.mrzEdit || it.mrz
+    let customerId = it.saveTarget
+    if (!customerId) return
+    patchItem(idx, { saving: true, saveError: '' })
+    try {
+      if (customerId === 'new') {
+        const r = await fetch('/api/customers', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ firstName: capName((m.givenNames || '').toLowerCase()), lastName: capName((m.surname || '').toLowerCase()) }),
+        })
+        const j = await r.json()
+        if (!j.success) throw new Error(j.error || 'Could not create the customer')
+        customerId = j.customer.id
+        setCustomers(null) // stale now
+      }
+      // 1 · file the details on the customer (partial PUT merges server-side)
+      const pr = await fetch('/api/customers', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: customerId,
+          dob: m.dob || undefined,
+          passportNumber: m.passportNumber || undefined,
+          passportExpiry: m.expiry || undefined,
+          passportOnFile: true,
+        }),
+      })
+      const pj = await pr.json()
+      if (!pj.success) throw new Error(pj.error || 'Could not save the details')
+      // 2 · attach the scan itself to the customer's documents
+      if (it.fileDataUrl) {
+        const dr = await fetch('/api/documents', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customerId,
+            filename: it.name || 'passport-scan.jpg',
+            contentType: it.fileType || 'image/jpeg',
+            dataBase64: String(it.fileDataUrl).split(',')[1] || '',
+          }),
+        })
+        const dj = await dr.json()
+        if (!dj.success) throw new Error(dj.error || 'Details saved, but the scan upload failed')
+      }
+      patchItem(idx, { saving: false, saved: true, savedName: pj.customer ? `${pj.customer.firstName} ${pj.customer.lastName || ''}`.trim() : '' })
+    } catch (e) {
+      patchItem(idx, { saving: false, saveError: String(e.message || e) })
+    }
+  }
 
   async function getWorker() {
     if (workerRef.current) return workerRef.current
@@ -121,13 +195,22 @@ export default function ScanReader() {
             }
             const thumb = canvases[0].toDataURL('image/jpeg', 0.6)
             const note = truncated ? `\n\n(Only the first ${MAX_PDF_PAGES} of ${numPages} pages were read.)` : ''
-            setItems((p) => [...p, { name: file.name, url: thumb, text: (parts.join('\n\n').trim() || '(no text found)') + note }])
+            const fullText = (parts.join('\n\n').trim() || '(no text found)') + note
+            const mrz = parseMRZ(fullText)
+            if (mrz) loadCustomers()
+            const pdfDataUrl = await fileToDataUrl(file)
+            setItems((p) => [...p, { name: file.name, url: thumb, text: fullText, mrz,
+              fileDataUrl: pdfDataUrl, fileType: file.type || 'application/pdf' }])
           } else {
             const url = URL.createObjectURL(file)
             let t
-            if (ai) t = await aiRead(await fileToDataUrl(file), file.type || 'image/jpeg')
+            const dataUrl = await fileToDataUrl(file)
+            if (ai) t = await aiRead(dataUrl, file.type || 'image/jpeg')
             else { const { data } = await worker.recognize(file); t = (data.text || '').trim() }
-            setItems((p) => [...p, { name: file.name, url, text: t || '(no text found)' }])
+            const mrz = parseMRZ(t)
+            if (mrz) loadCustomers()
+            setItems((p) => [...p, { name: file.name, url, text: t || '(no text found)', mrz,
+              fileDataUrl: dataUrl, fileType: file.type || 'image/jpeg' }])
           }
         } catch (err) {
           console.error('[scan-reader]', file.name, err)
@@ -205,6 +288,44 @@ export default function ScanReader() {
                     ? <div className="tool-msg">{it.error}</div>
                     : <textarea className="form-input" readOnly value={it.text} rows={Math.min(14, Math.max(4, it.text.split('\n').length + 1))}
                         dir="auto" style={{ width: '100%', fontFamily: 'inherit', fontSize: 14, lineHeight: 1.6, resize: 'vertical' }} />}
+                  {it.mrz && !it.dismissed && (
+                    <div style={{ marginTop: 10, padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+                      {it.saved ? (
+                        <div style={{ fontSize: 14 }}>✅ Saved to <strong>{it.savedName || 'the customer'}</strong> — scan filed under their documents, passport details on their record.</div>
+                      ) : (
+                        <>
+                          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>
+                            🛂 Passport detected — save it to a customer?
+                            {!it.mrz.checksumOk && <span style={{ color: 'var(--muted)', fontWeight: 400 }}> (check the fields — the scan was hard to read)</span>}
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginBottom: 10 }}>
+                            {[['surname', 'Surname'], ['givenNames', 'First name(s)'], ['passportNumber', 'Passport №'], ['dob', 'Date of birth'], ['expiry', 'Passport expiry']].map(([k, label]) => (
+                              <label key={k} style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 12, color: 'var(--muted)' }}>{label}
+                                <input className="form-input" type={k === 'dob' || k === 'expiry' ? 'date' : 'text'}
+                                  value={(it.mrzEdit || it.mrz)[k] || ''}
+                                  onChange={(e) => patchItem(idx, { mrzEdit: { ...(it.mrzEdit || it.mrz), [k]: e.target.value } })}
+                                  style={{ padding: '6px 8px', fontSize: 13 }} />
+                              </label>
+                            ))}
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                            <select className="form-input" style={{ maxWidth: 280, padding: '7px 8px', fontSize: 13 }}
+                              value={it.saveTarget || ''} onChange={(e) => patchItem(idx, { saveTarget: e.target.value })}>
+                              <option value="">— pick the customer —</option>
+                              <option value="new">➕ New customer from this passport</option>
+                              {(customers || []).map((c) => (
+                                <option key={c.id} value={c.id}>{c.firstName} {c.lastName || ''}</option>
+                              ))}
+                            </select>
+                            <button className="btn btn-primary" disabled={!it.saveTarget || it.saving}
+                              onClick={() => savePassportTo(idx)}>{it.saving ? 'Saving…' : '💾 Save scan + details'}</button>
+                            <button className="btn btn-outline" onClick={() => patchItem(idx, { dismissed: true })}>Not relevant</button>
+                          </div>
+                          {it.saveError && <div className="tool-msg" style={{ marginTop: 8 }}>{it.saveError}</div>}
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
               {allText && (

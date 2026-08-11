@@ -4887,6 +4887,17 @@ function buildCustomerPanelHtml(c, mode = 'card') {
       </div>`;
   }
 
+  // Passport filed from the Scan Reader (MRZ) — shown when details exist.
+  // Number stays partly masked on the card; the full value lives on the
+  // record and in the passengers editor where staff actually need it.
+  const passportHtml = (c.passportNumber || c.dob || c.passportExpiry) ? `
+      <div style="background:var(--bg-secondary);border-left:3px solid var(--accent);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:var(--fs-body);">
+        <span style="color:var(--muted);font-size:var(--fs-micro);display:block;margin-bottom:2px;">🛂 Passport on file</span>
+        ${c.passportNumber ? `№ ····${escHtml(String(c.passportNumber).slice(-4))}` : ''}
+        ${c.dob ? ` · born ${fmtDate(c.dob)}` : ''}
+        ${c.passportExpiry ? ` · expires <strong${c.passportExpiry < localISO() ? ' style="color:var(--danger-ink);"' : ''}>${fmtDate(c.passportExpiry)}</strong>${c.passportExpiry < localISO() ? ' ⚠️ expired' : ''}` : ''}
+      </div>` : '';
+
   // Notes + this customer's open reminders/tasks (Force E — the record was a
   // stub: notes weren't shown and reminders saved to the customer never
   // surfaced on the card).
@@ -4981,6 +4992,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   const overviewHtml = `
       <div id="nbaStrip-${c.id}"></div>
       ${tripHtml}
+      ${passportHtml}
       ${notesHtml}
       ${tasksHtml}
 
