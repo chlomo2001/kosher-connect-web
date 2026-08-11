@@ -2865,6 +2865,43 @@ async function saveNewRental() {
     toast(`That phone is taken ${fmtDate(clash.fromDate)} → ${fmtDate(clash.toDate)} (${clash.customerName}${clash.status === 'booked' ? ', reserved' : ''}).`, 'error');
     return;
   }
+
+  // Owner #7 — a pooled phone whose window runs out mid-rental is never booked
+  // silently: the customer would lose service abroad. Booking it through this
+  // gate creates a 🔴 high-priority activation task dated before the coverage
+  // gap; the dialog also names covered alternatives so the operator can back
+  // out and pick one instead.
+  const gPhone = phones.find(p => p.id === phoneId);
+  if (gPhone && (gPhone.country || '').toUpperCase() === 'USA' && gPhone.pool) {
+    const exp = gPhone.poolExpiry || null;
+    if (!exp || exp < to) {
+      const covered = phones.filter(p =>
+        p.id !== phoneId && (p.country || '').toUpperCase() === 'USA' && !p.maintenance &&
+        p.status === 'available' && p.poolExpiry && p.poolExpiry >= to &&
+        phoneConflicts(rentals, p.id, from, to, localISO()).length === 0).slice(0, 3);
+      const actBy = exp && exp >= from ? exp : from;
+      const ok = await kcConfirm({
+        title: exp ? 'Pool runs out mid-rental' : 'Pool not activated',
+        body: `<strong>${escHtml(fmtPhone(gPhone.number))}</strong> — pool “${escHtml(gPhone.pool)}” ${exp
+            ? `expires <strong>${fmtDate(exp)}</strong>, before the return on ${fmtDate(to)}`
+            : 'has no activation window on record'}: service would cut out mid-trip.<br>` +
+          (covered.length
+            ? `Covered instead: ${covered.map(p => `${escHtml(fmtPhone(p.number))} (till ${fmtDate(p.poolExpiry)})`).join(' · ')} — Cancel and pick one, or…`
+            : 'No other covered phone is free for these dates, so…') +
+          `<br>booking this one creates a 🔴 high-priority task to activate “${escHtml(gPhone.pool)}” by <strong>${fmtDate(actBy)}</strong>.`,
+        okLabel: '📝 Create the task & book anyway',
+      });
+      if (!ok) return; // operator backs out to pick a covered phone
+      await window.api.addTask({
+        title: `🔴 Activate pool “${gPhone.pool}” — ${fmtPhone(gPhone.number)} rented till ${fmtDate(to)}`,
+        dueDate: actBy,
+        priority: 'High',
+        notes: `Pool ${exp ? 'expires ' + exp : 'has no window'}; rental runs ${from} → ${to}. Activate in 📶 Pools (or move the rental to a covered phone).`,
+        customerId: customerId || null,
+      }).catch(() => null);
+      toast(`Task created: activate pool “${gPhone.pool}” by ${fmtDate(actBy)}.`, 'warning');
+    }
+  }
   // Future start = a reservation: the phone stays free until pickup.
   const isReservation = from > localISO();
 
