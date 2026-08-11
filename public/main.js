@@ -1804,6 +1804,18 @@ let phones   = [];
 let sims     = [];
 let bookings = [];
 let simMenu  = []; // 'sim'-category service menu (SIM-only monthlies, TomTom)
+
+// The menu is free-text names the owner types in Settings — no category field
+// of its own — so every item fell back to the same 🛒, and a 13-row dropdown
+// full of identical icons stops being a scan aid. Keyword-match the common
+// families instead; anything unrecognised still gets the cart.
+function simMenuIcon(name) {
+  const n = String(name || '').toLowerCase();
+  if (n.includes('intl calling') || n.includes('international calling')) return '☎️';
+  if (n.includes('sim only')) return '📶';
+  if (n.includes('tomtom') || n.includes('sat nav') || n.includes('gps')) return '🗺️';
+  return '🛒';
+}
 let rentalSearchTerm = '';
 
 function csToggle(wrapId) {
@@ -8435,7 +8447,7 @@ function openManageSimModal(id) {
             <option value="sim-replacement">📦 SIM Replacement — £${simChargePrice('sim-replacement')}</option>
             <option value="monthly">${s.paymentType !== 'direct' && s.simMonthlyCost ? `📅 Monthly DD — ${fmtGbp(ddMonthlyAmount(s.simMonthlyCost))}` : '📅 Monthly Subscription'}</option>
             <option value="annual">📅 Annual Subscription — £${simChargePrice('annual')}</option>
-            ${simMenu.map(m => `<option value="menu:${escHtml(String(m.id))}">🛒 ${escHtml(m.name)} — ${fmtGbp(m.price)}</option>`).join('')}
+            ${simMenu.map(m => `<option value="menu:${escHtml(String(m.id))}">${simMenuIcon(m.name)} ${escHtml(m.name)} — ${fmtGbp(m.price)}</option>`).join('')}
             <option value="custom">✏️ Custom</option>
           </select>
         </div>
