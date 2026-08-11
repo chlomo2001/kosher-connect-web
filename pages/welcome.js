@@ -67,7 +67,7 @@ const T = {
     heroBody: 'Most people are quietly on the wrong SIM. Bring us your last bill and we’ll match a plan to how you actually use your phone — same coverage, same number, far less money.',
     heroPill: 'Keep your number · pay less every month',
     ctaMessage: 'Message us', ctaCall: 'Call',
-    heroSub: 'Travel phones, international numbers, repairs — everything else, all under one roof.',
+    heroSub: 'Kosher Connect is a phone and SIM shop in Salford, Manchester — travel phones, international numbers, repairs and more, all under one roof.',
     bands: [
       {
         eyebrow: 'Mobile & SIM',
@@ -183,7 +183,7 @@ const T = {
     heroBody: 'רוב האנשים משלמים כל חודש על חבילה שפשוט לא מתאימה להם. תביאו לנו את החשבונית האחרונה — נתאים לכם חבילה לפי השימוש האמיתי שלכם. אותה רשת, אותו מספר, והרבה פחות בסוף החודש.',
     heroPill: 'המספר נשאר · החשבון קטן',
     ctaMessage: 'דברו איתנו', ctaCall: 'חייגו',
-    heroSub: 'וגם: טלפונים לחו״ל, מספרים בינלאומיים, תיקונים — הכול במקום אחד.',
+    heroSub: 'כשר קונקט היא חנות סלולר וסים בסלפורד, מנצ׳סטר — טלפונים לחו״ל, מספרים בינלאומיים, תיקונים ועוד, הכול במקום אחד.',
     bands: [
       {
         eyebrow: 'חבילות וסים',
