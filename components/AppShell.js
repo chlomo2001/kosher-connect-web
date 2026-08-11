@@ -295,6 +295,27 @@ export default function AppShell({ initialTab = 'dashboard' }) {
               </label>
             </div>
 
+            {/* Owner #2 — house account: this customer clears their wallet on a
+                set day each month, charged to their saved card. The sweep raises
+                the settlement task; the card's Settle-month button does the rest. */}
+            <div className="form-group form-full">
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input type="checkbox" id="fHouseEnabled" style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+                💳 House account — settle their wallet monthly on their saved card
+              </label>
+              <div id="fHouseFields" style={{ display: 'none', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 12, color: 'var(--muted)' }}>Day of month (1–28)
+                  <input className="form-input" id="fHouseDay" type="number" min={1} max={28} defaultValue={1} style={{ width: 110 }} />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 12, color: 'var(--muted)' }}>Min £ (optional)
+                  <input className="form-input" id="fHouseMin" type="number" min={0} step="0.01" placeholder="—" style={{ width: 110 }} />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 12, color: 'var(--muted)' }}>Max £ (optional)
+                  <input className="form-input" id="fHouseMax" type="number" min={0} step="0.01" placeholder="—" style={{ width: 110 }} />
+                </label>
+              </div>
+            </div>
+
             <div className="form-warning form-full" id="warnName">
               ⚠️ A customer with this name already exists. Please verify this is a different person.
             </div>

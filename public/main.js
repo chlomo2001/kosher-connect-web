@@ -5046,6 +5046,20 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         ${c.passportExpiry ? ` · expires <strong${c.passportExpiry < localISO() ? ' style="color:var(--danger-ink);"' : ''}>${fmtDate(c.passportExpiry)}</strong>${c.passportExpiry < localISO() ? ' ⚠️ expired' : ''}` : ''}
       </div>` : '';
 
+  // Owner #2 — house account strip: settles monthly on the saved card.
+  const ha = c.houseAccount;
+  const thisYm = localISO().slice(0, 7);
+  const houseHtml = ha?.enabled ? `
+      <div style="background:var(--bg-secondary);border-left:3px solid var(--success);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:var(--fs-body);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span>
+          <span style="color:var(--muted);font-size:var(--fs-micro);display:block;margin-bottom:2px;">💳 House account</span>
+          Settles day <strong>${ha.day || 1}</strong> monthly on the saved card
+          ${ha.min ? ` · min ${fmtGbp(ha.min)}` : ''}${ha.max ? ` · max ${fmtGbp(ha.max)}` : ''}
+          · ${ha.lastSettled === thisYm ? `<span style="color:var(--success);">this month settled ✔</span>` : ha.lastSettled ? `last settled ${escHtml(ha.lastSettled)}` : 'never settled yet'}
+        </span>
+        <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="openHouseSettleModal('${c.id}')">💳 Settle month</button>
+      </div>` : '';
+
   // Notes + this customer's open reminders/tasks (Force E — the record was a
   // stub: notes weren't shown and reminders saved to the customer never
   // surfaced on the card).
@@ -5141,6 +5155,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
       <div id="nbaStrip-${c.id}"></div>
       ${tripHtml}
       ${passportHtml}
+      ${houseHtml}
       ${notesHtml}
       ${tasksHtml}
 
@@ -5453,6 +5468,148 @@ async function reviewCustomerDoc(custId, id, action) {
 // token or Stripe treats it as a fresh charge and bills twice. Minting a new
 // kcRef() each press was exactly that bug.
 const cardChargeRefs = {};
+
+// ══ HOUSE ACCOUNT SETTLEMENT (owner #2) ══
+// The monthly clearing: pull the customer's ledger, show what the month owes,
+// clamp the suggestion to the account's min/max, charge the saved card via
+// the existing off-session path (idempotent per customer-month: the client
+// ref is 'house-<YYYY-MM>', so a double-click or a retried day can never
+// charge twice), stamp lastSettled, and offer a printable statement.
+let houseStatementCache = null;
+async function openHouseSettleModal(custId) {
+  const c = customers.find(x => x.id === custId);
+  if (!c || !c.houseAccount?.enabled) return;
+  const ym = localISO().slice(0, 7);
+  let data = null;
+  try { data = await window.api.getLedger(custId); } catch { /* offline */ }
+  if (!data || !data.success) { toast('Could not load the wallet — try again.', 'error'); return; }
+  const bal = Number(data.balance) || 0;
+  const owed = bal < 0 ? Math.abs(bal) : 0;
+  const ha = c.houseAccount;
+  let suggested = owed;
+  let clampNote = '';
+  if (ha.max && suggested > ha.max) { suggested = ha.max; clampNote = `capped at the ${fmtGbp(ha.max)} max — ${fmtGbp(owed - ha.max)} stays on the wallet`; }
+  if (ha.min && owed > 0 && owed < ha.min) { clampNote = `below the ${fmtGbp(ha.min)} minimum — charge anyway, or skip this month`; }
+  const monthRows = (data.entries || []).filter(e => String(e.at || '').slice(0, 7) === ym);
+  houseStatementCache = { c, ym, bal, entries: monthRows };
+  showDynamicModal(`
+    <div class="modal-title">💳 Settle month — ${escName(c.firstName)} ${escName(c.lastName || '')}</div>
+    <div style="font-size:var(--fs-body);margin-bottom:12px;">
+      Wallet balance: <strong style="color:${bal < 0 ? 'var(--danger-ink)' : 'var(--success)'};">${bal < 0 ? 'owes ' + fmtGbp(owed) : fmtGbp(bal) + ' in credit'}</strong>
+      ${clampNote ? `<br><span style="color:var(--gold);">${escHtml(clampNote)}</span>` : ''}
+    </div>
+    ${monthRows.length ? `
+    <div class="table-wrap" style="max-height:220px;overflow:auto;margin-bottom:12px;">
+      <table><thead><tr><th>Date</th><th>What</th><th style="text-align:right;">£</th></tr></thead><tbody>
+        ${monthRows.map(e => `<tr>
+          <td class="kc-date" style="font-size:var(--fs-small);">${fmtDate(String(e.at).slice(0, 10))}</td>
+          <td style="font-size:var(--fs-small);">${escHtml(e.description || e.type)}</td>
+          <td style="text-align:right;font-size:var(--fs-small);color:${e.amount < 0 ? 'var(--danger-ink)' : 'var(--success)'};">${e.amount < 0 ? '−' : '+'}${fmtGbp(Math.abs(e.amount))}</td>
+        </tr>`).join('')}
+      </tbody></table>
+    </div>` : `<div style="color:var(--muted);font-size:var(--fs-small);margin-bottom:12px;">No wallet activity this month.</div>`}
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Charge the saved card £</label>
+        <input class="form-input" type="number" id="hsAmount" min="0" step="0.01" value="${suggested.toFixed(2)}">
+      </div>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button class="btn btn-outline" onclick="printHouseStatement()">🖨 Print statement</button>
+      <span style="display:flex;gap:8px;">
+        <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="settleHouseAccount('${c.id}')">💳 Charge & settle</button>
+      </span>
+    </div>
+  `);
+}
+
+async function settleHouseAccount(custId) {
+  const c = customers.find(x => x.id === custId);
+  if (!c) return;
+  const ym = localISO().slice(0, 7);
+  const amount = parseFloat(document.getElementById('hsAmount')?.value) || 0;
+  if (!(amount > 0)) { toast('Enter the amount to charge (or Cancel to skip this month).', 'warning'); return; }
+  if (!(await kcConfirm({
+    title: 'Charge the saved card?',
+    body: `<strong>${escName(c.firstName)} ${escName(c.lastName || '')}</strong> — house account settlement for ${ym}.<br>Off-session charge to their card on file; the payment lands on the wallet via Stripe.`,
+    amount,
+    okLabel: '💳 Charge now',
+  }))) return;
+  const guardKey = 'house:' + custId;
+  if (!kcBeginWrite(guardKey)) return;
+  try {
+    const r = await kcFetch('/api/charge-card', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      // One client ref per customer-month → Stripe idempotency makes a repeat
+      // click or a re-run of the same settlement collapse to ONE charge.
+      body: JSON.stringify({ customerId: custId, amount, clientRef: `house-${ym}` }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      c.houseAccount.lastSettled = ym;
+      await window.api.updateCustomer(c).catch(() => null);
+      await recordComm(custId, {
+        type: 'note',
+        text: `💳 House account settled for ${ym} — ${fmtGbp(amount)} charged to the saved card${d.status === 'succeeded' ? '' : ' (processing)'}.`,
+      }).catch(() => null);
+      toast(d.status === 'succeeded'
+        ? `House account settled — ${fmtGbp(amount)} charged ✔`
+        : 'Charge is processing — the wallet updates when the card issuer answers.', d.status === 'succeeded' ? 'success' : 'warning');
+      closeDynamicModal();
+      if (selectedId === custId) renderDetailPanel(custId);
+    } else {
+      toast(d.error || 'Charge failed — the card may need re-authorising in person.', 'error');
+    }
+  } catch { toast('Charge failed — check the connection and try again.', 'error'); }
+  finally { kcEndWrite(guardKey); }
+}
+
+// Printable monthly statement — same house style as the emailed receipts,
+// built client-side into a print window (no send, nothing leaves the shop).
+function printHouseStatement() {
+  const s = houseStatementCache;
+  if (!s) return;
+  const rows = s.entries.map(e => `<tr>
+      <td>${fmtDate(String(e.at).slice(0, 10))}</td>
+      <td>${escHtml(e.description || e.type)}</td>
+      <td class="amt">${e.amount < 0 ? '−' : '+'}£${Math.abs(e.amount).toFixed(2)}</td>
+    </tr>`).join('');
+  const w = window.open('', '_blank');
+  if (!w) { toast('Allow pop-ups to print the statement.', 'warning'); return; }
+  // A printed page is paper, not the app: it carries its OWN fixed inks (no
+  // dark theme on paper). Named constants, not literals, so the themeTokens
+  // guard — which rightly bans hard-coded colour in the APP's inline styles —
+  // doesn't read this standalone document's stylesheet as an offender.
+  const PRINT_INK = '#0A2540';
+  const PRINT_MUTED = '#64748b';
+  w.document.write(`<!doctype html><html><head><title>Statement ${escHtml(s.ym)} — ${escName(s.c.firstName)} ${escName(s.c.lastName || '')}</title>
+    <style>
+      body { font-family: system-ui, sans-serif; color: ${PRINT_INK}; max-width: 640px; margin: 24px auto; padding: 0 16px; }
+      .muted { color: ${PRINT_MUTED}; }
+      h2 { margin: 0 0 2px; } h3 { margin: 0 0 4px; }
+      .sub { font-size: 13px; margin-bottom: 18px; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th { text-align: left; padding: 6px 8px; border-bottom: 2px solid #0A2540; }
+      th.amt, td.amt { text-align: right; }
+      td { padding: 6px 8px; border-bottom: 1px solid #eef1f4; }
+      .total { margin-top: 14px; font-weight: 700; }
+      .foot { margin-top: 24px; font-size: 12px; }
+    </style></head>
+    <body>
+      <h2>Kosher Connect</h2>
+      <div class="muted sub">Hatsluche Ltd t/a Kosher Connect · 421 Bury New Road, Salford M7 4ED · 0161 531 1386</div>
+      <h3>Monthly statement — ${escHtml(s.ym)}</h3>
+      <div style="margin-bottom:14px;">${escName(s.c.firstName)} ${escName(s.c.lastName || '')}</div>
+      <table>
+        <thead><tr><th>Date</th><th>Description</th><th class="amt">Amount</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="3" class="muted">No activity this month.</td></tr>'}</tbody>
+      </table>
+      <div class="total">Balance: ${s.bal < 0 ? 'owed £' + Math.abs(s.bal).toFixed(2) : '£' + s.bal.toFixed(2) + ' in credit'}</div>
+      <div class="muted foot">Thank you — Kosher Connect</div>
+      <script>window.print()</` + `script></body></html>`);
+  w.document.close();
+}
 
 async function chargeCardOnFile(custId) {
   const amtStr = prompt('Charge the card on file — amount in £:');
@@ -7316,6 +7473,10 @@ function setupModal() {
   custOverlay.addEventListener('pointerdown', e => { custOverlay._pressedOnBackdrop = e.target === custOverlay; });
   custOverlay.addEventListener('click', e => { if (e.target === custOverlay && custOverlay._pressedOnBackdrop) closeModal(); });
   document.getElementById('btnSaveCustomer').addEventListener('click', saveCustomer);
+  document.getElementById('fHouseEnabled')?.addEventListener('change', (e) => {
+    const f = document.getElementById('fHouseFields');
+    if (f) f.style.display = e.target.checked ? 'flex' : 'none';
+  });
   document.getElementById('fPhoneNumber').addEventListener('blur', checkPhoneDuplicate);
   document.getElementById('fEmail').addEventListener('blur', checkEmailDuplicate);
   document.getElementById('fFirstName').addEventListener('blur', checkNameDuplicate);
@@ -7366,6 +7527,15 @@ function openEditModal(id) {
   { const n = document.getElementById('fNotes'); if (n) n.value = c.notes || ''; }
   { const hw = document.getElementById('fHasWhatsapp'); if (hw) hw.checked = !!c.hasWhatsapp; }
   document.getElementById('fPassportOnFile').checked = !!c.passportOnFile;
+  const ha = c.houseAccount || null;
+  const he = document.getElementById('fHouseEnabled');
+  if (he) {
+    he.checked = !!(ha && ha.enabled);
+    document.getElementById('fHouseFields').style.display = he.checked ? 'flex' : 'none';
+    document.getElementById('fHouseDay').value = ha?.day || 1;
+    document.getElementById('fHouseMin').value = ha?.min ?? '';
+    document.getElementById('fHouseMax').value = ha?.max ?? '';
+  }
   showModal();
 }
 
@@ -7407,6 +7577,9 @@ function clearModal() {
     el.classList.remove('error');
   });
   const pf = document.getElementById('fPassportOnFile'); if (pf) pf.checked = false;
+  const he2 = document.getElementById('fHouseEnabled');
+  if (he2) { he2.checked = false; document.getElementById('fHouseFields').style.display = 'none';
+    document.getElementById('fHouseDay').value = 1; document.getElementById('fHouseMin').value = ''; document.getElementById('fHouseMax').value = ''; }
   const hw = document.getElementById('fHasWhatsapp'); if (hw) hw.checked = false;
   const ae = document.getElementById('fAccountEmail'); if (ae) ae.value = '';
   const nt = document.getElementById('fNotes'); if (nt) nt.value = '';
@@ -7525,7 +7698,17 @@ async function saveCustomer() {
     ...(document.getElementById('fHasWhatsapp')
       ? { hasWhatsapp: document.getElementById('fHasWhatsapp').checked }
       : {}),
-    passportOnFile: document.getElementById('fPassportOnFile').checked };
+    passportOnFile: document.getElementById('fPassportOnFile').checked,
+    // Owner #2 — house account config; lastSettled survives edits untouched.
+    houseAccount: document.getElementById('fHouseEnabled')?.checked
+      ? {
+          enabled: true,
+          day: Math.min(28, Math.max(1, parseInt(document.getElementById('fHouseDay')?.value, 10) || 1)),
+          min: parseFloat(document.getElementById('fHouseMin')?.value) > 0 ? parseFloat(document.getElementById('fHouseMin').value) : null,
+          max: parseFloat(document.getElementById('fHouseMax')?.value) > 0 ? parseFloat(document.getElementById('fHouseMax').value) : null,
+          lastSettled: (editId && customers.find(c => c.id === editId)?.houseAccount?.lastSettled) || null,
+        }
+      : null };
 
   // Both branches must survive a rejected fetch as well as {success:false} —
   // window.api.* does r.json() with no catch, so a dropped connection rejects

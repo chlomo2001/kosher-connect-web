@@ -589,6 +589,39 @@ async function handler(req, res) {
     counts.vnChargesPosted = vnCharges
     })
 
+    await section('house-accounts', async () => {
+    // ── Owner #2: house accounts ──
+    // A customer clears their wallet monthly on a set day, by their saved
+    // card. From that day until the month is settled, an open
+    // HOUSE-<uuid>-<YYYY-MM> task asks for the settlement — the charge itself
+    // stays a human action (off-session card charging is owner-only). The
+    // task closes itself once houseAccount.lastSettled stamps the month.
+    const ym = today.slice(0, 7)
+    const dom = Number(today.slice(8, 10))
+    const haRows = await selectAllPaged('customers', 'id,first_name,last_name,legacy_extras',
+      `legacy_extras->houseAccount->>enabled=eq.true&order=id.asc`)
+    let haCreated = 0, haClosed = 0
+    for (const c of haRows) {
+      const ha = (c.legacy_extras || {}).houseAccount || {}
+      const day = Math.min(28, Math.max(1, Number(ha.day) || 1))
+      const name = `${c.first_name || ''} ${c.last_name || ''}`.trim()
+      const ref = `HOUSE-${c.id}-${ym}`
+      if (dom >= day && ha.lastSettled !== ym) {
+        await upsertOpenTask({
+          reference: ref,
+          title: `💳 House account — settle ${name}'s month`,
+          customerUuid: c.id,
+          notes: `Monthly settlement day ${day}${ha.min ? ` · min £${ha.min}` : ''}${ha.max ? ` · max £${ha.max}` : ''}. Customer card → 💳 Settle month charges the saved card and prints the statement.`,
+        })
+        haCreated++
+      } else if (ha.lastSettled === ym) {
+        haClosed += await closeOpenTask(ref)
+      }
+    }
+    counts.houseAccountTasks = haCreated
+    counts.houseAccountClosed = haClosed
+    })
+
     await section('custom-rules', async () => {
     // ── 6. Owner-defined automation rules (#20) ──
     // Each enabled rule raises RULE-<ruleId>-<entityId> tasks for matching
