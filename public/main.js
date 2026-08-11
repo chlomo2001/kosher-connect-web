@@ -1159,6 +1159,7 @@ function selectRentalCustomer(id) {
   document.getElementById('rCustomerSelected').textContent = `✓ ${fmtPhone(c.phone || '')}`;
   document.getElementById('rCustomerDropdown').classList.remove('open');
   selectedRentalCustomerId = id;
+  refreshRentalPhoneOptions(); // resort the phone list — his old numbers first
   updateRentalCalc(); // customer drives the multi-phone (3rd+) auto-discount
 }
 
@@ -2478,6 +2479,13 @@ function renderPhoneRows() {
     let statusBadge;
     if (p.status === 'rented')         statusBadge = `<span class="badge badge-rental">Rented</span>`;
     else if (p.maintenance)            statusBadge = `<span class="badge" style="background:rgba(217,119,6,0.14);color:var(--gold);" title="${escHtml(p.maintenanceNote || 'Out of service')}">🔧 Maintenance</span>`;
+    // Out-of-stock line states each get their own words — before this they
+    // all wore the green "Available" badge, which is the one thing they are not.
+    else if (p.status === 'retired')    statusBadge = `<span class="badge" style="background:rgba(107,114,128,0.15);color:var(--muted);">🗄️ Retired</span>`;
+    else if (p.status === 'not_working')statusBadge = `<span class="badge" style="background:rgba(220,38,38,0.12);color:var(--danger);">⛔ Not working</span>`;
+    else if (p.status === 'permanent')  statusBadge = `<span class="badge" style="background:rgba(99,102,241,0.12);color:var(--accent);">🏠 Permanent</span>`;
+    else if (p.status === 'suspended')  statusBadge = `<span class="badge" style="background:rgba(217,119,6,0.14);color:var(--gold);">⏸ Suspended</span>`;
+    else if (p.status === 'unknown')    statusBadge = `<span class="badge" style="background:rgba(107,114,128,0.15);color:var(--muted);">❓ Unknown</span>`;
     else if (p.status === 'available' && p.poolExpiry && !poolExpired)
                                         statusBadge = `<span class="badge badge-sim">Available (active pool)</span>`;
     else if (poolExpired)               statusBadge = `<span class="badge" style="background:rgba(107,114,128,0.15);color:var(--muted);">Pool Expired</span>`;
@@ -2539,7 +2547,7 @@ async function markPhoneBack(phoneId) {
 // ══ NEW RENTAL MODAL ══
 // Phones offerable for a date range — DATE-aware, not status-aware, so a
 // phone that's out today can still be reserved for future dates.
-function phoneOptionsFor(from, to) {
+function phoneOptionsFor(from, to, customerId) {
   const today = localISO();
   // A phone under maintenance is never offerable, whatever the dates say.
   // "Not rented" is not the same as "rentable". A permanent line is in a
@@ -2550,9 +2558,29 @@ function phoneOptionsFor(from, to) {
   const list = (from && to && to >= from)
     ? inService.filter(p => phoneConflicts(rentals, p.id, from, to, today).length === 0)
     : inService;
-  return list
-    .map(p => `<option value="${p.id}">${escHtml(fmtPhone(p.number))} · ${escHtml(p.country)} · ${escHtml(p.company||'')} ${p.pool ? '(Pool: '+escHtml(p.pool)+')' : ''}</option>`)
+  // Returning customers keep their number when we can give it: lines this
+  // customer rented before float to the top, labelled with when they last had
+  // them, so "same number as last time" is the default offer, not a search.
+  const had = customerPastPhoneDates(customerId);
+  const sorted = had.size
+    ? [...list].sort((a, b) => (had.has(b.id) ? 1 : 0) - (had.has(a.id) ? 1 : 0))
+    : list;
+  return sorted
+    .map(p => `<option value="${p.id}">${escHtml(fmtPhone(p.number))} · ${escHtml(p.country)} · ${escHtml(p.company||'')} ${p.pool ? '(Pool: '+escHtml(p.pool)+')' : ''}${had.has(p.id) ? ` · ↺ had ${fmtDate(had.get(p.id))}` : ''}</option>`)
     .join('');
+}
+
+// phoneId → the most recent date this customer held that line (any rental,
+// including returned ones — that history is exactly what makes the offer).
+function customerPastPhoneDates(customerId) {
+  const map = new Map();
+  if (!customerId) return map;
+  for (const r of rentals) {
+    if (String(r.customerId) !== String(customerId) || !r.phoneId) continue;
+    const when = r.toDate || r.fromDate || r.createdAt || '';
+    if (!map.has(r.phoneId) || when > map.get(r.phoneId)) map.set(r.phoneId, when);
+  }
+  return map;
 }
 
 // Dates changed → rebuild the phone list for that window, keeping the
@@ -2562,13 +2590,17 @@ function refreshRentalPhoneOptions() {
   if (!sel) return;
   const from = document.getElementById('rFrom')?.value;
   const to = document.getElementById('rTo')?.value;
+  const customerId = document.getElementById('rCustomer')?.value;
   const prev = sel.value;
-  sel.innerHTML = `<option value="">— Select phone —</option>` + phoneOptionsFor(from, to);
+  sel.innerHTML = `<option value="">— Select phone —</option>` + phoneOptionsFor(from, to, customerId);
   if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
   else if (prev) { sel.value = ''; toast('That phone is not free for these dates — pick another.', 'warning'); }
   const hint = document.getElementById('rPhoneHint');
+  const hadCount = customerId ? [...sel.options].filter(o => o.text.includes('↺')).length : 0;
   if (hint && from && to && to >= from) {
-    hint.textContent = `(${sel.options.length - 1} free ${fmtDate(from)} → ${fmtDate(to)})`;
+    hint.textContent = `(${sel.options.length - 1} free ${fmtDate(from)} → ${fmtDate(to)}${hadCount ? ` · ↺ ${hadCount} he had before` : ''})`;
+  } else if (hint && hadCount) {
+    hint.textContent = `(↺ ${hadCount} number${hadCount === 1 ? '' : 's'} he had before — listed first)`;
   }
 }
 
@@ -3604,6 +3636,24 @@ function openEditPhoneModal(phoneId) {
     : '';
   const statusColor = p.status === 'rented' ? 'var(--accent)' : p.maintenance ? 'var(--gold)' : 'var(--success)';
   const statusLabel = p.status === 'rented' ? '🔴 Rented' : p.maintenance ? '🔧 Maintenance' : '🟢 Available';
+  // Line state is editable only while the phone is not out on a rental — a
+  // rented phone's status belongs to the rental cycle, not this dropdown.
+  // 'rented' therefore never appears as a choice; 'unknown' (import couldn't
+  // read the source) is kept visible when that's the current truth, but is
+  // not offered as something to set.
+  const lineStateSelect = p.status === 'rented' ? '' : `
+      <div class="form-group form-full">
+        <label class="form-label" for="epLineState">Line state</label>
+        <select class="form-input" id="epLineState">
+          <option value="available"   ${p.status === 'available'   ? 'selected' : ''}>🟢 In stock — rentable</option>
+          <option value="permanent"   ${p.status === 'permanent'   ? 'selected' : ''}>🏠 Permanent — with a customer by arrangement</option>
+          <option value="not_working" ${p.status === 'not_working' ? 'selected' : ''}>⛔ Not working — broken, needs attention</option>
+          <option value="retired"     ${p.status === 'retired'     ? 'selected' : ''}>🗄️ Retired — number dead/expired; kept for history</option>
+          ${p.status === 'unknown' ? `<option value="unknown" selected>❓ Unknown — import could not read it</option>` : ''}
+          ${p.status === 'suspended' ? `<option value="suspended" selected>⏸ Suspended</option>` : ''}
+        </select>
+        <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">Retired keeps the number and every past rental on record — nothing is deleted; it just stops being offered out.</div>
+      </div>`;
   showDynamicModal(`
     <div class="modal-title">✏️ Edit Phone — ${escHtml(fmtPhone(p.number))}</div>
     <div class="form-grid">
@@ -3640,6 +3690,7 @@ function openEditPhoneModal(phoneId) {
         <div style="font-size:var(--fs-body);font-weight:600;color:${statusColor};padding:8px 0;">${statusLabel}</div>
         ${renterInfo}
       </div>
+      ${lineStateSelect}
       <div class="form-group form-full">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--fs-body);">
           <input type="checkbox" id="epMaint" ${p.maintenance ? 'checked' : ''} style="accent-color:var(--gold);">
@@ -3687,6 +3738,12 @@ function saveEditPhone(phoneId) {
   if (epMaint) {
     p.maintenance = epMaint.checked;
     p.maintenanceNote = epMaint.checked ? (document.getElementById('epMaintNote')?.value.trim() || '') : '';
+  }
+  // Absent while the phone is rented — the rental cycle owns status then.
+  const epLineState = document.getElementById('epLineState');
+  if (epLineState && epLineState.value !== p.status) {
+    p.status = epLineState.value;
+    if (p.status === 'available') p.heldByNote = '';
   }
   savePhones(phones);
   toast('Phone updated!', 'success');

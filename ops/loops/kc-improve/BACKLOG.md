@@ -649,3 +649,14 @@ Verified per item: gate (251 tests ×2 + build) green, harness screenshots
 light+dark at 1280/390. Nothing skipped. Owner decisions pending: none from
 this loop — but see the day's thread: 14 import-created customers may need
 merging, and the "Card details" sheet with CCVs should be retired.
+
+## UX loop — 2026-08-11 (owner-requested pair, prototype for judgment)
+
+| Item | Commit | Screens |
+|------|--------|---------|
+| Line state control on Edit Phone: retire (dead/expired) / not working / permanent — number + rental history kept, line stops being offered; distinct table badges (were all wearing green "Available") | (this commit) | Rentals · Edit Phone modal, phones table |
+| New Rental picker greets returning customers: lines they held before sort first with "↺ had <date>"; hint shows the count | (this commit) | Rentals · New Rental modal |
+
+Verified: gate (255 tests ×2 TZ + build) exit 0; harness shots light+dark of
+both modals. Reviewer sub-agent pass in flight; owner live-judges on the dev
+branch before any ship (their explicit ask, so no auto-ff).
