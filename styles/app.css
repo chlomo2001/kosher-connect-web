@@ -2179,6 +2179,12 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 
 .cal-table th { font-size: var(--fs-overline); color: var(--muted); font-weight: 400; padding: 4px 0; text-align: center; }
 
+/* Gregorian day number stays the primary read; the Hebrew day (gematria)
+   rides underneath at a whisper — small enough that a 22px column still
+   fits it, the full Hebrew month/year lives in the header's title tooltip. */
+.cal-day-en { display: block; }
+.cal-day-heb { display: block; font-size: 9px; line-height: 1.3; opacity: .65; }
+
 
 /* Scoped under .cal-table so it outranks the 10px muted `.cal-table th` rule —
    the row header is a <th> now (it names the phone the row belongs to). */
@@ -2215,6 +2221,10 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 .cal-table thead th { position: sticky; top: 0; z-index: 2; background: var(--surface); }
 .cal-table thead th.cal-phone { z-index: 3; }
 .cal-table thead th.cal-shabbat { background: var(--bg-secondary); }
+/* Yom Tov gets its own tint (not Shabbos's grey) so the two off-calendar
+   landmarks stay distinguishable at a glance; a day that is both (yom tov
+   falling on Shabbos) shows as Shabbos — the tooltip still names both. */
+.cal-table thead th.cal-yomtov { background: var(--canvas-cream); }
 
 .cal-active  { background: var(--accent); cursor: pointer; }
 
@@ -2223,6 +2233,8 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 .cal-overdue { background: var(--danger); cursor: pointer; }
 
 td.cal-shabbat, th.cal-shabbat { background: var(--bg-secondary); }
+
+td.cal-yomtov, th.cal-yomtov { background: var(--canvas-cream); }
 
 td.cal-active.cal-shabbat { background: var(--accent); }
 
@@ -2239,6 +2251,8 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .cal-key.cal-overdue { background: var(--danger); }
 
 .cal-key.cal-shabbat { background: var(--bg-secondary); border: 1px solid var(--border); }
+
+.cal-key.cal-yomtov { background: var(--canvas-cream); border: 1px solid var(--border); }
 
 
 

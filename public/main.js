@@ -1035,6 +1035,17 @@ function numToHebrew(n) {
   return result;
 }
 
+// Compact Hebrew day-of-month, in gematria, for a column header that has no
+// room for the full "day month year" string (hebrewDateString above) — the
+// month/year still reach the reader via the header's title tooltip.
+function hebrewDayLabel(d) {
+  try {
+    const parts = new Intl.DateTimeFormat('he-IL-u-ca-hebrew', { day: 'numeric' }).formatToParts(d);
+    const dayNum = parseInt(parts.find(p => p.type === 'day')?.value || '0');
+    return dayNum ? numToHebrew(dayNum) : '';
+  } catch (e) { return ''; }
+}
+
 function showHebrewDate(inputId, labelId) {
   const val = document.getElementById(inputId)?.value;
   const el  = document.getElementById(labelId);
@@ -2109,10 +2120,22 @@ function availabilityCalendarHtml() {
     return false;
   });
 
+  // Yom Tov gets the same "not just another weekday" treatment Shabbos
+  // already had — the shop's actual off-calendar is Shabbos AND yom tov, not
+  // Saturdays alone, and staff scanning the grid need both landmarks.
   const dayHead = Array.from({ length: daysInMonth }, (_, i) => {
     const d = i + 1;
-    const dow = new Date(y, m - 1, d).getDay();
-    return `<th scope="col" class="cal-day${dow === 6 ? ' cal-shabbat' : ''}${iso(d) === today ? ' cal-today' : ''}">${d}</th>`;
+    const dObj = new Date(y, m - 1, d);
+    const dow = dObj.getDay();
+    const dIso = iso(d);
+    const yomTovName = DIASPORA_HOLIDAYS.get(dIso);
+    const titleParts = [];
+    if (dow === 6) titleParts.push('Shabbos');
+    if (yomTovName) titleParts.push(yomTovName);
+    const title = titleParts.length ? ` title="${escHtml(titleParts.join(' · '))}"` : '';
+    const ariaLabel = titleParts.length ? ` aria-label="${fmtDate(dIso)} — ${escHtml(titleParts.join(' · '))}"` : '';
+    return `<th scope="col" class="cal-day${dow === 6 ? ' cal-shabbat' : yomTovName ? ' cal-yomtov' : ''}${dIso === today ? ' cal-today' : ''}"${title}${ariaLabel}>` +
+      `<span class="cal-day-en">${d}</span><span class="cal-day-heb" aria-hidden="true">${escHtml(hebrewDayLabel(dObj))}</span></th>`;
   }).join('');
 
   const rows = rowPhones.map(p => {
@@ -2120,13 +2143,15 @@ function availabilityCalendarHtml() {
       const dIso = iso(i + 1);
       const hit = (blocks.get(p.id) || []).find(b => b.r.fromDate <= dIso && b.end >= dIso);
       const dow = new Date(y, m - 1, i + 1).getDay();
+      const yomTovName = DIASPORA_HOLIDAYS.get(dIso);
       if (!hit) {
         // #5 — teal wash while the phone's pool window still covers this day,
         // so pool time left AFTER a due-back date is visible at a glance.
         const pooled = p.poolExpiry && p.poolExpiry >= dIso && dIso >= today;
-        return `<td class="cal-cell cal-free${pooled ? ' cal-pooled' : ''}${dow === 6 ? ' cal-shabbat' : ''}${dIso === today ? ' cal-today' : ''}"
-          title="Free${pooled ? ' — pool active till ' + fmtDate(p.poolExpiry) : ''} — click to reserve ${escHtml(p.number)} from ${fmtDate(dIso)}"
-          aria-label="${fmtDate(dIso)}: free${pooled ? ', pool active' : ''}"
+        const offDayNote = dow === 6 ? ' — Shabbos' : yomTovName ? ` — ${yomTovName}` : '';
+        return `<td class="cal-cell cal-free${pooled ? ' cal-pooled' : ''}${dow === 6 ? ' cal-shabbat' : yomTovName ? ' cal-yomtov' : ''}${dIso === today ? ' cal-today' : ''}"
+          title="Free${pooled ? ' — pool active till ' + fmtDate(p.poolExpiry) : ''}${escHtml(offDayNote)} — click to reserve ${escHtml(p.number)} from ${fmtDate(dIso)}"
+          aria-label="${fmtDate(dIso)}: free${pooled ? ', pool active' : ''}${offDayNote}"
           onclick="calQuickReserve('${p.id}','${dIso}')"></td>`;
       }
       const state = hit.r.status === 'booked' ? 'booked'
@@ -2164,6 +2189,7 @@ function availabilityCalendarHtml() {
           <span style="white-space:nowrap;"><span class="cal-key cal-overdue"></span> overdue (!)</span>
           <span style="white-space:nowrap;"><span class="cal-key" style="background:color-mix(in srgb, var(--sim) 16%, var(--surface));border:1px solid var(--border);"></span> free, pool active</span>
           <span style="white-space:nowrap;"><span class="cal-key cal-shabbat"></span> Shabbos</span>
+          <span style="white-space:nowrap;"><span class="cal-key cal-yomtov"></span> Yom Tov</span>
           <span style="white-space:nowrap;">· click a free day to reserve</span>
         </span>
       </div>
