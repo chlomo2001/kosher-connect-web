@@ -2695,3 +2695,7 @@ td { border-top-color: color-mix(in srgb, var(--border) 55%, transparent); }
   0% { box-shadow: 0 0 0 2px var(--accent); }
   100% { box-shadow: 0 0 0 2px transparent; }
 }
+
+/* Staff-chrome half of the selectable-text inversion (see globals.css):
+   navigation and button-like chrome never paints blue on a drag. */
+.sidebar, .nav-item, .btn, .action-btn, .modal-x, .kc-fab, .sc-chev { user-select: none; }

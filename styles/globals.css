@@ -280,11 +280,11 @@ body {
 /* Everything reads as data by default — any text on a card, modal or table
    can be highlighted and copied (owner request: "all text even in a card
    should be copiable"). Only the interactive chrome opts OUT, so dragging
-   across the sidebar or double-clicking a button doesn't paint it blue.
-   (This inverts the old body-wide user-select:none + opt-in list, which
-   left card/modal prose unselectable.) */
-.sidebar, .nav-item, button, .btn, .action-btn, summary,
-.modal-x, .kc-fab, .sc-chev { user-select: none; }
+   across the app or double-clicking a button doesn't paint it blue. The
+   staff-only chrome selectors (.sidebar, .nav-item, …) opt out in app.css —
+   this sheet keeps only bare elements. (Inverts the old body-wide
+   user-select:none + opt-in list, which left card/modal prose unselectable.) */
+button, summary { user-select: none; }
 
 /* …and the public pages are documents, not app chrome. /welcome,
    /phone-guide, /portal and /login get read, quoted, and forwarded to a
