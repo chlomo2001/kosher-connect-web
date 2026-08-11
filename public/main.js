@@ -932,12 +932,52 @@ function mgSignGate(rentalId, checkId) {
 // A chip fixes all of that by being the only thing that knows how to draw a
 // device: number formatted once, model attached, country named. Nothing here is
 // new information — it is the same fields, said the same way twice.
-const COUNTRY_FLAGS = { USA: '🇺🇸', Israel: '🇮🇱', UK: '🇬🇧', Canada: '🇨🇦', EU: '🇪🇺' };
-
-// Flags are decoration: they read as a blank or as "regional indicator symbol"
-// to a screen reader, so the country always travels as text beside them.
+// Real flag artwork, not the Unicode flag emoji. Windows' emoji font (Segoe
+// UI Emoji) has never shipped the compound glyphs most flag emoji need —
+// it falls back to the two bare regional-indicator letters, so "🇺🇸" read as
+// literal "US" on the shop PC (worst inside an <option>, where it doubled
+// with the "USA" label text: "US USA"). A tiny inline SVG has no font
+// dependency, so it draws identically everywhere.
+const FLAG_COUNTRIES = ['USA', 'UK', 'Israel', 'EU', 'Canada'];
+const FLAG_SVG = {
+  USA: '<svg viewBox="0 0 20 14" width="16" height="12" aria-hidden="true"><rect width="20" height="14" fill="#B22234"/><g fill="#fff"><rect y="1.08" width="20" height="1.08"/><rect y="3.23" width="20" height="1.08"/><rect y="5.38" width="20" height="1.08"/><rect y="7.54" width="20" height="1.08"/><rect y="9.69" width="20" height="1.08"/><rect y="11.85" width="20" height="1.08"/></g><rect width="8" height="7.54" fill="#3C3B6E"/></svg>',
+  UK: '<svg viewBox="0 0 20 14" width="16" height="12" aria-hidden="true"><rect width="20" height="14" fill="#00247D"/><path d="M0 0L20 14M20 0L0 14" stroke="#fff" stroke-width="2.6"/><path d="M0 0L20 14M20 0L0 14" stroke="#CF142B" stroke-width="1"/><path d="M10 0V14M0 7H20" stroke="#fff" stroke-width="4.2"/><path d="M10 0V14M0 7H20" stroke="#CF142B" stroke-width="2.2"/></svg>',
+  Israel: '<svg viewBox="0 0 20 14" width="16" height="12" aria-hidden="true"><rect width="20" height="14" fill="#fff"/><rect y="1.4" width="20" height="1.8" fill="#0038B8"/><rect y="10.8" width="20" height="1.8" fill="#0038B8"/><g transform="translate(10 7)" fill="none" stroke="#0038B8" stroke-width="0.7"><path d="M-3.3 1.9L0 -3.8L3.3 1.9Z"/><path d="M-3.3 -1.9L0 3.8L3.3 -1.9Z"/></g></svg>',
+  Canada: '<svg viewBox="0 0 20 14" width="16" height="12" aria-hidden="true"><rect width="20" height="14" fill="#fff"/><rect width="5" height="14" fill="#D80621"/><rect x="15" width="5" height="14" fill="#D80621"/><path d="M10 2.3l1.1 2.4 2.3-1-0.6 2.3 2 0.9-2 1 0.5 1.7-2.1-0.5 0.1 2.1-1.3-1.6-1.3 1.6 0.1-2.1-2.1 0.5 0.5-1.7-2-1 2-0.9-0.6-2.3 2.3 1z" fill="#D80621"/></svg>',
+  EU: `<svg viewBox="0 0 20 14" width="16" height="12" aria-hidden="true"><rect width="20" height="14" fill="#003399"/><g fill="#FFCC00">${Array.from({ length: 12 }, (_, i) => {
+    const a = (i / 12) * 2 * Math.PI - Math.PI / 2;
+    return `<circle cx="${(10 + 5.2 * Math.cos(a)).toFixed(2)}" cy="${(7 + 4 * Math.sin(a)).toFixed(2)}" r="0.55"/>`;
+  }).join('')}</g></svg>`,
+};
+// Flags are decoration: they read as a blank to a screen reader (aria-hidden
+// above), so the country always travels as text beside them too.
 function countryFlag(country) {
-  return COUNTRY_FLAGS[country] || '🌍';
+  return FLAG_SVG[country] || '<svg viewBox="0 0 20 14" width="16" height="12" aria-hidden="true"><rect x="0.5" y="0.5" width="19" height="13" rx="2" fill="none" stroke="currentColor" stroke-opacity="0.35"/></svg>';
+}
+
+// A native <select><option> can only ever hold plain text — no image, no
+// SVG, that's an HTML platform limit, not a font one — so the one country
+// picker in the app (Manage phones → Add New Phone) is a small custom
+// listbox instead, built from the same trusted-markup pattern as the
+// customer combo below, so it can show the real flag next to each choice.
+function kcFlagPickToggle(valueId) {
+  const dd = document.getElementById(valueId + '_dd');
+  const open = dd && dd.classList.toggle('open');
+  document.getElementById(valueId + '_btn')?.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function kcFlagPickClose(valueId) {
+  document.getElementById(valueId + '_dd')?.classList.remove('open');
+  document.getElementById(valueId + '_btn')?.setAttribute('aria-expanded', 'false');
+}
+function kcFlagPick(valueId, country) {
+  const hidden = document.getElementById(valueId);
+  const label = document.getElementById(valueId + '_label');
+  if (hidden) hidden.value = country;
+  if (label) label.innerHTML = `${countryFlag(country)}<span>${escHtml(country)}</span>`;
+  document.querySelectorAll(`#${valueId}_dd .customer-dropdown-item`).forEach(el =>
+    el.setAttribute('aria-selected', el.dataset.country === country ? 'true' : 'false'));
+  kcFlagPickClose(valueId);
+  if (hidden) hidden.dispatchEvent(new Event('change'));
 }
 
 // `device` is a phone object, or a bare number string — the rental record
@@ -3268,15 +3308,23 @@ function openManagePhonesModal() {
       </div>
       <div class="form-group">
         <label class="form-label">Country *</label>
-        <select class="form-input" id="pCountry" onchange="document.getElementById('pUKPlanGroup').style.display=this.value==='UK'?'block':'none'; document.getElementById('pPoolGroup').style.display=this.value==='USA'?'contents':'none';">
-          ${/* No flag emoji inside <option> — Windows renders a flag as its
-                two letters, so "🇺🇸 USA" read as "US USA" on the shop PC. */''}
-          <option value="USA">USA</option>
-          <option value="UK">UK</option>
-          <option value="Israel">Israel</option>
-          <option value="EU">EU</option>
-          <option value="Canada">Canada</option>
-        </select>
+        ${/* A native <select><option> can only ever hold plain text — no image,
+              that's an HTML limit, not the Windows-emoji-font one — so this is a
+              small custom listbox instead, built to show the real flag. */''}
+        <div class="customer-search-wrap">
+          <button type="button" class="form-input kc-flag-btn" id="pCountry_btn" aria-haspopup="listbox" aria-expanded="false"
+            onclick="kcFlagPickToggle('pCountry')" onblur="setTimeout(()=>kcFlagPickClose('pCountry'),150)">
+            <span id="pCountry_label" class="kc-flag-btn-label">${countryFlag('USA')}<span>USA</span></span>
+            <span aria-hidden="true" class="kc-flag-btn-chev">▾</span>
+          </button>
+          <input type="hidden" id="pCountry" value="USA"
+            onchange="document.getElementById('pUKPlanGroup').style.display=this.value==='UK'?'block':'none'; document.getElementById('pPoolGroup').style.display=this.value==='USA'?'contents':'none';">
+          <div class="customer-dropdown" id="pCountry_dd" role="listbox" aria-label="Country">
+            ${FLAG_COUNTRIES.map(c => `<div class="customer-dropdown-item kc-flag-item" role="option" tabindex="0" data-country="${c}" aria-selected="${c === 'USA'}"
+              onmousedown="kcFlagPick('pCountry','${c}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();kcFlagPick('pCountry','${c}')}">
+              ${countryFlag(c)}<span>${c}</span></div>`).join('')}
+          </div>
+        </div>
       </div>
       <div class="form-group" id="pUKPlanGroup" style="display:none;">
         <label class="form-label">UK Plan Type</label>
@@ -3325,7 +3373,7 @@ function openManagePhonesModal() {
         phones.map(p => `
           <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:var(--fs-body);">
             <span style="font-weight:600;">${escHtml(fmtPhone(p.number))}</span>
-            <span style="color:var(--muted);">${escHtml(p.country)} · ${escHtml(p.company||'—')}</span>
+            <span style="color:var(--muted);display:flex;align-items:center;gap:5px;">${countryFlag(p.country)}${escHtml(p.country)} · ${escHtml(p.company||'—')}</span>
             <span class="badge ${p.status==='rented'?'badge-rental':'badge-active'}">${p.status}</span>
           </div>`).join('')}
     </div>
@@ -5035,7 +5083,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
 
   const cUpcoming = customerUpcomingBookings(c);
   const allActiveServices = [
-    ...cActiveRentals.map(r => ({ type: 'rental', label: `Rental ${countryFlag(r.country)}${r.depositHeld > 0 ? ' · 🔒£' + Number(r.depositHeld).toFixed(0) : ''}${r.termsAck ? ' · ✍️' : ''}` })),
+    ...cActiveRentals.map(r => ({ type: 'rental', flag: countryFlag(r.country), label: `Rental${r.depositHeld > 0 ? ' · 🔒£' + Number(r.depositHeld).toFixed(0) : ''}${r.termsAck ? ' · ✍️' : ''}` })),
     ...cUpcoming.map(b => ({ type: 'booking', label: `✈️ ${b.route}${b.travelDate ? ' · ' + fmtDate(b.travelDate) : ''}` })),
     ...cSims.map(s => ({ type: 'sim', simId: s.id, label: `SIM · ${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}` })),
     ...cVNs.map(v => ({ type: 'vn', label: `VN ${fmtPhone(v.number || '')}` })),
@@ -5052,8 +5100,9 @@ function buildCustomerPanelHtml(c, mode = 'card') {
     ? `<span style="color:var(--muted);font-size:var(--fs-body);">No active services yet — add one from “New Service” below.</span>`
     : allActiveServices.map(s => s.simId
         // SIM badges open the manage modal (it stacks above this card overlay).
-        ? `<button class="badge badge-${s.type}" style="font-size:var(--fs-small);padding:5px 12px;border:0;cursor:pointer;font-family:inherit;" onclick="openManageSimModal('${escHtml(String(s.simId))}')" title="Open this SIM plan">${escHtml(s.label)}</button>`
-        : `<span class="badge badge-${s.type}" style="font-size:var(--fs-small);padding:5px 12px;">${escHtml(s.label)}</span>`).join('');
+        // s.flag is only ever our own countryFlag() SVG, never user text — safe unescaped.
+        ? `<button class="badge badge-${s.type}" style="font-size:var(--fs-small);padding:5px 12px;border:0;cursor:pointer;font-family:inherit;" onclick="openManageSimModal('${escHtml(String(s.simId))}')" title="Open this SIM plan">${s.flag || ''}${escHtml(s.label)}</button>`
+        : `<span class="badge badge-${s.type}" style="font-size:var(--fs-small);padding:5px 12px;">${s.flag || ''}${escHtml(s.label)}</span>`).join('');
 
   // ── Trip bundle: the next flight as a unit — flight + phone + SIM + VN,
   // with what's missing flagged (travel-agent pattern).

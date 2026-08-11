@@ -795,12 +795,16 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 /* ─── BADGES — flat micro-badges (coloured text on a light flat fill) ─── */
 
 .badge {
-  display: inline-block;
+  display: inline-flex; align-items: center; gap: 4px;
   padding: 2px 8px;
   border-radius: var(--radius-sm);
   font-size: var(--fs-micro); font-weight: 500;
   letter-spacing: 0;
   margin: 1px 2px;
+  /* A chip is meant to stay one line — the country-flag SVG is just wide
+     enough that in a narrow column it used to wrap onto its own row inside
+     the same pill (the old flag emoji was thin enough that this never showed). */
+  white-space: nowrap;
 }
 
 .badge-active { background: rgba(14,138,82,0.14); color: #0a6e3f; }
@@ -1737,6 +1741,15 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 .customer-dropdown-item:last-child { border-bottom: none; }
 
 .customer-dropdown-empty { padding: 9px 12px; font-size: var(--fs-body); color: var(--muted); }
+
+/* Flag picker — the one country <select> that needed real flag artwork (a
+   native <option> can't hold an image) rides the same wrap/dropdown as the
+   customer combo above; this is just the trigger button + row layout. */
+.kc-flag-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; text-align: left; cursor: pointer; }
+.kc-flag-btn-label { display: flex; align-items: center; gap: 8px; }
+.kc-flag-btn-chev { color: var(--muted); }
+.kc-flag-item { display: flex; align-items: center; gap: 8px; }
+.kc-flag-item[aria-selected="true"] { background: rgba(0, 96, 168, 0.08); font-weight: 600; }
 
 
 
