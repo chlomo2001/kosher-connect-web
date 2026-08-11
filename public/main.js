@@ -5186,6 +5186,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
           Settles day <strong>${ha.day || 1}</strong> monthly on the saved card
           ${ha.min ? ` · min ${fmtGbp(ha.min)}` : ''}${ha.max ? ` · max ${fmtGbp(ha.max)}` : ''}
           · ${ha.lastSettled === thisYm ? `<span style="color:var(--success);">this month settled ✔</span>` : ha.lastSettled ? `last settled ${escHtml(ha.lastSettled)}` : 'never settled yet'}
+          ${ha.lastInvoiceUrl ? ` · <a href="${escHtml(ha.lastInvoiceUrl)}" target="_blank" rel="noopener" style="color:var(--accent);">🧾 last invoice${ha.lastInvoiceNumber ? ' ' + escHtml(ha.lastInvoiceNumber) : ''} ↗</a>` : ''}
         </span>
         <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="openHouseSettleModal('${c.id}')">💳 Settle month</button>
       </div>` : '';
@@ -5678,13 +5679,32 @@ async function settleHouseAccount(custId) {
     const d = await r.json();
     if (d.success) {
       c.houseAccount.lastSettled = ym;
+      // A real Stripe-hosted invoice documenting the charge that just
+      // succeeded — never a second charge attempt, so a failure here is a
+      // nice-to-have miss, not a reason to alarm the operator: the money
+      // already moved, that's the part that mattered.
+      let invoiceNote = '';
+      if (d.status === 'succeeded') {
+        try {
+          const ir = await kcFetch('/api/house-invoice', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customerId: custId, ym, amount }),
+          });
+          const idata = await ir.json();
+          if (idata.success && idata.hostedInvoiceUrl) {
+            c.houseAccount.lastInvoiceUrl = idata.hostedInvoiceUrl;
+            c.houseAccount.lastInvoiceNumber = idata.number || '';
+            invoiceNote = ` — invoice ${idata.number || ''} ready`;
+          }
+        } catch { /* charge already succeeded; the invoice is a nice-to-have */ }
+      }
       await window.api.updateCustomer(c).catch(() => null);
       await recordComm(custId, {
         type: 'note',
-        text: `💳 House account settled for ${ym} — ${fmtGbp(amount)} charged to the saved card${d.status === 'succeeded' ? '' : ' (processing)'}.`,
+        text: `💳 House account settled for ${ym} — ${fmtGbp(amount)} charged to the saved card${d.status === 'succeeded' ? '' : ' (processing)'}.${invoiceNote}`,
       }).catch(() => null);
       toast(d.status === 'succeeded'
-        ? `House account settled — ${fmtGbp(amount)} charged ✔`
+        ? `House account settled — ${fmtGbp(amount)} charged ✔${invoiceNote ? ' · Stripe invoice ready' : ''}`
         : 'Charge is processing — the wallet updates when the card issuer answers.', d.status === 'succeeded' ? 'success' : 'warning');
       closeDynamicModal();
       if (selectedId === custId) renderDetailPanel(custId);
