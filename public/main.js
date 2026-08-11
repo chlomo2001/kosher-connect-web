@@ -1956,6 +1956,17 @@ function nrSetGivenDefaults() {
   }
 }
 
+// A stat card doubles as a filter shortcut — set the dimension, then repaint
+// the WHOLE tab (not just the rows) so the filter dropdown above the table
+// updates to show what it's now filtered to, instead of quietly disagreeing
+// with the list underneath it.
+function rentalsStatFilter(dim, value) {
+  const st = kcView('rentals');
+  st.dims = st.dims || {};
+  st.dims[dim] = value;
+  renderRentalsTab();
+}
+
 function renderRentalsTab() {
   const content = document.getElementById('mainContent');
   const today0  = localISO();
@@ -1978,6 +1989,7 @@ function renderRentalsTab() {
     { dim: 'status', title: 'Status', options: [
       { value: 'all', label: 'Status: all' },
       { value: 'active', label: 'Active', test: r => getComputedStatus(r, localISO()) === 'active' },
+      { value: 'due_today', label: 'Due today', test: r => getComputedStatus(r, localISO()) === 'active' && r.toDate === localISO() },
       { value: 'overdue', label: 'Overdue', test: r => getComputedStatus(r, localISO()) === 'overdue' },
       { value: 'returned', label: 'Returned', test: r => getComputedStatus(r, localISO()) === 'returned' },
       { value: 'returned_incomplete', label: 'Returned ⚠️', test: r => getComputedStatus(r, localISO()) === 'returned_incomplete' },
@@ -1992,17 +2004,23 @@ function renderRentalsTab() {
 
   content.innerHTML = `
     <div class="stats-row">
-      <div class="stat-card">
+      <div class="stat-card" role="button" tabindex="0" style="cursor:pointer;"
+        onclick="rentalsStatFilter('status','active')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();rentalsStatFilter('status','active')}"
+        title="Show only active rentals">
         <div class="stat-label">Active Rentals</div>
         <div class="stat-value green">${activeRentals}</div>
         <div class="stat-sub">Currently out</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" role="button" tabindex="0" style="cursor:pointer;"
+        onclick="openManagePhonesModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openManagePhonesModal()}"
+        title="Open Manage phones — see which handsets are free">
         <div class="stat-label">Available Phones</div>
         <div class="stat-value" style="${statBandStyle('phonesFree', availablePhones)}">${availablePhones}</div>
         <div class="stat-sub">Ready to rent</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" role="button" tabindex="0" style="cursor:pointer;"
+        onclick="rentalsStatFilter('status','due_today')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();rentalsStatFilter('status','due_today')}"
+        title="Show only rentals due back today">
         <div class="stat-label">Returning Today</div>
         <div class="stat-value" style="${statBandStyle('returning', returningToday)}">${returningToday}</div>
         <div class="stat-sub">Expected back</div>
@@ -2015,7 +2033,9 @@ function renderRentalsTab() {
         <div class="stat-value gold">${needsReviewCount}</div>
         <div class="stat-sub">From the imported sheet</div>
       </div>` : ''}
-      <div class="stat-card">
+      <div class="stat-card" role="button" tabindex="0" style="cursor:pointer;"
+        onclick="rentalsStatFilter('balance','debt')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();rentalsStatFilter('balance','debt')}"
+        title="Show only rentals with an unpaid balance">
         <div class="stat-label">Outstanding Debt</div>
         <div class="stat-value" style="${statBandStyle('arrears', outstandingDebt)}">${fmtGbp(outstandingDebt)}</div>
         <div class="stat-sub">Unpaid balances</div>
