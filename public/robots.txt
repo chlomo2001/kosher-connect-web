@@ -5,6 +5,7 @@ Allow: /phone-guide
 Allow: /terms
 Allow: /privacy
 Allow: /refund
+Allow: /login
 Disallow: /
 
 Sitemap: https://app.kosher-connect.com/sitemap.xml
