@@ -2192,6 +2192,22 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 
 .cal-free:hover { background: rgba(0, 96, 168, 0.12); }
 
+/* Owner #5 — a free day still covered by the phone's ACTIVE pool window gets
+   a teal wash, so pool time left after a rental's due-back date is visible
+   at a glance (tinted days trailing the coloured block). */
+.cal-free.cal-pooled { background: color-mix(in srgb, var(--sim) 16%, var(--surface)); }
+.cal-free.cal-pooled:hover { background: color-mix(in srgb, var(--sim) 30%, var(--surface)); }
+
+/* Owner #4 — the day numbers freeze while the fleet scrolls: the grid lives
+   in a capped-height scroll box (.cal-scroll) and the header row sticks to
+   its top, so mid-list you always know which date a column is. Both stickies
+   meet in the top-left "Phone" cell, which needs the higher z to cover the
+   day cells sliding beneath it. */
+.cal-scroll { max-height: 62vh; overflow: auto; }
+.cal-table thead th { position: sticky; top: 0; z-index: 2; background: var(--surface); }
+.cal-table thead th.cal-phone { z-index: 3; }
+.cal-table thead th.cal-shabbat { background: var(--bg-secondary); }
+
 .cal-active  { background: var(--accent); cursor: pointer; }
 
 .cal-booked  { background: #e8b93c; cursor: pointer; }

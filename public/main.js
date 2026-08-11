@@ -1974,7 +1974,7 @@ function renderRentalsTab() {
     <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
       <button class="btn btn-primary" onclick="openNewRentalModal()">📱 New Rental</button>
       <button class="btn btn-outline" onclick="openManagePhonesModal()">⚙️ Manage phones</button>
-      <button class="btn btn-outline" onclick="openPoolsModal()">🏊 Pools</button>
+      <button class="btn btn-outline" onclick="openPoolsModal()">📶 Pools</button>
       <button class="btn ${rentalView === 'calendar' ? 'btn-primary' : 'btn-outline'}"
         onclick="rentalView = rentalView === 'calendar' ? 'list' : 'calendar'; renderRentalsTab();">📅 Availability</button>
       <input class="search-box" style="width:280px;" type="text" id="rentalScan"
@@ -2098,9 +2098,12 @@ function availabilityCalendarHtml() {
       const hit = (blocks.get(p.id) || []).find(b => b.r.fromDate <= dIso && b.end >= dIso);
       const dow = new Date(y, m - 1, i + 1).getDay();
       if (!hit) {
-        return `<td class="cal-cell cal-free${dow === 6 ? ' cal-shabbat' : ''}${dIso === today ? ' cal-today' : ''}"
-          title="Free — click to reserve ${escHtml(p.number)} from ${fmtDate(dIso)}"
-          aria-label="${fmtDate(dIso)}: free"
+        // #5 — teal wash while the phone's pool window still covers this day,
+        // so pool time left AFTER a due-back date is visible at a glance.
+        const pooled = p.poolExpiry && p.poolExpiry >= dIso && dIso >= today;
+        return `<td class="cal-cell cal-free${pooled ? ' cal-pooled' : ''}${dow === 6 ? ' cal-shabbat' : ''}${dIso === today ? ' cal-today' : ''}"
+          title="Free${pooled ? ' — pool active till ' + fmtDate(p.poolExpiry) : ''} — click to reserve ${escHtml(p.number)} from ${fmtDate(dIso)}"
+          aria-label="${fmtDate(dIso)}: free${pooled ? ', pool active' : ''}"
           onclick="calQuickReserve('${p.id}','${dIso}')"></td>`;
       }
       const state = hit.r.status === 'booked' ? 'booked'
@@ -2135,10 +2138,11 @@ function availabilityCalendarHtml() {
           <span style="white-space:nowrap;"><span class="cal-key cal-active"></span> out</span>
           <span style="white-space:nowrap;"><span class="cal-key cal-booked"></span> reserved (striped)</span>
           <span style="white-space:nowrap;"><span class="cal-key cal-overdue"></span> overdue (!)</span>
+          <span style="white-space:nowrap;"><span class="cal-key" style="background:color-mix(in srgb, var(--sim) 16%, var(--surface));border:1px solid var(--border);"></span> free, pool active</span>
           <span style="white-space:nowrap;"><span class="cal-key cal-shabbat"></span> Shabbos</span>
           · click a free day to reserve</span>
       </div>
-      <div style="overflow-x:auto;padding:0 14px 6px;">
+      <div class="cal-scroll" style="padding:0 14px 6px;">
         <table class="cal-table">
           <thead><tr><th class="cal-phone">Phone</th>${dayHead}</tr></thead>
           <tbody>${rows.length ? rows : `<tr><td colspan="${daysInMonth + 1}" style="color:var(--muted);padding:14px;">No phones in the fleet yet.</td></tr>`}</tbody>
@@ -3062,9 +3066,11 @@ function openManagePhonesModal() {
       <div class="form-group">
         <label class="form-label">Country *</label>
         <select class="form-input" id="pCountry" onchange="document.getElementById('pUKPlanGroup').style.display=this.value==='UK'?'block':'none'; document.getElementById('pPoolGroup').style.display=this.value==='USA'?'contents':'none';">
-          <option value="USA">🇺🇸 USA</option>
-          <option value="UK">🇬🇧 UK</option>
-          <option value="Israel">🇮🇱 Israel</option>
+          ${/* No flag emoji inside <option> — Windows renders a flag as its
+                two letters, so "🇺🇸 USA" read as "US USA" on the shop PC. */''}
+          <option value="USA">USA</option>
+          <option value="UK">UK</option>
+          <option value="Israel">Israel</option>
           <option value="EU">🇪🇺 EU</option>
           <option value="Canada">🇨🇦 Canada</option>
         </select>
@@ -3091,7 +3097,7 @@ function openManagePhonesModal() {
           <option value="">— no pool —</option>
           ${rentalPools().map(pl => `<option value="${escHtml(pl.name)}">${escHtml(pl.name)}${pl.till ? ' · till ' + fmtDate(pl.till) : ''}</option>`).join('')}
         </select>
-        <span style="font-size:var(--fs-micro);color:var(--muted);">Add pools in 🏊 Pools — the phone adopts the pool's window.</span>
+        <span style="font-size:var(--fs-micro);color:var(--muted);">Add pools in 📶 Pools — the phone adopts the pool's window.</span>
       </div>
       </div>
       <div class="form-group">
@@ -3331,7 +3337,7 @@ function openEditPhoneModal(phoneId) {
         <label class="form-label">Pool window</label>
         <div style="font-size:var(--fs-body);padding:8px 0;color:${p.poolExpiry ? 'var(--text)' : 'var(--muted)'};">
           ${p.poolExpiry ? `${p.poolActiveFrom ? fmtDate(p.poolActiveFrom) + ' → ' : 'till '}${fmtDate(p.poolExpiry)}` : '—'}
-          <div style="font-size:var(--fs-micro);color:var(--muted);">Set per pool in 🏊 Pools — picking a pool adopts its window.</div>
+          <div style="font-size:var(--fs-micro);color:var(--muted);">Set per pool in 📶 Pools — picking a pool adopts its window.</div>
         </div>
       </div>` : ''}
       <div class="form-group">
@@ -3460,7 +3466,7 @@ function openPoolsModal() {
     return `
       <div class="table-card" style="margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;flex-wrap:wrap;">
-          <strong style="font-size:var(--fs-ui);">🏊 ${escHtml(name)}</strong>
+          <strong style="font-size:var(--fs-ui);">📶 ${escHtml(name)}</strong>
           <span class="badge ${live ? 'badge-active' : 'badge-rental'}">${live ? 'ACTIVE' : 'not active'}</span>
           <span style="font-size:var(--fs-small);color:var(--muted);">
             ${ps.length} phone${ps.length === 1 ? '' : 's'} · ${rented} out
@@ -3496,7 +3502,7 @@ function openPoolsModal() {
   };
 
   showDynamicModal(`
-    <div class="modal-title">🏊 Pools</div>
+    <div class="modal-title">📶 Pools</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
       One carrier plan shared by several lines. Add the pool here, pick it on each phone
       (✏️ Edit Phone → Pool dropdown), and set the activation window once — every phone in the pool
@@ -3515,7 +3521,7 @@ function openPoolsModal() {
       </div>
     </div>
     ${names.length ? names.map(poolCard).join('')
-      : `<div class="empty-state"><div class="emoji">🏊</div><p>No pools yet.</p><small>Add the first pool above, then pick it on each phone.</small></div>`}
+      : `<div class="empty-state"><div class="emoji">📶</div><p>No pools yet.</p><small>Add the first pool above, then pick it on each phone.</small></div>`}
     ${unpooled ? `<div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">${unpooled} USA phone${unpooled === 1 ? '' : 's'} have no pool yet — open ✏️ Edit Phone to assign one.</div>` : ''}
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
   `);
@@ -3619,7 +3625,7 @@ function openManageRentalModal(rentalId) {
           every time. A deliberate second line reads the same at both widths. */''}
     <div class="modal-title">⚙ Manage Rental<span class="kc-title-device">${rentalDeviceChip(r)}</span></div>
     <div style="color:var(--muted);font-size:var(--fs-body);margin-bottom:16px;">
-      Customer: <strong style="color:var(--text);">${escName(r.customerName)}</strong>
+      Customer: <strong style="color:var(--text);">${custNameLink(r.customerId, escName(r.customerName))}</strong>
     </div>
     <div class="form-grid">
       <div class="form-group">
@@ -5753,6 +5759,15 @@ async function applyElidCreate() {
   }
 }
 
+// #8 — a customer's name on any card is a doorway to their customer card,
+// not dead text. Wrap the rendered name wherever the record carries the
+// customer id; records without one (walk-ins, unlinked imports) stay plain.
+function custNameLink(customerId, html) {
+  if (!customerId || customerId === 'walkin') return html;
+  return `<a href="#" style="color:inherit;text-decoration:underline dotted;text-underline-offset:3px;" title="Open customer card"
+    onclick="event.preventDefault();event.stopPropagation();openCustomerById('${escJs(String(customerId))}')">${html}</a>`;
+}
+
 // Open a customer's card by id from anywhere (e.g. the duplicate scanner).
 function openCustomerById(id) {
   closeDynamicModal();
@@ -6314,7 +6329,7 @@ function openRentalSmsModal(rentalId) {
   if (!r) return;
   const waC = customers.find(x => x.id === r.customerId) || { phone: r.customerPhone };
   showDynamicModal(`
-    <div class="modal-title">✉️ Status SMS — ${escName(r.customerName || '')}</div>
+    <div class="modal-title">✉️ Status SMS — ${custNameLink(r.customerId, escName(r.customerName || ''))}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
       Drafted from the rental's current status${r.customerPhone ? ` · 📞 <span class="copy-val">${escHtml(fmtPhone(r.customerPhone))}</span>` : ''}.
       Edit it, then copy — or send it directly once Twilio is connected.</div>
@@ -7837,7 +7852,7 @@ function openManageSimModal(id) {
         </div>`).join('');
 
   showDynamicModal(`
-    <div class="modal-title">💳 ${escHtml(capName(s.customerName))} ${providerBadge(s.provider)}</div>
+    <div class="modal-title">💳 ${custNameLink(s.customerId, escHtml(capName(s.customerName)))} ${providerBadge(s.provider)}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:var(--fs-body);">
       <div style="color:var(--muted);">SIM Number</div><div style="font-weight:600;">${escHtml(s.simNumber||'—')}</div>
       <div style="color:var(--muted);">ICCID</div><div style="font-size:var(--fs-micro);">${escHtml(s.iccid||'—')}</div>
@@ -8981,7 +8996,7 @@ function openEditBookingModal(id) {
   const b = bookings.find(x => x.id === id);
   if (!b) return;
   showDynamicModal(`
-    <div class="modal-title">✈️ ${escName(b.customerName || 'Booking')} — ${escHtml(b.route || '')}</div>
+    <div class="modal-title">✈️ ${custNameLink(b.customerId, escName(b.customerName || 'Booking'))} — ${escHtml(b.route || '')}</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Passenger(s) summary</label>
@@ -9446,7 +9461,7 @@ function openRepairSmsModal(repairId) {
   if (!r) return;
   const c = customers.find(x => x.id === r.customerId);
   showDynamicModal(`
-    <div class="modal-title">✉️ Ready to collect — ${escName(r.customerName || '')}</div>
+    <div class="modal-title">✉️ Ready to collect — ${custNameLink(r.customerId, escName(r.customerName || ''))}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Edit it, then ${WHATSAPP_ENABLED ? 'copy or open WhatsApp' : 'copy it into your messages'} — <strong>nothing is sent</strong> from here.</div>
     <textarea class="form-input" id="rpsmsText" rows="4" style="font-family:inherit;">${escHtml(buildRepairSms(r))}</textarea>
     <div class="modal-actions">
@@ -9480,7 +9495,7 @@ function openCollectRepairModal(id) {
   const r = repairs.find(x => x.id === id);
   if (!r) return;
   showDynamicModal(`
-    <div class="modal-title">🔧 Collect repair — ${escName(r.customerName || '')}</div>
+    <div class="modal-title">🔧 Collect repair — ${custNameLink(r.customerId, escName(r.customerName || ''))}</div>
     <div style="font-size:var(--fs-ui);margin-bottom:12px;">${escHtml(r.device || 'device')} · total <strong>${fmtGbp((r.total || 0))}</strong></div>
     <div class="form-group">
       <label class="form-label">Payment</label>

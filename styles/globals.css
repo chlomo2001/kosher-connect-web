@@ -275,14 +275,16 @@ body {
   min-height: 100vh;
   display: flex;
   overflow: hidden;
-  user-select: none;
 }
 
-/* The body-wide user-select:none stops app chrome (nav, buttons, labels) from
-   being accidentally highlighted — but real data the counter needs to copy
-   (phone, IMEI, reference, amounts) lives in table cells and copy values, and
-   was unselectable too. Opt those data surfaces back in. */
-td, th, .copy-val, code, pre, [data-selectable] { user-select: text; }
+/* Everything reads as data by default — any text on a card, modal or table
+   can be highlighted and copied (owner request: "all text even in a card
+   should be copiable"). Only the interactive chrome opts OUT, so dragging
+   across the sidebar or double-clicking a button doesn't paint it blue.
+   (This inverts the old body-wide user-select:none + opt-in list, which
+   left card/modal prose unselectable.) */
+.sidebar, .nav-item, button, .btn, .action-btn, summary,
+.modal-x, .kc-fab, .sc-chev { user-select: none; }
 
 /* …and the public pages are documents, not app chrome. /welcome,
    /phone-guide, /portal and /login get read, quoted, and forwarded to a
