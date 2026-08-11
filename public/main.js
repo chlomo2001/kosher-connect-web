@@ -4739,8 +4739,9 @@ function renderCustomersTab() {
         <select class="form-input" style="width:170px;padding:6px 10px;font-size:var(--fs-body);min-height:0;"
           onchange="customerSort=this.value; renderTableRows()">
           <option value="name" ${customerSort==='name'?'selected':''}>Sort: Name A–Z</option>
-          <option value="surname" ${customerSort==='surname'?'selected':''}>Surname A–Z</option>
           <option value="name_desc" ${customerSort==='name_desc'?'selected':''}>Name Z–A</option>
+          <option value="surname" ${customerSort==='surname'?'selected':''}>Surname A–Z</option>
+          <option value="surname_desc" ${customerSort==='surname_desc'?'selected':''}>Surname Z–A</option>
           <option value="owed" ${customerSort==='owed'?'selected':''}>Most owed first</option>
           <option value="recent" ${customerSort==='recent'?'selected':''}>Recently added</option>
           <option value="services" ${customerSort==='services'?'selected':''}>Most services</option>
@@ -4810,8 +4811,9 @@ function sortCustomers(list) {
   const sn = c => ((c.lastName || '').trim() || (c.firstName || '')).toLowerCase();
   const arr = [...list];
   switch (customerSort) {
-    case 'surname':   arr.sort((a, b) => sn(a).localeCompare(sn(b)) || nm(a).localeCompare(nm(b))); break;
-    case 'name_desc': arr.sort((a, b) => nm(b).localeCompare(nm(a))); break;
+    case 'surname':      arr.sort((a, b) => sn(a).localeCompare(sn(b)) || nm(a).localeCompare(nm(b))); break;
+    case 'surname_desc': arr.sort((a, b) => sn(b).localeCompare(sn(a)) || nm(b).localeCompare(nm(a))); break;
+    case 'name_desc':    arr.sort((a, b) => nm(b).localeCompare(nm(a))); break;
     case 'owed':      arr.sort((a, b) => customerOwed(b) - customerOwed(a)); break;
     case 'recent':    arr.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))); break;
     case 'services':  arr.sort((a, b) => customerServiceCount(b) - customerServiceCount(a)); break;
