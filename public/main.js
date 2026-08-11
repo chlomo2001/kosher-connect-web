@@ -2059,6 +2059,13 @@ function calShift(delta) {
   renderRentalsTab();
 }
 
+// One tap back to the current month — after paging ahead to plan a trip,
+// "where am I?" shouldn't cost N clicks of ←.
+function calToday() {
+  calMonth = localISO().slice(0, 7);
+  renderRentalsTab();
+}
+
 function calQuickReserve(phoneId, iso) {
   openNewRentalModal();
   setTimeout(() => {
@@ -2134,13 +2141,15 @@ function availabilityCalendarHtml() {
         <button class="btn btn-outline btn-sm" aria-label="Previous month" onclick="calShift(-1)">←</button>
         <strong style="min-width:150px;text-align:center;">${monthName}</strong>
         <button class="btn btn-outline btn-sm" aria-label="Next month" onclick="calShift(1)">→</button>
-        <span style="margin-left:auto;font-size:var(--fs-micro);color:var(--muted);">
+        ${calMonth !== today.slice(0, 7) ? `<button class="btn btn-outline btn-sm" onclick="calToday()">Today</button>` : ''}
+        <span class="cal-legend">
           <span style="white-space:nowrap;"><span class="cal-key cal-active"></span> out</span>
           <span style="white-space:nowrap;"><span class="cal-key cal-booked"></span> reserved (striped)</span>
           <span style="white-space:nowrap;"><span class="cal-key cal-overdue"></span> overdue (!)</span>
           <span style="white-space:nowrap;"><span class="cal-key" style="background:color-mix(in srgb, var(--sim) 16%, var(--surface));border:1px solid var(--border);"></span> free, pool active</span>
           <span style="white-space:nowrap;"><span class="cal-key cal-shabbat"></span> Shabbos</span>
-          · click a free day to reserve</span>
+          <span style="white-space:nowrap;">· click a free day to reserve</span>
+        </span>
       </div>
       <div class="cal-scroll" style="padding:0 14px 6px;">
         <table class="cal-table">

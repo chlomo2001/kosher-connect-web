@@ -2699,3 +2699,8 @@ td { border-top-color: color-mix(in srgb, var(--border) 55%, transparent); }
 /* Staff-chrome half of the selectable-text inversion (see globals.css):
    navigation and button-like chrome never paints blue on a drag. */
 .sidebar, .nav-item, .btn, .action-btn, .modal-x, .kc-fab, .sc-chev { user-select: none; }
+
+/* Availability legend: chips wrap as whole items, and on a phone the legend
+   takes its own full row under the month pager instead of squeezing beside it. */
+.cal-legend { margin-left: auto; font-size: var(--fs-micro); color: var(--muted); display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; justify-content: flex-end; }
+@media (max-width: 640px) { .cal-legend { flex-basis: 100%; margin-left: 0; justify-content: flex-start; } }
