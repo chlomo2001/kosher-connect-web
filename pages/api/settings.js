@@ -222,6 +222,35 @@ async function handler(req, res) {
         return res.json({ success: true, warnings, list })
       }
 
+      // Void reasons (text CSV) — why a rental was undone (owner #9). Owner-
+      // managed so the shop's own vocabulary ('mistake', 'didn't fly'…) can
+      // grow without a code change. Same sanitising as the provider list.
+      if (table === 'settings' && key === 'void_reasons') {
+        const seen = new Set()
+        const list = []
+        for (const raw of String(values?.textValue || '').split(',')) {
+          const name = raw.replace(/[^\w .'’+\-\/&]/g, '').trim().slice(0, 40).trim()
+          if (!name) continue
+          const k = name.toLowerCase()
+          if (seen.has(k)) continue
+          seen.add(k); list.push(name)
+        }
+        if (!list.length) return res.status(400).json({ success: false, error: 'Keep at least one reason.' })
+        if (list.length > 20) return res.status(400).json({ success: false, error: 'Keep it under 20 reasons.' })
+        const updated = await db.update('settings', `key=eq.void_reasons`, {
+          text_value: list.join(','),
+          updated_at: new Date().toISOString(),
+        })
+        if (!updated.length) {
+          await db.insert('settings', [{
+            key: 'void_reasons',
+            text_value: list.join(','),
+            description: 'Reasons offered when voiding a rental (owner-managed)',
+          }])
+        }
+        return res.json({ success: true, warnings, list })
+      }
+
       // Rental phone pools (JSON). A pool is one carrier plan shared by
       // several lines, activated for a window: [{name, from, till}]. The
       // client mirrors the window onto member phones' poolExpiry — the field

@@ -2226,7 +2226,8 @@ function renderRentalRows() {
   tbody.innerHTML = filtered.map(r => {
     const computedStatus = getComputedStatus(r, today);
     let statusBadge;
-    if      (computedStatus === 'booked')               statusBadge = `<span class="badge" style="background:var(--canvas-cream);color:var(--gold);">📅 Reserved${r.fromDate <= today ? ' — pickup due' : ''}</span>`;
+    if      (r.voided)                                  statusBadge = `<span class="badge" style="background:rgba(148,163,184,0.18);color:var(--muted);" title="${escHtml(r.voided.reason)}${r.voided.note ? ' — ' + escHtml(r.voided.note) : ''}">↩ Voided</span>`;
+    else if (computedStatus === 'booked')               statusBadge = `<span class="badge" style="background:var(--canvas-cream);color:var(--gold);">📅 Reserved${r.fromDate <= today ? ' — pickup due' : ''}</span>`;
     else if (computedStatus === 'active' && r.toDate === today) statusBadge = `<span class="badge badge-sim">Due Today</span>`;
     else if (computedStatus === 'active')               statusBadge = `<span class="badge badge-rental">Active</span>`;
     else if (computedStatus === 'overdue')              statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--danger-ink);">Overdue ⚠️</span>`;
@@ -3118,6 +3119,82 @@ async function startReservation(rentalId) {
   renderRentalsTab();
 }
 
+// ══ VOID RENTAL (owner #9) ══
+// Undo a wrongly-assigned rental WITHOUT deleting it: the record stays, marked
+// voided with a reason, every charge reverses to £0 on the ledger (see
+// bucketTargets in lib/tableStore.js), the phone frees, and the customer's
+// comm log gets an entry — so every happening keeps its why. The reason list
+// is owner-editable in Settings (void_reasons), like the provider list.
+function voidReasons() {
+  const s = pricingConfig?.settings?.find(x => x.key === 'void_reasons');
+  const list = String(s?.textValue || '').split(',').map(x => x.trim()).filter(Boolean);
+  return list.length ? list : ['Mistake', 'Didn’t fly', 'Other'];
+}
+
+function openVoidRentalModal(rentalId) {
+  const r = rentals.find(x => x.id === rentalId);
+  if (!r || r.voided) return;
+  const owed = rentalGrandTotal(r);
+  showDynamicModal(`
+    <div class="modal-title">↩ Void rental — ${escName(r.customerName || '')}</div>
+    <div style="font-size:var(--fs-body);margin-bottom:12px;">
+      ${escHtml(fmtPhone(r.phoneNumber || ''))} · ${fmtDate(r.fromDate)} → ${fmtDate(r.toDate)}<br>
+      Every charge on this rental reverses to £0 (${fmtGbp(owed)} today).
+      ${(r.amountPaid || 0) > 0 ? `<br>⚠️ ${fmtGbp(r.amountPaid)} was already paid — it stays on the wallet as credit to refund or reuse.` : ''}
+      <br>The rental stays on the books marked <strong>voided</strong>, with the reason on the customer's history.
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Reason *</label>
+        <select class="form-input" id="vrReason">
+          ${voidReasons().map(x => `<option value="${escHtml(x)}">${escHtml(x)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+        <input class="form-input" type="text" id="vrNote" placeholder="e.g. meant for his brother">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-primary" style="background:var(--danger-ink);border-color:var(--danger-ink);"
+        onclick="confirmVoidRental('${rentalId}')">↩ Void this rental</button>
+    </div>
+  `);
+}
+
+async function confirmVoidRental(rentalId) {
+  const r = rentals.find(x => x.id === rentalId);
+  if (!r || r.voided) return;
+  const reason = document.getElementById('vrReason')?.value || 'Other';
+  const note = document.getElementById('vrNote')?.value.trim() || '';
+  const original = { price: r.price, lateFee: r.lateFee || 0, lostChargesTotal: r.lostChargesTotal || 0 };
+  r.voided = { reason, note, at: localISO(), original };
+  // Zero the client money fields so every display (balance, debt, dashboards)
+  // agrees with the ledger reversal the server posts from bucketTargets.
+  r.price = 0; r.lateFee = 0; r.lostChargesTotal = 0;
+  r.status = 'returned';
+  const phone = phones.find(p => p.id === r.phoneId);
+  if (phone && phone.currentRental === r.id) {
+    phone.status = 'available'; phone.currentRental = null;
+    savePhones(phones);
+  }
+  const res = await saveRentals(rentals);
+  if (res && res.success === false) {
+    // Save refused — put the record back the way it was.
+    r.price = original.price; r.lateFee = original.lateFee; r.lostChargesTotal = original.lostChargesTotal;
+    r.voided = null;
+    return;
+  }
+  await recordComm(r.customerId, {
+    type: 'note',
+    text: `↩ Rental voided — ${reason}${note ? ` (${note})` : ''} · ${fmtPhone(r.phoneNumber || '')} ${fmtDate(r.fromDate)} → ${fmtDate(r.toDate)} · ${fmtGbp(original.price)} reversed`,
+  }).catch(() => null);
+  closeDynamicModal();
+  renderRentalsTab();
+  toast(`Rental voided (${reason}) — charges reversed.`, 'warning');
+}
+
 // ══ MANAGE PHONES MODAL ══
 function openManagePhonesModal() {
   showDynamicModal(`
@@ -3805,9 +3882,15 @@ function openManageRentalModal(rentalId) {
     ${/* The Charge Gate. Empty and hidden until the Returned toggle goes on —
          a rental still running has nothing to answer for yet. */''}
     <div id="mgGateBox" class="kc-gate" style="display:none;"></div>
-    <div class="modal-actions">
-      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" id="mgSaveBtn" onclick="saveManageRental('${rentalId}')">💾 Save changes</button>
+    <div class="modal-actions" style="justify-content:space-between;">
+      ${r.voided
+        ? `<span style="font-size:var(--fs-small);color:var(--muted);">↩ Voided ${fmtDate(r.voided.at)} — ${escHtml(r.voided.reason)}</span>`
+        : `<button class="btn btn-outline" style="color:var(--danger-ink);border-color:var(--danger-ink);"
+            onclick="openVoidRentalModal('${rentalId}')" title="Undo this rental — wrong person, didn't fly…">↩ Void</button>`}
+      <span style="display:flex;gap:8px;">
+        <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+        <button class="btn btn-primary" id="mgSaveBtn" onclick="saveManageRental('${rentalId}')">💾 Save changes</button>
+      </span>
     </div>
   `);
   // Sign-offs are per Manage session: reopening asks again, because a sign-off
@@ -14145,7 +14228,15 @@ async function renderSettingsTab() {
       </div>
       <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
         Comma-separated. These appear in the <strong>Platform / IVR provider</strong> dropdown when you add a virtual number.
-        Existing numbers keep their provider even if you remove it here.</div>`);
+        Existing numbers keep their provider even if you remove it here.</div>
+      <div style="padding:10px 16px 2px;border-top:1px solid var(--border);font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;">↩ Void reasons</div>
+      <div style="padding:8px 16px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input class="form-input" id="voidReasonsInput" value="${escHtml(voidReasons().join(', '))}"
+          placeholder="Mistake, Didn’t fly, Other…" style="flex:1;min-width:240px;min-height:0;padding:8px 12px;font-size:var(--fs-body);">
+        <button class="btn btn-outline btn-sm" onclick="saveVoidReasons()">💾 Save reasons</button>
+      </div>
+      <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
+        Comma-separated. Offered when a rental is <strong>voided</strong> (↩ in Manage Rental) — every undo keeps its why.</div>`);
 
   // ── Contact Tools reference card — the phone-migration workbench SOP.
   // A directory, not a launcher: a browser can't start a Windows program, so
@@ -15147,6 +15238,18 @@ async function saveHelperTabs() {
     values: { textValue: list.join(',') },
   });
   if (ok) toast('Helper access updated — applies on their next page load.', 'success');
+}
+
+// Void reasons (owner #9). Comma-separated; server sanitises + de-dups.
+async function saveVoidReasons() {
+  const raw = document.getElementById('voidReasonsInput')?.value || '';
+  const list = raw.split(',').map(s => s.trim()).filter(Boolean);
+  if (!list.length) { toast('Keep at least one reason.', 'error'); return; }
+  const ok = await applySettingUpdate({
+    table: 'settings', key: 'void_reasons',
+    values: { textValue: list.join(',') },
+  });
+  if (ok) { toast('Void reasons updated.', 'success'); renderSettingsTab(); }
 }
 
 // IVR / VN provider list (feature #10). Comma-separated; the server sanitises
