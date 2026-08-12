@@ -621,6 +621,24 @@ not been re-checked against the code and may have drifted the same way.
 
 ---
 
+## UX loop — night of 2026-08-12
+
+| Item | Commit | Screens |
+|------|--------|---------|
+| Login privacy/terms links: 24px touch targets (shipped at 13px tall with the OAuth-review row) | ad560a0 | /login |
+| SIM manage modal wears status badges instead of raw lowercase enum; empty Next-DD dash no longer painted success-green; customer card/page drop the dangling "Since —" on imported customers; bookings passenger card hides ✕ on the only passenger; bookings row icon buttons gain aria-labels | ceaa6d3 | SIM Plans, Customers, Tickets & Flights |
+| Harness: elements inside a designed horizontal scroller (welcome mobile chips) no longer reported as "outside viewport" — the false alarm cost tonight's first investigation | 4d7e896 | tooling |
+| Portal speaks the legacy 'out' rental status: Hebrew customers saw raw English "out" in a grey badge and never got the "N days left" line | 446c5a8 | /portal EN+HE |
+| One case for every create button: quick actions, tab primaries, modal titles, palette commands and empty-state copy all say "New rental / New booking / New repair / New customer" (three casings sat on one dashboard row) | 2ce8b3c | Dashboard, all four create flows |
+
+Discovery: full audit-all clean before any fix (overflow ×5 widths, contrast
+both themes, targets, modals ×2 themes, public EN+HE ×3 theme states, dark-rule
+pairing) — so the night's items came from eyeballing screenshots: dashboard +
+bookings at 1280, all 19 modals at 390 dark, portal HE at 390. Verified per
+item: gate (255 ×2 TZ + build) exit 0, harness re-render of the touched screen.
+Owner decisions pending: none new (Hebrew date-direction and legal-page
+translation remain open from 08-07/08-09).
+
 ## UX loop — night of 2026-08-11
 
 | Item | Commit | Screens |
