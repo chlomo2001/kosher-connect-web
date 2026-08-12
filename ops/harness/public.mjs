@@ -258,11 +258,25 @@ if (import.meta.url === `file://${process.argv[1]}`) {
           const rtl = [...root.querySelectorAll('[dir]')].some((el) => el.getAttribute('dir') === 'rtl')
           const stray = []
           const vw = de.clientWidth
+          // An element inside a horizontal scroller (the welcome page's mobile
+          // section chips) is SUPPOSED to sit past the fold — that is what the
+          // scroller is for. Reporting those as stray cried wolf on every run
+          // and sent a real investigation chasing a designed behaviour.
+          const scrollers = new Set()
+          root.querySelectorAll('*').forEach((el) => {
+            const o = getComputedStyle(el).overflowX
+            if ((o === 'auto' || o === 'scroll') && el.scrollWidth > el.clientWidth) scrollers.add(el)
+          })
           root.querySelectorAll('*').forEach((el) => {
             // Decorative layers and the contact-form honeypot are deliberately off
             // screen and are all aria-hidden, so skip those subtrees rather
             // than report known-good as noise.
             if (el.closest('[aria-hidden="true"]')) return
+            let inScroller = false
+            for (let a = el.parentElement; a && a !== root; a = a.parentElement) {
+              if (scrollers.has(a)) { inScroller = true; break }
+            }
+            if (inScroller) return
             const b = el.getBoundingClientRect()
             if (b.width && (b.right - vw > 1 || b.left < -1)) {
               stray.push(el.tagName.toLowerCase() + (el.className ? '.' + String(el.className).toString().trim().split(/\s+/)[0] : ''))
