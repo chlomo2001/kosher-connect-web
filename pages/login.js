@@ -140,7 +140,7 @@ export default function Login({ supabaseUrl, googleEnabled }) {
               )}
             </>
           )}
-          <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', marginTop: 16 }}>
+          <div className="login-legal" style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', marginTop: 16 }}>
             <a href="https://kosher-connect.com/privacy" style={{ color: 'inherit' }}>Privacy policy</a>
             {' · '}
             <a href="https://kosher-connect.com/terms" style={{ color: 'inherit' }}>Terms of service</a>

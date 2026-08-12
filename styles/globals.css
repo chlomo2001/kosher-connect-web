@@ -496,6 +496,11 @@ input[type="checkbox"], input[type="radio"] {
      inside a sentence and 2.5.8 exempts it. Locating the real container is
      what last night's guessed selector failed to do. */
   .w-footer-bottom a { display: inline-flex; align-items: center; min-height: 24px; }
+  /* The login page's privacy/terms row (added for the Google OAuth review)
+     shipped as two 13px-tall links standing on their own line — the exact
+     shape 2.5.8's inline exemption does not cover. Measured 76×13 / 89×13 by
+     `node ops/harness/public.mjs --targets`. */
+  .login-legal a { display: inline-flex; align-items: center; min-height: 24px; }
 }
 
 /* ─── TOAST ─── */
