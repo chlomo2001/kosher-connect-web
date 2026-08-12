@@ -2192,8 +2192,52 @@ function renderRentalsTab() {
 
 let rentalView = 'list';
 let calMonth = null; // 'YYYY-MM'; defaults to the current month
+// Which calendar the grid counts in. The DATA is always Gregorian — every
+// rental, pool window and renewal is stored as an ISO date — so the Hebrew
+// view changes only which days are on screen and what the columns are called.
+let calSystem = 'gregorian';   // 'gregorian' | 'hebrew'
+let calHebAnchor = null;       // an ISO date inside the shown Hebrew month
+
+// Every Gregorian date in the Hebrew month containing `anchorIso`. Walked a
+// day at a time from the platform's own Hebrew calendar rather than computed,
+// so leap years, Adar I/II and 29/30-day months are the browser's problem and
+// not a table of ours to get wrong.
+function hebrewMonthDays(anchorIso) {
+  const at = new Date((anchorIso || localISO()) + 'T12:00:00');
+  const cur = new Date(at);
+  let guard = 0;
+  while (hebrewParts(cur).day !== 1 && guard++ < 40) cur.setDate(cur.getDate() - 1);
+  const first = hebrewParts(cur);
+  const days = [];
+  guard = 0;
+  while (guard++ < 40) {
+    const hp = hebrewParts(cur);
+    if (hp.month !== first.month || hp.year !== first.year) break;
+    days.push({ iso: localISO(cur), dObj: new Date(cur), hp });
+    cur.setDate(cur.getDate() + 1);
+  }
+  return { days, month: first.month, year: first.year };
+}
+
+function calToggleSystem() {
+  calSystem = calSystem === 'hebrew' ? 'gregorian' : 'hebrew';
+  // Land on the month holding the day already on screen, so the toggle keeps
+  // your place instead of jumping to today.
+  if (calSystem === 'hebrew') calHebAnchor = calHebAnchor || `${calMonth || localISO().slice(0, 7)}-15`;
+  else if (calHebAnchor) calMonth = calHebAnchor.slice(0, 7);
+  renderRentalsTab();
+}
 
 function calShift(delta) {
+  if (calSystem === 'hebrew') {
+    const { days } = hebrewMonthDays(calHebAnchor);
+    // One day either side of this Hebrew month lands inside the next one.
+    const edge = new Date((delta < 0 ? days[0].iso : days[days.length - 1].iso) + 'T12:00:00');
+    edge.setDate(edge.getDate() + (delta < 0 ? -1 : 1));
+    calHebAnchor = localISO(edge);
+    renderRentalsTab();
+    return;
+  }
   const [y, m] = (calMonth || localISO().slice(0, 7)).split('-').map(Number);
   const d = new Date(y, m - 1 + delta, 1);
   calMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -2204,6 +2248,7 @@ function calShift(delta) {
 // "where am I?" shouldn't cost N clicks of ←.
 function calToday() {
   calMonth = localISO().slice(0, 7);
+  calHebAnchor = localISO();
   renderRentalsTab();
 }
 
@@ -2239,35 +2284,59 @@ function availabilityCalendarHtml() {
   // inventory table, so the three views can never disagree about a match.
   const rowPhones = phonesMatchingSearch();
 
+  // The columns, whichever calendar is counting them. Everything below reads
+  // this list, so the grid, the header and the empty state can never disagree
+  // about how many days are on screen.
+  const heb = calSystem === 'hebrew' ? hebrewMonthDays(calHebAnchor) : null;
+  const days = heb
+    ? heb.days.map(x => ({
+        iso: x.iso, dObj: x.dObj,
+        // A Hebrew month crosses a Gregorian one, so the small line has to
+        // carry the date, not just the day number.
+        en: `${x.dObj.getDate()}/${x.dObj.getMonth() + 1}`,
+        hebLabel: numToHebrew(x.hp.day), roshChodesh: x.hp.day === 1,
+      }))
+    : Array.from({ length: daysInMonth }, (_, i) => {
+        const dObj = new Date(y, m - 1, i + 1);
+        const hp = hebrewParts(dObj);
+        return {
+          iso: iso(i + 1), dObj, en: String(i + 1),
+          // On Rosh Chodesh the column names the month instead of printing א׳:
+          // in a 22px column the month is the useful half, and the day is 1
+          // by definition.
+          hebLabel: hp.day === 1 ? hp.month : numToHebrew(hp.day),
+          roshChodesh: hp.day === 1,
+        };
+      });
+
+  // In the Hebrew view the sub-line carries the Gregorian dates it spans,
+  // since that is what every other screen in the app is dated in.
+  const gregSpan = days.length
+    ? `${fmtDate(days[0].iso)} – ${fmtDate(days[days.length - 1].iso)}`
+    : '';
+
   // Yom Tov gets the same "not just another weekday" treatment Shabbos
   // already had — the shop's actual off-calendar is Shabbos AND yom tov, not
   // Saturdays alone, and staff scanning the grid need both landmarks.
-  const dayHead = Array.from({ length: daysInMonth }, (_, i) => {
-    const d = i + 1;
-    const dObj = new Date(y, m - 1, d);
+  const dayHead = days.map((day) => {
+    const dObj = day.dObj;
     const dow = dObj.getDay();
-    const dIso = iso(d);
+    const dIso = day.iso;
     const yomTovName = DIASPORA_HOLIDAYS.get(dIso);
     const titleParts = [];
     if (dow === 6) titleParts.push('Shabbos');
     if (yomTovName) titleParts.push(yomTovName);
     const title = titleParts.length ? ` title="${escHtml(titleParts.join(' · '))}"` : '';
     const ariaLabel = titleParts.length ? ` aria-label="${fmtDate(dIso)} — ${escHtml(titleParts.join(' · '))}"` : '';
-    // On Rosh Chodesh the Hebrew day resets to א׳ — say which month started,
-    // otherwise the second half of the row is unattributable.
-    const hp = hebrewParts(dObj);
-    // On Rosh Chodesh the column names the month instead of printing א׳: in a
-    // 22px column the month is the useful half, and the day is 1 by definition.
-    const hebLabel = hp.day === 1 ? hp.month : numToHebrew(hp.day);
-    return `<th scope="col" class="cal-day${dow === 6 ? ' cal-shabbat' : yomTovName ? ' cal-yomtov' : ''}${dIso === today ? ' cal-today' : ''}${hp.day === 1 ? ' cal-roshchodesh' : ''}"${title}${ariaLabel}>` +
-      `<span class="cal-day-en">${d}</span><span class="cal-day-heb" aria-hidden="true">${escHtml(hebLabel)}</span></th>`;
+    return `<th scope="col" class="cal-day${dow === 6 ? ' cal-shabbat' : yomTovName ? ' cal-yomtov' : ''}${dIso === today ? ' cal-today' : ''}${day.roshChodesh ? ' cal-roshchodesh' : ''}"${title}${ariaLabel}>` +
+      `<span class="cal-day-en">${escHtml(day.en)}</span><span class="cal-day-heb" aria-hidden="true">${escHtml(day.hebLabel)}</span></th>`;
   }).join('');
 
   const rows = rowPhones.map(p => {
-    const cells = Array.from({ length: daysInMonth }, (_, i) => {
-      const dIso = iso(i + 1);
+    const cells = days.map((day) => {
+      const dIso = day.iso;
       const hit = (blocks.get(p.id) || []).find(b => b.r.fromDate <= dIso && b.end >= dIso);
-      const dow = new Date(y, m - 1, i + 1).getDay();
+      const dow = day.dObj.getDay();
       const yomTovName = DIASPORA_HOLIDAYS.get(dIso);
       if (!hit) {
         // #5 — teal wash while the phone's pool window still covers this day,
@@ -2305,10 +2374,20 @@ function availabilityCalendarHtml() {
     <div class="table-card" style="margin-bottom:20px;padding-bottom:10px;">
       <div style="display:flex;align-items:center;gap:12px;padding:12px 14px 4px;flex-wrap:wrap;">
         <button class="btn btn-outline btn-sm" aria-label="Previous month" onclick="calShift(-1)">←</button>
-        <strong style="min-width:150px;text-align:center;">${monthName}${hebMonthName
-          ? `<span class="heb" style="display:block;font-size:var(--fs-small);font-weight:600;color:var(--muted);">${escHtml(hebMonthName)}</span>` : ''}</strong>
+        <strong style="min-width:170px;text-align:center;">${heb
+          ? `<span class="heb">${escHtml(heb.month)} ${escHtml(numToHebrew(heb.year))}</span>
+             <span style="display:block;font-size:var(--fs-small);font-weight:600;color:var(--muted);">${escHtml(gregSpan)}</span>`
+          : `${monthName}${hebMonthName
+              ? `<span class="heb" style="display:block;font-size:var(--fs-small);font-weight:600;color:var(--muted);">${escHtml(hebMonthName)}</span>` : ''}`}</strong>
         <button class="btn btn-outline btn-sm" aria-label="Next month" onclick="calShift(1)">→</button>
-        ${calMonth !== today.slice(0, 7) ? `<button class="btn btn-outline btn-sm" onclick="calToday()">Today</button>` : ''}
+        ${(heb ? !days.some(d => d.iso === today) : calMonth !== today.slice(0, 7))
+          ? `<button class="btn btn-outline btn-sm" onclick="calToday()">Today</button>` : ''}
+        ${/* Counting in Hebrew months is the natural frame for a customer who
+              books "from Rosh Chodesh Elul" — but the fleet's data is
+              Gregorian, so this switches the COLUMNS, never the dates. */''}
+        <button class="btn btn-outline btn-sm" onclick="calToggleSystem()"
+          title="${heb ? 'Show a Gregorian month instead' : 'Show a Hebrew month instead — א׳ to כ״ט of one Hebrew month'}"
+          aria-pressed="${heb ? 'true' : 'false'}">${heb ? '📅 Gregorian months' : '🕎 Hebrew months'}</button>
         <span class="cal-legend">
           <span style="white-space:nowrap;"><span class="cal-key cal-active"></span> out</span>
           <span style="white-space:nowrap;"><span class="cal-key cal-booked"></span> reserved (striped)</span>
@@ -2322,7 +2401,7 @@ function availabilityCalendarHtml() {
       <div class="cal-scroll" style="padding:0 14px 6px;">
         <table class="cal-table">
           <thead><tr><th class="cal-phone">Phone</th>${dayHead}</tr></thead>
-          <tbody>${rows.length ? rows : `<tr><td colspan="${daysInMonth + 1}" style="color:var(--muted);padding:14px;">${term ? 'No phone matches that search.' : 'No phones in the fleet yet.'}</td></tr>`}</tbody>
+          <tbody>${rows.length ? rows : `<tr><td colspan="${days.length + 1}" style="color:var(--muted);padding:14px;">${term ? 'No phone matches that search.' : 'No phones in the fleet yet.'}</td></tr>`}</tbody>
         </table>
       </div>
     </div>`;
