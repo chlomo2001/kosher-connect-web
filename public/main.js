@@ -648,12 +648,12 @@ function applyTabVisibility() {
 // topbar's context primary button all read this map, so a rename happens once.
 const TAB_META = {
   dashboard: { label: 'Dashboard',         title: 'Business <span>Dashboard</span>',    render: () => renderDashboardTab(), search: false },
-  customers: { label: 'Customers',         title: 'Customer <span>Management</span>',   render: () => renderCustomersTab(), search: true,  primary: { label: '+ New Customer', run: () => openAddModal() } },
-  rentals:   { label: 'Phone Rentals',     title: 'Phone <span>Rentals</span>',         render: () => renderRentalsTab(),   search: false, primary: { label: '+ New Rental',   run: () => openNewRentalModal() } },
+  customers: { label: 'Customers',         title: 'Customer <span>Management</span>',   render: () => renderCustomersTab(), search: true,  primary: { label: '+ New customer', run: () => openAddModal() } },
+  rentals:   { label: 'Phone Rentals',     title: 'Phone <span>Rentals</span>',         render: () => renderRentalsTab(),   search: false, primary: { label: '+ New rental',   run: () => openNewRentalModal() } },
   sim:       { label: 'SIM Plans',         title: 'SIM <span>Plans</span>',             render: () => renderSimsTab(),      search: false, primary: { label: '+ New SIM Plan', run: () => openAddSimModal() } },
-  bookings:  { label: 'Tickets & Flights', title: 'Tickets <span>&amp; Flights</span>', render: () => renderBookingsTab(),  search: false, primary: { label: '+ New Booking',  run: () => openNewBookingModal() } },
+  bookings:  { label: 'Tickets & Flights', title: 'Tickets <span>&amp; Flights</span>', render: () => renderBookingsTab(),  search: false, primary: { label: '+ New booking',  run: () => openNewBookingModal() } },
   wallet:    { label: 'Wallet',            title: 'Wallet <span>&amp; Ledger</span>',   render: () => renderWalletTab(),    search: false },
-  repairs:   { label: 'Repairs',           title: 'Phone <span>Repairs</span>',         render: () => renderRepairsTab(),   search: false, primary: { label: '+ New Repair',   run: () => openNewRepairModal() } },
+  repairs:   { label: 'Repairs',           title: 'Phone <span>Repairs</span>',         render: () => renderRepairsTab(),   search: false, primary: { label: '+ New repair',   run: () => openNewRepairModal() } },
   services:  { label: 'Online & Print',    title: 'Online <span>&amp; Print</span>',    render: () => renderServicesTab(),  search: false, primary: { label: '+ New Service',  run: () => openNewServiceModal() } },
   shop:      { label: 'Shop',              title: 'Shop <span>&amp; Stock</span>',      render: () => renderShopTab(),      search: false },
   koltorah:  { label: 'Kol Torah',         title: 'Kol <span>Torah</span>',             render: () => renderKolTorahTab(),  search: false, primary: { label: '+ New Job',      run: () => ktFocusNewJob() } },
@@ -2060,7 +2060,7 @@ function renderRentalsTab() {
     </div>
 
     <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-      <button class="btn btn-primary" onclick="openNewRentalModal()">📱 New Rental</button>
+      <button class="btn btn-primary" onclick="openNewRentalModal()">📱 New rental</button>
       <button class="btn btn-outline" onclick="openManagePhonesModal()">⚙️ Manage phones</button>
       <button class="btn btn-outline" onclick="openPoolsModal()">📶 Pools</button>
       <button class="btn ${rentalView === 'calendar' ? 'btn-primary' : 'btn-outline'}"
@@ -2354,7 +2354,7 @@ function renderRentalRows() {
     const narrowed = rentals.length > 0;
     tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="emoji">📱</div>
       <p>${narrowed ? 'No rentals match this view.' : 'No rentals yet.'}</p>
-      <small>${narrowed ? '' : 'Click "New Rental" to get started.'}</small>
+      <small>${narrowed ? '' : 'Click "New rental" to get started.'}</small>
       ${narrowed ? kcClearFiltersBtn('rentals') : ''}</div></td></tr>`;
     rentalVisibleIds = [];
     syncRentalSelUi();
@@ -2689,7 +2689,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
   const availablePhoneOptions = phoneOptionsFor(null, null);
 
   showDynamicModal(`
-    <div class="modal-title">📱 New Rental</div>
+    <div class="modal-title">📱 New rental</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
@@ -3710,7 +3710,7 @@ function openEditPhoneModal(phoneId) {
       <div class="form-group form-full">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--fs-body);">
           <input type="checkbox" id="epMaint" ${p.maintenance ? 'checked' : ''} style="accent-color:var(--gold);">
-          <span>🔧 Under maintenance — hidden from New Rental until cleared</span>
+          <span>🔧 Under maintenance — hidden from New rental until cleared</span>
         </label>
         <input class="form-input" id="epMaintNote" type="text" value="${escHtml(p.maintenanceNote || '')}"
           placeholder="Why? e.g. cracked screen, battery on order (optional)" style="margin-top:6px;">
@@ -3875,7 +3875,7 @@ function openPoolsModal() {
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
       One carrier plan shared by several lines. Add the pool here, pick it on each phone
       (✏️ Edit Phone → Pool dropdown), and set the activation window once — every phone in the pool
-      carries it, New Rental prefers already-active pool phones (no activation fee), and it warns
+      carries it, New rental prefers already-active pool phones (no activation fee), and it warns
       when a pool would run out mid-trip.
     </div>
     <div class="table-card" style="margin-bottom:12px;">
@@ -4953,7 +4953,7 @@ function renderTableRows() {
         <div class="empty-state">
           <div class="emoji">👥</div>
           <p>${searchTerm ? 'No customers match your search.' : 'No customers yet.'}</p>
-          <small>${searchTerm ? '' : 'Click "+ New Customer" to add your first customer.'}</small>
+          <small>${searchTerm ? '' : 'Click "+ New customer" to add your first customer.'}</small>
         </div>
       </td></tr>`;
     return;
@@ -7741,7 +7741,7 @@ function setupModal() {
 
 function openAddModal() {
   clearModal();
-  document.getElementById('modalTitle').textContent = '➕ Add New Customer';
+  document.getElementById('modalTitle').textContent = '➕ Add new customer';
   document.getElementById('editId').value = '';
   document.getElementById('btnSaveCustomer').textContent = 'Save Customer';
   showModal();
@@ -9044,7 +9044,7 @@ function renderBookingsTab() {
   const rows = loadFailed.bookings
     ? `<tr><td colspan="10">${errorHtml('Couldn’t load your bookings')}</td></tr>`
     : bkShown.length === 0
-    ? `<tr><td colspan="10"><div class="empty-state"><div class="emoji">✈️</div><p>${bookings.length ? 'No bookings match this filter.' : 'No bookings yet.'}</p><small>${bookings.length ? 'Change the filter above.' : 'Click "New Booking" to add the first one.'}</small>${kcClearFiltersBtn('bookings')}</div></td></tr>`
+    ? `<tr><td colspan="10"><div class="empty-state"><div class="emoji">✈️</div><p>${bookings.length ? 'No bookings match this filter.' : 'No bookings yet.'}</p><small>${bookings.length ? 'Change the filter above.' : 'Click "New booking" to add the first one.'}</small>${kcClearFiltersBtn('bookings')}</div></td></tr>`
     : bkShown.map(b => `
       <tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a,input'))openEditBookingModal('${escHtml(b.id)}')" title="Open booking">
         <td onclick="event.stopPropagation()">
@@ -9941,7 +9941,7 @@ async function renderRepairsTab() {
   const shown = kcViewApply('repairs', repairs);
   const emptyMsg = repairs.length ? 'No repairs match this filter.' : 'No repairs yet.';
   const rows = shown.length === 0
-    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔧</div><p>${emptyMsg}</p><small>${repairs.length ? 'Change the filter above.' : 'Click "New Repair" to open the first ticket.'}</small>${kcClearFiltersBtn('repairs')}</div></td></tr>`
+    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔧</div><p>${emptyMsg}</p><small>${repairs.length ? 'Change the filter above.' : 'Click "New repair" to open the first ticket.'}</small>${kcClearFiltersBtn('repairs')}</div></td></tr>`
     : shown.map(r => `
       <tr>
         <td><div class="customer-name">${escName(r.customerName || '—')}</div></td>
@@ -9995,7 +9995,7 @@ function openNewRepairModal(preselectCustomerId = null) {
       <strong class="rpPriceLbl">${fmtGbp(m.price)}</strong>
     </label>`).join('');
   showDynamicModal(`
-    <div class="modal-title">🔧 New Repair</div>
+    <div class="modal-title">🔧 New repair</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
@@ -12738,10 +12738,10 @@ async function assistantBuildAction(plan) {
 
 const PALETTE_COMMANDS = [
   // ── Create ──
-  { icon: '📱', label: 'New Rental', sub: 'create', run: () => openNewRentalModal() },
-  { icon: '✈️', label: 'New Booking', sub: 'create', run: () => openNewBookingModal() },
-  { icon: '🔧', label: 'New Repair', sub: 'create', run: async () => { repairMenu = await window.api.getServiceMenu('repair'); openNewRepairModal(); } },
-  { icon: '👤', label: 'New Customer', sub: 'create', run: () => goToTab('customers', {}) || setTimeout(() => document.getElementById('btnNewCustomer')?.click(), 120) },
+  { icon: '📱', label: 'New rental', sub: 'create', run: () => openNewRentalModal() },
+  { icon: '✈️', label: 'New booking', sub: 'create', run: () => openNewBookingModal() },
+  { icon: '🔧', label: 'New repair', sub: 'create', run: async () => { repairMenu = await window.api.getServiceMenu('repair'); openNewRepairModal(); } },
+  { icon: '👤', label: 'New customer', sub: 'create', run: () => goToTab('customers', {}) || setTimeout(() => document.getElementById('btnNewCustomer')?.click(), 120) },
   { icon: '📶', label: 'New SIM plan', sub: 'create', run: () => openOnTab('sim', openSimFormModal) },
   { icon: '☎️', label: 'New Virtual Number', sub: 'create', run: () => openOnTab('virtual', openNewVNModal) },
   { icon: '🖨️', label: 'Charge a Service', sub: 'create', run: () => openOnTab('services', openNewServiceModal) },
@@ -14005,9 +14005,9 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
       <div class="dash-actions">
         <button class="btn btn-outline" onclick="renderDashboardTab()" title="Reload today's money & tasks">↻ Refresh</button>
         ${(!currentStaff || currentStaff.role === 'owner') ? `<button class="btn btn-outline" onclick="openBusinessSummary()" title="Revenue by service — this week & month">📊 Summary</button>` : ''}
-        <button class="btn btn-outline" onclick="openNewRentalModal()">📱 New Rental</button>
+        <button class="btn btn-outline" onclick="openNewRentalModal()">📱 New rental</button>
         <button class="btn btn-outline" onclick="openNewBookingModal()">✈️ New booking</button>
-        <button class="btn btn-outline" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal()})()">🔧 New Repair</button>
+        <button class="btn btn-outline" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal()})()">🔧 New repair</button>
         <button class="btn btn-outline" onclick="document.querySelector('[data-tab=customers]').click();setTimeout(()=>document.getElementById('btnNewCustomer')?.click(),100)">👤 New customer</button>
       </div>
     </div>
