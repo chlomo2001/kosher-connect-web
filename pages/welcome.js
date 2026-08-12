@@ -657,8 +657,12 @@ export default function Welcome() {
             here — what the app does and what Google sign-in data is used for —
             not only the business. Keep this section: removing it re-fails the
             "homepage does not explain the purpose of your app" check. */}
+        {/* Deliberately NOT .sk-reveal: the scroll-reveal renders unscrolled
+            content at opacity 0, and Google's homepage verifier (like our own
+            harness) loads without scrolling — an invisible purpose statement
+            fails the check exactly like a missing one. */}
         <section className="sk-appinfo" id="app">
-          <div className="sk-wrap sk-reveal">
+          <div className="sk-wrap">
             <span className="sk-eyebrow">{t.appEyebrow}</span>
             <h2>{t.appTitle}</h2>
             <p>{t.appBody1}</p>
