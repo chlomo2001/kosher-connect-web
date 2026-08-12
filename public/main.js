@@ -1064,6 +1064,13 @@ function numToHebrew(n) {
   const tens  = ['','י','כ','ל','מ','נ','ס','ע','פ','צ'];
   const hunds = ['','ק','ר','ש','ת','תק','תר','תש','תת','תתק'];
   let result = '';
+  // Hebrew YEARS arrive as 5786 and are written without the millennium —
+  // תשפ״ו, not ה׳תשפ״ו — the way every calendar and every שטר writes them.
+  // Without this the hundreds index ran off the end of the table and the
+  // whole 700 vanished: 5786 printed as פ״ו, on the calendar AND on every
+  // rental date field. Day numbers (1–30) are untouched.
+  n = Math.round(Number(n) || 0);
+  if (n >= 1000) n %= 1000;
   const h = Math.floor(n/100); n %= 100;
   result += hunds[h] || '';
   if (n === 15) return result + 'ט״ו';
@@ -1084,6 +1091,34 @@ function hebrewDayLabel(d) {
     const dayNum = parseInt(parts.find(p => p.type === 'day')?.value || '0');
     return dayNum ? numToHebrew(dayNum) : '';
   } catch (e) { return ''; }
+}
+
+// Day number, month name and Hebrew year for one date.
+function hebrewParts(d) {
+  try {
+    const parts = new Intl.DateTimeFormat('he-IL-u-ca-hebrew', {
+      day: 'numeric', month: 'long', year: 'numeric',
+    }).formatToParts(d);
+    return {
+      day: parseInt(parts.find(p => p.type === 'day')?.value || '0'),
+      month: parts.find(p => p.type === 'month')?.value || '',
+      year: parseInt(parts.find(p => p.type === 'year')?.value || '0'),
+    };
+  } catch (e) { return { day: 0, month: '', year: 0 }; }
+}
+
+// Which Hebrew month(s) a Gregorian month covers — "אב–אלול תשפ״ו". A grid of
+// Hebrew day numbers alone is unreadable across a month boundary: the numbers
+// simply restart at א׳ with nothing saying which month began.
+function hebrewMonthSpan(y, m, daysInMonth) {
+  const first = hebrewParts(new Date(y, m - 1, 1));
+  const last  = hebrewParts(new Date(y, m - 1, daysInMonth));
+  if (!first.month) return '';
+  const years = first.year === last.year
+    ? numToHebrew(first.year)
+    : `${numToHebrew(first.year)}–${numToHebrew(last.year)}`;
+  const months = first.month === last.month ? first.month : `${first.month}–${last.month}`;
+  return `${months} ${years}`;
 }
 
 function showHebrewDate(inputId, labelId) {
@@ -2192,6 +2227,7 @@ function availabilityCalendarHtml() {
   const [y, m] = calMonth.split('-').map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
   const monthName = new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  const hebMonthName = hebrewMonthSpan(y, m, new Date(y, m, 0).getDate());
   const iso = (d) => `${calMonth}-${String(d).padStart(2, '0')}`;
 
   // Precompute each phone's blocking intervals once.
@@ -2217,8 +2253,14 @@ function availabilityCalendarHtml() {
     if (yomTovName) titleParts.push(yomTovName);
     const title = titleParts.length ? ` title="${escHtml(titleParts.join(' · '))}"` : '';
     const ariaLabel = titleParts.length ? ` aria-label="${fmtDate(dIso)} — ${escHtml(titleParts.join(' · '))}"` : '';
-    return `<th scope="col" class="cal-day${dow === 6 ? ' cal-shabbat' : yomTovName ? ' cal-yomtov' : ''}${dIso === today ? ' cal-today' : ''}"${title}${ariaLabel}>` +
-      `<span class="cal-day-en">${d}</span><span class="cal-day-heb" aria-hidden="true">${escHtml(hebrewDayLabel(dObj))}</span></th>`;
+    // On Rosh Chodesh the Hebrew day resets to א׳ — say which month started,
+    // otherwise the second half of the row is unattributable.
+    const hp = hebrewParts(dObj);
+    // On Rosh Chodesh the column names the month instead of printing א׳: in a
+    // 22px column the month is the useful half, and the day is 1 by definition.
+    const hebLabel = hp.day === 1 ? hp.month : numToHebrew(hp.day);
+    return `<th scope="col" class="cal-day${dow === 6 ? ' cal-shabbat' : yomTovName ? ' cal-yomtov' : ''}${dIso === today ? ' cal-today' : ''}${hp.day === 1 ? ' cal-roshchodesh' : ''}"${title}${ariaLabel}>` +
+      `<span class="cal-day-en">${d}</span><span class="cal-day-heb" aria-hidden="true">${escHtml(hebLabel)}</span></th>`;
   }).join('');
 
   const rows = rowPhones.map(p => {
@@ -2263,7 +2305,8 @@ function availabilityCalendarHtml() {
     <div class="table-card" style="margin-bottom:20px;padding-bottom:10px;">
       <div style="display:flex;align-items:center;gap:12px;padding:12px 14px 4px;flex-wrap:wrap;">
         <button class="btn btn-outline btn-sm" aria-label="Previous month" onclick="calShift(-1)">←</button>
-        <strong style="min-width:150px;text-align:center;">${monthName}</strong>
+        <strong style="min-width:150px;text-align:center;">${monthName}${hebMonthName
+          ? `<span class="heb" style="display:block;font-size:var(--fs-small);font-weight:600;color:var(--muted);">${escHtml(hebMonthName)}</span>` : ''}</strong>
         <button class="btn btn-outline btn-sm" aria-label="Next month" onclick="calShift(1)">→</button>
         ${calMonth !== today.slice(0, 7) ? `<button class="btn btn-outline btn-sm" onclick="calToday()">Today</button>` : ''}
         <span class="cal-legend">
@@ -6778,29 +6821,22 @@ function openCustomerById(id) {
 // in this community two records with the same name are as often brothers as
 // they are one man typed twice. Two verdicts: merge into the record you keep,
 // or "not the same", which is remembered so the pair never asks again.
-let dupDismissed = null;   // Set of "idA|idB" keys, loaded from settings
-
-function dupDismissKey(a, b) { return [String(a), String(b)].sort().join('|'); }
-function loadDupDismissed() {
-  if (dupDismissed) return dupDismissed;
-  const raw = pricingConfig?.settings?.find(x => x.key === 'dupe_not_same')?.textValue;
-  try { dupDismissed = new Set(JSON.parse(raw || '[]')); } catch { dupDismissed = new Set(); }
-  return dupDismissed;
-}
+// Verdicts live in the database (customer_dupe_dismissals), not in settings —
+// settings is edit-only over pricing keys and refuses to invent one, which is
+// why every dismissal failed the first time this shipped. The scan already
+// filters them out server-side, so the client only has to record one.
 async function dupMarkNotSame(aId, bId) {
-  const set = loadDupDismissed();
-  set.add(dupDismissKey(aId, bId));
-  const ok = await window.api.updateSetting({
-    table: 'settings', key: 'dupe_not_same', values: { textValue: JSON.stringify([...set]) },
-  }).then(r => r.success).catch(() => false);
-  if (!ok) { set.delete(dupDismissKey(aId, bId)); toast('Could not save that.', 'error'); return; }
-  if (pricingConfig?.settings) {
-    const row = pricingConfig.settings.find(x => x.key === 'dupe_not_same');
-    if (row) row.textValue = JSON.stringify([...set]);
-    else pricingConfig.settings.push({ key: 'dupe_not_same', textValue: JSON.stringify([...set]) });
-  }
-  document.getElementById('dupPair_' + dupDismissKey(aId, bId).replace('|', '_'))?.remove();
-  toast('Noted — that pair won\'t come up again.', 'success');
+  const row = document.getElementById('dupPair_' + [aId, bId].sort().join('_'));
+  try {
+    const r = await kcFetch('/api/customers/not-duplicate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ aId, bId }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.success) { toast(j.error || 'Could not save that.', 'error'); return; }
+    row?.remove();
+    toast('Noted — that pair won\'t come up again.', 'success');
+  } catch { toast('Could not reach the server.', 'error'); }
 }
 
 async function openDupScanModal() {
@@ -6813,8 +6849,7 @@ async function openDupScanModal() {
   } catch { const b = document.getElementById('dupBody'); if (b) b.textContent = 'Could not reach the server.'; }
 }
 function renderDupScan(j) {
-  const dismissed = loadDupDismissed();
-  const pairs = (j.pairs || []).filter(p => !dismissed.has(dupDismissKey(p.a.id, p.b.id)));
+  const pairs = j.pairs || [];   // the server already drops dismissed pairs
 
   // What each side actually holds — the whole basis for the judgement.
   const evidence = (x) => {
@@ -6842,7 +6877,7 @@ function renderDupScan(j) {
     </div>`;
 
   const rows = pairs.map(p => `
-    <div id="dupPair_${escHtml(dupDismissKey(p.a.id, p.b.id).replace('|', '_'))}"
+    <div id="dupPair_${escHtml([p.a.id, p.b.id].sort().join('_'))}"
          style="padding:10px 0;border-bottom:1px solid var(--border);">
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;">
         ${side(p.a, p.b)}
@@ -6857,7 +6892,7 @@ function renderDupScan(j) {
   showDynamicModal(`
     <div class="modal-title">👥 Possible duplicate customers</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
-      ${pairs.length} pair${pairs.length === 1 ? '' : 's'} to judge${dismissed.size ? ` · ${dismissed.size} already marked "not the same"` : ''}.
+      ${pairs.length} pair${pairs.length === 1 ? '' : 's'} to judge${j.dismissed ? ` · ${j.dismissed} already marked "not the same"` : ''}.
       Merging moves every SIM, rental, flight, repair and money line onto the record you keep, then removes the other —
       amounts never change. Same name is not proof: brothers share names, so check what each side holds first.
     </div>
@@ -6890,7 +6925,7 @@ async function mergeDupPair(dupId, survivorId) {
     const moved = Object.entries(j.moved || {}).filter(([, n]) => n > 0)
       .map(([k, n]) => `${n} ${k.replace('_', ' ')}`).join(', ');
     toast(`Merged into ${j.kept?.name || 'the kept record'}${moved ? ` — moved ${moved}` : ''}.`, 'success');
-    document.getElementById('dupPair_' + dupDismissKey(dupId, survivorId).replace('|', '_'))?.remove();
+    document.getElementById('dupPair_' + [dupId, survivorId].sort().join('_'))?.remove();
     if (typeof renderTableRows === 'function') renderTableRows();
   } catch { toast('Could not reach the server.', 'error'); }
 }

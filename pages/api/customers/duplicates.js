@@ -58,6 +58,20 @@ async function handler(req, res) {
   const seeds = elidOnly ? all.filter(isImported) : all
   const counts = await activityCounts()
 
+  // Pairs a human has already judged "not the same person" never come back.
+  // Keyed on uuids in the table, on legacy ids in the app — map once.
+  const idRows = await db.select('customers', 'select=id,legacy_id&limit=100000').catch(() => [])
+  const uuidByLegacy = new Map(idRows.map((r) => [String(r.legacy_id), String(r.id)]))
+  const dismissedRows = await db.select('customer_dupe_dismissals',
+    'select=customer_a,customer_b&limit=100000').catch(() => [])
+  const dismissed = new Set(dismissedRows.map((r) => `${r.customer_a}|${r.customer_b}`))
+  const isDismissed = (x, y) => {
+    const ux = uuidByLegacy.get(String(x)) || String(x)
+    const uy = uuidByLegacy.get(String(y)) || String(y)
+    const [lo, hi] = ux < uy ? [ux, uy] : [uy, ux]
+    return dismissed.has(`${lo}|${hi}`)
+  }
+
   const seen = new Set()
   const pairs = []
   for (const a of seeds) {
@@ -66,7 +80,11 @@ async function handler(req, res) {
       const key = [String(a.id), String(b.id)].sort().join('|')
       if (seen.has(key)) continue
       const s = namesSimilar(`${a.firstName} ${a.lastName}`, `${b.firstName} ${b.lastName}`)
-      if (s.match) { seen.add(key); pairs.push({ key, a: brief(a, counts), b: brief(b, counts), score: s.score }) }
+      if (s.match) {
+        seen.add(key)
+        if (isDismissed(a.id, b.id)) continue
+        pairs.push({ key, a: brief(a, counts), b: brief(b, counts), score: s.score })
+      }
     }
   }
   pairs.sort((x, y) => y.score - x.score)
@@ -75,6 +93,7 @@ async function handler(req, res) {
     mode: elidOnly ? 'elid-imported' : 'all',
     seeds: seeds.length,
     count: pairs.length,
+    dismissed: dismissed.size,
     pairs: pairs.slice(0, 200),
   })
 }

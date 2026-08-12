@@ -22,18 +22,32 @@ async function handler(req, res) {
   if (!dupId || !survivorId) return res.status(400).json({ success: false, error: 'Need both records.' })
   if (dupId === survivorId) return res.status(400).json({ success: false, error: 'Those are the same record.' })
 
-  const rows = await db.select('customers',
-    `select=id,first_name,last_name,phone_country_code,phone_number,notes,legacy_extras&id=in.(${dupId},${survivorId})`)
-  const dup = rows.find((r) => String(r.id) === dupId)
-  const keep = rows.find((r) => String(r.id) === survivorId)
+  // The app addresses customers by their LEGACY id ("pl-yitschock-chaim-laifer")
+  // — that is what listCustomers hands the browser — while the tables key on a
+  // uuid. Accept either, and resolve before touching anything: passing a legacy
+  // id straight to a uuid column is a 400 from Postgres, which is exactly how
+  // this failed the first time it met real data.
+  const COLS = 'id,legacy_id,first_name,last_name,phone_country_code,phone_number,notes,legacy_extras'
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const lookup = async (ref) => {
+    const filter = UUID_RE.test(ref)
+      ? `id=eq.${ref}`
+      : `legacy_id=eq.${encodeURIComponent(ref)}`
+    const rows = await db.select('customers', `select=${COLS}&${filter}&limit=1`).catch(() => [])
+    return rows[0] || null
+  }
+  const [dup, keep] = await Promise.all([lookup(dupId), lookup(survivorId)])
   if (!dup || !keep) return res.status(404).json({ success: false, error: 'Customer not found.' })
+  if (String(dup.id) === String(keep.id)) {
+    return res.status(400).json({ success: false, error: 'Those are the same record.' })
+  }
 
   const nameOf = (c) => `${c.first_name || ''} ${c.last_name || ''}`.trim() || '(no name)'
   const dupPhone = `${dup.phone_country_code || ''}${dup.phone_number || ''}`.trim()
 
   let result
   try {
-    result = await db.rpc('merge_customers', { p_dup: dupId, p_survivor: survivorId })
+    result = await db.rpc('merge_customers', { p_dup: dup.id, p_survivor: keep.id })
   } catch (e) {
     // The function raises a plain-English reason for every refusal it makes.
     return res.status(400).json({ success: false, error: String(e?.message || 'Merge failed.').replace(/^.*?:\s*/, '') })
@@ -65,7 +79,7 @@ async function handler(req, res) {
   const extras = { ...(keep.legacy_extras || {}) }
   if (elid.length) { extras.elidUsernames = elid; extras.elidUsername = elid[0] }
 
-  await db.update('customers', `id=eq.${survivorId}`, {
+  await db.update('customers', `id=eq.${keep.id}`, {
     notes: keep.notes ? `${keep.notes}\n${line}` : line,
     legacy_extras: extras,
     updated_at: new Date().toISOString(),
@@ -76,6 +90,7 @@ async function handler(req, res) {
     success: true,
     deletedId: dupId,
     kept: { id: survivorId, name: nameOf(keep), elid },
+
     removed: { name: nameOf(dup), phone: dupPhone },
     moved,
   })
