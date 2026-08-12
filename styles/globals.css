@@ -1119,7 +1119,10 @@ html { scroll-behavior: smooth; }
    grew 23px wider than .pd-main at 320px — every card on the customer's
    account page hanging past the right edge. Identical at every width where
    the content fits, which is why it only showed on the smallest phone. */
-.pd-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+/* stretch (default), not start: side-by-side cards share a row height, so a
+   short card (an empty "Recent activity") sits flush with its taller
+   neighbour instead of leaving the row ragged — owner call, 12 Aug. */
+.pd-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
 .pd-card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-xl); padding: 16px 18px;
