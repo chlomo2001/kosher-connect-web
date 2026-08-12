@@ -76,7 +76,7 @@ const P = {
     reqFailed: 'That didn’t send. Please try again, or just call us.',
     qShort: 'Questions? We’re here —',
     reassure: 'No password needed — we email you a secure one-time sign-in link.',
-    statuses: { active: 'Active', booked: 'Booked', overdue: 'Overdue', returned: 'Returned', renewal_pending: 'Renewal due', cancelled: 'Cancelled', suspended: 'Suspended', Booked: 'Booked', Ticketed: 'Ticket issued', Confirmed: 'Confirmed', Cancelled: 'Cancelled', Completed: 'Completed' },
+    statuses: { active: 'Active', out: 'Active', booked: 'Booked', overdue: 'Overdue', returned: 'Returned', renewal_pending: 'Renewal due', cancelled: 'Cancelled', suspended: 'Suspended', Booked: 'Booked', Ticketed: 'Ticket issued', Confirmed: 'Confirmed', Cancelled: 'Cancelled', Completed: 'Completed' },
     daysLeft: (n) => (n === 0 ? 'returns today' : n === 1 ? 'returns tomorrow' : `${n} days left`),
     subSignedOut: (g) => `${g}! See your rentals, bookings and balance`,
     yourEmail: 'Your email', emailLink: 'Email me a sign-in link', sending: 'Sending…',
@@ -145,7 +145,7 @@ const P = {
     reqFailed: 'הבקשה לא נשלחה. נסו שוב, או פשוט התקשרו אלינו.',
     qShort: 'יש שאלה? אנחנו כאן —',
     reassure: 'בלי סיסמה ובלי הרשמה — שולחים לכם למייל קישור כניסה מאובטח, חד־פעמי.',
-    statuses: { active: 'פעילה', booked: 'שמורה', overdue: 'באיחור', returned: 'הוחזרה', renewal_pending: 'לחידוש', cancelled: 'בוטלה', suspended: 'מושהית', Booked: 'הוזמנה', Ticketed: 'כורטסה', Confirmed: 'מאושרת', Cancelled: 'בוטלה', Completed: 'הושלמה' },
+    statuses: { active: 'פעילה', out: 'פעילה', booked: 'שמורה', overdue: 'באיחור', returned: 'הוחזרה', renewal_pending: 'לחידוש', cancelled: 'בוטלה', suspended: 'מושהית', Booked: 'הוזמנה', Ticketed: 'כורטסה', Confirmed: 'מאושרת', Cancelled: 'בוטלה', Completed: 'הושלמה' },
     daysLeft: (n) => (n === 0 ? 'חוזר היום' : n === 1 ? 'חוזר מחר' : `נותרו ${n} ימים`),
     subSignedOut: (g) => `${g}! כל ההשכרות, ההזמנות והיתרה שלכם — במקום אחד`,
     yourEmail: 'כתובת המייל שלכם', emailLink: 'שלחו לי קישור כניסה', sending: 'שולחים…',
@@ -631,11 +631,12 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     const staffDocs = (docs || []).filter((d) => d.source === 'staff')
     const myUploads = (docs || []).filter((d) => d.source === 'customer')
     const stLabel = (s) => L.statuses[s] || s
-    const stClass = (s) => (s === 'active' || s === 'Ticketed' ? 'p-badge-ok' : s === 'overdue' || s === 'renewal_pending' ? 'p-badge-warn' : 'p-badge-muted')
+    const stClass = (s) => (s === 'active' || s === 'out' || s === 'Ticketed' ? 'p-badge-ok' : s === 'overdue' || s === 'renewal_pending' ? 'p-badge-warn' : 'p-badge-muted')
     // "9 days left" on an active rental — the one number a traveller actually
     // wants from this row. Display-only; silently absent for odd dates.
     const daysLeft = (r) => {
-      if (r.status !== 'active' || !r.toDate) return ''
+      // 'out' is the legacy sheet's word for active — imported rentals carry it.
+      if ((r.status !== 'active' && r.status !== 'out') || !r.toDate) return ''
       const d = new Date(r.toDate)
       if (isNaN(d)) return ''
       const n = Math.ceil((d.getTime() - Date.now()) / 86400000)
