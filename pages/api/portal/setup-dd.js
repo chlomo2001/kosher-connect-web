@@ -37,12 +37,12 @@ export default async function handler(req, res) {
   // Send the customer back to the portal either way; ?dd= drives the message.
   const proto = req.headers['x-forwarded-proto'] || 'https'
   const host = req.headers['x-forwarded-host'] || req.headers.host
-  const base = `${proto}://${host}`
+  const origin = `${proto}://${host}`
   const session = await createDdCheckoutSession({
     customerId: stripeCustomerId,
     appCustomerId: cust.id,
-    successUrl: `${base}/portal?dd=done`,
-    cancelUrl: `${base}/portal?dd=cancelled`,
+    successUrl: `${origin}/portal?dd=done`,
+    cancelUrl: `${origin}/portal?dd=cancelled`,
   })
   return res.json({ success: true, url: session.url })
 }
