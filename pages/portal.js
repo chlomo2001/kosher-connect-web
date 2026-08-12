@@ -38,6 +38,11 @@ const P = {
     saveCardStart: 'Save a card for future payments',
     couldNotStart: 'Could not start.', couldNotLoadForm: 'Could not load the form.',
     couldNotSaveCard: 'Could not save the card.',
+    ddOnFile: '✓ Direct Debit is set up — monthly charges collect from your bank account automatically.',
+    ddStart: 'Set up Direct Debit (bank account)',
+    ddSave: 'Confirm Direct Debit', ddSettingUp: 'Setting up…',
+    ddNote: 'For monthly plans: pays from your bank account, keeps working when a card is replaced, protected by the Direct Debit Guarantee.',
+    couldNotSaveDd: 'Could not set up the Direct Debit.',
     rentals: 'Rentals', noRentals: 'No active rentals.',
     flights: 'Flights', noFlights: 'No upcoming flights.',
     simPlan: (n) => (n === 1 ? 'My SIM plan' : 'My SIM plans'), noSims: 'No SIM plan with us yet.',
@@ -117,6 +122,11 @@ const P = {
     saveCardStart: 'לשמור כרטיס לתשלומים הבאים',
     couldNotStart: 'משהו השתבש. נסו שוב בעוד רגע.', couldNotLoadForm: 'הטופס לא עלה. נסו לרענן את העמוד.',
     couldNotSaveCard: 'הכרטיס לא נשמר. נסו שוב.',
+    ddOnFile: '✓ הוראת קבע פעילה — חיובים חודשיים נגבים מחשבון הבנק אוטומטית.',
+    ddStart: 'להקים הוראת קבע (חשבון בנק)',
+    ddSave: 'אישור הוראת הקבע', ddSettingUp: 'מקימים…',
+    ddNote: 'לחבילות חודשיות: התשלום יורד מחשבון הבנק, ממשיך לעבוד גם כשמחליפים כרטיס, ומוגן במסגרת ה־Direct Debit Guarantee.',
+    couldNotSaveDd: 'הוראת הקבע לא הוקמה. נסו שוב.',
     rentals: 'השכרות', noRentals: 'אין כרגע השכרות פעילות.',
     flights: 'טיסות', noFlights: 'אין טיסות קרובות ביומן.',
     simPlan: (n) => (n === 1 ? 'חבילת הסים שלי' : 'חבילות הסים שלי'), noSims: 'עוד אין חבילת סים אצלנו.',
@@ -258,6 +268,12 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   const [saveMsg, setSaveMsg] = useState('')
   const [cardSaved, setCardSaved] = useState(false)
   const setupRef = useRef(null)
+  // Set up a Direct Debit mandate (Bacs SetupIntent — no charge now)
+  const [ddSetup, setDdSetup] = useState(null)
+  const [ddBusy, setDdBusy] = useState(false)
+  const [ddMsg, setDdMsg] = useState('')
+  const [ddSaved, setDdSaved] = useState(false)
+  const ddRef = useRef(null)
 
   const token = () => (typeof window !== 'undefined' ? sessionStorage.getItem('kc_portal_token') : null)
 
@@ -362,6 +378,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     }
     setAccount(null); setDocs(null); setPay(null); setPaid(false)
     setSaveCard(null); setCardSaved(false); setupRef.current = null
+    setDdSetup(null); setDdSaved(false); ddRef.current = null
   }
 
   const fmtGbp = (v) => `£${(Math.round((Number(v) || 0) * 100) / 100).toFixed(2)}`
@@ -526,6 +543,50 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     if (setupIntent && setupIntent.status === 'succeeded') {
       setCardSaved(true); setSaveCard(null); setupRef.current = null
     } else { setSaveMsg(L.saving); setSaveBusy(false) }
+  }
+
+  // ── Set up a Direct Debit mandate (Bacs — bank account, not a card) ───────
+  // Mirrors the save-card flow; the webhook records the mandate.
+  async function startDd() {
+    setDdMsg(''); setDdBusy(true)
+    try {
+      const r = await fetchT('/api/portal/setup-dd', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({}),
+      })
+      const d = await r.json()
+      if (!d.success || !d.clientSecret) { setDdMsg(d.error || L.couldNotStart); setDdBusy(false); return }
+      setDdSetup({ clientSecret: d.clientSecret, publishableKey: d.publishableKey })
+    } catch { setDdMsg(L.couldNotStart); setDdBusy(false) }
+  }
+  useEffect(() => {
+    if (!ddSetup?.clientSecret) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const Stripe = await loadStripeJs()
+        if (cancelled) return
+        const stripe = Stripe(ddSetup.publishableKey)
+        const elements = stripe.elements({ clientSecret: ddSetup.clientSecret })
+        const el = elements.create('payment')
+        el.on('loaderror', (ev) => { if (!cancelled) setDdMsg(ev?.error?.message || L.couldNotLoadForm) })
+        el.mount('#kc-dd-element')
+        ddRef.current = { stripe, elements }
+        setDdBusy(false)
+      } catch (e) { setDdMsg(e.message || L.couldNotLoadForm); setDdBusy(false) }
+    })()
+    return () => { cancelled = true }
+  }, [ddSetup])
+  async function confirmDd() {
+    if (!ddRef.current) return
+    setDdBusy(true); setDdMsg('')
+    const { stripe, elements } = ddRef.current
+    const { error, setupIntent } = await stripe.confirmSetup({ elements, redirect: 'if_required' })
+    if (error) { setDdMsg(error.message || L.couldNotSaveDd); setDdBusy(false); return }
+    if (setupIntent && setupIntent.status === 'succeeded') {
+      setDdSaved(true); setDdSetup(null); ddRef.current = null
+    } else { setDdMsg(L.ddSettingUp); setDdBusy(false) }
   }
 
   function google() {
@@ -773,6 +834,29 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                     style={{ fontSize: 13, padding: '8px 14px' }}>{saveBusy ? L.starting : L.saveCardStart}</button>
                 )}
                 {saveMsg && <div role="status" className="p-msg">{saveMsg}</div>}
+
+                {/* Direct Debit mandate (DD phase 1) — sits under the card
+                    option; a customer can hold either or both. */}
+                <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--p-line, rgba(128,128,128,.25))' }}>
+                  {(account.ddOnFile || ddSaved) ? (
+                    <div className="p-empty">{L.ddOnFile}</div>
+                  ) : ddSetup ? (
+                    <div>
+                      <div id="kc-dd-element" />
+                      <button className="btn btn-primary" onClick={confirmDd} disabled={ddBusy}
+                        style={{ marginTop: 12, width: '100%', padding: '10px 16px' }}>{ddBusy ? L.ddSettingUp : L.ddSave}</button>
+                      <button className="btn btn-outline" onClick={() => { setDdSetup(null); ddRef.current = null }}
+                        style={{ marginTop: 8, width: '100%', padding: '8px 16px', fontSize: 13 }}>{L.cancel}</button>
+                    </div>
+                  ) : (
+                    <div>
+                      <button className="btn btn-outline" onClick={startDd} disabled={ddBusy}
+                        style={{ fontSize: 13, padding: '8px 14px' }}>{ddBusy ? L.starting : L.ddStart}</button>
+                      <div className="p-msg" style={{ marginTop: 6 }}>{L.ddNote}</div>
+                    </div>
+                  )}
+                  {ddMsg && <div role="status" className="p-msg">{ddMsg}</div>}
+                </div>
               </section>
 
               <section className="pd-card">

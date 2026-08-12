@@ -25,7 +25,7 @@ export default async function handler(req, res) {
 
   const norm = normalizeEmail(user.email)
   const custRows = norm
-    ? await db.select('customers', `select=id,legacy_extras,stripe_pm_id,email_raw&email_normalized=eq.${encodeURIComponent(norm)}`)
+    ? await db.select('customers', `select=id,legacy_extras,stripe_pm_id,stripe_dd_pm_id,dd_mandate_status,email_raw&email_normalized=eq.${encodeURIComponent(norm)}`)
     : []
   // Exact-match guard: when several customers collapse to one normalized email
   // (dots/+ significant outside Gmail), require the verified raw email to match so
@@ -111,6 +111,8 @@ export default async function handler(req, res) {
     sims,
     statement,
     cardOnFile: !!cust.stripe_pm_id,
+    // DD phase 1 — a live Bacs mandate (docs/DD-PLAN-2026-08-12.md).
+    ddOnFile: !!cust.stripe_dd_pm_id && cust.dd_mandate_status === 'active',
     // Bank-transfer matching reference (94% of payments arrive this way).
     payRef: extras.id ? `KC-${extras.id}` : '',
   })

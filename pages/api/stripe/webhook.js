@@ -54,15 +54,40 @@ export default async function handler(req, res) {
     }
   }
 
-  // Explicit "save a card" (no charge): store the payment method on file. This
-  // is the event's ONLY side effect, so a swallowed failure would mark the event
-  // processed with nothing saved. Let it throw: the stripe_events insert below is
-  // skipped, Stripe retries, and the update runs again (idempotent — same value).
+  // Explicit "save a card" / "set up Direct Debit" (no charge): store the
+  // payment method on file. This is the event's ONLY side effect, so a
+  // swallowed failure would mark the event processed with nothing saved. Let it
+  // throw: the stripe_events insert below is skipped, Stripe retries, and the
+  // update runs again (idempotent — same value).
   if (event.type === 'setup_intent.succeeded') {
     const si = event.data?.object || {}
     const appCustomerId = si.metadata?.app_customer_id
     if (appCustomerId && si.payment_method) {
-      await db.update('customers', `id=eq.${appCustomerId}`, { stripe_pm_id: si.payment_method })
+      // A Bacs mandate is a bank account, not a card — it lives in its own
+      // columns (DD phase 1) so stripe_pm_id stays cards-only. A succeeded
+      // Bacs SetupIntent is chargeable, so the mandate records as active.
+      const isBacs = Array.isArray(si.payment_method_types) && si.payment_method_types.includes('bacs_debit')
+      await db.update('customers', `id=eq.${appCustomerId}`, isBacs
+        ? { stripe_dd_pm_id: si.payment_method, dd_mandate_status: 'active' }
+        : { stripe_pm_id: si.payment_method })
+    }
+  }
+
+  // The bank side can revoke a Bacs mandate long after setup (customer cancels
+  // at their bank). Requires 'mandate.updated' in the endpoint's event list —
+  // harmless if it never arrives, but phase 2 must not collect against a
+  // cancelled mandate, so keep the status honest when it does.
+  if (event.type === 'mandate.updated') {
+    const m = event.data?.object || {}
+    const pmId = typeof m.payment_method === 'string' ? m.payment_method : m.payment_method?.id
+    if (pmId && m.status && m.status !== 'active' && m.status !== 'pending') {
+      await db.update('customers', `stripe_dd_pm_id=eq.${encodeURIComponent(pmId)}`, { dd_mandate_status: 'cancelled' })
+    }
+  }
+  if (event.type === 'payment_method.detached') {
+    const pm = event.data?.object || {}
+    if (pm.id && pm.type === 'bacs_debit') {
+      await db.update('customers', `stripe_dd_pm_id=eq.${encodeURIComponent(pm.id)}`, { dd_mandate_status: 'cancelled' })
     }
   }
 
