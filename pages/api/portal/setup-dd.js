@@ -1,11 +1,13 @@
-// Portal "set up Direct Debit" — a Bacs SetupIntent so the customer can store
-// a bank mandate for monthly SIM collections (DD phase 1). Mirrors
-// save-card.js exactly: the mandate is recorded only by the
-// setup_intent.succeeded webhook, and the endpoint is dormant until Stripe
-// keys are set. Collections themselves are phase 2 and are NOT built here.
+// Portal "set up Direct Debit" — a HOSTED Stripe Checkout session (setup
+// mode, bacs_debit) so the customer can store a bank mandate for monthly SIM
+// collections (DD phase 1). Hosted, not an embedded SetupIntent: Stripe
+// refuses direct Bacs mandate creation on standard accounts (see
+// lib/stripe.js createDdCheckoutSession). The mandate is recorded only by the
+// setup_intent.succeeded webhook; the endpoint is dormant until Stripe keys
+// are set. Collections themselves are phase 2 and are NOT built here.
 import { db, tablesMode } from '../../../lib/db.js'
 import { resolvePortalCustomer } from '../../../lib/portal.js'
-import { stripeEnabled, webhookConfigured, keysMatch, publishableKey, getOrCreateCustomer, createDdSetupIntent } from '../../../lib/stripe.js'
+import { stripeEnabled, webhookConfigured, keysMatch, getOrCreateCustomer, createDdCheckoutSession } from '../../../lib/stripe.js'
 
 export default async function handler(req, res) {
   if (process.env.PORTAL_ENABLED !== '1') return res.status(404).json({ success: false, error: 'Not found.' })
@@ -32,6 +34,15 @@ export default async function handler(req, res) {
     await db.update('customers', `id=eq.${cust.id}`, { stripe_customer_id: stripeCustomerId }).catch(() => {})
   }
 
-  const si = await createDdSetupIntent({ customerId: stripeCustomerId, appCustomerId: cust.id })
-  return res.json({ success: true, clientSecret: si.client_secret, publishableKey })
+  // Send the customer back to the portal either way; ?dd= drives the message.
+  const proto = req.headers['x-forwarded-proto'] || 'https'
+  const host = req.headers['x-forwarded-host'] || req.headers.host
+  const base = `${proto}://${host}`
+  const session = await createDdCheckoutSession({
+    customerId: stripeCustomerId,
+    appCustomerId: cust.id,
+    successUrl: `${base}/portal?dd=done`,
+    cancelUrl: `${base}/portal?dd=cancelled`,
+  })
+  return res.json({ success: true, url: session.url })
 }
