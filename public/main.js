@@ -2090,6 +2090,7 @@ function renderRentalsTab() {
         </div>
         <div id="rentalBulkBar" style="display:none;margin:8px 0 0;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary);align-items:center;gap:10px;flex-wrap:wrap;">
           <strong id="rentalBulkCount" style="font-size:var(--fs-body);"></strong>
+          <button class="btn btn-outline btn-sm" style="color:var(--success);border-color:var(--success);" onclick="returnSelectedRentals()">📥 Mark returned</button>
           <button class="btn btn-outline btn-sm" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedRentals()">🗑 Delete selected</button>
           <button class="btn btn-outline btn-sm" onclick="clearRentalSel()">Clear selection</button>
         </div>
@@ -2438,6 +2439,74 @@ function syncRentalSelUi() {
     if (count) count.textContent = `${rentalSelected.size} rental${rentalSelected.size === 1 ? '' : 's'} selected`;
   }
 }
+// Bulk return — the family that brings every phone back at once. Each rental
+// still answers to the charge gate: equipment blockers keep it open, and the
+// only sign-off this dialog can give is "balance agreed", because the owed
+// amounts are printed in the confirm itself. Anything else stays for Manage.
+async function returnSelectedRentals() {
+  const today = localISO();
+  // Only rentals that are actually OUT can come back. A future reservation
+  // ('booked') has never left the shop, so it is silently out of scope here
+  // rather than reported as "unsettled".
+  const picked = rentals.filter(r => rentalSelected.has(r.id) &&
+    (r.status === 'active' || r.status === 'overdue') && !r.voided);
+  if (!picked.length) { toast('Nothing in the selection is out on rental.', 'warning'); return; }
+  // "Mark returned" is the operator asserting everything came back — that IS
+  // the equipment decision, so the draft marks every GIVEN item returned and
+  // the dialog says so in as many words. Anything actually missing must go
+  // through Manage, where it can be priced as lost; a rental already carrying
+  // a 'lost' item is therefore never closed from here.
+  const closable = [], gated = [];
+  for (const r of picked) {
+    const itemStatus = { ...(r.itemStatus || {}) };
+    let hasLost = false;
+    for (const item of MG_UI_ITEMS) {
+      if (!gateWasGiven(r, item)) continue;
+      if (gateItemStatus(r, item) === 'lost') { hasLost = true; continue; }
+      eqKeysFor(item).forEach(k => { itemStatus[k] = 'returned'; });
+    }
+    const draft = { ...r, itemStatus, lateFee: calcLateFeeDays(r) };
+    const g = gateFor(draft, { today });
+    if (!hasLost && !g.blockers.length && g.needsVerification.every(c => c.id === 'balance')) closable.push(draft);
+    else gated.push(r);
+  }
+  if (!closable.length) {
+    toast('None of these can close from here — open each rental to settle lost items or charges first.', 'warning');
+    return;
+  }
+  const line = (d) => {
+    const owed = Math.round((((Number(d.price) || 0) + (Number(d.lateFee) || 0) +
+      (Number(d.lostChargesTotal) || 0) - (Number(d.amountPaid) || 0)) + Number.EPSILON) * 100) / 100;
+    return `<strong>${escHtml(fmtPhone(d.phoneNumber || ''))}</strong> — ${escName(d.customerName || '')}` +
+      (d.lateFee > 0 ? ` · late fee ${fmtGbp(d.lateFee)}` : '') +
+      (owed > 0 ? ` · <strong>${fmtGbp(owed)} stays on account</strong>` : ' · paid in full');
+  };
+  if (!(await kcConfirm({
+    title: `Mark ${closable.length} rental${closable.length === 1 ? '' : 's'} returned?`,
+    body: `Marks the phone, SIM and charger <strong>returned</strong> on each — if anything is missing, close that one in Manage instead.<br><br>` +
+      closable.slice(0, 8).map(line).join('<br>') +
+      (closable.length > 8 ? `<br>+${closable.length - 8} more` : '') +
+      (gated.length ? `<br><br>⛔ ${gated.length} stay${gated.length === 1 ? 's' : ''} open — a lost item or unsettled charge; open each to finish.` : ''),
+    okLabel: `📥 Return ${closable.length}`,
+  }))) return;
+  let phonesTouched = false;
+  for (const d of closable) {
+    const r = rentals.find(x => x.id === d.id);
+    if (!r) continue;
+    r.lateFee = d.lateFee;
+    r.itemStatus = d.itemStatus;
+    r.status = 'returned';
+    const p = phones.find(x => x.id === r.phoneId);
+    if (p && p.currentRental === r.id) { p.status = 'available'; p.currentRental = null; phonesTouched = true; }
+    rentalSelected.delete(r.id);
+  }
+  if (phonesTouched) savePhones(phones);
+  const res = await saveRentals(rentals);
+  renderRentalsTab();
+  if (res && res.success === false) return; // reportSave already warned
+  toast(`${closable.length} returned.${gated.length ? ` ${gated.length} kept open (unsettled).` : ''}`, 'success');
+}
+
 async function deleteSelectedRentals() {
   const picked = rentals.filter(r => rentalSelected.has(r.id));
   if (!picked.length) return;
@@ -2841,6 +2910,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <button class="btn btn-outline" onclick="saveNewRental(true)" title="Save, then reopen prefilled with the same customer and dates — for the family renting several phones">💾 Save + another phone</button>
       <button class="btn btn-primary" onclick="saveNewRental()">💾 Save rental</button>
     </div>
   `);
@@ -3019,7 +3089,7 @@ function rPayFull() {
   if (amt) { amt.value = (rLastTotal || 0).toFixed(2); amt.dataset.touched = '1'; }
 }
 
-async function saveNewRental() {
+async function saveNewRental(addAnother = false) {
   const customerId = document.getElementById('rCustomer').value;
   const phoneId    = document.getElementById('rPhone').value;
   const from       = document.getElementById('rFrom').value;
@@ -3226,6 +3296,17 @@ async function saveNewRental() {
     ? `Reserved for ${customer.firstName} — pickup ${fmtDate(from)}. Press ▶ Start at handover.`
     : `Rental saved! ${fmtGbp(totalPrice)} charged to ${customer.firstName}.${payLine}${extraMsg}`, 'success');
   renderRentalsTab();
+  // Family trip: reopen prefilled — same customer, same dates, next phone.
+  // The multi-phone discount then applies itself from the 3rd phone on.
+  if (addAnother) {
+    openNewRentalModal(customerId);
+    setTimeout(() => {
+      const f = document.getElementById('rFrom'), t = document.getElementById('rTo');
+      if (f) { f.value = from; showHebrewDate('rFrom', 'rFromHeb'); }
+      if (t) { t.value = to; showHebrewDate('rTo', 'rToHeb'); }
+      refreshRentalPhoneOptions(); updateRentalCalc(); nrSetGivenDefaults();
+    }, 80);
+  }
 }
 
 // Post any auto "extra charges" for a freshly-created rental/SIM (their money
@@ -3414,9 +3495,10 @@ function openManagePhonesModal() {
       <div id="pPoolGroup" style="display:contents;">
       <div class="form-group">
         <label class="form-label">Pool (USA)</label>
-        <select class="form-input" id="pPool">
+        <select class="form-input" id="pPool" onchange="poolSelectChanged(this)">
           <option value="">— no pool —</option>
           ${rentalPools().map(pl => `<option value="${escHtml(pl.name)}">${escHtml(pl.name)}${pl.till ? ' · till ' + fmtDate(pl.till) : ''}</option>`).join('')}
+          <option value="__new__">＋ New pool…</option>
         </select>
         <span style="font-size:var(--fs-micro);color:var(--muted);">Add pools in 📶 Pools — the phone adopts the pool's window.</span>
       </div>
@@ -3676,10 +3758,11 @@ function openEditPhoneModal(phoneId) {
       ${p.country === 'USA' ? `
       <div class="form-group">
         <label class="form-label">Pool</label>
-        <select class="form-input" id="epPool">
+        <select class="form-input" id="epPool" onchange="poolSelectChanged(this)">
           <option value="">— no pool —</option>
           ${rentalPools().map(pl => `<option value="${escHtml(pl.name)}" ${p.pool === pl.name ? 'selected' : ''}>${escHtml(pl.name)}${pl.till ? ' · till ' + fmtDate(pl.till) : ''}</option>`).join('')}
           ${p.pool && !rentalPools().some(pl => pl.name === p.pool) ? `<option value="${escHtml(p.pool)}" selected>${escHtml(p.pool)} (not in the pool list)</option>` : ''}
+          <option value="__new__">＋ New pool…</option>
         </select>
       </div>
       <div class="form-group">
@@ -3794,6 +3877,32 @@ function rentalPools() {
     const arr = JSON.parse(s?.textValue || '[]');
     return Array.isArray(arr) ? arr : [];
   } catch { return []; }
+}
+
+// "＋ New pool…" straight from the phone's Pool dropdown — the shop names a
+// pool when the SIMs arrive, which is exactly while adding/editing the phone,
+// not on a separate trip to the Pools manager. Registers the name (window
+// dates stay the Pools manager's job) and selects it.
+async function poolSelectChanged(sel) {
+  if (!sel || sel.value !== '__new__') return;
+  const name = (prompt('Name the new pool (e.g. "Pool 39"):') || '').trim();
+  if (!name) { sel.value = ''; return; }          // cancelled — back to "no pool"
+  const pools = rentalPools();
+  if (pools.some(pl => pl.name.toLowerCase() === name.toLowerCase())) {
+    const existing = pools.find(pl => pl.name.toLowerCase() === name.toLowerCase()).name;
+    sel.value = [...sel.options].some(o => o.value === existing) ? existing : '';
+    toast(`“${existing}” already exists — selected it.`, 'warning');
+    return;
+  }
+  pools.push({ name, from: null, till: null });
+  const ok = await saveRentalPools(pools);
+  if (!ok) { sel.value = ''; return; }             // applySettingUpdate already warned
+  // Put the new name in the list, before the "＋ New pool…" row, and pick it.
+  const opt = document.createElement('option');
+  opt.value = name; opt.textContent = name;
+  sel.insertBefore(opt, sel.querySelector('option[value="__new__"]'));
+  sel.value = name;
+  toast(`Pool “${name}” created. Set its activation window in 📶 Pools.`, 'success');
 }
 
 async function saveRentalPools(pools) {
@@ -12840,11 +12949,29 @@ function paletteSearch(q) {
   for (const p of phones) {
     if (out.length >= 12) break;
     const hay = `${p.number || ''} ${p.imei || ''} ${p.simId || ''}`.replace(/\D/g, '');
-    if ((p.number || '').toLowerCase().includes(needle) ||
+    // Words too, not just digits: "nokia", "lebara", "pool 38" are how the
+    // counter actually asks for a handset.
+    const words = `${p.number || ''} ${p.model || ''} ${p.company || ''} ${p.pool || ''} ${p.country || ''}`.toLowerCase();
+    if (words.includes(needle) ||
         (digits.length >= 5 && hay.includes(digits))) {
       out.push({ icon: '📱', label: fmtPhone(p.number || '') || '(no number)',
-        sub: `${p.country || ''} · ${p.status}${p.maintenance ? ' · 🔧 maintenance' : ''}${p.imei ? ' · IMEI ' + p.imei : ''}`,
+        sub: `${[p.model, p.country, p.company].filter(Boolean).join(' · ')} · ${p.status}${p.maintenance ? ' · 🔧 maintenance' : ''}${p.pool ? ' · pool ' + p.pool : ''}`,
         kind: 'phone', id: p.id, run: () => openEditPhoneModal(p.id) });
+    }
+  }
+  // Shop stock — accessories and handsets on the shelf. Searchable at last:
+  // the till scans barcodes, but "have we got a type-c cable?" was a question
+  // the search could not answer.
+  for (const i of shopItems) {
+    if (out.length >= 12) break;
+    // Same fields the till's scan box matches on, plus the category label.
+    const label = [i.company, i.model].filter(Boolean).join(' ');
+    const hayStock = `${label} ${i.code || ''} ${i.barcode || ''} ${STOCK_CATEGORY_LABELS[i.category] || i.category || ''}`.toLowerCase();
+    if (hayStock.includes(needle)) {
+      const outOfStock = (i.quantity || 0) <= 0;
+      out.push({ icon: outOfStock ? '📭' : '📦', label: label || '(unnamed item)',
+        sub: `${outOfStock ? 'OUT OF STOCK' : i.quantity + ' in stock'} · ${fmtGbp(i.sellingPrice || 0)}${i.code ? ' · ' + i.code : ''}`,
+        kind: 'stock', id: i.id, run: () => goToTab('shop') || setTimeout(() => openStockItemModal(i.id), 120) });
     }
   }
   for (const b of bookings) {
@@ -13050,6 +13177,20 @@ function fillPaletteQuick() {
   q.innerHTML = html;
 }
 
+// Stock loads with the dashboard; a deep link to another tab can open the
+// palette before that happened, so fetch it once here rather than let the
+// search quietly report "no results" for the whole shelf.
+async function ensureStockLoaded() {
+  if (shopItems.length) return;
+  const d = await kcFetch('/api/shop').then(r => r.ok ? r.json() : null).catch(() => null);
+  if (d?.success && Array.isArray(d.items) && !shopItems.length) {
+    shopItems = d.items;
+    // Re-run the current query so results appear without another keystroke.
+    const input = document.getElementById('paletteInput');
+    if (input) { paletteResults = paletteSearch(input.value); paletteRender(); }
+  }
+}
+
 function openPalette() {
   kcSaveReturnFocus('paletteOverlay');
   if (document.getElementById('paletteOverlay')) return;
@@ -13058,7 +13199,7 @@ function openPalette() {
   el.className = 'palette-overlay';
   el.innerHTML = `
     <div class="palette-box">
-      <input class="palette-input" id="paletteInput" placeholder="${kcHint('Search customers, phones, IMEI… or type a command', 'Search or type a command')}"
+      <input class="palette-input" id="paletteInput" placeholder="${kcHint('Search customers, phones, stock, IMEI… or type a command', 'Search or type a command')}"
         autocomplete="off" spellcheck="false">
       <div id="paletteQuick" class="palette-quick"></div>
       <div id="paletteList"></div>
@@ -13072,6 +13213,7 @@ function openPalette() {
   fillPaletteQuick();
   paletteRender();
   input.focus();
+  ensureStockLoaded();  // fills the shelf in behind the first keystroke
   const quick = document.getElementById('paletteQuick');
   input.addEventListener('input', () => {
     paletteIndex = 0;
@@ -13829,6 +13971,10 @@ async function renderDashboardTab() {
     shop: shopData?.success ? shopData.items : dashCache.shop,
     returns: retData?.success ? retData.returns : dashCache.returns,
   };
+  // Stock is fetched here anyway — keep it, so ⌘K can search the shelf
+  // without waiting for someone to open the Shop tab. Every other searchable
+  // list loads at boot; this one used to be the exception, silently.
+  if (shopData?.success && Array.isArray(shopData.items) && !shopItems.length) shopItems = shopData.items;
   if (currentTab === 'dashboard') dashPaint(dashCache.money, dashCache.tasks, false, dashCache.shop, dashCache.returns);
 }
 
