@@ -5167,7 +5167,8 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   const lifecycle = customerLifecycle(c);
 
   const initials = ((c.firstName || '?')[0] + (c.lastName || '?')[0]).toUpperCase();
-  const since = c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '—';
+  // No created date → say nothing, not "Since —" (imported seeds have none).
+  const since = c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '';
   const addr = c.address ? `· ${escHtml(c.address)}` : '';
 
   const history = c.history || [];
@@ -5339,7 +5340,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         <div class="avatar">${initials}</div>
         <div class="detail-headline">
           <div class="detail-name">${c.title ? `<span class="cust-title">${escHtml(capName(c.title))}</span> ` : ''}${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:var(--fs-lead);">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
-          <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${waLink(c, '') ? ` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr} · Since ${since}</div>
+          <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${waLink(c, '') ? ` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr}${since ? ` · Since ${since}` : ''}</div>
         </div>
         <!-- Grouped by what the button DOES, not by the order they were added.
              Nine identical squares in a row made the operator read every icon
@@ -8513,9 +8514,12 @@ function openManageSimModal(id) {
       <div style="color:var(--muted);">Payment</div><div>${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}</div>
       ${s.paymentType !== 'direct' ? `
       <div style="color:var(--muted);">DD Day</div><div style="font-weight:600;">${s.ddDate ? `${s.ddDate}${s.ddDate===1?'st':s.ddDate===2?'nd':s.ddDate===3?'rd':'th'} of each month` : '—'}</div>
-      <div style="color:var(--muted);">Next DD Amount</div><div style="font-weight:700;color:var(--success);">${s.simMonthlyCost ? fmtGbp(ddMonthlyAmount(s.simMonthlyCost)) : '—'}</div>
+      <div style="color:var(--muted);">Next DD Amount</div><div style="font-weight:700;${s.simMonthlyCost ? 'color:var(--success);' : 'color:var(--muted);font-weight:400;'}">${s.simMonthlyCost ? fmtGbp(ddMonthlyAmount(s.simMonthlyCost)) : '—'}</div>
       ` : ''}
-      <div style="color:var(--muted);">Status</div><div>${s.status}</div>
+      <div style="color:var(--muted);">Status</div><div>${
+        s.status === 'suspended' ? '<span class="badge badge-suspended">Suspended</span>'
+        : s.status === 'cancelled' ? '<span class="badge" style="background:rgba(107,114,128,0.15);color:var(--muted);">Cancelled</span>'
+        : '<span class="badge badge-active">Active</span>'}</div>
     </div>
 
     <div class="section-divider">Service History</div>
@@ -9058,10 +9062,10 @@ function renderBookingsTab() {
         <td style="cursor:pointer;" onclick="openCheckinModal('${escHtml(b.id)}')" title="Set check-in">${checkinChip(b)}</td>
         <td>
           <div class="row-actions">
-          <button class="action-btn" onclick="openCheckinModal('${escHtml(b.id)}')" title="Online check-in">🛫</button>
-          <button class="action-btn" onclick="openPassengersModal('${escHtml(b.id)}')" title="Passengers (DOB, passport)">👥</button>
+          <button class="action-btn" onclick="openCheckinModal('${escHtml(b.id)}')" title="Online check-in" aria-label="Online check-in">🛫</button>
+          <button class="action-btn" onclick="openPassengersModal('${escHtml(b.id)}')" title="Passengers (DOB, passport)" aria-label="Passengers">👥</button>
           <button class="action-btn danger" onclick="deleteBookingRow('${escHtml(b.id)}')" title="Delete booking" aria-label="Delete booking">✕</button>
-          <button class="action-btn" onclick="openRemindModal('booking','${escHtml(b.id)}')" title="Remind me">⏰</button>
+          <button class="action-btn" onclick="openRemindModal('booking','${escHtml(b.id)}')" title="Remind me" aria-label="Set a reminder">⏰</button>
           <select class="form-input" style="width:110px;padding:5px 8px;font-size:var(--fs-small);"
             aria-label="Status for ${escHtml(b.customerName || b.bookingRef || 'this booking')}"
             onchange="changeBookingStatus('${escHtml(b.id)}', this.value)">
@@ -9159,7 +9163,7 @@ function paxEditorHtml() {
     <div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <strong style="font-size:var(--fs-small);">Passenger ${i + 1}</strong>
-        <button type="button" class="action-btn" onclick="bkRemovePax(${i})" title="Remove">✕</button>
+        ${bkPassengers.length > 1 ? `<button type="button" class="action-btn" onclick="bkRemovePax(${i})" title="Remove passenger ${i + 1}" aria-label="Remove passenger ${i + 1}">✕</button>` : ''}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         ${fld('Full name (as on passport)', `<input class="form-input" value="${escName(p.fullName || '')}" oninput="bkPassengers[${i}].fullName=this.value" autocomplete="off" style="width:200px;">`)}
