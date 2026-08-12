@@ -5195,6 +5195,8 @@ function renderCustomersTab() {
           <option value="services" ${customerSort==='services'?'selected':''}>Most services</option>
         </select>
         <button class="btn btn-outline" id="btnExportCSV">Export CSV</button>
+        ${(!currentStaff || currentStaff.role === 'owner')
+          ? `<button class="btn btn-outline" onclick="openDupScanModal()" title="Review customers who look like the same person entered twice">👥 Duplicates</button>` : ''}
       </div>
     </div>
 
@@ -6770,11 +6772,39 @@ function openCustomerById(id) {
   }, 60);
 }
 
-// Duplicate-customer scanner (owner tool). Fuzzy-matches the ELID-imported
-// customers against the whole book and lists likely-duplicate pairs to review.
-// Read-only — nothing merges; click a name to open that customer.
+// Duplicate-customer review (owner tool). Fuzzy-matches every customer
+// against every other and lists likely duplicates with the evidence the
+// decision turns on — SIMs, rentals, bookings, money on each side — because
+// in this community two records with the same name are as often brothers as
+// they are one man typed twice. Two verdicts: merge into the record you keep,
+// or "not the same", which is remembered so the pair never asks again.
+let dupDismissed = null;   // Set of "idA|idB" keys, loaded from settings
+
+function dupDismissKey(a, b) { return [String(a), String(b)].sort().join('|'); }
+function loadDupDismissed() {
+  if (dupDismissed) return dupDismissed;
+  const raw = pricingConfig?.settings?.find(x => x.key === 'dupe_not_same')?.textValue;
+  try { dupDismissed = new Set(JSON.parse(raw || '[]')); } catch { dupDismissed = new Set(); }
+  return dupDismissed;
+}
+async function dupMarkNotSame(aId, bId) {
+  const set = loadDupDismissed();
+  set.add(dupDismissKey(aId, bId));
+  const ok = await window.api.updateSetting({
+    table: 'settings', key: 'dupe_not_same', values: { textValue: JSON.stringify([...set]) },
+  }).then(r => r.success).catch(() => false);
+  if (!ok) { set.delete(dupDismissKey(aId, bId)); toast('Could not save that.', 'error'); return; }
+  if (pricingConfig?.settings) {
+    const row = pricingConfig.settings.find(x => x.key === 'dupe_not_same');
+    if (row) row.textValue = JSON.stringify([...set]);
+    else pricingConfig.settings.push({ key: 'dupe_not_same', textValue: JSON.stringify([...set]) });
+  }
+  document.getElementById('dupPair_' + dupDismissKey(aId, bId).replace('|', '_'))?.remove();
+  toast('Noted — that pair won\'t come up again.', 'success');
+}
+
 async function openDupScanModal() {
-  showDynamicModal(`<div class="modal-title">👥 Find duplicate customers</div><div id="dupBody" style="font-size:var(--fs-body);color:var(--muted);">Scanning the ELID-imported customers against the whole book…</div>`);
+  showDynamicModal(`<div class="modal-title">👥 Possible duplicate customers</div><div id="dupBody" style="font-size:var(--fs-body);color:var(--muted);">Comparing every customer against every other…</div>`);
   try {
     const r = await kcFetch('/api/customers/duplicates');
     const j = await r.json().catch(() => ({}));
@@ -6783,52 +6813,85 @@ async function openDupScanModal() {
   } catch { const b = document.getElementById('dupBody'); if (b) b.textContent = 'Could not reach the server.'; }
 }
 function renderDupScan(j) {
-  const tag = (x) => `${escHtml(x.name)}`
-    + (x.imported ? ' <span style="font-size:var(--fs-micro);color:var(--gold);">ELID-new</span>' : '')
-    + (x.elid && x.elid.length ? ` <span style="font-size:var(--fs-micro);color:var(--muted);">📡${x.elid.length}</span>` : '')
-    + (x.phone ? ` <span style="font-size:var(--fs-micro);color:var(--muted);">${escHtml(x.phone)}</span>` : '');
-  const mBtn = (from, to, label) =>
-    `<button style="font-size:var(--fs-small);background:none;border:1px solid var(--border);border-radius:999px;padding:3px 10px;color:var(--accent);cursor:pointer;" onclick="mergeElidDup('${escHtml(from)}','${escHtml(to)}')">${label}</button>`;
-  const rows = (j.pairs || []).map((p) => {
-    // Only an ELID-import can be the one deleted. Offer to keep the non-import
-    // side; if both are imports, let the owner choose which to keep.
-    let merge = '';
-    if (p.a.imported && p.b.imported) {
-      merge = `${mBtn(p.b.id, p.a.id, '⌫ merge → keep ' + escHtml(p.a.name))} ${mBtn(p.a.id, p.b.id, '⌫ merge → keep ' + escHtml(p.b.name))}`;
-    } else if (p.a.imported) {
-      merge = mBtn(p.a.id, p.b.id, '⌫ merge → keep ' + escHtml(p.b.name));
-    } else if (p.b.imported) {
-      merge = mBtn(p.b.id, p.a.id, '⌫ merge → keep ' + escHtml(p.a.name));
-    }
-    return `<div style="padding:8px 0;border-bottom:1px solid var(--border);">
-      <div style="display:flex;align-items:center;gap:8px;font-size:var(--fs-body);">
-        <button style="flex:1;text-align:start;background:none;border:0;color:var(--accent);cursor:pointer;padding:0;" onclick="openCustomerById('${escHtml(p.a.id)}')">${tag(p.a)}</button>
-        <span style="color:var(--muted);">⇄</span>
-        <button style="flex:1;text-align:start;background:none;border:0;color:var(--accent);cursor:pointer;padding:0;" onclick="openCustomerById('${escHtml(p.b.id)}')">${tag(p.b)}</button>
+  const dismissed = loadDupDismissed();
+  const pairs = (j.pairs || []).filter(p => !dismissed.has(dupDismissKey(p.a.id, p.b.id)));
+
+  // What each side actually holds — the whole basis for the judgement.
+  const evidence = (x) => {
+    const c = x.counts || {};
+    const bits = [
+      c.sims ? `${c.sims} SIM${c.sims === 1 ? '' : 's'}` : '',
+      c.rentals ? `${c.rentals} rental${c.rentals === 1 ? '' : 's'}` : '',
+      c.bookings ? `${c.bookings} flight${c.bookings === 1 ? '' : 's'}` : '',
+      c.repairs ? `${c.repairs} repair${c.repairs === 1 ? '' : 's'}` : '',
+      c.vns ? `${c.vns} VN${c.vns === 1 ? '' : 's'}` : '',
+      c.money ? `${c.money} money line${c.money === 1 ? '' : 's'}` : '',
+    ].filter(Boolean);
+    return bits.length ? bits.join(' · ') : 'nothing on this record';
+  };
+  const side = (x, other) => `
+    <div style="flex:1;min-width:210px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;">
+      <button style="background:none;border:0;padding:0;color:var(--accent);font-weight:600;font-size:var(--fs-body);cursor:pointer;text-align:start;"
+        onclick="closeDynamicModal();openCustomerById('${escHtml(x.id)}')">${escHtml(x.name)}</button>
+      <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:2px;">
+        ${x.phone ? escHtml(fmtPhone(x.phone)) : 'no phone'}${x.imported ? ' · <span style="color:var(--gold);">ELID import</span>' : ''}
       </div>
-      ${merge ? `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">${merge}</div>` : ''}
+      <div style="font-size:var(--fs-small);margin-top:4px;">${escHtml(evidence(x))}</div>
+      <button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%;color:var(--success);border-color:var(--success);"
+        onclick="mergeDupPair('${escHtml(other.id)}','${escHtml(x.id)}')">✓ Keep this one</button>
     </div>`;
-  }).join('') || '<div style="color:var(--success);font-size:var(--fs-body);">No likely duplicates found. 🎉</div>';
+
+  const rows = pairs.map(p => `
+    <div id="dupPair_${escHtml(dupDismissKey(p.a.id, p.b.id).replace('|', '_'))}"
+         style="padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;">
+        ${side(p.a, p.b)}
+        ${side(p.b, p.a)}
+      </div>
+      <div style="margin-top:6px;text-align:end;">
+        <button class="btn btn-outline btn-sm" onclick="dupMarkNotSame('${escHtml(p.a.id)}','${escHtml(p.b.id)}')">✋ Not the same person</button>
+      </div>
+    </div>`).join('') ||
+    '<div style="color:var(--success);font-size:var(--fs-body);">Nothing left to review. 🎉</div>';
+
   showDynamicModal(`
-    <div class="modal-title">👥 Find duplicate customers</div>
-    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">${j.count} possible duplicate pair${j.count === 1 ? '' : 's'} among the ${j.seeds} ELID-imported customers. Click a name to open the customer. <strong>Merge</strong> moves the ELID line onto the record you keep and deletes the empty import — only offered when one side is an ELID import, and never for a record with money history.</div>
-    <div style="max-height:360px;overflow:auto;">${rows}</div>
+    <div class="modal-title">👥 Possible duplicate customers</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
+      ${pairs.length} pair${pairs.length === 1 ? '' : 's'} to judge${dismissed.size ? ` · ${dismissed.size} already marked "not the same"` : ''}.
+      Merging moves every SIM, rental, flight, repair and money line onto the record you keep, then removes the other —
+      amounts never change. Same name is not proof: brothers share names, so check what each side holds first.
+    </div>
+    <div style="max-height:420px;overflow:auto;">${rows}</div>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
   `);
 }
-async function mergeElidDup(fromId, toId) {
-  if (!confirm('Merge these two? The ELID import will be deleted and its ELID line(s) moved onto the customer you keep.')) return;
+
+// Merge two real records. dupId is removed; survivorId keeps everything.
+async function mergeDupPair(dupId, survivorId) {
+  const dup = customers.find(c => String(c.id) === String(dupId));
+  const keep = customers.find(c => String(c.id) === String(survivorId));
+  const nm = (c) => c ? `${c.firstName || ''} ${c.lastName || ''}`.trim() : 'that record';
+  if (!(await kcConfirm({
+    title: 'Merge these two records?',
+    body: `Everything on <strong>${escName(nm(dup))}</strong> — SIMs, rentals, flights, repairs, money — moves onto ` +
+      `<strong>${escName(nm(keep))}</strong>, and the first record is removed.<br><br>` +
+      `No amount changes, and the merge is noted on the record you keep. This can't be undone from here.`,
+    okLabel: `Merge into ${nm(keep)}`,
+  }))) return;
   try {
-    const r = await kcFetch('/api/customers/merge-elid', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fromId, toId }) });
+    const r = await kcFetch('/api/customers/merge', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dupId, survivorId }),
+    });
     const j = await r.json().catch(() => ({}));
     if (!r.ok || !j.success) { toast(j.error || 'Merge failed.', 'error'); return; }
-    const fi = customers.findIndex((c) => String(c.id) === String(fromId));
-    if (fi >= 0) customers.splice(fi, 1);
-    const to = customers.find((c) => String(c.id) === String(toId));
-    if (to && j.kept) { to.elidUsernames = j.kept.elid || to.elidUsernames; to.elidUsername = (j.kept.elid || [])[0] || to.elidUsername; }
-    toast(`Merged — kept ${j.kept?.name || 'customer'}.`, 'success');
+    const i = customers.findIndex(c => String(c.id) === String(dupId));
+    if (i >= 0) customers.splice(i, 1);
+    const moved = Object.entries(j.moved || {}).filter(([, n]) => n > 0)
+      .map(([k, n]) => `${n} ${k.replace('_', ' ')}`).join(', ');
+    toast(`Merged into ${j.kept?.name || 'the kept record'}${moved ? ` — moved ${moved}` : ''}.`, 'success');
+    document.getElementById('dupPair_' + dupDismissKey(dupId, survivorId).replace('|', '_'))?.remove();
     if (typeof renderTableRows === 'function') renderTableRows();
-    openDupScanModal(); // refresh the list (merged pair drops out)
   } catch { toast('Could not reach the server.', 'error'); }
 }
 
