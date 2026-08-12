@@ -1675,6 +1675,22 @@ function multiPhoneDiscountPct(allRentals, customerId, from, to, excludeId = nul
   return (concurrent + 1) >= from_ ? settingNum('multi_phone_discount_pct', 15) : 0;
 }
 
+// How many phones this customer already has out over the window — the base
+// the batch counts up from, so the preview matches what save actually does.
+function multiPhoneCountFor(customerId, from, to) {
+  if (!customerId || !from || !to) return 0;
+  return rentals.filter(r =>
+    r.customerId === customerId && r.status !== 'returned' &&
+    r.fromDate && r.toDate && r.fromDate <= to && r.toDate >= from).length;
+}
+
+// Same rule as multiPhoneDiscountPct, asked by position instead of by data:
+// `already` is how many the customer holds before this one.
+function multiPhoneDiscountPctForIndex(already) {
+  const from_ = Math.max(2, settingNum('multi_phone_discount_from', 3));
+  return (already + 1) >= from_ ? settingNum('multi_phone_discount_pct', 15) : 0;
+}
+
 // Ticket-service fee for N passengers (price list tiers):
 //   passenger 1 → single price; passengers 2–5 → repeatPrice each;
 //   passengers 6+ → bulkPrice each. Flat services (repeatPrice null, e.g.
@@ -2072,9 +2088,9 @@ function renderRentalsTab() {
         aria-label="Scan a handset IMEI to check it out or return it"
         onkeydown="if(event.key==='Enter'){event.preventDefault();kcRentalScanEnter()}">
       <input class="search-box" style="width:280px;" type="text" id="rentalSearch"
-        placeholder="Search customer or phone…"
+        placeholder="Search rentals + inventory…"
         value="${rentalSearchTerm}"
-        oninput="rentalSearchTerm=this.value; renderRentalRows(); renderAvailabilityCalendar();">
+        oninput="rentalSearchTerm=this.value; renderRentalRows(); renderPhoneRows(); renderAvailabilityCalendar();">
     </div>
 
     <div id="availCalWrap">${rentalView === 'calendar' ? availabilityCalendarHtml() : ''}</div>
@@ -2092,6 +2108,7 @@ function renderRentalsTab() {
           <strong id="rentalBulkCount" style="font-size:var(--fs-body);"></strong>
           <button class="btn btn-outline btn-sm" style="color:var(--success);border-color:var(--success);" onclick="returnSelectedRentals()">📥 Mark returned</button>
           <button class="btn btn-outline btn-sm" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedRentals()">🗑 Delete selected</button>
+          <button class="btn btn-outline btn-sm" id="rentalBulkSameCust" style="display:none;" onclick="selectSameCustomerRentals()"></button>
           <button class="btn btn-outline btn-sm" onclick="clearRentalSel()">Clear selection</button>
         </div>
         <div class="table-wrap">
@@ -2182,21 +2199,9 @@ function availabilityCalendarHtml() {
     rentals.filter(r => r.phoneId === p.id && r.status !== 'returned' && r.fromDate && r.toDate)
       .map(r => ({ r, end: (r.status !== 'booked' && r.toDate < today) ? today : r.toDate }))]));
 
-  // Same search box as the list view, applied to which phone rows show —
-  // number, IMEI, model, or the name/mobile of whoever currently holds it.
-  const term = rentalSearchTerm.toLowerCase().trim();
-  const digits = term.replace(/\D/g, '');
-  const rowPhones = !term ? phones : phones.filter(p => {
-    if ((p.model || '').toLowerCase().includes(term)) return true;
-    const holder = rentals.find(r => r.phoneId === p.id && r.status !== 'returned');
-    if ((holder?.customerName || '').toLowerCase().includes(term)) return true;
-    if (digits.length >= 3) {
-      const hay = [p.number, p.imei].map(x => String(x || '').replace(/\D/g, ''));
-      if (hay.some(h => h && h.includes(digits))) return true;
-      if (holder && phoneDigitsMatch(term, customers.find(c => c.id === holder.customerId))) return true;
-    }
-    return false;
-  });
+  // Same search box as the list view — one predicate, shared with the
+  // inventory table, so the three views can never disagree about a match.
+  const rowPhones = phonesMatchingSearch();
 
   // Yom Tov gets the same "not just another weekday" treatment Shabbos
   // already had — the shop's actual off-calendar is Shabbos AND yom tov, not
@@ -2438,6 +2443,33 @@ function syncRentalSelUi() {
     const count = document.getElementById('rentalBulkCount');
     if (count) count.textContent = `${rentalSelected.size} rental${rentalSelected.size === 1 ? '' : 's'} selected`;
   }
+  // One family, several handsets: when the ticked rows all belong to one
+  // customer who has MORE out, offer the rest in a click instead of hunting
+  // for their rows down a filtered table.
+  const btn = document.getElementById('rentalBulkSameCust');
+  if (btn) {
+    const rest = sameCustomerRestOfRentals();
+    btn.style.display = rest.length ? 'inline-flex' : 'none';
+    if (rest.length) btn.textContent = `＋ ${rest[0].customerName || 'This customer'}’s other ${rest.length}`;
+  }
+}
+
+// The other open rentals of the ONE customer in the current selection.
+function sameCustomerRestOfRentals() {
+  const picked = rentals.filter(r => rentalSelected.has(r.id));
+  if (!picked.length) return [];
+  const ids = new Set(picked.map(r => String(r.customerId)));
+  if (ids.size !== 1) return [];                       // mixed selection — no offer
+  const cid = [...ids][0];
+  return rentals.filter(r => String(r.customerId) === cid && !rentalSelected.has(r.id) &&
+    (r.status === 'active' || r.status === 'overdue' || r.status === 'booked') && !r.voided);
+}
+
+function selectSameCustomerRentals() {
+  const rest = sameCustomerRestOfRentals();
+  rest.forEach(r => rentalSelected.add(r.id));
+  renderRentalRows();
+  if (rest.length) toast(`${rest.length} more added — ${rest[0].customerName || 'same customer'}.`, 'success');
 }
 // Bulk return — the family that brings every phone back at once. Each rental
 // still answers to the charge gate: equipment blockers keep it open, and the
@@ -2537,6 +2569,27 @@ async function deleteSelectedRentals() {
   toast(`${ids.length} rentals deleted.`, 'warning');
 }
 
+// Phones matching the rentals-page search box. Number, IMEI, model, carrier,
+// pool, country — and the name/mobile of whoever currently holds it, so
+// "Adler" finds the handset he's got out.
+function phonesMatchingSearch() {
+  const term = rentalSearchTerm.toLowerCase().trim();
+  if (!term) return phones;
+  const digits = term.replace(/\D/g, '');
+  return phones.filter(p => {
+    const words = `${p.model || ''} ${p.company || ''} ${p.pool || ''} ${p.country || ''} ${p.number || ''}`.toLowerCase();
+    if (words.includes(term)) return true;
+    const holder = rentals.find(r => r.phoneId === p.id && r.status !== 'returned');
+    if ((holder?.customerName || '').toLowerCase().includes(term)) return true;
+    if (digits.length >= 3) {
+      const hay = [p.number, p.imei].map(x => String(x || '').replace(/\D/g, ''));
+      if (hay.some(h => h && h.includes(digits))) return true;
+      if (holder && phoneDigitsMatch(term, customers.find(c => c.id === holder.customerId))) return true;
+    }
+    return false;
+  });
+}
+
 function renderPhoneRows() {
   const tbody = document.getElementById('phoneTableBody');
   if (!tbody) return;
@@ -2546,8 +2599,16 @@ function renderPhoneRows() {
     return;
   }
 
+  // The search box filters this table too — it used to sit at full length
+  // beside a filtered rentals list, which read as "no such handset".
+  const shown = phonesMatchingSearch();
+  if (shown.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔍</div><p>No handset matches “${escHtml(rentalSearchTerm)}”.</p><small>Searches number, IMEI, model, carrier, pool — and who has it out.</small></div></td></tr>`;
+    return;
+  }
+
   const today = localISO();
-  tbody.innerHTML = phones.map(p => {
+  tbody.innerHTML = shown.map(p => {
     const poolExpired = p.poolExpiry && p.poolExpiry < today;
     let statusBadge;
     if (p.status === 'rented')         statusBadge = `<span class="badge badge-rental">Rented</span>`;
@@ -2754,7 +2815,42 @@ function kcRentalScanEnter() {
   toast(res.message, 'success');
 }
 
+// Phones on the rental being built. One customer regularly takes several
+// handsets in one trip, and doing that as N separate trips through the modal
+// re-asked every question N times. Each phone still becomes its OWN rental
+// record (that is what the fleet, the calendar and returns all key on) — this
+// is one form filling in several of them.
+let nrPhones = [];
+
+function nrPhonePicked(sel) {
+  const id = sel.value;
+  if (!id) return;
+  if (!nrPhones.includes(id)) nrPhones.push(id);
+  sel.value = '';               // ready for the next one
+  renderNrPhoneChips();
+}
+function nrRemovePhone(id) {
+  nrPhones = nrPhones.filter(x => x !== id);
+  renderNrPhoneChips();
+  updateRentalCalc();
+}
+function renderNrPhoneChips() {
+  const box = document.getElementById('rPhoneChips');
+  if (!box) return;
+  box.innerHTML = nrPhones.map(id => {
+    const p = phones.find(x => x.id === id);
+    if (!p) return '';
+    return `<span class="badge" style="display:inline-flex;align-items:center;gap:6px;padding:5px 8px;background:var(--bg-secondary);color:var(--text);">
+      ${escHtml(fmtPhone(p.number || ''))}<span style="color:var(--muted);font-size:var(--fs-micro);">${escHtml(p.country || '')}</span>
+      <button type="button" class="action-btn" style="padding:0 4px;" aria-label="Remove ${escHtml(fmtPhone(p.number || ''))}"
+        onclick="nrRemovePhone('${escHtml(id)}')">✕</button></span>`;
+  }).join('');
+  const hint = document.getElementById('rPhoneHint');
+  if (hint && nrPhones.length > 1) hint.textContent = `(${nrPhones.length} phones on this rental)`;
+}
+
 function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null) {
+  nrPhones = [];
   const availablePhoneOptions = phoneOptionsFor(null, null);
 
   showDynamicModal(`
@@ -2776,10 +2872,11 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
 
       <div class="form-group form-full">
         <label class="form-label">Phone * <span style="color:var(--muted);font-weight:400;" id="rPhoneHint">(pick dates to see availability)</span></label>
-        <select class="form-input" id="rPhone" onchange="updateRentalPhoneInfo(); updateRentalCalc();">
+        <select class="form-input" id="rPhone" onchange="nrPhonePicked(this); updateRentalPhoneInfo(); updateRentalCalc();">
           <option value="">— Select phone —</option>
           ${availablePhoneOptions}
         </select>
+        <div id="rPhoneChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
         <div id="rPhoneInfo" style="font-size:var(--fs-small);color:var(--muted);margin-top:4px;"></div>
       </div>
 
@@ -2927,6 +3024,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
     const sel = document.getElementById('rPhone');
     if (sel && [...sel.options].some(o => o.value === preselectPhoneId)) {
       sel.value = preselectPhoneId;
+      nrPhonePicked(sel);
       updateRentalPhoneInfo();
     } else {
       toast('That phone is not free for these dates — pick the dates first.', 'warning');
@@ -2997,8 +3095,37 @@ function updateRentalCalc() {
   const box  = document.getElementById('rCalcBox');
   const txt  = document.getElementById('rCalcText');
   if (!from || !to || to <= from) { box.style.display='none'; return; }
+  // Several phones → price each and show the batch total; the reasoning
+  // panel below still explains the FIRST phone's rate line by line.
+  const simGivenAll = document.getElementById('nrGiven_sim')?.dataset.given !== '0';
+  if (nrPhones.length > 1) {
+    const rows = nrPhones.map(id => {
+      const ph = phones.find(x => x.id === id);
+      const r = calcRentalPrice(from, to, ph?.country || 'USA', ph?.ukPlan || 'standard', simGivenAll);
+      return { ph, ...r };
+    });
+    const gross = round2(rows.reduce((sum, r) => sum + r.price, 0));
+    // The 3rd concurrent phone and beyond takes the standing 15% — applied
+    // per phone by saveNewRental as each one is created, mirrored here.
+    const already = multiPhoneCountFor(document.getElementById('rCustomer')?.value, from, to);
+    let net = 0;
+    rows.forEach((r, i) => {
+      const pct = multiPhoneDiscountPctForIndex(already + i);
+      r.net = pct > 0 ? round2(r.price * (1 - pct / 100)) : round2(r.price);
+      r.pct = pct;
+      net += r.net;
+    });
+    box.style.display = 'block';
+    txt.innerHTML = `<strong>${rows.length} phones</strong> · ${fmtDate(from)} → ${fmtDate(to)}<br>` +
+      rows.map(r => `${escHtml(fmtPhone(r.ph?.number || ''))} — ${r.chargeableDays}d · ${fmtGbp(r.price)}` +
+        (r.pct > 0 ? ` <span style="color:var(--gold);">−${r.pct}% → ${fmtGbp(r.net)}</span>` : '')).join('<br>') +
+      `<br><strong style="font-size:var(--fs-body);">Total: ${fmtGbp(net)}</strong>` +
+      (net !== gross ? ` <span style="color:var(--gold);font-size:var(--fs-small);">(was ${fmtGbp(gross)})</span>` : '');
+    return;
+  }
   const selPhone = document.getElementById('rPhone');
-  const phone    = selPhone ? phones.find(p => p.id === selPhone.value) : null;
+  const phone    = nrPhones.length ? phones.find(p => p.id === nrPhones[0])
+                                   : (selPhone ? phones.find(p => p.id === selPhone.value) : null);
   const country  = phone?.country || 'USA';
   const ukPlan   = phone?.ukPlan  || 'standard';
   const simGiven = document.getElementById('nrGiven_sim')?.dataset.given !== '0';
@@ -3089,9 +3216,131 @@ function rPayFull() {
   if (amt) { amt.value = (rLastTotal || 0).toFixed(2); amt.dataset.touched = '1'; }
 }
 
+// One customer, several handsets, one trip through the form. Each phone gets
+// its OWN rental record — the fleet, the calendar, returns and the ledger all
+// key on one rental per line — but the dates, equipment, notes and terms are
+// answered once. Discounts are NOT recomputed by hand: each rental is created
+// in turn and priced by the same rule the single path uses, so the 3rd
+// concurrent phone and beyond takes the standing discount exactly as it would
+// have if they were entered one by one.
+async function saveMultiPhoneRental(customerId, phoneIds, addAnother) {
+  const from  = document.getElementById('rFrom').value;
+  const to    = document.getElementById('rTo').value;
+  const notes = document.getElementById('rNotes').value.trim();
+  if (!from || !to || to <= from) { toast('Please enter valid dates.', 'error'); return; }
+
+  const customer = customers.find(c => c.id === customerId);
+  const today = localISO();
+  const isReservation = from > today;
+
+  // Every phone must be free for the window — one clash cancels the batch
+  // rather than quietly renting out a subset the operator didn't choose.
+  for (const id of phoneIds) {
+    const clash = phoneConflicts(rentals, id, from, to, today)[0];
+    if (clash) {
+      const ph = phones.find(p => p.id === id);
+      toast(`${fmtPhone(ph?.number || '')} is taken ${fmtDate(clash.fromDate)} → ${fmtDate(clash.toDate)} (${clash.customerName}) — remove it or pick another.`, 'error');
+      return;
+    }
+  }
+
+  const nrCharger = document.getElementById('nrGiven_charger')?.dataset.given === '1';
+  const equipmentGiven = {
+    phone: document.getElementById('nrGiven_phone')?.dataset.given === '1',
+    sim:   document.getElementById('nrGiven_sim')?.dataset.given   === '1',
+    plug:  nrCharger,
+    cable: nrCharger,
+  };
+
+  // Price each phone as it would price if entered in turn.
+  let already = multiPhoneCountFor(customerId, from, to);
+  const lines = phoneIds.map((id, i) => {
+    const phone = phones.find(p => p.id === id);
+    const { chargeableDays, totalDays, price } =
+      calcRentalPrice(from, to, phone.country, phone.ukPlan || 'standard', equipmentGiven.sim);
+    const pct = multiPhoneDiscountPctForIndex(already + i);
+    // Round at the point of storage: an unrounded discount put
+    // 17.849999999999998 on the record and into the ledger behind it.
+    const net = pct > 0 ? round2(Math.max(0, price * (1 - pct / 100))) : round2(price);
+    return { phone, chargeableDays, totalDays, price: round2(price), pct, net };
+  });
+  const total = round2(lines.reduce((sum, l) => sum + l.net, 0));
+
+  // Payment taken now is spread across the batch in order, so each rental
+  // carries its own true amountPaid and no rental is silently overpaid.
+  const payMethod = document.getElementById('rPay')?.value || 'account';
+  let payLeft = payMethod !== 'account'
+    ? Math.max(0, Math.min(total, parseFloat(document.getElementById('rPayAmount')?.value) || 0)) : 0;
+
+  if (!(await kcConfirm({
+    title: isReservation ? `Reserve ${lines.length} phones` : `Confirm rental — ${lines.length} phones`,
+    body: `<strong>${escName(customer.firstName)} ${escName(customer.lastName)}</strong> · ${fmtDate(from)} → ${fmtDate(to)}<br>` +
+      lines.map(l => `${escHtml(fmtPhone(l.phone.number))} (${escHtml(l.phone.country)}) — ${fmtGbp(l.price)}` +
+        (l.pct > 0 ? ` <span style="color:var(--gold);">−${l.pct}% → ${fmtGbp(l.net)}</span>` : '')).join('<br>') +
+      (payLeft > 0 ? `<br><br>${fmtGbp(payLeft)} paid now, spread across them in order.` : ''),
+    amount: total,
+    okLabel: isReservation ? `Reserve ${lines.length} & charge` : `Charge ${lines.length} rentals`,
+  }))) return;
+
+  const created = [];
+  for (const l of lines) {
+    const pay = round2(Math.min(payLeft, l.net));
+    payLeft = round2(payLeft - pay);
+    const rental = {
+      id: uid(), customerId,
+      customerName: `${customer.firstName} ${customer.lastName}`,
+      customerPhone: customer.phone || '',
+      phoneId: l.phone.id, phoneNumber: l.phone.number, country: l.phone.country,
+      ukPlan: l.phone.ukPlan || 'standard',
+      fromDate: from, toDate: to,
+      chargeableDays: l.chargeableDays, totalDays: l.totalDays,
+      price: l.net, basePrice: l.price, rentalPrice: l.price,
+      discountValue: l.pct, discountType: 'percent',
+      vn: false, vnPrefix: '', vnSub: '', vnPrice: 0,
+      notes, amountPaid: pay,
+      depositHeld: 0,
+      termsAck: !!document.getElementById('rTerms')?.checked,
+      termsAckName: document.getElementById('rTerms')?.checked
+        ? (document.getElementById('rTermsName')?.value.trim() || '') : '',
+      termsAckAt: document.getElementById('rTerms')?.checked ? new Date().toISOString() : '',
+      status: isReservation ? 'booked' : 'active',
+      createdAt: new Date().toISOString(),
+      equipmentGiven,
+    };
+    rentals.push(rental);
+    created.push(rental);
+  }
+
+  const saveRes = await saveRentals(rentals);
+  if (!saveRes || saveRes.success === false) {
+    created.forEach(r => { const i = rentals.indexOf(r); if (i >= 0) rentals.splice(i, 1); });
+    renderRentalsTab();
+    return; // reportSave already surfaced the error
+  }
+  if (!isReservation) {
+    created.forEach(r => {
+      const p = phones.find(x => x.id === r.phoneId);
+      if (p) { p.status = 'rented'; p.currentRental = r.id; }
+    });
+    savePhones(phones);
+  }
+  for (const r of created) await applyExtraCharges('rental', r.id, customerId, false).catch(() => '');
+  closeDynamicModal();
+  nrPhones = [];
+  renderRentalsTab();
+  toast(isReservation
+    ? `${created.length} phones reserved for ${customer.firstName} — pickup ${fmtDate(from)}.`
+    : `${created.length} rentals saved — ${fmtGbp(total)} charged to ${customer.firstName}.`, 'success');
+  if (addAnother) openNewRentalModal(customerId);
+}
+
 async function saveNewRental(addAnother = false) {
   const customerId = document.getElementById('rCustomer').value;
-  const phoneId    = document.getElementById('rPhone').value;
+  // Chips are the source of truth; a phone still sitting in the dropdown
+  // unconfirmed counts too, so nobody loses a pick to a missed tap.
+  const pending = document.getElementById('rPhone')?.value;
+  if (pending && !nrPhones.includes(pending)) nrPhones.push(pending);
+  const phoneId    = nrPhones[0] || '';
   const from       = document.getElementById('rFrom').value;
   const to         = document.getElementById('rTo').value;
   const notes      = document.getElementById('rNotes').value.trim();
@@ -3099,6 +3348,10 @@ async function saveNewRental(addAnother = false) {
 
   if (!customerId) { toast('Please select a customer.', 'error'); return; }
   if (!phoneId)    { toast('Please select a phone.', 'error'); return; }
+  // Several phones for one customer: each becomes its own rental record, but
+  // the operator answers the questions once. Handled by its own path so the
+  // single-phone flow below is untouched.
+  if (nrPhones.length > 1) return saveMultiPhoneRental(customerId, [...nrPhones], addAnother);
   if (!from || !to || to <= from) { toast('Please enter valid dates.', 'error'); return; }
 
   // Hard double-booking guard — a phone can hold one rental per date window.
