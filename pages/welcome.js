@@ -156,6 +156,11 @@ const T = {
       { q: 'You are closed — can I still get help?',
         a: 'Leave us a message with the form on this page, or ring and leave a voicemail. We pick both up when we open and reply the same day. For an urgent problem abroad, say so in the message and we will come back to you first.' },
     ],
+    appEyebrow: 'The Kosher Connect app',
+    appTitle: 'Your account online — what the app does',
+    appBody1: 'Kosher Connect is this shop’s online account app. Customers sign in to see their SIM plans, phone rentals, flight bookings, repairs and balance, and to pay online — and our team runs the shop on the same system: rentals, SIM plan management, repairs, bookings and the till.',
+    appBody2: 'Signing in with Google is optional and only confirms your name and email address, so we know which account is yours. We never see or access your Gmail, your Drive files, your contacts or anything else in your Google account. The full detail is in our privacy policy.',
+    appPolicy: 'Read the privacy policy', appAccount: 'Go to my account',
     fBadName: 'Please enter your name.', fBadContact: 'Please enter a valid phone number or email address.',
     preferCall: 'Prefer to call?',
     waLabel: 'WhatsApp us', waText: 'Hello Kosher Connect — I’d like to ask about…',
@@ -272,6 +277,11 @@ const T = {
       { q: 'אתם סגורים — אפשר בכל זאת לקבל עזרה?',
         a: 'השאירו לנו הודעה בטופס שבעמוד, או התקשרו והשאירו הודעה קולית. אנחנו אוספים את שתיהן עם הפתיחה ומשיבים באותו יום. אם זה דחוף ואתם בחו״ל — כתבו זאת, ונחזור אליכם ראשונים.' },
     ],
+    appEyebrow: 'האפליקציה של כשר קונקט',
+    appTitle: 'החשבון שלכם אונליין — מה האפליקציה עושה',
+    appBody1: 'כשר קונקט היא אפליקציית החשבון המקוון של החנות. לקוחות נכנסים כדי לראות את חבילות הסים, השכרות הטלפונים, הזמנות הטיסות, התיקונים והיתרה — ולשלם אונליין. הצוות שלנו מנהל באותה מערכת את החנות עצמה: השכרות, חבילות, תיקונים, הזמנות והקופה.',
+    appBody2: 'התחברות עם Google היא אופציונלית ומאשרת רק את השם וכתובת המייל שלכם, כדי שנדע איזה חשבון שייך לכם. אין לנו גישה ל‑Gmail, לקבצי Drive, לאנשי הקשר או לכל דבר אחר בחשבון Google שלכם. הפירוט המלא במדיניות הפרטיות.',
+    appPolicy: 'למדיניות הפרטיות', appAccount: 'לאזור האישי',
     fBadName: 'נא להזין שם.', fBadContact: 'נא להזין מספר טלפון או כתובת מייל תקינים.',
     preferCall: 'מעדיפים להתקשר?',
     waLabel: 'כתבו לנו בוואטסאפ', waText: 'שלום כשר קונקט — רציתי לשאול לגבי…',
@@ -639,6 +649,24 @@ export default function Welcome() {
                 </details>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* Google's OAuth branding review reads THIS page as the app's
+            homepage, and its checklist wants the application itself explained
+            here — what the app does and what Google sign-in data is used for —
+            not only the business. Keep this section: removing it re-fails the
+            "homepage does not explain the purpose of your app" check. */}
+        <section className="sk-appinfo" id="app">
+          <div className="sk-wrap sk-reveal">
+            <span className="sk-eyebrow">{t.appEyebrow}</span>
+            <h2>{t.appTitle}</h2>
+            <p>{t.appBody1}</p>
+            <p>{t.appBody2}</p>
+            <p className="sk-appinfo-links">
+              <a href="/privacy">{t.appPolicy}</a>
+              <a href="/portal">{t.appAccount}</a>
+            </p>
           </div>
         </section>
 
@@ -1027,6 +1055,14 @@ const SKY_CSS = `
   .sk-form-hint{font-size:13px;color:var(--sk-muted);font-weight:600}
   .sk-form-privacy{margin:12px 0 0;font-size:12.5px;color:var(--sk-muted);line-height:1.5}
   .sk-faq{padding:74px 0}
+  /* About-the-app: modest strip; exists chiefly for the OAuth review's
+     homepage checklist, so it must stay real page copy, not footer print. */
+  .sk-appinfo{padding:0 0 74px}
+  .sk-appinfo p{margin:14px 0 0;max-width:70ch;color:var(--sk-muted);line-height:1.65;font-size:15px}
+  .sk-appinfo-links{display:flex;gap:18px;flex-wrap:wrap}
+  .sk-appinfo-links a{color:var(--sk-sky);font-weight:600;display:inline-flex;align-items:center;min-height:24px}
+  :root[data-theme="dark"] .sk-appinfo-links a{color:var(--sk-sky-bright)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-appinfo-links a{color:var(--sk-sky-bright)}}
   .sk-faq-list{margin-top:26px;display:flex;flex-direction:column;gap:1px;
     background:var(--sk-line);border:1px solid var(--sk-line);border-radius:14px;overflow:hidden}
   .sk-faq-item{background:var(--sk-card)}

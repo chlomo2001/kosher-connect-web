@@ -1,4 +1,7 @@
 User-agent: *
+# The bare root serves /welcome (rewrite) on the shop domain — allow exactly
+# "/" so Google's OAuth verifier can read the homepage at kosher-connect.com/.
+Allow: /$
 Allow: /welcome
 Allow: /join
 Allow: /phone-guide
