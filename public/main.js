@@ -4616,7 +4616,7 @@ function openManageRentalModal(rentalId) {
         ? `<span style="font-size:var(--fs-small);color:var(--muted);">↩ Voided ${fmtDate(r.voided.at)} — ${escHtml(r.voided.reason)}</span>`
         : `<button class="btn btn-outline" style="color:var(--danger-ink);border-color:var(--danger-ink);"
             onclick="openVoidRentalModal('${rentalId}')" title="Undo this rental — wrong person, didn't fly…">↩ Void</button>`}
-      <span style="display:flex;gap:8px;">
+      <span class="modal-actions-group">
         <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
         <button class="btn btn-primary" id="mgSaveBtn" onclick="saveManageRental('${rentalId}')">💾 Save changes</button>
       </span>
@@ -6252,7 +6252,7 @@ async function openHouseSettleModal(custId) {
     </div>
     <div class="modal-actions" style="justify-content:space-between;">
       <button class="btn btn-outline" onclick="printHouseStatement()">🖨 Print statement</button>
-      <span style="display:flex;gap:8px;">
+      <span class="modal-actions-group">
         <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
         <button class="btn btn-primary" onclick="settleHouseAccount('${c.id}')">💳 Charge & settle</button>
       </span>
@@ -10278,7 +10278,7 @@ function openEditBookingModal(id) {
     <div class="modal-actions" style="justify-content:space-between;">
       <button class="btn btn-outline" style="color:var(--danger);border-color:color-mix(in srgb, var(--danger) 40%, var(--border));"
         onclick="closeDynamicModal();deleteBookingRow('${escHtml(b.id)}')">🗑 Delete</button>
-      <span style="display:flex;gap:10px;">
+      <span class="modal-actions-group">
         <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
         <button class="btn btn-primary" onclick="saveEditBooking('${escHtml(b.id)}')">💾 Save</button>
       </span>
@@ -11688,7 +11688,7 @@ function openStockItemModal(itemId = null) {
     </div>
     <div class="modal-actions" style="justify-content:space-between;">
       <span>${i ? `<button class="btn btn-outline" onclick="retireStockItem('${i.id}')">🗑 Retire</button>` : ''}</span>
-      <span style="display:flex;gap:8px;">
+      <span class="modal-actions-group">
         <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
         <button class="btn btn-primary" onclick="saveStockItem(${i ? `'${i.id}'` : 'null'})">💾 Save</button>
       </span>

@@ -1140,7 +1140,17 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .form-warning.visible { display: block; }
 
 
-.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+/* Footers wrap. Without this the row was unbreakable, and in Simple Mode's
+   largest step (17px body copy) Manage Rental's "💾 Save changes" sat 53px off
+   the right edge of a 390px screen — reachable by neither finger nor keyboard.
+   Four modals put a Void/Delete/Retire/Print on the left and a Cancel+Save
+   group on the right, so all four had it latent. */
+.modal-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+
+/* The Cancel+Save half of such a footer. margin-left:auto keeps it against the
+   right edge on the line it wraps onto, where space-between no longer has a
+   second item to push it with. */
+.modal-actions-group { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
 
 
 
