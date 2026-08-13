@@ -2902,7 +2902,12 @@ async function markPhoneBack(phoneId) {
 // ══ NEW RENTAL MODAL ══
 // Phones offerable for a date range — DATE-aware, not status-aware, so a
 // phone that's out today can still be reserved for future dates.
-function phoneOptionsFor(from, to, customerId) {
+// `term` filters the list the way the counter actually searches for a handset:
+// a few digits out of the middle of the number. A native <select> only does
+// type-ahead from the START of the option text, and every option here starts
+// "+1 7…", so typing 986 matched nothing — the box above the picker is what
+// makes those three digits work.
+function phoneOptionsFor(from, to, customerId, term = '') {
   const today = localISO();
   // A phone under maintenance is never offerable, whatever the dates say.
   // "Not rented" is not the same as "rentable". A permanent line is in a
@@ -2920,7 +2925,21 @@ function phoneOptionsFor(from, to, customerId) {
   const sorted = had.size
     ? [...list].sort((a, b) => (had.has(b.id) ? 1 : 0) - (had.has(a.id) ? 1 : 0))
     : list;
-  return sorted
+  // Digits typed match digits in the number, so spaces and the +44/+1 in
+  // either the typed text or the stored number stop mattering; letters match
+  // country, carrier, model or pool.
+  const q = String(term || '').trim().toLowerCase();
+  const qDigits = q.replace(/\D/g, '');
+  // Digits only chase the number; the moment a letter is typed the query is a
+  // word, and "pool 38" should not also drag in every number containing 38.
+  const numeric = qDigits && !/[a-z]/.test(q);
+  const shown = !q ? sorted : sorted.filter(p => {
+    if (numeric) return String(p.number || '').replace(/\D/g, '').includes(qDigits)
+      || String(p.imei || '').includes(qDigits);
+    return [p.country, p.company, p.model, p.pool, p.imei, p.number]
+      .filter(Boolean).some(v => String(v).toLowerCase().includes(q));
+  });
+  return shown
     .map(p => `<option value="${p.id}">${escHtml(fmtPhone(p.number))} · ${escHtml(p.country)} · ${escHtml(p.company||'')} ${p.pool ? '(Pool: '+escHtml(p.pool)+')' : ''}${had.has(p.id) ? ` · ↺ had ${fmtDate(had.get(p.id))}` : ''}</option>`)
     .join('');
 }
@@ -2946,18 +2965,51 @@ function refreshRentalPhoneOptions() {
   const from = document.getElementById('rFrom')?.value;
   const to = document.getElementById('rTo')?.value;
   const customerId = document.getElementById('rCustomer')?.value;
+  const term = document.getElementById('rPhoneFind')?.value || '';
   const prev = sel.value;
-  sel.innerHTML = `<option value="">— Select phone —</option>` + phoneOptionsFor(from, to, customerId);
+  sel.innerHTML = `<option value="">— Select phone —</option>` + phoneOptionsFor(from, to, customerId, term);
   if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
-  else if (prev) { sel.value = ''; toast('That phone is not free for these dates — pick another.', 'warning'); }
+  else if (prev && !term) { sel.value = ''; toast('That phone is not free for these dates — pick another.', 'warning'); }
+  else if (prev) sel.value = '';   // filtered out of view, not unavailable — say nothing
   const hint = document.getElementById('rPhoneHint');
   // Count from the data, not by sniffing option text for the ↺ glyph.
   const had = customerPastPhoneDates(customerId);
   const hadCount = [...sel.options].filter(o => had.has(o.value)).length;
-  if (hint && from && to && to >= from) {
-    hint.textContent = `(${sel.options.length - 1} free ${fmtDate(from)} → ${fmtDate(to)}${hadCount ? ` · ↺ ${hadCount} they had before` : ''})`;
+  const n = sel.options.length - 1;
+  if (hint && term) {
+    hint.textContent = n
+      ? `(${n} match${n === 1 ? '' : 'es'} “${term}”)`
+      : `(nothing matches “${term}”)`;
+  } else if (hint && from && to && to >= from) {
+    hint.textContent = `(${n} free ${fmtDate(from)} → ${fmtDate(to)}${hadCount ? ` · ↺ ${hadCount} they had before` : ''})`;
   } else if (hint && hadCount) {
     hint.textContent = `(↺ ${hadCount} number${hadCount === 1 ? '' : 's'} this customer had before — listed first)`;
+  } else if (hint) {
+    hint.textContent = '(pick dates to see availability)';
+  }
+  // One match and something typed: that IS the pick. Saves the second gesture
+  // the search was meant to remove.
+  if (term && n === 1 && !sel.value) sel.value = sel.options[1].value;
+}
+
+// Typing in the find box: rebuild the list, and Enter takes the top match so
+// the whole job is type-three-digits-Enter without touching the dropdown.
+function rentalPhoneFind() { refreshRentalPhoneOptions(); }
+function rentalPhoneFindKey(e) {
+  const sel = document.getElementById('rPhone');
+  if (!sel) return;
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (sel.options.length > 1) {
+      sel.value = sel.options[1].value;
+      nrPhonePicked(sel); updateRentalPhoneInfo(); updateRentalCalc();
+      const box = document.getElementById('rPhoneFind');
+      if (box) { box.value = ''; refreshRentalPhoneOptions(); box.focus(); }
+    }
+  } else if (e.key === 'Escape' && e.currentTarget.value) {
+    e.preventDefault();
+    e.currentTarget.value = '';
+    refreshRentalPhoneOptions();
   }
 }
 
@@ -3102,7 +3154,11 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
 
       <div class="form-group form-full">
         <label class="form-label">Phone * <span style="color:var(--muted);font-weight:400;" id="rPhoneHint">(pick dates to see availability)</span></label>
-        <select class="form-input" id="rPhone" onchange="nrPhonePicked(this); updateRentalPhoneInfo(); updateRentalCalc();">
+        <input class="form-input" id="rPhoneFind" type="search" inputmode="search" autocomplete="off"
+          placeholder="🔍 Type a few digits — 986, or USA, Pool 38…"
+          aria-label="Filter the phone list" style="margin-bottom:6px;"
+          oninput="rentalPhoneFind()" onkeydown="rentalPhoneFindKey(event)">
+        <select class="form-input" id="rPhone" size="1" onchange="nrPhonePicked(this); updateRentalPhoneInfo(); updateRentalCalc();">
           <option value="">— Select phone —</option>
           ${availablePhoneOptions}
         </select>
