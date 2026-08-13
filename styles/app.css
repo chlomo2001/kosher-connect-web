@@ -2852,3 +2852,28 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
    point, since it is the form you are coming back to — goes muddy. Same
    reasoning as the customer card's scrim-off. */
 .modal-overlay.kc-stacked { z-index: 1000; background: rgba(10, 37, 64, 0.22); }
+
+/* ── After a rental is saved ──────────────────────────────────────────────
+   The receipt used to be four clicks away — customer card, Wallet, find the
+   ledger row, the small ✉️ on it — at the one moment it is wanted, with the
+   customer still at the counter. These are big, obvious, one-press targets,
+   and each carries the address or number it will reach underneath its label,
+   because the mistake worth catching is the right receipt sent to the wrong
+   person and it is caught by reading, not by a second dialog. */
+.rd-summary {
+  border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+  background: var(--surface2); margin-bottom: 14px;
+}
+.rd-who { font-size: var(--fs-lead); font-weight: 600; }
+.rd-what { font-size: var(--fs-small); color: var(--muted); margin-top: 2px; }
+.rd-money { font-size: var(--fs-display-2); font-weight: 700; margin-top: 8px; font-feature-settings: 'tnum'; }
+
+.rd-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+
+/* Two lines inside one button: what it does, and who it reaches. */
+.rd-act {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 12px 14px; min-height: 58px; text-align: center; line-height: 1.25;
+}
+.rd-sub { font-size: var(--fs-micro); font-weight: 400; opacity: .78; display: block; overflow-wrap: anywhere; }
+.rd-money .rd-sub { display: inline; margin-left: 8px; font-size: var(--fs-small); opacity: 1; color: var(--muted); }

@@ -3553,10 +3553,119 @@ async function saveMultiPhoneRental(customerId, phoneIds, addAnother) {
   closeDynamicModal();
   nrPhones = [];
   renderRentalsTab();
-  toast(isReservation
-    ? `${created.length} phones reserved for ${customer.firstName} — pickup ${fmtDate(from)}.`
-    : `${created.length} rentals saved — ${fmtGbp(total)} charged to ${customer.firstName}.`, 'success');
-  if (addAnother) openNewRentalModal(customerId);
+  if (addAnother) { openNewRentalModal(customerId); return; }
+  showRentalDone({
+    ids: created.map(r => r.id),
+    customerId,
+    customerName: `${customer.firstName} ${customer.lastName}`,
+    customerPhone: customer.phone || '',
+    isReservation,
+    from, to,
+    summary: `${created.length} phones · ${fmtDate(from)} → ${fmtDate(to)}`
+      + (isReservation ? ' · pickup at handover' : ''),
+    total,
+    payLine: 'on account',
+    method: null,
+    paidNow: false,
+    lines: created.map(r => ({
+      name: `Phone rental ${fmtPhone(r.phoneNumber)} · ${fmtDate(from)} → ${fmtDate(to)}`,
+      qty: 1, total: r.price,
+    })),
+  });
+}
+
+// ── After a rental is saved ──────────────────────────────────────────────
+// A toast said "Rental saved!" and vanished, and the receipt lived four clicks
+// away: customer card → Wallet → find the ledger row → the small ✉️ on it. The
+// counter is handing a phone over while the customer is still standing there,
+// which is the one moment a receipt is wanted, so the next actions come to you
+// instead of being looked for.
+//
+// The recipient is printed ON the button rather than behind a second "are you
+// sure?": the mistake worth catching is the right receipt sent to the wrong
+// person, and naming the address in front of the press catches it without
+// putting a dialog between the counter and a one-press job.
+let rentalDone = null;   // { ids[], customerId, summary, total, receipt }
+
+function showRentalDone(d) {
+  rentalDone = d;
+  const c = customers.find(x => String(x.id) === String(d.customerId));
+  const email = (c && c.email) || '';
+  // Some rows carry OUR provider login (Lebara etc.) rather than the customer's
+  // own address; a receipt sent there mails the shop.
+  const ours = email && isOwnAccountEmail(email);
+  const canEmail = !!email && !ours;
+  const phone = (c && c.phone) || d.customerPhone || '';
+  const first = (c && c.firstName) || 'this customer';
+
+  const emailBtn = canEmail
+    ? `<button class="btn btn-primary rd-act" id="rdEmail" onclick="emailRentalReceipt(this)">
+         ✉️ Email receipt<span class="rd-sub">${escHtml(email)}</span></button>`
+    : `<button class="btn btn-outline rd-act" disabled title="${ours ? 'That address is a shop account login, not the customer\u2019s own' : 'No email address on this customer'}">
+         ✉️ Email receipt<span class="rd-sub">${ours ? 'shop login, not theirs' : 'no address on file'}</span></button>`;
+  const smsBtn = phone && d.ids.length === 1
+    ? `<button class="btn btn-outline rd-act" onclick="closeDynamicModal();openRentalSmsModal('${escJs(String(d.ids[0]))}')">
+         💬 Text receipt<span class="rd-sub">${escHtml(fmtPhone(phone))}</span></button>`
+    : '';
+
+  showDynamicModal(`
+    <div class="modal-title">${d.isReservation ? '📅 Reserved' : '✅ Rental saved'}</div>
+    <div class="rd-summary">
+      <div class="rd-who">${escName(d.customerName)}</div>
+      <div class="rd-what">${escHtml(d.summary)}</div>
+      <div class="rd-money">${fmtGbp(d.total)}<span class="rd-sub">${escHtml(d.payLine || 'on account')}</span></div>
+    </div>
+    <div class="rd-actions">
+      ${emailBtn}
+      ${smsBtn}
+      <button class="btn btn-outline rd-act" onclick="rentalDoneAnother()">
+        📱 Another phone<span class="rd-sub">for ${escName(first)}</span></button>
+    </div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Done</button></div>
+  `);
+}
+
+function rentalDoneAnother() {
+  const d = rentalDone;
+  closeDynamicModal();
+  if (!d) return;
+  openNewRentalModal(d.customerId);
+  // Same dates as the rental just written — a family trip is one set of dates
+  // and several handsets.
+  setTimeout(() => {
+    const f = document.getElementById('rFrom'), t = document.getElementById('rTo');
+    if (f && d.from) { f.value = d.from; showHebrewDate('rFrom', 'rFromHeb'); }
+    if (t && d.to) { t.value = d.to; showHebrewDate('rTo', 'rToHeb'); }
+    refreshRentalPhoneOptions(); updateRentalCalc(); nrSetGivenDefaults();
+  }, 80);
+}
+
+async function emailRentalReceipt(btn) {
+  const d = rentalDone;
+  if (!d) return;
+  if (btn) { btn.disabled = true; btn.innerHTML = 'Sending…'; }
+  const res = await kcFetch('/api/email', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      kind: 'sale',
+      customerId: d.customerId,
+      lines: d.lines,
+      total: d.total,
+      method: d.method || null,
+      paidNow: d.paidNow,
+    }),
+  }).then(r => r.json()).catch(() => null);
+
+  const restore = () => { if (btn) { btn.disabled = false; btn.innerHTML = '✉️ Email receipt'; } };
+  if (res && res.success && res.held) { toast(res.note || 'Email is on hold — receipt not sent.', 'warning'); restore(); }
+  else if (res && res.success && res.redirected) {
+    toast(res.note || `Test mode — sent to ${res.sentTo}.`, 'warning');
+    if (btn) btn.innerHTML = '✅ Sent';
+  } else if (res && res.success) {
+    toast(`Receipt emailed to ${res.sentTo}.`, 'success');
+    recordComm(d.customerId, { type: 'email', text: `Rental receipt emailed — ${fmtGbp(d.total)}` });
+    if (btn) btn.innerHTML = '✅ Sent';
+  } else { toast(res?.error || 'Could not send the receipt.', 'error'); restore(); }
 }
 
 async function saveNewRental(addAnother = false) {
@@ -3770,12 +3879,12 @@ async function saveNewRental(addAnother = false) {
   const payLine = paidNow && payAmt > 0
     ? (payAmt >= totalPrice ? ' Paid in full.' : ` ${fmtGbp(payAmt)} paid, ${fmtGbp((totalPrice - payAmt))} on account.`)
     : '';
-  toast(isReservation
-    ? `Reserved for ${customer.firstName} — pickup ${fmtDate(from)}. Press ▶ Start at handover.`
-    : `Rental saved! ${fmtGbp(totalPrice)} charged to ${customer.firstName}.${payLine}${extraMsg}`, 'success');
+  if (extraMsg) toast(`Rental saved.${extraMsg}`, 'success');
   renderRentalsTab();
   // Family trip: reopen prefilled — same customer, same dates, next phone.
   // The multi-phone discount then applies itself from the 3rd phone on.
+  // Otherwise the done panel takes over: it says the same thing the toast used
+  // to, and carries the receipt instead of leaving it four clicks away.
   if (addAnother) {
     openNewRentalModal(customerId);
     setTimeout(() => {
@@ -3784,7 +3893,25 @@ async function saveNewRental(addAnother = false) {
       if (t) { t.value = to; showHebrewDate('rTo', 'rToHeb'); }
       refreshRentalPhoneOptions(); updateRentalCalc(); nrSetGivenDefaults();
     }, 80);
+    return;
   }
+  showRentalDone({
+    ids: [rental.id],
+    customerId,
+    customerName: `${customer.firstName} ${customer.lastName}`,
+    customerPhone: customer.phone || '',
+    isReservation,
+    from, to,
+    summary: `${fmtPhone(phone.number)} · ${fmtDate(from)} → ${fmtDate(to)} · ${chargeableDays} chargeable day${chargeableDays === 1 ? '' : 's'}`
+      + (isReservation ? ' · pickup at handover' : ''),
+    total: totalPrice,
+    payLine: paidNow && payAmt > 0
+      ? (payAmt >= totalPrice ? 'paid in full' : `${fmtGbp(payAmt)} paid, ${fmtGbp(totalPrice - payAmt)} on account`)
+      : 'on account',
+    method: paidNow ? payMethod : null,
+    paidNow,
+    lines: [{ name: `Phone rental ${fmtPhone(phone.number)} · ${fmtDate(from)} → ${fmtDate(to)}`, qty: 1, total: totalPrice }],
+  });
 }
 
 // Post any auto "extra charges" for a freshly-created rental/SIM (their money
