@@ -3973,7 +3973,7 @@ function openManagePhonesModal() {
       <div id="pPoolGroup" style="display:contents;">
       <div class="form-group">
         <label class="form-label">Pool (USA)</label>
-        <select class="form-input" id="pPool" onchange="poolSelectChanged(this)">
+        <select class="form-input" id="pPool" onfocus="poolSelectRemember(this)" onchange="poolSelectChanged(this)">
           <option value="">— no pool —</option>
           ${rentalPools().map(pl => `<option value="${escHtml(pl.name)}">${escHtml(pl.name)}${pl.till ? ' · till ' + fmtDate(pl.till) : ''}</option>`).join('')}
           <option value="__new__">＋ New pool…</option>
@@ -4236,7 +4236,7 @@ function openEditPhoneModal(phoneId) {
       ${p.country === 'USA' ? `
       <div class="form-group">
         <label class="form-label">Pool</label>
-        <select class="form-input" id="epPool" onchange="poolSelectChanged(this)">
+        <select class="form-input" id="epPool" onfocus="poolSelectRemember(this)" onchange="poolSelectChanged(this)">
           <option value="">— no pool —</option>
           ${rentalPools().map(pl => `<option value="${escHtml(pl.name)}" ${p.pool === pl.name ? 'selected' : ''}>${escHtml(pl.name)}${pl.till ? ' · till ' + fmtDate(pl.till) : ''}</option>`).join('')}
           ${p.pool && !rentalPools().some(pl => pl.name === p.pool) ? `<option value="${escHtml(p.pool)}" selected>${escHtml(p.pool)} (not in the pool list)</option>` : ''}
@@ -4359,28 +4359,88 @@ function rentalPools() {
 
 // "＋ New pool…" straight from the phone's Pool dropdown — the shop names a
 // pool when the SIMs arrive, which is exactly while adding/editing the phone,
-// not on a separate trip to the Pools manager. Registers the name (window
-// dates stay the Pools manager's job) and selects it.
-async function poolSelectChanged(sel) {
+// not on a separate trip to the Pools manager.
+//
+// This used to be a browser prompt() that took a name and nothing else, so
+// every pool born here arrived with no activation window and someone had to
+// remember to go and set it in 📶 Pools — the window being the whole point of
+// a pool. It now opens the real card, the same three fields the Pools manager
+// asks for, stacked on top of the phone form so the half-filled form behind it
+// is never disturbed.
+let poolNewForSelect = null;   // which dropdown asked, and what it showed before
+
+function poolSelectChanged(sel) {
   if (!sel || sel.value !== '__new__') return;
-  const name = (prompt('Name the new pool (e.g. "Pool 39"):') || '').trim();
-  if (!name) { sel.value = ''; return; }          // cancelled — back to "no pool"
+  poolNewForSelect = { id: sel.id, previous: sel.dataset.kcPrevPool || '' };
+  sel.value = poolNewForSelect.previous;   // put the dropdown back; the card decides
+  const today = localISO();
+  showStackedModal(`
+    <div class="modal-title">📶 New pool</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
+      One carrier plan shared by several lines. Set the window now and every phone you
+      put in this pool carries it — New rental prefers already-active pool phones, and
+      warns when a pool would run out mid-trip.
+    </div>
+    <div class="form-grid">
+      <div class="form-group form-full">
+        <label class="form-label">Pool name *</label>
+        <input class="form-input" id="npcName" type="text" placeholder="e.g. Pool 39" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Activated from</label>
+        <input class="form-input" id="npcFrom" type="date" value="${today}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Till</label>
+        <input class="form-input" id="npcTill" type="date">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <span class="modal-actions-group">
+        <button class="btn btn-outline" onclick="closeStackedModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="createPoolFromPicker()">＋ Create pool</button>
+      </span>
+    </div>
+  `);
+}
+
+// Remember what the dropdown showed before, so cancelling puts it back rather
+// than silently dropping the pool the phone was already in.
+function poolSelectRemember(sel) {
+  if (sel && sel.value !== '__new__') sel.dataset.kcPrevPool = sel.value;
+}
+
+async function createPoolFromPicker() {
+  const name = (document.getElementById('npcName')?.value || '').trim();
+  const from = document.getElementById('npcFrom')?.value || '';
+  const till = document.getElementById('npcTill')?.value || '';
+  if (!name) { toast('Give the pool a name.', 'warning'); return; }
+  if (from && till && till < from) { toast('The window ends before it starts.', 'warning'); return; }
+
+  const sel = poolNewForSelect ? document.getElementById(poolNewForSelect.id) : null;
+  const pick = (value) => {
+    if (!sel) return;
+    if (![...sel.options].some(o => o.value === value)) {
+      const opt = document.createElement('option');
+      opt.value = value; opt.textContent = value;
+      sel.insertBefore(opt, sel.querySelector('option[value="__new__"]'));
+    }
+    sel.value = value;
+    sel.dataset.kcPrevPool = value;
+  };
+
   const pools = rentalPools();
-  if (pools.some(pl => pl.name.toLowerCase() === name.toLowerCase())) {
-    const existing = pools.find(pl => pl.name.toLowerCase() === name.toLowerCase()).name;
-    sel.value = [...sel.options].some(o => o.value === existing) ? existing : '';
-    toast(`“${existing}” already exists — selected it.`, 'warning');
+  const clash = pools.find(pl => pl.name.toLowerCase() === name.toLowerCase());
+  if (clash) {
+    pick(clash.name);
+    closeStackedModal();
+    toast(`“${clash.name}” already exists — selected it.`, 'warning');
     return;
   }
-  pools.push({ name, from: null, till: null });
-  const ok = await saveRentalPools(pools);
-  if (!ok) { sel.value = ''; return; }             // applySettingUpdate already warned
-  // Put the new name in the list, before the "＋ New pool…" row, and pick it.
-  const opt = document.createElement('option');
-  opt.value = name; opt.textContent = name;
-  sel.insertBefore(opt, sel.querySelector('option[value="__new__"]'));
-  sel.value = name;
-  toast(`Pool “${name}” created. Set its activation window in 📶 Pools.`, 'success');
+  if (!(await saveRentalPools([...pools, { name, from, till }]))) return;  // already warned
+  pick(name);
+  closeStackedModal();
+  toast(`Pool “${name}” created${till ? ` — active till ${fmtDate(till)}` : ''}.`, 'success');
 }
 
 async function saveRentalPools(pools) {
@@ -5102,6 +5162,40 @@ function closeDynamicModal() {
   if (overlay) overlay.classList.add('hidden');
   suppressCardScrim(false);
   kcRestoreReturnFocus('dynamicModal');
+}
+
+// ── A dialog on top of a dialog ──────────────────────────────────────────
+// There is one #dynamicModal and showDynamicModal replaces its innerHTML, so
+// opening a second one from inside a form destroys the form. Some jobs are
+// genuinely a small errand mid-form — naming a pool while adding the phone
+// that belongs to it — and sending someone away and back is how a half-filled
+// form gets lost. This is a second layer: same shape, own overlay, above the
+// first, and the form underneath is never touched.
+function showStackedModal(html, { width = 460 } = {}) {
+  let overlay = document.getElementById('stackedModal');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'stackedModal';
+    overlay.className = 'modal-overlay kc-stacked';
+    // Same backdrop rule as the layer below: close only when the press STARTED
+    // on the backdrop, so a drag that merely ends there keeps the form.
+    overlay.addEventListener('pointerdown', e => { overlay._pressedOnBackdrop = e.target === overlay; });
+    overlay.addEventListener('click', e => { if (e.target === overlay && overlay._pressedOnBackdrop) closeStackedModal(); });
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:${width}px;"><button type="button" class="modal-x" aria-label="Close" title="Close (Esc)" onclick="closeStackedModal()">✕</button>${html}</div>`;
+  const dlg = overlay.querySelector('.modal');
+  const t = dlg && dlg.querySelector('.modal-title');
+  if (dlg && t) { if (!t.id) t.id = 'kcStackedTitle'; dlg.setAttribute('aria-labelledby', t.id); }
+  kcSaveReturnFocus('stackedModal');
+  overlay.classList.remove('hidden');
+  autofocusFirstField(overlay);
+}
+function closeStackedModal(onClosed) {
+  const overlay = document.getElementById('stackedModal');
+  if (overlay) overlay.classList.add('hidden');
+  kcRestoreReturnFocus('stackedModal');
+  if (typeof onClosed === 'function') onClosed();
 }
 
 // ── Charge confirmation ──────────────────────────────────────────────────
@@ -13908,6 +14002,7 @@ document.addEventListener('keydown', e => {
     if (open('kcShortcuts')) { closeShortcuts(); return; }
     if (open('kcConfirm')) { kcConfirmDone(false); return; }
     if (open('paletteOverlay')) { closePalette(); return; }
+    if (open('stackedModal')) { closeStackedModal(); return; }
     if (open('dynamicModal')) { closeDynamicModal(); return; }
     if (open('customerModal')) { closeModal(); return; }
     if (open('customerCard')) { dismissCustomerCard(); return; }

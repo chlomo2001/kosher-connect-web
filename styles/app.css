@@ -2844,3 +2844,11 @@ td { border-top-color: color-mix(in srgb, var(--border) 55%, transparent); }
 
 /* While dragging, nothing else should highlight or hand the cursor back. */
 body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-resize !important; }
+
+/* A dialog on top of a dialog (showStackedModal). Above the base overlay,
+   below the palette and the charge confirmation, so the Escape order and the
+   paint order agree. Its scrim is lighter than the one underneath: two 40%
+   navy layers dim the screen twice and the card underneath — which is the
+   point, since it is the form you are coming back to — goes muddy. Same
+   reasoning as the customer card's scrim-off. */
+.modal-overlay.kc-stacked { z-index: 1000; background: rgba(10, 37, 64, 0.22); }
