@@ -2348,7 +2348,7 @@ function availabilityCalendarHtml() {
     const hebIsLead = calSystem === 'hebrew';
     return `<th scope="col" class="cal-day${dow === 6 ? ' cal-shabbat' : yomTovName ? ' cal-yomtov' : ''}${dIso === today ? ' cal-today' : ''}${day.roshChodesh ? ' cal-roshchodesh' : ''}"${title}${ariaLabel}>` +
       `<span class="cal-day-lead"${hebIsLead ? ' aria-hidden="true"' : ''}>${escHtml(lead)}</span>` +
-      `<span class="cal-day-sub"${hebIsLead ? '' : ' aria-hidden="true"'}>${escHtml(sub)}</span></th>`;
+      `<span class="cal-day-sub"${hebIsLead ? ' dir="ltr"' : ' aria-hidden="true"'}>${escHtml(sub)}</span></th>`;
   }).join('');
 
   const rows = rowPhones.map(p => {
@@ -2384,7 +2384,10 @@ function availabilityCalendarHtml() {
     // th+scope, not td: it makes the phone the row header, so a screen reader
     // announces "07… , 14" for a cell instead of an unplaced date.
     return `<tr>
-      <th scope="row" class="cal-phone"><strong>${escHtml(fmtPhone(p.number))}</strong><div class="customer-email">${escHtml(p.country)}${p.ukPlan === 'unlimited' ? ' intl' : ''}</div></th>
+      ${/* The column flips with the calendar; the NUMBER never does. In a
+             Hebrew month the table is dir="rtl", and an unisolated
+             "+1 518 555 0101" comes out as "0101 555 518 1+". */''}
+      <th scope="row" class="cal-phone"><strong><bdi dir="ltr">${escHtml(fmtPhone(p.number))}</bdi></strong><div class="customer-email">${escHtml(p.country)}${p.ukPlan === 'unlimited' ? ' intl' : ''}</div></th>
       ${cells}
     </tr>`;
   }).join('');
@@ -2392,13 +2395,18 @@ function availabilityCalendarHtml() {
   return `
     <div class="table-card" style="margin-bottom:20px;padding-bottom:10px;">
       <div style="display:flex;align-items:center;gap:12px;padding:12px 14px 4px;flex-wrap:wrap;">
-        <button class="btn btn-outline btn-sm" aria-label="Previous month" onclick="calShift(-1)">←</button>
+        ${/* In a Hebrew month the grid runs right-to-left, so "back" is to the
+              RIGHT. The pager takes the same direction rather than leaving an
+              arrow that points the opposite way to the thing it moves. */''}
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"${heb ? ' dir="rtl"' : ''}>
+        <button class="btn btn-outline btn-sm" aria-label="Previous month" onclick="calShift(-1)">${heb ? '→' : '←'}</button>
         <strong style="min-width:170px;text-align:center;">${heb
           ? `<span class="heb">${escHtml(heb.month)} ${escHtml(numToHebrew(heb.year))}</span>
-             <span style="display:block;font-size:var(--fs-small);font-weight:600;color:var(--muted);">${escHtml(gregSpan)}</span>`
+             <span dir="ltr" style="display:block;font-size:var(--fs-small);font-weight:600;color:var(--muted);">${escHtml(gregSpan)}</span>`
           : `${monthName}${hebMonthName
               ? `<span class="heb" style="display:block;font-size:var(--fs-small);font-weight:600;color:var(--muted);">${escHtml(hebMonthName)}</span>` : ''}`}</strong>
-        <button class="btn btn-outline btn-sm" aria-label="Next month" onclick="calShift(1)">→</button>
+        <button class="btn btn-outline btn-sm" aria-label="Next month" onclick="calShift(1)">${heb ? '←' : '→'}</button>
+        </div>
         ${(heb ? !days.some(d => d.iso === today) : calMonth !== today.slice(0, 7))
           ? `<button class="btn btn-outline btn-sm" onclick="calToday()">Today</button>` : ''}
         ${/* Counting in Hebrew months is the natural frame for a customer who
@@ -2418,7 +2426,7 @@ function availabilityCalendarHtml() {
         </span>
       </div>
       <div class="cal-scroll" style="padding:0 14px 6px;">
-        <table class="cal-table${calSystem === 'hebrew' ? ' cal-heb' : ''}">
+        <table class="cal-table${calSystem === 'hebrew' ? ' cal-heb' : ''}"${heb ? ' dir="rtl"' : ''}>
           <thead><tr><th class="cal-phone">Phone</th>${dayHead}</tr></thead>
           <tbody>${rows.length ? rows : `<tr><td colspan="${days.length + 1}" style="color:var(--muted);padding:14px;">${term ? 'No phone matches that search.' : 'No phones in the fleet yet.'}</td></tr>`}</tbody>
         </table>

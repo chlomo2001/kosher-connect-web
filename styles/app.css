@@ -2289,7 +2289,11 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
    indefinite size blew the table out to 13490px. A px width is stable under
    max-content, fits the longest number we format (+972 54 400 0111), and
    leaves the rest of the row to the day columns. */
-.cal-table .cal-phone { width: 150px; text-align: left !important; white-space: nowrap; padding: 4px 10px 4px 0 !important; font-size: var(--fs-small); font-weight: 400; color: var(--text); position: sticky; left: 0; background: var(--surface); }
+/* Logical properties, not left/right: in a Hebrew month the grid is dir="rtl"
+   and the phone column has to stick to the RIGHT, with its padding and its
+   text following the same way round. The numbers inside stay LTR on their own
+   (.kc-phone / bdi) — it is the column that flips, never a phone number. */
+.cal-table .cal-phone { width: 150px; text-align: start !important; white-space: nowrap; padding: 4px 10px 4px 0 !important; padding-inline: 0 10px !important; font-size: var(--fs-small); font-weight: 400; color: var(--text); position: sticky; inset-inline-start: 0; background: var(--surface); }
 
 .cal-cell { width: 22px; height: 24px; border: 1px solid var(--border); padding: 0 !important; }
 
