@@ -65,6 +65,26 @@ async function handler(req, res) {
     if (e.code === 'MONEY_HISTORY' || e.code === 'HAS_RECORDS') {
       return res.status(409).json({ success: false, error: e.message })
     }
+    // customers.email_normalized and (country code, phone) are uniquely indexed,
+    // so a second customer on the same mailbox or number is rejected by the
+    // database itself (23505). That is a duplicate, not a storage fault: name it,
+    // and say WHY two addresses that look different are one mailbox — the stored
+    // key drops full stops and anything after a "+". Otherwise every caller that
+    // isn't the customer form (import, a direct API write) gets "couldn't save
+    // that" for a problem the operator could have fixed in a second.
+    const msg = String(e && e.message || '')
+    if (msg.includes('23505')) {
+      if (msg.includes('customers_email_normalized_key')) {
+        return res.status(409).json({
+          success: false,
+          error: 'Another customer already has that email. Addresses are matched by mailbox — full stops in the name are ignored and anything after a "+" is only a label, so e.a.rothbart@gmail.com, earothbart@gmail.com and earothbart+shop@gmail.com are all one inbox.',
+        })
+      }
+      if (msg.includes('customers_phone_key')) {
+        return res.status(409).json({ success: false, error: 'Another customer already has that phone number.' })
+      }
+      return res.status(409).json({ success: false, error: 'That would duplicate a customer who already exists.' })
+    }
     console.error('[api/customers]', e)
     return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }

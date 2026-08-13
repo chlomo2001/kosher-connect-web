@@ -5880,7 +5880,7 @@ function renderCustomersTab() {
       <table>
         <thead>
           <tr>
-            <th>Customer Name</th>
+            <th id="thCustomerName">Surname, first name</th>
             <th>Phone</th>
             <th>Active Services</th>
             <th>Balance</th>
@@ -5930,6 +5930,24 @@ function customerServiceCount(c) {
     + virtualNumbers.filter(v => v.customerId === c.id && v.status === 'Active').length
     + repairs.filter(r => r.customerId === c.id && r.status !== 'Collected' && r.status !== 'Cancelled').length;
 }
+// The name as it should READ in a list ordered by surname: surname first and
+// heavier, so the eye runs down one column of surnames the way it does in a
+// spreadsheet, with the honorific and given name trailing after the comma. Sorted
+// by surname but printed "Elye Abitan", the surname starts at a different x on
+// every row and the column can't be scanned at all.
+// The bold word is exactly sortCustomers' own key (`sn`) — the surname, or the
+// single name when there is no surname — so what's emphasised is always what the
+// rows are actually in order of. Sorting by first name restores natural order.
+function customerNameCell(c, surnameFirst) {
+  const title = c.title ? `<span class="cust-title">${escHtml(capName(c.title))}</span> ` : '';
+  const first = (c.firstName || '').trim();
+  const last = (c.lastName || '').trim();
+  if (!surnameFirst) return `${title}${nameHtml(`${first} ${last}`.trim())}`;
+  if (!last) return `${title}<span class="cust-surname">${nameHtml(first)}</span>`;
+  return `<span class="cust-surname">${nameHtml(last)}</span>`
+    + `<span class="cust-given">, ${title}${nameHtml(first)}</span>`;
+}
+
 function sortCustomers(list) {
   const nm = c => `${c.firstName || ''} ${c.lastName || ''}`.trim().toLowerCase();
   // Surname sort: records with no real surname (labels, single-word names)
@@ -5978,6 +5996,12 @@ function renderTableRows() {
   // #51 — derive the shown list; never re-filter filteredCustomers in place
   // (that narrowed the search result cumulatively on every render/filter change).
   const shown = sortCustomers(filteredCustomers.filter(customerMatchesFilter));
+  // The column header names the order the rows are in, and the rows are printed
+  // to match it. Set here rather than in the tab template because the sort can
+  // change without the table being rebuilt.
+  const surnameFirst = customerSort === 'surname' || customerSort === 'surname_desc';
+  const th = document.getElementById('thCustomerName');
+  if (th) th.textContent = surnameFirst ? 'Surname, first name' : 'Customer name';
 
   // A failed load must never read as "No customers yet." — with 751 real
   // records behind it that invites a panicked re-entry of data that already
@@ -6032,7 +6056,7 @@ function renderTableRows() {
     return `
     <tr class="${selected}" data-id="${c.id}">
       <td>
-        <div class="customer-name">${c.title ? `<span class="cust-title">${escHtml(capName(c.title))}</span> ` : ''}${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file">🛂</span>' : ''}</div>
+        <div class="customer-name">${customerNameCell(c, surnameFirst)}${customerHasPassport(c) ? ' <span title="Passport on file">🛂</span>' : ''}</div>
         <div class="customer-email">${escHtml(c.email || '')}${c.accountEmail ? `${c.email ? '<br>' : ''}<span title="Account/login email (Lebara etc.) — not for contacting the customer" style="color:var(--muted);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''}</div>
       </td>
       <td class="kc-phone">${c.phone ? escHtml(fmtPhone(c.phone)) : '—'}</td>
@@ -9094,6 +9118,50 @@ function checkPhoneDuplicate() {
   warn.classList.toggle('visible', !!dup);
 }
 
+// WHY two addresses that plainly differ count as one mailbox. normalizeEmail()
+// lowercases, drops every full stop from the name part and cuts anything after
+// a "+", so three different-looking lines can land on the same customer. A bare
+// "this email already exists" leaves the operator staring at two addresses that
+// are visibly not the same and doubting the app; this names the rule that
+// actually fired. Returns ready-to-insert HTML fragments.
+function emailDupWhy(typed, existing) {
+  const a = String(typed || '').trim().toLowerCase();
+  const b = String(existing || '').trim().toLowerCase();
+  const aLocal = a.split('@')[0] || '';
+  const bLocal = b.split('@')[0] || '';
+  const domain = a.split('@')[1] || '';
+  const gmail = /^(gmail|googlemail)\.com$/.test(domain);
+  const tag = aLocal.split('+')[1] || bLocal.split('+')[1] || '';
+  const aBase = aLocal.split('+')[0];
+  const bBase = bLocal.split('+')[0];
+  const dots = aBase !== bBase && aBase.replace(/\./g, '') === bBase.replace(/\./g, '');
+  const why = [];
+  if (tag) {
+    why.push(gmail
+      ? `The <b>+${escHtml(tag)}</b> is only a label — Gmail delivers anything after a <b>+</b> to the very same inbox.`
+      : `Anything after the <b>+</b> is treated as a label here, so <b>+${escHtml(tag)}</b> doesn’t make it a different address.`);
+  }
+  if (dots) {
+    why.push(gmail
+      ? 'Gmail also ignores <b>full stops</b> in the part before the @, so both spellings reach one inbox.'
+      : 'We ignore <b>full stops</b> in the part before the @. Outside Gmail a full stop <i>can</i> matter — check this really is the same person.');
+  }
+  // Compare the RAW strings here, not the lowercased ones — capitals are the
+  // only difference left once the dot and +tag rules haven't fired.
+  if (!why.length && String(typed || '').trim() !== String(existing || '').trim()) {
+    why.push('Only the capitals differ, and an email address is never case-sensitive.');
+  }
+  return why;
+}
+
+function emailDupHtml(dup, typed) {
+  const who = `${dup.firstName || ''} ${dup.lastName || ''}`.trim() || 'Another customer';
+  const why = emailDupWhy(typed, dup.email);
+  return `⚠️ <b>${escHtml(who)}</b> already has this mailbox — <span class="warn-em">${escHtml(dup.email)}</span>.`
+    + `<div class="warn-why">${why.map(l => `<div>${l}</div>`).join('')}`
+    + '<div>One mailbox belongs to one customer, so this can’t be saved as a second person.</div></div>';
+}
+
 function checkEmailDuplicate() {
   const editId = document.getElementById('editId').value;
   const email = document.getElementById('fEmail').value.trim();
@@ -9101,7 +9169,9 @@ function checkEmailDuplicate() {
   if (!email) { warn.classList.remove('visible'); return; }
   const norm = normalizeEmail(email);
   const dup = customers.find(c => c.id !== editId && c.email && normalizeEmail(c.email) === norm);
-  warn.classList.toggle('visible', !!dup);
+  if (!dup) { warn.classList.remove('visible'); return; }
+  warn.innerHTML = emailDupHtml(dup, email);
+  warn.classList.add('visible');
 }
 
 function checkNameDuplicate() {
@@ -9147,6 +9217,22 @@ async function saveCustomer() {
     document.getElementById('warnPhone').classList.add('visible');
     return;
   }
+
+  // Block on a duplicate mailbox HERE, with the reason spelled out. The column
+  // is uniquely indexed, so saving one anyway used to fail in the database and
+  // surface as the generic "couldn't save that" — a real duplicate reported as
+  // a storage fault, with no hint that a dot or a +tag was what collided.
+  const emailDup = email && customers.find(c => c.id !== editId && c.email
+    && normalizeEmail(c.email) === normalizeEmail(email));
+  if (emailDup) {
+    const warn = document.getElementById('warnEmail');
+    warn.innerHTML = emailDupHtml(emailDup, email);
+    warn.classList.add('visible');
+    setInputErr('fEmail', true);
+    warn.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    return;
+  }
+  setInputErr('fEmail', false);
 
   // Soft-warn on a same-name customer (schema build rule: block on email/phone
   // duplicates, WARN on name — two Moshe Katzes are legal but usually a slip).

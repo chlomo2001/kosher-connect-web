@@ -788,6 +788,15 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
    the eye still lands on the surname it sorts by. */
 .cust-title { color: var(--muted); font-weight: 400; }
 
+/* Surname-led rows, for the sort that puts the list in surname order. The
+   surname carries the weight and the given name steps back, so the left edge of
+   the column reads as one scannable list of surnames — the thing the operator is
+   looking down when they're hunting for a family. */
+.cust-surname { font-weight: 700; }
+/* Weight alone separates the two halves — the given name keeps the full text
+   colour, so nothing here depends on a contrast margin. */
+.cust-given { font-weight: 400; }
+
 .customer-email { color: var(--muted); font-size: var(--fs-body); letter-spacing: -0.13px; }
 
 
@@ -1138,6 +1147,14 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 }
 
 .form-warning.visible { display: block; }
+
+/* The reasoning under a warning's headline: why the app thinks two things that
+   plainly differ are the same. Set smaller and looser than the headline so the
+   box still reads as one warning rather than a wall. */
+.warn-why { margin-top: 6px; font-size: var(--fs-small); line-height: 1.5; }
+.warn-why div + div { margin-top: 3px; }
+/* The value being complained about, quoted back verbatim. */
+.warn-em { font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace); word-break: break-all; }
 
 
 /* Footers wrap. Without this the row was unbreakable, and in Simple Mode's
