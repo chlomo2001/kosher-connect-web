@@ -2826,3 +2826,21 @@ td { border-top-color: color-mix(in srgb, var(--border) 55%, transparent); }
 .badge-clip > .badge-fix,
 .badge-clip > svg { flex: none; }
 .badge-clip > .badge-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* The Phone Inventory corner grip. The list is capped so the two halves of the
+   rentals split stay comparable, but a shop with 40 handsets wants far more
+   than eight rows at once — so the corner comes off its hinge. ns-resize and
+   touch-action:none because a touch drag here must resize, not scroll the
+   page underneath it; 26px tall clears WCAG 2.5.8 on the counter tablet. */
+.kc-grip {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 34px; min-height: 26px; padding: 2px 8px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); color: var(--muted);
+  font-size: var(--fs-small); line-height: 1;
+  cursor: ns-resize; touch-action: none;
+}
+.kc-grip:hover { color: var(--text); border-color: var(--muted); }
+
+/* While dragging, nothing else should highlight or hand the cursor back. */
+body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-resize !important; }

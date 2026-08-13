@@ -2163,6 +2163,11 @@ function renderRentalsTab() {
       <div class="rentals-split-col">
         <div class="section-header">
           <div class="section-title">Phone Inventory</div>
+          <button type="button" class="kc-grip" id="invGrip"
+            title="Drag up to open the list out — double-click to fit every phone"
+            aria-label="Resize the phone inventory list"
+            onpointerdown="invGripDown(event)" onkeydown="invGripKey(event)"
+            ondblclick="invGripFit()">⇕</button>
         </div>
         <div class="rentals-filter-row rentals-inv-spacer" aria-hidden="true"></div>
         <div class="table-wrap">
@@ -2720,9 +2725,89 @@ function phonesMatchingSearch() {
   });
 }
 
+// ── How tall the Phone Inventory list is ─────────────────────────────────
+// The list is capped at 420px so the two halves of the rentals split stay
+// comparable (see .rentals-split-col .table-wrap). With 40-odd handsets on the
+// shelf that is eight rows of a fleet the counter wants to see at once, so the
+// grip in the section header takes it as tall as they like — and the app
+// remembers, because re-setting it on every visit is the same annoyance one
+// step further along.
+const INV_H_KEY = 'kc_inv_height';
+const INV_H_MIN = 160;
+const INV_H_DEFAULT = 420;
+
+function invWrap() {
+  return document.getElementById('phoneTableBody')?.closest('.table-wrap') || null;
+}
+// The effective cap, not the painted height: a short list sits below its cap,
+// and starting a drag from the painted height would make the first pixel jump.
+function invCurrentCap(w) {
+  const cur = parseFloat(getComputedStyle(w).maxHeight);
+  return Number.isFinite(cur) ? cur : w.clientHeight;
+}
+function invApplyHeight(px, save = true) {
+  const w = invWrap();
+  if (!w) return;
+  const max = Math.max(INV_H_MIN, Math.round(window.innerHeight * 3));
+  const h = Math.min(max, Math.max(INV_H_MIN, Math.round(px)));
+  w.style.maxHeight = h + 'px';
+  const grip = document.getElementById('invGrip');
+  if (grip) grip.setAttribute('aria-valuenow', String(h));
+  if (save) { try { localStorage.setItem(INV_H_KEY, String(h)); } catch { /* private mode */ } }
+}
+function invRestoreHeight() {
+  let v = 0;
+  try { v = Number(localStorage.getItem(INV_H_KEY)) || 0; } catch { /* private mode */ }
+  if (v) invApplyHeight(v, false);
+}
+function invGripDown(e) {
+  const w = invWrap();
+  if (!w) return;
+  e.preventDefault();
+  const grip = e.currentTarget;
+  const startY = e.clientY;
+  const startH = invCurrentCap(w);
+  grip.setPointerCapture?.(e.pointerId);
+  document.body.classList.add('kc-resizing');
+  // Up makes it taller. That is the gesture as asked for — "grab the corner
+  // and pull it up" reads as opening the card out, not as moving its top edge
+  // down into the rentals list above it.
+  const move = (ev) => invApplyHeight(startH + (startY - ev.clientY), false);
+  const done = () => {
+    grip.removeEventListener('pointermove', move);
+    grip.removeEventListener('pointerup', done);
+    grip.removeEventListener('pointercancel', done);
+    document.body.classList.remove('kc-resizing');
+    const el = invWrap();
+    if (el) invApplyHeight(invCurrentCap(el));   // one write, at the end
+  };
+  grip.addEventListener('pointermove', move);
+  grip.addEventListener('pointerup', done);
+  grip.addEventListener('pointercancel', done);
+}
+// Same grip from the keyboard, since a drag is the one gesture that has no
+// keyboard equivalent unless you give it one.
+function invGripKey(e) {
+  const w = invWrap();
+  if (!w) return;
+  const step = e.shiftKey ? 120 : 40;
+  if (e.key === 'ArrowUp') { e.preventDefault(); invApplyHeight(invCurrentCap(w) + step); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); invApplyHeight(invCurrentCap(w) - step); }
+  else if (e.key === 'Home') { e.preventDefault(); invApplyHeight(INV_H_DEFAULT); }
+  else if (e.key === 'End' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); invGripFit(); }
+}
+// Double-click: show every phone, or go back to the default if it already does.
+function invGripFit() {
+  const w = invWrap();
+  if (!w) return;
+  const full = w.scrollHeight + 2;
+  invApplyHeight(invCurrentCap(w) >= full - 4 ? INV_H_DEFAULT : full);
+}
+
 function renderPhoneRows() {
   const tbody = document.getElementById('phoneTableBody');
   if (!tbody) return;
+  invRestoreHeight();
 
   if (phones.length === 0) {
     tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="emoji">📋</div><p>No phones in inventory.</p><small>Click "⚙️ Manage phones" to add phones.</small></div></td></tr>`;
