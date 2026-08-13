@@ -120,6 +120,17 @@ Safe (loop-eligible), ranked value ÷ effort:
       (Loyverse.) *money persistence — careful design.*
 
 ## UX / smoothness / delight
+- [ ] **P2 · S** ⚠ — **Till overflows sideways at 320px in Simple Mode** (found
+      08-13). `.pos-methods` — the row of payment-method buttons — will not
+      wrap: +13px at text `large`, +43px at `largest`, where `.pos-main`,
+      `.pos-cats` and `.pos-tiles` go with it. A tender can end up off the
+      screen on a small phone for the staff member who needs bigger text. The
+      fix is a wrapping rule, not charge logic, but the till is the
+      customer-charge surface, so it wants the owner's nod rather than a night
+      loop. Reproduce:
+      `node ops/harness/modals.mjs --width 320 --theme light --fs largest`.
+      **Wiring the largest-size modal sweep into `audit-all.sh` is waiting on
+      this** — see the comment there.
 - [ ] **P1 · L** — **"Google-feel" polish (owner ask 08-03**, after "why does
       business.google.com feel so much nicer/richer/smoother?"). Owner wants
       the **first three** of the four gaps. **Session 1 shipped 08-04**
@@ -620,6 +631,32 @@ not been re-checked against the code and may have drifted the same way.
       with RLS off. Re-run the migration after any new hand-made table.
 
 ---
+
+## UX loop — night of 2026-08-13
+
+| Item | Commit | Screens |
+|------|--------|---------|
+| Hebrew calendar: the Hebrew day leads its own view — it shipped as the 9px 65%-opacity subtitle under a bold Gregorian date. The two spans are roles now, not languages; Gregorian months unchanged | 220daac | Rentals → Availability |
+| Harness: the duplicate review joins the nightly modal sweep — needed a faithful `/api/customers/duplicates` fixture plus two customers a scan can plausibly pair | df3697a | tooling |
+| Duplicate review: one card per pair, with OR between the sides so a pair still reads as a pair once a phone stacks it; header says WHY the scan flagged them (same phone / same name / ELID import / one side holds nothing); name buttons 17px → 24px | aadd235 | Customers → 👥 Duplicates |
+| New rental: the multi-phone count stopped lying (never rewrote itself downward) and stopped overwriting the availability hint the date fields put in the same slot | c1bd25e | Rentals → New rental |
+| Modal footers wrap — at Simple Mode largest, Manage Rental's "💾 Save changes" sat 53px off a 390px screen. Four modals shared the pattern; `.modal-actions-group` replaces the inline flex written out four times | b3e76d7 | Manage Rental, Edit Booking, House account, Stock item |
+| `render.mjs --fs` — Simple Mode over the 13 tabs, wired into audit-all (tabs at large+largest, targets, dark contrast). Plus a 320px modal sweep, which found Manage SIM's Close button 26px off screen | aeccd1d | tooling + SIM Plans → Manage SIM |
+
+Discovery: audit-all clean before any fix, so the night's items came from
+opening the surfaces built in the last 48h at counter width (Hebrew calendar,
+multi-phone New Rental, bulk-return bar, duplicate review — the last two of
+which no harness had ever opened), then from sweeping the modals at all three
+Simple Mode text sizes, which nothing had run since the last modal changed.
+Verified per item: gate (tests ×2 TZ + build) exit 0, harness re-render of the
+touched surface in both themes; audit-all clean end to end at the finish.
+
+**Skipped, needs an owner decision:** the till overflows sideways at 320px from
+Simple Mode `large` upward (+13px at large, +43px at largest — `.pos-methods`,
+a row of payment-method buttons that will not wrap). It is a wrapping rule, not
+charge logic, but the till is the customer-charge surface this loop does not
+touch. Wiring the largest-size MODAL sweep into audit-all is held behind it, so
+that check does not go red every night — the by-hand command sits in the script.
 
 ## UX loop — night of 2026-08-12
 
