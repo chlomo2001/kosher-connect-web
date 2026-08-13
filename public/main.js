@@ -2975,8 +2975,17 @@ function renderNrPhoneChips() {
       <button type="button" class="action-btn" style="padding:0 4px;" aria-label="Remove ${escHtml(fmtPhone(p.number || ''))}"
         onclick="nrRemovePhone('${escHtml(id)}')">✕</button></span>`;
   }).join('');
-  const hint = document.getElementById('rPhoneHint');
-  if (hint && nrPhones.length > 1) hint.textContent = `(${nrPhones.length} phones on this rental)`;
+  // The count gets its own line rather than overwriting the availability hint.
+  // It used to write into #rPhoneHint and only when the count was above one, so
+  // taking a phone back off the rental left "(2 phones on this rental)" sitting
+  // over a single chip — and it clobbered the "N free 14 Aug → 21 Aug" the date
+  // fields had just put there, which is the harder thing to get back.
+  const multi = document.getElementById('rPhoneMulti');
+  if (multi) {
+    multi.textContent = nrPhones.length > 1
+      ? `${nrPhones.length} phones — this books ${nrPhones.length} rentals, one per handset.`
+      : '';
+  }
 }
 
 function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null) {
@@ -3007,6 +3016,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
           ${availablePhoneOptions}
         </select>
         <div id="rPhoneChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
+        <div id="rPhoneMulti" style="font-size:var(--fs-small);color:var(--accent);margin-top:4px;"></div>
         <div id="rPhoneInfo" style="font-size:var(--fs-small);color:var(--muted);margin-top:4px;"></div>
       </div>
 
