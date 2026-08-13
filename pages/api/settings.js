@@ -48,6 +48,20 @@ const SETTING_RULES = {
   dash_returning_red:        { type: 'count',   unit: 'returns' },
 }
 
+// Customer-facing receipt copy — see the migration that seeds these. `allow`
+// is the closed list of placeholders each line may use; anything else is a
+// typo and is refused at save time.
+const EMAIL_COPY_KEYS = {
+  email_receipt_subject: { max: 120, allow: ['total', 'name', 'first'],
+    description: 'Subject line on a receipt email. {total} is filled in.' },
+  email_payment_subject: { max: 120, allow: ['amount', 'name', 'first'],
+    description: 'Subject line on a payment-received email. {amount} is filled in.' },
+  email_greeting: { max: 300, allow: ['first', 'name'],
+    description: 'Opening line inside every receipt email. {first} / {name} are filled in.' },
+  email_closing: { max: 400, allow: [],
+    description: 'Closing line in the footer of every customer email.' },
+}
+
 // A key is editable if it's in the known-rules whitelist OR it's a custom_
 // key the owner added from the app. Custom keys validate/display as money.
 const settingEditable = (key) => !!SETTING_RULES[key] || String(key).startsWith('custom_')
@@ -301,6 +315,32 @@ async function handler(req, res) {
             text_value: text,
             description: 'Shop opening hours shown on the public welcome page',
           }])
+        }
+        return res.json({ success: true, warnings })
+      }
+
+      // Receipt wording. Four text keys, edited in Settings with a preview, so
+      // tuning a subject line is not a deploy. Placeholders are checked here
+      // rather than discovered by a customer: a typo'd {Total} would otherwise
+      // print literally in a real receipt.
+      if (table === 'settings' && EMAIL_COPY_KEYS[key]) {
+        const rule = EMAIL_COPY_KEYS[key]
+        const text = String(values?.textValue || '').replace(/\s+/g, ' ').trim().slice(0, rule.max)
+        if (!text) return res.status(400).json({ success: false, error: 'Enter the wording — an empty line is not allowed.' })
+        const unknown = [...text.matchAll(/\{([^}]*)\}/g)]
+          .map(m => m[1]).filter(t => !rule.allow.includes(t))
+        if (unknown.length) {
+          return res.status(400).json({
+            success: false,
+            error: `Unknown placeholder ${unknown.map(u => `{${u}}`).join(', ')}. This line can use ${rule.allow.map(a => `{${a}}`).join(', ')}.`,
+          })
+        }
+        const updated = await db.update('settings', `key=eq.${encodeURIComponent(String(key))}`, {
+          text_value: text,
+          updated_at: new Date().toISOString(),
+        })
+        if (!updated.length) {
+          await db.insert('settings', [{ key: String(key), text_value: text, description: rule.description }])
         }
         return res.json({ success: true, warnings })
       }

@@ -16231,6 +16231,47 @@ async function renderSettingsTab() {
         <span style="flex-basis:100%;font-size:var(--fs-micro);color:var(--muted);">Shown on the public welcome page (Visit-the-shop card and footer). Free text — write it the way you'd say it.</span>
       </div>`);
 
+  // ── Receipt wording, with the real email beside it ─────────────────────
+  // These four lines used to be literals in pages/api/email.js, so tuning a
+  // subject was a deploy. The preview is rendered by the SAME builder that
+  // sends, so what you see here is the email — not a second rendering that can
+  // drift away from it.
+  const copyOf = (k, d) => cfg.settings.find(x => x.key === k)?.textValue || d;
+  const emailCopyHtml = settingsCard('email-copy', '✉️ Receipt wording',
+    'what customers read', `
+      <div style="padding:12px 14px 14px;display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;">
+        <div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:10px;">
+          ${[
+            ['email_receipt_subject', 'Receipt subject', 'Your Kosher Connect receipt — {total}', '{total}'],
+            ['email_payment_subject', 'Payment subject', 'Payment received — {amount}', '{amount}'],
+            ['email_greeting', 'Opening line', 'Dear {first}, thank you for coming in — here are your details for your records.', '{first} · {name}'],
+            ['email_closing', 'Closing line', 'Thank you for choosing Kosher Connect. If anything on this receipt looks wrong, simply reply to this email or call us and we’ll put it right.', 'no placeholders'],
+          ].map(([key, label, dflt, tokens]) => `
+            <label style="display:flex;flex-direction:column;gap:3px;font-size:var(--fs-micro);color:var(--muted);">
+              ${escHtml(label)} <span style="opacity:.8;">${escHtml(tokens)}</span>
+              <textarea class="form-input" id="ec_${key}" rows="2"
+                style="font-family:inherit;font-size:var(--fs-body);color:var(--text);"
+                oninput="emailCopyDirty()">${escHtml(copyOf(key, dflt))}</textarea>
+            </label>`).join('')}
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button class="btn btn-primary btn-sm" onclick="saveEmailCopy()">💾 Save wording</button>
+            <button class="btn btn-outline btn-sm" onclick="loadEmailPreview('sale')">👁 Preview receipt</button>
+            <button class="btn btn-outline btn-sm" onclick="loadEmailPreview('payment')">👁 Preview payment</button>
+            <span id="emailCopyNote" style="font-size:var(--fs-micro);color:var(--muted);"></span>
+          </div>
+          <div style="font-size:var(--fs-micro);color:var(--muted);">
+            A placeholder in curly brackets is filled in when the email goes out — anything
+            else in brackets is refused when you save, rather than printed to a customer.
+            The preview shows saved wording, so save first to see a change.
+          </div>
+        </div>
+        <div style="flex:1;min-width:300px;">
+          <div style="font-size:var(--fs-micro);color:var(--muted);margin-bottom:4px;" id="emailPreviewSubject">Press Preview to see the email.</div>
+          <iframe id="emailPreviewFrame" title="Email preview" sandbox=""
+            style="width:100%;height:520px;border:1px solid var(--border);border-radius:10px;background:#f2f4f7;"></iframe>
+        </div>
+      </div>`);
+
   // Travel requirements matrix (owner-only) — filled lazily after render.
   const travelRulesHtml = (currentStaff && currentStaff.role !== 'owner') ? '' :
     settingsCard('travel-rules', '🛂 Travel requirements',
@@ -16263,6 +16304,7 @@ async function renderSettingsTab() {
 
     ${sectionHead('Shop', 'public-facing details')}
     ${shopHtml}
+    ${emailCopyHtml}
     ${phoneGuideHtml}
 
     ${bizAccHtml ? sectionHead('Business', 'the accounts &amp; subscriptions the company runs on') + bizAccHtml : ''}
@@ -16534,6 +16576,60 @@ async function saveSettingKey(key) {
     table: 'settings', key,
     values: { numValue: document.getElementById(`st_${key}`).value },
   });
+}
+
+// ── Receipt wording ──────────────────────────────────────────────────────
+const EMAIL_COPY_FIELDS = ['email_receipt_subject', 'email_payment_subject', 'email_greeting', 'email_closing'];
+
+function emailCopyDirty() {
+  const note = document.getElementById('emailCopyNote');
+  if (note) { note.textContent = 'Unsaved — the preview shows the saved wording.'; note.style.color = 'var(--gold)'; }
+}
+
+// Saved one line at a time by the API, but reported once: four fields going
+// through applySettingUpdate would fire four toasts, each claiming "new
+// calculations use the updated value", which is not what changed here.
+async function saveEmailCopy() {
+  const note = document.getElementById('emailCopyNote');
+  let saved = 0;
+  for (const key of EMAIL_COPY_FIELDS) {
+    const el = document.getElementById('ec_' + key);
+    if (!el) continue;
+    const res = await window.api.updateSetting({
+      table: 'settings', key, values: { textValue: el.value },
+    }).catch(() => null);
+    if (!res || !res.success) {
+      toast(res?.error || 'Could not save that wording.', 'error');
+      if (note) { note.textContent = res?.error || 'Not saved.'; note.style.color = 'var(--danger-ink)'; }
+      return;
+    }
+    saved++;
+  }
+  pricingConfig = await window.api.getSettings().catch(() => pricingConfig);
+  toast(`Receipt wording saved — ${saved} line${saved === 1 ? '' : 's'}.`, 'success');
+  if (note) { note.textContent = 'Saved. The preview below is what customers will get.'; note.style.color = 'var(--success-ink)'; }
+  loadEmailPreview(emailPreviewKind);
+}
+
+let emailPreviewKind = 'sale';
+async function loadEmailPreview(kind = 'sale') {
+  emailPreviewKind = kind;
+  const frame = document.getElementById('emailPreviewFrame');
+  const subj = document.getElementById('emailPreviewSubject');
+  if (!frame) return;
+  if (subj) subj.textContent = 'Rendering…';
+  const res = await kcFetch('/api/email', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ preview: true, kind }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) {
+    if (subj) { subj.textContent = res?.error || 'Could not build the preview.'; subj.style.color = 'var(--danger-ink)'; }
+    return;
+  }
+  if (subj) { subj.style.color = 'var(--muted)'; subj.textContent = `Subject: ${res.subject}`; }
+  // srcdoc + an empty sandbox: the preview is inert markup, with no script, no
+  // forms and no access back to the app.
+  frame.setAttribute('srcdoc', res.html);
 }
 
 async function saveOpeningHours() {
