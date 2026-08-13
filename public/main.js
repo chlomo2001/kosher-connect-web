@@ -6382,28 +6382,13 @@ function buildCustomerPanelHtml(c, mode = 'card') {
           <div class="detail-name">${c.title ? `<span class="cust-title">${escHtml(capName(c.title))}</span> ` : ''}${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:var(--fs-lead);">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
           <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${waLink(c, '') ? ` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr}${since ? ` · Since ${since}` : ''}</div>
         </div>
-        <!-- Grouped by what the button DOES, not by the order they were added.
-             Nine identical squares in a row made the operator read every icon
-             every time; three small families are scannable. Reach them (talk
-             to the customer) · Money (take payment) · Manage (my own admin).
-             The groups are labelled for screen readers too, which a flat row
-             could not be. -->
+        <!-- Three menus, not nine icons. Grouping them by what they DO was the
+             first fix; the row was still nine identical squares to read, and
+             they carried nothing but an emoji. Now the card shows Contact ·
+             Money · Manage, and the actions — with words on them — come out on
+             a press. -->
         <div class="card-tools">
-          <span class="card-tool-group" role="group" aria-label="Contact this customer"><span class="card-tool-cap" aria-hidden="true">Contact</span>
-            <button class="card-tool" onclick="openDraftReminderModal('${c.id}')" title="Draft a reminder message (does not send)" aria-label="Draft reminder">✉️</button>
-            <button class="card-tool" onclick="openAiReplyModal('${c.id}')" title="Draft an AI reply to a customer message (does not send)" aria-label="AI reply">💬</button>
-            <button class="card-tool" onclick="openLogCommModal('${c.id}')" title="Log a call or note" aria-label="Log call or note">📞</button>
-          </span>
-          <span class="card-tool-group" role="group" aria-label="Money"><span class="card-tool-cap" aria-hidden="true">Money</span>
-            <button class="card-tool" onclick="chargeCardOnFile('${c.id}')" title="Charge the customer's saved card on file (Stripe)" aria-label="Charge saved card">💳</button>
-            <button class="card-tool" onclick="openPaymentLinkModal('${c.id}')" title="Create a Stripe payment link tagged to this customer" aria-label="Create payment link">🔗</button>
-          </span>
-          <span class="card-tool-group" role="group" aria-label="Manage"><span class="card-tool-cap" aria-hidden="true">Manage</span>
-            <button class="card-tool" onclick="openRemindModal('customer','${c.id}')" title="Remind me about this customer" aria-label="Set reminder">⏰</button>
-            ${(!currentStaff || currentStaff.role === 'owner') ? `<button class="card-tool" onclick="openElidModal('${c.id}')" title="Look up this customer's ELID (telecom) balance & status" aria-label="ELID lookup">📡</button>` : ''}
-            <button class="card-tool" onclick="openEditModal('${c.id}')" title="Edit customer" aria-label="Edit customer">✏️</button>
-            ${isPage ? '' : `<button class="card-tool" onclick="openCustomerPage('${c.id}')" title="Open as a full page — own link, refresh-safe, shareable with a colleague" aria-label="Open full profile page">⤢</button>`}
-          </span>
+          ${cardToolMenus(c, isPage)}
         </div>
       </div>`;
 
@@ -6942,6 +6927,110 @@ async function chargeCardOnFile(custId) {
 // lands on their wallet automatically. Staff copy the link and send it by text
 // or email (no message is sent from here). This is the tracked alternative to
 // making a link in the Stripe dashboard.
+// ── The customer card's three tool menus ─────────────────────────────────
+// Nine icon-only squares in a row meant reading every one of them every time,
+// and an emoji is not a label. Three named menus instead: press one, get its
+// actions with words on them. The grouping is unchanged — Contact (talk to
+// them) · Money (take payment) · Manage (my own admin) — only the amount on
+// screen at rest.
+function cardToolMenus(c, isPage) {
+  const owner = !currentStaff || currentStaff.role === 'owner';
+  const id = escJs(String(c.id));
+  const GROUPS = [
+    ['contact', '💬 Contact', [
+      ['✉️', 'Draft a reminder', `openDraftReminderModal('${id}')`, 'Written for you — nothing is sent'],
+      ['🤖', 'AI reply', `openAiReplyModal('${id}')`, 'Draft a reply to their message'],
+      ['📞', 'Log a call or note', `openLogCommModal('${id}')`, 'Goes on their record'],
+    ]],
+    ['money', '💷 Money', [
+      ['💳', 'Charge the card on file', `chargeCardOnFile('${id}')`, 'Their saved card, via Stripe'],
+      ['➕', 'Save a card on file', `saveCardOnFile('${id}')`, 'Opens Stripe — we never see the number'],
+      ['🔗', 'Create a payment link', `openPaymentLinkModal('${id}')`, 'Send it to them to pay'],
+    ]],
+    ['manage', '⚙️ Manage', [
+      ['⏰', 'Remind me about this customer', `openRemindModal('customer','${id}')`, 'A task for you, not for them'],
+      ...(owner ? [['📡', 'ELID lookup', `openElidModal('${id}')`, 'Telecom balance & status']] : []),
+      ['✏️', 'Edit customer', `openEditModal('${id}')`, ''],
+      ...(isPage ? [] : [['⤢', 'Open as a full page', `openCustomerPage('${id}')`, 'Own link, refresh-safe, shareable']]),
+    ]],
+  ];
+  return GROUPS.map(([key, label, items]) => `
+    <span class="card-menu-wrap">
+      <button class="card-menu-btn" id="cmBtn_${key}" aria-haspopup="menu" aria-expanded="false"
+        onclick="toggleCardMenu(event, '${key}')">${label} <span class="card-menu-chev" aria-hidden="true">▾</span></button>
+      <div class="card-menu" id="cmMenu_${key}" role="menu" aria-label="${escHtml(label.replace(/^\S+\s/, ''))}">
+        ${items.map(([icon, text, run, sub]) => `
+          <button class="card-menu-item" role="menuitem" onclick="closeCardMenus();${run}">
+            <span class="card-menu-icon" aria-hidden="true">${icon}</span>
+            <span><span class="card-menu-text">${escHtml(text)}</span>${sub ? `<span class="card-menu-sub">${escHtml(sub)}</span>` : ''}</span>
+          </button>`).join('')}
+      </div>
+    </span>`).join('');
+}
+
+function closeCardMenus() {
+  document.querySelectorAll('.card-menu.open').forEach(m => m.classList.remove('open'));
+  document.querySelectorAll('.card-menu-btn[aria-expanded="true"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+}
+function toggleCardMenu(e, key) {
+  e.stopPropagation();
+  const menu = document.getElementById('cmMenu_' + key);
+  const btn = document.getElementById('cmBtn_' + key);
+  if (!menu) return;
+  const wasOpen = menu.classList.contains('open');
+  closeCardMenus();
+  if (wasOpen) return;                 // pressing the open one closes it
+  menu.classList.add('open');
+  if (btn) btn.setAttribute('aria-expanded', 'true');
+  menu.querySelector('.card-menu-item')?.focus();
+}
+// Anywhere else, and Escape, put them away.
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.card-menu-wrap')) closeCardMenus();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.querySelector('.card-menu.open')) {
+    e.stopPropagation();
+    closeCardMenus();
+  }
+}, true);
+
+// ── Save a card on file, from the counter ────────────────────────────────
+// A hosted Stripe page, opened here or sent to them. The number is typed into
+// Stripe and never touches this app — that is the difference between taking
+// cards and being in PCI scope. Nothing is charged; the card attaches when
+// Stripe's setup_intent.succeeded webhook lands.
+async function saveCardOnFile(custId) {
+  const c = customers.find(x => String(x.id) === String(custId));
+  const res = await kcFetch('/api/customers/save-card', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ customerId: custId }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not reach Stripe.', 'error'); return; }
+
+  showDynamicModal(`
+    <div class="modal-title">💳 Save a card on file</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
+      ${c ? `For <strong>${escName(`${c.firstName || ''} ${c.lastName || ''}`.trim())}</strong>. ` : ''}Stripe collects the card —
+      the number never reaches this app. Nothing is charged now; the card is stored so it can be
+      charged later from “Charge the card on file”.
+      ${res.hadCard ? '<br><strong style="color:var(--gold);">This customer already has a card on file — saving another replaces it.</strong>' : ''}
+    </div>
+    <div class="rd-actions">
+      <a class="btn btn-primary rd-act" href="${escHtml(res.url)}" target="_blank" rel="noopener"
+        onclick="closeDynamicModal()">🔒 Open Stripe now<span class="rd-sub">on this screen or the tablet</span></a>
+      <button class="btn btn-outline rd-act" onclick="kcCopy('${escJs(res.url)}','Card link copied — send it to them.')">
+        🔗 Copy the link<span class="rd-sub">to send by text or WhatsApp</span></button>
+    </div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
+  `);
+}
+
+async function kcCopy(text, note) {
+  try { await navigator.clipboard.writeText(text); toast(note || 'Copied.', 'success'); }
+  catch { toast('Could not copy — select the link and copy it manually.', 'warning'); }
+}
+
 function openPaymentLinkModal(custId) {
   const c = customers.find(x => x.id === custId);
   if (!c) return;

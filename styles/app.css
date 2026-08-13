@@ -1396,28 +1396,57 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .card-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 
 
-/* Tools are grouped by job (contact · money · manage). Tight inside a group,
-   a hairline and real air between groups — so the row reads as three short
-   words instead of nine unrelated glyphs. The divider is drawn between
-   groups only, never leading, so a wrapped row never starts with a stray rule. */
+/* Three named menus, not nine icons.
+   Grouping the tools by job (contact · money · manage) was the first fix and it
+   held — but the row was still nine identical squares carrying nothing but an
+   emoji, and an emoji is not a label: its meaning lived in a hover title, which
+   a finger never sees. So the card shows three words at rest and the actions —
+   with real text on them — come out on a press. */
 
-.card-tool-group { display: inline-flex; align-items: center; gap: 4px; }
+.card-menu-wrap { position: relative; display: inline-flex; }
 
-
-/* The group's own name, visible. Emoji tool meanings used to live only in a
-   hover title — no touch equivalent at all, and several glyphs degrade to
-   ambiguous monochrome at 390px. */
-
-.card-tool-cap {
-  font-size: var(--fs-overline); letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--muted); font-weight: 700; margin-inline-end: 2px; white-space: nowrap;
+.card-menu-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  min-height: 32px; padding: 5px 11px;
+  font: inherit; font-size: var(--fs-small); color: var(--ink-secondary);
+  background: transparent; border: 1px solid var(--border);
+  border-radius: var(--radius); cursor: pointer; white-space: nowrap;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
 }
+.card-menu-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-wash); }
+.card-menu-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.card-menu-chev { font-size: 9px; opacity: .7; }
+.card-menu-btn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-wash); }
 
-.card-tool-group + .card-tool-group {
-  margin-inline-start: 8px; padding-inline-start: 8px;
-  border-inline-start: 1px solid var(--border);
+/* Above the card's own stacking context, and pinned to the button's end edge
+   so a menu opened by the last button cannot hang off the card. */
+.card-menu {
+  display: none; position: absolute; top: calc(100% + 5px); inset-inline-end: 0; z-index: 20;
+  min-width: 248px; max-width: min(300px, 86vw); padding: 5px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: var(--shadow-2);
 }
+.card-menu.open { display: block; }
 
+.card-menu-item {
+  display: flex; align-items: flex-start; gap: 9px; width: 100%;
+  padding: 8px 10px; min-height: 40px;
+  font: inherit; text-align: start; color: var(--text);
+  background: transparent; border: 0; border-radius: 7px; cursor: pointer;
+}
+.card-menu-item:hover { background: var(--accent-wash); color: var(--accent); }
+.card-menu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.card-menu-icon { flex: none; font-size: 15px; line-height: 1.3; }
+.card-menu-text { display: block; font-size: var(--fs-body); }
+/* What the action actually does, in words — the thing a hover title used to
+   hide from anyone using a finger. */
+.card-menu-sub { display: block; font-size: var(--fs-micro); color: var(--muted); margin-top: 1px; }
+.card-menu-item:hover .card-menu-sub { color: inherit; opacity: .8; }
+
+
+/* The square icon button the menus replaced. Still used on its own elsewhere
+   (the ELID line-unlink ✕), and the coarse-pointer sizing rule below names it,
+   so it stays. */
 
 .card-tool {
   width: 34px; height: 34px; padding: 0; flex: 0 0 auto;
