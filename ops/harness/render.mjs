@@ -247,10 +247,22 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const width = Number(arg('--width', process.argv.includes('--audit') ? 390 : 1280))
     const theme = arg('--theme', 'light')
     const ctx = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme, hasTouch: process.argv.includes('--targets') })
+    // Simple Mode's text-size steps (docs/DESIGN.md §Type). The third dimension
+    // beside width and theme, and the one most likely to break a layout: every
+    // screen here was laid out against 13px body copy and `largest` is 17px.
+    // modals.mjs has taken --fs for a while; the tab sweep was only reachable by
+    // setting data-fs by hand, so nobody ran it, and Manage Rental's Save button
+    // sat 53px off a 390px screen at `largest` until the modal sweep found it.
+    const fsSize = arg('--fs', 'standard')
     const page = await ctx.newPage()
     await page.goto('file://' + file, { waitUntil: 'load' })
     await page.waitForTimeout(800)
     await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)
+    if (fsSize !== 'standard') {
+      await page.evaluate((v) => document.documentElement.setAttribute('data-fs', v), fsSize)
+      await page.waitForTimeout(200)
+    }
+    const fsNote = fsSize === 'standard' ? '' : ` / text ${fsSize}`
 
     if (process.argv.includes('--targets')) {
       const seen = new Map()
@@ -263,7 +275,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       for (const r of rows) {
         console.log(`✗ ${String(r.min).padStart(3)}px min  ${(r.w + '×' + r.h).padEnd(9)} ${r.sel.padEnd(22)} "${r.text}"  [${[...r.tabs].slice(0, 4).join(' ')}]`)
       }
-      console.log(rows.length ? `\n${rows.length} distinct target(s) under 24×24 at ${width}px` : `\nno target under 24×24 at ${width}px`)
+      console.log(rows.length ? `\n${rows.length} distinct target(s) under 24×24 at ${width}px${fsNote}` : `\nno target under 24×24 at ${width}px${fsNote}`)
     } else if (process.argv.includes('--contrast')) {
       const found = await contrast(page)
       const seen = new Map()
@@ -276,7 +288,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       for (const r of rows) {
         console.log(`✗ ${String(r.ratio).padStart(5)}:1 (needs ${r.need}) ${String(Math.round(r.size)) + 'px'} ${r.sel.padEnd(24)} "${r.text}"  [${[...r.tabs].join(' ')}]`)
       }
-      console.log(rows.length ? `\n${rows.length} distinct contrast failure(s) in ${theme}` : `\nno contrast failures in ${theme}`)
+      console.log(rows.length ? `\n${rows.length} distinct contrast failure(s) in ${theme}${fsNote}` : `\nno contrast failures in ${theme}${fsNote}`)
     } else if (process.argv.includes('--audit')) {
       let bad = 0, blank = 0
       for (const r of await audit(page)) {
@@ -294,7 +306,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       const notes = []
       if (bad) notes.push(`${bad} tab(s) overflow`)
       if (blank) notes.push(`${blank} tab(s) never rendered — usually a seed.json shape, check pages/api/ before believing it`)
-      console.log(notes.length ? `\n${notes.join('; ')} at ${width}px` : `\nall ${TABS.length} tabs render and none overflows at ${width}px`)
+      console.log(notes.length ? `\n${notes.join('; ')} at ${width}px${fsNote}` : `\nall ${TABS.length} tabs render and none overflows at ${width}px${fsNote}`)
     } else {
       const tab = arg('--shot', 'dashboard')
       await page.evaluate((t) => window.renderTab(t), tab)

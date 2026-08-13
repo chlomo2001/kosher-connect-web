@@ -15,7 +15,15 @@ node ops/harness/render.mjs --audit --width 390              # overflow report, 
 node ops/harness/render.mjs --contrast --theme dark          # AA contrast, every tab
 node ops/harness/render.mjs --targets --width 390            # touch targets under 24×24
 node ops/harness/render.mjs --shot rentals --width 390 --theme dark
+node ops/harness/render.mjs --audit --width 390 --fs largest    # Simple Mode
 ```
+
+`--fs` is the third dimension beside width and theme: Simple Mode's text-size
+steps (`standard` / `large` / `largest`, docs/DESIGN.md §Type), the same flag
+`modals.mjs` takes. Everything here was laid out against 13px body copy and
+`largest` is 17px, so it is the setting most likely to break a layout — and for
+a long time the tab sweep could only be run in it by setting `data-fs` on
+`<html>` by hand, which meant nobody did. `audit-all.sh` now runs it.
 
 `--audit` prints one line per tab. It fails a tab when the page or the content
 column scrolls sideways, when anything sits outside the content column without

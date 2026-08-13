@@ -31,6 +31,26 @@ run "staff app · touch targets (coarse pointer)" \
 run "staff app · modals open + geometry, 390px both themes" \
   bash -c 'for t in light dark; do node ops/harness/modals.mjs --width 390 --theme $t | tail -1; done'
 
+# 320 as well: the modal sweep had only ever run at 390, and 320 is where a
+# footer with a left action and a Cancel+Save group first runs out of room.
+run "staff app · modals at 320px" \
+  bash -c 'node ops/harness/modals.mjs --width 320 --theme light | tail -1'
+
+# Simple Mode. The third dimension beside width and theme, and the one most
+# likely to break a layout: every screen here was laid out against 13px body
+# copy and `largest` is 17px. It found Manage Rental's Save button 53px off a
+# 390px screen, and nothing had ever run it over the tabs.
+#
+# The MODAL sweep at largest is deliberately not wired in here yet: the till
+# still overflows at 320px from `large` upward (a row of payment-method buttons
+# that will not wrap), and until that is fixed adding it would paint this whole
+# report red every night and hide the next real finding. Run it by hand:
+#   node ops/harness/modals.mjs --width 320 --theme light --fs largest
+run "staff app · Simple Mode text sizes, every tab" \
+  bash -c 'for f in large largest; do node ops/harness/render.mjs --audit --width 390 --fs $f | tail -1; done
+           node ops/harness/render.mjs --targets --width 390 --fs largest | tail -1
+           node ops/harness/render.mjs --contrast --theme dark --width 1280 --fs largest | tail -1'
+
 # 320 as well as the default 390/1280: the portal's top bar was overflowing at
 # 320 in English and up to 375 in Hebrew, and no sweep had ever run below 390.
 run "public pages · render + RTL, en and he" \

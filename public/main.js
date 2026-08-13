@@ -9148,9 +9148,9 @@ function openManageSimModal(id) {
       </div>
     </div>
 
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;margin-top:4px;">
       <span style="font-size:var(--fs-body);color:var(--muted);">Total charged: <strong style="color:var(--success);">${fmtGbp(totalCharged)}</strong></span>
-      <div style="display:flex;gap:8px;">
+      <div class="modal-actions-group">
         <button class="btn btn-outline btn-sm" onclick="openEditSimModal('${id}');void(0)">✏️ Edit details</button>
         <button class="btn btn-outline btn-sm" onclick="closeDynamicModal()">Close</button>
       </div>
