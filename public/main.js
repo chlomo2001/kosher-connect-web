@@ -1134,6 +1134,9 @@ function showHebrewDate(inputId, labelId) {
     const dayNum   = parseInt(parts.find(p=>p.type==='day')?.value || '0');
     const monthStr = parts.find(p=>p.type==='month')?.value || '';
     const yearNum  = parseInt(parts.find(p=>p.type==='year')?.value || '0');
+    // A Hebrew date is Hebrew: it reads right to left, and left-to-right it
+    // arrives as year-month-day to anyone who reads it.
+    el.setAttribute('dir', 'rtl');
     el.textContent = numToHebrew(dayNum) + ' ' + monthStr + ' ' + numToHebrew(yearNum);
   } catch(e) { el.textContent = ''; }
 }
@@ -1206,6 +1209,10 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.customer-search-wrap')) {
     const dd = document.getElementById('rCustomerDropdown');
     if (dd) dd.classList.remove('open');
+  }
+  if (!e.target.closest('.phone-search-wrap')) {
+    const pd = document.getElementById('rPhoneDropdown');
+    if (pd) pd.classList.remove('open');
   }
 });
 
@@ -2269,11 +2276,7 @@ function calQuickReserve(phoneId, iso) {
     const fromEl = document.getElementById('rFrom');
     if (fromEl) { fromEl.value = iso; showHebrewDate('rFrom', 'rFromHeb'); }
     refreshRentalPhoneOptions();
-    const sel = document.getElementById('rPhone');
-    if (sel && [...sel.options].some(o => o.value === phoneId)) {
-      sel.value = phoneId;
-      updateRentalPhoneInfo();
-    }
+    if (nrPhoneShown.some(p => String(p.id) === String(phoneId))) nrPickPhone(phoneId);
   }, 60);
 }
 
@@ -2952,7 +2955,10 @@ async function markPhoneBack(phoneId) {
 // type-ahead from the START of the option text, and every option here starts
 // "+1 7…", so typing 986 matched nothing — the box above the picker is what
 // makes those three digits work.
-function phoneOptionsFor(from, to, customerId, term = '') {
+// The offerable handsets for a window, in the order the picker shows them.
+// The picker is a type-ahead now (one box, like the customer field), so what it
+// needs is the LIST; the option markup below is just a rendering of it.
+function phonesOfferableFor(from, to, customerId, term = '') {
   const today = localISO();
   // A phone under maintenance is never offerable, whatever the dates say.
   // "Not rented" is not the same as "rentable". A permanent line is in a
@@ -2984,9 +2990,13 @@ function phoneOptionsFor(from, to, customerId, term = '') {
     return [p.country, p.company, p.model, p.pool, p.imei, p.number]
       .filter(Boolean).some(v => String(v).toLowerCase().includes(q));
   });
-  return shown
-    .map(p => `<option value="${p.id}">${escHtml(fmtPhone(p.number))} · ${escHtml(p.country)} · ${escHtml(p.company||'')} ${p.pool ? '(Pool: '+escHtml(p.pool)+')' : ''}${had.has(p.id) ? ` · ↺ had ${fmtDate(had.get(p.id))}` : ''}</option>`)
-    .join('');
+  return shown.map(p => ({ ...p, hadOn: had.get(p.id) || null }));
+}
+
+// One line describing a handset, used by the dropdown and the chosen-row alike.
+function phoneOptionLabel(p) {
+  return [fmtPhone(p.number), p.country, p.company || '', p.pool ? `Pool: ${p.pool}` : '']
+    .filter(Boolean).join(' · ') + (p.hadOn ? ` · ↺ had ${fmtDate(p.hadOn)}` : '');
 }
 
 // phoneId → the most recent date this customer held that line (any rental,
@@ -3002,60 +3012,107 @@ function customerPastPhoneDates(customerId) {
   return map;
 }
 
-// Dates changed → rebuild the phone list for that window, keeping the
-// current pick if it's still free.
+// ── The phone picker ─────────────────────────────────────────────────────
+// One box, the same shape as the Customer field above it: type, see matches,
+// pick one. It was a search box AND a dropdown — two controls for one job, and
+// a native <select> could not be typed into usefully anyway (its type-ahead
+// only matches from the start of the option text, and every option here starts
+// "+1 7…"). #rPhone stays as the hidden value carrier, exactly as #rCustomer is
+// for the customer picker, so everything downstream still reads .value.
+let nrPhoneShown = [];
+
+// Dates or customer changed → rebuild the offer for that window, keeping the
+// current pick if it is still free.
 function refreshRentalPhoneOptions() {
-  const sel = document.getElementById('rPhone');
-  if (!sel) return;
+  const hidden = document.getElementById('rPhone');
+  if (!hidden) return;
   const from = document.getElementById('rFrom')?.value;
   const to = document.getElementById('rTo')?.value;
   const customerId = document.getElementById('rCustomer')?.value;
-  const term = document.getElementById('rPhoneFind')?.value || '';
-  const prev = sel.value;
-  sel.innerHTML = `<option value="">— Select phone —</option>` + phoneOptionsFor(from, to, customerId, term);
-  if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
-  else if (prev && !term) { sel.value = ''; toast('That phone is not free for these dates — pick another.', 'warning'); }
-  else if (prev) sel.value = '';   // filtered out of view, not unavailable — say nothing
+  const term = document.getElementById('rPhoneSearch')?.value || '';
+  nrPhoneShown = phonesOfferableFor(from, to, customerId, term);
+
+  // A pick that is no longer offerable is dropped — but only say so when the
+  // DATES ruled it out. Typing a filter that hides it is not the same thing.
+  const prev = hidden.value;
+  if (prev && !phonesOfferableFor(from, to, customerId).some(p => p.id === prev)) {
+    hidden.value = '';
+    const box = document.getElementById('rPhoneSearch');
+    if (box) box.value = '';
+    toast('That phone is not free for these dates — pick another.', 'warning');
+  }
+
   const hint = document.getElementById('rPhoneHint');
-  // Count from the data, not by sniffing option text for the ↺ glyph.
-  const had = customerPastPhoneDates(customerId);
-  const hadCount = [...sel.options].filter(o => had.has(o.value)).length;
-  const n = sel.options.length - 1;
+  const all = term ? phonesOfferableFor(from, to, customerId) : nrPhoneShown;
+  const hadCount = all.filter(p => p.hadOn).length;
+  const n = nrPhoneShown.length;
   if (hint && term) {
-    hint.textContent = n
-      ? `(${n} match${n === 1 ? '' : 'es'} “${term}”)`
-      : `(nothing matches “${term}”)`;
+    hint.textContent = n ? `(${n} match${n === 1 ? '' : 'es'} “${term}”)` : `(nothing matches “${term}”)`;
   } else if (hint && from && to && to >= from) {
-    hint.textContent = `(${n} free ${fmtDate(from)} → ${fmtDate(to)}${hadCount ? ` · ↺ ${hadCount} they had before` : ''})`;
+    hint.textContent = `(${all.length} free ${fmtDate(from)} → ${fmtDate(to)}${hadCount ? ` · ↺ ${hadCount} they had before` : ''})`;
   } else if (hint && hadCount) {
     hint.textContent = `(↺ ${hadCount} number${hadCount === 1 ? '' : 's'} this customer had before — listed first)`;
   } else if (hint) {
     hint.textContent = '(pick dates to see availability)';
   }
-  // One match and something typed: that IS the pick. Saves the second gesture
-  // the search was meant to remove.
-  if (term && n === 1 && !sel.value) sel.value = sel.options[1].value;
+  renderPhoneDropdown();
 }
 
-// Typing in the find box: rebuild the list, and Enter takes the top match so
-// the whole job is type-three-digits-Enter without touching the dropdown.
-function rentalPhoneFind() { refreshRentalPhoneOptions(); }
-function rentalPhoneFindKey(e) {
-  const sel = document.getElementById('rPhone');
-  if (!sel) return;
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    if (sel.options.length > 1) {
-      sel.value = sel.options[1].value;
-      nrPhonePicked(sel); updateRentalPhoneInfo(); updateRentalCalc();
-      const box = document.getElementById('rPhoneFind');
-      if (box) { box.value = ''; refreshRentalPhoneOptions(); box.focus(); }
-    }
-  } else if (e.key === 'Escape' && e.currentTarget.value) {
-    e.preventDefault();
-    e.currentTarget.value = '';
-    refreshRentalPhoneOptions();
+function renderPhoneDropdown(open = null) {
+  const dd = document.getElementById('rPhoneDropdown');
+  if (!dd) return;
+  const term = document.getElementById('rPhoneSearch')?.value || '';
+  dd.innerHTML = nrPhoneShown.length
+    ? nrPhoneShown.slice(0, 40).map(p => `
+        <div class="customer-dropdown-item" role="option" onclick="nrPickPhone('${escJs(String(p.id))}')">
+          <strong class="kc-phone">${escHtml(fmtPhone(p.number))}</strong>
+          <span style="color:var(--muted);font-size:var(--fs-micro);margin-left:8px;">${escHtml(
+            [p.country, p.company || '', p.pool ? `Pool: ${p.pool}` : ''].filter(Boolean).join(' · '))}${
+            p.hadOn ? ` · ↺ had ${fmtDate(p.hadOn)}` : ''}</span>
+        </div>`).join('')
+    : `<div class="customer-dropdown-empty">${term ? `No handset matches “${escHtml(term)}”` : 'No phone is free for these dates'}</div>`;
+  const shouldOpen = open === null ? dd.classList.contains('open') : open;
+  dd.classList.toggle('open', !!shouldOpen);
+}
+
+function phoneSearchFocus() { refreshRentalPhoneOptions(); renderPhoneDropdown(true); }
+function phoneSearchInput() {
+  const hidden = document.getElementById('rPhone');
+  if (hidden) hidden.value = '';        // retyping clears the pick, as above
+  refreshRentalPhoneOptions();
+  renderPhoneDropdown(true);
+  updateRentalPhoneInfo();
+}
+// Enter takes the top match. With one handset in hand and three digits typed
+// that is the whole job; with none it does nothing rather than guess.
+function phoneSearchKey(e) {
+  if (e.key === 'Escape') {
+    const dd = document.getElementById('rPhoneDropdown');
+    if (dd && dd.classList.contains('open')) { e.preventDefault(); dd.classList.remove('open'); return; }
+    const box = document.getElementById('rPhoneSearch');
+    if (box && box.value) { e.preventDefault(); box.value = ''; phoneSearchInput(); }
+    return;
   }
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  if (nrPhoneShown.length) nrPickPhone(nrPhoneShown[0].id);
+}
+
+// The one place a handset becomes the pick, whether by click, Enter, a scan,
+// or the "Use" button on the pool suggestion.
+function nrPickPhone(id) {
+  const p = phones.find(x => String(x.id) === String(id));
+  if (!p) return;
+  const hidden = document.getElementById('rPhone');
+  if (hidden) hidden.value = p.id;
+  const box = document.getElementById('rPhoneSearch');
+  const dd = document.getElementById('rPhoneDropdown');
+  if (dd) dd.classList.remove('open');
+  nrPhonePicked({ value: p.id });        // adds the chip, clears for the next
+  if (box) { box.value = ''; }
+  refreshRentalPhoneOptions();
+  updateRentalPhoneInfo();
+  updateRentalCalc();
 }
 
 // ── Scan to check out / return ────────────────────────────────────────────
@@ -3149,7 +3206,13 @@ function nrPhonePicked(sel) {
 }
 function nrRemovePhone(id) {
   nrPhones = nrPhones.filter(x => x !== id);
+  // The hidden field is "the current pick" — what the info line, the VN price
+  // and the save path read. Taking its chip off has to move it on, or a phone
+  // you just removed comes back at save time.
+  const hidden = document.getElementById('rPhone');
+  if (hidden && String(hidden.value) === String(id)) hidden.value = nrPhones[0] || '';
   renderNrPhoneChips();
+  updateRentalPhoneInfo();
   updateRentalCalc();
 }
 function renderNrPhoneChips() {
@@ -3178,7 +3241,6 @@ function renderNrPhoneChips() {
 
 function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null) {
   nrPhones = [];
-  const availablePhoneOptions = phoneOptionsFor(null, null);
 
   showDynamicModal(`
     <div class="modal-title">📱 New rental</div>
@@ -3199,14 +3261,14 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
 
       <div class="form-group form-full">
         <label class="form-label">Phone * <span style="color:var(--muted);font-weight:400;" id="rPhoneHint">(pick dates to see availability)</span></label>
-        <input class="form-input" id="rPhoneFind" type="search" inputmode="search" autocomplete="off"
-          placeholder="🔍 Type a few digits — 986, or USA, Pool 38…"
-          aria-label="Filter the phone list" style="margin-bottom:6px;"
-          oninput="rentalPhoneFind()" onkeydown="rentalPhoneFindKey(event)">
-        <select class="form-input" id="rPhone" size="1" onchange="nrPhonePicked(this); updateRentalPhoneInfo(); updateRentalCalc();">
-          <option value="">— Select phone —</option>
-          ${availablePhoneOptions}
-        </select>
+        <div class="customer-search-wrap phone-search-wrap">
+          <input type="hidden" id="rPhone">
+          <input class="form-input" id="rPhoneSearch" type="text" autocomplete="off"
+            placeholder="Type a few digits, or USA, Pool 38…"
+            aria-label="Find a phone" role="combobox" aria-expanded="false" aria-autocomplete="list"
+            onfocus="phoneSearchFocus()" oninput="phoneSearchInput()" onkeydown="phoneSearchKey(event)">
+          <div class="customer-dropdown" id="rPhoneDropdown" role="listbox" aria-label="Phones"></div>
+        </div>
         <div id="rPhoneChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
         <div id="rPhoneMulti" style="font-size:var(--fs-small);color:var(--accent);margin-top:4px;"></div>
         <div id="rPhoneInfo" style="font-size:var(--fs-small);color:var(--muted);margin-top:4px;"></div>
@@ -3353,14 +3415,8 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
   // the date-filtered picker actually offers it — a phone booked out over these
   // dates must stay unpickable, scan or no scan.
   if (preselectPhoneId) {
-    const sel = document.getElementById('rPhone');
-    if (sel && [...sel.options].some(o => o.value === preselectPhoneId)) {
-      sel.value = preselectPhoneId;
-      nrPhonePicked(sel);
-      updateRentalPhoneInfo();
-    } else {
-      toast('That phone is not free for these dates — pick the dates first.', 'warning');
-    }
+    if (nrPhoneShown.some(p => String(p.id) === String(preselectPhoneId))) nrPickPhone(preselectPhoneId);
+    else toast('That phone is not free for these dates — pick the dates first.', 'warning');
   }
   nrSetGivenDefaults();
   updateRentalCalc();
@@ -3506,7 +3562,7 @@ function updateRentalCalc() {
       poolLine = `<div style="margin-top:6px;font-size:var(--fs-micro);line-height:1.5;">
         💡 <span style="color:var(--accent);font-weight:600;">Best pool match:</span> ${deviceChip(best.phone)}
         <button type="button" class="btn btn-outline" style="padding:1px 8px;font-size:var(--fs-micro);margin-left:4px;"
-          onclick="document.getElementById('rPhone').value='${best.phone.id}';updateRentalPhoneInfo();updateRentalCalc();">Use</button>
+          onclick="nrPickPhone('${escJs(String(best.phone.id))}')">Use</button>
         <br><span style="color:var(--muted);">${escHtml(best.reason)}</span></div>`;
     }
   }
