@@ -2328,8 +2328,16 @@ function availabilityCalendarHtml() {
     if (yomTovName) titleParts.push(yomTovName);
     const title = titleParts.length ? ` title="${escHtml(titleParts.join(' · '))}"` : '';
     const ariaLabel = titleParts.length ? ` aria-label="${fmtDate(dIso)} — ${escHtml(titleParts.join(' · '))}"` : '';
+    // The system the grid is counting in names the column; the other one is
+    // the small line beneath. Gematria is left aria-hidden either way — read
+    // aloud it is noise, and the Gregorian date is the useful one to a screen
+    // reader whichever half is leading.
+    const lead = calSystem === 'hebrew' ? day.hebLabel : day.en;
+    const sub = calSystem === 'hebrew' ? day.en : day.hebLabel;
+    const hebIsLead = calSystem === 'hebrew';
     return `<th scope="col" class="cal-day${dow === 6 ? ' cal-shabbat' : yomTovName ? ' cal-yomtov' : ''}${dIso === today ? ' cal-today' : ''}${day.roshChodesh ? ' cal-roshchodesh' : ''}"${title}${ariaLabel}>` +
-      `<span class="cal-day-en">${escHtml(day.en)}</span><span class="cal-day-heb" aria-hidden="true">${escHtml(day.hebLabel)}</span></th>`;
+      `<span class="cal-day-lead"${hebIsLead ? ' aria-hidden="true"' : ''}>${escHtml(lead)}</span>` +
+      `<span class="cal-day-sub"${hebIsLead ? '' : ' aria-hidden="true"'}>${escHtml(sub)}</span></th>`;
   }).join('');
 
   const rows = rowPhones.map(p => {
@@ -2399,7 +2407,7 @@ function availabilityCalendarHtml() {
         </span>
       </div>
       <div class="cal-scroll" style="padding:0 14px 6px;">
-        <table class="cal-table">
+        <table class="cal-table${calSystem === 'hebrew' ? ' cal-heb' : ''}">
           <thead><tr><th class="cal-phone">Phone</th>${dayHead}</tr></thead>
           <tbody>${rows.length ? rows : `<tr><td colspan="${days.length + 1}" style="color:var(--muted);padding:14px;">${term ? 'No phone matches that search.' : 'No phones in the fleet yet.'}</td></tr>`}</tbody>
         </table>
