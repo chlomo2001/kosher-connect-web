@@ -12531,8 +12531,11 @@ const KT_JOB_BADGE = {
 };
 
 function ktSectionHead(title, sub) {
-  return `<div style="display:flex;align-items:baseline;gap:10px;margin:18px 2px 8px;">
-    <h3 style="font-size:var(--fs-ui);font-weight:700;">${title}</h3>
+  // The row wraps and the heading does not: without this the h3 was the item
+  // that shrank, so on a phone "Conversion jobs" broke across two lines while
+  // its one-line description sat beside it. Now the description drops under it.
+  return `<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;margin:18px 2px 8px;">
+    <h3 style="font-size:var(--fs-ui);font-weight:700;white-space:nowrap;">${title}</h3>
     <span style="font-size:var(--fs-small);color:var(--muted);">${sub || ''}</span></div>`;
 }
 
@@ -12576,7 +12579,7 @@ async function renderKolTorahTab() {
       <tr>
         <td><div class="customer-name">${escName(j.customerName)}</div>
             <div style="font-size:var(--fs-micro);color:var(--muted);">${fmtDate(j.createdAt)}</div></td>
-        <td>${escHtml(KT_JOB_KINDS[j.kind] || j.kind)}${j.qty > 1 ? ` <span style="color:var(--muted);">× ${j.qty}</span>` : ''}</td>
+        <td style="white-space:nowrap;">${escHtml(KT_JOB_KINDS[j.kind] || j.kind)}${j.qty > 1 ? ` <span style="color:var(--muted);">× ${j.qty}</span>` : ''}</td>
         <td style="max-width:260px;">${escHtml(j.details || '—')}</td>
         <td><strong>${fmtGbp(j.price)}</strong></td>
         <td><span class="badge" style="${KT_JOB_BADGE[j.status] || ''}">${escHtml(j.status)}</span></td>
