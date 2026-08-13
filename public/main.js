@@ -12593,7 +12593,13 @@ async function renderKolTorahTab() {
     const chips = rows.length
       ? rows.map(r => {
           const t = d.titles.find(x => x.id === r.titleId);
-          return `<span class="badge" style="background:var(--bg-secondary);color:var(--ink-secondary);">${r.qty} × ${escHtml(t ? t.name : '(retired)')}</span>`;
+          const nm = t ? t.name : '(retired)';
+          // A chip never wraps (the flag SVG is why), so a real shiur title —
+          // "Shiur — Parshas Devarim, R' Shloime Taussig, Elul 5786 series" —
+          // used to run straight off a 320px screen. The count is the half you
+          // scan, so it holds its ground and the title takes the ellipsis.
+          return `<span class="badge kt-stock-chip" style="background:var(--bg-secondary);color:var(--ink-secondary);"
+            title="${escHtml(`${r.qty} × ${nm}`)}"><span class="kt-chip-qty">${r.qty} ×</span><span class="kt-chip-name">${escHtml(nm)}</span></span>`;
         }).join(' ')
       : '<span style="font-size:var(--fs-small);color:var(--muted);">nothing on consignment</span>';
     const editing = ktEditShuls.has(s.id);

@@ -2813,3 +2813,12 @@ td { border-top-color: color-mix(in srgb, var(--border) 55%, transparent); }
 
 .dup-foot { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; margin-top: 8px; }
 .dup-foot-note { font-size: var(--fs-micro); color: var(--muted); }
+
+/* Kol Torah consignment chips. A .badge never wraps — the country-flag SVG is
+   why — so a chip carrying a real shiur title ran off the right of a 320px
+   screen by 51px. The count is the half that gets scanned, so it keeps its
+   width and the title takes the ellipsis; the full text stays in the tooltip
+   and in the move picker below it. */
+.kt-stock-chip { max-width: 100%; }
+.kt-stock-chip .kt-chip-qty { flex: none; }
+.kt-stock-chip .kt-chip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
