@@ -2829,18 +2829,29 @@ td { border-top-color: color-mix(in srgb, var(--border) 55%, transparent); }
 
 /* The Phone Inventory corner grip. The list is capped so the two halves of the
    rentals split stay comparable, but a shop with 40 handsets wants far more
-   than eight rows at once — so the corner comes off its hinge. ns-resize and
-   touch-action:none because a touch drag here must resize, not scroll the
-   page underneath it; 26px tall clears WCAG 2.5.8 on the counter tablet. */
+   than eight rows at once — so the corner comes off its hinge.
+   It is drawn as the corner, not as a button: the same diagonal hatch the
+   browser puts in a resizable box (see .modal's `resize: both`), mirrored to
+   sit at the TOP right. The hit area is 26px for WCAG 2.5.8 on the counter
+   tablet while the mark stays 14px, so it reads as chrome rather than as
+   another control competing with the section title.
+   touch-action:none because a touch drag here must resize, not scroll the page
+   underneath it. */
+.kc-resizable-box { position: relative; }
+
 .kc-grip {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 34px; min-height: 26px; padding: 2px 8px;
-  border: 1px solid var(--border); border-radius: 6px;
-  background: var(--surface); color: var(--muted);
-  font-size: var(--fs-small); line-height: 1;
-  cursor: ns-resize; touch-action: none;
+  position: absolute; top: 0; right: 0; z-index: 3;
+  width: 26px; height: 26px; padding: 0;
+  border: 0; background: none; cursor: ns-resize; touch-action: none;
 }
-.kc-grip:hover { color: var(--text); border-color: var(--muted); }
+.kc-grip::after {
+  content: ''; position: absolute; top: 5px; right: 5px; width: 13px; height: 13px;
+  clip-path: polygon(100% 0, 100% 100%, 0 0);
+  background: repeating-linear-gradient(135deg,
+    rgba(0, 0, 0, 0) 0 2px, var(--muted) 2px 3px, rgba(0, 0, 0, 0) 3px 6px);
+  opacity: .55;
+}
+.kc-grip:hover::after, .kc-grip:focus-visible::after { opacity: 1; }
 
 /* While dragging, nothing else should highlight or hand the cursor back. */
 body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-resize !important; }

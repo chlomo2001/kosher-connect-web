@@ -2163,23 +2163,29 @@ function renderRentalsTab() {
       <div class="rentals-split-col">
         <div class="section-header">
           <div class="section-title">Phone Inventory</div>
-          <button type="button" class="kc-grip" id="invGrip"
-            title="Drag up to open the list out — double-click to fit every phone"
-            aria-label="Resize the phone inventory list"
-            onpointerdown="invGripDown(event)" onkeydown="invGripKey(event)"
-            ondblclick="invGripFit()">⇕</button>
         </div>
         <div class="rentals-filter-row rentals-inv-spacer" aria-hidden="true"></div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Number</th><th>Country</th><th>Pool</th>
-                <th>Expires</th><th>Status</th><th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="phoneTableBody"></tbody>
-          </table>
+        <div class="kc-resizable-box">
+          <!-- The same grip the browser draws in a resizable box's corner (see
+               the resize rule on .modal), on the card's TOP right instead of
+               the bottom (owner, 13 Aug): drag it up and the list opens out.
+               Drawn as the corner itself, not as a button beside the title. -->
+          <button type="button" class="kc-grip" id="invGrip"
+            title="Drag to resize — double-click to fit every phone"
+            aria-label="Resize the phone inventory list"
+            onpointerdown="invGripDown(event)" onkeydown="invGripKey(event)"
+            ondblclick="invGripFit()"></button>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Number</th><th>Country</th><th>Pool</th>
+                  <th>Expires</th><th>Status</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="phoneTableBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -3554,13 +3560,11 @@ async function saveMultiPhoneRental(customerId, phoneIds, addAnother) {
   nrPhones = [];
   renderRentalsTab();
   if (addAnother) { openNewRentalModal(customerId); return; }
-  showRentalDone({
-    ids: created.map(r => r.id),
+  showDonePanel({
+    title: isReservation ? '📅 Reserved' : '✅ Rentals saved',
     customerId,
     customerName: `${customer.firstName} ${customer.lastName}`,
     customerPhone: customer.phone || '',
-    isReservation,
-    from, to,
     summary: `${created.length} phones · ${fmtDate(from)} → ${fmtDate(to)}`
       + (isReservation ? ' · pickup at handover' : ''),
     total,
@@ -3571,24 +3575,32 @@ async function saveMultiPhoneRental(customerId, phoneIds, addAnother) {
       name: `Phone rental ${fmtPhone(r.phoneNumber)} · ${fmtDate(from)} → ${fmtDate(to)}`,
       qty: 1, total: r.price,
     })),
+    smsText: `Hi ${customer.firstName}, ${created.length} phones are booked ${fmtDate(from)} → ${fmtDate(to)}. Total ${fmtGbp(total)}. Kosher Connect, 0161 531 1386.`,
+    again: { label: '📱 Another phone', sub: `for ${customer.firstName}`, run: () => openNewRentalModal(customerId) },
   });
 }
 
-// ── After a rental is saved ──────────────────────────────────────────────
-// A toast said "Rental saved!" and vanished, and the receipt lived four clicks
-// away: customer card → Wallet → find the ledger row → the small ✉️ on it. The
-// counter is handing a phone over while the customer is still standing there,
-// which is the one moment a receipt is wanted, so the next actions come to you
-// instead of being looked for.
+// ── The panel that finishes a job ────────────────────────────────────────
+// Every counter job used to end in a toast that said "saved!" and vanished,
+// with the receipt four clicks away — customer card → Wallet → find the ledger
+// row → the small ✉️ on it — at the one moment it is wanted, with the customer
+// still standing there. Rentals, repairs, flights and SIM plans now all finish
+// on this card instead: what just happened, and the next moves as big buttons.
 //
 // The recipient is printed ON the button rather than behind a second "are you
 // sure?": the mistake worth catching is the right receipt sent to the wrong
 // person, and naming the address in front of the press catches it without
 // putting a dialog between the counter and a one-press job.
-let rentalDone = null;   // { ids[], customerId, summary, total, receipt }
+//
+// d = { title, customerId, customerName, customerPhone, summary, total,
+//       payLine, lines, method, paidNow, smsText, again }
+//   lines  — receipt lines for /api/email (kind: 'sale')
+//   smsText— the text receipt to draft; omitted, no Text button
+//   again  — optional { label, sub, run } third button
+let kcDone = null;
 
-function showRentalDone(d) {
-  rentalDone = d;
+function showDonePanel(d) {
+  kcDone = d;
   const c = customers.find(x => String(x.id) === String(d.customerId));
   const email = (c && c.email) || '';
   // Some rows carry OUR provider login (Lebara etc.) rather than the customer's
@@ -3596,52 +3608,52 @@ function showRentalDone(d) {
   const ours = email && isOwnAccountEmail(email);
   const canEmail = !!email && !ours;
   const phone = (c && c.phone) || d.customerPhone || '';
-  const first = (c && c.firstName) || 'this customer';
 
   const emailBtn = canEmail
-    ? `<button class="btn btn-primary rd-act" id="rdEmail" onclick="emailRentalReceipt(this)">
+    ? `<button class="btn btn-primary rd-act" id="rdEmail" onclick="kcDoneEmail(this)">
          ✉️ Email receipt<span class="rd-sub">${escHtml(email)}</span></button>`
     : `<button class="btn btn-outline rd-act" disabled title="${ours ? 'That address is a shop account login, not the customer\u2019s own' : 'No email address on this customer'}">
          ✉️ Email receipt<span class="rd-sub">${ours ? 'shop login, not theirs' : 'no address on file'}</span></button>`;
-  const smsBtn = phone && d.ids.length === 1
-    ? `<button class="btn btn-outline rd-act" onclick="closeDynamicModal();openRentalSmsModal('${escJs(String(d.ids[0]))}')">
+  const smsBtn = phone && d.smsText
+    ? `<button class="btn btn-outline rd-act" onclick="kcDoneText()">
          💬 Text receipt<span class="rd-sub">${escHtml(fmtPhone(phone))}</span></button>`
+    : '';
+  const againBtn = d.again
+    ? `<button class="btn btn-outline rd-act" onclick="kcDoneAgain()">
+         ${escHtml(d.again.label)}<span class="rd-sub">${escHtml(d.again.sub || '')}</span></button>`
     : '';
 
   showDynamicModal(`
-    <div class="modal-title">${d.isReservation ? '📅 Reserved' : '✅ Rental saved'}</div>
+    <div class="modal-title">${d.title}</div>
     <div class="rd-summary">
       <div class="rd-who">${escName(d.customerName)}</div>
       <div class="rd-what">${escHtml(d.summary)}</div>
-      <div class="rd-money">${fmtGbp(d.total)}<span class="rd-sub">${escHtml(d.payLine || 'on account')}</span></div>
+      ${Number.isFinite(d.total) ? `<div class="rd-money">${fmtGbp(d.total)}<span class="rd-sub">${escHtml(d.payLine || 'on account')}</span></div>` : ''}
     </div>
     <div class="rd-actions">
       ${emailBtn}
       ${smsBtn}
-      <button class="btn btn-outline rd-act" onclick="rentalDoneAnother()">
-        📱 Another phone<span class="rd-sub">for ${escName(first)}</span></button>
+      ${againBtn}
     </div>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Done</button></div>
   `);
 }
 
-function rentalDoneAnother() {
-  const d = rentalDone;
+function kcDoneAgain() {
+  const d = kcDone;
   closeDynamicModal();
-  if (!d) return;
-  openNewRentalModal(d.customerId);
-  // Same dates as the rental just written — a family trip is one set of dates
-  // and several handsets.
-  setTimeout(() => {
-    const f = document.getElementById('rFrom'), t = document.getElementById('rTo');
-    if (f && d.from) { f.value = d.from; showHebrewDate('rFrom', 'rFromHeb'); }
-    if (t && d.to) { t.value = d.to; showHebrewDate('rTo', 'rToHeb'); }
-    refreshRentalPhoneOptions(); updateRentalCalc(); nrSetGivenDefaults();
-  }, 80);
+  if (d && typeof d.again?.run === 'function') d.again.run();
 }
 
-async function emailRentalReceipt(btn) {
-  const d = rentalDone;
+function kcDoneText() {
+  const d = kcDone;
+  if (!d) return;
+  closeDynamicModal();
+  openTextReceiptModal(d.customerId, d.smsText);
+}
+
+async function kcDoneEmail(btn) {
+  const d = kcDone;
   if (!d) return;
   if (btn) { btn.disabled = true; btn.innerHTML = 'Sending…'; }
   const res = await kcFetch('/api/email', {
@@ -3663,9 +3675,59 @@ async function emailRentalReceipt(btn) {
     if (btn) btn.innerHTML = '✅ Sent';
   } else if (res && res.success) {
     toast(`Receipt emailed to ${res.sentTo}.`, 'success');
-    recordComm(d.customerId, { type: 'email', text: `Rental receipt emailed — ${fmtGbp(d.total)}` });
+    recordComm(d.customerId, { type: 'email', text: `Receipt emailed — ${fmtGbp(d.total)}` });
     if (btn) btn.innerHTML = '✅ Sent';
   } else { toast(res?.error || 'Could not send the receipt.', 'error'); restore(); }
+}
+
+// One text-receipt drafter for every module. Same shape as the rental status
+// SMS that already existed: draft, then send / copy / open in WhatsApp — the
+// send is HOLD-gated server-side like every other outbound message.
+function openTextReceiptModal(customerId, text) {
+  const c = customers.find(x => String(x.id) === String(customerId));
+  showDynamicModal(`
+    <div class="modal-title">💬 Text receipt</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
+      ${c && c.phone ? `To <span class="copy-val">${escHtml(fmtPhone(c.phone))}</span>. ` : ''}Edit it, then send — or copy it into your own messaging app.</div>
+    <textarea class="form-input" id="kcTrText" rows="5" style="font-family:inherit;">${escHtml(text || '')}</textarea>
+    <div class="modal-actions">
+      <span class="modal-actions-group">
+        <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
+        ${waLink(c || {}, '') ? `<button class="btn btn-outline" onclick="kcTextReceiptWa('${escJs(String(customerId))}')">💬 WhatsApp</button>` : ''}
+        <button class="btn btn-outline" onclick="kcTextReceiptCopy('${escJs(String(customerId))}')">📋 Copy</button>
+        <button class="btn btn-primary" onclick="kcTextReceiptSend('${escJs(String(customerId))}')">📤 Send</button>
+      </span>
+    </div>
+  `);
+}
+async function kcTextReceiptSend(customerId) {
+  const text = document.getElementById('kcTrText')?.value || '';
+  if (!text.trim()) return;
+  const res = await kcFetch('/api/sms', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ customerId, text }),
+  }).then(x => x.json()).catch(() => ({ success: false, error: 'Network error.' }));
+  if (!res.success) { toast(res.error || 'Could not send.', 'error'); return; }
+  if (res.held) toast(res.note, 'warning');
+  else if (res.redirected) toast(res.note, 'warning');
+  else toast('Receipt texted ✔', 'success');
+  recordComm(customerId, { type: 'message', text: res.held ? 'Text receipt built (HOLD, not sent)' : 'Text receipt sent' });
+  closeDynamicModal();
+}
+async function kcTextReceiptCopy(customerId) {
+  const text = document.getElementById('kcTrText')?.value || '';
+  try { await navigator.clipboard.writeText(text); toast('Copied — paste it into your messaging app.', 'success'); }
+  catch { toast('Select the text and copy it manually.', 'warning'); return; }
+  recordComm(customerId, { type: 'message', text: 'Text receipt drafted & copied' });
+  closeDynamicModal();
+}
+function kcTextReceiptWa(customerId) {
+  const c = customers.find(x => String(x.id) === String(customerId));
+  const url = waLink(c || {}, document.getElementById('kcTrText')?.value || '');
+  if (!url) { toast('No usable phone number for WhatsApp.', 'warning'); return; }
+  window.open(url, '_blank');
+  recordComm(customerId, { type: 'message', text: 'Text receipt opened in WhatsApp' });
+  closeDynamicModal();
 }
 
 async function saveNewRental(addAnother = false) {
@@ -3895,13 +3957,11 @@ async function saveNewRental(addAnother = false) {
     }, 80);
     return;
   }
-  showRentalDone({
-    ids: [rental.id],
+  showDonePanel({
+    title: isReservation ? '📅 Reserved' : '✅ Rental saved',
     customerId,
     customerName: `${customer.firstName} ${customer.lastName}`,
     customerPhone: customer.phone || '',
-    isReservation,
-    from, to,
     summary: `${fmtPhone(phone.number)} · ${fmtDate(from)} → ${fmtDate(to)} · ${chargeableDays} chargeable day${chargeableDays === 1 ? '' : 's'}`
       + (isReservation ? ' · pickup at handover' : ''),
     total: totalPrice,
@@ -3911,6 +3971,19 @@ async function saveNewRental(addAnother = false) {
     method: paidNow ? payMethod : null,
     paidNow,
     lines: [{ name: `Phone rental ${fmtPhone(phone.number)} · ${fmtDate(from)} → ${fmtDate(to)}`, qty: 1, total: totalPrice }],
+    smsText: buildRentalSms(rental),
+    again: {
+      label: '📱 Another phone', sub: `for ${customer.firstName}`,
+      run: () => {
+        openNewRentalModal(customerId);
+        setTimeout(() => {
+          const f = document.getElementById('rFrom'), t = document.getElementById('rTo');
+          if (f) { f.value = from; showHebrewDate('rFrom', 'rFromHeb'); }
+          if (t) { t.value = to; showHebrewDate('rTo', 'rToHeb'); }
+          refreshRentalPhoneOptions(); updateRentalCalc(); nrSetGivenDefaults();
+        }, 80);
+      },
+    },
   });
 }
 
@@ -9391,8 +9464,40 @@ async function saveSimForm(editId) {
   closeDynamicModal();
   let extraMsg = '';
   if (newSimId) extraMsg = await applyExtraCharges('sim', newSimId, customerId, false);
-  toast(`${editId ? 'SIM plan updated ✅' : 'SIM plan added ✅'}${extraMsg}`, 'success');
   renderSimsTab();
+  // An EDIT is a correction, not a counter job — it keeps the toast. A new plan
+  // is money changing hands with the customer in front of you, so it finishes
+  // on the card like everything else.
+  if (editId) { toast(`SIM plan updated ✅${extraMsg}`, 'success'); return; }
+  if (extraMsg) toast(`SIM plan added.${extraMsg}`, 'success');
+  const sc = customers.find(x => String(x.id) === String(customerId));
+  // Read the labels off the form's own selects rather than re-deriving them,
+  // so the card says exactly what the person just picked.
+  const fieldText = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return '';
+    if (el.tagName === 'SELECT') return (el.options[el.selectedIndex]?.textContent || '').trim();
+    return (el.value || '').trim();
+  };
+  const simNo = fieldText('simNumber');
+  const planLabel = fieldText('simPlan');
+  const providerLabel = fieldText('simProvider');
+  const renewal = fieldText('simRenewal');
+  showDonePanel({
+    title: '💳 SIM plan added',
+    customerId,
+    customerName: sc ? `${sc.firstName || ''} ${sc.lastName || ''}`.trim() : '',
+    customerPhone: sc?.phone || '',
+    summary: [simNo && fmtPhone(simNo), providerLabel, planLabel, renewal && `renews ${fmtDate(renewal)}`]
+      .filter(Boolean).join(' · ') || 'SIM plan',
+    total: setupFee || 0,
+    payLine: setupFee > 0 ? 'setup fee on account' : 'no setup fee',
+    method: null,
+    paidNow: false,
+    lines: [{ name: `SIM plan${simNo ? ' ' + fmtPhone(simNo) : ''}${planLabel ? ' · ' + planLabel : ''}`, qty: 1, total: setupFee || 0 }],
+    smsText: `Hi${sc?.firstName ? ' ' + sc.firstName : ''}, your SIM plan${simNo ? ' on ' + fmtPhone(simNo) : ''} is set up${renewal ? ` — renews ${fmtDate(renewal)}` : ''}. Kosher Connect, 0161 531 1386.`,
+    again: { label: '💳 Another SIM', sub: sc?.firstName ? `for ${sc.firstName}` : 'new plan', run: () => openAddSimModal(customerId) },
+  });
 }
 
 function openManageSimModal(id) {
@@ -10396,8 +10501,23 @@ async function saveNewBooking() {
       : ` ${fmtGbp(res.charged)} on account — wallet balance ${fmtGbp(res.balance)}.`;
   }
   if (res.extras?.length) chargeMsg += ` Incl. ${res.extras.map(e => `${e.label} ${fmtGbp(e.amount)}`).join(', ')}.`;
-  toast(`Booking saved!${chargeMsg}`, 'success');
   renderBookingsTab();
+  const b = res.booking;
+  const bc = customers.find(x => String(x.id) === String(b.customerId));
+  showDonePanel({
+    title: '✈️ Booking saved',
+    customerId: b.customerId,
+    customerName: bc ? `${bc.firstName || ''} ${bc.lastName || ''}`.trim() : (b.customerName || ''),
+    customerPhone: bc?.phone || '',
+    summary: `${b.route || ''}${b.airline ? ' · ' + b.airline : ''}${b.travelDate ? ' · ' + fmtDate(b.travelDate) : ''}${b.bookingRef ? ' · ref ' + b.bookingRef : ''}`,
+    total: Number.isFinite(res.charged) ? res.charged : b.price,
+    payLine: res.chargePosted ? (res.paidNow ? 'paid in full' : 'on account') : 'not charged',
+    method: null,
+    paidNow: !!res.paidNow,
+    lines: [{ name: `Flight ${b.route || ''}${b.travelDate ? ' · ' + fmtDate(b.travelDate) : ''}`, qty: 1, total: Number.isFinite(res.charged) ? res.charged : b.price }],
+    smsText: `Hi${bc?.firstName ? ' ' + bc.firstName : ''}, your flight is booked: ${b.route || ''}${b.travelDate ? ', ' + fmtDate(b.travelDate) : ''}${b.bookingRef ? '. Ref ' + b.bookingRef : ''}. Kosher Connect, 0161 531 1386.`,
+    again: { label: '✈️ Another booking', sub: bc?.firstName ? `for ${bc.firstName}` : 'new flight', run: () => openNewBookingModal(b.customerId) },
+  });
 }
 
 // When WE own an unfinished check-in with a date, raise a High task on that
@@ -10994,8 +11114,23 @@ async function saveNewRepair() {
   });
   if (!res.success) { toast(res.error || 'Could not open the ticket.', 'error'); return; }
   closeDynamicModal();
-  toast(`Repair ticket opened — ${fmtGbp(res.repair.total)} on collection.`, 'success');
   renderRepairsTab();
+  const rc = customers.find(x => String(x.id) === String(customerId));
+  const rDevice = res.repair.device || 'the device';
+  showDonePanel({
+    title: '🔧 Repair ticket opened',
+    customerId,
+    customerName: rc ? `${rc.firstName || ''} ${rc.lastName || ''}`.trim() : (res.repair.customerName || ''),
+    customerPhone: rc?.phone || '',
+    summary: `${rDevice}${res.repair.services?.length ? ' · ' + res.repair.services.map(x => x.name || x).join(', ') : ''}`,
+    total: res.repair.total,
+    payLine: 'due on collection',
+    method: null,
+    paidNow: false,
+    lines: [{ name: `Repair — ${rDevice}`, qty: 1, total: res.repair.total }],
+    smsText: `Hi${rc?.firstName ? ' ' + rc.firstName : ''}, we've booked in ${rDevice} for repair. Estimate ${fmtGbp(res.repair.total)}, payable on collection. We'll message you when it's ready. Kosher Connect, 0161 531 1386.`,
+    again: { label: '🔧 Another repair', sub: rc?.firstName ? `for ${rc.firstName}` : 'new ticket', run: () => openNewRepairModal(customerId) },
+  });
 }
 
 async function changeRepairStatus(id, status) {
