@@ -33,6 +33,23 @@
       "phone": "+972544123456",
       "email": "",
       "services": []
+    },
+    {
+      "id": "c5",
+      "firstName": "Menachem",
+      "lastName": "Adler",
+      "phone": "",
+      "email": "",
+      "notes": "Imported from ELID 2026-08-06",
+      "services": []
+    },
+    {
+      "id": "c6",
+      "firstName": "Yoisef",
+      "lastName": "Teitelboim",
+      "phone": "+447700900123",
+      "email": "",
+      "services": []
     }
   ],
   "/api/rentals": [
@@ -958,6 +975,59 @@
         "status": "sent",
         "error": null,
         "customerName": "Pesha Eger"
+      }
+    ]
+  },
+  "/api/customers/duplicates": {
+    "success": true,
+    "mode": "all",
+    "seeds": 6,
+    "count": 2,
+    "dismissed": 3,
+    "pairs": [
+      {
+        "key": "c1|c5",
+        "score": 9,
+        "a": {
+          "id": "c1",
+          "name": "Menachem Adler",
+          "elid": [],
+          "imported": false,
+          "phone": "+447911123456",
+          "email": "m.adler@example.com",
+          "counts": { "sims": 2, "rentals": 1, "money": 7 }
+        },
+        "b": {
+          "id": "c5",
+          "name": "Menachem Adler",
+          "elid": ["adler.m"],
+          "imported": true,
+          "phone": "",
+          "email": "",
+          "counts": {}
+        }
+      },
+      {
+        "key": "c2|c6",
+        "score": 6,
+        "a": {
+          "id": "c2",
+          "name": "Yossi Taitelbaum",
+          "elid": [],
+          "imported": false,
+          "phone": "+447700900123",
+          "email": "yossi@example.com",
+          "counts": { "bookings": 2, "repairs": 1 }
+        },
+        "b": {
+          "id": "c6",
+          "name": "Yoisef Teitelboim",
+          "elid": [],
+          "imported": false,
+          "phone": "+447700900123",
+          "email": "",
+          "counts": { "sims": 1, "vns": 1, "money": 3 }
+        }
       }
     ]
   }

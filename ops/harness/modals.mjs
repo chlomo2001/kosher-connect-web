@@ -60,6 +60,11 @@ export const MODALS = [
   ['supplier-return','shop',     `openSupplierReturnModal()`],
   ['supplier-return-manage','shop', `openSupplierReturnModal(window.__kc.supplierReturn)`],
   ['goods-in',      'shop',      `openGoodsInModal()`],
+  // The duplicate review. It shipped unmeasured, and the first run of it here
+  // found four sub-24px targets and two sides of a pair that a phone stacked
+  // into an unreadable column — exactly the class of thing the other nineteen
+  // entries exist to catch. Answers from the seed's /api/customers/duplicates.
+  ['dup-scan',      'customers', `openDupScanModal()`],
   // Not modals, but the same eyes-on treatment: the Customer-360 page
   // (/customers/<id>) renders in the content column — .kc-cpage is in the
   // geometry selector below so both sub-tabs get measured and screenshotted.
