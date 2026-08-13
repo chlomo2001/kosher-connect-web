@@ -6951,26 +6951,53 @@ function renderDupScan(j) {
     ].filter(Boolean);
     return bits.length ? bits.join(' · ') : 'nothing on this record';
   };
+  // Why this pair is in front of you. The scan knows; it was keeping it to
+  // itself, so every pair arrived looking equally suspicious and the reader
+  // had to re-derive the match by eye. Digits only for the phone — one side is
+  // often stored 07… and the other +447….
+  const digits = (s) => String(s || '').replace(/\D/g, '').replace(/^44/, '0');
+  const bareName = (s) => String(s || '').toLowerCase()
+    .replace(/\([^)]*\)/g, '').replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim();
+  const why = (a, b) => {
+    const bits = [];
+    if (a.phone && b.phone && digits(a.phone) === digits(b.phone)) bits.push('same phone number');
+    bits.push(bareName(a.name) === bareName(b.name) ? 'same name' : 'names spelled alike');
+    if (a.imported !== b.imported) bits.push('one side is an ELID import');
+    const empty = [a, b].filter(x => !Object.values(x.counts || {}).some(n => n > 0)).length;
+    if (empty === 1) bits.push('one side holds nothing');
+    return bits.join(' · ');
+  };
+
   const side = (x, other) => `
-    <div style="flex:1;min-width:210px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;">
-      <button style="background:none;border:0;padding:0;color:var(--accent);font-weight:600;font-size:var(--fs-body);cursor:pointer;text-align:start;"
-        onclick="closeDynamicModal();openCustomerById('${escHtml(x.id)}')">${escHtml(x.name)}</button>
-      <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:2px;">
-        ${x.phone ? escHtml(fmtPhone(x.phone)) : 'no phone'}${x.imported ? ' · <span style="color:var(--gold);">ELID import</span>' : ''}
+    <div class="dup-side">
+      <button class="dup-name" onclick="closeDynamicModal();openCustomerById('${escHtml(x.id)}')"
+        title="Open this customer">${escHtml(x.name)}</button>
+      <div class="dup-meta">
+        ${x.phone ? escHtml(fmtPhone(x.phone)) : 'no phone'}${x.imported ? ' · <span class="dup-elid">ELID import</span>' : ''}
       </div>
-      <div style="font-size:var(--fs-small);margin-top:4px;">${escHtml(evidence(x))}</div>
-      <button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%;color:var(--success);border-color:var(--success);"
+      <div class="dup-evidence">${escHtml(evidence(x))}</div>
+      <button class="btn btn-outline btn-sm dup-keep"
         onclick="mergeDupPair('${escHtml(other.id)}','${escHtml(x.id)}')">✓ Keep this one</button>
     </div>`;
 
-  const rows = pairs.map(p => `
-    <div id="dupPair_${escHtml([p.a.id, p.b.id].sort().join('_'))}"
-         style="padding:10px 0;border-bottom:1px solid var(--border);">
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;">
+  // One bordered card per pair. On a phone the two sides stack, and until this
+  // the gap between the halves of ONE pair was drawn exactly like the gap
+  // between two different pairs — so the screen read as a column of unrelated
+  // customers rather than a queue of decisions. The "or" between them is the
+  // whole point of the card, and it survives the stack.
+  const rows = pairs.map((p, i) => `
+    <div class="dup-pair" id="dupPair_${escHtml([p.a.id, p.b.id].sort().join('_'))}">
+      <div class="dup-pair-head">
+        <span class="dup-pair-n">${i + 1} of ${pairs.length}</span>
+        <span class="dup-pair-why">${escHtml(why(p.a, p.b))}</span>
+      </div>
+      <div class="dup-sides">
         ${side(p.a, p.b)}
+        <div class="dup-or" aria-hidden="true">or</div>
         ${side(p.b, p.a)}
       </div>
-      <div style="margin-top:6px;text-align:end;">
+      <div class="dup-foot">
+        <span class="dup-foot-note">Keeping one removes the other.</span>
         <button class="btn btn-outline btn-sm" onclick="dupMarkNotSame('${escHtml(p.a.id)}','${escHtml(p.b.id)}')">✋ Not the same person</button>
       </div>
     </div>`).join('') ||
@@ -6983,7 +7010,7 @@ function renderDupScan(j) {
       Merging moves every SIM, rental, flight, repair and money line onto the record you keep, then removes the other —
       amounts never change. Same name is not proof: brothers share names, so check what each side holds first.
     </div>
-    <div style="max-height:420px;overflow:auto;">${rows}</div>
+    <div class="dup-list">${rows}</div>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
   `);
 }

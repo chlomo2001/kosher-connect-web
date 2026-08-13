@@ -2759,3 +2759,47 @@ td { border-top-color: color-mix(in srgb, var(--border) 55%, transparent); }
 .table-wrap thead th, .table-card thead th {
   position: sticky; top: 0; z-index: 2; background: var(--surface2);
 }
+
+/* ── Duplicate review ─────────────────────────────────────────────────────
+   Each pair is ONE card. The screen shipped as a flat run of customer boxes
+   separated by a hairline, and on a phone — where the two sides stack — the
+   gap inside a pair was drawn exactly like the gap between two pairs, so a
+   queue of decisions read as a column of unrelated customers. The card, its
+   numbered header and the "or" between the halves are all there to say which
+   two records the next press is choosing between. */
+.dup-list { max-height: 420px; overflow: auto; display: flex; flex-direction: column; gap: 10px; padding: 2px; }
+
+.dup-pair { border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: var(--surface2); }
+
+.dup-pair-head { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; margin-bottom: 8px; }
+.dup-pair-n { font-size: var(--fs-micro); font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+/* Why the scan flagged them. It knew all along; without it every pair arrives
+   looking equally suspicious and the reader re-derives the match by eye. */
+.dup-pair-why { font-size: var(--fs-micro); color: var(--muted); }
+
+.dup-sides { display: flex; gap: 8px; flex-wrap: wrap; align-items: stretch; }
+.dup-side { flex: 1; min-width: 200px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--surface); }
+
+/* The hinge. Horizontal between two side-by-side records, and still between
+   them once they stack — which is the case that needed it. */
+.dup-or {
+  align-self: center; font-size: var(--fs-micro); color: var(--muted);
+  text-transform: uppercase; letter-spacing: .08em;
+}
+@media (max-width: 520px) { .dup-or { width: 100%; text-align: center; } }
+
+/* 24×24 under a coarse pointer (WCAG 2.5.8): these were a bare 0-padding
+   button and measured 17px tall on the counter tablet. */
+.dup-name {
+  background: none; border: 0; padding: 3px 0; color: var(--accent);
+  font-weight: 600; font-size: var(--fs-body); cursor: pointer; text-align: start;
+  min-height: 24px;
+}
+.dup-name:hover { text-decoration: underline; }
+.dup-meta { font-size: var(--fs-micro); color: var(--muted); margin-top: 2px; }
+.dup-elid { color: var(--gold); }
+.dup-evidence { font-size: var(--fs-small); margin-top: 4px; }
+.dup-keep { margin-top: 8px; width: 100%; color: var(--success); border-color: var(--success); }
+
+.dup-foot { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; margin-top: 8px; }
+.dup-foot-note { font-size: var(--fs-micro); color: var(--muted); }
