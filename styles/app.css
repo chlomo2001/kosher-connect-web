@@ -1955,23 +1955,81 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 /* Business-summary bar charts — magnitude by service in a single hue, with a
    light top-lit gradient + inset track for gentle depth (not heavy). */
 
-.bizcol { flex: 1; min-width: 250px; }
+/* ── Business summary ──────────────────────────────────────────────────────
+   Four forms, each picked for the job its data does rather than for variety:
+   a KPI row for the headline numbers (a handful of totals is stat tiles, not a
+   chart), a meter for one ratio against its limit, one-hue horizontal bars for
+   magnitude by service, and two shades of that hue for billed-against-received
+   across six months — because received is PART of billed, not a rival series.
+   Values are labelled directly throughout, so nothing is carried by colour
+   alone and the whole thing survives a colourblind reader and a mono print. */
 
-.bizcol-title { font-weight: 600; margin-bottom: 12px; }
+.biz-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.biz-tab {
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink-secondary);
+  border-radius: 999px; padding: 6px 14px; min-height: 30px;
+  font: inherit; font-size: var(--fs-small); cursor: pointer;
+}
+.biz-tab:hover { border-color: var(--accent); color: var(--accent); }
+.biz-tab.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+
+/* 200px, not 140: at 140 four tiles need 590px in a 504px modal and the fourth
+   orphans onto its own row. 200 gives a tidy 2×2 in the default modal and goes
+   4-up once it is dragged wider or on a big screen. */
+.biz-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.biz-kpi { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--surface2); }
+.biz-kpi-label { font-size: var(--fs-micro); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.biz-kpi-val { font-size: var(--fs-display-2); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; margin-top: 2px; }
+.biz-kpi-val.owed { color: var(--danger-ink); }
+
+/* Direction is never colour alone — the arrow and the words carry it too. */
+.biz-delta { display: block; font-size: var(--fs-micro); margin-top: 3px; }
+.biz-delta.up { color: var(--success-ink); }
+.biz-delta.down { color: var(--danger-ink); }
+.biz-delta.flat { color: var(--muted); }
+
+/* One ratio against its limit: a meter on the same track the bars use. */
+.biz-meter { height: 8px; border-radius: 4px; background: var(--panel); overflow: hidden; margin-top: 6px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.10); }
+.biz-meter-fill { height: 100%; border-radius: 4px; background: var(--success); }
+
+.biz-section { font-weight: 600; margin: 18px 0 8px; }
+.biz-empty { color: var(--muted); font-size: var(--fs-body); padding: 6px 0; }
+.biz-note { font-size: var(--fs-small); color: var(--muted); margin-top: 8px; }
+.biz-foot { font-size: var(--fs-micro); color: var(--muted); margin-top: 14px; }
 
 .bizbar-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: var(--fs-body); }
-
-.bizbar-label { flex: 0 0 92px; color: var(--ink-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.bizbar-track { flex: 1; height: 12px; background: var(--panel); border-radius: 6px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.10); }
-
+/* Wide enough for the longest service name at 17px Simple Mode: "✈️ Flights &
+   tickets" used to arrive as "Flights & tick…" in a 92px slot. */
+.bizbar-label { flex: 0 0 138px; color: var(--ink-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bizbar-track { flex: 1; min-width: 40px; height: 12px; background: var(--panel); border-radius: 6px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.10); }
 .bizbar-fill { height: 100%; border-radius: 6px; background: linear-gradient(180deg, var(--accent2), var(--accent)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.28); }
-
 .bizbar-fill.received { background: linear-gradient(180deg, #2bb978, var(--success)); }
+.bizbar-val { flex: 0 0 auto; min-width: 118px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bizbar-share { display: inline-block; min-width: 34px; margin-left: 6px; font-weight: 400; color: var(--muted); font-size: var(--fs-small); }
+.biz-move { margin-right: 5px; font-size: var(--fs-micro); }
+.biz-move.up { color: var(--success-ink); }
+.biz-move.down { color: var(--danger-ink); }
 
-.bizbar-val { flex: 0 0 auto; min-width: 74px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* Six months. Received sits INSIDE billed as a darker shade of the same hue,
+   which is what "part of it came in" looks like; two rival colours would have
+   claimed they were separate measures. */
+.biz-trend { display: flex; align-items: flex-end; gap: 8px; height: 132px; }
+.biz-tcol { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; height: 100%; }
+.biz-tstack { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.biz-tbilled {
+  width: 100%; max-width: 46px; border-radius: 4px 4px 0 0;
+  background: var(--primary-subdued); position: relative; display: flex; align-items: flex-end;
+}
+.biz-treceived { width: 100%; border-radius: 0 0 0 0; background: var(--accent); }
+.biz-tbilled > .biz-treceived:only-child { border-radius: 4px 4px 0 0; }
+.biz-tlabel { font-size: var(--fs-micro); color: var(--muted); margin-top: 5px; }
+.biz-tval { font-size: var(--fs-micro); font-variant-numeric: tabular-nums; color: var(--ink-secondary); }
 
-.bizcol-tot { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+.biz-legend { display: flex; gap: 14px; font-size: var(--fs-micro); color: var(--muted); margin-top: 8px; }
+.biz-sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.biz-sw.billed { background: var(--primary-subdued); }
+.biz-sw.received { background: var(--accent); }
 
 
 .dash-grid {
@@ -2888,3 +2946,17 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 }
 .rd-sub { font-size: var(--fs-micro); font-weight: 400; opacity: .78; display: block; overflow-wrap: anywhere; }
 .rd-money .rd-sub { display: inline; margin-left: 8px; font-size: var(--fs-small); opacity: 1; color: var(--muted); }
+
+/* On a phone the fixed label and value columns leave the bar about 90px to
+   work with, which is not enough of a bar to compare anything by. The numbers
+   keep their room; the name gives some up, since it is already the shortest
+   thing in the row. */
+@media (max-width: 560px) {
+  /* The name wraps rather than ellipsising: "✈️ Flights & tickets" cut to
+     "Flights & tick…" is worse than a two-line row, and the row has the height
+     to spare on a phone. */
+  .bizbar-label { flex: 0 0 104px; white-space: normal; line-height: 1.2; }
+  .bizbar-val { min-width: 96px; }
+  .bizbar-share { min-width: 28px; margin-left: 4px; }
+  .biz-trend { height: 108px; }
+}

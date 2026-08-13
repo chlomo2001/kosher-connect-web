@@ -13578,82 +13578,221 @@ async function saveReminder(kind, id) {
   toast(time ? `⏰ Will pop up ${fmtDate(date)} at ${time}.` : `Reminder set for ${fmtDate(date)}.`, 'success');
 }
 
-// ── Business summary (revenue by service type) ───────────────────────────
+// ── Business summary ─────────────────────────────────────────────────────
 // Ledger entry_types collapsed into the services the owner thinks in.
 const REVENUE_CATS = {
-  rental: '📱 Rentals', rental_loss: '📱 Rentals',
-  sim_charge: '📶 SIM', sim_annual: '📶 SIM', sim_additional: '📶 SIM',
-  sim_replacement: '📶 SIM', sim_service: '📶 SIM',
+  rental: '📱 Rentals', rental_loss: '📱 Rentals', rental_adjustment: '📱 Rentals',
+  sim_charge: '📶 SIM plans', sim_annual: '📶 SIM plans', sim_additional: '📶 SIM plans',
+  sim_replacement: '📶 SIM plans', sim_service: '📶 SIM plans',
   repair: '🔧 Repairs',
   booking: '✈️ Flights & tickets',
-  online_service: '🖨️ Print / online',
+  online_service: '🖨️ Print & online',
   phone_sale: '🛒 Shop', stock_sale: '🛒 Shop',
   virtual_number: '🔢 Virtual numbers',
   extra_charge: '➕ Extra charges',
+  manual_adjustment: '✏️ Adjustments',
 };
 function groupRevenue(byType) {
   const groups = {};
+  const otherTypes = [];
   for (const [type, amt] of Object.entries(byType || {})) {
-    const label = REVENUE_CATS[type] || '• Other';
-    groups[label] = (groups[label] || 0) + amt;
+    const label = REVENUE_CATS[type];
+    if (!label) otherTypes.push(`${type.replace(/_/g, ' ')} ${fmtGbp(amt)}`);
+    const key = label || '• Other';
+    groups[key] = (groups[key] || 0) + amt;
   }
-  return Object.entries(groups).sort((a, b) => b[1] - a[1]);
+  const rows = Object.entries(groups).sort((a, b) => b[1] - a[1]);
+  // "Other" used to be an unexplained bar. Whatever fell into it is named in
+  // the row's tooltip, so an unrecognised entry_type is a question you can
+  // answer rather than a mystery you have to live with.
+  return { rows, otherTypes };
 }
+
+// A report window is "everything since <date>", so a discrete period is the
+// difference of two of them. One shape, used for months and for weeks.
+const bizDiff = (a, b) => {
+  if (!a) return null;
+  if (!b) return a;
+  const byType = { ...(a.byType || {}) };
+  for (const [k, v] of Object.entries(b.byType || {})) {
+    byType[k] = Math.round(((byType[k] || 0) - v) * 100) / 100;
+    if (byType[k] <= 0) delete byType[k];
+  }
+  const n = (x) => Math.round((x || 0) * 100) / 100;
+  return {
+    byType,
+    charged: n(a.charged - b.charged), received: n(a.received - b.received),
+    refunded: n(a.refunded - b.refunded), refundsOwed: n(a.refundsOwed),
+  };
+};
+const bizMonthStart = (back) => {
+  const d = new Date();
+  d.setDate(1); d.setMonth(d.getMonth() - back);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+};
+const bizMonthLabel = (back) => {
+  const d = new Date();
+  d.setDate(1); d.setMonth(d.getMonth() - back);
+  return d.toLocaleDateString('en-GB', { month: 'short' });
+};
+
+let bizData = null;
+let bizPeriod = 'month';
+
 async function openBusinessSummary() {
-  const now = new Date();
-  const weekFrom = localISO(new Date(Date.now() - 6 * 86400000));
-  const monthFrom = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
   showDynamicModal(`
     <div class="modal-title">📊 Business summary</div>
     <div id="bizSummaryBody" style="color:var(--muted);padding:20px 4px;">Loading…</div>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>`);
-  const [wk, mo] = await Promise.all([
-    kcFetch('/api/ledger?report=1&from=' + weekFrom).then(r => r.json()).catch(() => null),
-    kcFetch('/api/ledger?report=1&from=' + monthFrom).then(r => r.json()).catch(() => null),
+  const rep = (from) => kcFetch('/api/ledger?report=1&from=' + from)
+    .then(r => r.json()).catch(() => null);
+  const day = (back) => localISO(new Date(Date.now() - back * 86400000));
+  // Six month-starts (this month back to five ago) + two week anchors. Every
+  // discrete period below is a difference of two of these, so the numbers can
+  // never disagree with each other the way two independent queries can.
+  const months = [0, 1, 2, 3, 4, 5, 6].map(bizMonthStart);
+  const [w0, w1, ...ms] = await Promise.all([
+    rep(day(6)), rep(day(13)), ...months.map(rep),
   ]);
   const body = document.getElementById('bizSummaryBody');
   if (!body) return;
-  if (!wk?.success || !mo?.success) {
-    body.innerHTML = `<div style="color:var(--danger-ink);padding:6px 0;">${(wk && wk.error) || (mo && mo.error) || 'Could not load the summary.'}</div>`;
+  if (!ms[0]?.success) {
+    body.innerHTML = `<div style="color:var(--danger-ink);padding:6px 0;">${ms[0]?.error || 'Could not load the summary.'}</div>`;
     return;
   }
-  // Revenue by service is a magnitude-by-category read → horizontal bars in a
-  // single hue (values labelled directly, so identity is never colour-alone),
-  // plus a collection-rate bar. Soft top-light gradients give a light 3D feel.
-  const col = (title, rep) => {
-    const rows = groupRevenue(rep.byType);
-    const max = Math.max(1, ...rows.map(([, a]) => a));
-    const bars = rows.length ? rows.map(([label, amt]) => `
-      <div class="bizbar-row">
-        <span class="bizbar-label" title="${label}">${label}</span>
-        <div class="bizbar-track"><div class="bizbar-fill" style="width:${Math.max(3, (amt / max) * 100).toFixed(1)}%;"></div></div>
-        <span class="bizbar-val">${fmtGbp(amt)}</span>
-      </div>`).join('')
-      : '<div style="color:var(--muted);font-size:var(--fs-body);padding:6px 0;">No charges yet.</div>';
-    const rate = rep.charged > 0 ? Math.min(100, Math.round((rep.received / rep.charged) * 100)) : 0;
-    return `<div class="bizcol">
-      <div class="bizcol-title">${title}</div>
-      <div class="bizbars">${bars}</div>
-      <div class="bizcol-tot">
-        <div class="bizbar-row">
-          <span class="bizbar-label" style="font-weight:700;color:var(--text);">Billed</span>
-          <div class="bizbar-track"><div class="bizbar-fill" style="width:100%;opacity:0.3;"></div></div>
-          <span class="bizbar-val">${fmtGbp(rep.charged)}</span>
-        </div>
-        <div class="bizbar-row">
-          <span class="bizbar-label" style="color:var(--success);">Received</span>
-          <div class="bizbar-track"><div class="bizbar-fill received" style="width:${rate}%;"></div></div>
-          <span class="bizbar-val">${fmtGbp(rep.received)} <span style="color:var(--muted);font-weight:400;">· ${rate}%</span></span>
-        </div>
-        ${rep.refunded ? `<div style="display:flex;justify-content:space-between;font-size:var(--fs-small);color:var(--muted);padding-top:4px;"><span>Refunded</span><span>−${fmtGbp(rep.refunded)}</span></div>` : ''}
-      </div>
-    </div>`;
+  bizData = {
+    week: w0, prevWeek: bizDiff(w1, w0),
+    month: ms[0], prevMonth: bizDiff(ms[1], ms[0]),
+    months: ms,
   };
   body.style.color = 'var(--text)';
   body.style.padding = '0';
+  renderBizSummary();
+}
+
+function bizSetPeriod(p) { bizPeriod = p; renderBizSummary(); }
+
+function renderBizSummary() {
+  const body = document.getElementById('bizSummaryBody');
+  if (!body || !bizData) return;
+  const d = bizData;
+  const PERIODS = {
+    week:  { label: 'This week',  now: d.week,  prev: d.prevWeek,  prevLabel: 'previous 7 days' },
+    month: { label: 'This month', now: d.month, prev: d.prevMonth, prevLabel: 'last month' },
+    last:  { label: 'Last month', now: d.prevMonth, prev: bizDiff(d.months[2], d.months[1]), prevLabel: 'the month before' },
+  };
+  const P = PERIODS[bizPeriod] || PERIODS.month;
+  const now = P.now || { byType: {}, charged: 0, received: 0, refunded: 0, refundsOwed: 0 };
+  const prev = P.prev;
+
+  // ── KPI row. A handful of headline numbers is a row of stat tiles, not a
+  // chart — and each carries its change against the comparable period, which
+  // is the question a total always raises next.
+  const delta = (a, b) => {
+    if (!prev || !Number.isFinite(b) || b === 0) return '';
+    const pct = Math.round(((a - b) / Math.abs(b)) * 100);
+    if (!Number.isFinite(pct) || pct === 0) return `<span class="biz-delta flat">— level vs ${P.prevLabel}</span>`;
+    const up = pct > 0;
+    return `<span class="biz-delta ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${Math.abs(pct)}% vs ${P.prevLabel}</span>`;
+  };
+  const rate = now.charged > 0 ? Math.min(100, Math.round((now.received / now.charged) * 100)) : 0;
+  const prevRate = prev && prev.charged > 0 ? Math.round((prev.received / prev.charged) * 100) : null;
+  const owed = Math.max(0, (now.charged || 0) - (now.received || 0));
+
+  const tiles = `
+    <div class="biz-kpis">
+      <div class="biz-kpi">
+        <div class="biz-kpi-label">Billed</div>
+        <div class="biz-kpi-val">${fmtGbp(now.charged)}</div>
+        ${delta(now.charged, prev?.charged)}
+      </div>
+      <div class="biz-kpi">
+        <div class="biz-kpi-label">Received</div>
+        <div class="biz-kpi-val">${fmtGbp(now.received)}</div>
+        ${delta(now.received, prev?.received)}
+      </div>
+      <div class="biz-kpi">
+        <div class="biz-kpi-label">Collected</div>
+        <div class="biz-kpi-val">${rate}%</div>
+        <div class="biz-meter" role="img" aria-label="${rate}% of what was billed has been received">
+          <div class="biz-meter-fill" style="width:${rate}%;"></div>
+        </div>
+        ${prevRate === null ? ''
+          : rate === prevRate ? `<span class="biz-delta flat">— level vs ${P.prevLabel}</span>`
+          : `<span class="biz-delta ${rate > prevRate ? 'up' : 'down'}">${rate > prevRate ? '▲' : '▼'} ${Math.abs(rate - prevRate)} pts vs ${P.prevLabel}</span>`}
+      </div>
+      <div class="biz-kpi">
+        <div class="biz-kpi-label">Still owed</div>
+        <div class="biz-kpi-val ${owed > 0 ? 'owed' : ''}">${fmtGbp(owed)}</div>
+        <span class="biz-delta flat">billed but not yet in</span>
+      </div>
+    </div>`;
+
+  // ── Revenue by service. Magnitude by category: one hue, values labelled
+  // directly, so identity never rests on colour. Share is spelled out because
+  // "how much of the month is rentals" is the question the bars invite.
+  const { rows, otherTypes } = groupRevenue(now.byType);
+  const total = rows.reduce((n, [, a]) => n + a, 0);
+  const max = Math.max(1, ...rows.map(([, a]) => a));
+  const prevByCat = prev ? Object.fromEntries(groupRevenue(prev.byType).rows) : null;
+  const bars = rows.length ? rows.map(([label, amt]) => {
+    const share = total > 0 ? Math.round((amt / total) * 100) : 0;
+    const was = prevByCat ? prevByCat[label] : undefined;
+    const move = (was === undefined || was === 0) ? '' :
+      (amt > was ? '<span class="biz-move up" aria-hidden="true">▲</span>'
+       : amt < was ? '<span class="biz-move down" aria-hidden="true">▼</span>' : '');
+    const other = label === '• Other' && otherTypes.length
+      ? ` — ${otherTypes.join(', ')}` : '';
+    const wasNote = was === undefined ? '' : ` — was ${fmtGbp(was)} ${P.prevLabel}`;
+    return `
+      <div class="bizbar-row" title="${escHtml(label + wasNote + other)}">
+        <span class="bizbar-label">${label}</span>
+        <div class="bizbar-track"><div class="bizbar-fill" style="width:${Math.max(3, (amt / max) * 100).toFixed(1)}%;"></div></div>
+        <span class="bizbar-val">${move}${fmtGbp(amt)}<span class="bizbar-share">${share}%</span></span>
+      </div>`;
+  }).join('') : '<div class="biz-empty">Nothing charged in this period.</div>';
+
+  // ── Six months, billed against received. Same hue, two shades: this is one
+  // measure and the part of it that came in, not two competing series.
+  // Each anchor is "everything since", so an EARLIER anchor covers more time.
+  // Month i on its own is therefore months[i] minus months[i-1] — the later
+  // one is the subtrahend. Getting this backwards paints six negative columns.
+  const mv = [0, 1, 2, 3, 4, 5].map(i => ({
+    label: bizMonthLabel(i),
+    ...(i === 0 ? d.months[0] : bizDiff(d.months[i], d.months[i - 1])) || { charged: 0, received: 0 },
+  })).reverse();
+  const mMax = Math.max(1, ...mv.map(m => m.charged));
+  const trend = `
+    <div class="biz-trend" role="img" aria-label="Billed and received for each of the last six months">
+      ${mv.map(m => `
+        <div class="biz-tcol" title="${escHtml(m.label)} — billed ${fmtGbp(m.charged)}, received ${fmtGbp(m.received)}">
+          <div class="biz-tstack">
+            <div class="biz-tbilled" style="height:${Math.max(2, (m.charged / mMax) * 100).toFixed(1)}%;">
+              <div class="biz-treceived" style="height:${m.charged > 0 ? Math.min(100, (m.received / m.charged) * 100).toFixed(1) : 0}%;"></div>
+            </div>
+          </div>
+          <div class="biz-tlabel">${escHtml(m.label)}</div>
+          <div class="biz-tval">${fmtGbp(m.charged)}</div>
+        </div>`).join('')}
+    </div>
+    <div class="biz-legend">
+      <span><i class="biz-sw billed"></i> Billed</span>
+      <span><i class="biz-sw received"></i> Received</span>
+    </div>`;
+
   body.innerHTML = `
-    <div style="display:flex;gap:28px;flex-wrap:wrap;">${col('This week (7 days)', wk)}${col('This month', mo)}</div>
-    <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:14px;">Bars show revenue by service. “Billed” is revenue charged; “Received” is money actually taken in (payments + top-ups); the green bar is the collection rate.</div>`;
+    <div class="biz-tabs" role="tablist">
+      ${Object.entries(PERIODS).map(([k, v]) => `
+        <button class="biz-tab${k === bizPeriod ? ' active' : ''}" role="tab"
+          aria-selected="${k === bizPeriod}" onclick="bizSetPeriod('${k}')">${v.label}</button>`).join('')}
+    </div>
+    ${tiles}
+    <div class="biz-section">Revenue by service · ${P.label.toLowerCase()}</div>
+    <div class="bizbars">${bars}</div>
+    ${now.refunded ? `<div class="biz-note">Refunds issued ${fmtGbp(now.refunded)}${now.refundsOwed ? ` · ${fmtGbp(now.refundsOwed)} still to be paid back out` : ' · all paid out'}</div>` : ''}
+    <div class="biz-section">Last six months</div>
+    ${trend}
+    <div class="biz-foot">“Billed” is what was charged; “Received” is money actually taken in (payments and top-ups). Every period is measured off the same running totals, so the figures always add up against each other.</div>`;
 }
 
 // ── Command palette (Ctrl/Cmd+K) ─────────────────────────────────────────
