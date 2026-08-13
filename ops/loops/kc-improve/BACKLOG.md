@@ -642,18 +642,25 @@ not been re-checked against the code and may have drifted the same way.
 | New rental: the multi-phone count stopped lying (never rewrote itself downward) and stopped overwriting the availability hint the date fields put in the same slot | c1bd25e | Rentals → New rental |
 | Modal footers wrap — at Simple Mode largest, Manage Rental's "💾 Save changes" sat 53px off a 390px screen. Four modals shared the pattern; `.modal-actions-group` replaces the inline flex written out four times | b3e76d7 | Manage Rental, Edit Booking, House account, Stock item |
 | `render.mjs --fs` — Simple Mode over the 13 tabs, wired into audit-all (tabs at large+largest, targets, dark contrast). Plus a 320px modal sweep, which found Manage SIM's Close button 26px off screen | aeccd1d | tooling + SIM Plans → Manage SIM |
-| Kol Torah at counter width: section headings stopped breaking mid-phrase ("Conversion" / "jobs" beside a one-line description), and a job stopped stacking as CD / → / MP3 / × 3 — a 5-line row becomes 2 | (this commit) | Kol Torah |
+| Kol Torah at counter width: section headings stopped breaking mid-phrase ("Conversion" / "jobs" beside a one-line description), and a job stopped stacking as CD / → / MP3 / × 3 — a 5-line row becomes 2 | fb0982a | Kol Torah |
 | Consignment chips ellipsize instead of running off the screen — a real shiur title overflowed 320px by 51px, found by re-seeding every display string at the length the book actually reaches | 9cffb03 | Kol Torah |
-| The hourly-timer picker shows its own prompt — squeezed to 189px at exactly 390px it read "Who are you helpi", though 320px was fine because the Start button had already wrapped away | (this commit) | Online & Print |
-| The duplicate queue counts down as it is worked: settling a pair renumbers the rest and updates the total (they were counting against the figure at load), and working the queue to zero says so instead of leaving a heading over nothing | (this commit) | Customers → 👥 Duplicates |
-| The same treatment generalised to `.badge-clip` and taken through the modals: a flight route ran 84px off the customer card, and a long email address ran the receipt tick-box off the wallet's Record payment modal | (this commit) | Customer card, Wallet, Kol Torah |
-| One name and one case for the last four create buttons (SIM plan, job, number, charge a service — three of which the top bar and the tab called different things); two empty states that had no way out gained one; found by rendering all 13 tabs with the data emptied, which no sweep had done | (this commit) | SIM Plans, Kol Torah, Virtual Numbers, Online & Print, Rentals |
+| The hourly-timer picker shows its own prompt — squeezed to 189px at exactly 390px it read "Who are you helpi", though 320px was fine because the Start button had already wrapped away | a8cbb58 | Online & Print |
+| The duplicate queue counts down as it is worked: settling a pair renumbers the rest and updates the total (they were counting against the figure at load), and working the queue to zero says so instead of leaving a heading over nothing | 44e72c3 | Customers → 👥 Duplicates |
+| The same treatment generalised to `.badge-clip` and taken through the modals: a flight route ran 84px off the customer card, and a long email address ran the receipt tick-box off the wallet's Record payment modal | 4eb9dca | Customer card, Wallet, Kol Torah |
+| One name and one case for the last four create buttons (SIM plan, job, number, charge a service — three of which the top bar and the tab called different things); two empty states that had no way out gained one; found by rendering all 13 tabs with the data emptied, which no sweep had done | 80f420d | SIM Plans, Kol Torah, Virtual Numbers, Online & Print, Rentals |
 
-Discovery: audit-all clean before any fix, so the night's items came from
-opening the surfaces built in the last 48h at counter width (Hebrew calendar,
-multi-phone New Rental, bulk-return bar, duplicate review — the last two of
-which no harness had ever opened), then from sweeping the modals at all three
-Simple Mode text sizes, which nothing had run since the last modal changed.
+Discovery, four lenses, in the order they paid off: audit-all was clean before
+any fix, so the night started by opening the surfaces built in the last 48h at
+counter width (Hebrew calendar, multi-phone New Rental, bulk-return bar,
+duplicate review — the last two of which no harness had ever opened); then the
+modals at all three Simple Mode text sizes, which nothing had run since the
+last modal changed, and at 320px, which nothing had ever run; then all 13 tabs
+with the seed emptied, which found the copy that names buttons no longer
+called that; then all 13 tabs and all 24 modals re-seeded with strings at the
+length the book actually reaches ("Yakov Moishe Yehoishua Bindinger-Grinfeld
+(Antwerp)"), which found three chips and one label escaping their containers.
+Two lenses came back clean and are worth recording as such: focus rings on
+every new surface, and the tab sweep in Simple Mode.
 Verified per item: gate (tests ×2 TZ + build) exit 0, harness re-render of the
 touched surface in both themes; audit-all clean end to end at the finish.
 
