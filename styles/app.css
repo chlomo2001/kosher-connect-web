@@ -2814,11 +2814,15 @@ td { border-top-color: color-mix(in srgb, var(--border) 55%, transparent); }
 .dup-foot { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; margin-top: 8px; }
 .dup-foot-note { font-size: var(--fs-micro); color: var(--muted); }
 
-/* Kol Torah consignment chips. A .badge never wraps — the country-flag SVG is
-   why — so a chip carrying a real shiur title ran off the right of a 320px
-   screen by 51px. The count is the half that gets scanned, so it keeps its
-   width and the title takes the ellipsis; the full text stays in the tooltip
-   and in the move picker below it. */
-.kt-stock-chip { max-width: 100%; }
-.kt-stock-chip .kt-chip-qty { flex: none; }
-.kt-stock-chip .kt-chip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* A .badge never wraps — the country-flag SVG is why, and that reason is
+   written beside the rule — so any chip carrying real-length text ran off the
+   right of its container with no way to reach it: a shiur title overflowed a
+   320px Kol Torah card by 51px, a flight route overflowed the customer card by
+   84px. .badge-clip caps the chip at its container and lets .badge-text take
+   the ellipsis, while the half worth scanning — a count, a flag — stays whole.
+   The full string goes in the title attribute, so nothing is lost, only
+   folded. */
+.badge-clip { max-width: 100%; }
+.badge-clip > .badge-fix,
+.badge-clip > svg { flex: none; }
+.badge-clip > .badge-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }

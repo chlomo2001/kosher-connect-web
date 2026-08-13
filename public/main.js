@@ -5726,8 +5726,8 @@ function buildCustomerPanelHtml(c, mode = 'card') {
     : allActiveServices.map(s => s.simId
         // SIM badges open the manage modal (it stacks above this card overlay).
         // s.flag is only ever our own countryFlag() SVG, never user text — safe unescaped.
-        ? `<button class="badge badge-${s.type}" style="font-size:var(--fs-small);padding:5px 12px;border:0;cursor:pointer;font-family:inherit;" onclick="openManageSimModal('${escHtml(String(s.simId))}')" title="Open this SIM plan">${s.flag || ''}${escHtml(s.label)}</button>`
-        : `<span class="badge badge-${s.type}" style="font-size:var(--fs-small);padding:5px 12px;">${s.flag || ''}${escHtml(s.label)}</span>`).join('');
+        ? `<button class="badge badge-clip badge-${s.type}" style="font-size:var(--fs-small);padding:5px 12px;border:0;cursor:pointer;font-family:inherit;" onclick="openManageSimModal('${escHtml(String(s.simId))}')" title="${escHtml(s.label)} — open this SIM plan">${s.flag || ''}<span class="badge-text">${escHtml(s.label)}</span></button>`
+        : `<span class="badge badge-clip badge-${s.type}" style="font-size:var(--fs-small);padding:5px 12px;" title="${escHtml(s.label)}">${s.flag || ''}<span class="badge-text">${escHtml(s.label)}</span></span>`).join('');
 
   // ── Trip bundle: the next flight as a unit — flight + phone + SIM + VN,
   // with what's missing flagged (travel-agent pattern).
@@ -7633,8 +7633,8 @@ function openWalletModal(customerId, balance = null) {
         <input class="form-input" id="wlNote" placeholder="What is this for?">
       </div>
       ${c && c.email && !isOwnAccountEmail(c.email) ? `<div class="form-group form-full">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--fs-body);">
-          <input type="checkbox" id="wlEmail"> ✉️ Email a receipt to ${escHtml(c.email)}
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:var(--fs-body);">
+          <input type="checkbox" id="wlEmail"> <span style="min-width:0;overflow-wrap:anywhere;">✉️ Email a receipt to ${escHtml(c.email)}</span>
         </label>
       </div>` : ''}
     </div>
@@ -12598,8 +12598,8 @@ async function renderKolTorahTab() {
           // "Shiur — Parshas Devarim, R' Shloime Taussig, Elul 5786 series" —
           // used to run straight off a 320px screen. The count is the half you
           // scan, so it holds its ground and the title takes the ellipsis.
-          return `<span class="badge kt-stock-chip" style="background:var(--bg-secondary);color:var(--ink-secondary);"
-            title="${escHtml(`${r.qty} × ${nm}`)}"><span class="kt-chip-qty">${r.qty} ×</span><span class="kt-chip-name">${escHtml(nm)}</span></span>`;
+          return `<span class="badge badge-clip" style="background:var(--bg-secondary);color:var(--ink-secondary);"
+            title="${escHtml(`${r.qty} × ${nm}`)}"><span class="badge-fix">${r.qty} ×</span><span class="badge-text">${escHtml(nm)}</span></span>`;
         }).join(' ')
       : '<span style="font-size:var(--fs-small);color:var(--muted);">nothing on consignment</span>';
     const editing = ktEditShuls.has(s.id);
