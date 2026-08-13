@@ -6923,7 +6923,6 @@ function openCustomerById(id) {
 // why every dismissal failed the first time this shipped. The scan already
 // filters them out server-side, so the client only has to record one.
 async function dupMarkNotSame(aId, bId) {
-  const row = document.getElementById('dupPair_' + [aId, bId].sort().join('_'));
   try {
     const r = await kcFetch('/api/customers/not-duplicate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -6931,7 +6930,7 @@ async function dupMarkNotSame(aId, bId) {
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok || !j.success) { toast(j.error || 'Could not save that.', 'error'); return; }
-    row?.remove();
+    dupPairSettled(aId, bId);
     toast('Noted — that pair won\'t come up again.', 'success');
   } catch { toast('Could not reach the server.', 'error'); }
 }
@@ -7016,13 +7015,34 @@ function renderDupScan(j) {
   showDynamicModal(`
     <div class="modal-title">👥 Possible duplicate customers</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
-      ${pairs.length} pair${pairs.length === 1 ? '' : 's'} to judge${j.dismissed ? ` · ${j.dismissed} already marked "not the same"` : ''}.
+      <span id="dupCount">${pairs.length} pair${pairs.length === 1 ? '' : 's'}</span> to judge${j.dismissed ? ` · ${j.dismissed} already marked "not the same"` : ''}.
       Merging moves every SIM, rental, flight, repair and money line onto the record you keep, then removes the other —
       amounts never change. Same name is not proof: brothers share names, so check what each side holds first.
     </div>
     <div class="dup-list">${rows}</div>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
   `);
+}
+
+// A pair leaves the queue — merged, or judged not the same. Both used to just
+// remove the card, which left every card below it counting against a total
+// that no longer existed: "3 of 96" with 90 left on screen. Renumber what is
+// still there, and say so when the queue empties rather than leaving a heading
+// over nothing.
+function dupPairSettled(aId, bId) {
+  document.getElementById('dupPair_' + [aId, bId].sort().join('_'))?.remove();
+  const left = [...document.querySelectorAll('.dup-pair')];
+  left.forEach((el, i) => {
+    const n = el.querySelector('.dup-pair-n');
+    if (n) n.textContent = `${i + 1} of ${left.length}`;
+  });
+  const count = document.getElementById('dupCount');
+  if (count) count.textContent = `${left.length} pair${left.length === 1 ? '' : 's'}`;
+  if (!left.length) {
+    const list = document.querySelector('.dup-list');
+    if (list) list.innerHTML =
+      '<div style="color:var(--success);font-size:var(--fs-body);">Nothing left to review. 🎉</div>';
+  }
 }
 
 // Merge two real records. dupId is removed; survivorId keeps everything.
@@ -7049,7 +7069,7 @@ async function mergeDupPair(dupId, survivorId) {
     const moved = Object.entries(j.moved || {}).filter(([, n]) => n > 0)
       .map(([k, n]) => `${n} ${k.replace('_', ' ')}`).join(', ');
     toast(`Merged into ${j.kept?.name || 'the kept record'}${moved ? ` — moved ${moved}` : ''}.`, 'success');
-    document.getElementById('dupPair_' + [dupId, survivorId].sort().join('_'))?.remove();
+    dupPairSettled(dupId, survivorId);
     if (typeof renderTableRows === 'function') renderTableRows();
   } catch { toast('Could not reach the server.', 'error'); }
 }
