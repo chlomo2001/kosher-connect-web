@@ -2751,12 +2751,36 @@ function invCurrentCap(w) {
   const cur = parseFloat(getComputedStyle(w).maxHeight);
   return Number.isFinite(cur) ? cur : w.clientHeight;
 }
-function invApplyHeight(px, save = true) {
+// The pane that actually scrolls behind the card (.content / #mainContent),
+// falling back to the document if the shell ever changes.
+function invScroller() {
+  let el = invWrap()?.parentElement;
+  while (el && el !== document.body) {
+    const oy = getComputedStyle(el).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight) return el;
+    el = el.parentElement;
+  }
+  return document.scrollingElement || document.documentElement;
+}
+
+// `anchorBottom` is what makes the gesture read as pulling the card UP. Growing
+// a box only ever extends its BOTTOM edge — so without this the new rows land
+// below the fold and you have to scroll down to see the thing you just asked
+// for, which is the opposite of the point. Holding the bottom edge still on
+// screen means the top edge rises under your hand and the rows you gained are
+// the ones now in view.
+function invApplyHeight(px, save = true, anchorBottom = false) {
   const w = invWrap();
   if (!w) return;
+  const sc = anchorBottom ? invScroller() : null;
+  const before = anchorBottom ? w.getBoundingClientRect().bottom : 0;
   const max = Math.max(INV_H_MIN, Math.round(window.innerHeight * 3));
   const h = Math.min(max, Math.max(INV_H_MIN, Math.round(px)));
   w.style.maxHeight = h + 'px';
+  if (sc) {
+    const after = w.getBoundingClientRect().bottom;
+    sc.scrollTop += after - before;
+  }
   const grip = document.getElementById('invGrip');
   if (grip) grip.setAttribute('aria-valuenow', String(h));
   if (save) { try { localStorage.setItem(INV_H_KEY, String(h)); } catch { /* private mode */ } }
@@ -2778,7 +2802,7 @@ function invGripDown(e) {
   // Up makes it taller. That is the gesture as asked for — "grab the corner
   // and pull it up" reads as opening the card out, not as moving its top edge
   // down into the rentals list above it.
-  const move = (ev) => invApplyHeight(startH + (startY - ev.clientY), false);
+  const move = (ev) => invApplyHeight(startH + (startY - ev.clientY), false, true);
   const done = () => {
     grip.removeEventListener('pointermove', move);
     grip.removeEventListener('pointerup', done);
@@ -2797,9 +2821,9 @@ function invGripKey(e) {
   const w = invWrap();
   if (!w) return;
   const step = e.shiftKey ? 120 : 40;
-  if (e.key === 'ArrowUp') { e.preventDefault(); invApplyHeight(invCurrentCap(w) + step); }
-  else if (e.key === 'ArrowDown') { e.preventDefault(); invApplyHeight(invCurrentCap(w) - step); }
-  else if (e.key === 'Home') { e.preventDefault(); invApplyHeight(INV_H_DEFAULT); }
+  if (e.key === 'ArrowUp') { e.preventDefault(); invApplyHeight(invCurrentCap(w) + step, true, true); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); invApplyHeight(invCurrentCap(w) - step, true, true); }
+  else if (e.key === 'Home') { e.preventDefault(); invApplyHeight(INV_H_DEFAULT, true, true); }
   else if (e.key === 'End' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); invGripFit(); }
 }
 // Double-click: show every phone, or go back to the default if it already does.
@@ -2807,7 +2831,20 @@ function invGripFit() {
   const w = invWrap();
   if (!w) return;
   const full = w.scrollHeight + 2;
-  invApplyHeight(invCurrentCap(w) >= full - 4 ? INV_H_DEFAULT : full);
+  const fitting = invCurrentCap(w) < full - 4;
+  // Fitting the whole fleet usually makes the card taller than the screen, so
+  // the bottom is the wrong thing to hold on to — start it at the top and read
+  // down. Shrinking back to the default anchors the bottom like a drag does.
+  invApplyHeight(fitting ? full : INV_H_DEFAULT, true, !fitting);
+  if (fitting) {
+    const sc = invScroller();
+    const box = w.closest('.kc-resizable-box') || w;
+    if (sc && sc !== document.scrollingElement) {
+      sc.scrollTop += box.getBoundingClientRect().top - sc.getBoundingClientRect().top - 8;
+    } else {
+      box.scrollIntoView({ block: 'start' });
+    }
+  }
 }
 
 function renderPhoneRows() {
