@@ -643,6 +643,7 @@ not been re-checked against the code and may have drifted the same way.
 | Modal footers wrap — at Simple Mode largest, Manage Rental's "💾 Save changes" sat 53px off a 390px screen. Four modals shared the pattern; `.modal-actions-group` replaces the inline flex written out four times | b3e76d7 | Manage Rental, Edit Booking, House account, Stock item |
 | `render.mjs --fs` — Simple Mode over the 13 tabs, wired into audit-all (tabs at large+largest, targets, dark contrast). Plus a 320px modal sweep, which found Manage SIM's Close button 26px off screen | aeccd1d | tooling + SIM Plans → Manage SIM |
 | Kol Torah at counter width: section headings stopped breaking mid-phrase ("Conversion" / "jobs" beside a one-line description), and a job stopped stacking as CD / → / MP3 / × 3 — a 5-line row becomes 2 | (this commit) | Kol Torah |
+| One name and one case for the last four create buttons (SIM plan, job, number, charge a service — three of which the top bar and the tab called different things); two empty states that had no way out gained one; found by rendering all 13 tabs with the data emptied, which no sweep had done | (this commit) | SIM Plans, Kol Torah, Virtual Numbers, Online & Print, Rentals |
 
 Discovery: audit-all clean before any fix, so the night's items came from
 opening the surfaces built in the last 48h at counter width (Hebrew calendar,

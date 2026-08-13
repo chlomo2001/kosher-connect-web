@@ -650,15 +650,15 @@ const TAB_META = {
   dashboard: { label: 'Dashboard',         title: 'Business <span>Dashboard</span>',    render: () => renderDashboardTab(), search: false },
   customers: { label: 'Customers',         title: 'Customer <span>Management</span>',   render: () => renderCustomersTab(), search: true,  primary: { label: '+ New customer', run: () => openAddModal() } },
   rentals:   { label: 'Phone Rentals',     title: 'Phone <span>Rentals</span>',         render: () => renderRentalsTab(),   search: false, primary: { label: '+ New rental',   run: () => openNewRentalModal() } },
-  sim:       { label: 'SIM Plans',         title: 'SIM <span>Plans</span>',             render: () => renderSimsTab(),      search: false, primary: { label: '+ New SIM Plan', run: () => openAddSimModal() } },
+  sim:       { label: 'SIM Plans',         title: 'SIM <span>Plans</span>',             render: () => renderSimsTab(),      search: false, primary: { label: '+ New SIM plan', run: () => openAddSimModal() } },
   bookings:  { label: 'Tickets & Flights', title: 'Tickets <span>&amp; Flights</span>', render: () => renderBookingsTab(),  search: false, primary: { label: '+ New booking',  run: () => openNewBookingModal() } },
   wallet:    { label: 'Wallet',            title: 'Wallet <span>&amp; Ledger</span>',   render: () => renderWalletTab(),    search: false },
   repairs:   { label: 'Repairs',           title: 'Phone <span>Repairs</span>',         render: () => renderRepairsTab(),   search: false, primary: { label: '+ New repair',   run: () => openNewRepairModal() } },
-  services:  { label: 'Online & Print',    title: 'Online <span>&amp; Print</span>',    render: () => renderServicesTab(),  search: false, primary: { label: '+ New Service',  run: () => openNewServiceModal() } },
+  services:  { label: 'Online & Print',    title: 'Online <span>&amp; Print</span>',    render: () => renderServicesTab(),  search: false, primary: { label: '+ Charge a service', run: () => openNewServiceModal() } },
   shop:      { label: 'Shop',              title: 'Shop <span>&amp; Stock</span>',      render: () => renderShopTab(),      search: false },
-  koltorah:  { label: 'Kol Torah',         title: 'Kol <span>Torah</span>',             render: () => renderKolTorahTab(),  search: false, primary: { label: '+ New Job',      run: () => ktFocusNewJob() } },
+  koltorah:  { label: 'Kol Torah',         title: 'Kol <span>Torah</span>',             render: () => renderKolTorahTab(),  search: false, primary: { label: '+ New job',      run: () => ktFocusNewJob() } },
   tasks:     { label: 'Tasks',             title: 'Task <span>List</span>',             render: () => renderTasksTab(),     search: false },
-  virtual:   { label: 'Virtual Numbers',   title: 'Virtual <span>Numbers</span>',       render: () => renderVirtualTab(),   search: false, primary: { label: '+ New Number',   run: () => openNewVNModal() } },
+  virtual:   { label: 'Virtual Numbers',   title: 'Virtual <span>Numbers</span>',       render: () => renderVirtualTab(),   search: false, primary: { label: '+ New number',   run: () => openNewVNModal() } },
   settings:  { label: 'Settings',          title: 'System <span>Settings</span>',       render: () => renderSettingsTab(),  search: false },
 };
 let tabPrimaryAction = null; // #58 — what the topbar primary button does on this tab
@@ -2725,7 +2725,7 @@ function renderPhoneRows() {
   if (!tbody) return;
 
   if (phones.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="emoji">📋</div><p>No phones in inventory.</p><small>Click "Manage Phones" to add phones.</small></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="emoji">📋</div><p>No phones in inventory.</p><small>Click "⚙️ Manage phones" to add phones.</small></div></td></tr>`;
     return;
   }
 
@@ -5921,7 +5921,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
       <div class="section-divider" style="margin-top:18px;">New Service</div>
       <div class="card-action-grid">
         <button class="card-action" onclick="openNewRentalModal('${c.id}')"><span class="ca-icon">📱</span> Rental</button>
-        <button class="card-action" onclick="openAddSimModal('${c.id}')"><span class="ca-icon">💳</span> SIM Plan</button>
+        <button class="card-action" onclick="openAddSimModal('${c.id}')"><span class="ca-icon">💳</span> SIM plan</button>
         <button class="card-action" onclick="openNewBookingModal('${c.id}')"><span class="ca-icon">✈️</span> Flight</button>
         <button class="card-action" onclick="openNewVNModal('${c.id}')"><span class="ca-icon">🔢</span> Virtual number</button>
         <button class="card-action" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal('${c.id}')})()"><span class="ca-icon">🔧</span> Repair</button>
@@ -8738,7 +8738,7 @@ function renderSimsTab() {
     </div>
 
     <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:center;">
-      <button class="btn btn-primary" onclick="openAddSimModal()">+ New SIM Plan</button>
+      <button class="btn btn-primary" onclick="openAddSimModal()">+ New SIM plan</button>
       <input class="search-box" style="width:260px;" type="text" id="simSearch"
         placeholder="Search customer, number, provider…"
         value="${escHtml(simSearchTerm)}"
@@ -8815,7 +8815,7 @@ function renderSimRows() {
     const narrowed = sims.length > 0;
     tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="emoji">💳</div>
       <p>${narrowed ? 'No SIM plans match this view.' : 'No SIM plans yet.'}</p>
-      <small>${narrowed ? '' : 'Click "+ New SIM Plan" to add one.'}</small>
+      <small>${narrowed ? '' : 'Click "+ New SIM plan" to add one.'}</small>
       ${narrowed ? kcClearFiltersBtn('sim') : ''}</div></td></tr>`;
     simVisibleIds = [];
     syncSimSelUi();
@@ -8923,7 +8923,7 @@ function openSimFormModal(id, preselectCustomerId = null) {
   ).join('');
 
   showDynamicModal(`
-    <div class="modal-title">${isEdit ? '✏️ Edit SIM Plan' : '➕ New SIM Plan'}</div>
+    <div class="modal-title">${isEdit ? '✏️ Edit SIM plan' : '➕ New SIM plan'}</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
@@ -10991,7 +10991,7 @@ async function renderServicesTab() {
   ], renderServicesTab);
   const svcShown = kcViewApply('services', serviceOrders);
   const orderRows = svcShown.length === 0
-    ? `<tr><td colspan="5"><div class="empty-state"><div class="emoji">🖨️</div><p>${serviceOrders.length ? 'No orders match this filter.' : 'No services charged yet.'}</p>${kcClearFiltersBtn('services')}</div></td></tr>`
+    ? `<tr><td colspan="5"><div class="empty-state"><div class="emoji">🖨️</div><p>${serviceOrders.length ? 'No orders match this filter.' : 'No services charged yet.'}</p>${serviceOrders.length ? '' : '<small>Click "+ Charge a service" to record the first one.</small>'}${kcClearFiltersBtn('services')}</div></td></tr>`
     : svcShown.map(o => `
       <tr>
         <td><div class="customer-name">${escName(o.customerName || '—')}</div></td>
@@ -11053,7 +11053,7 @@ async function renderServicesTab() {
     })()}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
       ${svcBar}
-      <button class="btn btn-primary" onclick="openNewServiceModal()">+ Charge a Service</button>
+      <button class="btn btn-primary" onclick="openNewServiceModal()">+ Charge a service</button>
     </div>
     <div class="dash-cols">
       <div class="table-card">
@@ -11101,7 +11101,7 @@ async function openNewServiceModal(preselectCustomerId = null) {
   const svcOptions = onlineMenu.map(m =>
     `<option value="${escHtml(String(m.id))}">${escHtml(m.name)} — ${fmtGbp(m.price)}${m.repeatPrice !== null ? ` (${onlineRepeatFrom()}+ ${fmtGbp(m.repeatPrice)})` : ''}</option>`).join('');
   showDynamicModal(`
-    <div class="modal-title">🖨️ Charge a Service</div>
+    <div class="modal-title">🖨️ Charge a service</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
@@ -13331,7 +13331,7 @@ const PALETTE_COMMANDS = [
   { icon: '👤', label: 'New customer', sub: 'create', run: () => goToTab('customers', {}) || setTimeout(() => document.getElementById('btnNewCustomer')?.click(), 120) },
   { icon: '📶', label: 'New SIM plan', sub: 'create', run: () => openOnTab('sim', openSimFormModal) },
   { icon: '☎️', label: 'New Virtual Number', sub: 'create', run: () => openOnTab('virtual', openNewVNModal) },
-  { icon: '🖨️', label: 'Charge a Service', sub: 'create', run: () => openOnTab('services', openNewServiceModal) },
+  { icon: '🖨️', label: 'Charge a service', sub: 'create', run: () => openOnTab('services', openNewServiceModal) },
   { icon: '📦', label: 'Add Stock Item', sub: 'create', run: () => openOnTab('shop', openStockItemModal) },
   // ── Tools ──
   { icon: '⏱', label: 'Start help timer', sub: 'tool', run: () => openOnTab('services', () => document.getElementById('svcTimerCustomer')?.focus()) },
@@ -14690,7 +14690,7 @@ async function renderVirtualTab() {
   [...vnSelected].forEach(id => { if (!liveVnIds.has(id)) vnSelected.delete(id); });
   vnVisibleIds = vnShown.map(v => String(v.id));
   const rows = vnShown.length === 0
-    ? `<tr><td colspan="8"><div class="empty-state"><div class="emoji">🔢</div><p>${virtualNumbers.length ? 'No numbers match this filter.' : 'No virtual numbers yet.'}</p>${kcClearFiltersBtn('virtual')}</div></td></tr>`
+    ? `<tr><td colspan="8"><div class="empty-state"><div class="emoji">🔢</div><p>${virtualNumbers.length ? 'No numbers match this filter.' : 'No virtual numbers yet.'}</p>${virtualNumbers.length ? '' : '<small>Click "+ New number" to add one.</small>'}${kcClearFiltersBtn('virtual')}</div></td></tr>`
     : vnShown.map(v => `
       <tr>
         <td><input type="checkbox" aria-label="Select this number" ${vnSelected.has(String(v.id)) ? 'checked' : ''}
@@ -14725,7 +14725,7 @@ async function renderVirtualTab() {
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
       ${vnBar}
-      <button class="btn btn-primary" onclick="openNewVNModal()">+ New virtual number</button>
+      <button class="btn btn-primary" onclick="openNewVNModal()">+ New number</button>
     </div>
     <div id="vnBulkBar" style="display:${vnSelected.size ? 'flex' : 'none'};margin:0 0 10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary);align-items:center;gap:10px;flex-wrap:wrap;">
       <strong id="vnBulkCount" style="font-size:var(--fs-body);">${vnSelected.size} number${vnSelected.size === 1 ? '' : 's'} selected</strong>
