@@ -11065,7 +11065,12 @@ async function renderServicesTab() {
         <div class="table-card" style="margin-bottom:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <span style="font-size:20px;">⏱</span>
           <span style="font-size:var(--fs-body);color:var(--muted);">Hourly help timer (£${settingNum('online_hourly_rate', 45)}/hr, 10-min minimum)</span>
-          <select class="form-input" id="svcTimerCustomer" style="flex:1;min-width:180px;min-height:0;padding:8px 12px;">
+          <!-- 230px is what "Who are you helping?" needs in this type once the
+               select's own arrow is allowed for. Below that the row squeezed it
+               to 189px and truncated its own prompt to "Who are you helpi" —
+               oddly only at 390px, since by 320 the Start button had already
+               wrapped away and left the select the whole row. -->
+          <select class="form-input" id="svcTimerCustomer" style="flex:1;min-width:230px;min-height:0;padding:8px 12px;">
             <option value="">Who are you helping?</option>${opts}
           </select>
           <button class="btn btn-primary" onclick="svcTimerStart()">▶ Start timer</button>
