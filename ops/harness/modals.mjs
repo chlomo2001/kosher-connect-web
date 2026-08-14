@@ -73,7 +73,7 @@ export const MODALS = [
      title: '✅ Rental saved', customerId: window.__kc.customer,
      customerName: 'Menachem Adler', customerPhone: '+447911123456',
      summary: '+44 7911 123456 · 12 Aug 2026 → 26 Aug 2026 · 14 chargeable days',
-     total: 140, payLine: '£60 paid, £80 on account', method: 'cash', paidNow: true,
+     total: 140, payLine: '£60 paid, £80 on account', owed: 80, method: 'cash', paidNow: true,
      lines: [{ name: 'Phone rental +44 7911 123456 · 12 Aug → 26 Aug', qty: 1, total: 140 }],
      smsText: 'Your rental is ready.',
      again: { label: '📱 Another rental', sub: 'same customer' } })`],

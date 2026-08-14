@@ -3015,6 +3015,11 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 .rd-sub { font-size: var(--fs-micro); font-weight: 400; opacity: .78; display: block; overflow-wrap: anywhere; }
 .rd-money .rd-sub { display: inline; margin-left: 8px; font-size: var(--fs-small); opacity: 1; color: var(--muted); }
 
+/* What is still to pay, when anything is. --danger-ink is the repo's measured
+   AA red on both themes; the weight is what makes this legible across a
+   counter, not the colour, so it survives being read in greyscale. */
+.rd-owed { margin-top: 4px; font-weight: 700; color: var(--danger-ink); font-feature-settings: 'tnum'; }
+
 /* On a phone the fixed label and value columns leave the bar about 90px to
    work with, which is not enough of a bar to compare anything by. The numbers
    keep their room; the name gives some up, since it is already the shortest

@@ -3726,6 +3726,10 @@ async function saveMultiPhoneRental(customerId, phoneIds, addAnother) {
       + (isReservation ? ' · pickup at handover' : ''),
     total,
     payLine: 'on account',
+    // Nothing was taken here, so the whole total is outstanding. The panel
+    // states it in its own right — "on account" is a bookkeeping word, and the
+    // number behind it is what decides whether you ask for money now.
+    owed: total,
     method: null,
     paidNow: false,
     lines: created.map(r => ({
@@ -3786,6 +3790,7 @@ function showDonePanel(d) {
       <div class="rd-who">${escName(d.customerName)}</div>
       <div class="rd-what">${escHtml(d.summary)}</div>
       ${Number.isFinite(d.total) ? `<div class="rd-money">${fmtGbp(d.total)}<span class="rd-sub">${escHtml(d.payLine || 'on account')}</span></div>` : ''}
+      ${d.owed > 0 ? `<div class="rd-owed">${fmtGbp(d.owed)} still to pay</div>` : ''}
     </div>
     <div class="rd-actions">
       ${emailBtn}
@@ -4125,6 +4130,11 @@ async function saveNewRental(addAnother = false) {
     payLine: paidNow && payAmt > 0
       ? (payAmt >= totalPrice ? 'paid in full' : `${fmtGbp(payAmt)} paid, ${fmtGbp(totalPrice - payAmt)} on account`)
       : 'on account',
+    // The same figure the pay line already carries, given its own weight: a
+    // part payment left "£80 on account" in small muted grey beside a large
+    // £140 total, so the number the counter has to act on was the quietest
+    // thing on the card. Fully paid passes nothing and the line stays away.
+    owed: Math.max(0, totalPrice - (paidNow ? payAmt : 0)),
     method: paidNow ? payMethod : null,
     paidNow,
     lines: [{ name: `Phone rental ${fmtPhone(phone.number)} · ${fmtDate(from)} → ${fmtDate(to)}`, qty: 1, total: totalPrice }],
