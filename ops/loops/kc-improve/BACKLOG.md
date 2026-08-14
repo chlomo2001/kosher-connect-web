@@ -632,6 +632,28 @@ not been re-checked against the code and may have drifted the same way.
 
 ---
 
+## UX loop — night of 2026-08-14
+
+| Item | Commit | Screens |
+|------|--------|---------|
+| Harness renders British dates — every screenshot showed "08/14/2026" and prompted "mm/dd/yyyy" because a native date input takes its format from the browser's locale, which only LANG reaches (not `lang="en-GB"`, not Playwright's `locale`). All four launches share one BROWSER_ENV. Also registers three surfaces built 08-13 that no sweep had ever opened: the finishing card, the stacked New-pool card, the business summary | 0ba220f | tooling |
+| Business summary: a period with no money in it said the same nothing five times (four £0.00 tiles, a 0% meter, "Nothing charged") — one line now, trend kept because that is where an empty week gets its meaning; a refunds-only period is not blank. And the revenue bars overflowed a 320px card in Simple Mode (label 138 + track 40 + amount 118 + gaps = 316 into 304), cutting the amount mid-figure and pushing the share % off screen — the row wraps, width-driven, so nothing moves where it already fitted | ba190ba | Dashboard → 📊 Business summary |
+| Harness: a seed key may carry a query and wins by prefix. `/api/ledger` answers two shapes and the stub keyed only on the path, so the summary rendered as an empty period in every sweep — which is exactly how the overflow above survived every clean audit. `/api/ledger?report=1` now holds a real report payload | 9c535ca | tooling |
+| The finishing card says what is still to pay: a part-paid rental left "£80 on account" in small muted grey beside a display-type £140, so the number the counter must act on was the quietest thing on the card. Own line, measured AA red, weight first so it survives greyscale. Only the two rental flows pass it — the two that already compute the figure; nothing is derived, nothing is charged | 25887f0 | Rentals → after save |
+| audit-all sweeps the hardest corner of the grid: 320px at text `largest`, every tab. It was only ever run as separate axes (320 at standard, 390 at largest). Passes today, so it can only go red on a regression | 6cc326f | tooling |
+
+Discovery: the modal sweep at 320 / text `largest` was run by hand over all 27
+surfaces — everything clean except the till, which is the ⚠ item already logged
+above and was not touched. Contrast measured on the three newly-registered
+surfaces in both themes: clean. The business-summary bar overflow came from a
+scratch fixture with real numbers in it, which is what prompted the seed fix.
+Verified per item: gate (255 tests ×2 TZ + build) exit 0 and full audit-all
+clean before each commit, plus harness re-renders of the touched screen at
+390 dark and 320 / largest.
+Owner decisions pending: none new from this loop. The till's `.pos-methods`
+wrap stays ⚠ and unbuilt, and the modal sweep at largest stays out of
+audit-all until it is fixed.
+
 ## UX loop — night of 2026-08-13
 
 | Item | Commit | Screens |
