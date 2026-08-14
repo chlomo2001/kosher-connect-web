@@ -20,6 +20,8 @@ import { db, tablesMode, selectAllPaged, STORAGE_ERROR } from '../../lib/db.js'
 import { parseStatementCsv } from '../../lib/bankCsv.mjs'
 import { proposeMatches } from '../../lib/bankMatch.mjs'
 import { buildCandidates } from '../../lib/bankCandidates.mjs'
+import { importableCharges } from '../../lib/stripeReconcile.mjs'
+import { stripeEnabled, listCharges } from '../../lib/stripe.js'
 
 // Same idempotency-token shape the rest of the app uses (kcRef()).
 const validRef = (v) => (typeof v === 'string' && /^[\w-]{8,64}$/.test(v)) ? v : null
@@ -31,12 +33,16 @@ const validLabel = (v) => {
 
 // Bound the proposal work: score only this many un-triaged rows per GET.
 const PROPOSE_CAP = 200
+// One Stripe pull walks at most this many charges (5 pages of 100). The shop's
+// whole history is under 300, so this reaches the beginning in one press and
+// still cannot become an unbounded loop against someone else's API.
+const STRIPE_PAGE_CAP = 5
 // Same single-entry ceiling as every other money-in path.
 const MAX_CONFIRM = 5000
 
 async function loadCandidates() {
   const [customers, balances, bookings] = await Promise.all([
-    selectAllPaged('customers', 'id,legacy_id,first_name,last_name', 'order=id.asc'),
+    selectAllPaged('customers', 'id,legacy_id,first_name,last_name,email_normalized,email_raw', 'order=id.asc'),
     db.select('customer_balances', 'select=customer_id,balance&balance=neq.0&limit=1000'),
     db.select('bookings', 'select=customer_id,booking_reference,travel_date&order=created_at.desc&limit=500'),
   ])
@@ -88,7 +94,7 @@ async function handler(req, res) {
       const proposals = new Map()
       for (const r of open.slice(0, PROPOSE_CAP)) {
         const p = proposeMatches(
-          { amount: Number(r.amount), bookedAt: String(r.booked_at || '').slice(0, 10), description: r.description, counterpartyName: r.counterparty_name },
+          { amount: Number(r.amount), bookedAt: String(r.booked_at || '').slice(0, 10), description: r.description, counterpartyName: r.counterparty_name, email: r.raw?.email || null },
           candidates, { limit: 3 }
         )
         proposals.set(r.id, {
@@ -151,6 +157,67 @@ async function handler(req, res) {
         })
       }
 
+      // Pull settled card payments out of Stripe and into the triage queue.
+      //
+      // This does not post anything. Stripe is a reconciliation source exactly
+      // as a bank feed is: it knows £45 arrived on a Tuesday under whatever
+      // name the payer typed into a hosted checkout, and nothing about which
+      // customer that is. The rows land 'unmatched' and a person decides, which
+      // is the same rule the whole table exists to enforce.
+      //
+      // Safe to press repeatedly: unique(provider, provider_txn_id) absorbs
+      // charges already pulled, and anything the webhook already posted is
+      // filtered out by its ledger reference before it is even offered.
+      if (b.op === 'import-stripe') {
+        if (!stripeEnabled) return res.status(503).json({ success: false, error: 'Stripe isn’t switched on yet.' })
+        const refRows = await selectAllPaged('ledger', 'charge_reference', 'charge_reference=like.STRIPE-*&order=charge_reference.asc')
+        const ledgerRefs = new Set(refRows.map((r) => r.charge_reference))
+
+        const charges = []
+        let after = null
+        try {
+          for (let page = 0; page < STRIPE_PAGE_CAP; page++) {
+            const { charges: batch, hasMore } = await listCharges({ limit: 100, startingAfter: after })
+            charges.push(...batch)
+            if (!hasMore || !batch.length) break
+            after = batch[batch.length - 1].id
+          }
+        } catch (e) {
+          console.error('[api/bank] stripe pull', e.message)
+          // A restricted key without the Charges permission is the likely
+          // cause, and it is fixable in the Stripe dashboard — say so rather
+          // than reporting a storage fault.
+          return res.status(502).json({
+            success: false,
+            error: /permission|scope|restricted/i.test(String(e.message))
+              ? 'Stripe refused to list charges — the restricted key needs read access to Charges.'
+              : 'Could not reach Stripe.',
+          })
+        }
+
+        const { rows, skipped } = importableCharges(charges, ledgerRefs)
+        const inserted = rows.length ? await db.insertIgnoreDup('bank_transactions', rows.map((r) => ({
+          provider: r.provider,
+          provider_txn_id: r.providerTxnId,
+          account_ref: r.accountRef,
+          booked_at: r.bookedAt,
+          amount: r.amount,
+          currency: r.currency,
+          description: r.description,
+          counterparty_name: r.counterpartyName,
+          raw: r.raw,
+        })), 'provider,provider_txn_id') : []
+
+        return res.json({
+          success: true,
+          scanned: charges.length,
+          importable: rows.length,
+          inserted: inserted.length,
+          alreadyHere: rows.length - inserted.length,   // pulled by an earlier press
+          skipped,
+        })
+      }
+
       if (b.op === 'confirm') {
         const token = validRef(b.clientRef)
         if (!token) return res.status(400).json({ success: false, error: 'Missing idempotency token — refresh and try again.' })
@@ -168,24 +235,48 @@ async function handler(req, res) {
         const cust = await db.select('customers', `select=id,legacy_id,first_name,last_name&legacy_id=eq.${encodeURIComponent(String(b.customerId))}&limit=1`)
         if (!cust.length) return res.status(400).json({ success: false, error: `Customer ${b.customerId} not found.` })
 
-        const desc = ['Bank', txn.account_ref, txn.counterparty_name || txn.description || null]
+        // A Stripe row is a card payment, and it posts under the reference the
+        // WEBHOOK would have used (STRIPE-<payment intent>), not this request's
+        // token. That is deliberate: it makes the charge itself the unit of
+        // idempotency, so if the webhook ever delivers the same payment later —
+        // a replay, a re-subscribed endpoint — insertIgnoreDup sees the
+        // reference and the money cannot land on the wallet twice.
+        const isStripe = txn.provider === 'stripe'
+        const stripeRef = isStripe ? String(txn.raw?.ledger_reference || '') : ''
+        const reference = /^STRIPE-.+/.test(stripeRef) ? stripeRef : `BANK-${token}`
+        const desc = [isStripe ? 'Card payment via Stripe' : 'Bank', txn.account_ref,
+          txn.counterparty_name || txn.description || null]
           .filter(Boolean).join(' · ').slice(0, 200)
         const inserted = await db.insertIgnoreDup('ledger', [{
           customer_id: cust[0].id,
-          charge_reference: `BANK-${token}`,
+          charge_reference: reference,
           entry_type: 'payment',
           amount,
-          method: 'bank_transfer',
+          method: isStripe ? 'card' : 'bank_transfer',
           description: desc,
           created_by: req.staff?.id || null,
         }], 'charge_reference')
         const mintedHere = !!(inserted && inserted.length)
         let entry = inserted && inserted[0]
         if (!entry) {
-          const existing = await db.select('ledger', `charge_reference=eq.${encodeURIComponent(`BANK-${token}`)}&limit=1`)
+          // Look up the reference we actually posted under — for a Stripe row
+          // that is the charge's, not this request's token.
+          const existing = await db.select('ledger', `charge_reference=eq.${encodeURIComponent(reference)}&limit=1`)
           entry = existing[0]
         }
         if (!entry) return res.status(500).json({ success: false, error: STORAGE_ERROR })
+        // The charge's reference was already on the ledger against SOMEONE
+        // ELSE. Only reachable on a Stripe row whose webhook landed between the
+        // import and this press: the money is on that customer's wallet and
+        // nothing here has changed it, but confirming would mark this row as
+        // belonging to the person the operator picked, which is now a lie. Say
+        // what happened instead of quietly claiming it.
+        if (!mintedHere && String(entry.customer_id) !== String(cust[0].id)) {
+          return res.status(409).json({
+            success: false,
+            error: 'That payment reached the wallet already, under a different customer — refresh and check before matching it again. Nothing was double-counted.',
+          })
+        }
 
         // Claim the bank row — guarded so a double-submit can't re-point it.
         const updated = await db.update('bank_transactions',

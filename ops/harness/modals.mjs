@@ -82,6 +82,10 @@ export const MODALS = [
      const s = document.createElement('select'); s.id = 'rPool'; s.innerHTML = '<option value="__new__">';
      s.value = '__new__'; document.body.appendChild(s); poolSelectChanged(s)`],
   ['business-summary', 'dashboard', `openBusinessSummary()`],
+  // The reconciliation screen — not a modal either, it replaces the content
+  // column like the Customer-360 page. Worth the eyes now that Stripe charges
+  // triage through it beside bank rows.
+  ['bank-recon',    'wallet',    `renderBankRecon()`, '#mainContent'],
   // Not modals, but the same eyes-on treatment: the Customer-360 page
   // (/customers/<id>) renders in the content column — .kc-cpage is in the
   // geometry selector below so both sub-tabs get measured and screenshotted.

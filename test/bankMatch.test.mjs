@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  refsIn, scoreCandidate, confidenceOf, proposeMatches, shouldAutoPost, AUTO_POST_SUPPORTED,
+  refsIn, scoreCandidate, confidenceOf, proposeMatches, shouldAutoPost, AUTO_POST_SUPPORTED, mailboxKey,
 } from '../lib/bankMatch.mjs'
 
 test('refsIn — finds a booking ref inside bank-statement noise', () => {
@@ -101,4 +101,24 @@ test('a match is never auto-posted, at any confidence', () => {
   )
   assert.equal(out.best.confidence, 'strong')
   assert.equal(out.suggestedState, 'proposed')  // never 'confirmed'
+})
+
+test('email — the payer’s own address is the strongest signal a card carries', () => {
+  const txn = { amount: 45, bookedAt: '2026-08-03', description: 'Payment link', counterpartyName: 'S Paneth', email: 'E.A.Rothbart+shop@gmail.com' }
+  const hit = scoreCandidate(txn, { customerId: '1', name: 'Eliezer Rothbart', email: 'earothbart@gmail.com' })
+  assert.ok(hit.score >= 50)
+  assert.ok(hit.reasons.some((r) => /address on file/.test(r)))
+  // Dots and +tags are decoration; a different mailbox is a different person.
+  const miss = scoreCandidate(txn, { customerId: '2', name: 'Someone Else', email: 'other@gmail.com' })
+  assert.equal(miss.reasons.some((r) => /address on file/.test(r)), false)
+  // Neither side present must never match "nothing" to "nothing".
+  const blank = scoreCandidate({ ...txn, email: '' }, { customerId: '3', name: 'No Email', email: '' })
+  assert.equal(blank.reasons.some((r) => /address on file/.test(r)), false)
+})
+
+test('mailboxKey — the app’s own rule, and it refuses non-addresses', () => {
+  assert.equal(mailboxKey('E.A.Rothbart+shop@Gmail.com'), 'earothbart@gmail.com')
+  assert.equal(mailboxKey('plain'), '')
+  assert.equal(mailboxKey(''), '')
+  assert.equal(mailboxKey('@nope.com'), '')
 })

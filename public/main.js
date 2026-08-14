@@ -8485,7 +8485,7 @@ async function renderWalletTab() {
         if(!id){toast('Choose a customer first.','error');return;}openWalletModal(id)})()">💰 Record payment / credit</button>
       <button class="btn btn-outline" onclick="openCashupModal()" style="margin-left:auto;">🧾 Cash-up</button>
       ${(!currentStaff || currentStaff.role === 'owner')
-        ? `<button class="btn btn-outline" onclick="renderBankRecon()">🏦 Bank statements</button>` : ''}
+        ? `<button class="btn btn-outline" onclick="renderBankRecon()">🏦 Bank &amp; card reconciliation</button>` : ''}
     </div>
 
     <div class="dash-cols">
@@ -8725,7 +8725,7 @@ function bankPaint() {
   content.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
       <button class="btn btn-outline btn-sm" onclick="renderTab('wallet')">← Wallet</button>
-      <span style="color:var(--muted);font-size:var(--fs-body);">Upload a statement export; confirm each match yourself — nothing posts on its own.</span>
+      <span style="color:var(--muted);font-size:var(--fs-body);">Bank statements and Stripe card payments land here together; confirm each match yourself — nothing posts on its own.</span>
     </div>
 
     <div class="table-card" style="padding:16px 18px;margin-bottom:16px;">
@@ -8748,6 +8748,18 @@ function bankPaint() {
       <div id="bankUploadNote" style="font-size:var(--fs-small);margin-top:6px;"></div>
     </div>
 
+    <div class="table-card" style="padding:16px 18px;margin-bottom:16px;">
+      <div class="section-divider" style="margin:0 0 10px;">Card payments taken through Stripe</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-primary" id="bankStripeBtn" onclick="bankPullStripe()">💳 Pull from Stripe</button>
+        <span style="font-size:var(--fs-small);color:var(--muted);flex:1;min-width:220px;">
+          Money taken on a Stripe payment link never reached a wallet — the checkout doesn’t know
+          which customer it was. This brings those payments in to be matched, exactly like a
+          statement. Nothing posts until you confirm each one, and pressing it again is safe.</span>
+      </div>
+      <div id="bankStripeNote" style="font-size:var(--fs-small);margin-top:6px;"></div>
+    </div>
+
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
       ${stateBtn('open', 'Needs review', open)}
       ${stateBtn('confirmed', 'Confirmed', counts.confirmed || 0)}
@@ -8766,6 +8778,43 @@ function bankPaint() {
             ? 'No bank rows yet — import a statement above to start.'
             : 'Nothing in this view.'}</p></div>`}
     </div>`;
+}
+
+// Pull settled Stripe charges into the same triage queue a statement lands in.
+// Read-only at Stripe and posting nothing here: the rows arrive unmatched and
+// each one still needs a person to say whose money it is.
+async function bankPullStripe() {
+  const btn = document.getElementById('bankStripeBtn');
+  const note = document.getElementById('bankStripeNote');
+  btn.disabled = true;
+  const was = btn.innerHTML;
+  btn.innerHTML = 'Reading Stripe…';
+  try {
+    const res = await kcFetch('/api/bank', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ op: 'import-stripe' }),
+    }).then(r => r.json()).catch(() => null);
+    if (!res || !res.success) { toast(res?.error || 'Could not read Stripe.', 'error'); return; }
+
+    const s = res.skipped || {};
+    // Say what was left behind as well as what arrived — "0 new" reads as a
+    // failure unless it also says the payments were already accounted for.
+    if (note) {
+      note.innerHTML = `Read ${res.scanned} payment${res.scanned === 1 ? '' : 's'} at Stripe · `
+        + `<strong>${res.inserted} new to review</strong>`
+        + (res.alreadyHere ? ` · ${res.alreadyHere} pulled before` : '')
+        + (s.alreadyLinked ? ` · ${s.alreadyLinked} already on a wallet` : '')
+        + (s.refunded ? ` · ${s.refunded} fully refunded` : '')
+        + (s.unpaid ? ` · ${s.unpaid} never settled` : '');
+    }
+    toast(res.inserted
+      ? `${res.inserted} card payment${res.inserted === 1 ? '' : 's'} ready to match.`
+      : 'Nothing new — every settled payment is already accounted for.',
+      res.inserted ? 'success' : 'info');
+    bankAccountFilter = '';
+    bankStateFilter = 'open';
+    await renderBankRecon();
+  } finally { btn.disabled = false; btn.innerHTML = was; }
 }
 
 async function bankUpload() {

@@ -1365,7 +1365,12 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 }
 
 @media (max-width: 560px) {
-  .kc-truncate { overflow: visible; text-overflow: clip; white-space: normal; }
+  /* Wrapping instead of truncating is only half the answer: an email address or
+     an IMEI has no space to break at, so a long one still ran off the card —
+     "Payment link · lyrosenbaum@gmail.com" on a Stripe row overflowed a 320px
+     phone by 86px in Simple Mode. Let a break fall inside the word when there
+     is nowhere else for it to go. */
+  .kc-truncate { overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; }
 }
 
 .history-date { color: var(--muted); font-size: var(--fs-small); font-feature-settings: "tnum"; }

@@ -799,10 +799,16 @@
         "count": 1,
         "open": 1,
         "latest": "2026-07-28"
+      },
+      {
+        "ref": "Stripe",
+        "count": 1,
+        "open": 1,
+        "latest": "2026-08-03"
       }
     ],
     "counts": {
-      "unmatched": 2,
+      "unmatched": 3,
       "proposed": 1,
       "confirmed": 1,
       "ignored": 1
@@ -823,9 +829,42 @@
         "customerId": "103",
         "customerUuid": "u3",
         "name": "Yankel Wolf"
+      },
+      {
+        "customerId": "104",
+        "customerUuid": "u4",
+        "name": "Sarah Paneth"
       }
     ],
     "transactions": [
+      {
+        "id": "st1",
+        "accountRef": "Stripe",
+        "provider": "stripe",
+        "bookedAt": "2026-08-03",
+        "amount": 394.35,
+        "currency": "GBP",
+        "description": "Payment link · lyrosenbaum@gmail.com",
+        "counterparty": "Sarah Paneth",
+        "state": "unmatched",
+        "note": "",
+        "matchedLedgerId": null,
+        "matchedAt": null,
+        "match": {
+          "ambiguous": false,
+          "proposals": [
+            {
+              "customerId": "104",
+              "customerUuid": "u4",
+              "name": "Sarah Paneth",
+              "confidence": "possible",
+              "reasons": [
+                "counterparty resembles Sarah Paneth"
+              ]
+            }
+          ]
+        }
+      },
       {
         "id": "b1",
         "accountRef": "Revolut main",
