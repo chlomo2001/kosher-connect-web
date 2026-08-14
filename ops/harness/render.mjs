@@ -92,8 +92,18 @@ export function buildAppHtml(out = path.join(HERE, 'app.html')) {
 const SEED = ${seed};
 // Answer from the seed, keyed by path. Anything unlisted returns an empty
 // success so a missing stub degrades instead of throwing.
+//
+// A seed key MAY carry a query ("/api/ledger?report=1"), and then it wins by
+// prefix over the bare path. One route can return genuinely different shapes
+// per query — /api/ledger answers arrears+credits normally and a totals report
+// under report=1 — and keying only on the path meant the report call got the
+// arrears body, so the business summary rendered as an empty period and no
+// sweep could see its bars at all. That is how a revenue row overflowing a
+// 320px card survived every audit.
+const SEED_QUERY_KEYS = Object.keys(SEED).filter(function (k) { return k.indexOf('?') > -1 });
 window.fetch = function (url) {
-  const u = String(url).split('?')[0];
+  const full = String(url);
+  const u = SEED_QUERY_KEYS.find(function (k) { return full.indexOf(k) === 0 }) || full.split('?')[0];
   const body = Object.prototype.hasOwnProperty.call(SEED, u) ? SEED[u] : { success: true };
   return Promise.resolve({
     ok: true, status: 200,

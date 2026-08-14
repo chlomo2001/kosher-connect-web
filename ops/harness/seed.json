@@ -167,7 +167,7 @@
     {
       "id": "b1",
       "customerId": "c1",
-      "route": "MAN \u2192 TLV",
+      "route": "MAN → TLV",
       "airline": "Wizz",
       "bookingRef": "BNKYRW",
       "travelDate": "2026-08-18",
@@ -293,7 +293,7 @@
         "description": "Late fee per day",
         "editable": true,
         "custom": false,
-        "unit": "\u00a3"
+        "unit": "£"
       },
       {
         "key": "dd_fee",
@@ -302,7 +302,7 @@
         "description": "Direct debit fee",
         "editable": true,
         "custom": false,
-        "unit": "\u00a3"
+        "unit": "£"
       },
       {
         "key": "ivr_platforms",
@@ -383,7 +383,7 @@
         "amount": -120,
         "method": "",
         "reference": "R-1001",
-        "description": "Nokia 105 rental \u2014 2 weeks",
+        "description": "Nokia 105 rental — 2 weeks",
         "at": "2026-07-20T10:00:00Z"
       },
       {
@@ -414,6 +414,25 @@
         "at": "2026-08-02T09:40:00Z"
       }
     ]
+  },
+  "/api/ledger?report=1": {
+    "success": true,
+    "from": "2026-08-01",
+    "byType": {
+      "rental": 3250,
+      "sim_charge": 1250,
+      "booking": 937.5,
+      "repair": 437.5,
+      "stock_sale": 250,
+      "virtual_number": 125,
+      "online_service": 60,
+      "kol_torah": 40
+    },
+    "charged": 6350,
+    "received": 4900,
+    "refunded": 120,
+    "paidOut": 120,
+    "refundsOwed": 0
   },
   "/api/tasks": [
     {
@@ -456,7 +475,7 @@
         "id": "sr1",
         "supplierId": "sup1",
         "supplierName": "TechTrade Wholesale",
-        "items": "6\u00d7 Nokia 105, screens dead",
+        "items": "6× Nokia 105, screens dead",
         "imeis": "356789100000001\n356789100000002",
         "claimedValue": 210,
         "status": "awaiting_send",
@@ -469,7 +488,7 @@
         "id": "sr2",
         "supplierId": "sup2",
         "supplierName": "Nordic Handsets Ltd",
-        "items": "2\u00d7 Alcatel 1, no charge",
+        "items": "2× Alcatel 1, no charge",
         "imeis": "",
         "claimedValue": 56,
         "status": "sent",
@@ -482,7 +501,7 @@
         "id": "sr3",
         "supplierId": "sup1",
         "supplierName": "TechTrade Wholesale",
-        "items": "1\u00d7 charger batch (wrong plug)",
+        "items": "1× charger batch (wrong plug)",
         "imeis": "",
         "claimedValue": 30,
         "status": "credited",
@@ -662,7 +681,7 @@
       {
         "id": "kt1",
         "code": "KT-001",
-        "name": "Shiur \u2014 Parshas Devarim",
+        "name": "Shiur — Parshas Devarim",
         "speaker": "R. Cohen",
         "price": 8,
         "active": true,
@@ -814,7 +833,7 @@
         "bookedAt": "2026-07-31",
         "amount": 285.0,
         "currency": "GBP",
-        "description": "Incoming transfer \u00b7 BNKYRW",
+        "description": "Incoming transfer · BNKYRW",
         "counterparty": "KOPILOWITZ M",
         "state": "unmatched",
         "note": "",
@@ -882,7 +901,7 @@
         "bookedAt": "2026-07-30",
         "amount": -42.35,
         "currency": "GBP",
-        "description": "Amazon \u00b7 order 123",
+        "description": "Amazon · order 123",
         "counterparty": "",
         "state": "proposed",
         "note": "",
@@ -935,7 +954,7 @@
         "kind": "payment",
         "to": "someone@example.com",
         "actualTo": "owner-test@example.com",
-        "subject": "Payment received \u2014 \u00a340.00",
+        "subject": "Payment received — £40.00",
         "status": "redirected",
         "error": null,
         "customerName": "Moishe Berger"
@@ -959,7 +978,7 @@
         "kind": "sale",
         "to": "bad@nowhere.example",
         "actualTo": "bad@nowhere.example",
-        "subject": "Your Kosher Connect receipt \u2014 \u00a312.50",
+        "subject": "Your Kosher Connect receipt — £12.50",
         "status": "failed",
         "error": "[resend] domain is not verified",
         "customerName": null
@@ -995,12 +1014,18 @@
           "imported": false,
           "phone": "+447911123456",
           "email": "m.adler@example.com",
-          "counts": { "sims": 2, "rentals": 1, "money": 7 }
+          "counts": {
+            "sims": 2,
+            "rentals": 1,
+            "money": 7
+          }
         },
         "b": {
           "id": "c5",
           "name": "Menachem Adler",
-          "elid": ["adler.m"],
+          "elid": [
+            "adler.m"
+          ],
           "imported": true,
           "phone": "",
           "email": "",
@@ -1017,7 +1042,10 @@
           "imported": false,
           "phone": "+447700900123",
           "email": "yossi@example.com",
-          "counts": { "bookings": 2, "repairs": 1 }
+          "counts": {
+            "bookings": 2,
+            "repairs": 1
+          }
         },
         "b": {
           "id": "c6",
@@ -1026,7 +1054,11 @@
           "imported": false,
           "phone": "+447700900123",
           "email": "",
-          "counts": { "sims": 1, "vns": 1, "money": 3 }
+          "counts": {
+            "sims": 1,
+            "vns": 1,
+            "money": 3
+          }
         }
       }
     ]
