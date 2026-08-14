@@ -14038,7 +14038,11 @@ function renderBizSummary() {
     ...(i === 0 ? d.months[0] : bizDiff(d.months[i], d.months[i - 1])) || { charged: 0, received: 0 },
   })).reverse();
   const mMax = Math.max(1, ...mv.map(m => m.charged));
-  const trend = `
+  // Six empty columns and six £0.00 labels is a chart of nothing taking up a
+  // third of the card. Only a brand-new shop sees it, and what it should say
+  // is that there is no history yet.
+  const trend = mv.every(m => !(m.charged > 0) && !(m.received > 0)) ? `
+    <div class="biz-empty">No billing history yet — the first six months will chart here.</div>` : `
     <div class="biz-trend" role="img" aria-label="Billed and received for each of the last six months">
       ${mv.map(m => `
         <div class="biz-tcol" title="${escHtml(m.label)} — billed ${fmtGbp(m.charged)}, received ${fmtGbp(m.received)}">
@@ -14056,16 +14060,32 @@ function renderBizSummary() {
       <span><i class="biz-sw received"></i> Received</span>
     </div>`;
 
+  // A period with no money in it at all — an ordinary thing to open on a
+  // Sunday morning. Four £0.00 tiles, a 0% meter and "Nothing charged in this
+  // period" say the same nothing five times over, and the eye has to read all
+  // five to learn it. Say it once. The six-month trend stays below, because
+  // that is where an empty week gets its meaning. Refunds count as money
+  // moving, so a period with only refunds is NOT blank.
+  const emptyPeriod = !(now.charged > 0) && !(now.received > 0) && !(now.refunded > 0);
+
   body.innerHTML = `
     <div class="biz-tabs" role="tablist">
       ${Object.entries(PERIODS).map(([k, v]) => `
         <button class="biz-tab${k === bizPeriod ? ' active' : ''}" role="tab"
           aria-selected="${k === bizPeriod}" onclick="bizSetPeriod('${k}')">${v.label}</button>`).join('')}
     </div>
+    ${emptyPeriod ? `
+    <div class="biz-blank">
+      <div class="biz-blank-mark" aria-hidden="true">📭</div>
+      <div>
+        <div class="biz-blank-title">Nothing billed or received ${escHtml(P.label.toLowerCase())}</div>
+        <div class="biz-blank-sub">No charge and no payment has landed in this period yet.</div>
+      </div>
+    </div>` : `
     ${tiles}
     <div class="biz-section">Revenue by service · ${P.label.toLowerCase()}</div>
     <div class="bizbars">${bars}</div>
-    ${now.refunded ? `<div class="biz-note">Refunds issued ${fmtGbp(now.refunded)}${now.refundsOwed ? ` · ${fmtGbp(now.refundsOwed)} still to be paid back out` : ' · all paid out'}</div>` : ''}
+    ${now.refunded ? `<div class="biz-note">Refunds issued ${fmtGbp(now.refunded)}${now.refundsOwed ? ` · ${fmtGbp(now.refundsOwed)} still to be paid back out` : ' · all paid out'}</div>` : ''}`}
     <div class="biz-section">Last six months</div>
     ${trend}
     <div class="biz-foot">“Billed” is what was charged; “Received” is money actually taken in (payments and top-ups). Every period is measured off the same running totals, so the figures always add up against each other.</div>`;
