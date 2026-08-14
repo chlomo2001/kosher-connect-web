@@ -23,7 +23,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { buildAppHtml, TABS } from './render.mjs'
+import { buildAppHtml, TABS, BROWSER_ENV } from './render.mjs'
 import { buildPublicHtml, PAGES } from './public.mjs'
 import { MODALS } from './modals.mjs'
 
@@ -124,7 +124,7 @@ const settle = async (p) => {
 async function staffScenes(browser, snap) {
   const file = buildAppHtml()
   for (const [w, theme] of [[1280, 'light'], [390, 'dark']]) {
-    const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, colorScheme: theme })
+    const ctx = await browser.newContext({ locale: 'en-GB', viewport: { width: w, height: 900 }, colorScheme: theme })
     const p = await ctx.newPage()
     await p.goto('file://' + file, { waitUntil: 'load' })
     await settle(p)
@@ -146,7 +146,7 @@ async function staffScenes(browser, snap) {
 async function modalScenes(browser, snap) {
   const file = buildAppHtml()
   for (const theme of ['light', 'dark']) {
-    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: theme })
+    const ctx = await browser.newContext({ locale: 'en-GB', viewport: { width: 390, height: 844 }, colorScheme: theme })
     const p = await ctx.newPage()
     await p.goto('file://' + file, { waitUntil: 'load' })
     await p.waitForTimeout(900)
@@ -183,7 +183,7 @@ async function publicScenes(browser, snap) {
     for (const lang of ['en', 'he']) {
       const file = buildPublicHtml(page, lang)
       for (const [w, theme] of [[390, 'light'], [1280, 'dark']]) {
-        const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, colorScheme: theme })
+        const ctx = await browser.newContext({ locale: 'en-GB', viewport: { width: w, height: 900 }, colorScheme: theme })
         const p = await ctx.newPage()
         await p.goto('file://' + file, { waitUntil: 'load' })
         await settle(p)
@@ -195,7 +195,7 @@ async function publicScenes(browser, snap) {
 }
 
 const { chromium } = require(path.join(ROOT, 'node_modules/playwright-core'))
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', env: BROWSER_ENV })
 const snap = {}
 await staffScenes(browser, snap)
 await modalScenes(browser, snap)

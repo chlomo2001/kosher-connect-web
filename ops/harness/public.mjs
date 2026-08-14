@@ -22,6 +22,7 @@ import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { measure, report } from './contrast.mjs'
+import { BROWSER_ENV } from './render.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '../..')
@@ -227,7 +228,7 @@ window.fetch = function (url) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? process.argv[i + 1] : d }
   const { chromium } = require(path.join(ROOT, 'node_modules/playwright-core'))
-  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
+  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', env: BROWSER_ENV })
   const widths = (arg('--width', '390,1280')).split(',').map(Number)
   const langs = (arg('--lang', 'en,he')).split(',')
   const only = arg('--shot', null)

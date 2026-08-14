@@ -34,6 +34,16 @@ const cjs = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/plugi
 const React = require(path.join(ROOT, 'node_modules/react'))
 const { renderToStaticMarkup } = require(path.join(ROOT, 'node_modules/react-dom/server'))
 
+// Every browser this harness launches gets a British locale, and it has to come
+// through the ENVIRONMENT: a native <input type="date"> takes its display order
+// from the browser's own locale, and neither `lang="en-GB"` on the document nor
+// Playwright's `locale` context option reaches it — only LANG does. Without this
+// every date field in every screenshot rendered "08/14/2026" and prompted
+// "mm/dd/yyyy": American order, a different string width, and nothing like what
+// the counter in Salford sees. A harness that lies about the format cannot be
+// trusted about the width either.
+export const BROWSER_ENV = { ...process.env, LANG: 'en_GB.UTF-8' }
+
 // next/head and next/script contribute nothing to layout here.
 const STUBS = {
   'next/head': { __esModule: true, default: () => null },
@@ -70,7 +80,12 @@ export function buildAppHtml(out = path.join(HERE, 'app.html')) {
   const main = readFileSync(path.join(ROOT, 'public/main.js'), 'utf8')
   const seed = readFileSync(path.join(HERE, 'seed.json'), 'utf8')
   writeFileSync(out, `<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
+<!-- en-GB, the same as pages/_document.js. The locale is not decoration here:
+     a native <input type="date"> takes its display order from it, so under
+     plain "en" every date field in the harness rendered 08/14/2026 and prompted
+     "mm/dd/yyyy" — American order, a different string width, and nothing like
+     what a Salford counter actually sees. -->
+<html lang="en-GB"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>${css}</style>
 <script>
@@ -243,10 +258,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   if (process.argv.includes('--shot') || process.argv.includes('--audit') || process.argv.includes('--contrast') || process.argv.includes('--targets')) {
     const { chromium } = require(path.join(ROOT, 'node_modules/playwright-core'))
-    const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
+    const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', env: BROWSER_ENV })
     const width = Number(arg('--width', process.argv.includes('--audit') ? 390 : 1280))
     const theme = arg('--theme', 'light')
-    const ctx = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme, hasTouch: process.argv.includes('--targets') })
+    const ctx = await browser.newContext({ locale: 'en-GB', viewport: { width, height: 900 }, colorScheme: theme, hasTouch: process.argv.includes('--targets') })
     // Simple Mode's text-size steps (docs/DESIGN.md §Type). The third dimension
     // beside width and theme, and the one most likely to break a layout: every
     // screen here was laid out against 13px body copy and `largest` is 17px.

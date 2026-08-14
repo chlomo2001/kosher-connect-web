@@ -20,7 +20,7 @@
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
-import { buildAppHtml } from './render.mjs'
+import { buildAppHtml, BROWSER_ENV } from './render.mjs'
 import { measure, report } from './contrast.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
@@ -65,6 +65,23 @@ export const MODALS = [
   // into an unreadable column — exactly the class of thing the other nineteen
   // entries exist to catch. Answers from the seed's /api/customers/duplicates.
   ['dup-scan',      'customers', `openDupScanModal()`],
+  // Built 08-13 and never measured: the finishing card every counter flow now
+  // ends on, the New-pool card that stacks OVER the rental form (the second
+  // overlay — the loop's "last modal-shaped box" rule picks it up), and the
+  // business summary. Three surfaces staff meet daily that no sweep had seen.
+  ['done-panel',    'rentals',   `showDonePanel({
+     title: '✅ Rental saved', customerId: window.__kc.customer,
+     customerName: 'Menachem Adler', customerPhone: '+447911123456',
+     summary: '+44 7911 123456 · 12 Aug 2026 → 26 Aug 2026 · 14 chargeable days',
+     total: 140, payLine: '£60 paid, £80 on account', method: 'cash', paidNow: true,
+     lines: [{ name: 'Phone rental +44 7911 123456 · 12 Aug → 26 Aug', qty: 1, total: 140 }],
+     smsText: 'Your rental is ready.',
+     again: { label: '📱 Another rental', sub: 'same customer' } })`],
+  ['pool-new',      'rentals',
+    `openNewRentalModal();
+     const s = document.createElement('select'); s.id = 'rPool'; s.innerHTML = '<option value="__new__">';
+     s.value = '__new__'; document.body.appendChild(s); poolSelectChanged(s)`],
+  ['business-summary', 'dashboard', `openBusinessSummary()`],
   // Not modals, but the same eyes-on treatment: the Customer-360 page
   // (/customers/<id>) renders in the content column — .kc-cpage is in the
   // geometry selector below so both sub-tabs get measured and screenshotted.
@@ -98,8 +115,8 @@ export const TRANSIENTS = [
 // MODALS without opening a browser.
 if (import.meta.url === `file://${process.argv[1]}`) {
   const file = buildAppHtml()
-  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
-  const ctx = await browser.newContext({ viewport: { width, height: 844 }, colorScheme: theme })
+  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', env: BROWSER_ENV })
+  const ctx = await browser.newContext({ locale: 'en-GB', viewport: { width, height: 844 }, colorScheme: theme })
   const page = await ctx.newPage()
   page.on('pageerror', (e) => console.log('  pageerror:', String(e).split('\n')[0]))
   await page.goto('file://' + file, { waitUntil: 'load' })
