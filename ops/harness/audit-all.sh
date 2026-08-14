@@ -46,8 +46,14 @@ run "staff app · modals at 320px" \
 # that will not wrap), and until that is fixed adding it would paint this whole
 # report red every night and hide the next real finding. Run it by hand:
 #   node ops/harness/modals.mjs --width 320 --theme light --fs largest
+#
+# 320 × largest IS wired in, for the tabs: it is the hardest corner of the grid
+# (narrowest screen, biggest type) and the tabs pass it today, so it can only
+# ever go red on a regression. The till's problem lives one layer down, in the
+# modal sweep, so keeping that one out does not cost this.
 run "staff app · Simple Mode text sizes, every tab" \
   bash -c 'for f in large largest; do node ops/harness/render.mjs --audit --width 390 --fs $f | tail -1; done
+           node ops/harness/render.mjs --audit --width 320 --fs largest | tail -1
            node ops/harness/render.mjs --targets --width 390 --fs largest | tail -1
            node ops/harness/render.mjs --contrast --theme dark --width 1280 --fs largest | tail -1'
 
