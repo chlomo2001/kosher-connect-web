@@ -632,6 +632,26 @@ not been re-checked against the code and may have drifted the same way.
 
 ---
 
+## UX loop — night of 2026-08-15
+
+| Item | Commit | Screens |
+|------|--------|---------|
+| Three kinds of keyboard stop that matched `:focus-visible`, were genuinely focused, and painted nothing: the Rentals drill-down cards (`.stat-card[role=button]` without `.dash-link`) and every scroll region `kcSyncScrollers` makes focusable for WCAG 2.1.1 — both lost the zero-specificity `--ring` to their own resting box-shadow, so both take an outline instead. Plus the sidebar, whose ring was translucent blue at 22% on navy: invisible, and it is how a keyboard gets anywhere | 07f9726 | Rentals, every scrolling table, the sidebar on every screen |
+| `ops/harness/focus.mjs` joins the nightly sweep in both themes (~25s each) — the first check here that measures a STATE rather than geometry or colour, which is why three invisible stops survived every clean run. Must press a real Tab first (`:focus-visible` only matches once Chrome believes focus is keyboard-driven) and must wait out the transition (focus styles animate); both written at the top of the file. The palette's search box was the last real finding — `outline:none` is its design, so it lights its underline instead | 73f968b | tooling + ⌘K palette |
+| `render.mjs --empty` renders every collection empty — day one, or a search that matched nothing, a dimension the full seed could never show. Most empty states read well; two didn't. The dashboard clock put its seconds after the pulsing dot, so the strip read "04:07 · 42 · SATURDAY 15 AUGUST 2026" with a bare 42 among bulleted facts; seconds now join the time with a colon and the live dot moved to the end, where it also does the separating. And the wallet's empty feed announced "Recent activity · last 0" | cfa98eb | Dashboard, Wallet, tooling |
+
+Discovery: a focus probe written from scratch, which took three attempts to
+stop lying — programmatic `.focus()` does not match `:focus-visible`, and
+computed styles read in the same tick return pre-focus values. Both traps are
+now documented in the tool. Public pages re-eyeballed in Hebrew at 390 (repair,
+portal): clean, including the bidi on prices and the Direct Debit Guarantee
+line. Reduced-motion support checked and already complete — a global blanket
+rule plus per-component overrides, nothing to do.
+Verified per item: gate (255 tests ×2 TZ + build) exit 0 and full audit-all
+clean before each commit, plus harness re-renders of the touched screen.
+Owner decisions pending: none new from this loop. The till's `.pos-methods`
+wrap stays ⚠ and unbuilt.
+
 ## UX loop — night of 2026-08-14
 
 | Item | Commit | Screens |
