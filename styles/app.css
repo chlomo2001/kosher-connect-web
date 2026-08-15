@@ -194,6 +194,16 @@
 
 .nav-item:hover, .nav-link:hover { color: #ffffff; background: rgba(255,255,255,0.08); }
 
+/* The global keyboard ring is a translucent blue (rgba(0,96,168,.22)) sized for
+   the ivory content column. On the navy rail it lands blue-on-navy and simply
+   is not there — a keyboard user tabbing into the sidebar, which is the app's
+   main way of getting anywhere, could not see which destination they were on.
+   White carries the contrast the rail needs; inset so it can't collide with the
+   8px item margins or the rail's own edge. */
+.nav-item:focus-visible, .nav-link:focus-visible, .sb-row:focus-visible {
+  outline: 2px solid rgba(255,255,255,0.92); outline-offset: -2px;
+}
+
 
 /* Rimless selected state — a soft frosted panel (no accent bar), like the
    Travel-Planner reference: the highlight reads as a calm shade, not a rule. */
@@ -2642,6 +2652,23 @@ td.cal-active.cal-shabbat { background: var(--accent); }
    Any future component that sets box-shadow AND is focusable needs this line
    too — the zero-specificity ring cannot beat it. */
 .stat-card.dash-link:focus-visible { box-shadow: var(--ring); border-color: var(--accent); }
+
+/* The same trap, found by tabbing the whole app rather than reasoning about it
+   (08-15). Two more kinds of keyboard stop matched :focus-visible and painted
+   nothing at all:
+     · the Rentals tab's drill-down cards — .stat-card[role=button] WITHOUT
+       .dash-link, so the line above never reached them;
+     · every scroll region kcSyncScrollers makes focusable for WCAG 2.1.1 —
+       landing on one showed nothing, which defeats the tab stop it added.
+   Both are fixed with an OUTLINE rather than a box-shadow, on purpose: the
+   zero-specificity --ring keeps losing to whatever resting shadow the
+   component already paints, and an outline has no such competitor. It also
+   costs no layout, so a ring on a wide scroll region can't shift the table
+   inside it. */
+.stat-card[role="button"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Inset, because a region ring drawn outside a full-width table would sit
+   under the next card or off the edge of the screen. */
+[data-kc-scroller="1"]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 .dash-hero-row.dash-link { border-radius: 6px; margin: 0 -6px; padding-left: 6px; padding-right: 6px; transition: background 0.12s; }
 
