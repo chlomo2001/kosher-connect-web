@@ -28,6 +28,14 @@ run "staff app · contrast, both themes" \
 run "staff app · touch targets (coarse pointer)" \
   bash -c 'node ops/harness/render.mjs --targets --width 390 | tail -1'
 
+# Day one. Every collection empty is a real state — a new shop, and any search
+# that matched nothing — and the seed is deliberately full, so no sweep could
+# reach it. An empty tab must still render (the audit fails a tab that painted
+# nothing) and must not overflow: an empty state is usually a centred block,
+# which is exactly the shape that escapes a narrow column when nobody looks.
+run "staff app · day one, every collection empty" \
+  bash -c 'node ops/harness/render.mjs --audit --empty --width 390 | tail -1'
+
 # Focus visibility. Everything else here measures geometry or colour; this
 # measures a STATE — focus each keyboard stop and check the screen changes.
 # Its first run found three kinds that painted nothing at all, so it earns its
