@@ -66,7 +66,26 @@ export function loadComponent(file) {
   return mod.exports
 }
 
-export function buildAppHtml(out = path.join(HERE, 'app.html')) {
+// Day one, or a filter that matched nothing: every collection empty. A whole
+// dimension the harness could not reach, because the seed is deliberately full
+// — and empty is the state a new shop and a bad search both land in. Two of the
+// app's empty states were caught LYING once ("No rentals yet" with 800 records
+// behind a filter); nothing had ever looked at the set of them together.
+function emptySeed(seed) {
+  const d = JSON.parse(seed)
+  for (const [k, v] of Object.entries(d)) {
+    if (Array.isArray(v)) d[k] = []
+    else if (v && typeof v === 'object') {
+      for (const [kk, vv] of Object.entries(v)) {
+        if (Array.isArray(vv)) v[kk] = []
+        else if (typeof vv === 'number') v[kk] = 0
+      }
+    }
+  }
+  return JSON.stringify(d)
+}
+
+export function buildAppHtml(out = path.join(HERE, 'app.html'), { empty = false } = {}) {
   const AppShell = loadComponent('components/AppShell.js').default
   const shell = renderToStaticMarkup(React.createElement(AppShell, { initialTab: 'customers' }))
   // Both sheets, in the order the browser really gets them: globals.css comes
@@ -78,7 +97,8 @@ export function buildAppHtml(out = path.join(HERE, 'app.html')) {
   const css = readFileSync(path.join(ROOT, 'styles/globals.css'), 'utf8') +
     '\n' + readFileSync(path.join(ROOT, 'styles/app.css'), 'utf8')
   const main = readFileSync(path.join(ROOT, 'public/main.js'), 'utf8')
-  const seed = readFileSync(path.join(HERE, 'seed.json'), 'utf8')
+  const seedRaw = readFileSync(path.join(HERE, 'seed.json'), 'utf8')
+  const seed = empty ? emptySeed(seedRaw) : seedRaw
   writeFileSync(out, `<!doctype html>
 <!-- en-GB, the same as pages/_document.js. The locale is not decoration here:
      a native <input type="date"> takes its display order from it, so under
@@ -263,7 +283,8 @@ export async function targets(page, tabs = TABS) {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? process.argv[i + 1] : d }
-  const file = buildAppHtml()
+  // --empty renders the day-one / nothing-matched state instead of the seed.
+  const file = buildAppHtml(undefined, { empty: process.argv.includes('--empty') })
   console.log('built', path.relative(ROOT, file))
 
   if (process.argv.includes('--shot') || process.argv.includes('--audit') || process.argv.includes('--contrast') || process.argv.includes('--targets')) {

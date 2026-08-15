@@ -2001,9 +2001,15 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 
 .dash-clock b { font-size: var(--fs-lead); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: 0.4px; }
 
+/* The live dot sits AFTER the seconds, as a status light. Between them it read
+   as a separator — "04:07 · 42 · SATURDAY 15 AUGUST" put a bare 42 in a row of
+   bulleted facts, and the one number that wasn't a fact was the seconds. */
 .dash-pulse { align-self: center; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); margin-left: 8px; animation: dashPulse 1.7s ease-in-out infinite; }
 
-.dash-secs { align-self: baseline; font-size: var(--fs-overline); font-weight: 400; color: var(--gold); opacity: 0.6; font-variant-numeric: tabular-nums; margin-left: 4px; letter-spacing: 0.3px; }
+/* Seconds belong to the time, so they join it: a colon and no gap, the way a
+   clock is written. */
+.dash-secs { align-self: baseline; font-size: var(--fs-overline); font-weight: 400; color: var(--gold); opacity: 0.6; font-variant-numeric: tabular-nums; letter-spacing: 0.3px; }
+.dash-secs::before { content: ':'; opacity: 0.75; }
 
 @media (prefers-reduced-motion: reduce) { .dash-pulse { animation: none; } }
 

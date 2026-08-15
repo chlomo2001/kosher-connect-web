@@ -8496,7 +8496,8 @@ async function renderWalletTab() {
         ${creditsHtml}
       </div>
       <div class="table-card" style="padding:8px 18px 14px;">
-        <div class="section-divider" style="margin-top:12px;">Recent activity <span style="color:var(--muted);font-weight:400;">· last ${(data.recent || []).length}</span></div>
+        <div class="section-divider" style="margin-top:12px;">Recent activity ${(data.recent || []).length
+          ? `<span style="color:var(--muted);font-weight:400;">· last ${data.recent.length}</span>` : ''}</div>
         <div>${feedHtml}</div>
       </div>
     </div>`;
@@ -15646,7 +15647,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   content.innerHTML = `
     <div class="dash-head">
       <div>
-        <div class="dash-date"><span class="dash-clock" id="dashClock" title="Current time"><b>${clockHM}</b><span class="dash-pulse" aria-hidden="true"></span><span class="dash-secs" id="dashSecs">${clockSS}</span></span>&nbsp;·&nbsp;${enDate}${hebDate ? ` &nbsp;·&nbsp; <span class="heb">${hebDate}</span>` : ''}</div>
+        <div class="dash-date"><span class="dash-clock" id="dashClock" title="Current time"><b>${clockHM}</b><span class="dash-secs" id="dashSecs">${clockSS}</span><span class="dash-pulse" aria-hidden="true"></span></span>&nbsp;&nbsp;${enDate}${hebDate ? ` &nbsp;·&nbsp; <span class="heb">${hebDate}</span>` : ''}</div>
         <div class="dash-greeting">${greeting}${staffFirstName ? ', ' + nameHtml(staffFirstName) : ''}.</div>
       </div>
       <div class="dash-actions">
