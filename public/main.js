@@ -2144,7 +2144,9 @@ function renderRentalsTab() {
         </div>
         <div class="rentals-filter-row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           ${rentalBar}
-          <button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 12px;" onclick="clearRentalFilters()">Clear</button>
+          ${kcViewIsFiltered('rentals')
+            ? `<button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 12px;" onclick="clearRentalFilters()">Clear</button>`
+            : ''}
         </div>
         <div id="rentalBulkBar" style="display:none;margin:8px 0 0;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary);align-items:center;gap:10px;flex-wrap:wrap;">
           <strong id="rentalBulkCount" style="font-size:var(--fs-body);"></strong>
