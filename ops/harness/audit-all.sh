@@ -28,6 +28,14 @@ run "staff app · contrast, both themes" \
 run "staff app · touch targets (coarse pointer)" \
   bash -c 'node ops/harness/render.mjs --targets --width 390 | tail -1'
 
+# Focus visibility. Everything else here measures geometry or colour; this
+# measures a STATE — focus each keyboard stop and check the screen changes.
+# Its first run found three kinds that painted nothing at all, so it earns its
+# 25 seconds. Both themes: the ring that works on ivory vanished on the navy
+# rail, and only a dark run would have caught that.
+run "staff app · every keyboard stop shows itself" \
+  bash -c 'for t in light dark; do node ops/harness/focus.mjs --theme $t | tail -1; done'
+
 run "staff app · modals open + geometry, 390px both themes" \
   bash -c 'for t in light dark; do node ops/harness/modals.mjs --width 390 --theme $t | tail -1; done'
 
