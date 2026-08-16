@@ -8705,18 +8705,33 @@ function bankPaint() {
   const row = (t) => {
     const isIn = t.amount >= 0;
     const best = t.match && t.match.proposals && t.match.proposals[0];
+    // EVERY candidate, not just the winner. The ambiguity warning used to tell
+    // the reader to "read the reasons" while the row showed one name and one
+    // set of reasons — the second candidate, which is the entire reason the
+    // warning fired, was never on screen. Now each one states its own case and
+    // carries its own button, so the warning is something you can act on.
+    const all = (t.match?.proposals || []).filter(Boolean);
+    const line = (c, lead) => `
+      <div style="margin-top:${lead ? 0 : 8}px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          ${lead ? `<span style="font-size:var(--fs-small);color:var(--muted);">Looks like</span>` : ''}
+          <strong>${escHtml(c.name)}</strong>
+          <span style="font-size:var(--fs-micro);padding:2px 8px;border-radius:99px;${CONF_BADGE[c.confidence] || CONF_BADGE.weak}">${escHtml(c.confidence)}</span>
+          ${isIn ? `<button class="btn ${c.confidence === 'weak' ? 'btn-outline' : 'btn-primary'} btn-sm" style="font-size:var(--fs-small);padding:4px 12px;"
+            onclick="bankConfirm('${escHtml(t.id)}','${escHtml(String(c.customerId ?? ''))}','${escHtml(c.name).replace(/'/g, '&#39;')}')">✓ Confirm match</button>` : ''}
+        </div>
+        <div style="font-size:var(--fs-small);color:var(--muted);margin-top:3px;">${
+          c.reasons.length ? c.reasons.map(escHtml).join(' · ') : 'nothing but the name to go on'}</div>
+      </div>`;
     const proposalHtml = (t.state === 'unmatched' || t.state === 'proposed') ? (
       best ? `
         <div class="bank-proposal">
-          ${t.match.ambiguous ? `<div style="font-size:var(--fs-small);color:var(--warning,#b07d10);margin-bottom:4px;">⚠ Two candidates score alike — read the reasons before confirming.</div>` : ''}
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span style="font-size:var(--fs-small);color:var(--muted);">Looks like</span>
-            <strong>${escHtml(best.name)}</strong>
-            <span style="font-size:var(--fs-micro);padding:2px 8px;border-radius:99px;${CONF_BADGE[best.confidence] || CONF_BADGE.weak}">${escHtml(best.confidence)}</span>
-            ${isIn ? `<button class="btn btn-primary btn-sm" style="font-size:var(--fs-small);padding:4px 12px;"
-              onclick="bankConfirm('${escHtml(t.id)}','${escHtml(String(best.customerId ?? ''))}','${escHtml(best.name).replace(/'/g, '&#39;')}')">✓ Confirm match</button>` : ''}
-          </div>
-          <div style="font-size:var(--fs-small);color:var(--muted);margin-top:3px;">${best.reasons.map(escHtml).join(' · ')}</div>
+          ${t.match.ambiguous
+            ? `<div style="font-size:var(--fs-small);color:var(--warning,#b07d10);margin-bottom:4px;">⚠ ${all.length > 1 ? 'These score alike' : 'Two candidates score alike'} — compare the reasons before confirming.</div>`
+            : ''}
+          ${all.map((c, i) => line(c, i === 0)).join('')}
+          ${best.confidence === 'weak' ? `<div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;">
+            A weak guess is a starting point, not an answer — if none of these is right, choose the customer yourself.</div>` : ''}
         </div>` : `
         <div class="bank-proposal" style="color:var(--muted);font-size:var(--fs-small);">
           No candidate found${isIn ? ' — pick the customer yourself if you recognise it' : ''}.</div>`

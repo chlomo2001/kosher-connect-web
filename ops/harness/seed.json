@@ -851,15 +851,24 @@
         "matchedLedgerId": null,
         "matchedAt": null,
         "match": {
-          "ambiguous": false,
+          "ambiguous": true,
           "proposals": [
             {
               "customerId": "104",
               "customerUuid": "u4",
               "name": "Sarah Paneth",
-              "confidence": "possible",
+              "confidence": "weak",
               "reasons": [
                 "counterparty resembles Sarah Paneth"
+              ]
+            },
+            {
+              "customerId": "101",
+              "customerUuid": "u1",
+              "name": "Naftoly Padwa",
+              "confidence": "weak",
+              "reasons": [
+                "3 days from the expected date"
               ]
             }
           ]
