@@ -9531,7 +9531,6 @@ function renderSimsTab() {
     </div>
 
     <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:center;">
-      <button class="btn btn-primary" onclick="openAddSimModal()">+ New SIM plan</button>
       <input class="search-box" style="width:260px;" type="text" id="simSearch"
         placeholder="Search customer, number, provider…"
         value="${escHtml(simSearchTerm)}"
@@ -10493,7 +10492,6 @@ function renderBookingsTab() {
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
       ${bkBar}
-      <button class="btn btn-primary" onclick="openNewBookingModal()">+ New booking</button>
     </div>
     <div id="bkBulkBar" style="display:${bkSelected.size ? 'flex' : 'none'};margin:0 0 10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary);align-items:center;gap:10px;flex-wrap:wrap;">
       <strong id="bkBulkCount" style="font-size:var(--fs-body);">${bkSelected.size} booking${bkSelected.size === 1 ? '' : 's'} selected</strong>
@@ -11394,7 +11392,6 @@ async function renderRepairsTab() {
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
       ${repBar}
-      <button class="btn btn-primary" onclick="openNewRepairModal()">+ New repair</button>
     </div>
     <div class="table-card">
       <table>
