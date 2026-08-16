@@ -239,6 +239,26 @@ async function handler(req, res) {
         return res.json({ success: true, warnings, list })
       }
 
+      // The owner's monthly money-in target. Stored as text like the other
+      // owner-managed settings; '' means "no target" and hides the bar.
+      if (table === 'settings' && key === 'monthly_target') {
+        const n = Math.max(0, Math.round(Number(values?.textValue) || 0))
+        if (n > 10_000_000) {
+          return res.status(400).json({ success: false, error: 'That target looks like a typo.' })
+        }
+        const text = n ? String(n) : ''
+        const updated = await db.update('settings', `key=eq.monthly_target`, {
+          text_value: text, updated_at: new Date().toISOString(),
+        })
+        if (!updated.length) {
+          await db.insert('settings', [{
+            key: 'monthly_target', text_value: text,
+            description: 'Monthly money-in target shown on the dashboard (owner-managed)',
+          }])
+        }
+        return res.json({ success: true, warnings, target: n })
+      }
+
       // Repair stages (text CSV) — the owner's OWN steps between "In Progress"
       // and "Ready" ("Waiting for part", "Quote sent"). The five system
       // statuses are not editable here and cannot be duplicated: Collected

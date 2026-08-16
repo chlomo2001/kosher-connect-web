@@ -332,6 +332,10 @@
       {
         "key": "repair_stages",
         "textValue": "Waiting for part,Quote sent"
+      },
+      {
+        "key": "monthly_target",
+        "textValue": "4000"
       }
     ]
   },
@@ -433,7 +437,9 @@
         "description": "Balance payment",
         "at": "2026-08-02T09:40:00Z"
       }
-    ]
+    ],
+    "lastWeekIn": 48.0,
+    "monthIn": 1240.0
   },
   "/api/ledger?report=1": {
     "success": true,

@@ -128,7 +128,17 @@ async function handler(req, res) {
         // one caps the visible list, never the money figures.
         const LIST_CAP = 500
         const sinceUtc = londonDayStartUtc(since)
-        const [recent, flowRows, totalsRows, arrearsRows, creditRows] = await Promise.all([
+        // Same weekday LAST WEEK, midnight to this time of day. Comparing
+        // "today so far" against a whole previous day is not a comparison —
+        // at 10am it would always look like a collapse. And last week rather
+        // than yesterday because a shop's week has a shape: a Sunday is only
+        // ever comparable to a Sunday.
+        const elapsedMs = Date.now() - Date.parse(sinceUtc)
+        const lastWeekStartUtc = new Date(Date.parse(sinceUtc) - 7 * 86400000).toISOString()
+        const lastWeekToUtc = new Date(Date.parse(lastWeekStartUtc) + elapsedMs).toISOString()
+        // Month to date, for the target line.
+        const monthStartUtc = londonDayStartUtc(since.slice(0, 8) + '01')
+        const [recent, flowRows, totalsRows, arrearsRows, creditRows, lastWeekRows, monthRows] = await Promise.all([
           // Names/app-ids ride along on each row's embed, so no whole-table
           // customers read is needed (752 rows and climbing toward the 1000 cap).
           db.select('ledger', `select=*,customers(legacy_id,first_name,last_name)&order=created_at.desc&limit=${recentLimit}`),
@@ -136,6 +146,8 @@ async function handler(req, res) {
           db.rpc('wallet_totals', {}),
           db.select('customer_balances', `select=customer_id,balance&balance=lt.0&order=balance.asc&limit=${LIST_CAP}`),
           db.select('customer_balances', `select=customer_id,balance&balance=gt.0&order=balance.desc&limit=${LIST_CAP}`),
+          db.rpc('ledger_flow_between', { p_from: lastWeekStartUtc, p_to: lastWeekToUtc }),
+          db.rpc('ledger_flow_between', { p_from: monthStartUtc, p_to: new Date().toISOString() }),
         ])
         const flow = (flowRows && flowRows[0]) || { money_in: 0, money_out: 0 }
         const totals = (totalsRows && totalsRows[0]) || { owed: 0, credit: 0 }
@@ -168,6 +180,9 @@ async function handler(req, res) {
           arrearsTotal: Number(totals.owed) || 0,
           todayIn: Number(flow.money_in) || 0,
           todayOut: Number(flow.money_out) || 0,
+          // Same weekday last week to this time of day, and the month so far.
+          lastWeekIn: Number((lastWeekRows && lastWeekRows[0]?.money_in) || 0),
+          monthIn: Number((monthRows && monthRows[0]?.money_in) || 0),
         })
       }
       // A customer's statement is money data — gate it to wallet/customers.

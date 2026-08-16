@@ -16017,6 +16017,43 @@ function hebrewDateString(d) {
 // repaints once the fresh ledger + tasks arrive. No blank "Loading…" wait.
 let dashCache = { money: null, tasks: null, shop: null, returns: null };
 
+// "£17 more than last Sunday by this time" — a figure with nothing to compare
+// it against is not information. The API measures the same weekday last week
+// from midnight to this time of day, so a morning is judged against a morning
+// (owner, 08-16; the idea is lifted from a Lightspeed dashboard that compares
+// to "last Friday" rather than to yesterday, which is the right instinct — a
+// shop's week has a shape).
+function weekOnWeekHtml(money) {
+  const now = Number(money.todayIn) || 0;
+  const then = Number(money.lastWeekIn) || 0;
+  const day = new Date().toLocaleDateString('en-GB', { weekday: 'long' });
+  if (!then && !now) return `nothing in yet — nor last ${escHtml(day)} by now`;
+  if (!then) return `nothing had come in by this time last ${escHtml(day)}`;
+  const diff = now - then;
+  if (Math.abs(diff) < 0.005) return `exactly level with last ${escHtml(day)}`;
+  const up = diff > 0;
+  return `<span style="color:${up ? 'var(--success-ink)' : 'var(--danger-ink)'};">${up ? '▲' : '▼'} ${fmtGbp(Math.abs(diff))}</span>
+    ${up ? 'more' : 'less'} than last ${escHtml(day)} by this time`;
+}
+
+// The owner's own monthly target, set in Settings. Shown only when one exists:
+// an empty progress bar every morning is a nag, not a number.
+function monthlyTargetValue() {
+  const s = pricingConfig?.settings?.find(x => x.key === 'monthly_target');
+  const n = Number(s?.textValue || s?.numberValue || 0);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+function monthTargetHtml(money) {
+  const target = monthlyTargetValue();
+  const soFar = Number(money.monthIn) || 0;
+  if (!target) return '';
+  const pct = Math.max(0, Math.min(100, Math.round((soFar / target) * 100)));
+  return `<div class="dash-hero-target">
+      <div class="dash-hero-sub">${fmtGbp(soFar)} of ${fmtGbp(target)} this month · ${pct}%</div>
+      <div class="dash-target-bar"><span style="width:${pct}%"></span></div>
+    </div>`;
+}
+
 async function renderDashboardTab() {
   dashPaint(dashCache.money, dashCache.tasks, dashCache.money === null, dashCache.shop, dashCache.returns);
 
@@ -16094,12 +16131,15 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
     }, 1000);
   }
 
+
   // ── Featured money card (dark navy) ──
   const heroHtml = `
     <div class="dash-hero">
       <div class="dash-hero-label">Money in today</div>
       <div class="dash-hero-value">${stillLoading ? '…' : (money ? fmtGbp(money.todayIn) : '£0.00')}</div>
       <div class="dash-hero-sub">${money && money.todayOut ? fmtGbp(Math.abs(money.todayOut)) + ' charged out today' : (stillLoading ? '&nbsp;' : 'no charges yet today')}</div>
+      ${stillLoading || !money ? '' : `<div class="dash-hero-sub">${weekOnWeekHtml(money)}</div>`}
+      ${stillLoading || !money ? '' : monthTargetHtml(money)}
       <div class="dash-hero-divider"></div>
       <div class="dash-hero-label">Outstanding</div>
       <div class="dash-hero-value" style="font-size:var(--fs-hero);letter-spacing:-0.28px;">${stillLoading ? '…' : fmtGbp(arrearsTotal)}</div>
@@ -16910,6 +16950,16 @@ async function renderSettingsTab() {
       </div>
       <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
         Comma-separated. Offered when a rental is <strong>voided</strong> (↩ in Manage Rental) — every undo keeps its why.</div>
+
+      <div style="padding:10px 16px 2px;border-top:1px solid var(--border);font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;">🎯 Monthly target</div>
+      <div style="padding:8px 16px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input class="form-input" id="monthlyTargetInput" type="number" min="0" step="10" placeholder="e.g. 4000"
+          value="${monthlyTargetValue() || ''}" style="width:160px;min-height:0;padding:8px 12px;font-size:var(--fs-body);">
+        <button class="btn btn-outline btn-sm" onclick="saveMonthlyTarget()">💾 Save target</button>
+      </div>
+      <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
+        Money in, per calendar month. Shown on the dashboard as progress under today's takings.
+        Leave it empty for no target — an empty bar every morning is a nag, not a number.</div>
 
       <div style="padding:10px 16px 2px;border-top:1px solid var(--border);font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;">🔧 Repair stages</div>
       <div style="padding:8px 16px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -18146,6 +18196,16 @@ async function saveVoidReasons() {
     values: { textValue: list.join(',') },
   });
   if (ok) { toast('Void reasons updated.', 'success'); renderSettingsTab(); }
+}
+
+// The owner's monthly money-in target (owner, 08-16). Blank clears it.
+async function saveMonthlyTarget() {
+  const raw = (document.getElementById('monthlyTargetInput')?.value || '').trim();
+  const n = Math.max(0, Math.round(Number(raw) || 0));
+  const ok = await saveSetting({
+    table: 'settings', key: 'monthly_target', values: { textValue: n ? String(n) : '' },
+  });
+  if (ok) { toast(n ? `Target set to ${fmtGbp(n)}.` : 'Target cleared.', 'success'); renderSettingsTab(); }
 }
 
 // Repair stages (owner, 08-16). Comma-separated; the server sanitises, de-dups

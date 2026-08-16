@@ -830,6 +830,18 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
    4.5 AA floor — the harness caught it. */
 .kc-contact-flag { color: var(--danger-ink); background: color-mix(in srgb, var(--danger) 10%, transparent); }
 
+/* Monthly target progress, under today's takings on the money card. A thin
+   rule rather than a chart — it answers "are we on track" at a glance and is
+   not trying to be a report. */
+.dash-hero-target { margin-top: 8px; }
+.dash-target-bar {
+  height: 4px; border-radius: 999px; margin-top: 5px;
+  /* Tinted from the text colour, not white: this card is cream in light mode
+     and navy in dark, and a hardcoded white track is invisible on one of them. */
+  background: color-mix(in srgb, var(--text) 14%, transparent); overflow: hidden;
+}
+.dash-target-bar > span { display: block; height: 100%; background: var(--success); border-radius: 999px; }
+
 /* Quick-add a customer inside a picker (owner, 08-16). It sits INSIDE the form
    it was opened from — no second overlay — so the half-filled rental or SIM
    behind it survives. Boxed and slightly inset so it reads as a step within the
