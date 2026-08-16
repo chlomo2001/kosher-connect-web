@@ -144,6 +144,8 @@ window.api = {
 
   getVirtualNumbers: () => kcFetch('/api/virtual-numbers').then(r => r.ok ? r.json() : []),
   getCarrierMail: (filter = 'pending') => kcFetch(`/api/sim-mail?filter=${encodeURIComponent(filter)}&limit=60`).then(r => r.ok ? r.json() : null),
+  getSimMail: (simLegacyId) => kcFetch(`/api/sim-mail?simLegacyId=${encodeURIComponent(simLegacyId)}`)
+    .then(r => r.ok ? r.json() : null).catch(() => null),
   settleCarrierMail: (body) => kcFetch('/api/sim-mail', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   }).then(r => r.json()),
@@ -9776,13 +9778,18 @@ async function deleteSelectedSims() {
   toast(`${ids.length} SIM plans deleted.`, 'warning');
 }
 
-function openAddSimModal(preselectCustomerId = null) { openSimFormModal(null, preselectCustomerId); }
+function openAddSimModal(preselectCustomerId = null, prefill = null) { openSimFormModal(null, preselectCustomerId, prefill); }
 function openEditSimModal(id) { openSimFormModal(id); }
 
-function openSimFormModal(id, preselectCustomerId = null) {
-  const s = id ? sims.find(x => x.id === id) : null;
-  const isEdit = !!s;
-  const preselect = s ? s.customerId : preselectCustomerId;
+function openSimFormModal(id, preselectCustomerId = null, prefill = null) {
+  // `prefill` carries what a carrier email already told us (number, carrier)
+  // so the operator only has to say WHOSE it is.
+  const s = id ? sims.find(x => x.id === id) : (prefill ? { ...prefill } : null);
+  // isEdit follows the ID, not the object: a prefilled NEW plan also has an `s`
+  // (the number and carrier a carrier email supplied) and must still open as
+  // "New SIM plan" and save down the create path.
+  const isEdit = !!id && !!s;
+  const preselect = s && s.customerId ? s.customerId : preselectCustomerId;
 
   const customerOptions = customers.map(c =>
     `<option value="${c.id}" ${preselect === c.id ? 'selected' : ''}>${escHtml(c.firstName + ' ' + c.lastName)}</option>`
@@ -9929,6 +9936,8 @@ async function saveSimForm(editId) {
       .catch(() => toast('SIM saved, but the setup fee was not billed to the wallet.', 'error'));
   }
   closeDynamicModal();
+  // If this plan was created from a carrier email, file that email on it.
+  if (newSimId) cmPairAfterSimSaved(newSimId);
   let extraMsg = '';
   if (newSimId) extraMsg = await applyExtraCharges('sim', newSimId, customerId, false);
   renderSimsTab();
@@ -9965,6 +9974,28 @@ async function saveSimForm(editId) {
     smsText: `Hi${sc?.firstName ? ' ' + sc.firstName : ''}, your SIM plan${simNo ? ' on ' + fmtPhone(simNo) : ''} is set up${renewal ? ` — renews ${fmtDate(renewal)}` : ''}. Kosher Connect, 0161 531 1386.`,
     again: { label: '💳 Another SIM', sub: sc?.firstName ? `for ${sc.firstName}` : 'new plan', run: () => openAddSimModal(customerId) },
   });
+}
+
+// Carrier mail filed on ONE SIM, loaded after the card paints. It is a
+// secondary read: the card is about the plan and its charges, and waiting on
+// the mail query to show either would be the wrong trade.
+async function loadSimMailInto(simLegacyId) {
+  const box = document.getElementById('simMailList');
+  if (!box) return;
+  const data = await window.api.getSimMail(simLegacyId);
+  if (!document.getElementById('simMailList')) return;   // modal closed meanwhile
+  if (!data || !data.success) {
+    box.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-small);padding:6px 0;">Couldn’t load carrier mail.</div>';
+    return;
+  }
+  box.innerHTML = data.messages.length === 0
+    ? '<div style="color:var(--muted);font-size:var(--fs-small);padding:6px 0;">No carrier mail filed on this SIM yet.</div>'
+    : data.messages.map(m => `
+        <div class="history-item">
+          <span class="history-dot dot-blue"></span>
+          <span class="history-desc">${escHtml(m.subject || '(no subject)')}${m.carrier ? ` · ${escHtml(m.carrier)}` : ''}</span>
+          <span class="history-date">${escHtml(fmtDate(m.receivedAt) || '')}</span>
+        </div>`).join('');
 }
 
 function openManageSimModal(id) {
@@ -10006,6 +10037,11 @@ function openManageSimModal(id) {
 
     <div class="section-divider">Service History</div>
     <div class="history-list" id="simHistoryList">${historyHtml}</div>
+
+    <div class="section-divider">Carrier Mail</div>
+    <div class="history-list" id="simMailList">
+      <div style="color:var(--muted);font-size:var(--fs-small);padding:6px 0;">Loading…</div>
+    </div>
 
     <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;">
       <div class="section-divider" style="margin-top:0;">Add Charge</div>
@@ -10054,6 +10090,7 @@ function openManageSimModal(id) {
       </div>
     </div>
   `);
+  loadSimMailInto(id);
 }
 
 // SIM charge prices come from Settings (BUSINESS_RULES §2); numbers here are
@@ -15398,9 +15435,12 @@ function cmRowHtml(m) {
           </div>` : ''}
         ${!settled && !m.candidates.length ? `
           <div class="cm-pick">
+            ${m.numbers.length ? `<button class="btn btn-primary btn-sm"
+                onclick="cmAddSim(${m.id}, '${escHtml('0' + m.numbers[0])}', '${escHtml(m.carrier || '')}')">
+                ➕ Add as a new SIM</button>` : ''}
             <span style="color:var(--muted);font-size:var(--fs-small);">
-              No SIM on record carries ${numbers ? 'that number' : 'this address'} — add the SIM to the
-              customer it belongs to, then this will pair itself next time.</span>
+              No SIM on record carries ${numbers ? 'that number' : 'this address'}${m.numbers.length
+                ? ' — adding it files this message on the new plan.' : '.'}</span>
           </div>` : ''}
       </div>
       <div class="cm-actions">
@@ -15419,6 +15459,27 @@ async function cmPair(id, simId) {
     await renderCarrierMailTab();
   } catch { showToast('Couldn’t file that message — try again.', 'error'); }
   finally { cmBusy = false; }
+}
+
+// Opens the normal New SIM form with the number and carrier already filled,
+// and remembers which message asked for it: once the plan is saved, that
+// message is filed on it rather than being left for the operator to come back
+// and pair by hand.
+let cmPendingMessageId = null;
+function cmAddSim(messageId, number, provider) {
+  cmPendingMessageId = messageId;
+  openAddSimModal(null, { simNumber: number, provider });
+}
+
+// Called by saveSimForm after a new plan is stored.
+async function cmPairAfterSimSaved(simLegacyId) {
+  const messageId = cmPendingMessageId;
+  cmPendingMessageId = null;
+  if (!messageId || !simLegacyId) return;
+  try {
+    const res = await window.api.settleCarrierMail({ id: messageId, simLegacyId });
+    if (res && res.success) showToast('✓ Message filed on the new SIM');
+  } catch { /* the SIM is saved; the message simply stays in the queue */ }
 }
 
 async function cmResolve(id) {

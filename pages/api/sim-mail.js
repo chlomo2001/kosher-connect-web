@@ -31,25 +31,31 @@ const TTL_MS = 60_000
 async function simDirectory() {
   if (cache.sims && Date.now() - cache.at < TTL_MS) return cache.sims
   const rows = await selectAllPaged(
-    'sims', 'id,customer_id,provider,status,legacy_extras', 'order=id.asc'
+    'sims', 'id,legacy_id,customer_id,provider,status,legacy_extras', 'order=id.asc'
   )
   const byId = new Map()
+  // The browser holds the app's own SIM ids (legacy_id), not the row UUIDs, so
+  // every id that arrives from the client is resolved through here.
+  const byLegacyId = new Map()
   for (const r of rows) {
-    byId.set(String(r.id), {
+    const entry = {
       id: r.id,
+      legacyId: r.legacy_id ? String(r.legacy_id) : '',
       number: r.legacy_extras?.simNumber || '',
       provider: r.provider || r.legacy_extras?.provider || '',
       status: r.status || '',
       customerId: r.customer_id,
       customerName: r.legacy_extras?.customerName || '',
-    })
+    }
+    byId.set(String(r.id), entry)
+    if (entry.legacyId) byLegacyId.set(entry.legacyId, entry)
   }
   const index = buildSimIndex(rows.map((r) => ({
     id: r.id,
     email: r.legacy_extras?.email || '',
     simNumber: r.legacy_extras?.simNumber || '',
   })))
-  const sims = { byId, index }
+  const sims = { byId, byLegacyId, index }
   cache = { at: Date.now(), sims }
   return sims
 }
@@ -59,6 +65,26 @@ async function handler(req, res) {
 
   if (req.method === 'GET') {
     const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50))
+
+    // One SIM's mail, for its record card. Answered from the app's own id.
+    if (req.query.simLegacyId) {
+      const { byLegacyId } = await simDirectory()
+      const sim = byLegacyId.get(String(req.query.simLegacyId))
+      if (!sim) return res.json({ success: true, messages: [] })
+      const rows = await db.select(
+        'sim_mail',
+        `select=id,received_at,from_address,carrier,subject,confidence&sim_id=eq.${enc(sim.id)}` +
+          `&order=received_at.desc&limit=${limit}`
+      )
+      return res.json({
+        success: true,
+        messages: rows.map((m) => ({
+          id: m.id, receivedAt: m.received_at, from: m.from_address || '',
+          carrier: m.carrier || '', subject: m.subject || '', confidence: m.confidence,
+        })),
+      })
+    }
+
     const filter = String(req.query.filter || 'pending')
     const where = filter === 'paired' ? 'sim_id=not.is.null'
       : filter === 'all' ? ''
@@ -122,9 +148,20 @@ async function handler(req, res) {
       return res.json({ success: true, resolved: true })
     }
 
-    if (!simId) return res.status(400).json({ success: false, error: 'Pick a SIM, or resolve it.' })
-    const { byId } = await simDirectory()
-    const sim = byId.get(String(simId))
+    const { simLegacyId } = req.body || {}
+    if (!simId && !simLegacyId) {
+      return res.status(400).json({ success: false, error: 'Pick a SIM, or resolve it.' })
+    }
+    const { byId, byLegacyId } = await simDirectory()
+    // A SIM created seconds ago would miss the 60s directory cache, so a miss
+    // on the legacy id retries against fresh data before giving up — this path
+    // runs right after "add it as a new SIM".
+    let sim = simId ? byId.get(String(simId)) : byLegacyId.get(String(simLegacyId))
+    if (!sim && simLegacyId) {
+      cache = { at: 0, sims: null }
+      const fresh = await simDirectory()
+      sim = fresh.byLegacyId.get(String(simLegacyId))
+    }
     if (!sim) return res.status(400).json({ success: false, error: 'That SIM no longer exists.' })
 
     const rows = await db.update('sim_mail', `id=eq.${enc(id)}`, {

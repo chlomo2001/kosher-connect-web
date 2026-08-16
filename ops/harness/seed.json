@@ -1347,5 +1347,26 @@
         "candidates": []
       }
     ]
+  },
+  "/api/sim-mail?simLegacyId": {
+    "success": true,
+    "messages": [
+      {
+        "id": 40,
+        "receivedAt": "2026-08-16T11:34:00Z",
+        "from": "billing@lebara.co.uk",
+        "carrier": "Lebara",
+        "subject": "Payment received",
+        "confidence": "address"
+      },
+      {
+        "id": 33,
+        "receivedAt": "2026-08-02T09:12:00Z",
+        "from": "noreply@lebara.com",
+        "carrier": "Lebara",
+        "subject": "Your plan renews on 2 September",
+        "confidence": "address"
+      }
+    ]
   }
 }
