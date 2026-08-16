@@ -44,6 +44,13 @@ run "staff app · day one, every collection empty" \
 run "staff app · every keyboard stop shows itself" \
   bash -c 'for t in light dark; do node ops/harness/focus.mjs --theme $t | tail -1; done'
 
+# The other invisible-in-one-render failure. Simple Mode looks fine at Standard
+# and fine-ish at Largest; only a DIFF of the two shows a line that stayed 15px
+# while its neighbours grew 30%. `body` was that line for every element which
+# never set a size of its own, through nine Simple Mode sweeps.
+run "staff app · Simple Mode reaches every word" \
+  bash -c 'node ops/harness/textscale.mjs | tail -1'
+
 run "staff app · modals open + geometry, 390px both themes" \
   bash -c 'for t in light dark; do node ops/harness/modals.mjs --width 390 --theme $t | tail -1; done'
 
