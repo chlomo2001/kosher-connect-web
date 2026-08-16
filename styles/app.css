@@ -1416,6 +1416,8 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 
 .card-action:hover { border-color: var(--accent); background: var(--accent-wash); }
 
+/* A glyph, not a word: it stays put while the label beside it scales, which
+   keeps the icon column aligned down the card instead of ragging. */
 .card-action .ca-icon { font-size: 17px; flex-shrink: 0; }
 
 

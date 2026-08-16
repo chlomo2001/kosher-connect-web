@@ -266,7 +266,16 @@ body {
      above) and sits FIRST: Hebrew glyphs — dates, names, notes, full niqqud —
      render in the classic David face; Latin falls straight through. */
   font-family: 'David Libre KC', 'SF Pro Display', system-ui, -apple-system, sans-serif;
-  font-size: 15px;              /* body-md */
+  /* Through --fs-scale like every step of the ramp, because this is a ramp step
+     too — it is what any element WITHOUT its own font-size inherits. Left as a
+     bare 15px it was the one size Simple Mode could not reach: measured 08-16
+     by rendering every screen at `standard` and at `largest` and diffing the
+     computed sizes, which found "£80.00 still to pay" on the finishing card,
+     the business summary's section headings and the task-list descriptions all
+     sitting at 15px in both — frozen next to text that had grown 30% around
+     them. calc(15px * 1) is byte-identical at standard, so nothing moves for
+     anyone who has not asked for bigger text. */
+  font-size: calc(15px * var(--fs-scale));   /* body-md */
   font-weight: 400;             /* #57 — 300 was too thin to read comfortably */
   font-feature-settings: "ss01";
   line-height: 1.45;
@@ -340,6 +349,9 @@ button, summary { user-select: none; }
 
    The glyph is a plain "Aa" in the app's quiet grey, not an emoji — the blue
    🔠 block shouted from every page's topbar (owner, 9 Aug 2026). */
+/* Fixed on purpose, and the one control that should be: the button that
+   changes the text size must not change its own — it would grow under the
+   finger that is pressing it, and each press would move the next one. */
 .kc-textsize { position: relative; font-size: 15px; font-weight: 600; letter-spacing: -0.3px; color: var(--muted); }
 .kc-textsize[data-size="large"]::after,
 .kc-textsize[data-size="largest"]::after {
