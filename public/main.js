@@ -17618,6 +17618,11 @@ function openEmailAliasModal(id = null) {
         <label class="form-label">Forwards to (comma-separated)</label>
         <input class="form-input" id="eaRecipients" placeholder="yourinbox@gmail.com"
           value="${a ? escHtml(a.recipients.join(', ')) : ''}">
+        <span style="font-size:var(--fs-micro);color:var(--muted);">
+          A mailbox, or an <strong>https://</strong> webhook URL to send the mail into the app
+          (see docs/INBOUND-MAIL.md). A URL is stored exactly as typed — capitals in a
+          <code>?key=</code> matter.
+        </span>
       </div>
       <div class="form-group form-full">
         <label class="form-label">Purpose (optional)</label>

@@ -4,6 +4,8 @@
 //
 //   GET                → { aliases: [...] }
 //   POST {name, recipients, description}          → create alias
+//        recipients may be mailboxes or an https:// webhook URL — the latter is
+//        how carrier mail reaches /api/inbound/mail (docs/INBOUND-MAIL.md)
 //   POST {op:'password', id}                       → generate SMTP password
 //                        (returned ONCE — Forward Email never shows it again)
 //   PUT  {id, recipients?, description?, enabled?} → update alias
@@ -13,6 +15,7 @@
 // MAIL_DOMAIN defaults to kosher-connect.com.
 
 import { withStaff } from '../../lib/auth.js'
+import { cleanRecipients, recipientProblem } from '../../lib/aliasRecipients.mjs'
 
 const API = 'https://api.forwardemail.net/v1'
 const DOMAIN = (process.env.MAIL_DOMAIN || 'kosher-connect.com').trim()
@@ -50,10 +53,9 @@ const toApp = (a) => ({
   hasImap: !!a.has_imap,
 })
 
-const cleanRecipients = (v) =>
-  (Array.isArray(v) ? v : String(v || '').split(/[,\s]+/))
-    .map((r) => String(r).trim().toLowerCase())
-    .filter((r) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(r))
+// Recipients may be mailboxes OR an https webhook URL — see
+// lib/aliasRecipients.mjs, which also explains why a URL must not be
+// lowercased the way an email address is.
 
 async function handler(req, res) {
   if (req.staff && req.staff.role !== 'owner') {
@@ -93,7 +95,15 @@ async function handler(req, res) {
       }
       const recipients = cleanRecipients(b.recipients)
       if (!recipients.length) {
-        return res.status(400).json({ success: false, error: 'Add at least one forwarding address (e.g. the Gmail inbox).' })
+        // Name the offending entry rather than "add at least one": pasting a
+        // webhook URL used to fail with a message that suggested the field was
+        // empty, which is how a correct URL reads as a mistake.
+        const given = Array.isArray(b.recipients) ? b.recipients.join(',') : String(b.recipients || '')
+        const first = given.split(/[,\s]+/).filter(Boolean)[0] || ''
+        return res.status(400).json({
+          success: false,
+          error: recipientProblem(first) || 'Add a forwarding address or an https:// webhook URL.',
+        })
       }
       const created = await fe(`/domains/${DOMAIN}/aliases`, {
         method: 'POST',
@@ -107,7 +117,14 @@ async function handler(req, res) {
       const patch = {}
       if (b.recipients !== undefined) {
         const recipients = cleanRecipients(b.recipients)
-        if (!recipients.length) return res.status(400).json({ success: false, error: 'Keep at least one forwarding address.' })
+        if (!recipients.length) {
+          const given = Array.isArray(b.recipients) ? b.recipients.join(',') : String(b.recipients || '')
+          const first = given.split(/[,\s]+/).filter(Boolean)[0] || ''
+          return res.status(400).json({
+            success: false,
+            error: recipientProblem(first) || 'Keep at least one forwarding address or webhook URL.',
+          })
+        }
         patch.recipients = recipients
       }
       if (b.description !== undefined) patch.description = String(b.description || '').trim()

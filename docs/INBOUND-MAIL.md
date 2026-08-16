@@ -51,16 +51,23 @@ live at a carrier that the app has never heard of, which the July sweep found
 string; it never goes in the repo or in chat. Redeploy so the function picks it
 up.
 
-**2. Create the alias in Forward Email** for `kosher-connect.com`:
+**2. Create the alias** — in your own app, **Settings → email addresses → add**:
 
 | | |
 |---|---|
-| alias | `sims-in` |
-| recipient | `https://<the production domain>/api/inbound/mail?key=<the secret>` |
+| address | `sims-in` |
+| forwards to | `https://<the production domain>/api/inbound/mail?key=<the secret>` |
 
-Forward Email accepts an https URL as a recipient and POSTs the parsed message
-to it. The secret in the URL is the entire gate — Forward Email cannot sign
-requests for us — so treat that URL as a credential.
+An alias recipient is normally a mailbox; an https URL makes Forward Email POST
+the parsed message to it instead of delivering it. Until 08-16 this screen
+rejected anything without an `@` and the alias had to be made in Forward Email's
+own dashboard — it now takes either.
+
+The URL is stored EXACTLY as typed. Recipients used to be lowercased, which is
+harmless for a mailbox and fatal here: the secret sits in `?key=`, and query
+strings are case-sensitive, so folding the case leaves an alias that looks
+right and 401s on every message. Treat that URL as a credential — the secret in
+it is the entire gate, since Forward Email cannot sign requests for us.
 
 **3. Turn on forwarding in the shop Gmail** (`5311386k@gmail.com`):
 Settings → Forwarding and POP/IMAP → *Add a forwarding address* →
