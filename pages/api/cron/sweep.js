@@ -11,6 +11,8 @@
 //   4. SIM renewals due  → SIMDUE-<sim> task when renewing within 3 days
 //   5. VN monthly billing → one ledger charge per billing period
 //      (VN-<id>-<YYYY-MM>, idempotent), next_billing_date advances +1 month
+//   6. Carrier email needing a human → rolling SIMNEW / SIMPAIR tasks from the
+//      sim_mail rows /api/inbound/mail could not pair with certainty
 //
 // Callers: Vercel Cron (Authorization: Bearer CRON_SECRET — note crons fire
 // only on PRODUCTION deployments), or a signed-in staff member (the "Run
@@ -622,8 +624,58 @@ async function handler(req, res) {
     counts.houseAccountClosed = haClosed
     })
 
+    await section('sim-mail', async () => {
+    // ── 6. Carrier email that needs a human ──
+    // /api/inbound/mail files every message against the SIM it names, but two
+    // piles need eyes: 'ambiguous' (a pool address shared by up to 37 SIMs,
+    // with no number in the text to narrow it) and 'unknown' (a number live at
+    // a carrier that the app has never heard of — the July sweep found 241).
+    //
+    // ONE rolling task per pile, not one per message. Lebara alone mails
+    // hundreds of times a month; a task each would bury the list it lives in.
+    // The count is the signal, the numbers are in the notes.
+    const pending = await selectAllPaged(
+      'sim_mail', 'confidence,numbers,carrier',
+      'resolved_at=is.null&sim_id=is.null&order=received_at.desc'
+    )
+    const unknownNumbers = new Set()
+    let ambiguous = 0
+    for (const m of pending) {
+      if (m.confidence === 'unknown') for (const n of m.numbers || []) unknownNumbers.add(n)
+      else ambiguous++
+    }
+
+    if (unknownNumbers.size) {
+      const list = [...unknownNumbers]
+      const shown = list.slice(0, 10).map((n) => `0${n}`).join(', ')
+      await upsertOpenTask({
+        reference: 'SIMNEW',
+        title: `📵 ${list.length} number${list.length === 1 ? '' : 's'} live at a carrier, not on the books`,
+        notes: `${shown}${list.length > 10 ? ` … and ${list.length - 10} more` : ''}. `
+             + 'Each one is a SIM a carrier is billing for that the app has no record of — '
+             + 'add it to the customer it belongs to, or find out whose it is.',
+      })
+    } else {
+      await closeOpenTask('SIMNEW')
+    }
+
+    if (ambiguous) {
+      await upsertOpenTask({
+        reference: 'SIMPAIR',
+        title: `📬 ${ambiguous} carrier email${ambiguous === 1 ? '' : 's'} need pairing`,
+        priority: 'normal',
+        notes: 'Sent to a shared pool address with no number in the message, so the app '
+             + 'will not guess which SIM it belongs to.',
+      })
+    } else {
+      await closeOpenTask('SIMPAIR')
+    }
+    counts.simMailUnknownNumbers = unknownNumbers.size
+    counts.simMailAmbiguous = ambiguous
+    })
+
     await section('custom-rules', async () => {
-    // ── 6. Owner-defined automation rules (#20) ──
+    // ── 7. Owner-defined automation rules (#20) ──
     // Each enabled rule raises RULE-<ruleId>-<entityId> tasks for matching
     // records; keys not re-raised this run are closed. Built on the same
     // idempotent upsert as the fixed sweeps above.

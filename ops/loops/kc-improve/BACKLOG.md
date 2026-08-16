@@ -606,6 +606,13 @@ not been re-checked against the code and may have drifted the same way.
       no record of**, plus 119 rows marked `active` with no mail since before
       2026. The SIM list is what the business runs on and it is out of step with
       the shop's own mailbox. Full write-up in `docs/GMAIL-SWEEP-2026-07-31.md`.
+      **08-16: the pipe that stops this recurring is built** — carrier mail now
+      forwards into `/api/inbound/mail`, pairs to a SIM on the per-SIM recipient
+      address (417 exactly, 317 via the number in the message), and the daily
+      sweep raises SIMNEW for numbers that are live at a carrier but absent from
+      the app. Setup steps in `docs/INBOUND-MAIL.md`. Remaining: the owner's
+      three config steps, then a queue screen for the unpaired pile
+      (`sim_mail.resolved_at` is written by nothing yet).
 
 ### Money not being collected
 
