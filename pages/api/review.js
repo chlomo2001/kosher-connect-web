@@ -19,6 +19,7 @@
 
 import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode, selectAllPaged } from '../../lib/db.js'
+import { classifyContact, contactLabel } from '../../lib/contactLines.mjs'
 
 const enc = encodeURIComponent
 const UNVERIFIED = 'data_source=eq.import&verified_at=is.null'
@@ -88,6 +89,15 @@ async function handler(req, res) {
           number: v.number || '',
           platform: [v.platform, v.plan].filter(Boolean).join(' · '),
         })
+      }
+
+      // Contact number vs the lines we run for them — the distinction the card
+      // could not previously show. Done here, where both are already loaded.
+      for (const bundle of bundles) {
+        const c = classifyContact(bundle.phone, bundle.sims.map((s) => ({
+          id: s.id, simNumber: s.number, provider: s.provider, status: s.status,
+        })))
+        bundle.contact = { kind: c.kind, simId: c.simId || null, label: contactLabel(c) }
       }
     }
 

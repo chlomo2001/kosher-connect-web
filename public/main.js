@@ -6446,7 +6446,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         <div class="avatar">${initials}</div>
         <div class="detail-headline">
           <div class="detail-name">${c.title ? `<span class="cust-title">${escHtml(capName(c.title))}</span> ` : ''}${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:var(--fs-lead);">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
-          <div class="detail-meta">${unconfirmedChip(c) ? unconfirmedChip(c) + ' · ' : ''}${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${c.altPhone ? ` <a href="tel:${escHtml(String(c.altPhone).replace(/\s/g, ''))}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional number">${escHtml(fmtPhone(c.altPhone))}</a>` : ''}${waLink(c, '') ?` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.altEmail ? ` · <a href="mailto:${escHtml(c.altEmail)}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional email">${escHtml(c.altEmail)}</a>` : ''}${c.accountEmail ?` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr}${since ? ` · Since ${since}` : ''}</div>
+          <div class="detail-meta">${unconfirmedChip(c) ? unconfirmedChip(c) + ' · ' : ''}${contactChip(c)}${contactChip(c) ? ' ' : ''}${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${c.altPhone ? ` <a href="tel:${escHtml(String(c.altPhone).replace(/\s/g, ''))}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional number">${escHtml(fmtPhone(c.altPhone))}</a>` : ''}${waLink(c, '') ?` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.altEmail ? ` · <a href="mailto:${escHtml(c.altEmail)}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional email">${escHtml(c.altEmail)}</a>` : ''}${c.accountEmail ?` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr}${since ? ` · Since ${since}` : ''}</div>
         </div>
         <!-- Three menus, not nine icons. Grouping them by what they DO was the
              first fix; the row was still nine identical squares to read, and
@@ -9702,7 +9702,7 @@ function renderSimRows() {
       </td>
       <td><div class="customer-name">${escHtml(capName(s.customerName) || '—')}${unconfirmedChip(s)}</div></td>
       <td>${providerBadge(s.provider)}</td>
-      <td style="font-weight:600;font-size:var(--fs-small);">${escHtml(s.simNumber || '—')}</td>
+      <td style="font-weight:600;font-size:var(--fs-small);">${escHtml(s.simNumber || '—')}${simIsTheirContact(s) ? ' <span class="kc-contact-ours" title="This is also the number we ring the customer on.">☎️ contact</span>' : ''}</td>
       <td style="font-size:var(--fs-small);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(s.plan || '—')}</td>
       <td class="kc-date" style="font-size:var(--fs-small);${renewalClass}">${fmtDate(s.renewalDate)}${renewalLabel}</td>
       <td style="font-size:var(--fs-small);">${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}</td>
@@ -15292,6 +15292,50 @@ async function snoozeTask(id, choice) {
   }
 }
 
+// Contact number vs the SIMs we run for them. Mirrors lib/contactLines.mjs —
+// change both together (test/contactLines.test.mjs covers the rules).
+//
+// Two different ideas were both stored as "a phone number": the number you ring
+// the person on, and a line the shop sells them. Usually the same number (440
+// customers), occasionally not (4), and on 143 customers the contact field is
+// empty while their record is full of OUR numbers — which reads as reachable
+// and is not.
+function kcTail10(v) {
+  const d = String(v == null ? '' : v).replace(/\D/g, '');
+  return d.length >= 10 ? d.slice(-10) : '';
+}
+function customerSimsOf(c) {
+  return typeof sims !== 'undefined' && Array.isArray(sims)
+    ? sims.filter(s => s.customerId === c.id) : [];
+}
+// 'none' | 'ours' | 'outside'
+function contactKind(c) {
+  const t = kcTail10(c && c.phone);
+  if (!t) return 'none';
+  return customerSimsOf(c).some(s => kcTail10(s.simNumber) === t) ? 'ours' : 'outside';
+}
+// The reverse view, for the SIM list: is THIS line the one we ring them on?
+function simIsTheirContact(sim) {
+  const c = typeof customers !== 'undefined' && Array.isArray(customers)
+    ? customers.find(x => x.id === sim.customerId) : null;
+  const t = kcTail10(c && c.phone);
+  return !!t && kcTail10(sim.simNumber) === t;
+}
+
+function contactChip(c) {
+  const kind = contactKind(c);
+  if (kind === 'none') {
+    return customerSimsOf(c).length
+      ? ' <span class="kc-contact-flag" title="This customer has SIMs with us but no number to ring them on. The SIM numbers are lines we sell them, not necessarily a handset they answer.">no contact number</span>'
+      : '';
+  }
+  if (kind === 'ours') {
+    const hit = customerSimsOf(c).find(s => kcTail10(s.simNumber) === kcTail10(c.phone));
+    return ` <span class="kc-contact-ours" title="The number we ring them on is also a SIM we provide and bill them for.">📶 our ${escHtml(hit && hit.provider ? hit.provider : '')} SIM</span>`;
+  }
+  return ' <span class="kc-contact-outside" title="They answer a line we do not provide.">outside line</span>';
+}
+
 // The unconfirmed marker (owner, 08-16). Imported data that no human has
 // vouched for yet — shown wherever the record shows, and doing nothing else:
 // nothing is blocked and no flow changes. Confirming happens in one place, the
@@ -15367,7 +15411,13 @@ function paintConfirm() {
       </div>
       <div class="rv-card">
         <div class="rv-name">${escName(b.name || '(no name)')}</div>
-        ${line('Phone', escHtml(fmtPhone(b.phone) || ''))}
+        ${line('Phone', b.phone
+          ? `${escHtml(fmtPhone(b.phone))}${b.contact && b.contact.kind === 'ours'
+              ? ' <span class="kc-contact-ours">📶 also a SIM with us</span>'
+              : b.contact && b.contact.kind === 'outside'
+                ? ' <span class="kc-contact-outside">outside line</span>' : ''}`
+          : `<span class="kc-contact-flag">${escHtml((b.contact && b.contact.label) || 'No contact number on record')}</span>${b.sims.length
+              ? ` <span style="color:var(--muted)">— the ${b.sims.length} SIM${b.sims.length === 1 ? '' : 's'} below are lines we sell them, not necessarily a phone they answer</span>` : ''}`)}
         ${line('Email', escHtml(b.email))}
         ${line('Address', escHtml(b.address))}
         ${line('Notes', escHtml(b.notes))}

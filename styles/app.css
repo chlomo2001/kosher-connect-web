@@ -813,6 +813,23 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 
 /* ─── BADGES — flat micro-badges (coloured text on a light flat fill) ─── */
 
+/* Contact number vs the lines we run for them. Three states, three weights:
+   "our SIM" is neutral information, "outside line" is quieter still, and the
+   missing-contact flag is the only one that earns a warning colour — a
+   customer with three of our SIMs and nothing to ring reads as reachable and
+   is not. */
+.kc-contact-ours, .kc-contact-outside, .kc-contact-flag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: var(--fs-micro); font-weight: 500;
+  border-radius: 999px; padding: 1px 7px; white-space: nowrap; vertical-align: middle;
+}
+.kc-contact-ours { color: var(--accent); background: var(--accent-wash); }
+.kc-contact-outside { color: var(--muted); border: 1px solid var(--border-input); }
+/* --danger-ink, not --danger: the repo's measured text-on-wash colour. The
+   raw --danger over a 10% wash of itself measures 4.03:1 in light, under the
+   4.5 AA floor — the harness caught it. */
+.kc-contact-flag { color: var(--danger-ink); background: color-mix(in srgb, var(--danger) 10%, transparent); }
+
 /* ---------- Confirm imported data ---------- */
 /* One customer per card, so this is a reading surface first: the values want
    to be scannable in a column, not squeezed into a form. */

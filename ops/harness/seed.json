@@ -1231,17 +1231,24 @@
         "id": "seed-uuid-1",
         "legacyId": "c1",
         "name": "Menachem Adler",
-        "phone": "+447911123456",
+        "phone": "",
         "email": "m.adler@example.com",
         "address": "123 Baker Street, London",
         "notes": "prefers the £20 US plan",
         "sims": [
           {
             "id": "s1",
-            "number": "+447349967598",
+            "number": "+447396843022",
             "provider": "Lebara",
             "status": "active",
-            "renewal": "2026-09-01"
+            "renewal": "2026-09-02"
+          },
+          {
+            "id": "s2",
+            "number": "+447423287185",
+            "provider": "Lebara",
+            "status": "active",
+            "renewal": ""
           }
         ],
         "bookings": [
@@ -1258,7 +1265,12 @@
             "number": "+441615311386",
             "platform": "ELID"
           }
-        ]
+        ],
+        "contact": {
+          "kind": "none",
+          "simId": null,
+          "label": "No contact number on record"
+        }
       }
     ]
   }
