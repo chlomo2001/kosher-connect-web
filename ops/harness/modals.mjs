@@ -42,7 +42,14 @@ const fsSize = arg('--fs', 'standard')
 // `closer` are only for the transient surfaces below — a dialog is found by
 // shape and closed by the standard close functions.
 export const MODALS = [
-  ['customer-new',  'customers', `showModal()`],
+  // openAddModal(), not showModal(): the add form differs from the raw markup
+  // (the carrier-login field is hidden while adding), and screenshotting the
+  // bare modal measured a screen no one is ever shown.
+  ['customer-new',  'customers', `openAddModal()`],
+  // The edit form is no longer the same screen as the add form — the carrier
+  // login field is hidden on one and shown on the other — so it gets measured
+  // in its own right instead of being assumed identical.
+  ['customer-edit', 'customers', `openEditModal(window.__kc.customer)`],
   ['customer-card', 'customers', `openCustomerById(window.__kc.customer)`],
   ['rental-new',    'rentals',   `openNewRentalModal()`],
   ['rental-manage', 'rentals',   `openManageRentalModal(window.__kc.rental)`],
@@ -196,7 +203,16 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log(`${flags.length ? '✗' : '✓'} ${name.padEnd(14)} ${geo.w}×${geo.h}  ${flags.join('  ') || 'clean'}`)
     if (closer) await page.evaluate(closer).catch(() => {})
     else await page.evaluate(() => {
-      document.querySelectorAll('.modal-overlay, .modal').forEach((m) => m.classList.add('hidden'))
+      // Hide the OVERLAY, and any modal box that stands on its own (the
+      // customer card renders one directly) — but never the .modal inside an
+      // overlay. showModal() only un-hides the overlay, so hiding its inner box
+      // left it stuck: the next entry to open that same dialog measured an
+      // empty screen and failed as "no visible modal". It went unnoticed while
+      // no two entries opened the same dialog.
+      document.querySelectorAll('.modal-overlay').forEach((m) => m.classList.add('hidden'))
+      document.querySelectorAll('.modal').forEach((m) => {
+        if (!m.closest('.modal-overlay')) m.classList.add('hidden')
+      })
       if (typeof closeDynamicModal === 'function') try { closeDynamicModal() } catch {}
       if (typeof closeModal === 'function') try { closeModal() } catch {}
       if (typeof dismissCustomerCard === 'function') try { dismissCustomerCard() } catch {}

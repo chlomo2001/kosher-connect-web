@@ -6440,7 +6440,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         <div class="avatar">${initials}</div>
         <div class="detail-headline">
           <div class="detail-name">${c.title ? `<span class="cust-title">${escHtml(capName(c.title))}</span> ` : ''}${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:var(--fs-lead);">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
-          <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${waLink(c, '') ? ` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.accountEmail ? ` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr}${since ? ` · Since ${since}` : ''}</div>
+          <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${c.altPhone ? ` <a href="tel:${escHtml(String(c.altPhone).replace(/\s/g, ''))}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional number">${escHtml(fmtPhone(c.altPhone))}</a>` : ''}${waLink(c, '') ?` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.altEmail ? ` · <a href="mailto:${escHtml(c.altEmail)}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional email">${escHtml(c.altEmail)}</a>` : ''}${c.accountEmail ?` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr}${since ? ` · Since ${since}` : ''}</div>
         </div>
         <!-- Three menus, not nine icons. Grouping them by what they DO was the
              first fix; the row was still nine identical squares to read, and
@@ -9098,7 +9098,24 @@ function openAddModal() {
   document.getElementById('modalTitle').textContent = '➕ Add new customer';
   document.getElementById('editId').value = '';
   document.getElementById('btnSaveCustomer').textContent = 'Save Customer';
+  // The carrier login (owner, 08-16) is not a counter field — it is set up
+  // later, when the SIM is. Hidden here, still on the edit form.
+  const aeg = document.getElementById('fAccountEmailGroup');
+  if (aeg) aeg.style.display = 'none';
   showModal();
+}
+
+// A title stored before this list existed (or typed into the old free-text
+// box) must not vanish because the select has no option for it. Add it,
+// select it, and let the owner change it deliberately if they want to.
+function setTitleSelect(value) {
+  const sel = document.getElementById('fTitle');
+  if (!sel) return;
+  const v = String(value || '').trim();
+  if (v && !Array.from(sel.options).some(o => o.value === v)) {
+    sel.add(new Option(v, v), sel.options[1] || null);
+  }
+  sel.value = v;
 }
 
 function openEditModal(id) {
@@ -9120,12 +9137,16 @@ function openEditModal(id) {
     }
   }
 
-  { const t = document.getElementById('fTitle'); if (t) t.value = c.title || ''; }
+  setTitleSelect(c.title);
   document.getElementById('fFirstName').value = c.firstName || '';
   document.getElementById('fLastName').value  = c.lastName  || '';
   document.getElementById('fCountryCode').value = code;
   document.getElementById('fPhoneNumber').value = phoneNum;
+  { const ap = document.getElementById('fAltPhone'); if (ap) ap.value = c.altPhone || ''; }
   document.getElementById('fEmail').value   = c.email   || '';
+  { const ae2 = document.getElementById('fAltEmail'); if (ae2) ae2.value = c.altEmail || ''; }
+  const aeg = document.getElementById('fAccountEmailGroup');
+  if (aeg) aeg.style.display = '';   // hidden while adding, always shown here
   const aeEl = document.getElementById('fAccountEmail');
   if (aeEl) aeEl.value = c.accountEmail || '';
   document.getElementById('fAddress').value = c.address || '';
@@ -9176,8 +9197,9 @@ function isOwnAccountEmail(email) {
 }
 
 function clearModal() {
-  ['fTitle','fFirstName','fLastName','fPhoneNumber','fEmail','fAddress'].forEach(id => {
+  ['fTitle','fFirstName','fLastName','fPhoneNumber','fAltPhone','fEmail','fAltEmail','fAddress'].forEach(id => {
     const el = document.getElementById(id);
+    if (!el) return;
     el.value = '';
     el.classList.remove('error');
   });
@@ -9294,7 +9316,9 @@ async function saveCustomer() {
   const lastName  = capName(document.getElementById('fLastName').value);
   const phoneNum  = document.getElementById('fPhoneNumber').value.trim();
   const code      = document.getElementById('fCountryCode').value.replace('-CA', '');
+  const altPhone  = document.getElementById('fAltPhone')?.value.trim() || '';
   const email     = document.getElementById('fEmail').value.trim();
+  const altEmail  = document.getElementById('fAltEmail')?.value.trim() || '';
   const address   = document.getElementById('fAddress').value.trim();
   const notes     = document.getElementById('fNotes')?.value.trim() || '';
   const editId    = document.getElementById('editId').value;
@@ -9357,7 +9381,7 @@ async function saveCustomer() {
     if (move) { if (!accountEmail) accountEmail = contactEmail; contactEmail = ''; }
   }
 
-  const payload = { title, firstName, lastName, phone: fullPhone, email: contactEmail, address, notes,
+  const payload = { title, firstName, lastName, phone: fullPhone, altPhone, email: contactEmail, altEmail, address, notes,
     accountEmail,
     // Only sent when the field is on screen — the PUT merges over the stored
     // row, so omitting it while the WhatsApp channel is off preserves whatever

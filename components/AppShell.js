@@ -201,26 +201,44 @@ export default function AppShell({ initialTab = 'dashboard' }) {
           <input type="hidden" id="editId" />
 
           <div className="form-grid">
-            <div className="form-group">
-              <label className="form-label" htmlFor="fTitle">Title</label>
-              <input className="form-input" id="fTitle" type="text" placeholder="Harav / Mrs / Reb…" autoComplete="off" list="kcTitleOptions" />
-              <datalist id="kcTitleOptions">
-                <option value="Harav" /><option value="Mrs" /><option value="Mr" />
-                <option value="Reb" /><option value="Rabbi" /><option value="Rebbetzin" /><option value="Dr" />
-              </datalist>
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="fFirstName">First Name *</label>
-              <input className="form-input" id="fFirstName" type="text" placeholder="Menachem" autoComplete="off" aria-describedby="errFirstName" />
-              <span className="form-error" id="errFirstName">Required</span>
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="fLastName">Last Name *</label>
-              <input className="form-input" id="fLastName" type="text" placeholder="Adler" autoComplete="off" aria-describedby="errLastName" />
-              <span className="form-error" id="errLastName">Required</span>
+            {/* Title, first and last on one line: a title is two or three
+                characters and had a half-width box to itself, which pushed the
+                two names that matter onto separate rows. A select rather than a
+                free-text box — the list is short and fixed, and typing "Harav"
+                by hand invites "harav"/"HaRav" spellings that then sort apart.
+                openEditModal adds any stored title that is not on this list, so
+                an older spelling is never silently dropped on save. */}
+            <div className="form-full">
+              <div className="name-row">
+                <div className="form-group">
+                  <label className="form-label" htmlFor="fTitle">Title</label>
+                  <select className="form-input title-select" id="fTitle">
+                    <option value="">—</option>
+                    <option value="Harav">Harav</option>
+                    <option value="Reb">Reb</option>
+                    <option value="Rabbi">Rabbi</option>
+                    <option value="Mr">Mr</option>
+                    <option value="Mrs">Mrs</option>
+                    <option value="Rebbetzin">Rebbetzin</option>
+                    <option value="Dr">Dr</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="fFirstName">First Name *</label>
+                  <input className="form-input" id="fFirstName" type="text" placeholder="Menachem" autoComplete="off" aria-describedby="errFirstName" />
+                  <span className="form-error" id="errFirstName">Required</span>
+                </div>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="fLastName">Last Name *</label>
+                  <input className="form-input" id="fLastName" type="text" placeholder="Adler" autoComplete="off" aria-describedby="errLastName" />
+                  <span className="form-error" id="errLastName">Required</span>
+                </div>
+              </div>
             </div>
 
-            <div className="form-group form-full">
+            {/* Phone and the optional second number share a row — the form grid
+                is already two columns, so dropping form-full is all it takes. */}
+            <div className="form-group">
               <label className="form-label" htmlFor="fPhoneNumber">Phone *</label>
               <div className="phone-row">
                 <select className="country-select" id="fCountryCode" aria-label="Country dialing code">
@@ -268,12 +286,37 @@ export default function AppShell({ initialTab = 'dashboard' }) {
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="fEmail">✉️ Contact email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(the customer&apos;s own)</span></label>
+              <label className="form-label" htmlFor="fAltPhone">Additional number <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(optional)</span></label>
+              {/* Free text, not a code + digits pair: the second number is as
+                  often a landline, an Israeli mobile or "wife's phone" as it is
+                  another UK mobile, and forcing it through the country select
+                  would make the common case slower to type. It is stored as
+                  entered; the primary number above is the one everything else
+                  in the app dials, matches and de-duplicates on. */}
+              <input className="form-input" id="fAltPhone" type="tel" inputMode="tel" dir="ltr" placeholder="0161 531 1386 / +972 …" autoComplete="off" />
+            </div>
+
+            <div className="form-group">
+              {/* "(their own)", not "(the customer's own)": the longer hint
+                  wrapped this label onto a second line, which dropped the input
+                  below the Additional email box beside it — two fields on one
+                  row sitting at different heights. */}
+              <label className="form-label" htmlFor="fEmail">✉️ Contact email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(their own)</span></label>
               <input className="form-input" id="fEmail" type="email" placeholder="customer@gmail.com" autoComplete="off" aria-describedby="warnEmail" />
               <div className="form-warning" id="warnEmail">⚠️ This email already exists for another customer.</div>
             </div>
 
             <div className="form-group">
+              <label className="form-label" htmlFor="fAltEmail">Additional email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(optional)</span></label>
+              <input className="form-input" id="fAltEmail" type="email" placeholder="work@example.com" autoComplete="off" />
+            </div>
+
+            {/* Hidden while ADDING (openAddModal) and shown when editing: the
+                Lebara/carrier login is something the shop sets up later, not
+                something anyone has to hand at the counter with a customer
+                waiting. Kept on the edit form so the 200-odd already recorded
+                stay visible and editable. */}
+            <div className="form-group" id="fAccountEmailGroup">
               <label className="form-label" htmlFor="fAccountEmail">⚙️ Account email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(our login for Lebara etc.)</span></label>
               <input className="form-input" id="fAccountEmail" type="email" placeholder="kosherconnect+levi@gmail.com" autoComplete="off" />
             </div>

@@ -1124,6 +1124,22 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 
 /* The dial-code select keeps its size; the number field is what gives way. */
 
+/* Title + first + last on one line (owner, 08-16). A title is two or three
+   characters and had a half-width column to itself, which pushed the two names
+   that actually matter onto rows of their own. 104px fits "Rebbetzin" in the
+   select without the box looking like it expects a sentence.
+
+   At 560px the form grid is already one column and the modal is close to the
+   full screen, so the surname takes its own line there rather than being
+   squeezed to nothing beside the other two. */
+.name-row { display: grid; grid-template-columns: 104px minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: start; }
+.title-select { width: 100%; }
+
+@media (max-width: 560px) {
+  .name-row { grid-template-columns: 96px minmax(0, 1fr); }
+  .name-row > :nth-child(3) { grid-column: 1 / -1; }
+}
+
 .phone-row { display: flex; gap: 8px; min-width: 0; }
 
 .phone-row .form-input { min-width: 0; }
