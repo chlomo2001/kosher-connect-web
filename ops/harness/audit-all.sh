@@ -36,6 +36,13 @@ run "staff app · touch targets (coarse pointer)" \
 run "staff app · day one, every collection empty" \
   bash -c 'node ops/harness/render.mjs --audit --empty --width 390 | tail -1'
 
+# …and the other end of the same axis. The seed's names are short and tidy
+# ("Menachem Adler", "Nokia 105"); the shop's are "Yakov Mendl Bindinger
+# (TomTom)" and "Tomtom S/N ZO1357I02581". Stretching every string to something
+# the shop plausibly holds is how a cell that only fits neat data says so.
+run "staff app · real-length names and models" \
+  bash -c 'for w in 320 390; do node ops/harness/render.mjs --audit --long --width $w | tail -1; done'
+
 # Focus visibility. Everything else here measures geometry or colour; this
 # measures a STATE — focus each keyboard stop and check the screen changes.
 # Its first run found three kinds that painted nothing at all, so it earns its

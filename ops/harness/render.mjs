@@ -85,7 +85,33 @@ function emptySeed(seed) {
   return JSON.stringify(d)
 }
 
-export function buildAppHtml(out = path.join(HERE, 'app.html'), { empty = false } = {}) {
+// The other end of the same axis: real data that is LONGER than the seed's.
+// The fixture names are short and tidy ("Menachem Adler", "Nokia 105") and the
+// shop's are not — "Yakov Mendl Bindinger (TomTom)", "Rentel — available from",
+// "Tomtom S/N ZO1357I02581". Every string is stretched to something the shop
+// plausibly holds, so a cell that only fits neat data says so.
+function longSeed(seed) {
+  const LONG = {
+    firstName: 'Yechezkel Shraga Feivel', lastName: 'Bindinger-Halberstam',
+    model: 'Nokia 105 4G dual-SIM (2023, TomTom kit)',
+    name: 'Kosher Connect — Manchester counter, Bury New Road',
+    description: 'Replacement charger, SIM tray tool and screen protector, fitted',
+    notes: 'Prefers the £20 USA plan · pays end of month · brother of Yossi Adler',
+  }
+  const stretch = (v, k) => (typeof v === 'string' && LONG[k] && v.trim() ? LONG[k] : v)
+  const walk = (node) => {
+    if (Array.isArray(node)) return node.map(walk)
+    if (node && typeof node === 'object') {
+      const out = {}
+      for (const [k, v] of Object.entries(node)) out[k] = typeof v === 'object' ? walk(v) : stretch(v, k)
+      return out
+    }
+    return node
+  }
+  return JSON.stringify(walk(JSON.parse(seed)))
+}
+
+export function buildAppHtml(out = path.join(HERE, 'app.html'), { empty = false, long = false } = {}) {
   const AppShell = loadComponent('components/AppShell.js').default
   const shell = renderToStaticMarkup(React.createElement(AppShell, { initialTab: 'customers' }))
   // Both sheets, in the order the browser really gets them: globals.css comes
@@ -98,7 +124,7 @@ export function buildAppHtml(out = path.join(HERE, 'app.html'), { empty = false 
     '\n' + readFileSync(path.join(ROOT, 'styles/app.css'), 'utf8')
   const main = readFileSync(path.join(ROOT, 'public/main.js'), 'utf8')
   const seedRaw = readFileSync(path.join(HERE, 'seed.json'), 'utf8')
-  const seed = empty ? emptySeed(seedRaw) : seedRaw
+  const seed = empty ? emptySeed(seedRaw) : long ? longSeed(seedRaw) : seedRaw
   writeFileSync(out, `<!doctype html>
 <!-- en-GB, the same as pages/_document.js. The locale is not decoration here:
      a native <input type="date"> takes its display order from it, so under
@@ -284,7 +310,7 @@ export async function targets(page, tabs = TABS) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? process.argv[i + 1] : d }
   // --empty renders the day-one / nothing-matched state instead of the seed.
-  const file = buildAppHtml(undefined, { empty: process.argv.includes('--empty') })
+  const file = buildAppHtml(undefined, { empty: process.argv.includes('--empty'), long: process.argv.includes('--long') })
   console.log('built', path.relative(ROOT, file))
 
   if (process.argv.includes('--shot') || process.argv.includes('--audit') || process.argv.includes('--contrast') || process.argv.includes('--targets')) {
