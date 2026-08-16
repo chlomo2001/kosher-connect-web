@@ -642,6 +642,25 @@ not been re-checked against the code and may have drifted the same way.
 
 ---
 
+## UX loop — night of 2026-08-16
+
+| Item | Commit | Screens |
+|------|--------|---------|
+| Simple Mode reaches text that never asked for a size. `body { font-size: 15px }` was a bare pixel value, so anything WITHOUT its own font-size inherited a size the text-size control could not touch — "£80.00 still to pay" on the finishing card, the business summary's section headings and the task-list descriptions all sat at 15px while their neighbours grew 30%. It goes through `--fs-scale` like every other ramp step; `calc(15px * 1)` is byte-identical at Standard | 2725713 | every screen at text large/largest |
+| `ops/harness/textscale.mjs` joins the nightly sweep (~37s): all ten tabs and every modal rendered at `standard` AND at `largest`, with the computed size of 1141 text elements diffed. Catches what neither render shows alone. Two kinds hold their size on purpose and are allow-listed with the reason beside each — the Aa button (it would grow under the finger pressing it) and the card-action glyph | c6c5428 | tooling |
+| The type-ramp sweep was already done and the backlog's "~455 remaining" was stale — measured: 563 inline declarations, 556 on a ramp token, and all seven survivors correct (three print CSS, four emoji glyphs). Recorded as tidying so it stops being carried as a P1 | e770510 | backlog |
+| SIM plans, bookings and repairs each printed a create button with the same label and action as the topbar's, visible in the same screenful ~350px below it. Customers, Wallet and the Dashboard never did; Rentals and Shop put theirs in a row of several, where it reads as a group. The first record on a phone moved up 40/40/38px | bfb6723 | SIM Plans, Tickets & Flights, Repairs |
+
+Discovery: a text-scale diff written from scratch, which is what found the
+`body` size — nine Simple Mode sweeps had looked at those screenshots and none
+could see it, because the failure only exists BETWEEN two renders. Also swept
+clean, no change needed: truncated text with no way to read the rest (nothing
+at 320, 390 or 1280 — the only hits were `.kc-sr-only`, which is clipped on
+purpose); the public pages' Hebrew; reduced motion.
+Verified per item: gate (255 tests ×2 TZ + build) exit 0 and full audit-all
+clean before each commit, plus harness re-renders of the touched screens.
+Owner decisions pending: none new. The till's `.pos-methods` wrap stays ⚠.
+
 ## UX loop — night of 2026-08-15
 
 | Item | Commit | Screens |
