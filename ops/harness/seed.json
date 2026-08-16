@@ -757,8 +757,8 @@
   },
   "/api/elid/summary": {
     "success": true,
-    "accounts": [],
-    "lines": []
+    "account": "kosher-connect-rental",
+    "balance": 88.5
   },
   "/api/email-aliases": {
     "success": true,
@@ -1099,6 +1099,84 @@
             "money": 3
           }
         }
+      }
+    ]
+  },
+  "/api/ai-usage": {
+    "success": true,
+    "enabled": true,
+    "pricedOn": "2026-08-16",
+    "fxRate": 0.79,
+    "estimated": true,
+    "thisMonth": {
+      "calls": 74,
+      "tokens": 812450,
+      "usd": 1.94,
+      "gbp": 1.53,
+      "features": [
+        {
+          "feature": "AI reader",
+          "calls": 31,
+          "tokens": 561200,
+          "usd": 1.12,
+          "gbp": 0.88
+        },
+        {
+          "feature": "assistant planner",
+          "calls": 28,
+          "tokens": 180300,
+          "usd": 0.55,
+          "gbp": 0.43
+        },
+        {
+          "feature": "reply drafter",
+          "calls": 12,
+          "tokens": 58900,
+          "usd": 0.19,
+          "gbp": 0.15
+        },
+        {
+          "feature": "task prioritiser",
+          "calls": 3,
+          "tokens": 12050,
+          "usd": 0.08,
+          "gbp": 0.07
+        }
+      ]
+    },
+    "lastMonth": {
+      "calls": 51,
+      "tokens": 505900,
+      "usd": 1.21,
+      "gbp": 0.96,
+      "features": []
+    },
+    "since": "2026-07-01",
+    "capped": false
+  },
+  "/api/elid/balances": {
+    "success": true,
+    "total": 3,
+    "offset": 0,
+    "nextOffset": null,
+    "accounts": [
+      {
+        "username": "moishe-bodner",
+        "internal": false,
+        "balance": 4.2,
+        "error": null
+      },
+      {
+        "username": "kosher-connect-rental",
+        "internal": true,
+        "balance": 88.5,
+        "error": null
+      },
+      {
+        "username": "chaim-lemberger",
+        "internal": false,
+        "balance": null,
+        "error": "ELID balance read failed"
       }
     ]
   }

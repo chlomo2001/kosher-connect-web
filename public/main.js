@@ -16025,7 +16025,7 @@ async function deleteSelectedVNs() {
 async function renderSettingsTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = skeletonHtml('settings');
-  const [cfg, team, autos, aliases, menu, extra, bizacc, pguide, health, elidSummary] = await Promise.all([
+  const [cfg, team, autos, aliases, menu, extra, bizacc, pguide, health, elidSummary, aiUsage] = await Promise.all([
     window.api.getSettings(),
     kcFetch('/api/team').then(r => r.status === 403 ? null : r.json()).catch(() => null),
     kcFetch('/api/automations').then(r => r.status === 403 ? null : r.json()).catch(() => null),
@@ -16036,6 +16036,7 @@ async function renderSettingsTab() {
     kcFetch('/api/phone-guide').then(r => r.ok ? r.json() : null).catch(() => null),
     fetch('/api/health').then(r => r.json()).catch(() => null),
     kcFetch('/api/elid/summary').then(r => r.status === 403 ? null : r.json()).catch(() => null),
+    kcFetch('/api/ai-usage').then(r => r.status === 403 ? null : r.json()).catch(() => null),
   ]);
   if (!cfg || !cfg.success) {
     content.innerHTML = `<div class="tab-placeholder"><div class="big">⚙️</div>
@@ -16565,15 +16566,60 @@ async function renderSettingsTab() {
   // ELID (telecom upstream) — owner-only. Shows the reseller's live ELID credit
   // balance, read-only. Hidden until ELID is configured (a 503 "not configured"
   // or a non-owner 403 → no card). Read live via lib/elid.js.
+  // A success with no number in it still has to read as something. Number(undefined)
+  // is NaN and "£NaN" is never an answer — say the balance didn't come back.
+  const elidBal = Number(elidSummary?.balance);
+  const elidHasBal = Number.isFinite(elidBal);
   const elidCard = (!elidSummary || /not configured/i.test(elidSummary.error || '')) ? '' :
     settingsCard('elid', '📞 ELID (telecom upstream)',
-      elidSummary.success ? `credit £${Number(elidSummary.balance).toFixed(2)}` : 'connection issue', `
+      elidSummary.success ? (elidHasBal ? `credit ${fmtGbp(elidBal)}` : 'connected') : 'connection issue', `
       <div style="padding:12px 14px 14px;font-size:var(--fs-body);">
         ${elidSummary.success
-          ? `Account <strong>${escHtml(elidSummary.account)}</strong> — upstream credit balance:
-             <strong style="font-size:var(--fs-lead);">£${Number(elidSummary.balance).toFixed(2)}</strong>
-             <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;">Read live from ELID (Kolmisoft MOR), read-only. Per-customer usage is next.</div>`
+          ? `${elidSummary.account ? `Account <strong>${escHtml(elidSummary.account)}</strong> — ` : ''}upstream credit balance:
+             <strong style="font-size:var(--fs-lead);">${elidHasBal ? fmtGbp(elidBal) : '—'}</strong>
+             <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;">Read live from ELID (Kolmisoft MOR), read-only.</div>`
           : `<span style="color:var(--danger-ink);">Couldn't read ELID: ${escHtml(elidSummary.error || 'unknown error')}</span>`}
+        <div class="section-divider" style="margin:14px 0 8px;">Every ELID account</div>
+        <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:8px;">
+          ${ELID_ROSTER_NOTE}
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-outline btn-sm" id="elidBalBtn" onclick="elidLoadBalances()">📞 Read balances</button>
+          <span id="elidBalNote" style="font-size:var(--fs-small);color:var(--muted);"></span>
+        </div>
+        <div id="elidBalBody" style="margin-top:10px;"></div>
+      </div>`);
+
+  // What the AI features cost — metered by us, because Google reports no spend
+  // through the endpoint the app calls. Hidden for non-owners (403 → null) and
+  // when the table isn't there yet.
+  const aiUsed = aiUsage?.success ? aiUsage : null;
+  const aiRow = (f) => `<div class="history-item history-flat" style="gap:10px;">
+      <span class="kc-truncate" style="flex:1;">${escHtml(f.feature)}
+        <span style="color:var(--muted);font-size:var(--fs-small);">· ${f.calls} call${f.calls === 1 ? '' : 's'} · ${f.tokens.toLocaleString('en-GB')} tokens</span></span>
+      <strong style="font-feature-settings:'tnum';">${fmtGbp(f.gbp)}</strong>
+    </div>`;
+  const aiCard = !aiUsed ? '' :
+    settingsCard('aiusage', '🤖 AI usage (Gemini)',
+      `${fmtGbp(aiUsed.thisMonth.gbp)} this month · est.`, `
+      <div style="padding:12px 14px 14px;font-size:var(--fs-body);">
+        ${!aiUsed.enabled ? `<div style="color:var(--muted);margin-bottom:10px;">Gemini isn’t switched on — nothing is being spent.</div>` : ''}
+        <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:4px;">
+          <div><div style="color:var(--muted);font-size:var(--fs-micro);text-transform:uppercase;letter-spacing:.5px;">This month</div>
+            <div style="font-size:var(--fs-title);font-weight:700;">${fmtGbp(aiUsed.thisMonth.gbp)}</div>
+            <div style="color:var(--muted);font-size:var(--fs-small);">${aiUsed.thisMonth.calls} call${aiUsed.thisMonth.calls === 1 ? '' : 's'}</div></div>
+          <div><div style="color:var(--muted);font-size:var(--fs-micro);text-transform:uppercase;letter-spacing:.5px;">Last month</div>
+            <div style="font-size:var(--fs-title);font-weight:700;">${fmtGbp(aiUsed.lastMonth.gbp)}</div>
+            <div style="color:var(--muted);font-size:var(--fs-small);">${aiUsed.lastMonth.calls} call${aiUsed.lastMonth.calls === 1 ? '' : 's'}</div></div>
+        </div>
+        ${aiUsed.thisMonth.features.length
+          ? `<div class="section-divider" style="margin:14px 0 4px;">Where it went, this month</div>${aiUsed.thisMonth.features.map(aiRow).join('')}`
+          : `<div style="color:var(--muted);margin-top:10px;">Nothing used yet this month.</div>`}
+        <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:10px;">
+          Counted from each Gemini reply’s own token report, so the usage is exact.
+          The money is an <strong>estimate</strong>: list prices as of ${escHtml(aiUsed.pricedOn)}, converted at $1 = £${aiUsed.fxRate}.
+          Google does not report spend to the app, so this is our meter, not their bill.
+        </div>
       </div>`);
 
   content.innerHTML = `
@@ -16602,7 +16648,7 @@ async function renderSettingsTab() {
     ${msgHtml}
     ${aliasesHtml}
 
-    ${(ivrHtml || elidCard) ? sectionHead('Connectivity', 'virtual-number &amp; IVR providers') + ivrHtml + elidCard : ''}
+    ${(ivrHtml || elidCard || aiCard) ? sectionHead('Connectivity', 'virtual-number &amp; IVR providers') + ivrHtml + elidCard + aiCard : ''}
 
     ${sectionHead('Workbench', 'phone migrations &amp; converters')}
     ${contactToolsHtml}
@@ -16921,6 +16967,70 @@ async function saveOpeningHours() {
     table: 'settings', key: 'opening_hours',
     values: { textValue: document.getElementById('stOpeningHours').value },
   });
+}
+
+// ── ELID: live balances for the whole roster ─────────────────────────────
+// 146 accounts, one upstream call each, so the server hands them over a page at
+// a time and this fills the list in as they land. Nothing is cached: a credit
+// balance is only worth showing if it is the one from a moment ago.
+// No count in the prose: the roster is a seeded list that will drift, and the
+// live note under the button reports the real total as it reads them.
+const ELID_ROSTER_NOTE = 'Read live, a page at a time — one call per account. Nothing is stored, so what you see is the balance right now.';
+let elidBalances = [];
+
+function elidBalRow(a) {
+  const money = a.error
+    // A failed read is not a zero balance, and must never look like one.
+    ? `<span style="color:var(--danger-ink);font-size:var(--fs-small);" title="${escHtml(a.error)}">couldn’t read</span>`
+    : `<strong style="font-feature-settings:'tnum';">£${Number(a.balance || 0).toFixed(2)}</strong>`;
+  return `<div class="history-item history-flat" style="gap:10px;">
+      <span class="kc-truncate" style="flex:1;">${escHtml(a.username)}${a.internal
+        ? ' <span style="font-size:var(--fs-micro);color:var(--muted);">· shop account</span>' : ''}</span>
+      ${money}
+    </div>`;
+}
+
+function elidBalPaint(done, total) {
+  const body = document.getElementById('elidBalBody');
+  const note = document.getElementById('elidBalNote');
+  if (!body) return;
+  // Lowest credit first: the reason to open this list is to find who is running
+  // out, and alphabetical order buries exactly that.
+  const rows = [...elidBalances].sort((a, b) => {
+    if (!!a.error !== !!b.error) return a.error ? -1 : 1;
+    return (a.balance ?? 0) - (b.balance ?? 0);
+  });
+  const read = elidBalances.filter(a => !a.error);
+  const credit = read.reduce((n, a) => n + (a.balance || 0), 0);
+  if (note) {
+    note.textContent = done >= total
+      ? `${read.length} of ${total} read · ${fmtGbp(credit)} on account across them`
+      : `read ${done} of ${total}…`;
+  }
+  body.innerHTML = rows.length ? rows.map(elidBalRow).join('') : '';
+}
+
+async function elidLoadBalances() {
+  const btn = document.getElementById('elidBalBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Reading…'; }
+  elidBalances = [];
+  let offset = 0;
+  let total = 0;
+  try {
+    // Follow the server's own nextOffset rather than counting pages here — it
+    // knows how many accounts there are and this shouldn't have to agree.
+    for (let guard = 0; guard < 20; guard++) {
+      const res = await kcFetch(`/api/elid/balances?offset=${offset}`).then(r => r.json()).catch(() => null);
+      if (!res || !res.success) { toast(res?.error || 'Could not read ELID balances.', 'error'); break; }
+      total = res.total;
+      elidBalances.push(...(res.accounts || []));
+      elidBalPaint(elidBalances.length, total);
+      if (res.nextOffset === null || res.nextOffset === undefined) break;
+      offset = res.nextOffset;
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↻ Read again'; }
+  }
 }
 
 // ── Accounts & subscriptions register ────────────────────────────────────
