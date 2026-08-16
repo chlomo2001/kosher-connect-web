@@ -396,7 +396,9 @@
 
 .search-box::placeholder { color: var(--muted); }
 
-.btn-sm { padding: 6px 12px; font-size: var(--fs-body); }
+/* Still the small one — for row actions and inline tools — but 34px rather
+   than ~26px. Small should mean "secondary", not "hard to hit". */
+.btn-sm { padding: 8px 14px; min-height: 34px; font-size: var(--fs-body); }
 
 .tab-enter { animation: kc-tab-enter var(--dur-2) var(--ease-out); }
 
@@ -1298,6 +1300,17 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
    the right edge of a 390px screen — reachable by neither finger nor keyboard.
    Four modals put a Void/Delete/Retire/Print on the left and a Cancel+Save
    group on the right, so all four had it latent. */
+/* On a phone or the counter tablet the modal footer stops being a right-aligned
+   pair of desktop buttons and becomes full-width rows, primary at the bottom
+   where the thumb is. This is the Lightspeed "Pay" idea applied honestly: the
+   action you came for should be the biggest thing on the screen. */
+@media (max-width: 560px) {
+  .modal-actions { flex-direction: column-reverse; align-items: stretch; }
+  .modal-actions .btn { width: 100%; min-height: 48px; font-size: var(--fs-ui); }
+  .modal-actions-group { flex-direction: column-reverse; align-items: stretch; width: 100%; margin-left: 0; }
+  .modal-actions-group .btn { width: 100%; }
+}
+
 .modal-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin-top: 22px; }
 
 /* The Cancel+Save half of such a footer. margin-left:auto keeps it against the

@@ -360,10 +360,17 @@ button, summary { user-select: none; }
 }
 
 /* ─── BUTTONS — tight-radius pills ─── */
+/* Button size (owner, 08-16: "the sizes of buttons… fills the screen").
+   These were 8px/16px padding on a 1.0 line box — about 32px tall, which is a
+   desktop button being tapped on a counter tablet. 40px is the height a finger
+   actually expects, and the extra 8px costs nothing on a desktop screen.
+   min-height rather than a fixed height, so a two-line label still fits. */
 .btn {
-  padding: 8px 16px;
+  padding: 10px 18px;
+  min-height: 40px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   border-radius: var(--radius);
-  font-family: inherit; font-size: var(--fs-ui); font-weight: 400; line-height: 1;
+  font-family: inherit; font-size: var(--fs-ui); font-weight: 400; line-height: 1.15;
   cursor: pointer; border: none;
   transition: background var(--dur-2) var(--ease-out),
               border-color var(--dur-2) var(--ease-out),
@@ -478,10 +485,15 @@ input[type="checkbox"], input[type="radio"] {
    that matters is the counter tablet — that is a touch device at any width,
    and a mouse on a small window does not need bigger targets. Desktop is
    untouched. min-height only, so nothing is stretched wider than its label. */@media (pointer: coarse) {
-  .btn, .action-btn, .card-tool, .task-mini, .form-input, .country-select, select {
-    min-height: 24px;
+  /* 24px was the WCAG 2.5.8 FLOOR — the size below which a target fails, not
+     the size at which one is comfortable. On the counter tablet every one of
+     these is hit with a thumb, often in a hurry, so the floor moves to 44px
+     (the figure Apple and Google both publish) and the row buttons to 40. */
+  .btn, .form-input, .country-select, select {
+    min-height: 44px;
   }
-  .action-btn, .card-tool { min-width: 24px; }
+  .action-btn, .card-tool, .task-mini { min-height: 40px; }
+  .action-btn, .card-tool { min-width: 40px; }
   /* A 13px checkbox is the browser default and is genuinely hard to hit. */
   input[type="checkbox"], input[type="radio"] { width: 24px; height: 24px; }
   /* Inline clickable spans (task cards' 👤 customer link rides an 11px meta
