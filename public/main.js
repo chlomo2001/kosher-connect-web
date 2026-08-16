@@ -15963,10 +15963,19 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   const activeRentals = rentals.filter(r => r.status !== 'returned');
   const overdue = activeRentals.filter(r => r.toDate && r.toDate < today);
   const dueToday = activeRentals.filter(r => r.toDate === today);
-  const openRepairs = reps.filter(r => r.status === 'Open' || r.status === 'In Progress');
+  // NOT a positive match on two names: the owner can add their own stages
+  // ("Waiting for part"), and a repair sitting on one is still open work. Open
+  // = not finished, not cancelled, not yet ready — the same negative test the
+  // rest of the app uses. A positive list silently dropped custom stages off
+  // this count the moment stages shipped.
+  const openRepairs = reps.filter(r => r.status !== 'Collected' && r.status !== 'Cancelled' && r.status !== 'Ready');
   const readyRepairs = reps.filter(r => r.status === 'Ready');
   const travel7 = bookings.filter(b => b.status !== 'Cancelled' && b.travelDate >= today && b.travelDate <= in7);
   const renewals7 = sims.filter(s => s.status === 'active' && s.renewalDate && s.renewalDate >= today && s.renewalDate <= in7);
+  // Renewal dates that have already passed on a plan still marked active — 29
+  // of them today. Nothing in the app showed these, and they are the half that
+  // is actually wrong rather than merely upcoming.
+  const renewalsLate = sims.filter(s => s.status === 'active' && s.renewalDate && s.renewalDate < today);
   // Snoozed tasks are deliberately parked — keep them off the dashboard.
   const openTasks = tks.filter(t => !t.done && !(t.snoozedUntil && t.snoozedUntil > today));
   const highTasks = openTasks.filter(t => t.priority === 'High');
@@ -16038,9 +16047,18 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
            lines at 390px, which left the card 16px taller than the one beside
            it. Matches Active Rentals / Open Repairs / Open Tasks. */''}
       ${metric('Flights', travel7.length,
-        `${travel7.length === 1 ? '1 flight' : travel7.length + ' flights'} this week${renewals7.length
-          ? ` · <span class="dash-link" style="color:var(--gold);" onclick="event.stopPropagation();goToTab('sim')">${renewals7.length} SIM renewal${renewals7.length === 1 ? '' : 's'} ›</span>` : ''}`,
+        `${travel7.length === 1 ? '1 flight' : travel7.length + ' flights'} this week`,
         'bookings')}
+      ${/* SIM renewals were a footnote on the Flights card. 290 active plans
+           carry a renewal date and 83 of them fall inside a week — the largest
+           recurring commitment the shop has, reading as an afterthought about
+           air travel. Its own card, with the overdue count as the sub-line,
+           because that is the half that needs doing rather than watching. */''}
+      ${metric('SIM renewals', renewals7.length,
+        renewalsLate.length
+          ? `<span style="color:var(--danger-ink);">${renewalsLate.length} past their date</span>`
+          : 'next 7 days · none overdue',
+        'sim', renewalsLate.length ? 'color:var(--danger-ink);' : '')}
       ${metric('Open Tasks', openTasks.length,
         highTasks.length ? `<span style="${statBandStyle('highTasks', highTasks.length) || 'color:var(--danger-ink);'}">${highTasks.length} high priority</span>` : 'none urgent', 'tasks',
         statBand('highTasks', highTasks.length) === 'clear' ? '' : statBandStyle('highTasks', highTasks.length))}
@@ -16062,9 +16080,18 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   // Straight to the plan that is renewing, not to the list of every plan.
   // The line names one SIM, so landing on the tab and leaving you to find it
   // again is the app forgetting what you just clicked.
-  renewals7.forEach(s => attention.push(['💳',
+  // Three named renewals, then a roll-up. The feed shows ten lines in total, so
+  // 83 renewals would have pushed every overdue rental, ready repair and flight
+  // off the bottom of it — the loudest item silencing the urgent ones.
+  renewals7.slice(0, 3).forEach(s => attention.push(['💳',
     `<strong>${escName(s.customerName || '?')}</strong> — SIM renews ${fmtDate(s.renewalDate)}`,
     () => openOnTab('sim', () => openManageSimModal(s.id))]));
+  if (renewals7.length > 3) attention.push(['💳',
+    `<strong>${renewals7.length - 3} more SIM plans</strong> renew in the next 7 days`,
+    () => goToTab('sim')]);
+  if (renewalsLate.length) attention.push(['⏰',
+    `<strong>${renewalsLate.length} active SIM${renewalsLate.length === 1 ? '' : 's'}</strong> past the renewal date on record`,
+    () => goToTab('sim')]);
   // Low-stock accessories/phones (display-only; the Shop tab holds the editable
   // per-SKU threshold + the full list). One rolled-up line → opens Shop.
   const lowStock = (shopList || []).filter(i => i.active && i.quantity <= i.lowStockAt);
