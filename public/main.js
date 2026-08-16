@@ -16255,7 +16255,7 @@ async function renderSettingsTab() {
       </tbody></table>
       <div class="section-divider" style="margin:14px 14px 4px;">🔓 What helpers can see</div>
       <div style="padding:4px 14px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
-        ${['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'shop', 'koltorah', 'virtual', 'tasks', 'settings'].map(t => `
+        ${['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'shop', 'koltorah', 'virtual', 'tasks', 'review', 'settings'].map(t => `
           <label style="display:flex;align-items:center;gap:5px;font-size:var(--fs-small);cursor:pointer;">
             <input type="checkbox" class="htTab" value="${t}" style="accent-color:var(--accent);cursor:pointer;"
               ${(cfg.settings.find(s => s.key === 'helper_tabs')?.textValue || '').split(',').includes(t) ? 'checked' : ''}>
