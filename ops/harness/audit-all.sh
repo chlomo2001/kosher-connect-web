@@ -51,6 +51,11 @@ run "staff app · every keyboard stop shows itself" \
 run "staff app · Simple Mode reaches every word" \
   bash -c 'node ops/harness/textscale.mjs | tail -1'
 
+# The 24×24 sweep proves you can HIT a control and the contrast sweep proves you
+# can SEE it. This asks whether it says what it is.
+run "staff app · every control says what it is" \
+  bash -c 'node ops/harness/names.mjs | tail -1'
+
 run "staff app · modals open + geometry, 390px both themes" \
   bash -c 'for t in light dark; do node ops/harness/modals.mjs --width 390 --theme $t | tail -1; done'
 

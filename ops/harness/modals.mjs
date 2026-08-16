@@ -80,7 +80,11 @@ export const MODALS = [
   ['pool-new',      'rentals',
     `openNewRentalModal();
      const s = document.createElement('select'); s.id = 'rPool'; s.innerHTML = '<option value="__new__">';
-     s.value = '__new__'; document.body.appendChild(s); poolSelectChanged(s)`],
+     s.value = '__new__'; document.body.appendChild(s); poolSelectChanged(s);
+     // …and take it away again. Left attached it outlived this entry and turned
+     // up in every later surface as an unnamed <select>, which is exactly the
+     // kind of ghost that makes a sweep report defects the app does not have.
+     s.remove()`],
   ['business-summary', 'dashboard', `openBusinessSummary()`],
   // The reconciliation screen — not a modal either, it replaces the content
   // column like the Customer-360 page. Worth the eyes now that Stripe charges

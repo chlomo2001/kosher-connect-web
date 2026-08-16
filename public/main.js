@@ -4987,8 +4987,10 @@ function openManageRentalModal(rentalId) {
         <input type="hidden" id="mgItemStatus_${item}" value="${status}">
         <span style="font-size:var(--fs-body);min-width:130px;">${EQ_LABELS[item]}</span>
         <div class="eq-slide-track" id="mgSlide_${item}" data-status="${status}">
-          <div class="eq-slide-zone eq-slide-zone-left"  onclick="mgSetItemStatus('${item}','returned')"></div>
-          <div class="eq-slide-zone eq-slide-zone-right" onclick="mgSetItemStatus('${item}','lost')"></div>
+          <div class="eq-slide-zone eq-slide-zone-left"  onclick="mgSetItemStatus('${item}','returned')"
+            aria-label="${EQ_LABELS[item]} — mark returned"></div>
+          <div class="eq-slide-zone eq-slide-zone-right" onclick="mgSetItemStatus('${item}','lost')"
+            aria-label="${EQ_LABELS[item]} — mark lost"></div>
           <span class="eq-slide-lbl eq-slide-lbl-n eq-slide-lbl-n-ret">Returned</span>
           <span class="eq-slide-lbl eq-slide-lbl-n eq-slide-lbl-n-lost">Lost</span>
           <span class="eq-slide-lbl eq-slide-lbl-a eq-slide-lbl-a-ret">✓ Returned</span>
@@ -5037,6 +5039,7 @@ function openManageRentalModal(rentalId) {
         <label class="form-label">Return Status</label>
         <div style="display:flex;align-items:center;gap:14px;margin-top:4px;">
           <div class="toggle-wrap" onclick="toggleReturned()" id="mgReturnedToggle"
+            role="switch" aria-checked="${r.status === 'returned'}" aria-label="Phone returned"
             style="width:52px;height:28px;border-radius:14px;cursor:pointer;transition:background 0.2s;position:relative;background:${r.status==='returned'?'var(--success)':'var(--border)'};">
             <div id="mgToggleKnob" style="position:absolute;top:3px;left:${r.status==='returned'?'25px':'3px'};width:22px;height:22px;border-radius:50%;background:#fff;transition:left 0.2s;"></div>
           </div>
@@ -5053,7 +5056,7 @@ function openManageRentalModal(rentalId) {
       <div id="mgChargeBreakdown" style="margin-bottom:10px;"></div>
       <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">
         <span style="font-size:var(--fs-body);color:var(--muted);white-space:nowrap;">Amount paid: £</span>
-        <input class="form-input" type="number" id="mgPaid" value="${paid}" min="0" step="0.5"
+        <input class="form-input" type="number" id="mgPaid" aria-label="Amount paid, in pounds" value="${paid}" min="0" step="0.5"
           style="width:100px;padding:7px 10px;" oninput="mgUpdateDebt()">
       </div>
       <div style="margin-bottom:8px;">
@@ -5242,6 +5245,8 @@ function toggleReturned() {
   const isNowReturned = hidden.value !== '1';
   hidden.value = isNowReturned ? '1' : '0';
   toggle.style.background = isNowReturned ? 'var(--success)' : 'var(--border)';
+  // The switch announces its state, so the state has to follow the knob.
+  toggle.setAttribute('aria-checked', String(isNowReturned));
   knob.style.left = isNowReturned ? '25px' : '3px';
   label.style.color = isNowReturned ? 'var(--success)' : 'var(--muted)';
   label.textContent = isNowReturned ? 'Returned ✅' : 'Not returned yet';
@@ -8051,7 +8056,7 @@ function openDraftReminderModal(customerId) {
   showDynamicModal(`
     <div class="modal-title">✉️ Draft reminder — ${escName(c.firstName)} ${escName(c.lastName)}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Built from what this customer currently owes / has coming up. Edit it, then copy — <strong>nothing is sent</strong>.</div>
-    <textarea class="form-input" id="drText" rows="9" style="font-family:inherit;">${escHtml(draft)}</textarea>
+    <textarea class="form-input" id="drText" rows="9" aria-label="Reminder message — edit before copying" style="font-family:inherit;">${escHtml(draft)}</textarea>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
       ${waLink(c, '') ? `<button class="btn btn-outline" onclick="waReminderDraft('${escHtml(String(customerId))}')">💬 Open in WhatsApp</button>` : ''}
@@ -9953,7 +9958,7 @@ function openManageSimModal(id) {
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;width:80px;">
           <label style="font-size:var(--fs-micro);color:var(--muted);font-weight:600;">Amount £</label>
-          <input class="form-input" id="simChargeAmount" type="number" value="${simChargePrice('service')}" min="0" step="0.5" style="font-size:var(--fs-body);">
+          <input class="form-input" id="simChargeAmount" aria-label="Charge amount, in pounds" type="number" value="${simChargePrice('service')}" min="0" step="0.5" style="font-size:var(--fs-body);">
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;flex:2;min-width:140px;">
           <label style="font-size:var(--fs-micro);color:var(--muted);font-weight:600;">Note (optional)</label>
@@ -10709,8 +10714,8 @@ async function openNewBookingModal(preselectCustomerId = null) {
       <div class="form-group">
         <label class="form-label">Departure / Arrival</label>
         <div style="display:flex;gap:6px;">
-          <input class="form-input" type="time" id="bkDep">
-          <input class="form-input" type="time" id="bkArr">
+          <input class="form-input" type="time" id="bkDep" aria-label="Departure time">
+          <input class="form-input" type="time" id="bkArr" aria-label="Arrival time">
         </div>
       </div>
       <div class="form-group">
@@ -14972,6 +14977,12 @@ function kcMarkClickable(el) {
   const tag = el.tagName;
   if (tag === 'BUTTON' || tag === 'A' || tag === 'INPUT' || tag === 'SELECT' ||
       tag === 'TEXTAREA' || tag === 'LABEL') return;            // natively operable
+  // A cell whose only onclick stops the row handler firing is not an action.
+  // Marking it made an unnamed role=button tab stop in front of the checkbox
+  // it wraps — a keyboard user hit "button" (announced as nothing), pressed it,
+  // and nothing happened. Found by sweeping for interactive elements with no
+  // accessible name; it was three table cells across four modals.
+  if (/^\s*event\.stopPropagation\(\)\s*;?\s*$/.test(el.getAttribute('onclick') || '')) return;
   if (el.hasAttribute('data-kc-key')) return;                   // already marked
   el.setAttribute('data-kc-key', '1');
   if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
