@@ -21,15 +21,32 @@ Shloime or for 421 Bury New Road.
 | Twilio account | **trial** — console screenshot 08-16, £11.71 credit, registered `tech@kosher-connect.com`, opened 20 Jul |
 | Send gate | TEST — every message goes to `SMS_TEST_TO`, never a customer |
 
-The account is the blocker, not the app. **Alphanumeric Sender IDs are not
-available on trial accounts**, so step 1 is not optional for this route.
+The account is probably still the blocker, but less certainly than this page
+once claimed — see the section below, which records what the console actually
+did rather than what the documentation implies.
 
-## The order that matters
+## What is actually true, tested in the console (08-16)
 
-Upgrade → register the sender ID → create the Messaging Service → add the
-sender to its pool → point the app at it. A Messaging Service can be created at
-any time (and one already exists: `KosherConnect`, SID `MG541b51d6…`), but its
-sender pool will refuse an alphanumeric sender while the account is on trial.
+Two claims in an earlier version of this page were wrong, and the console
+settled both:
+
+- **"The sender pool refuses an alphanumeric sender on a trial account."**
+  FALSE. `KosherCnct` was added to the `KosherConnect` service's sender pool
+  while the account was still on trial. It shows as type *Alpha Sender ID*,
+  tagged "Generic for all countries".
+- **"The UK requires pre-registration before you can send."** NOT ESTABLISHED.
+  Twilio's reachable documentation says the UK *supports* pre-registration
+  "to achieve higher delivery rates and reduced filtering", which reads as
+  strongly recommended rather than a gate. The authoritative country table is
+  on twilio.com, which this environment cannot reach.
+
+What remains true and sourced: **Twilio's support documentation says
+alphanumeric Sender IDs are not supported on trial accounts.** Configuring one
+evidently is allowed. Whether a trial account can SEND with one is the open
+question, and the cheapest way to answer it is to try — see step 4.
+
+A trial account can also only send to VERIFIED numbers, so `SMS_TEST_TO` must be
+a verified caller ID for any trial-mode test to prove anything.
 
 ## Step 1 — upgrade off trial
 
