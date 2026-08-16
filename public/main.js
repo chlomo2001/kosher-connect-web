@@ -7565,6 +7565,85 @@ function customerComboHtml(valueId, preselectId = null) {
     <div class="customer-dropdown" id="${valueId}_dd"></div>
   </div>`;
 }
+// Quick-add a customer WITHOUT leaving the form you are in.
+//
+// Deliberately NOT a second modal. showDynamicModal replaces the contents of
+// one shared overlay, so opening a dialog on top of the rental/SIM form would
+// destroy the form underneath it. This expands in place instead — three fields
+// under the search box — which also happens to be fewer clicks than the modal
+// version that inspired it.
+//
+// Three fields, not the full customer card: a name and a number is what the
+// counter has when someone walks in. Address, notes, passport and house
+// account are all editable later from the customer record.
+function kcComboAddNew(valueId) {
+  const wrap = document.getElementById(valueId + '_search')?.closest('.customer-search-wrap');
+  if (!wrap || document.getElementById(valueId + '_qa')) return;
+  const typed = (document.getElementById(valueId + '_search')?.value || '').trim();
+  // "Moshe Adler" → first "Moshe", last "Adler". One word goes in first name.
+  const bits = typed.split(/\s+/).filter(Boolean);
+  const first = bits.length ? bits[0] : '';
+  const last = bits.length > 1 ? bits.slice(1).join(' ') : '';
+  const dd = document.getElementById(valueId + '_dd');
+  if (dd) dd.style.display = 'none';
+
+  const panel = document.createElement('div');
+  panel.id = valueId + '_qa';
+  panel.className = 'kc-quickadd';
+  panel.innerHTML = `
+    <div class="kc-quickadd-head">➕ New customer</div>
+    <div class="kc-quickadd-grid">
+      <input class="form-input" id="${valueId}_qaFirst" placeholder="First name" value="${escHtml(first)}" autocomplete="off">
+      <input class="form-input" id="${valueId}_qaLast" placeholder="Surname" value="${escHtml(last)}" autocomplete="off">
+      <input class="form-input" id="${valueId}_qaPhone" type="tel" inputmode="tel" dir="ltr" placeholder="07911 123456" autocomplete="off">
+    </div>
+    <div class="kc-quickadd-msg" id="${valueId}_qaMsg"></div>
+    <div class="kc-quickadd-actions">
+      <button type="button" class="btn btn-primary btn-sm" onclick="kcComboSaveNew('${valueId}')">Save &amp; use</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="kcComboCancelNew('${valueId}')">Cancel</button>
+    </div>`;
+  wrap.appendChild(panel);
+  document.getElementById(`${valueId}_qa${first ? 'Phone' : 'First'}`)?.focus();
+}
+
+function kcComboCancelNew(valueId) {
+  document.getElementById(valueId + '_qa')?.remove();
+  document.getElementById(valueId + '_search')?.focus();
+}
+
+async function kcComboSaveNew(valueId) {
+  const msg = document.getElementById(valueId + '_qaMsg');
+  const firstName = capName(document.getElementById(valueId + '_qaFirst')?.value || '');
+  const lastName = capName(document.getElementById(valueId + '_qaLast')?.value || '');
+  const phoneRaw = (document.getElementById(valueId + '_qaPhone')?.value || '').trim();
+  const say = (html) => { if (msg) msg.innerHTML = html; };
+
+  if (!firstName || !lastName) return say('Both names, please — that is how they are found later.');
+  if (!phoneRaw) return say('A number, please — it is how the shop finds someone.');
+
+  // The same number on two records is the duplicate that costs most, so offer
+  // the existing person rather than refusing the save. Compared on digits, so
+  // 07…, +447… and 447… all meet.
+  const digits = phoneRaw.replace(/\D/g, '').slice(-10);
+  const clash = customers.find(c => (c.phone || '').replace(/\D/g, '').slice(-10) === digits && digits.length === 10);
+  if (clash) {
+    return say(`That number is already <strong>${escName(clash.firstName)} ${escName(clash.lastName || '')}</strong>.
+      <button type="button" class="btn btn-outline btn-sm" style="margin-left:6px;"
+        onclick="kcComboPick('${valueId}','${escHtml(clash.id)}');kcComboCancelNew('${valueId}')">Use them</button>`);
+  }
+
+  say('Saving…');
+  const res = await window.api.addCustomer({
+    id: uid(), firstName, lastName, phone: phoneRaw, email: '', address: '', notes: '',
+  }).catch(() => null);
+  if (!res || !res.success || !res.customer) return say('Couldn’t save that — try again.');
+
+  customers.push(res.customer);
+  kcComboPick(valueId, res.customer.id);
+  kcComboCancelNew(valueId);
+  showToast(`✓ ${escName(firstName)} ${escName(lastName)} added`);
+}
+
 function kcComboFilter(valueId) {
   const q = (document.getElementById(valueId + '_search')?.value || '').toLowerCase().trim();
   const dd = document.getElementById(valueId + '_dd');
@@ -7575,10 +7654,19 @@ function kcComboFilter(valueId) {
   const list = customers.filter(c => !q ||
     `${c.firstName} ${c.lastName || ''}`.toLowerCase().includes(q) || phoneDigitsMatch(q, c)
   ).slice(0, 12);
-  dd.innerHTML = list.length
+  // "No match" used to be the end of the road: the operator had to abandon a
+  // half-filled rental/SIM/repair form, go to Customers, create the person,
+  // come back and start again — with someone standing at the counter. The
+  // dropdown now offers to create them from here (owner, 08-16, after watching
+  // a Lightspeed demo do exactly this).
+  const addRow = q
+    ? `<div class="customer-dropdown-item kc-combo-add" onmousedown="kcComboAddNew('${valueId}')">
+        ➕ Add <strong>${escName(q)}</strong> as a new customer</div>`
+    : '';
+  dd.innerHTML = (list.length
     ? list.map(c => `<div class="customer-dropdown-item" onmousedown="kcComboPick('${valueId}','${c.id}')">
         ${escName(c.firstName)} ${escName(c.lastName || '')} <span style="color:var(--muted);font-size:var(--fs-micro);">${escHtml(c.phone || '')}</span></div>`).join('')
-    : `<div class="customer-dropdown-item" style="color:var(--muted);">No match — check the spelling</div>`;
+    : `<div class="customer-dropdown-item" style="color:var(--muted);">No match — check the spelling</div>`) + addRow;
   dd.style.display = 'block';
 }
 function kcComboPick(valueId, id) {

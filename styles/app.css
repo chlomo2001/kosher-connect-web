@@ -830,6 +830,27 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
    4.5 AA floor — the harness caught it. */
 .kc-contact-flag { color: var(--danger-ink); background: color-mix(in srgb, var(--danger) 10%, transparent); }
 
+/* Quick-add a customer inside a picker (owner, 08-16). It sits INSIDE the form
+   it was opened from — no second overlay — so the half-filled rental or SIM
+   behind it survives. Boxed and slightly inset so it reads as a step within the
+   field rather than a new screen. */
+.kc-quickadd {
+  margin-top: 8px; padding: 12px;
+  border: 1px solid var(--border-input); border-radius: 8px;
+  background: var(--bg);
+}
+.kc-quickadd-head { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.2px; color: var(--muted); margin-bottom: 8px; }
+.kc-quickadd-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.kc-quickadd-actions { display: flex; gap: 8px; margin-top: 10px; }
+.kc-quickadd-msg:not(:empty) { margin-top: 8px; font-size: var(--fs-small); color: var(--danger-ink); }
+
+/* The dropdown row that starts it. Reads as an action, not another result. */
+.kc-combo-add { border-top: 1px solid var(--border); color: var(--accent); }
+
+@media (max-width: 560px) {
+  .kc-quickadd-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* ---------- Carrier mail ---------- */
 /* A log, not a table: the useful unit is one message with its verdict and the
    action it needs, and a message's subject is long. Three columns — when, what,
