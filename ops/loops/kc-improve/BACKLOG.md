@@ -180,6 +180,22 @@ Safe (loop-eligible), ranked value ÷ effort:
       Stripe `rk_live` into Vercel (health shows live-pk/test-sk mismatch),
       Wizz per-PNR receipt confirmations (ZMKWJP settled 08-04 — husband;
       refund legs post only against confirmed receipts).
+- [ ] **P1 · S** 🔒 — **Twilio is still a TRIAL account** (owner console
+      screenshot 08-16: "Trial: £11.71", *"you can only send messages and make
+      calls to verified phone numbers"*). Registered to `tech@kosher-connect.com`,
+      opened 20 Jul; the credentials are already in Vercel (health 08-04:
+      `sms: configured, provider twilio, mode test`). **So the code is done and
+      the account is the blocker, not the app.** Two owner steps, in order:
+      (1) **verify Shloime's own mobile** in Console → Phone Numbers → Verified
+      Caller IDs — that alone makes the Settings → Messaging "send test SMS"
+      button deliver; (2) **upgrade off trial** (card on the account) — until
+      then LIVE is impossible by construction, because a real customer's number
+      is not a verified number, and every trial message is prefixed
+      "Sent from your Twilio trial account". No face pic or ID is needed for
+      either. A photo ID + proof of address at 421 Bury New Rd is only needed if
+      we later buy a **UK number** (Twilio regulatory bundle); an alphanumeric
+      sender ("KosherCnct") avoids that but cannot receive replies — decide
+      which before buying anything.
 - [ ] **P3 · done-but-dark** — **myPOS ↔ till** one-tap. **BUILT 08-04 and
       PARKED by owner decision 08-04** ("we wait and work manually with the
       current K300"). Facts that closed it: K300 will never do ePOS
