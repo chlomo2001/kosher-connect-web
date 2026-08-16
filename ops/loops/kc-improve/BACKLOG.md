@@ -139,8 +139,18 @@ Safe (loop-eligible), ranked value ÷ effort:
       modal entrances; first ramp-adoption sweep (all 15 half-step sizes) +
       toast tokens + last `transition: all` retired. **Remaining for
       sessions 2–3** (adoption, per DESIGN.md's ledger):
-      1. Type-ramp sweep of the ~455 remaining inline `font-size`s in
-         main.js, surface by surface (eyeball each in the harness).
+      1. ~~Type-ramp sweep of the ~455 remaining inline `font-size`s~~ —
+         **DONE, and the count was stale. Measured 08-16**: main.js holds 563
+         inline `font-size` declarations and 556 of them already use a ramp
+         token. The seven survivors are all correct as they are — three are
+         print CSS (paper does not have Simple Mode, and px is the right unit
+         there) and four are emoji glyph sizes, not text. What is genuinely
+         left of this line is moving inline `style="font-size:var(--fs-…)"`
+         into classes, which changes nothing a user can see; treat it as
+         tidying, not as a P1. The real defect underneath it was found by the
+         new textscale sweep and fixed (2725713): `body` was a bare 15px, so
+         every element that never set a size of its own was invisible to
+         Simple Mode.
       2. Inline-style spacing/colour micro-decisions into tokens/classes.
       3. Odd paddings onto the 4/8/12/16/24 spacing grid.
       4. Considered + parked: customer-search dropdown enter animation —
