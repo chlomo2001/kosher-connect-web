@@ -653,6 +653,8 @@ not been re-checked against the code and may have drifted the same way.
 
 | Ten interactive controls announced as nothing to a screen reader: two time fields sharing one label (the existing label pass names only a group's FIRST control), three fields headed by a plain `<span>` or a label outside any `.form-group`, the returned toggle (now `role=switch` with `aria-checked` following the knob), both halves of the equipment slider, and three table cells `kcMarkClickable` had turned into unnamed `role=button` tab stops because their only onclick was an `event.stopPropagation()` guard. `ops/harness/names.mjs` joins the nightly audit | 8e32f8b | Manage Rental, New booking, Manage SIM, Draft reminder + tooling |
 
+| `render.mjs --long` stretches every seeded string to real shop length ("Yakov Mendl Bindinger (TomTom)", "Tomtom S/N ZO1357I02581") and joins the audit opposite `--empty`. Nothing failed today at 320/390/1280 — including the surname-first list, which wraps a long name and keeps the surname leading — so it is a guard, not a fix | f6463e9 | tooling |
+
 Discovery: a text-scale diff written from scratch, which is what found the
 `body` size — nine Simple Mode sweeps had looked at those screenshots and none
 could see it, because the failure only exists BETWEEN two renders. Also swept
