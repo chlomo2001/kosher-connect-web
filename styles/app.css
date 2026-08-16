@@ -813,6 +813,35 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 
 /* ─── BADGES — flat micro-badges (coloured text on a light flat fill) ─── */
 
+/* ---------- Confirm imported data ---------- */
+/* One customer per card, so this is a reading surface first: the values want
+   to be scannable in a column, not squeezed into a form. */
+.rv-card { border: 1px solid var(--border); border-radius: 10px; padding: 16px; background: var(--surface); }
+.rv-name { font-size: var(--fs-h2); font-weight: 600; margin-bottom: 12px; }
+.rv-line { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 10px; padding: 6px 0; border-top: 1px solid var(--border); }
+.rv-label { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.2px; color: var(--muted); }
+.rv-value { word-break: break-word; }
+.rv-attached { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+.rv-attached ul { margin: 6px 0 0; padding-left: 18px; }
+.rv-attached li { padding: 3px 0; font-size: var(--fs-small); }
+.rv-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.rv-hint { color: var(--muted); font-size: var(--fs-small); margin-top: 10px; }
+
+/* The unconfirmed marker. Deliberately quiet — it is a note about provenance,
+   not a warning about the record: the data is very probably fine, it has just
+   never been checked by a person. A red badge on 1,865 rows would train
+   everyone to stop seeing it on day one. */
+.kc-unconfirmed {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: var(--fs-micro); font-weight: 500; color: var(--muted);
+  border: 1px dashed var(--border-input); border-radius: 999px;
+  padding: 1px 7px; white-space: nowrap; vertical-align: middle;
+}
+
+@media (max-width: 560px) {
+  .rv-line { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}
+
 .badge {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 2px 8px;

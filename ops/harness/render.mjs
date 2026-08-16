@@ -166,7 +166,7 @@ window.fetch = function (url) {
 }
 
 export const TABS = ['dashboard', 'customers', 'rentals', 'sim', 'bookings', 'wallet',
-  'repairs', 'services', 'shop', 'koltorah', 'virtual', 'tasks', 'settings']
+  'repairs', 'services', 'shop', 'koltorah', 'virtual', 'tasks', 'review', 'settings']
 
 // A page must never scroll sideways, and nothing may sit outside the content
 // column unless it is inside something that scrolls on purpose.

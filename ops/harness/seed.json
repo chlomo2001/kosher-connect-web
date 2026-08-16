@@ -7,7 +7,9 @@
       "phone": "+447911123456",
       "email": "m.adler@example.com",
       "passportOnFile": true,
-      "services": []
+      "services": [],
+      "dataSource": "import",
+      "verifiedAt": null
     },
     {
       "id": "c2",
@@ -15,7 +17,9 @@
       "lastName": "Taitelbaum",
       "phone": "+447700900123",
       "email": "yossi@example.com",
-      "services": []
+      "services": [],
+      "dataSource": "import",
+      "verifiedAt": null
     },
     {
       "id": "c3",
@@ -24,7 +28,9 @@
       "phone": "+447871385566",
       "email": "chaim@example.com",
       "accountEmail": "kosherconnect+chaim@gmail.com",
-      "services": []
+      "services": [],
+      "dataSource": "app",
+      "verifiedAt": null
     },
     {
       "id": "c4",
@@ -32,7 +38,9 @@
       "lastName": "Gluck",
       "phone": "+972544123456",
       "email": "",
-      "services": []
+      "services": [],
+      "dataSource": "app",
+      "verifiedAt": null
     },
     {
       "id": "c5",
@@ -41,7 +49,9 @@
       "phone": "",
       "email": "",
       "notes": "Imported from ELID 2026-08-06",
-      "services": []
+      "services": [],
+      "dataSource": "app",
+      "verifiedAt": null
     },
     {
       "id": "c6",
@@ -49,7 +59,9 @@
       "lastName": "Teitelboim",
       "phone": "+447700900123",
       "email": "",
-      "services": []
+      "services": [],
+      "dataSource": "app",
+      "verifiedAt": null
     }
   ],
   "/api/rentals": [
@@ -151,7 +163,9 @@
       "provider": "Lebara",
       "status": "active",
       "expiryDate": "2026-08-14",
-      "customerName": "Menachem Adler"
+      "customerName": "Menachem Adler",
+      "dataSource": "import",
+      "verifiedAt": null
     },
     {
       "id": "s2",
@@ -1186,6 +1200,65 @@
         "internal": false,
         "balance": null,
         "error": "ELID balance read failed"
+      }
+    ]
+  },
+  "/api/review": {
+    "success": true,
+    "total": 1865,
+    "remaining": 1861,
+    "done": 4,
+    "progress": {
+      "customers": {
+        "imported": 604,
+        "remaining": 602
+      },
+      "sims": {
+        "imported": 796,
+        "remaining": 795
+      },
+      "bookings": {
+        "imported": 391,
+        "remaining": 391
+      },
+      "virtual_numbers": {
+        "imported": 74,
+        "remaining": 73
+      }
+    },
+    "bundles": [
+      {
+        "id": "seed-uuid-1",
+        "legacyId": "c1",
+        "name": "Menachem Adler",
+        "phone": "+447911123456",
+        "email": "m.adler@example.com",
+        "address": "123 Baker Street, London",
+        "notes": "prefers the £20 US plan",
+        "sims": [
+          {
+            "id": "s1",
+            "number": "+447349967598",
+            "provider": "Lebara",
+            "status": "active",
+            "renewal": "2026-09-01"
+          }
+        ],
+        "bookings": [
+          {
+            "id": "b1",
+            "ref": "KC-2291",
+            "route": "MAN → TLV",
+            "date": "2026-09-14"
+          }
+        ],
+        "virtualNumbers": [
+          {
+            "id": "v1",
+            "number": "+441615311386",
+            "platform": "ELID"
+          }
+        ]
       }
     ]
   }

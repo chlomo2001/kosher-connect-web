@@ -143,6 +143,11 @@ window.api = {
   }).then(r => r.json()),
 
   getVirtualNumbers: () => kcFetch('/api/virtual-numbers').then(r => r.ok ? r.json() : []),
+  getReviewQueue: (limit = 12) => kcFetch(`/api/review?limit=${limit}`).then(r => r.ok ? r.json() : null),
+  confirmReviewed: (customerId) => kcFetch('/api/review', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ customerId }),
+  }).then(r => r.json()),
   addVirtualNumber: (v) => kcFetch('/api/virtual-numbers', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -658,6 +663,7 @@ const TAB_META = {
   shop:      { label: 'Shop',              title: 'Shop <span>&amp; Stock</span>',      render: () => renderShopTab(),      search: false },
   koltorah:  { label: 'Kol Torah',         title: 'Kol <span>Torah</span>',             render: () => renderKolTorahTab(),  search: false, primary: { label: '+ New job',      run: () => ktFocusNewJob() } },
   tasks:     { label: 'Tasks',             title: 'Task <span>List</span>',             render: () => renderTasksTab(),     search: false },
+  review:    { label: 'Confirm Data',      title: 'Confirm <span>Imported Data</span>', render: () => renderConfirmTab(),    search: false },
   virtual:   { label: 'Virtual Numbers',   title: 'Virtual <span>Numbers</span>',       render: () => renderVirtualTab(),   search: false, primary: { label: '+ New number',   run: () => openNewVNModal() } },
   settings:  { label: 'Settings',          title: 'System <span>Settings</span>',       render: () => renderSettingsTab(),  search: false },
 };
@@ -6092,7 +6098,7 @@ function renderTableRows() {
     return `
     <tr class="${selected}" data-id="${c.id}">
       <td>
-        <div class="customer-name">${customerNameCell(c, surnameFirst)}${customerHasPassport(c) ? ' <span title="Passport on file">🛂</span>' : ''}</div>
+        <div class="customer-name">${customerNameCell(c, surnameFirst)}${customerHasPassport(c) ? ' <span title="Passport on file">🛂</span>' : ''}${unconfirmedChip(c)}</div>
         <div class="customer-email">${escHtml(c.email || '')}${c.accountEmail ? `${c.email ? '<br>' : ''}<span title="Account/login email (Lebara etc.) — not for contacting the customer" style="color:var(--muted);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''}</div>
       </td>
       <td class="kc-phone">${c.phone ? escHtml(fmtPhone(c.phone)) : '—'}</td>
@@ -6440,7 +6446,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         <div class="avatar">${initials}</div>
         <div class="detail-headline">
           <div class="detail-name">${c.title ? `<span class="cust-title">${escHtml(capName(c.title))}</span> ` : ''}${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:var(--fs-lead);">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
-          <div class="detail-meta">${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${c.altPhone ? ` <a href="tel:${escHtml(String(c.altPhone).replace(/\s/g, ''))}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional number">${escHtml(fmtPhone(c.altPhone))}</a>` : ''}${waLink(c, '') ?` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.altEmail ? ` · <a href="mailto:${escHtml(c.altEmail)}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional email">${escHtml(c.altEmail)}</a>` : ''}${c.accountEmail ?` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr}${since ? ` · Since ${since}` : ''}</div>
+          <div class="detail-meta">${unconfirmedChip(c) ? unconfirmedChip(c) + ' · ' : ''}${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${c.altPhone ? ` <a href="tel:${escHtml(String(c.altPhone).replace(/\s/g, ''))}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional number">${escHtml(fmtPhone(c.altPhone))}</a>` : ''}${waLink(c, '') ?` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.altEmail ? ` · <a href="mailto:${escHtml(c.altEmail)}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional email">${escHtml(c.altEmail)}</a>` : ''}${c.accountEmail ?` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr}${since ? ` · Since ${since}` : ''}</div>
         </div>
         <!-- Three menus, not nine icons. Grouping them by what they DO was the
              first fix; the row was still nine identical squares to read, and
@@ -9694,7 +9700,7 @@ function renderSimRows() {
         <input type="checkbox" aria-label="Select this SIM plan" ${simSelected.has(s.id) ? 'checked' : ''}
           onclick="toggleSimSel('${s.id}', this.checked)">
       </td>
-      <td><div class="customer-name">${escHtml(capName(s.customerName) || '—')}</div></td>
+      <td><div class="customer-name">${escHtml(capName(s.customerName) || '—')}${unconfirmedChip(s)}</div></td>
       <td>${providerBadge(s.provider)}</td>
       <td style="font-weight:600;font-size:var(--fs-small);">${escHtml(s.simNumber || '—')}</td>
       <td style="font-size:var(--fs-small);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(s.plan || '—')}</td>
@@ -15284,6 +15290,133 @@ async function snoozeTask(id, choice) {
     toast(until ? `Snoozed until ${fmtDate(until)}.` : 'Task is back in the list.', 'success');
     renderTasksTab();
   }
+}
+
+// The unconfirmed marker (owner, 08-16). Imported data that no human has
+// vouched for yet — shown wherever the record shows, and doing nothing else:
+// nothing is blocked and no flow changes. Confirming happens in one place, the
+// Confirm Data tab.
+function unconfirmedChip(rec) {
+  return rec && rec.dataSource === 'import' && !rec.verifiedAt
+    ? ' <span class="kc-unconfirmed" title="Imported from a spreadsheet — nobody has confirmed this against reality yet. Manage \u2192 Confirm Data.">unconfirmed</span>'
+    : '';
+}
+
+// ---------- Confirm imported data ----------
+//
+// 1,865 of the shop's records came out of spreadsheets and no human has ever
+// checked them. This screen asks about ONE CUSTOMER AT A TIME (owner, 08-16),
+// with everything attached to them on the same card — their SIMs, bookings and
+// virtual numbers — because the question a person can actually answer is "is
+// everything right for Adler?", not "is row 412 of the SIM sheet right?".
+//
+// Nothing here is destructive and nothing is blocked elsewhere: confirming
+// writes verified_at/verified_by and moves on. Fixing something is a normal
+// edit, reached from the same card.
+let confirmQueue = [];
+let confirmStats = { total: 0, remaining: 0, done: 0 };
+let confirmBusy = false;
+
+async function renderConfirmTab() {
+  const content = document.getElementById('mainContent');
+  content.innerHTML = skeletonHtml('stats');
+  let data = null;
+  try { data = await window.api.getReviewQueue(12); }
+  catch { content.innerHTML = errorHtml('Couldn’t load the confirmation queue'); return; }
+  if (!data || !data.success) { content.innerHTML = errorHtml('Couldn’t load the confirmation queue'); return; }
+  confirmQueue = Array.isArray(data.bundles) ? data.bundles : [];
+  confirmStats = { total: data.total || 0, remaining: data.remaining || 0, done: data.done || 0 };
+  paintConfirm();
+}
+
+function paintConfirm() {
+  const content = document.getElementById('mainContent');
+  const { total, remaining, done } = confirmStats;
+  const pct = total ? Math.round((done / total) * 100) : 100;
+
+  if (!confirmQueue.length) {
+    content.innerHTML = `
+      <div class="stats-row">${confirmStatsHtml()}</div>
+      <div class="card"><div class="empty-state">
+        <div class="emoji">${remaining ? '☕' : '🎉'}</div>
+        <p>${remaining
+          ? 'That’s this batch done — reload for the next twelve.'
+          : 'Every imported record has been confirmed by a human.'}</p>
+        ${remaining ? '<button class="btn btn-primary" onclick="renderConfirmTab()">Load next batch</button>' : ''}
+      </div></div>`;
+    return;
+  }
+
+  const b = confirmQueue[0];
+  const line = (label, value) => `
+    <div class="rv-line"><span class="rv-label">${escHtml(label)}</span>
+      <span class="rv-value">${value || '<span style="color:var(--muted)">—</span>'}</span></div>`;
+  const attached = [
+    ...b.sims.map(s => `<li><strong>SIM</strong> ${escHtml(fmtPhone(s.number) || '—')} · ${escHtml(s.provider || '—')}
+        · ${escHtml(s.status || '—')}${s.renewal ? ` · renews ${escHtml(fmtDate(s.renewal))}` : ''}</li>`),
+    ...b.bookings.map(k => `<li><strong>Booking</strong> ${escHtml(k.ref || '—')}${k.route ? ` · ${escHtml(k.route)}` : ''}${k.date ? ` · ${escHtml(fmtDate(k.date))}` : ''}</li>`),
+    ...b.virtualNumbers.map(v => `<li><strong>Virtual number</strong> ${escHtml(fmtPhone(v.number) || '—')}${v.platform ? ` · ${escHtml(v.platform)}` : ''}</li>`),
+  ].join('');
+
+  content.innerHTML = `
+    <div class="stats-row">${confirmStatsHtml()}</div>
+    <div class="card">
+      <div class="card-head">
+        <h2 class="card-title">Does this look right?</h2>
+        <span class="badge" style="background:rgba(148,163,184,0.15);color:var(--muted);">${pct}% confirmed</span>
+      </div>
+      <div class="rv-card">
+        <div class="rv-name">${escName(b.name || '(no name)')}</div>
+        ${line('Phone', escHtml(fmtPhone(b.phone) || ''))}
+        ${line('Email', escHtml(b.email))}
+        ${line('Address', escHtml(b.address))}
+        ${line('Notes', escHtml(b.notes))}
+        ${attached ? `<div class="rv-attached"><div class="rv-label">Also imported for them</div><ul>${attached}</ul></div>` : ''}
+      </div>
+      <div class="rv-actions">
+        <button class="btn btn-primary" id="rvConfirm" onclick="confirmBundle()">✓ Yes — confirm${attached ? ' all' : ''}</button>
+        <button class="btn btn-outline" onclick="openEditModal('${escHtml(String(b.legacyId))}')">✏️ Fix first</button>
+        <button class="btn btn-outline" onclick="skipConfirmBundle()">Skip for now</button>
+      </div>
+      <p class="rv-hint">Confirming records who checked it and when. It changes nothing else —
+        nothing is blocked anywhere in the app while data is unconfirmed.</p>
+    </div>`;
+}
+
+function confirmStatsHtml() {
+  const { total, remaining, done } = confirmStats;
+  return `
+    <div class="stat-card"><div class="stat-label">Imported records</div><div class="stat-value">${total}</div></div>
+    <div class="stat-card"><div class="stat-label">Confirmed</div><div class="stat-value" style="color:var(--success-ink)">${done}</div></div>
+    <div class="stat-card"><div class="stat-label">Still to check</div><div class="stat-value">${remaining}</div></div>`;
+}
+
+function skipConfirmBundle() {
+  confirmQueue.shift();
+  if (confirmQueue.length) paintConfirm(); else renderConfirmTab();
+}
+
+async function confirmBundle() {
+  if (confirmBusy) return;
+  const b = confirmQueue[0];
+  if (!b) return;
+  confirmBusy = true;
+  const btn = document.getElementById('rvConfirm');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const res = await window.api.confirmReviewed(b.id);
+    if (!res || !res.success) throw new Error(res?.error || 'save failed');
+    // Count what actually moved, from the server's answer — not an assumption
+    // about how many rows the card happened to show.
+    confirmStats.done += res.confirmed;
+    confirmStats.remaining = Math.max(0, confirmStats.remaining - res.confirmed);
+    showToast(`✓ Confirmed ${escName(b.name)}${res.attached ? ` and ${res.attached} attached record${res.attached === 1 ? '' : 's'}` : ''}`);
+    confirmQueue.shift();
+    if (confirmQueue.length) paintConfirm(); else renderConfirmTab();
+  } catch (e) {
+    showToast('Couldn’t save that confirmation — try again.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Yes — confirm'; }
+  } finally { confirmBusy = false; }
 }
 
 async function renderTasksTab() {
