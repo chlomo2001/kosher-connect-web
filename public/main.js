@@ -1646,6 +1646,25 @@ function statBand(name, value) {
 
 const STAT_BAND_INK = { clear: 'var(--success)', amber: 'var(--gold)', red: 'var(--danger-ink)' };
 
+// The sub-line under a banded stat, so the COLOUR is never the only thing
+// carrying the news (WCAG 1.4.1 — the same reason the availability calendar got
+// stripes and a "!" rather than three fills). A red 1 under "Available phones"
+// tells a staff member something is wrong and not what; "only 1 left to rent"
+// tells them. Neutral bands keep the card's own wording.
+function statBandNote(name, value, fallback) {
+  const band = statBand(name, value);
+  const n = Number(value) || 0;
+  if (band !== 'amber' && band !== 'red') return fallback;
+  const NOTES = {
+    phonesFree: () => (n === 0 ? 'none left to rent' : `only ${n} left to rent`),
+    returning:  () => `${n} due back today`,
+    arrears:    () => 'chase these',
+    overdue:    () => 'past their return date',
+    highTasks:  () => 'need doing first',
+  };
+  return (NOTES[name] || (() => fallback))();
+}
+
 // Inline style for a stat value, or '' to leave it the default navy ink.
 function statBandStyle(name, value) {
   const ink = STAT_BAND_INK[statBand(name, value)];
@@ -2091,14 +2110,14 @@ function renderRentalsTab() {
         title="Open Manage phones — see which handsets are free">
         <div class="stat-label">Available Phones</div>
         <div class="stat-value" style="${statBandStyle('phonesFree', availablePhones)}">${availablePhones}</div>
-        <div class="stat-sub">Ready to rent</div>
+        <div class="stat-sub">${escHtml(statBandNote('phonesFree', availablePhones, 'Ready to rent'))}</div>
       </div>
       <div class="stat-card" role="button" tabindex="0" style="cursor:pointer;"
         onclick="rentalsStatFilter('status','due_today')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();rentalsStatFilter('status','due_today')}"
         title="Show only rentals due back today">
         <div class="stat-label">Returning Today</div>
         <div class="stat-value" style="${statBandStyle('returning', returningToday)}">${returningToday}</div>
-        <div class="stat-sub">Expected back</div>
+        <div class="stat-sub">${escHtml(statBandNote('returning', returningToday, 'Expected back'))}</div>
       </div>
       ${needsReviewCount > 0 ? `
       <div class="stat-card" role="button" tabindex="0" style="cursor:pointer;"
@@ -2113,7 +2132,7 @@ function renderRentalsTab() {
         title="Show only rentals with an unpaid balance">
         <div class="stat-label">Outstanding Debt</div>
         <div class="stat-value" style="${statBandStyle('arrears', outstandingDebt)}">${fmtGbp(outstandingDebt)}</div>
-        <div class="stat-sub">Unpaid balances</div>
+        <div class="stat-sub">${escHtml(statBandNote('arrears', outstandingDebt, 'Unpaid balances'))}</div>
       </div>
     </div>
 
