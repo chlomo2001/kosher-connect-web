@@ -655,6 +655,8 @@ not been re-checked against the code and may have drifted the same way.
 
 | `render.mjs --long` stretches every seeded string to real shop length ("Yakov Mendl Bindinger (TomTom)", "Tomtom S/N ZO1357I02581") and joins the audit opposite `--empty`. Nothing failed today at 320/390/1280 — including the surname-first list, which wraps a long name and keeps the surname leading — so it is a guard, not a fix | f6463e9 | tooling |
 
+| A banded stat that turns red now says why. "Available phones — 1 — Ready to rent" painted the 1 in danger red and left the words unchanged, so colour was the whole message; the sub-line now follows the band ("only 1 left to rent", "none left to rent", "4 due back today", "chase these") and neutral bands keep the card's own wording. Same principle the availability calendar got in July — colour may carry the news, never alone. Bands unchanged and still owner-tunable | 59accf3 | Rentals, Wallet |
+
 Discovery: a text-scale diff written from scratch, which is what found the
 `body` size — nine Simple Mode sweeps had looked at those screenshots and none
 could see it, because the failure only exists BETWEEN two renders. Also swept
