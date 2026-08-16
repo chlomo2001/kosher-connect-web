@@ -55,10 +55,13 @@ async function handler(req, res) {
 
     if (ids.length) {
       const inList = `in.(${ids.map(enc).join(',')})`
+      // Bookings and virtual_numbers are FULLY TYPED — no legacy_extras blob at
+      // all, unlike customers and sims. Asking for one is a 400 from PostgREST,
+      // which is what made this route 500 on its first run in production.
       const [sims, bookings, vns] = await Promise.all([
         db.select('sims', `select=id,customer_id,legacy_extras,status,next_renewal_date,provider&customer_id=${inList}&${UNVERIFIED}`),
-        db.select('bookings', `select=id,customer_id,legacy_extras&customer_id=${inList}&${UNVERIFIED}`),
-        db.select('virtual_numbers', `select=id,customer_id,legacy_extras&customer_id=${inList}&${UNVERIFIED}`),
+        db.select('bookings', `select=id,customer_id,booking_reference,route,airline,travel_date,passenger&customer_id=${inList}&${UNVERIFIED}`),
+        db.select('virtual_numbers', `select=id,customer_id,number,platform,plan&customer_id=${inList}&${UNVERIFIED}`),
       ])
       const byId = new Map(bundles.map((b) => [b.id, b]))
       for (const s of sims) {
@@ -71,19 +74,19 @@ async function handler(req, res) {
         })
       }
       for (const b of bookings) {
-        const x = b.legacy_extras || {}
         byId.get(b.customer_id)?.bookings.push({
           id: b.id,
-          ref: x.reference || x.bookingRef || '',
-          route: [x.from, x.to].filter(Boolean).join(' → ') || x.route || '',
-          date: x.departDate || x.date || '',
+          ref: b.booking_reference || '',
+          route: [b.route, b.airline].filter(Boolean).join(' · '),
+          date: b.travel_date || '',
+          passenger: b.passenger || '',
         })
       }
       for (const v of vns) {
         byId.get(v.customer_id)?.virtualNumbers.push({
           id: v.id,
-          number: v.legacy_extras?.number || '',
-          platform: v.legacy_extras?.platform || '',
+          number: v.number || '',
+          platform: [v.platform, v.plan].filter(Boolean).join(' · '),
         })
       }
     }

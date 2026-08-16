@@ -15354,7 +15354,7 @@ function paintConfirm() {
   const attached = [
     ...b.sims.map(s => `<li><strong>SIM</strong> ${escHtml(fmtPhone(s.number) || '—')} · ${escHtml(s.provider || '—')}
         · ${escHtml(s.status || '—')}${s.renewal ? ` · renews ${escHtml(fmtDate(s.renewal))}` : ''}</li>`),
-    ...b.bookings.map(k => `<li><strong>Booking</strong> ${escHtml(k.ref || '—')}${k.route ? ` · ${escHtml(k.route)}` : ''}${k.date ? ` · ${escHtml(fmtDate(k.date))}` : ''}</li>`),
+    ...b.bookings.map(k => `<li><strong>Booking</strong> ${escHtml(k.ref || '—')}${k.passenger ? ` · ${escName(k.passenger)}` : ''}${k.route ? ` · ${escHtml(k.route)}` : ''}${k.date ? ` · ${escHtml(fmtDate(k.date))}` : ''}</li>`),
     ...b.virtualNumbers.map(v => `<li><strong>Virtual number</strong> ${escHtml(fmtPhone(v.number) || '—')}${v.platform ? ` · ${escHtml(v.platform)}` : ''}</li>`),
   ].join('');
 
