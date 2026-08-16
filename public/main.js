@@ -6109,7 +6109,16 @@ function renderTableRows() {
     <tr class="${selected}" data-id="${c.id}">
       <td>
         <div class="customer-name">${customerNameCell(c, surnameFirst)}${customerHasPassport(c) ? ' <span title="Passport on file">🛂</span>' : ''}${unconfirmedChip(c)}</div>
-        <div class="customer-email">${escHtml(c.email || '')}${c.accountEmail ? `${c.email ? '<br>' : ''}<span title="Account/login email (Lebara etc.) — not for contacting the customer" style="color:var(--muted);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''}</div>
+        ${/* The account email is the SHOP's carrier login, not the customer's
+             address, and it was printed under 453 of 609 names — 452 of them
+             with no contact email at all, so the only thing on that line was
+             our own Gmail in the position where theirs belongs. It reads as
+             "this is how you reach them", which is the opposite of true. The
+             list is for finding a person; the login lives on their card, where
+             you are working on their SIM. The search never matched it either
+             (name, phone and contact email only), so nothing is harder to find
+             for its absence. */''}
+        <div class="customer-email">${escHtml(c.email || '')}</div>
       </td>
       <td class="kc-phone">${c.phone ? escHtml(fmtPhone(c.phone)) : '—'}</td>
       <td>${services || '<span style="color:var(--muted);font-size:var(--fs-small);">None</span>'}</td>
