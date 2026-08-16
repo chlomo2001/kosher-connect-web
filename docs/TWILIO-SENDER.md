@@ -24,6 +24,13 @@ Shloime or for 421 Bury New Road.
 The account is the blocker, not the app. **Alphanumeric Sender IDs are not
 available on trial accounts**, so step 1 is not optional for this route.
 
+## The order that matters
+
+Upgrade → register the sender ID → create the Messaging Service → add the
+sender to its pool → point the app at it. A Messaging Service can be created at
+any time (and one already exists: `KosherConnect`, SID `MG541b51d6…`), but its
+sender pool will refuse an alphanumeric sender while the account is on trial.
+
 ## Step 1 — upgrade off trial
 
 Console top bar: the green **`Trial: £11.71  Upgrade`** pill — click *Upgrade*.
@@ -46,12 +53,19 @@ Console ▸ **Messaging ▸ Services ▸ Create Messaging Service**.
    it should appear on the handset.
 4. Finish the wizard. Nothing else in it matters for our use.
 
-**Check while you are there:** UK operators increasingly filter alphanumeric
-senders that are not registered on the MEF UK SMS SenderID Protection Registry
-(an anti-spoofing list). Twilio's console will say if registration applies to
-this account — if it offers it, do it, or texts may silently not arrive on some
-networks. This is the one item in this runbook that may have changed since it
-was written; trust the console over this page.
+## Step 2b — REGISTER the sender ID (the UK is a pre-registration country)
+
+Confirmed against Twilio's own docs, 08-16: the UK requires an alphanumeric
+sender ID to be registered and vetted with the carriers BEFORE it can send.
+This is not the same as adding it to a sender pool, and it is not instant.
+
+Console ▸ **Numbers and Senders ▸ Alphanumeric senders ▸ Set up a new
+alphanumeric sender ID**. It asks for the business (Hatsluche Ltd t/a Kosher
+Connect, 421 Bury New Road) and what the messages will say. Then it waits on
+carrier vetting — allow days, not minutes.
+
+Plan around it: if SMS is wanted by a particular date, this is the step with a
+queue in it, and it can only start once the account is off trial.
 
 ## Step 3 — point the app at it
 
