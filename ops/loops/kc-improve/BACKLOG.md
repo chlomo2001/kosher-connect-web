@@ -651,6 +651,8 @@ not been re-checked against the code and may have drifted the same way.
 | The type-ramp sweep was already done and the backlog's "~455 remaining" was stale — measured: 563 inline declarations, 556 on a ramp token, and all seven survivors correct (three print CSS, four emoji glyphs). Recorded as tidying so it stops being carried as a P1 | e770510 | backlog |
 | SIM plans, bookings and repairs each printed a create button with the same label and action as the topbar's, visible in the same screenful ~350px below it. Customers, Wallet and the Dashboard never did; Rentals and Shop put theirs in a row of several, where it reads as a group. The first record on a phone moved up 40/40/38px | bfb6723 | SIM Plans, Tickets & Flights, Repairs |
 
+| Ten interactive controls announced as nothing to a screen reader: two time fields sharing one label (the existing label pass names only a group's FIRST control), three fields headed by a plain `<span>` or a label outside any `.form-group`, the returned toggle (now `role=switch` with `aria-checked` following the knob), both halves of the equipment slider, and three table cells `kcMarkClickable` had turned into unnamed `role=button` tab stops because their only onclick was an `event.stopPropagation()` guard. `ops/harness/names.mjs` joins the nightly audit | 8e32f8b | Manage Rental, New booking, Manage SIM, Draft reminder + tooling |
+
 Discovery: a text-scale diff written from scratch, which is what found the
 `body` size — nine Simple Mode sweeps had looked at those screenshots and none
 could see it, because the failure only exists BETWEEN two renders. Also swept
