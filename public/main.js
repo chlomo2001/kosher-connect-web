@@ -5610,7 +5610,10 @@ function closeStackedModal(onClosed) {
 // customer's wallet. The POS till is deliberately exempt — its 💷 Charge
 // button IS the confirmation on the shopfloor.
 let kcConfirmResolve = null;
-function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm charge', amount = null }) {
+// `blocking: true` renders a dialog with NO confirm button — used by the
+// booking gate, where the answer to "passport expires before the flight" is not
+// a decision the operator gets to make. It always resolves false.
+function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm charge', amount = null, blocking = false }) {
   return new Promise(resolve => {
     kcConfirmResolve = resolve;
     kcSaveReturnFocus('kcConfirm');
@@ -5629,8 +5632,8 @@ function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm cha
         <div style="font-size:var(--fs-ui);line-height:1.65;margin:4px 0 10px;color:var(--text);">${body}</div>
         ${amount !== null ? `<div style="font-size:var(--fs-h1);font-weight:700;margin:0 0 16px;font-feature-settings:'tnum';">${fmtGbp(Number(amount))}</div>` : ''}
         <div class="modal-actions">
-          <button class="btn btn-outline" onclick="kcConfirmDone(false)">Cancel</button>
-          <button class="btn btn-primary" onclick="kcConfirmDone(true)">✓ ${escHtml(okLabel)}</button>
+          <button class="btn btn-outline" onclick="kcConfirmDone(false)">${blocking ? 'Close' : 'Cancel'}</button>
+          ${blocking ? '' : `<button class="btn btn-primary" onclick="kcConfirmDone(true)">✓ ${escHtml(okLabel)}</button>`}
         </div>
       </div>`;
     el.classList.remove('hidden');
@@ -11023,6 +11026,82 @@ function bkCheckinToggle() {
   }
 }
 
+// The Booking Gate (owner, 08-16). Mirrors lib/bookingGate.mjs — change both
+// together; test/bookingGate.test.mjs holds the rules.
+//
+// The app already NOTICED these problems: the daily sweep raises a task when a
+// passport expires within 90 days of travel. But the customer is at the counter
+// when the booking is made and long gone when the task appears, and a passport
+// that runs out before the flight is not a task — it is a trip that will not
+// happen. So the questions get asked here, at the only moment anyone can still
+// answer them, on the same BLOCK / VERIFY pattern as the rental charge gate.
+const BK_BLOCK = 'block', BK_VERIFY = 'verify', BK_PASS = 'pass';
+const BK_SIX_MONTHS = 183;
+
+function bookingGateFor(b, verifications = []) {
+  const checks = [];
+  const seen = new Set(verifications.map(String));
+  const isDate = (x) => /^\d{4}-\d{2}-\d{2}$/.test(String(x || ''));
+  const dayDiff = (x, y) => Math.round((Date.parse(x) - Date.parse(y)) / 86400000);
+  const travelDate = b.travelDate || '';
+
+  if (!b.passportOnFile) checks.push({
+    key: 'passport-on-file',
+    level: seen.has('passport-on-file') ? BK_PASS : BK_VERIFY,
+    title: 'No passport copy on file',
+    detail: 'Take a photocopy or scan now — chasing it later is how a booking becomes a problem.',
+  });
+
+  if (isDate(b.passportExpiry) && isDate(travelDate)) {
+    const after = dayDiff(b.passportExpiry, travelDate);
+    if (after < 0) checks.push({
+      key: 'passport-expired', level: BK_BLOCK,
+      title: 'Passport expires before the travel date',
+      detail: `It runs out ${Math.abs(after)} day${Math.abs(after) === 1 ? '' : 's'} before they fly. The trip cannot go ahead on this document.`,
+    });
+    else if (after < BK_SIX_MONTHS) checks.push({
+      key: 'passport-thin',
+      level: seen.has('passport-thin') ? BK_PASS : BK_VERIFY,
+      title: `Passport valid only ${after} days after travel`,
+      detail: 'Many destinations want six months beyond the return date. Check this one before booking.',
+    });
+  } else if (isDate(travelDate) && b.passportOnFile && !isDate(b.passportExpiry)) {
+    checks.push({
+      key: 'passport-expiry-unknown',
+      level: seen.has('passport-expiry-unknown') ? BK_PASS : BK_VERIFY,
+      title: 'Passport expiry not recorded',
+      detail: 'Without it nobody can tell whether this passport outlives the trip.',
+    });
+  }
+
+  const worst = checks.some(c => c.level === BK_BLOCK) ? BK_BLOCK
+    : checks.some(c => c.level === BK_VERIFY) ? BK_VERIFY : BK_PASS;
+  return { checks, worst, canProceed: worst !== BK_BLOCK };
+}
+
+// Ask before charging. Returns true when the booking may go ahead.
+// A BLOCK has no "continue" button at all — the only way past it is to fix the
+// record, which is the point.
+async function bookingGatePrompt(payload) {
+  const gate = bookingGateFor(payload);
+  if (gate.worst === BK_PASS) return true;
+  const open = gate.checks.filter(c => c.level !== BK_PASS);
+  const blocked = gate.worst === BK_BLOCK;
+  const rows = open.map(c => `
+    <div class="kc-gate-row ${c.level === BK_BLOCK ? 'is-block' : ''}">
+      <div class="kc-gate-text"><strong>${escHtml(c.title)}</strong><br>
+        <span style="color:var(--muted);font-size:var(--fs-small);">${escHtml(c.detail)}</span></div>
+    </div>`).join('');
+  return await kcConfirm({
+    title: blocked ? '🛂 This booking cannot go ahead' : '🛂 Before you book',
+    body: rows + (blocked
+      ? '<div style="margin-top:10px;color:var(--muted);font-size:var(--fs-small);">Fix the passport details and try again.</div>'
+      : '<div style="margin-top:10px;color:var(--muted);font-size:var(--fs-small);">Booking anyway records that you checked.</div>'),
+    okLabel: 'I have checked — book it',
+    blocking: blocked,
+  });
+}
+
 async function saveNewBooking() {
   const paxList = bkPassengers.filter(p => (p.fullName || '').trim());
   paxList.forEach(p => { p.fullName = capName(p.fullName); });
@@ -11060,6 +11139,9 @@ async function saveNewBooking() {
   if (!kcBeginWrite(guardKey)) return;
   let res;
   try {
+    // Passport questions BEFORE the money question: there is no point
+    // confirming a charge for a trip that cannot happen.
+    if (!(await bookingGatePrompt(payload))) return;
     const bkCust = customers.find(c => c.id === payload.customerId);
     if (!(await kcConfirm({
       title: 'Confirm booking charge',
