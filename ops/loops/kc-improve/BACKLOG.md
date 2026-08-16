@@ -192,10 +192,11 @@ Safe (loop-eligible), ranked value ÷ effort:
       then LIVE is impossible by construction, because a real customer's number
       is not a verified number, and every trial message is prefixed
       "Sent from your Twilio trial account". No face pic or ID is needed for
-      either. A photo ID + proof of address at 421 Bury New Rd is only needed if
-      we later buy a **UK number** (Twilio regulatory bundle); an alphanumeric
-      sender ("KosherCnct") avoids that but cannot receive replies — decide
-      which before buying anything.
+      either. **Owner decided 08-16: alphanumeric sender "KosherCnct" only, no
+      Twilio number** — which removes the regulatory bundle (no photo ID, no
+      proof of address) and means replies are impossible, so outgoing copy must
+      never say "reply STOP/YES". Alphanumeric senders need a PAID account, so
+      the upgrade is required, not optional. Runbook: `docs/TWILIO-SENDER.md`.
 - [ ] **P3 · done-but-dark** — **myPOS ↔ till** one-tap. **BUILT 08-04 and
       PARKED by owner decision 08-04** ("we wait and work manually with the
       current K300"). Facts that closed it: K300 will never do ePOS
