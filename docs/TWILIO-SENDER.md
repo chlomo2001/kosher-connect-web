@@ -110,3 +110,33 @@ is the safety, and it is a good one — it cannot be bypassed from the UI.
 Before flipping it, re-read the outgoing templates for "reply" wording: with an
 alphanumeric sender, `Reply STOP` and `Reply YES` are both untrue. Opt-out has
 to read "call 0161 531 1386".
+
+
+## Delivery tracking (built 08-16, after the 21267 episode)
+
+`email_log.status` only ever said what THIS APP did — held, redirected, sent.
+Twilio returning a message SID means "accepted", not "delivered", and for three
+weeks every message was accepted and then rejected with **21267 — Alphanumeric
+Sender ID cannot be used as the 'From' number on trial accounts**. Two of those
+were real rental reminders. The log said `redirected` for all of them.
+
+So the app now asks Twilio to report back:
+
+- `lib/sms.js` sets `StatusCallback` on every send, pointing at
+  `<PUBLIC_BASE_URL>/api/sms-status`. With no `PUBLIC_BASE_URL` (and no
+  `VERCEL_URL`) no callback is attached and sending is unaffected — losing
+  observability must never be able to stop the shop texting anyone.
+- `/api/sms-status` verifies **Twilio's own signature** using the account auth
+  token, so there is no new shared secret. The signature covers the URL as well
+  as the body, so it cannot be replayed against another endpoint.
+- The verdict lands in `email_log.delivery_status` / `delivery_error` /
+  `delivered_at`, kept SEPARATE from our own `status` so a delivery result
+  cannot erase the fact that a message was a test redirect.
+- The 06:00 sweep raises a rolling **SMSFAIL** task while anything failed to
+  arrive in the last seven days — one task, not one per message, because a
+  broken sender fails every message at once.
+
+`/api/health` now reports `sms.deliveryTracking: on|off` so this can be checked
+rather than assumed.
+
+**Set `PUBLIC_BASE_URL=https://app.kosher-connect.com` in Vercel** to turn it on.

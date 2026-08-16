@@ -13,6 +13,8 @@
 //      (VN-<id>-<YYYY-MM>, idempotent), next_billing_date advances +1 month
 //   6. Carrier email needing a human → rolling SIMNEW / SIMPAIR tasks from the
 //      sim_mail rows /api/inbound/mail could not pair with certainty
+//   7. SMS that never arrived → rolling SMSFAIL task from the delivery results
+//      /api/sms-status writes back onto email_log
 //
 // Callers: Vercel Cron (Authorization: Bearer CRON_SECRET — note crons fire
 // only on PRODUCTION deployments), or a signed-in staff member (the "Run
@@ -674,8 +676,36 @@ async function handler(req, res) {
     counts.simMailAmbiguous = ambiguous
     })
 
+    await section('sms-delivery', async () => {
+    // ── 7. Messages that never reached anyone ──
+    // /api/sms-status writes the carrier's verdict onto each row. A message the
+    // carrier rejected is worse than one never sent: staff believe the customer
+    // was told. Between 24 Jul and 16 Aug every SMS failed with 21267 and the
+    // log said 'redirected' throughout — this is the task that would have said
+    // so on the morning of 25 July.
+    const since = new Date(Date.now() - 7 * 86400000).toISOString()
+    const failed = await selectAllPaged(
+      'email_log', 'id,delivery_status,delivery_error,actual_to,created_at',
+      `provider=eq.twilio&delivery_status=in.(undelivered,failed)&created_at=gte.${since}&order=created_at.desc`
+    )
+    if (failed.length) {
+      // One rolling task, not one per message: a broken sender fails EVERY
+      // message, and 200 identical tasks would bury the list they live in.
+      const reasons = [...new Set(failed.map(f => (f.delivery_error || 'no reason given')))].slice(0, 3)
+      await upsertOpenTask({
+        reference: 'SMSFAIL',
+        title: `📵 ${failed.length} text${failed.length === 1 ? '' : 's'} did not reach anyone this week`,
+        notes: `${reasons.join(' · ')}. The customer was NOT told, whatever the message said. `
+             + 'Twilio → Monitor → Logs → Messaging has the full history.',
+      })
+    } else {
+      await closeOpenTask('SMSFAIL')
+    }
+    counts.smsUndelivered = failed.length
+    })
+
     await section('custom-rules', async () => {
-    // ── 7. Owner-defined automation rules (#20) ──
+    // ── 8. Owner-defined automation rules (#20) ──
     // Each enabled rule raises RULE-<ruleId>-<entityId> tasks for matching
     // records; keys not re-raised this run are closed. Built on the same
     // idempotent upsert as the fixed sweeps above.
