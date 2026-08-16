@@ -103,11 +103,18 @@ hundreds of times a month:
 
 Both close themselves when their pile empties.
 
-## Not built yet
+## The screen
 
-There is no screen for working the pile — `sim_mail.resolved_at` exists and
-nothing sets it, so SIMPAIR will report the same backlog every morning until a
-queue UI lands or the rows are resolved in SQL. That is the next piece, and it
-should wait until real mail has been flowing for a few days: the shape of the
-queue depends on what actually arrives, and guessing at it now would build the
-wrong screen.
+**Services → Carrier Mail.** Three views: *Needs a human* (the default and the
+only one that is work), *Filed*, and *Everything*.
+
+An `ambiguous` row arrives with its candidates — the SIMs registered at that
+recipient address — so settling it is one click, and the click writes
+`sim_id` + `resolved_at`. Candidates are recomputed on every read rather than
+stored, so a SIM added after the message arrived still shows up for it.
+
+An `unknown` row has nothing to pick, because the SIM genuinely is not on the
+books; the row says so and the number is there to act on. **Dismiss** resolves
+anything without pairing, for mail that is simply not about a SIM.
+
+`resolved_at` is what empties the daily SIMPAIR task.

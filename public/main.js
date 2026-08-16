@@ -143,6 +143,10 @@ window.api = {
   }).then(r => r.json()),
 
   getVirtualNumbers: () => kcFetch('/api/virtual-numbers').then(r => r.ok ? r.json() : []),
+  getCarrierMail: (filter = 'pending') => kcFetch(`/api/sim-mail?filter=${encodeURIComponent(filter)}&limit=60`).then(r => r.ok ? r.json() : null),
+  settleCarrierMail: (body) => kcFetch('/api/sim-mail', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }).then(r => r.json()),
   getReviewQueue: (limit = 12) => kcFetch(`/api/review?limit=${limit}`).then(r => r.ok ? r.json() : null),
   confirmReviewed: (customerId) => kcFetch('/api/review', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -664,6 +668,7 @@ const TAB_META = {
   koltorah:  { label: 'Kol Torah',         title: 'Kol <span>Torah</span>',             render: () => renderKolTorahTab(),  search: false, primary: { label: '+ New job',      run: () => ktFocusNewJob() } },
   tasks:     { label: 'Tasks',             title: 'Task <span>List</span>',             render: () => renderTasksTab(),     search: false },
   review:    { label: 'Confirm Data',      title: 'Confirm <span>Imported Data</span>', render: () => renderConfirmTab(),    search: false },
+  mail:      { label: 'Carrier Mail',      title: 'Carrier <span>Mail</span>',          render: () => renderCarrierMailTab(), search: false },
   virtual:   { label: 'Virtual Numbers',   title: 'Virtual <span>Numbers</span>',       render: () => renderVirtualTab(),   search: false, primary: { label: '+ New number',   run: () => openNewVNModal() } },
   settings:  { label: 'Settings',          title: 'System <span>Settings</span>',       render: () => renderSettingsTab(),  search: false },
 };
@@ -15292,6 +15297,141 @@ async function snoozeTask(id, choice) {
   }
 }
 
+// ---------- Carrier mail ----------
+//
+// Every message /api/inbound/mail files, and the two piles it could not settle
+// on its own. The default view is the WORK — unresolved and unpaired — because
+// a list of hundreds of correctly-filed Lebara renewals is not a screen anyone
+// needs to look at, while the handful it could not place is.
+//
+//   ambiguous  a pool address shared by up to 37 SIMs, nothing in the text to
+//              say which. Candidates are offered; one click settles it.
+//   unknown    a number live at a carrier that the app has no record of. There
+//              is nothing to pick — the SIM does not exist yet — so the row
+//              says so plainly and links to the customer search.
+let cmFilter = 'pending';
+let cmData = { counts: { pending: 0, paired: 0, total: 0 }, messages: [] };
+let cmBusy = false;
+
+async function renderCarrierMailTab() {
+  const content = document.getElementById('mainContent');
+  content.innerHTML = skeletonHtml('stats');
+  let data = null;
+  try { data = await window.api.getCarrierMail(cmFilter); }
+  catch { content.innerHTML = errorHtml('Couldn’t load carrier mail'); return; }
+  if (!data || !data.success) { content.innerHTML = errorHtml('Couldn’t load carrier mail'); return; }
+  cmData = data;
+  paintCarrierMail();
+}
+
+function cmSetFilter(f) { cmFilter = f; renderCarrierMailTab(); }
+
+function paintCarrierMail() {
+  const content = document.getElementById('mainContent');
+  const { pending, paired, total } = cmData.counts;
+  // Its own chip, not .kc-view-chip: that component carries its colour on an
+  // inner .kc-view-apply span, so reusing the shell alone left the active chip
+  // at 3.24:1 in light and 2.62:1 in dark. The harness caught it.
+  const chip = (f, label) => `<button class="cm-chip ${cmFilter === f ? 'on' : ''}"
+      onclick="cmSetFilter('${f}')" ${cmFilter === f ? 'aria-current="true"' : ''}>${label}</button>`;
+
+  const rows = cmData.messages.length === 0
+    ? `<div class="empty-state"><div class="emoji">${cmFilter === 'pending' ? '✅' : '📭'}</div>
+        <p>${cmFilter === 'pending'
+          ? 'Nothing waiting — every message so far landed on a SIM or has been dealt with.'
+          : 'No carrier mail here yet.'}</p>
+        ${total === 0 ? '<small>Mail appears the moment Forward Email posts it in — see docs/INBOUND-MAIL.md.</small>' : ''}
+      </div>`
+    : cmData.messages.map(cmRowHtml).join('');
+
+  content.innerHTML = `
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">Needs a human</div>
+        <div class="stat-value" style="${pending ? 'color:var(--danger-ink)' : ''}">${pending}</div></div>
+      <div class="stat-card"><div class="stat-label">Filed on a SIM</div>
+        <div class="stat-value" style="color:var(--success-ink)">${paired}</div></div>
+      <div class="stat-card"><div class="stat-label">Messages received</div>
+        <div class="stat-value">${total}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h2 class="card-title">Carrier mail</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${chip('pending', 'Needs a human')}${chip('paired', 'Filed')}${chip('all', 'Everything')}
+        </div>
+      </div>
+      <div class="cm-list">${rows}</div>
+    </div>`;
+}
+
+function cmRowHtml(m) {
+  const when = m.receivedAt ? `${fmtDate(m.receivedAt)} ${String(m.receivedAt).slice(11, 16)}` : '—';
+  const badge = {
+    address: ['Paired by address', 'var(--success-ink)'],
+    'address+number': ['Paired by address + number', 'var(--success-ink)'],
+    number: ['Paired by number', 'var(--success-ink)'],
+    ambiguous: ['Needs picking', 'var(--danger-ink)'],
+    unknown: ['Not on the books', 'var(--danger-ink)'],
+  }[m.confidence] || [m.confidence, 'var(--muted)'];
+
+  const numbers = (m.numbers || []).map(n => `<span class="kc-phone">${escHtml(fmtPhone('0' + n))}</span>`).join(', ');
+  const settled = !!m.sim || !!m.resolvedAt;
+
+  return `
+    <div class="cm-row">
+      <div class="cm-when">${escHtml(when)}${m.carrier ? `<div class="cm-carrier">${escHtml(m.carrier)}</div>` : ''}</div>
+      <div class="cm-body">
+        <div class="cm-subject">${escHtml(m.subject || '(no subject)')}</div>
+        <div class="cm-meta">
+          <span style="color:${badge[1]}">${escHtml(badge[0])}</span>
+          ${m.recipient ? ` · sent to ${escHtml(m.recipient)}` : ''}
+          ${numbers ? ` · ${numbers}` : ''}
+        </div>
+        ${m.sim ? `<div class="cm-meta">Filed on ${escHtml(fmtPhone(m.sim.number))} ·
+            ${escHtml(m.sim.provider || '')} · ${escName(m.sim.customerName || '')}</div>` : ''}
+        ${!settled && m.candidates.length ? `
+          <div class="cm-pick">
+            <span class="rv-label">Which SIM is this?</span>
+            ${m.candidates.map(c => `<button class="btn btn-outline btn-sm"
+                onclick="cmPair(${m.id}, '${escHtml(String(c.id))}')">
+                ${escHtml(fmtPhone(c.number) || '—')} · ${escName(c.customerName || '')}</button>`).join('')}
+          </div>` : ''}
+        ${!settled && !m.candidates.length ? `
+          <div class="cm-pick">
+            <span style="color:var(--muted);font-size:var(--fs-small);">
+              No SIM on record carries ${numbers ? 'that number' : 'this address'} — add the SIM to the
+              customer it belongs to, then this will pair itself next time.</span>
+          </div>` : ''}
+      </div>
+      <div class="cm-actions">
+        ${settled ? '<span style="color:var(--muted);font-size:var(--fs-micro);">done</span>'
+          : `<button class="btn btn-outline btn-sm" onclick="cmResolve(${m.id})" title="Nothing to do about this one">Dismiss</button>`}
+      </div>
+    </div>`;
+}
+
+async function cmPair(id, simId) {
+  if (cmBusy) return; cmBusy = true;
+  try {
+    const res = await window.api.settleCarrierMail({ id, simId });
+    if (!res || !res.success) throw new Error(res?.error || 'failed');
+    showToast('✓ Filed on that SIM');
+    await renderCarrierMailTab();
+  } catch { showToast('Couldn’t file that message — try again.', 'error'); }
+  finally { cmBusy = false; }
+}
+
+async function cmResolve(id) {
+  if (cmBusy) return; cmBusy = true;
+  try {
+    const res = await window.api.settleCarrierMail({ id, op: 'resolve' });
+    if (!res || !res.success) throw new Error(res?.error || 'failed');
+    showToast('Dismissed.');
+    await renderCarrierMailTab();
+  } catch { showToast('Couldn’t dismiss that — try again.', 'error'); }
+  finally { cmBusy = false; }
+}
+
 // Contact number vs the SIMs we run for them. Mirrors lib/contactLines.mjs —
 // change both together (test/contactLines.test.mjs covers the rules).
 //
@@ -16305,7 +16445,7 @@ async function renderSettingsTab() {
       </tbody></table>
       <div class="section-divider" style="margin:14px 14px 4px;">🔓 What helpers can see</div>
       <div style="padding:4px 14px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
-        ${['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'shop', 'koltorah', 'virtual', 'tasks', 'review', 'settings'].map(t => `
+        ${['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'shop', 'koltorah', 'virtual', 'tasks', 'review', 'mail', 'settings'].map(t => `
           <label style="display:flex;align-items:center;gap:5px;font-size:var(--fs-small);cursor:pointer;">
             <input type="checkbox" class="htTab" value="${t}" style="accent-color:var(--accent);cursor:pointer;"
               ${(cfg.settings.find(s => s.key === 'helper_tabs')?.textValue || '').split(',').includes(t) ? 'checked' : ''}>

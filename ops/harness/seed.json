@@ -1273,5 +1273,79 @@
         }
       }
     ]
+  },
+  "/api/sim-mail": {
+    "success": true,
+    "counts": {
+      "pending": 2,
+      "paired": 118,
+      "total": 120
+    },
+    "messages": [
+      {
+        "id": 42,
+        "receivedAt": "2026-08-16T17:08:00Z",
+        "from": "billing@lebara.co.uk",
+        "carrier": "Lebara",
+        "subject": "Your plan renews on 2 September",
+        "snippet": "",
+        "recipient": "shevabruches111@gmail.com",
+        "confidence": "ambiguous",
+        "numbers": [],
+        "resolvedAt": null,
+        "sim": null,
+        "candidates": [
+          {
+            "id": "s1",
+            "number": "+447349967598",
+            "provider": "Lebara",
+            "customerName": "Menachem Adler"
+          },
+          {
+            "id": "s2",
+            "number": "+447423287185",
+            "provider": "Lebara",
+            "customerName": "Rivka Gluck"
+          }
+        ]
+      },
+      {
+        "id": 41,
+        "receivedAt": "2026-08-16T15:25:00Z",
+        "from": "noreply@lebara.com",
+        "carrier": "Lebara",
+        "subject": "Welcome to Lebara — 07349 967598",
+        "snippet": "",
+        "recipient": "",
+        "confidence": "unknown",
+        "numbers": [
+          "7349967598"
+        ],
+        "resolvedAt": null,
+        "sim": null,
+        "candidates": []
+      },
+      {
+        "id": 40,
+        "receivedAt": "2026-08-16T11:34:00Z",
+        "from": "billing@lebara.co.uk",
+        "carrier": "Lebara",
+        "subject": "Payment received",
+        "snippet": "",
+        "recipient": "gitt.bilig+moshe@gmail.com",
+        "confidence": "address",
+        "numbers": [
+          "7807065243"
+        ],
+        "resolvedAt": "2026-08-16T11:34:10Z",
+        "sim": {
+          "id": "s3",
+          "number": "+447807065243",
+          "provider": "Lebara",
+          "customerName": "Yossi Taitelbaum"
+        },
+        "candidates": []
+      }
+    ]
   }
 }
