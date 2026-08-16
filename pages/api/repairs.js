@@ -10,10 +10,22 @@
 
 import { withStaff, withTab } from '../../lib/auth.js'
 import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
+import { statusesFromCsv, SYSTEM_STATUSES } from '../../lib/repairStatuses.mjs'
 import { postAutoCharges } from '../../lib/customCharges.js'
 import { money } from '../../lib/money.mjs'
 
-const REPAIR_STATUSES = ['Open', 'In Progress', 'Ready', 'Collected', 'Cancelled']
+// The five system statuses plus whatever stages the owner has added in
+// Settings. Read per request (a stage added a minute ago must be selectable),
+// and it fails SAFE: if the settings read fails, the five system statuses still
+// validate, so a repair can always be moved through its life.
+async function allowedStatuses() {
+  try {
+    const rows = await db.select('settings', 'select=text_value&key=eq.repair_stages')
+    return statusesFromCsv(rows[0]?.text_value || '')
+  } catch {
+    return SYSTEM_STATUSES
+  }
+}
 const EMBED = 'customers(legacy_id,first_name,last_name),repair_services(id,price,service_prices(name))'
 
 function toApp(row) {
@@ -98,8 +110,9 @@ async function handler(req, res) {
       if (!id) return res.status(400).json({ success: false, error: 'Repair id is required.' })
       const patch = {}
       if (status !== undefined) {
-        if (!REPAIR_STATUSES.includes(status)) {
-          return res.status(400).json({ success: false, error: `Status must be one of: ${REPAIR_STATUSES.join(', ')}.` })
+        const statuses = await allowedStatuses()
+        if (!statuses.includes(status)) {
+          return res.status(400).json({ success: false, error: `Status must be one of: ${statuses.join(', ')}.` })
         }
         patch.status = status
         if (status === 'Collected') patch.closed_at = new Date().toISOString()

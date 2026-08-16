@@ -90,6 +90,15 @@ test('the lists are actually populated (a bad regex must fail loudly)', () => {
   assert.ok(metaTabs().length >= 10)
 })
 
+test('the helper_tabs validator uses ALL_TABS, not a copy of it', () => {
+  // It used to hold its own literal, which had already drifted — 'koltorah'
+  // was missing, so ticking that box for a helper was dropped on save.
+  const src = read('pages/api/settings.js')
+  const block = src.slice(src.indexOf("key === 'helper_tabs'"), src.indexOf("key === 'helper_tabs'") + 900)
+  assert.ok(block.includes('ALL_TABS.includes'), 'helper_tabs must validate against ALL_TABS')
+  assert.ok(!/const ALL = \[/.test(block), 'helper_tabs must not keep its own tab list')
+})
+
 test('review — the tab that shipped hidden — is in all four', () => {
   assert.ok(allTabs().includes('review'))
   assert.ok(navTabs().includes('review'))

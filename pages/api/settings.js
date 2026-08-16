@@ -7,7 +7,8 @@
 // GET returns everything the app needs to price: rental_rates, damage_rates,
 // and the settings key/value list.
 
-import { withStaff } from '../../lib/auth.js'
+import { withStaff, ALL_TABS } from '../../lib/auth.js'
+import { cleanStages } from '../../lib/repairStatuses.mjs'
 import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 
 // Typed rules for editable settings keys. A key not listed here is shown
@@ -196,9 +197,11 @@ async function handler(req, res) {
 
       // Helper-visibility list (text CSV, validated against known tabs).
       if (table === 'settings' && key === 'helper_tabs') {
-        const ALL = ['dashboard', 'customers', 'rentals', 'sim', 'wallet',
-          'bookings', 'repairs', 'services', 'shop', 'virtual', 'tasks', 'settings']
-        const list = String(values?.textValue || '').split(',').map(s => s.trim()).filter(t => ALL.includes(t))
+        // ALL_TABS, not a copy of it. This validated against its own hardcoded
+        // list, which had drifted: 'koltorah' was missing, so ticking Kol Torah
+        // for a helper was silently dropped on save — and every tab added since
+        // would have been too.
+        const list = String(values?.textValue || '').split(',').map(s => s.trim()).filter(t => ALL_TABS.includes(t))
         if (!list.length) return res.status(400).json({ success: false, error: 'Helpers need at least one tab.' })
         await db.update('settings', `key=eq.helper_tabs`, {
           text_value: list.join(','),
@@ -234,6 +237,31 @@ async function handler(req, res) {
           }])
         }
         return res.json({ success: true, warnings, list })
+      }
+
+      // Repair stages (text CSV) — the owner's OWN steps between "In Progress"
+      // and "Ready" ("Waiting for part", "Quote sent"). The five system
+      // statuses are not editable here and cannot be duplicated: Collected
+      // posts the wallet charge and Cancelled closes without one, so a second
+      // status wearing either name would be a silent money bug.
+      // See lib/repairStatuses.mjs.
+      if (table === 'settings' && key === 'repair_stages') {
+        const { list, warnings: stageWarnings } = cleanStages(values?.textValue)
+        if (list.length > 20) {
+          return res.status(400).json({ success: false, error: 'Keep the extra stages under 20.' })
+        }
+        const updated = await db.update('settings', `key=eq.repair_stages`, {
+          text_value: list.join(','),
+          updated_at: new Date().toISOString(),
+        })
+        if (!updated.length) {
+          await db.insert('settings', [{
+            key: 'repair_stages',
+            text_value: list.join(','),
+            description: 'Extra repair statuses between In Progress and Ready (owner-managed)',
+          }])
+        }
+        return res.json({ success: true, warnings: [...warnings, ...stageWarnings], list })
       }
 
       // Void reasons (text CSV) — why a rental was undone (owner #9). Owner-

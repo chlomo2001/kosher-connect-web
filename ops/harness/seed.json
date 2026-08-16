@@ -326,6 +326,10 @@
         "editable": true,
         "custom": false,
         "unit": ""
+      },
+      {
+        "key": "repair_stages",
+        "textValue": "Waiting for part,Quote sent"
       }
     ]
   },

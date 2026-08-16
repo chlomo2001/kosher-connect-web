@@ -11429,7 +11429,23 @@ function copyTravelDraft(destName, label, url) {
 
 let repairs = [];
 let repairMenu = [];
-const REPAIR_STATUSES = ['Open', 'In Progress', 'Ready', 'Collected', 'Cancelled'];
+// Mirrors lib/repairStatuses.mjs — change both together.
+// Five system statuses that carry behaviour (Collected charges the wallet,
+// Cancelled closes without charging, Ready drives the collection prompt) plus
+// the owner's own stages from Settings, which sit where a repair really waits:
+// after someone has looked at it, before it is done. A custom stage counts as
+// an OPEN job everywhere for free, because every open-test in this file asks
+// "not Collected and not Cancelled".
+const SYSTEM_REPAIR_STATUSES = ['Open', 'In Progress', 'Ready', 'Collected', 'Cancelled'];
+function repairStages() {
+  const s = pricingConfig?.settings?.find(x => x.key === 'repair_stages');
+  const isSystem = (n) => SYSTEM_REPAIR_STATUSES.some(x => x.toLowerCase() === String(n).trim().toLowerCase());
+  return String(s?.textValue || '').split(',').map(x => x.trim()).filter(x => x && !isSystem(x));
+}
+function repairStatuses() {
+  const custom = repairStages();
+  return ['Open', 'In Progress', ...custom, 'Ready', 'Collected', 'Cancelled'];
+}
 
 function repairStatusBadge(status) {
   const styles = {
@@ -11440,7 +11456,11 @@ function repairStatusBadge(status) {
     'Collected':   'background:rgba(34,197,94,0.15);color:var(--success-ink);',
     'Cancelled':   'background:rgba(239,68,68,0.15);color:var(--danger-ink);',
   };
-  return `<span class="badge" style="${styles[status] || styles.Open}">${escHtml(status)}</span>`;
+  // An owner-added stage gets its own neutral badge rather than borrowing
+  // Open's blue — two different states that look identical are worse than one
+  // that looks unfamiliar.
+  const custom = 'background:rgba(148,163,184,0.18);color:var(--muted);';
+  return `<span class="badge" style="${styles[status] || custom}">${escHtml(status)}</span>`;
 }
 
 async function renderRepairsTab() {
@@ -11489,7 +11509,7 @@ async function renderRepairsTab() {
           <select class="form-input" style="width:120px;padding:5px 8px;font-size:var(--fs-small);"
             aria-label="Status for ${escHtml([r.customerName, r.device].filter(Boolean).join(' — ') || 'this repair')}"
             onchange="changeRepairStatus('${escHtml(r.id)}', this.value)">
-            ${REPAIR_STATUSES.map(s => `<option value="${s}" ${r.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+            ${repairStatuses().map(s => `<option value="${s}" ${r.status === s ? 'selected' : ''}>${s}</option>`).join('')}
           </select>
         </td>
       </tr>`).join('');
@@ -16774,7 +16794,20 @@ async function renderSettingsTab() {
         <button class="btn btn-outline btn-sm" onclick="saveVoidReasons()">💾 Save reasons</button>
       </div>
       <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
-        Comma-separated. Offered when a rental is <strong>voided</strong> (↩ in Manage Rental) — every undo keeps its why.</div>`);
+        Comma-separated. Offered when a rental is <strong>voided</strong> (↩ in Manage Rental) — every undo keeps its why.</div>
+
+      <div style="padding:10px 16px 2px;border-top:1px solid var(--border);font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;">🔧 Repair stages</div>
+      <div style="padding:8px 16px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input class="form-input" id="repairStagesInput" value="${escHtml(repairStages().join(', '))}"
+          placeholder="Waiting for part, Quote sent, Customer approved…" style="flex:1;min-width:240px;min-height:0;padding:8px 12px;font-size:var(--fs-body);">
+        <button class="btn btn-outline btn-sm" onclick="saveRepairStages()">💾 Save stages</button>
+      </div>
+      <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
+        Your own steps, shown between <strong>In Progress</strong> and <strong>Ready</strong> in the repair status
+        dropdown. A repair sitting on one of your stages still counts as an open job everywhere.<br>
+        <strong>Open, In Progress, Ready, Collected and Cancelled cannot be changed</strong> — Collected is what
+        charges the wallet and Cancelled is what closes a job without charging, so those two names carry money.
+        Removing a stage here leaves any repair already on it exactly where it is.</div>`);
 
   // ── Contact Tools reference card — the phone-migration workbench SOP.
   // A directory, not a launcher: a browser can't start a Windows program, so
@@ -17998,6 +18031,19 @@ async function saveVoidReasons() {
     values: { textValue: list.join(',') },
   });
   if (ok) { toast('Void reasons updated.', 'success'); renderSettingsTab(); }
+}
+
+// Repair stages (owner, 08-16). Comma-separated; the server sanitises, de-dups
+// and REFUSES anything named after a system status — a second "Collected" that
+// did not charge would be a silent money bug.
+async function saveRepairStages() {
+  const raw = document.getElementById('repairStagesInput')?.value || '';
+  const list = raw.split(',').map(x => x.trim()).filter(Boolean);
+  const ok = await saveSetting({
+    table: 'settings', key: 'repair_stages',
+    values: { textValue: list.join(',') },
+  });
+  if (ok) { toast('Repair stages updated.', 'success'); renderSettingsTab(); }
 }
 
 // IVR / VN provider list (feature #10). Comma-separated; the server sanitises
