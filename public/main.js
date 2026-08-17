@@ -12624,16 +12624,145 @@ function svcTimerFloatFrame(t) {
       ${paused
         ? `<button class="svc-float-btn" title="Resume" onclick="event.stopPropagation();svcTimerResume()">▶</button>`
         : `<button class="svc-float-btn" title="Pause" onclick="event.stopPropagation();svcTimerPause()">⏸</button>`}
+      ${svcPipSupported()
+        ? `<button class="svc-float-btn" title="Float on top of everything" onclick="event.stopPropagation();svcTimerPopOut()">⧉</button>`
+        : ''}
       <button class="svc-float-btn svc-float-stop" title="Stop &amp; charge" onclick="event.stopPropagation();svcTimerStop()">⏹</button>
     </div>`;
 }
 
+// ── The timer, out of the app and in front of everything ──────────────────
+//
+// Owner, 17 Aug: "the timer should come up even when OUT of the app. like it
+// should stay pinned (and movable) in front of pc even while doing the work on
+// other sites. an extension maybe?"
+//
+// Not an extension. An extension can only draw INSIDE a browser tab, so it
+// would vanish the moment the work moved to Photoshop, a PDF, or the phone
+// tool — which is most of what "online help" actually is. What does the job is
+// Document Picture-in-Picture: a real, small, always-on-top OS window that the
+// page owns. It sits above every other window, browser or not, drags anywhere
+// on the screen, resizes, and survives switching tabs, sites and desktops.
+//
+// The price: Chrome or Edge (Chromium 116+, which the shop's Mac runs), and
+// the app's tab has to stay OPEN — it may be buried behind everything, but if
+// it is closed the window that belongs to it goes with it. The button is
+// simply not offered where the browser cannot do it.
+//
+// The window's document is a separate document but the SAME script realm, so
+// the buttons in it call svcTimerPause/Resume/Stop directly — there is no
+// message passing to get out of step, and the clock is driven by the one
+// interval that already ticks the in-app chip.
+let svcPipWin = null;
+
+function svcPipSupported() {
+  return typeof window !== 'undefined' && 'documentPictureInPicture' in window;
+}
+
+// The PiP document starts blank — no app stylesheet, no variables — so it
+// carries its own. Small enough to read at a glance from across the counter.
+const SVC_PIP_CSS = `
+  :root { --ink:#0f172a; --sub:#64748b; --bg:#ffffff; --line:#e2e8f0; --go:#0060a8; --stop:#b91c1c; --hold:#a16207; }
+  :root[data-theme="dark"] { --ink:#f1f5f9; --sub:#94a3b8; --bg:#0f172a; --line:#1e293b; --go:#60a5fa; --stop:#f87171; --hold:#fbbf24; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:13px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+         background:var(--bg); color:var(--ink); user-select:none; -webkit-user-select:none; }
+  .w { padding:10px 12px; display:flex; flex-direction:column; gap:6px; height:100vh; }
+  .who { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .who small { font-weight:400; color:var(--sub); }
+  .clock { font-size:30px; font-weight:700; font-feature-settings:'tnum'; line-height:1; letter-spacing:-0.5px; }
+  .paused .clock { color:var(--hold); }
+  .sub { color:var(--sub); font-size:12px; }
+  .btns { display:flex; gap:6px; margin-top:auto; }
+  button { flex:1; font:inherit; font-weight:600; padding:7px 6px; border-radius:7px; cursor:pointer;
+           border:1px solid var(--line); background:transparent; color:var(--ink); min-height:32px; }
+  button:hover { border-color:var(--go); color:var(--go); }
+  button.stop { background:var(--go); border-color:var(--go); color:#fff; }
+  button.stop:hover { filter:brightness(1.08); color:#fff; }
+  button:focus-visible { outline:2px solid var(--go); outline-offset:2px; }
+`;
+
+async function svcTimerPopOut() {
+  const t = svcTimerState();
+  if (!t) return toast('Start a timer first.', 'warning');
+  if (!svcPipSupported()) {
+    return toast('This browser can’t float a window on top — Chrome or Edge can.', 'warning');
+  }
+  if (svcPipWin && !svcPipWin.closed) { svcPipWin.focus(); return; }
+  try {
+    // Must be the first await after the click: the browser only grants this
+    // while the user's gesture is still live.
+    svcPipWin = await documentPictureInPicture.requestWindow({ width: 250, height: 152 });
+  } catch { return toast('Couldn’t open the floating timer.', 'error'); }
+
+  const d = svcPipWin.document;
+  d.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme') || 'light');
+  d.title = 'Kosher Connect — help timer';
+  const style = d.createElement('style');
+  style.textContent = SVC_PIP_CSS;
+  d.head.appendChild(style);
+  d.body.innerHTML = `
+    <div class="w" id="pipWrap">
+      <div class="who" id="pipWho"></div>
+      <div class="clock" id="pipClock">0:00</div>
+      <div class="sub" id="pipSub"></div>
+      <div class="btns">
+        <button id="pipHold"></button>
+        <button id="pipStop" class="stop">⏹ Stop</button>
+      </div>
+    </div>`;
+
+  // Same script realm as the app, so these are the app's own functions.
+  d.getElementById('pipHold').addEventListener('click', () => {
+    svcTimerState()?.runningSince ? svcTimerPause() : svcTimerResume();
+    svcPipTick();
+  });
+  d.getElementById('pipStop').addEventListener('click', () => {
+    // Stopping opens the charge form, which lives in the app — so bring the
+    // app forward rather than leaving the operator wondering where it went.
+    svcPipClose();
+    window.focus();
+    svcTimerStop();
+  });
+
+  svcPipWin.addEventListener('pagehide', () => { svcPipWin = null; svcTimerFloatTick(); });
+  svcPipTick();
+  svcTimerFloatTick();      // the in-app chip stands down while this is up
+}
+
+function svcPipClose() {
+  if (svcPipWin && !svcPipWin.closed) svcPipWin.close();
+  svcPipWin = null;
+}
+
+function svcPipTick() {
+  if (!svcPipWin || svcPipWin.closed) return;
+  const t = svcTimerState();
+  if (!t) return svcPipClose();          // stopped or discarded from the app
+  const d = svcPipWin.document;
+  const paused = !t.runningSince;
+  const secs = Math.floor(svcTimerElapsedMs(t) / 1000);
+  const { minutes, amount } = svcTimerCharge(t);
+  d.getElementById('pipWrap')?.classList.toggle('paused', paused);
+  const who = d.getElementById('pipWho');
+  if (who) who.innerHTML = `${escName(t.customerName || 'customer')} <small>${paused ? '· paused' : ''}</small>`;
+  const clock = d.getElementById('pipClock');
+  if (clock) clock.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+  const sub = d.getElementById('pipSub');
+  if (sub) sub.textContent = `${fmtGbp(amount)} · ${minutes} min at £${settingNum('online_hourly_rate', 45)}/hr`;
+  const hold = d.getElementById('pipHold');
+  if (hold) hold.textContent = paused ? '▶ Resume' : '⏸ Pause';
+}
+
 function svcTimerFloatTick() {
   const t = svcTimerState();
+  svcPipTick();
   let el = document.getElementById('svcTimerFloat');
-  // Hidden with no session, outside the portal (login/portal-less), or on
-  // Services where the full timer card already shows.
-  if (!t || currentTab === 'services' || !document.getElementById('mainContent')) { if (el) el.remove(); return; }
+  // Hidden with no session, outside the portal (login/portal-less), on
+  // Services where the full timer card already shows, or while the floating
+  // window is up — two clocks on one screen is one too many.
+  if (!t || currentTab === 'services' || !document.getElementById('mainContent')
+      || (svcPipWin && !svcPipWin.closed)) { if (el) el.remove(); return; }
   if (!el) {
     el = document.createElement('div'); el.id = 'svcTimerFloat'; el.className = 'svc-float';
     svcFloatRestorePos(el);
@@ -12774,6 +12903,9 @@ async function renderServicesTab() {
             ? `<button class="btn btn-outline" onclick="svcTimerResume()">▶ Resume</button>`
             : `<button class="btn btn-outline" onclick="svcTimerPause()">⏸ Pause</button>`}
           <button class="btn btn-primary" onclick="svcTimerStop()">⏹ Stop &amp; charge</button>
+          ${svcPipSupported()
+            ? `<button class="btn btn-outline" onclick="svcTimerPopOut()" title="A small always-on-top window that stays in front of every other site and app">⧉ Float on top</button>`
+            : ''}
           <button class="btn btn-outline btn-sm" onclick="svcTimerDiscard()">✕ Discard</button>
         </div>`;
       }
@@ -15801,6 +15933,8 @@ const PALETTE_COMMANDS = [
   { icon: '📦', label: 'Add Stock Item', sub: 'create', run: () => openOnTab('shop', openStockItemModal) },
   // ── Tools ──
   { icon: '⏱', label: 'Start help timer', sub: 'tool', run: () => openOnTab('services', () => kcPickerFocus('svcTimerCustomer')) },
+  { icon: '⧉', label: 'Float the help timer on top', sub: 'tool', keys: ['float', 'pin', 'on top', 'timer', 'always on top', 'popout', 'pop out'],
+    run: () => svcTimerPopOut() },
   { icon: '🛒', label: 'Point of Sale (Till)', sub: 'tool', keys: ['pos', 'till', 'sell', 'checkout'], run: () => goToTab('shop') },
   { icon: '📇', label: 'Manage Phone Inventory', sub: 'tool', run: () => openOnTab('rentals', openManagePhonesModal) },
   { icon: '🧾', label: 'Cash-up (Z-report)', sub: 'tool', keys: ['cashup', 'z report', 'eod', 'end of day', 'takings'], run: () => openCashupModal() },

@@ -127,6 +127,7 @@ const GUIDES = [
       'Choose the customer and the service from the list — each one carries its own price.',
       'For work charged by time, start the help timer instead: it runs while you work and turns the minutes into a charge when you stop.',
       'The timer bills by the hour with a ten-minute minimum, so a five-minute job still charges ten.',
+      'Press "⧉ Float on top" and the timer becomes a small window that stays in front of every other site and program, wherever you drag it. Leave this tab open behind it; closing the tab closes the window.',
       'Save. The charge lands on the customer\'s wallet like any other.',
     ],
   },

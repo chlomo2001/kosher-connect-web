@@ -891,3 +891,31 @@ a shul's wallet link was being silently unset on edit).
 New: `node ops/harness/picker.mjs` drives all eleven and fails if a twelfth ever
 turns up hand-built. Verified: gate (429 tests ×2 TZ + build) exit 0, picker
 harness green, modals/names/focus/contrast/targets sweeps clean.
+
+## Owner request — 2026-08-17: the help timer, out of the app
+
+> "build me that the online and print 'timer' should come up even when OUT of
+> the app. like it should stay pinned (and movable) in front (say bottom right
+> corner) of pc even while doing the work on othe sites. an extension maybe?"
+
+Built as **Document Picture-in-Picture**, not an extension. An extension can
+only draw inside a browser tab, so it would vanish the moment the work moved to
+a program that is not the browser — which is much of what "online help" is. Doc
+PiP is a real always-on-top OS window: it sits above every other window
+(browser or not), drags anywhere, resizes, and survives switching tab, site and
+desktop. No install, no store review, no permissions.
+
+`⧉ Float on top` on the running-timer card and on the floating chip, plus a
+command-palette entry. The window shows who is being helped, the clock, what it
+will cost so far, and Pause/Resume + Stop. Stopping from the window brings the
+app forward with the charge form already filled in. The in-app chip stands down
+while the window is up, so there are never two clocks.
+
+The price, and it is stated in the guide: Chrome or Edge (the shop's Mac runs
+Chrome), and the app's tab must stay open — buried behind everything is fine,
+closed is not. The button is not offered at all where the browser can't do it.
+
+New: `node ops/harness/popout.mjs` drives the window in both themes — clock
+moves, pause from the window pauses the app, stop from the window opens the
+charge form with the customer and the money in it. Wired into `audit-all.sh`
+alongside `picker.mjs`. Gate green.

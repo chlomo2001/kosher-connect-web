@@ -61,6 +61,38 @@ Needs `playwright-core` for the screenshot and audit modes; Chromium is already
 at `/opt/pw-browsers/chromium` in the session container. Building `app.html`
 needs nothing but the repo.
 
+## The customer picker (`picker.mjs`)
+
+```bash
+node ops/harness/picker.mjs           # all 11 pickers, driven like a person drives them
+```
+
+There is one customer picker in the app — `customerPicker()` — and eleven
+places call it. This opens every one of them and types in it: does it open on
+who was in lately, does a surname filter, does a phone number filter, does the
+number show beside each name, do arrow keys and Enter commit, does the hidden
+input end up holding the id, does the ✓ line name the number, does a name
+nobody has still offer "➕ Add … as a new customer", and is the list actually
+*visible* rather than painted and clipped (the last one caught `.table-card`'s
+`overflow: hidden` cutting the help timer's list down to two pixels).
+
+It also fails if any `<select>` anywhere is still listing customers, which is
+what stops a twelfth hand-built picker quietly appearing.
+
+## The floating help timer (`popout.mjs`)
+
+```bash
+node ops/harness/popout.mjs           # opens the always-on-top window, light and dark
+```
+
+The timer's "⧉ Float on top" opens a Document Picture-in-Picture window — a
+real always-on-top OS window with its own document, its own stylesheet and its
+own copies of the buttons, which is exactly the kind of thing that works the
+day it is written and rots unwatched. This opens it in both themes, watches the
+clock move, pauses from the window and checks the APP agrees, then stops from
+the window and checks the charge form comes up in the app with the customer and
+the money already in it.
+
 ## Modals (`modals.mjs`)
 
 ```bash

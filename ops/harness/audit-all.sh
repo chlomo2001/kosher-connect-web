@@ -85,6 +85,16 @@ run "staff app · modals at 320px" \
 run "staff app · modals at 320px, text largest" \
   bash -c 'node ops/harness/modals.mjs --width 320 --theme light --fs largest | tail -1'
 
+# The two controls that are the same everywhere or nowhere: one customer picker
+# built by one function (11 places), and the help timer's always-on-top window,
+# which has its own document and its own copies of the buttons and would
+# otherwise rot unwatched.
+run "one customer picker, everywhere" \
+  bash -c 'node ops/harness/picker.mjs | tail -3'
+
+run "help timer · floating window, both themes" \
+  bash -c 'node ops/harness/popout.mjs | tail -3'
+
 run "staff app · Simple Mode text sizes, every tab" \
   bash -c 'for f in large largest; do node ops/harness/render.mjs --audit --width 390 --fs $f | tail -1; done
            node ops/harness/render.mjs --audit --width 320 --fs largest | tail -1
