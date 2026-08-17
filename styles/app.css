@@ -918,6 +918,19 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
    number being scanned down the column; this is the reference behind it. */
 .kc-money-sub { font-size: var(--fs-micro); font-weight: 400; color: var(--muted); white-space: nowrap; }
 
+/* Who was served — three figures under the money, in the same rhythm as the
+   KPI tiles above so the block reads as part of the same report. */
+.biz-people { display: flex; flex-wrap: wrap; gap: 10px; }
+.biz-person {
+  flex: 1 1 150px; min-width: 0;
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 12px 14px; background: var(--surface);
+}
+.biz-person-val { font-size: var(--fs-title); font-weight: 600; color: var(--text); font-feature-settings: "tnum"; }
+.biz-person-lbl { font-size: var(--fs-small); color: var(--muted); margin-top: 2px; }
+.biz-person-sub { font-size: var(--fs-micro); color: var(--ink-secondary); margin-top: 6px; }
+.biz-people-empty { font-size: var(--fs-body); color: var(--muted); }
+
 /* ---------- Row overflow menu ---------- */
 /* Fewer controls per row (owner, 17 Aug — "a comfortable view like Lightspeed
    has"). The primary action stays on the row; the rest sit behind ⋯.

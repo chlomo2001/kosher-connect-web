@@ -108,6 +108,38 @@ async function handler(req, res) {
             })),
           })
         }
+        // Who was served in a window, derived from the same ledger as the
+        // money above it — so the two can never disagree. Definitions live in
+        // the migration, because each is a choice: "served" is a CHARGE in the
+        // period (paying off an old debt is not being served again), and "new"
+        // is a first-ever charge, not a record created date — a row imported
+        // from a spreadsheet years ago is not a new customer the day someone
+        // finally bills it.
+        if (req.query.customers) {
+          const ok = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''))
+          const from = ok(req.query.from) ? req.query.from : londonDate(-29)
+          const to = ok(req.query.to) ? req.query.to : londonDate()
+          const rows = await db.rpc('ledger_customer_stats', { p_from: from, p_to: to })
+          const r = (rows && rows[0]) || {}
+          const round = (v) => Math.round((Number(v) || 0) * 100) / 100
+          const served = Number(r.served) || 0
+          let topName = null
+          if (r.top_customer_id) {
+            const c = await db.select('customers',
+              `select=first_name,last_name&id=eq.${encodeURIComponent(String(r.top_customer_id))}&limit=1`).catch(() => [])
+            if (c[0]) topName = `${c[0].first_name || ''} ${c[0].last_name || ''}`.trim()
+          }
+          return res.json({
+            success: true, from, to,
+            served,
+            newCustomers: Number(r.new_customers) || 0,
+            returningCustomers: Number(r.returning_customers) || 0,
+            totalCharged: round(r.total_charged),
+            averageSpend: served ? round(Number(r.total_charged) / served) : 0,
+            topCustomer: topName,
+            topCustomerCharged: round(r.top_customer_charged),
+          })
+        }
         if (req.query.report) {
           const from = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.from || ''))
             ? req.query.from : londonDate()

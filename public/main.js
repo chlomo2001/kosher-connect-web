@@ -14892,6 +14892,55 @@ function bizPeriods() {
     } } : {}),
   };
 }
+// The window a period covers, as two dates. The money tiles get their figures
+// by subtracting two "since" snapshots; the customer figures need the window
+// itself, and this is the one place that says what each period means.
+function bizPeriodRange(key = bizPeriod) {
+  const today = localISO();
+  const back = (n) => localISO(new Date(Date.now() - n * 86400000));
+  if (key === 'custom' && bizCustom) return { from: bizCustom.from, to: bizCustom.to };
+  if (key === 'week') return { from: back(6), to: today };
+  if (key === 'last') {
+    const thisMonth = bizMonthStart(0);
+    return { from: bizMonthStart(1), to: localISO(new Date(new Date(`${thisMonth}T00:00:00`).getTime() - 86400000)) };
+  }
+  return { from: bizMonthStart(0), to: today };   // this month
+}
+
+let bizPeople = {};   // period key → the customer figures, fetched once each
+
+async function bizLoadPeople(key = bizPeriod) {
+  if (bizPeople[key]) return bizPeople[key];
+  const { from, to } = bizPeriodRange(key);
+  const r = await kcFetch(`/api/ledger?customers=1&from=${from}&to=${to}`)
+    .then(x => x.json()).catch(() => null);
+  if (r?.success) { bizPeople[key] = r; renderBizSummary(); }
+  return r;
+}
+
+/**
+ * Who the shop served, under the money it took from them.
+ *
+ * "Served" counts a CHARGE, not a payment — settling an old debt is not being
+ * served again — and "new" means a first-ever charge rather than a record
+ * created date, because 604 of these customers were imported from a
+ * spreadsheet and none of them were new the day the import ran.
+ */
+function bizPeopleHtml() {
+  const p = bizPeople[bizPeriod];
+  if (!p) { bizLoadPeople(); return ''; }
+  if (!p.served) return `<div class="biz-people"><span class="biz-people-empty">Nobody was charged in this period.</span></div>`;
+  const cell = (label, value, sub = '') =>
+    `<div class="biz-person"><div class="biz-person-val">${value}</div>
+      <div class="biz-person-lbl">${escHtml(label)}</div>${sub ? `<div class="biz-person-sub">${sub}</div>` : ''}</div>`;
+  return `<div class="section-divider" style="margin:18px 0 8px;">Who was served</div>
+    <div class="biz-people">
+      ${cell('customers served', p.served, `${p.returningCustomers} came back · ${p.newCustomers} new`)}
+      ${cell('average each', fmtGbp(p.averageSpend))}
+      ${cell('biggest', fmtGbp(p.topCustomerCharged), p.topCustomer ? escName(p.topCustomer) : '')}
+    </div>`;
+}
+
 function bizCurrentPeriod() {
   const all = bizPeriods();
   return all[bizPeriod] || all.month || null;
@@ -14930,6 +14979,7 @@ async function bizApplyRange() {
     prevLabel: `the ${days} day${days === 1 ? '' : 's'} before`,
   };
   bizPeriod = 'custom';
+  delete bizPeople.custom;      // same key, different dates behind it
   renderBizSummary();
 }
 
@@ -15125,7 +15175,8 @@ function renderBizSummary() {
     ${tiles}
     <div class="biz-section">Revenue by service · ${P.label.toLowerCase()}</div>
     <div class="bizbars">${bars}</div>
-    ${now.refunded ? `<div class="biz-note">Refunds issued ${fmtGbp(now.refunded)}${now.refundsOwed ? ` · ${fmtGbp(now.refundsOwed)} still to be paid back out` : ' · all paid out'}</div>` : ''}`}
+    ${now.refunded ? `<div class="biz-note">Refunds issued ${fmtGbp(now.refunded)}${now.refundsOwed ? ` · ${fmtGbp(now.refundsOwed)} still to be paid back out` : ' · all paid out'}</div>` : ''}
+    ${bizPeopleHtml()}`}
     <div class="biz-section">Last six months</div>
     ${trend}
     <div class="biz-foot">“Billed” is what was charged; “Received” is money actually taken in (payments and top-ups). Every period is measured off the same running totals, so the figures always add up against each other.</div>`;
