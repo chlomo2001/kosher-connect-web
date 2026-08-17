@@ -17991,6 +17991,11 @@ const MSG_STATUS_LABEL = {
   suppressed: ['SUPPRESSED', '', 'address previously bounced or complained — never mailed'],
   bounced: ['BOUNCED', '', 'the address bounced it back'],
   complained: ['SPAM', '', 'the recipient marked it as spam'],
+  // Inbound — a customer texting the shop back. Same log, so one screen holds
+  // the whole conversation rather than an inbox per direction.
+  received: ['↩ REPLY', 'badge-sim', 'a customer texted this to the shop'],
+  opt_out: ['↩ STOP', '', 'they asked to stop receiving texts — Twilio blocks further sends'],
+  invalid: ['NOT A NUMBER', '', 'refused before sending: the destination could not be a phone number'],
 };
 async function loadMessageLog() {
   const wrap = document.getElementById('msgLogWrap');
