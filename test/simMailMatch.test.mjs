@@ -100,3 +100,52 @@ test('SIMs with no address never collide on an empty key', () => {
   assert.equal(index.byAddress.has(null), false)
   assert.equal(index.byAddress.get('@gmail.com'), undefined)
 })
+
+// ── Two hops, one business-only inbox ────────────────────────────────────
+//
+// Owner, 17 Aug, relaying the shop's own reasoning: gitt.bilig has all the
+// carrier mail but is a mixed personal/business mailbox, while 5311386k is
+// business-only and already receives everything forwarded from it — so point
+// the app at the business-only one and let it read the lot, forwarded
+// included, instead of maintaining a filter in seven mailboxes.
+//
+// That works only if the ORIGINAL recipient survives the forward and is the
+// one used. A forwarded message carries the hub in Delivered-To and the real
+// per-SIM address in To.
+test('a message forwarded through the shop hub still pairs on the address it was sent to', () => {
+  const index = buildSimIndex([
+    { id: 'sim-moshe', email: 'gitt.bilig+moshe@gmail.com', simNumber: '07700900111' },
+    { id: 'sim-other', email: 'gitt.bilig+other@gmail.com', simNumber: '07700900222' },
+  ])
+  const m = matchSimForMail({
+    deliveredTo: '5311386k@gmail.com',
+    to: 'gitt.bilig+moshe@gmail.com',
+    subject: 'Your Lebara plan has renewed',
+  }, index)
+  assert.equal(m.simId, 'sim-moshe')
+  assert.equal(m.confidence, 'address')
+  // And the queue must show the address that did the work, not the hub —
+  // "sent to 5311386k@gmail.com" on every row helps nobody settle anything.
+  assert.equal(m.matchedOn, 'gitt.bilig+moshe@gmail.com')
+})
+
+test('a hub address no SIM is registered at contributes nothing either way', () => {
+  const index = buildSimIndex([
+    { id: 'sim-a', email: 'shevabruches111+14@gmail.com', simNumber: '07700900333' },
+  ])
+  // Two hops and a Cc, none of which name a SIM except the real one.
+  const m = matchSimForMail({
+    deliveredTo: '5311386k@gmail.com',
+    to: 'shevabruches111+14@gmail.com',
+    cc: 'gitt.bilig@gmail.com',
+    subject: 'renewal',
+  }, index)
+  assert.equal(m.simId, 'sim-a')
+  assert.equal(m.matchedOn, 'shevabruches111+14@gmail.com')
+
+  // And when nothing matches, matchedOn stays null rather than naming a hop.
+  const none = matchSimForMail({ deliveredTo: '5311386k@gmail.com', to: 'someone@else.com' }, index)
+  assert.equal(none.simId, null)
+  assert.equal(none.confidence, 'unknown')
+  assert.equal(none.matchedOn, null)
+})

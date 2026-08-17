@@ -1153,3 +1153,30 @@ scanner and the command palette use it deliberately to land on the LIST with a
 row selected, which is a different intention from opening one person.
 
 Verified: gate green, names/focus/contrast clean, modals clean.
+
+## Owner request — 2026-08-17: read everything from the business-only inbox
+
+The shop's own reasoning, relayed: gitt.bilig has all the carrier mail but is a
+mixed personal/business mailbox; 5311386k is business-only and already receives
+everything forwarded from gitt.bilig. So point the app at the business-only one
+and let it read the lot, forwarded included, instead of maintaining a carrier
+filter in seven mailboxes.
+
+**It works, and the code already supported it.** `matchSimForMail` looks up
+EVERY recipient it finds, so a forwarded message carrying
+`Delivered-To: <hub>` and `To: gitt.bilig+moshe@gmail.com` pairs on the second;
+the hub, which no SIM is registered at, contributes nothing.
+
+One thing did not work: the stored recipient was `recipients[0]`, which after a
+forward is the hub on **every** message — so the queue would have read "sent to
+5311386k@gmail.com" 800 times, which is the one fact that cannot help anyone
+settle an ambiguous row. `matchSimForMail` now reports which address matched,
+as written (dots intact — the canonical key has Gmail's dots stripped and looks
+like a typo on screen), and that is what gets stored.
+
+Two tests cover the two-hop path. `docs/INBOUND-MAIL.md` has the reasoning.
+
+Still worth doing even so: the three carriers missing from the existing filters
+(giffgaff 11 SIMs, Talk Home 5, Asda Mobile 4) — if the hub forwards
+everything, they are covered automatically, which is exactly the argument for
+doing it this way.

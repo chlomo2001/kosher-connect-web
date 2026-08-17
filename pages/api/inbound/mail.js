@@ -97,7 +97,11 @@ export default async function handler(req, res) {
     const inserted = await db.insertIgnoreDup('sim_mail', [{
       message_id: mail.messageId,
       ...(mail.receivedAt ? { received_at: mail.receivedAt } : {}),
-      recipient: mail.recipients[0] || null,
+      // The address that identified the SIM, not whichever hop happened to be
+      // first on the envelope — see matchSimForMail. With the shop's mailboxes
+      // forwarding into one business-only inbox, recipients[0] is the hub on
+      // every single message, which tells a human nothing.
+      recipient: match.matchedOn || mail.recipients[0] || null,
       from_address: mail.from || null,
       carrier: carrierOf(mail.from),
       subject: mail.subject || null,

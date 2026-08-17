@@ -81,6 +81,34 @@ If you would rather not forward everything, create a Gmail filter (`from:lebara
 OR from:1pmobile OR …`) and forward only matching mail. Everything works the
 same; the app simply sees less.
 
+### Two hops, one business-only inbox (17 Aug)
+
+The shop's SIM accounts are spread over seven of its own Gmail mailboxes —
+gittbilig (336 SIMs), redfarbilig (86), shevabruches111 (64), heimishecentre
+(59), hashomrimmcr (55), mendlhersh and shloimea1 (30). Those mailboxes already
+forward their carrier mail into **5311386k@gmail.com**, which — unlike
+gitt.bilig — is business-only.
+
+So the shop's own suggestion is the right architecture: point the app at the
+business-only inbox and let it forward **everything**, rather than maintaining a
+carrier filter in seven mailboxes and missing one every time a new carrier
+appears (giffgaff, Talk Home and Asda Mobile were all missing on 17 Aug).
+
+It works because **the original recipient survives a Gmail forward.** A message
+that reaches the app through two hops carries
+
+    Delivered-To: 5311386k@gmail.com          ← the hub
+    To:           gitt.bilig+moshe@gmail.com  ← the SIM
+
+and `matchSimForMail` looks up EVERY recipient, so the hub — which no SIM is
+registered at — contributes nothing and the real address does the work.
+
+One thing that had to change for it: the row used to store `recipients[0]`,
+which after a forward is the hub on every single message. `matchSimForMail` now
+reports **which address matched**, and that is what is stored and shown, so the
+queue says `gitt.bilig+moshe@gmail.com` rather than the hub 800 times.
+`test/simMailMatch.test.mjs` covers both hops.
+
 **4. Check it.** Send anything to `sims-in@kosher-connect.com` and look for a
 row:
 
