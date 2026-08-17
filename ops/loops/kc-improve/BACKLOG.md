@@ -1063,3 +1063,38 @@ read at the same moment as Tasks and Confirm Data.
 
 Verified: gate green, no overflow at 390/768/1280/1440, names and contrast
 clean, picker sweep green.
+
+## Owner request — 2026-08-17: dialogs behave like windows
+
+> "i want every card should be expandable not only from bottom right corner,
+> but from all 4 box endings and corners - like word textboxes"
+> "can we do like windows does — press to arrange view right, left, big,
+> small, or custom?"
+
+Since 9 Aug a dialog could be pulled bigger by its bottom-right corner. That
+was `resize: both`, and the browser only ever gives you that one corner — so
+the other seven meant owning it.
+
+| | |
+|---|---|
+| Eight grips | four edges, four corners, invisible until hovered |
+| Drag by the title | the way every window on the machine works |
+| ◧ ⛶ ◨ ▭ | left half · fill · right half · back to normal, beside the ✕ |
+| Phones | untouched — a dialog there IS the screen, and a 6px grip nobody can hit is worse than none |
+
+Two things that make it work rather than nearly work:
+
+**The grips live on the overlay, not in the dialog.** The dialog scrolls its own
+content, so anything inside it scrolls away from the edge it is supposed to
+mark. They are painted over its edges and re-laid on every move.
+
+**Pulling the left or top edge has to move the box as well as size it**, at the
+pointer's speed, and stop moving when the width hits its floor — otherwise the
+dialog slides out from under a hand that is no longer resizing anything. That
+arithmetic is what `ops/harness/window.mjs` mostly exists to hold: it drags all
+eight points and checks both numbers each time, then checks the grips are still
+glued on, that it cannot be shrunk below 300×180 or pushed off screen, and that
+a phone still gets the plain dialog.
+
+Wired into `audit-all.sh`. Gate green; modals clean at 390 and 1280; names,
+focus, contrast and targets all clean.

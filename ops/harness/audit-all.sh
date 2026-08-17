@@ -98,6 +98,9 @@ run "help timer · floating window, both themes" \
 run "loading · no flash, and the ghost reaches the fold" \
   bash -c 'node ops/harness/loading.mjs | tail -3'
 
+run "dialogs · eight grips, snap, and plain on a phone" \
+  bash -c 'node ops/harness/window.mjs | tail -3'
+
 run "staff app · Simple Mode text sizes, every tab" \
   bash -c 'for f in large largest; do node ops/harness/render.mjs --audit --width 390 --fs $f | tail -1; done
            node ops/harness/render.mjs --audit --width 320 --fs largest | tail -1

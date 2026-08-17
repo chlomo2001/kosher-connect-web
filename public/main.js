@@ -5584,6 +5584,197 @@ async function deletePhone(id) {
 }
 
 // ══ DYNAMIC MODAL (shared) ══
+// ══ Dialogs behave like windows ═══════════════════════════════════════════
+//
+// Owner, 17 Aug: "i want every card should be expandable not only from bottom
+// right corner, but from all 4 box endings and corners - like word textboxes"
+// and "can we do like windows does — press to arrange view right, left, big,
+// small, or custom?"
+//
+// Since 9 Aug a dialog could be pulled bigger by its bottom-right corner —
+// that was `resize: both`, and the browser only ever gives you that one
+// corner. Doing the other seven means owning it: eight grips, a drag handle on
+// the title, and four snap buttons.
+//
+// The grips live on the OVERLAY, not inside the dialog. The dialog is its own
+// scroll container, so anything positioned inside it scrolls away with the
+// form; siblings do not. They are painted over the dialog's edges and re-laid
+// whenever it moves, which is also why every path here ends in a sync.
+//
+// Desktop and a real pointer only. On a phone a dialog is the screen, and a
+// 6px grip you cannot hit is worse than no grip at all.
+const KC_WIN_DIRS = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+const KC_WIN_MIN_W = 300;
+const KC_WIN_MIN_H = 180;
+const KC_WIN_PAD = 12;
+
+function kcWinEnabled() {
+  return typeof window !== 'undefined' && window.innerWidth >= 900
+    && window.matchMedia('(pointer: fine)').matches;
+}
+
+/** Freeze the dialog where it currently sits, so arithmetic can take over. */
+function kcWinPin(dlg) {
+  if (!dlg || dlg.classList.contains('kc-win')) return;
+  const r = dlg.getBoundingClientRect();
+  dlg.classList.add('kc-win');
+  dlg.style.left = `${Math.round(r.left)}px`;
+  dlg.style.top = `${Math.round(r.top)}px`;
+  dlg.style.width = `${Math.round(r.width)}px`;
+  dlg.style.height = `${Math.round(r.height)}px`;
+}
+
+/** Back to the centred, content-sized dialog it was when it opened. */
+function kcWinReset(dlg) {
+  if (!dlg) return;
+  dlg.classList.remove('kc-win');
+  dlg.setAttribute('style', dlg.dataset.kcCss || '');
+  kcWinSync(dlg.closest('.modal-overlay'));
+}
+
+function kcWinPlace(dlg, x, y, w, h) {
+  const W = window.innerWidth, H = window.innerHeight;
+  w = Math.max(KC_WIN_MIN_W, Math.min(w, W - KC_WIN_PAD * 2));
+  h = Math.max(KC_WIN_MIN_H, Math.min(h, H - KC_WIN_PAD * 2));
+  dlg.style.left = `${Math.round(Math.max(0, Math.min(x, W - w)))}px`;
+  dlg.style.top = `${Math.round(Math.max(0, Math.min(y, H - h)))}px`;
+  dlg.style.width = `${Math.round(w)}px`;
+  dlg.style.height = `${Math.round(h)}px`;
+  kcWinSync(dlg.closest('.modal-overlay'));
+}
+
+// ◧ ⛶ ◨ ▭ — the four Windows does, in the order it does them.
+function kcWinSnap(btn, how) {
+  const dlg = btn.closest('.modal');
+  if (!dlg) return;
+  if (how === 'reset') return kcWinReset(dlg);
+  kcWinPin(dlg);
+  const W = window.innerWidth, H = window.innerHeight, p = KC_WIN_PAD;
+  const halfW = W / 2 - p * 1.5;
+  if (how === 'left')  kcWinPlace(dlg, p, p, halfW, H - p * 2);
+  if (how === 'right') kcWinPlace(dlg, W / 2 + p / 2, p, halfW, H - p * 2);
+  if (how === 'max')   kcWinPlace(dlg, p, p, W - p * 2, H - p * 2);
+}
+
+/** The grips, painted over the dialog's own edges. */
+function kcWinSync(overlay) {
+  if (!overlay) return;
+  const layer = overlay.querySelector('.kc-grips');
+  const dlg = overlay.querySelector('.modal');
+  if (!layer) return;
+  if (!dlg) { layer.hidden = true; return; }
+  layer.hidden = false;
+  const r = dlg.getBoundingClientRect();
+  const T = 8;                               // how wide a grab band is
+  const box = {
+    n:  [r.left + 14, r.top - T / 2, r.width - 28, T],
+    s:  [r.left + 14, r.bottom - T / 2, r.width - 28, T],
+    w:  [r.left - T / 2, r.top + 14, T, r.height - 28],
+    e:  [r.right - T / 2, r.top + 14, T, r.height - 28],
+    nw: [r.left - T / 2, r.top - T / 2, 16, 16],
+    ne: [r.right - 16 + T / 2, r.top - T / 2, 16, 16],
+    sw: [r.left - T / 2, r.bottom - 16 + T / 2, 16, 16],
+    se: [r.right - 16 + T / 2, r.bottom - 16 + T / 2, 16, 16],
+  };
+  for (const d of KC_WIN_DIRS) {
+    const el = layer.querySelector(`.kc-grip-${d}`);
+    if (!el) continue;
+    const [x, y, w, h] = box[d];
+    el.style.cssText = `left:${x}px;top:${y}px;width:${Math.max(0, w)}px;height:${Math.max(0, h)}px;`;
+  }
+}
+
+function kcWinGrab(e, dlg, dir) {
+  if (!dlg || e.button !== 0) return;
+  e.preventDefault();
+  kcWinPin(dlg);
+  const start = dlg.getBoundingClientRect();
+  const x0 = e.clientX, y0 = e.clientY;
+  document.body.classList.add('kc-win-dragging');
+  const move = (ev) => {
+    const dx = ev.clientX - x0, dy = ev.clientY - y0;
+    let { left: x, top: y, width: w, height: h } = start;
+    if (dir === 'move') { x += dx; y += dy; }
+    else {
+      if (dir.includes('e')) w = start.width + dx;
+      if (dir.includes('s')) h = start.height + dy;
+      // Pulling the left or top edge moves the box as well as sizing it —
+      // and it must stop moving once the width hits its floor, or the dialog
+      // slides away under a pointer that is no longer resizing anything.
+      if (dir.includes('w')) { w = start.width - dx; x = start.left + Math.min(dx, start.width - KC_WIN_MIN_W); }
+      if (dir.includes('n')) { h = start.height - dy; y = start.top + Math.min(dy, start.height - KC_WIN_MIN_H); }
+    }
+    kcWinPlace(dlg, x, y, w, h);
+  };
+  const up = () => {
+    document.body.classList.remove('kc-win-dragging');
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+}
+
+/** The snap buttons, sticky beside the ✕ so they survive the dialog scrolling. */
+function kcWinBarHtml() {
+  const b = (how, glyph, label) =>
+    `<button type="button" class="kc-snap-b" aria-label="${label}" title="${label}"
+      onclick="kcWinSnap(this,'${how}')">${glyph}</button>`;
+  return `<div class="kc-snap" role="group" aria-label="Window size">
+    ${b('left', '◧', 'Snap to the left half')}
+    ${b('max', '⛶', 'Fill the screen')}
+    ${b('right', '◨', 'Snap to the right half')}
+    ${b('reset', '▭', 'Back to the normal size')}
+  </div>`;
+}
+
+/** Give an open overlay its grips, its drag handle and its snap bar. */
+function kcWindowise(overlay) {
+  if (!overlay || !kcWinEnabled()) return;
+  const dlg = overlay.querySelector('.modal');
+  if (!dlg) return;
+  if (!('kcCss' in dlg.dataset)) dlg.dataset.kcCss = dlg.getAttribute('style') || '';
+
+  let layer = overlay.querySelector('.kc-grips');
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.className = 'kc-grips';
+    layer.setAttribute('aria-hidden', 'true');
+    layer.innerHTML = KC_WIN_DIRS.map(d => `<div class="kc-grip kc-grip-${d}"></div>`).join('');
+    layer.addEventListener('pointerdown', (e) => {
+      const g = e.target.closest('.kc-grip');
+      if (!g) return;
+      const dir = [...g.classList].find(c => c.startsWith('kc-grip-'))?.slice(8);
+      kcWinGrab(e, overlay.querySelector('.modal'), dir);
+    });
+    overlay.appendChild(layer);
+  }
+
+  // Drag by the title, the way every window on the machine already works.
+  const title = dlg.querySelector('.modal-title');
+  if (title && !title.dataset.kcDrag) {
+    title.dataset.kcDrag = '1';
+    title.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('button, a, input, select')) return;
+      kcWinGrab(e, dlg, 'move');
+    });
+  }
+  kcWinSync(overlay);
+}
+
+// A dialog pinned to the left half is wrong the moment the window changes size.
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(o => {
+    const dlg = o.querySelector('.modal.kc-win');
+    if (dlg) {
+      const r = dlg.getBoundingClientRect();
+      kcWinPlace(dlg, r.left, r.top, r.width, r.height);
+    } else {
+      kcWinSync(o);
+    }
+  });
+});
+
 function showDynamicModal(html) {
   let overlay = document.getElementById('dynamicModal');
   let wasOpen = false;
@@ -5602,7 +5793,7 @@ function showDynamicModal(html) {
   } else {
     wasOpen = !overlay.classList.contains('hidden');
   }
-  overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:560px;"><button type="button" class="modal-x" aria-label="Close" title="Close (Esc)" onclick="closeDynamicModal()">✕</button>${html}</div>`;
+  overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:560px;"><button type="button" class="modal-x" aria-label="Close" title="Close (Esc)" onclick="closeDynamicModal()">✕</button>${kcWinBarHtml()}${html}</div>`;
   // Name the dialog from the title the payload already renders. Without this
   // all 49 call sites announce as an unnamed dialog — and because focus jumps
   // straight into the first field, the visible title is never read aloud.
@@ -5618,6 +5809,7 @@ function showDynamicModal(html) {
   if (wasOpen) overlay.firstElementChild.style.animation = 'none';
   kcSaveReturnFocus('dynamicModal');
   overlay.classList.remove('hidden');
+  kcWindowise(overlay);
   suppressCardScrim(true);
   autofocusFirstField(overlay);
 }
@@ -5685,12 +5877,13 @@ function showStackedModal(html, { width = 460 } = {}) {
     overlay.addEventListener('click', e => { if (e.target === overlay && overlay._pressedOnBackdrop) closeStackedModal(); });
     document.body.appendChild(overlay);
   }
-  overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:${width}px;"><button type="button" class="modal-x" aria-label="Close" title="Close (Esc)" onclick="closeStackedModal()">✕</button>${html}</div>`;
+  overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:${width}px;"><button type="button" class="modal-x" aria-label="Close" title="Close (Esc)" onclick="closeStackedModal()">✕</button>${kcWinBarHtml()}${html}</div>`;
   const dlg = overlay.querySelector('.modal');
   const t = dlg && dlg.querySelector('.modal-title');
   if (dlg && t) { if (!t.id) t.id = 'kcStackedTitle'; dlg.setAttribute('aria-labelledby', t.id); }
   kcSaveReturnFocus('stackedModal');
   overlay.classList.remove('hidden');
+  kcWindowise(overlay);
   autofocusFirstField(overlay);
 }
 function closeStackedModal(onClosed) {
@@ -9935,7 +10128,7 @@ function clearModal() {
   ['warnPhone','warnEmail','warnName'].forEach(id => document.getElementById(id).classList.remove('visible'));
 }
 
-function showModal() { const m = document.getElementById('customerModal'); kcSaveReturnFocus('customerModal'); m.classList.remove('hidden'); suppressCardScrim(true); autofocusFirstField(m); }
+function showModal() { const m = document.getElementById('customerModal'); kcSaveReturnFocus('customerModal'); m.classList.remove('hidden'); suppressCardScrim(true); kcWindowise(m); autofocusFirstField(m); }
 function closeModal() { document.getElementById('customerModal').classList.add('hidden'); suppressCardScrim(false); kcRestoreReturnFocus('customerModal'); }
 
 function normalizeEmail(email) {
