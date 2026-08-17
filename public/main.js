@@ -13770,8 +13770,8 @@ async function renderKolTorahTab() {
         <td><div class="customer-name">${escName(j.customerName)}</div>
             <div style="font-size:var(--fs-micro);color:var(--muted);">${fmtDate(j.createdAt)}</div></td>
         <td style="white-space:nowrap;">${escHtml(KT_JOB_KINDS[j.kind] || j.kind)}${j.qty > 1 ? ` <span style="color:var(--muted);">× ${j.qty}</span>` : ''}</td>
-        <td style="max-width:260px;">${escHtml(j.details || '—')}</td>
-        <td><strong>${fmtGbp(j.price)}</strong></td>
+        <td data-label="Details" style="max-width:260px;">${escHtml(j.details || '—')}</td>
+        <td data-label="Price"><strong>${fmtGbp(j.price)}</strong></td>
         <td><span class="badge" style="${KT_JOB_BADGE[j.status] || ''}">${escHtml(j.status)}</span></td>
         <td style="white-space:nowrap;">${jobBtns(j)}</td>
       </tr>`).join('');
@@ -13834,11 +13834,11 @@ async function renderKolTorahTab() {
   // ── Titles table ────────────────────────────────────────────────────────
   const titleRows = d.titles.map(t => `
     <tr style="${t.active ? '' : 'opacity:0.55;'}">
-      <td><input class="form-input" id="ktT_code_${t.id}" value="${escHtml(t.code || '')}" style="width:74px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
-      <td><input class="form-input" id="ktT_name_${t.id}" value="${escHtml(t.name)}" style="min-width:170px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
-      <td><input class="form-input" id="ktT_speaker_${t.id}" value="${escHtml(t.speaker || '')}" style="min-width:130px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
-      <td><input class="form-input" id="ktT_price_${t.id}" type="number" min="0" step="0.01" value="${t.price.toFixed(2)}" style="width:84px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
-      <td><input type="checkbox" id="ktT_active_${t.id}" ${t.active ? 'checked' : ''} style="accent-color:var(--accent);cursor:pointer;"></td>
+      <td data-label="Code"><input class="form-input" id="ktT_code_${t.id}" value="${escHtml(t.code || '')}" style="width:74px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
+      <td data-label="Title"><input class="form-input" id="ktT_name_${t.id}" value="${escHtml(t.name)}" style="min-width:170px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
+      <td data-label="Speaker"><input class="form-input" id="ktT_speaker_${t.id}" value="${escHtml(t.speaker || '')}" style="min-width:130px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
+      <td data-label="£"><input class="form-input" id="ktT_price_${t.id}" type="number" min="0" step="0.01" value="${t.price.toFixed(2)}" style="width:84px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
+      <td data-label="Active"><input type="checkbox" id="ktT_active_${t.id}" ${t.active ? 'checked' : ''} style="accent-color:var(--accent);cursor:pointer;"></td>
       <td><button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 10px;" aria-label="Save title" onclick="ktSaveTitle('${t.id}')">💾</button></td>
     </tr>`).join('');
 
@@ -13874,7 +13874,7 @@ async function renderKolTorahTab() {
       <input class="form-input" id="ktJobPrice" type="number" min="0" step="0.01" placeholder="£" style="width:80px;min-height:0;padding:6px 9px;font-size:var(--fs-small);">
       <button class="btn btn-primary btn-sm" onclick="ktAddJob()">+ Add job</button>
     </div>
-    <div class="table-wrap"><table>
+    <div class="table-wrap kc-stack-sm"><table>
       <thead><tr><th>Customer</th><th>Job</th><th>Details</th><th>£</th><th>Status</th><th></th></tr></thead>
       <tbody>
         ${jobRows}
@@ -13895,7 +13895,7 @@ async function renderKolTorahTab() {
     </div>
 
     ${ktSectionHead('Titles catalogue', 'code · title · speaker · price — retire with the tick')}
-    <div class="table-wrap"><table>
+    <div class="table-wrap kc-stack-sm"><table>
       <thead><tr><th>Code</th><th>Title</th><th>Speaker</th><th>£</th><th>Active</th><th></th></tr></thead>
       <tbody>
         ${titleRows}
