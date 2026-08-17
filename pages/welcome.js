@@ -891,8 +891,12 @@ const SKY_CSS = `
      (not two <img>s) so only the theme's own file is ever fetched. */
   .sk-logo{height:32px;aspect-ratio:825/196;width:fit-content;display:block;
     background:url(/logo-full-tight.png) center/contain no-repeat}
-  :root[data-theme="dark"] .sk-logo{background-image:url(/logo-full-tight-dark.png)}
-  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-logo{background-image:url(/logo-full-tight-dark.png)}}
+  /* ?v=2 because the FILE changed on 17 Aug (white knock-out → the brand's own
+     dark-theme blue) and next.config.js serves the logos as immutable for a
+     year. Without a new URL every existing visitor keeps the old one until
+     their cache expires. Bump this whenever a logo is edited in place. */
+  :root[data-theme="dark"] .sk-logo{background-image:url("/logo-full-tight-dark.png?v=2")}
+  @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-logo{background-image:url("/logo-full-tight-dark.png?v=2")}}
   /* The row is a fixed run of nowrap items, so it cannot shrink — gap 20 once
      overflowed every desktop width (with the phone block still in the row).
      With the phone block gone the links only render at ≥~1260px, and gap 18

@@ -2621,7 +2621,7 @@ function renderRentalRows() {
           onclick="toggleRentalSel('${r.id}', this.checked)">
       </td>
       <td>
-        <div class="customer-name">${nameHtml(r.customerName || '—')}</div>
+        <div class="customer-name">${custNameLink(r.customerId, nameHtml(r.customerName || '—'))}</div>
         <div class="customer-email" style="font-size:var(--fs-micro);">${r.vn ? '🔢 +'+escHtml(r.vnPrefix || '') : ''}</div>
       </td>
       <td class="kc-phone">${rentalDeviceChip(r, { stacked: true })}</td>
@@ -5623,6 +5623,13 @@ function kcWinPin(dlg) {
   if (!dlg || dlg.classList.contains('kc-win')) return;
   const r = dlg.getBoundingClientRect();
   dlg.classList.add('kc-win');
+  // Some dialogs carry their caps in an INLINE style — the customer card is
+  // width:720px;max-width:94vw;max-height:90vh — and inline beats a stylesheet,
+  // so the .kc-win rule that lifts the caps loses. "Fill the screen" then fills
+  // 90% of it and looks broken. Clearing them here is safe: kcWinReset puts the
+  // whole original style attribute back.
+  dlg.style.maxWidth = 'none';
+  dlg.style.maxHeight = 'none';
   dlg.style.left = `${Math.round(r.left)}px`;
   dlg.style.top = `${Math.round(r.top)}px`;
   dlg.style.width = `${Math.round(r.width)}px`;
@@ -5740,6 +5747,18 @@ function kcWindowise(overlay) {
   if (!dlg) return;
   if (!('kcCss' in dlg.dataset)) dlg.dataset.kcCss = dlg.getAttribute('style') || '';
 
+  // The snap bar is injected, not written into each opener's markup. It was
+  // the latter for an evening, and the customer card — which builds its own
+  // innerHTML — got the grips but no buttons. One place owns it now, so a
+  // dialog added next year gets it without anyone remembering to.
+  if (!dlg.querySelector('.kc-snap')) {
+    const x = dlg.querySelector('.modal-x');
+    // Right after the ✕: both float right and stick to the top, so the order
+    // in the source is the order along the edge.
+    if (x) x.insertAdjacentHTML('afterend', kcWinBarHtml());
+    else dlg.insertAdjacentHTML('afterbegin', kcWinBarHtml());
+  }
+
   let layer = overlay.querySelector('.kc-grips');
   if (!layer) {
     layer = document.createElement('div');
@@ -5798,7 +5817,7 @@ function showDynamicModal(html) {
   } else {
     wasOpen = !overlay.classList.contains('hidden');
   }
-  overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:560px;"><button type="button" class="modal-x" aria-label="Close" title="Close (Esc)" onclick="closeDynamicModal()">✕</button>${kcWinBarHtml()}${html}</div>`;
+  overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:560px;"><button type="button" class="modal-x" aria-label="Close" title="Close (Esc)" onclick="closeDynamicModal()">✕</button>${html}</div>`;
   // Name the dialog from the title the payload already renders. Without this
   // all 49 call sites announce as an unnamed dialog — and because focus jumps
   // straight into the first field, the visible title is never read aloud.
@@ -5882,7 +5901,7 @@ function showStackedModal(html, { width = 460 } = {}) {
     overlay.addEventListener('click', e => { if (e.target === overlay && overlay._pressedOnBackdrop) closeStackedModal(); });
     document.body.appendChild(overlay);
   }
-  overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:${width}px;"><button type="button" class="modal-x" aria-label="Close" title="Close (Esc)" onclick="closeStackedModal()">✕</button>${kcWinBarHtml()}${html}</div>`;
+  overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:${width}px;"><button type="button" class="modal-x" aria-label="Close" title="Close (Esc)" onclick="closeStackedModal()">✕</button>${html}</div>`;
   const dlg = overlay.querySelector('.modal');
   const t = dlg && dlg.querySelector('.modal-title');
   if (dlg && t) { if (!t.id) t.id = 'kcStackedTitle'; dlg.setAttribute('aria-labelledby', t.id); }
@@ -6989,6 +7008,10 @@ function renderDetailPanel(id) {
   // focus back to the card on every save.
   if (!wasOpen) kcSaveReturnFocus('customerCard');
   overlay.classList.remove('hidden');
+  // The customer card is the surface staff have open longest, and it was the
+  // one that missed out when dialogs became windows (owner, 17 Aug: "why
+  // doesnt the windows thing work" — they were trying it on this).
+  kcWindowise(overlay);
   if (!wasOpen) {
     const card = overlay.firstElementChild;
     if (card) { card.setAttribute('tabindex', '-1'); card.focus({ preventScroll: true }); }
@@ -8458,7 +8481,7 @@ async function kcPickerSaveNew(valueId) {
 // one the app handles itself.
 function custNameLink(customerId, html) {
   if (!customerId || customerId === 'walkin') return html;
-  return `<a href="/customers/${encodeURIComponent(String(customerId))}"
+  return `<a class="kc-namelink" href="/customers/${encodeURIComponent(String(customerId))}"
     style="color:inherit;text-decoration:underline dotted;text-underline-offset:3px;" title="Open this customer's profile"
     onclick="event.stopPropagation();if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();kcOpenCustomerLink('${escJs(String(customerId))}')">${html}</a>`;
 }
@@ -10710,7 +10733,7 @@ function renderSimRows() {
         <input type="checkbox" aria-label="Select this SIM plan" ${simSelected.has(s.id) ? 'checked' : ''}
           onclick="toggleSimSel('${s.id}', this.checked)">
       </td>
-      <td><div class="customer-name">${escHtml(capName(s.customerName) || '—')}${unconfirmedChip(s)}</div></td>
+      <td><div class="customer-name">${custNameLink(s.customerId, escHtml(capName(s.customerName) || '—'))}${unconfirmedChip(s)}</div></td>
       <td>${providerBadge(s.provider)}</td>
       <td data-label="SIM" style="font-weight:600;font-size:var(--fs-small);">${escHtml(s.simNumber || '—')}${simIsTheirContact(s) ? ' <span class="kc-contact-ours" title="This is also the number we ring the customer on.">☎️ contact</span>' : ''}</td>
       <td class="kc-cell-clip" data-label="Plan" style="font-size:var(--fs-small);">${escHtml(s.plan || '—')}</td>
@@ -11632,7 +11655,7 @@ function renderBookingsTab() {
         <td onclick="event.stopPropagation()">
           <input type="checkbox" aria-label="Select this booking" ${bkSelected.has(String(b.id)) ? 'checked' : ''}
             onclick="toggleBkSel('${escHtml(String(b.id))}', this.checked)"></td>
-        <td><div class="customer-name">${escName(b.customerName || '—')}</div>
+        <td><div class="customer-name">${custNameLink(b.customerId, escName(b.customerName || '—'))}</div>
             <div class="customer-email">${escName(b.passenger || '')}${(b.passengers || []).length ? ` · 👥 ${b.passengers.length}` : ''}</div></td>
         <td style="white-space:nowrap;">${escHtml(b.route)}</td>
         <td>${escHtml(b.airline || '—')}<div class="customer-email">${escHtml(b.bookingReference || '')}</div></td>
@@ -12634,7 +12657,7 @@ async function renderRepairsTab() {
     ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔧</div><p>${emptyMsg}</p><small>${repairs.length ? 'Change the filter above.' : 'Click "New repair" to open the first ticket.'}</small>${kcClearFiltersBtn('repairs')}</div></td></tr>`
     : shown.map(r => `
       <tr>
-        <td><div class="customer-name">${escName(r.customerName || '—')}</div></td>
+        <td><div class="customer-name">${custNameLink(r.customerId, escName(r.customerName || '—'))}</div></td>
         <td>${escHtml(r.device || '—')}${r.kcPurchase ? ' <span class="badge" style="background:rgba(0, 96, 168,0.1);color:var(--accent);font-size:var(--fs-micro);">KC phone</span>' : ''}</td>
         <td style="font-size:var(--fs-small);">${r.services.map(s => escHtml(s.name)).join('<br>') || '—'}</td>
         <td><strong>${fmtGbp((r.total || 0))}</strong></td>
@@ -13302,7 +13325,7 @@ async function renderServicesTab() {
     ? `<tr><td colspan="5"><div class="empty-state"><div class="emoji">🖨️</div><p>${serviceOrders.length ? 'No orders match this filter.' : 'No services charged yet.'}</p>${serviceOrders.length ? '' : '<small>Click "+ Charge a service" to record the first one.</small>'}${kcClearFiltersBtn('services')}</div></td></tr>`
     : svcShown.map(o => `
       <tr>
-        <td><div class="customer-name">${escName(o.customerName || '—')}</div></td>
+        <td><div class="customer-name">${custNameLink(o.customerId, escName(o.customerName || '—'))}</div></td>
         <td>${escHtml(o.serviceName)}${o.qty > 1 ? ` <span style="color:var(--muted);">× ${o.qty}</span>` : ''}</td>
         <td><strong>${fmtGbp((o.total || 0))}</strong></td>
         <td class="kc-date">${o.createdAt ? fmtDate(o.createdAt) : '—'}</td>
@@ -17798,7 +17821,7 @@ async function renderTasksTab() {
     const chaseCust = isChaseTask ? customers.find(c => c.id === t.customerId) : null;
     const custLabel = t.customerName
       ? (t.customerId
-          ? `<a class="dash-link" href="/customers/${encodeURIComponent(String(t.customerId))}" style="color:var(--accent);cursor:pointer;"
+          ? `<a class="dash-link kc-namelink" href="/customers/${encodeURIComponent(String(t.customerId))}" style="color:var(--accent);cursor:pointer;"
             onclick="event.stopPropagation();if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();kcOpenCustomerLink('${escJs(String(t.customerId))}')">👤 ${escName(t.customerName)}</a> · `
           : '👤 ' + escName(t.customerName) + ' · ')
       : '';

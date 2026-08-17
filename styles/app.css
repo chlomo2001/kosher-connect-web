@@ -865,6 +865,18 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   .kc-quickadd-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* A customer's name, as a link.
+   On a desktop it is a word in a row and must not disturb the row's density.
+   On a phone it is a TAP TARGET, and a 13px-tall line is under the 24px floor
+   the rest of the app is held to — so there, and only there, it gets a real
+   box to hit. Found by --targets the moment the names became anchors. */
+@media (max-width: 560px), (pointer: coarse) {
+  .kc-namelink {
+    display: inline-flex; align-items: center;
+    min-height: 24px; padding-right: 2px;
+  }
+}
+
 /* A number you type INSIDE a sentence — the minutes in the timed-help line.
    Sized to its content so it reads as part of the sentence rather than as a
    form field that wandered in, but still obviously a box you can type in. */

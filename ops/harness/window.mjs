@@ -134,6 +134,33 @@ const tiny = await rect()
 say(tiny.w >= 300 && tiny.h >= 180, `a dialog should not shrink below 300×180 — got ${tiny.w}×${tiny.h}`)
 say(tiny.x >= 0 && tiny.y >= 0, `a dialog should not be pushed off screen — got ${tiny.x},${tiny.y}`)
 
+// ── the customer card gets it too ─────────────────────────────────────────
+// The surface staff have open longest, and the one it was missing on.
+await p.evaluate(() => { try { closeDynamicModal() } catch {} })
+await p.evaluate(async () => { await goToTab('customers') })
+await p.waitForTimeout(300)
+await p.evaluate(() => openCustomerById(customers[0].id))
+await p.waitForTimeout(700)
+const card = await p.evaluate(() => ({
+  grips: document.querySelectorAll('#customerCard .kc-grip').length,
+  snap: document.querySelectorAll('#customerCard .kc-snap-b').length,
+}))
+say(card.grips === 8 && card.snap === 4,
+  `the customer card should carry the window chrome too — got ${card.grips} grips, ${card.snap} snap buttons`)
+
+// Its caps live in an INLINE style (max-width:94vw, max-height:90vh), and
+// inline beats the stylesheet — so "fill the screen" filled 90% of it.
+await p.evaluate(() => kcWinSnap(document.querySelector('#customerCard .kc-snap-b'), 'max'))
+await p.waitForTimeout(250)
+const filled = await p.evaluate(() => {
+  const r = document.querySelector('#customerCard .modal').getBoundingClientRect()
+  return { w: Math.round(r.width), h: Math.round(r.height), vw: window.innerWidth, vh: window.innerHeight }
+})
+say(filled.h >= filled.vh - 30 && filled.w >= filled.vw - 30,
+  `filling the screen from the customer card left ${filled.w}×${filled.h} of ${filled.vw}×${filled.vh}`)
+await p.evaluate(() => { try { dismissCustomerCard() } catch {} })
+await p.waitForTimeout(200)
+
 // ── phones keep the plain dialog ──────────────────────────────────────────
 await ctx.close()
 const phone = await b.newContext({ viewport: { width: 390, height: 844 }, locale: 'en-GB', hasTouch: true, isMobile: true })

@@ -1180,3 +1180,33 @@ Still worth doing even so: the three carriers missing from the existing filters
 (giffgaff 11 SIMs, Talk Home 5, Asda Mobile 4) — if the hub forwards
 everything, they are covered automatically, which is exactly the argument for
 doing it this way.
+
+## Owner report — 2026-08-17: "why doesnt the windows thing work"
+
+Because the surface they tried it on never got it. `kcWindowise` was wired into
+the two shared dialog openers and the static customer modal — but the
+**customer card** builds its own overlay and its own `innerHTML`, so it got
+nothing. It is the surface staff have open longest.
+
+Three faults behind the one report:
+
+| | |
+|---|---|
+| The customer card had no chrome | `kcWindowise` now runs on it too |
+| The snap bar was written into each opener's MARKUP | Injected by `kcWindowise` instead, so every dialog gets one — including any added later |
+| "Fill the screen" filled 90% of it | The card carries `max-width:94vw;max-height:90vh` **inline**, and inline beats the stylesheet rule that lifts the caps. `kcWinPin` clears them; `kcWinReset` still restores the whole original style attribute |
+
+Also fixed, same session and my own doing: the dark logo is served with
+`immutable` for a year (next.config.js), and I changed the FILE in place on 17
+Aug — so every existing visitor would have kept the old white knock-out until
+their cache expired. The CSS now points at `?v=2`.
+
+And the customer name is a link in every list now — rentals, SIM plans,
+bookings, repairs, services — not only on cards. Which `--targets` immediately
+caught as a regression: a name is a 13–16px tap target on a phone, under the
+24px floor the rest of the app is held to. `.kc-namelink` gives it a real box
+to hit at ≤560px and on any coarse pointer, and leaves desktop row density
+exactly as it was.
+
+Verified: gate green, window/picker/modals/names/focus/contrast/targets all
+clean, public pages clean in EN+HE and all three theme states.
