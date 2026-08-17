@@ -7317,26 +7317,120 @@ async function saveCardOnFile(custId) {
   const c = customers.find(x => String(x.id) === String(custId));
   const res = await kcFetch('/api/customers/save-card', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ customerId: custId }),
+    body: JSON.stringify({ customerId: custId, inline: true }),
   }).then(r => r.json()).catch(() => null);
   if (!res || !res.success) { toast(res?.error || 'Could not reach Stripe.', 'error'); return; }
 
   showDynamicModal(`
     <div class="modal-title">💳 Save a card on file</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
-      ${c ? `For <strong>${escName(`${c.firstName || ''} ${c.lastName || ''}`.trim())}</strong>. ` : ''}Stripe collects the card —
-      the number never reaches this app. Nothing is charged now; the card is stored so it can be
-      charged later from “Charge the card on file”.
+      ${c ? `For <strong>${escName(`${c.firstName || ''} ${c.lastName || ''}`.trim())}</strong>. ` : ''}Type the card here —
+      the field belongs to Stripe, so the number never reaches this app. Nothing is charged now.
       ${res.hadCard ? '<br><strong style="color:var(--gold);">This customer already has a card on file — saving another replaces it.</strong>' : ''}
     </div>
-    <div class="rd-actions">
-      <a class="btn btn-primary rd-act" href="${escHtml(res.url)}" target="_blank" rel="noopener"
-        onclick="closeDynamicModal()">🔒 Open Stripe now<span class="rd-sub">on this screen or the tablet</span></a>
-      <button class="btn btn-outline rd-act" onclick="kcCopy('${escJs(res.url)}','Card link copied — send it to them.')">
-        🔗 Copy the link<span class="rd-sub">to send by text or WhatsApp</span></button>
+    <div class="form-group form-full">
+      <label class="form-label" for="kcCardField">Card details</label>
+      <div id="kcCardField" class="kc-cardfield">Loading Stripe…</div>
+      <div class="form-error visible" id="kcCardErr" style="display:none;"></div>
     </div>
-    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
+    <div class="modal-actions">
+      <span class="modal-actions-group">
+        <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+        <button class="btn btn-primary" id="kcCardSave" onclick="kcSaveCardConfirm('${escJs(String(custId))}')" disabled>🔒 Save the card</button>
+      </span>
+    </div>
   `);
+  kcMountCardField(res, custId);
+}
+
+// Stripe's own card field, mounted in our modal. Loaded on demand rather than
+// on every page — most sessions never save a card, and Stripe.js is not small.
+let kcStripe = null, kcCardElement = null, kcCardSecret = null;
+
+function kcLoadStripeJs() {
+  if (window.Stripe) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const el = document.createElement('script');
+    el.src = 'https://js.stripe.com/v3/';
+    el.onload = () => resolve(!!window.Stripe);
+    el.onerror = () => resolve(false);
+    document.head.appendChild(el);
+  });
+}
+
+async function kcMountCardField(res, custId) {
+  const box = document.getElementById('kcCardField');
+  if (!box) return;
+  const ok = await kcLoadStripeJs();
+  if (!ok || !window.Stripe) {
+    // Offline, blocked, or Stripe is down. Say so plainly and offer the hosted
+    // page, which is the same job by another route.
+    box.innerHTML = `<div style="font-size:var(--fs-body);color:var(--danger-ink);">Stripe’s card field could not load.
+      <button class="btn btn-outline btn-sm" style="margin-left:8px;" onclick="saveCardHosted('${escJs(String(custId || ''))}')">Use the hosted page instead</button></div>`;
+    return;
+  }
+  kcStripe = window.Stripe(res.publishableKey);
+  kcCardSecret = res.clientSecret;
+  const elements = kcStripe.elements();
+  // Styled to match the app's own inputs — a field that looks foreign in the
+  // form is a field people hesitate over.
+  const cs = getComputedStyle(document.body);
+  kcCardElement = elements.create('card', {
+    hidePostalCode: true,
+    style: {
+      base: {
+        color: cs.getPropertyValue('--text').trim() || '#0f172a',
+        fontFamily: cs.fontFamily,
+        fontSize: '15px',
+        '::placeholder': { color: cs.getPropertyValue('--muted').trim() || '#64748b' },
+      },
+      invalid: { color: cs.getPropertyValue('--danger-ink').trim() || '#b91c1c' },
+    },
+  });
+  box.innerHTML = '';
+  kcCardElement.mount('#kcCardField');
+  const save = document.getElementById('kcCardSave');
+  kcCardElement.on('change', (e) => {
+    const err = document.getElementById('kcCardErr');
+    if (err) { err.textContent = e.error ? e.error.message : ''; err.style.display = e.error ? '' : 'none'; }
+    if (save) save.disabled = !e.complete;
+  });
+}
+
+async function kcSaveCardConfirm(custId) {
+  const btn = document.getElementById('kcCardSave');
+  const err = document.getElementById('kcCardErr');
+  if (!kcStripe || !kcCardElement || !kcCardSecret) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  const c = customers.find(x => String(x.id) === String(custId));
+  const name = c ? `${c.firstName || ''} ${c.lastName || ''}`.trim() : '';
+  const out = await kcStripe.confirmCardSetup(kcCardSecret, {
+    payment_method: { card: kcCardElement, billing_details: name ? { name } : undefined },
+  }).catch((e) => ({ error: { message: e?.message || 'Stripe did not answer.' } }));
+
+  if (out?.error) {
+    if (err) { err.textContent = out.error.message; err.style.display = ''; }
+    if (btn) { btn.disabled = false; btn.textContent = '🔒 Save the card'; }
+    return;
+  }
+  // Stripe has the card. It attaches to the customer when the
+  // setup_intent.succeeded webhook lands — the same path every other route
+  // uses — so this says "saved", not "ready to charge".
+  closeDynamicModal();
+  kcStripe = kcCardElement = kcCardSecret = null;
+  toast(`Card saved for ${escName(name) || 'this customer'}. It attaches within a few seconds.`, 'success');
+}
+
+// The old route, kept for the case where Stripe.js cannot load and for a card
+// the customer wants to type on their own phone.
+async function saveCardHosted(custId) {
+  const res = await kcFetch('/api/customers/save-card', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ customerId: custId }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not reach Stripe.', 'error'); return; }
+  window.open(res.url, '_blank', 'noopener');
+  closeDynamicModal();
 }
 
 async function kcCopy(text, note) {

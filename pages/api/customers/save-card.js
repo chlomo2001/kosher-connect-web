@@ -14,8 +14,8 @@
 import { withStaff, tabAllowedFor } from '../../../lib/auth.js'
 import { db, tablesMode } from '../../../lib/db.js'
 import {
-  stripeEnabled, webhookConfigured, keysMatch,
-  getOrCreateCustomer, createCardCheckoutSession,
+  stripeEnabled, webhookConfigured, keysMatch, publishableKey,
+  getOrCreateCustomer, createCardCheckoutSession, createCardSetupIntent,
 } from '../../../lib/stripe.js'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -64,6 +64,34 @@ async function handler(req, res) {
   }
   if (stripeCustomerId !== cust.stripe_customer_id) {
     await db.update('customers', `id=eq.${cust.id}`, { stripe_customer_id: stripeCustomerId }).catch(() => {})
+  }
+
+  // INLINE: the counter types the card into Stripe's own field inside one of
+  // our modals. Card only — no Link, no wallet, and so no verification email
+  // to a customer who is standing at the counter (owner, 17 Aug). The number
+  // still never reaches this app; what comes back here is a client secret,
+  // which authorises confirming THIS one setup and nothing else.
+  if (req.body?.inline) {
+    if (!publishableKey) {
+      return res.status(503).json({ success: false, error: 'No Stripe publishable key is configured.' })
+    }
+    try {
+      const intent = await createCardSetupIntent({ customerId: stripeCustomerId, appCustomerId: cust.id })
+      if (!intent?.client_secret) {
+        return res.status(502).json({ success: false, error: 'Stripe would not open a card form.' })
+      }
+      return res.json({
+        success: true,
+        inline: true,
+        clientSecret: intent.client_secret,
+        publishableKey,
+        hadCard: !!cust.stripe_pm_id,
+        customerName: name,
+      })
+    } catch (e) {
+      console.error('[save-card inline]', e.message)
+      return res.status(502).json({ success: false, error: 'Stripe would not open a card form.' })
+    }
   }
 
   // Where Stripe sends them afterwards — the public welcome page either way,

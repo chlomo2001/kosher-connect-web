@@ -217,13 +217,21 @@ export default function AppShell({ initialTab = 'dashboard' }) {
                 <div className="form-group">
                   <label className="form-label" htmlFor="fTitle">Title</label>
                   <select className="form-input title-select" id="fTitle">
+                    {/* The owner's order, 17 Aug: the two the counter reaches
+                        for most first, then the rest. A dropdown is scanned
+                        from the top, so the order IS the design. Reb and Dr
+                        stay on the end rather than being dropped — customers
+                        already carry them, and removing an option would not
+                        remove it from their record, only from the list that
+                        can set it. */}
                     <option value="">—</option>
-                    <option value="Harav">Harav</option>
-                    <option value="Reb">Reb</option>
-                    <option value="Rabbi">Rabbi</option>
                     <option value="Mr">Mr</option>
                     <option value="Mrs">Mrs</option>
+                    <option value="Harav">Harav</option>
+                    <option value="Rabbi">Rabbi</option>
                     <option value="Rebbetzin">Rebbetzin</option>
+                    <option value="Master">Master</option>
+                    <option value="Reb">Reb</option>
                     <option value="Dr">Dr</option>
                   </select>
                 </div>

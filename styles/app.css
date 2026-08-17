@@ -931,6 +931,17 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .biz-person-sub { font-size: var(--fs-micro); color: var(--ink-secondary); margin-top: 6px; }
 .biz-people-empty { font-size: var(--fs-body); color: var(--muted); }
 
+/* Stripe's card field, sized and bordered like our own inputs so it does not
+   read as a foreign object dropped into the form. The height is fixed because
+   the iframe inside reports none until it has loaded. */
+.kc-cardfield {
+  min-height: 44px; padding: 12px 14px;
+  border: 1px solid var(--border-input); border-radius: var(--radius);
+  background: var(--surface); font-size: var(--fs-body); color: var(--muted);
+}
+.kc-cardfield.StripeElement--focus { border-color: var(--accent); box-shadow: var(--ring); }
+.kc-cardfield.StripeElement--invalid { border-color: var(--danger); }
+
 /* ---------- Row overflow menu ---------- */
 /* Fewer controls per row (owner, 17 Aug — "a comfortable view like Lightspeed
    has"). The primary action stays on the row; the rest sit behind ⋯.
