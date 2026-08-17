@@ -14731,6 +14731,10 @@ const bizMonthLabel = (back) => {
 
 let bizData = null;
 let bizPeriod = 'month';
+// A range the owner picks, held apart from the fixed periods so switching to
+// "This week" and back does not lose it. Fetched on demand — the fixed periods
+// are pre-fetched when the summary opens, this one cannot be.
+let bizCustom = null;   // { from, to, now, prev, prevLabel }
 
 async function openBusinessSummary() {
   showDynamicModal(`
@@ -14763,18 +14767,115 @@ async function openBusinessSummary() {
   renderBizSummary();
 }
 
+// The periods on offer, in one place: the screen renders from this and the CSV
+// exports from it, so a file can never describe a period the screen doesn't.
+function bizPeriods() {
+  const d = bizData;
+  if (!d) return {};
+  return {
+    week:  { label: 'This week',  now: d.week,  prev: d.prevWeek,  prevLabel: 'previous 7 days' },
+    month: { label: 'This month', now: d.month, prev: d.prevMonth, prevLabel: 'last month' },
+    last:  { label: 'Last month', now: d.prevMonth, prev: bizDiff(d.months[2], d.months[1]), prevLabel: 'the month before' },
+    ...(bizCustom ? { custom: {
+      label: `${fmtDate(bizCustom.from)} → ${fmtDate(bizCustom.to)}`,
+      now: bizCustom.now, prev: bizCustom.prev, prevLabel: bizCustom.prevLabel,
+    } } : {}),
+  };
+}
+function bizCurrentPeriod() {
+  const all = bizPeriods();
+  return all[bizPeriod] || all.month || null;
+}
+
 function bizSetPeriod(p) { bizPeriod = p; renderBizSummary(); }
+
+/**
+ * Show any two dates the owner picks.
+ *
+ * The report endpoint answers "everything since DATE", so a discrete period is
+ * the difference of two of those — exactly what bizDiff already does for the
+ * fixed tabs. A range therefore needs no new endpoint and, more importantly,
+ * cannot disagree with the tabs beside it.
+ *
+ * The comparison is the equal-length run-up immediately before, so a fortnight
+ * is measured against the fortnight before it.
+ */
+async function bizApplyRange() {
+  const from = document.getElementById('bizFrom')?.value || '';
+  const to = document.getElementById('bizTo')?.value || '';
+  if (!from || !to) { toast('Pick both dates.', 'warning'); return; }
+  if (to < from) { toast('The end is before the start.', 'warning'); return; }
+
+  const dayAfter = (iso) => localISO(new Date(new Date(`${iso}T00:00:00`).getTime() + 86400000));
+  const days = Math.round((new Date(`${to}T00:00:00`) - new Date(`${from}T00:00:00`)) / 86400000) + 1;
+  const before = localISO(new Date(new Date(`${from}T00:00:00`).getTime() - days * 86400000));
+  const rep = (d) => kcFetch('/api/ledger?report=1&from=' + d).then(r => r.json()).catch(() => null);
+
+  const [sinceFrom, sinceAfterTo, sinceBefore] = await Promise.all([rep(from), rep(dayAfter(to)), rep(before)]);
+  if (!sinceFrom?.success) { toast('Could not load that range.', 'error'); return; }
+  bizCustom = {
+    from, to,
+    now: bizDiff(sinceFrom, sinceAfterTo),
+    prev: bizDiff(sinceBefore, sinceFrom),
+    prevLabel: `the ${days} day${days === 1 ? '' : 's'} before`,
+  };
+  bizPeriod = 'custom';
+  renderBizSummary();
+}
+
+/**
+ * The figures on screen, as a file — the one thing an accountant always asks
+ * for. Built from what is RENDERED rather than re-queried, so the file and the
+ * screen can never differ.
+ */
+function bizExportCsv() {
+  if (!bizData) return;
+  const P = bizCurrentPeriod();
+  if (!P || !P.now) { toast('Nothing to export yet.', 'warning'); return; }
+  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const money = (v) => (Math.round((Number(v) || 0) * 100) / 100).toFixed(2);
+  const { rows } = groupRevenue(P.now.byType);
+  const lines = [
+    ['Kosher Connect — business summary'],
+    ['Period', P.label],
+    ['Compared with', P.prevLabel || ''],
+    ['Generated', new Date().toLocaleString('en-GB')],
+    [],
+    ['Service', 'Billed £', 'Previous £'],
+    ...rows.map(([label, amt]) => {
+      const prevRow = P.prev ? Object.fromEntries(groupRevenue(P.prev.byType).rows)[label] : '';
+      return [label.replace(/^• /, ''), money(amt), prevRow === undefined ? '' : money(prevRow)];
+    }),
+    [],
+    ['Billed total', money(P.now.charged)],
+    ['Received', money(P.now.received)],
+    ['Still owed', money(Math.max(0, (P.now.charged || 0) - (P.now.received || 0)))],
+    ['Refunds issued', money(P.now.refunded)],
+    ['Refunds still to pay out', money(P.now.refundsOwed)],
+  ];
+  const csv = lines.map(r => (r.length ? r.map(esc).join(',') : '')).join('\r\n');
+  const stamp = bizCustom && bizPeriod === 'custom' ? `${bizCustom.from}_${bizCustom.to}` : bizPeriod;
+  kcDownload(`kosher-connect-summary-${stamp}.csv`, csv, 'text/csv;charset=utf-8');
+  toast('Exported.', 'success');
+}
+
+// Hand the browser a file. One place, so every export behaves the same and the
+// object URL is always released.
+function kcDownload(filename, content, mime = 'text/plain') {
+  const blob = new Blob(['\ufeff' + content], { type: mime });   // BOM: Excel reads £ properly
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 function renderBizSummary() {
   const body = document.getElementById('bizSummaryBody');
   if (!body || !bizData) return;
   const d = bizData;
-  const PERIODS = {
-    week:  { label: 'This week',  now: d.week,  prev: d.prevWeek,  prevLabel: 'previous 7 days' },
-    month: { label: 'This month', now: d.month, prev: d.prevMonth, prevLabel: 'last month' },
-    last:  { label: 'Last month', now: d.prevMonth, prev: bizDiff(d.months[2], d.months[1]), prevLabel: 'the month before' },
-  };
-  const P = PERIODS[bizPeriod] || PERIODS.month;
+  const PERIODS = bizPeriods();
+  const P = bizCurrentPeriod();
   const now = P.now || { byType: {}, charged: 0, received: 0, refunded: 0, refundsOwed: 0 };
   const prev = P.prev;
 
@@ -14889,7 +14990,19 @@ function renderBizSummary() {
     <div class="biz-tabs" role="tablist">
       ${Object.entries(PERIODS).map(([k, v]) => `
         <button class="biz-tab${k === bizPeriod ? ' active' : ''}" role="tab"
-          aria-selected="${k === bizPeriod}" onclick="bizSetPeriod('${k}')">${v.label}</button>`).join('')}
+          aria-selected="${k === bizPeriod}" onclick="bizSetPeriod('${k}')">${escHtml(v.label)}</button>`).join('')}
+    </div>
+    ${/* Any two dates, and the same comparison the fixed periods get — against
+         the run-up of equal length immediately before, so "the fortnight of
+         Succos" is measured against the fortnight before it rather than
+         against nothing. Built from the same endpoint the fixed periods use
+         (a difference of two open-ended snapshots), so the numbers cannot
+         disagree with the tabs above them. */''}
+    <div class="biz-range">
+      <label class="biz-range-lbl">From <input class="form-input" type="date" id="bizFrom" value="${escHtml(bizCustom?.from || '')}"></label>
+      <label class="biz-range-lbl">To <input class="form-input" type="date" id="bizTo" value="${escHtml(bizCustom?.to || '')}"></label>
+      <button class="btn btn-outline btn-sm" onclick="bizApplyRange()">Show this range</button>
+      <button class="btn btn-outline btn-sm" style="margin-inline-start:auto;" onclick="bizExportCsv()">⤓ Export CSV</button>
     </div>
     ${emptyPeriod ? `
     <div class="biz-blank">

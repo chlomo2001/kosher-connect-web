@@ -934,6 +934,25 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .kc-howto-steps li { font-size: var(--fs-body); line-height: 1.55; margin-bottom: 7px; color: var(--ink-secondary); }
 .kc-howto-steps li::marker { color: var(--accent); font-weight: 700; }
 
+/* The date range on the business summary. Sits under the period tabs and
+   reads as one line of controls, wrapping to two on a phone rather than
+   squeezing the date fields to nothing. */
+.biz-range {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end;
+  padding: 10px 0 4px; margin-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.biz-range-lbl {
+  display: flex; flex-direction: column; gap: 3px;
+  font-size: var(--fs-micro); color: var(--muted);
+}
+.biz-range-lbl .form-input { min-height: 34px; padding: 6px 9px; width: auto; }
+
+@media (max-width: 560px) {
+  .biz-range { gap: 6px; }
+  .biz-range .btn { flex: 1 1 auto; }
+  .biz-range .btn:last-child { margin-inline-start: 0 !important; }
+}
+
 /* ---------- Carrier mail ---------- */
 /* A log, not a table: the useful unit is one message with its verdict and the
    action it needs, and a message's subject is long. Three columns — when, what,
