@@ -942,6 +942,14 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .kc-cardfield.StripeElement--focus { border-color: var(--accent); box-shadow: var(--ring); }
 .kc-cardfield.StripeElement--invalid { border-color: var(--danger); }
 
+/* A purchase-order line: item, or free text, then how many and what each.
+   Wraps to two rows on a narrow screen rather than squeezing the quantity
+   into something you cannot read. */
+.po-line { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+.po-line .form-input { flex: 1 1 140px; min-width: 0; width: auto; min-height: 38px; }
+.po-line .po-qty { flex: 0 0 76px; }
+.po-line .po-cost { flex: 0 0 96px; }
+
 /* ---------- Row overflow menu ---------- */
 /* Fewer controls per row (owner, 17 Aug — "a comfortable view like Lightspeed
    has"). The primary action stays on the row; the rest sit behind ⋯.

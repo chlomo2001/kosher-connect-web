@@ -252,6 +252,14 @@ only carries our name once a profile exists).
       services list (rentals, SIM plans, virtual numbers, repairs, Kol Torah).
 
 ## Suppliers & stock (owner ask 08-03 — "the business must track this all")
+- [x] **Purchase orders — DONE 08-17.** The missing middle of the buy side:
+      suppliers and goods-in were both here, the ORDER was not, so "what is on
+      its way and when was it promised" had no answer. Shop tab → "On order",
+      with draft → ordered → received, an expected date that goes red when it
+      passes, and Receive putting the quantities straight onto the shelf.
+      Ordering posts nothing; only receiving moves anything, and it moves stock
+      rather than the ledger. **NOTE: there are 0 suppliers on file** — the
+      first order needs one adding (the Returns panel has the box).
 The buy side is invisible today: stock arrives from wholesalers, some of it is
 defective and sits in a bag waiting to go back ("a few hundred quid of phones
 to return to the sender"), and nothing in the app knows. Shop tab tracks

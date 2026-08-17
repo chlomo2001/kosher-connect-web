@@ -13048,6 +13048,191 @@ function renderShopRows() {
   }
 }
 
+// ── Purchase orders ───────────────────────────────────────────────────────
+// The middle of the buy side: suppliers and goods-in were already here, the
+// ORDER was not — so "what is on its way, and was it promised for when?" had
+// no answer anywhere.
+//
+// Ordering is not a financial event. Nothing is charged and the shelf does not
+// move; only RECEIVING moves stock, through one database function so the
+// quantities and the order's status change together or not at all.
+let purchaseOrders = [];
+
+const PO_LABEL = {
+  draft:     ['Draft', 'badge-rental', 'written up, not sent'],
+  ordered:   ['On order', 'badge-sim', 'sent to the supplier, not here yet'],
+  received:  ['Received', 'badge-active', 'arrived and on the shelf'],
+  cancelled: ['Cancelled', '', 'not coming'],
+};
+
+function poRowsHtml() {
+  const today = localISO();
+  if (!purchaseOrders.length) {
+    return `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">
+      Nothing on order. When stock is ordered from a wholesaler, write it here — then receiving it
+      puts the quantities straight onto the shelf.</div>`;
+  }
+  return purchaseOrders.map(po => {
+    const [label, cls, why] = PO_LABEL[po.status] || [po.status, '', ''];
+    const late = po.status === 'ordered' && po.expectedAt && po.expectedAt < today;
+    const total = po.lines.reduce((n, l) => n + (Number(l.qty) || 0) * (Number(l.unitCost) || 0), 0);
+    const items = po.lines.reduce((n, l) => n + (Number(l.qty) || 0), 0);
+    return `
+      <div class="history-item history-flat">
+        <div style="flex:1;min-width:0;">
+          <div class="history-desc"><strong>${escHtml(po.supplierName || 'Supplier')}</strong>${
+            po.reference ? ` — ${escHtml(po.reference)}` : ''}</div>
+          <div style="font-size:var(--fs-micro);color:var(--muted);">
+            <span class="badge ${cls}" title="${escHtml(why)}">${escHtml(label)}</span>
+            ${po.lines.length} line${po.lines.length === 1 ? '' : 's'} · ${items} item${items === 1 ? '' : 's'}
+            ${po.expectedAt ? ` · ${late ? '<strong style="color:var(--danger-ink);">due ' + fmtDate(po.expectedAt) + ' — late</strong>' : 'due ' + fmtDate(po.expectedAt)}` : ''}
+            ${po.receivedAt ? ` · arrived ${fmtDate(po.receivedAt)}` : ''}
+          </div>
+        </div>
+        <div class="history-amount" style="margin:0 10px;">${total ? fmtGbp(total) : '—'}</div>
+        <div class="row-actions">
+          ${po.status === 'draft' ? `<button class="action-btn" onclick="poSetStatus('${escJs(po.id)}','ordered')">📤 Mark ordered</button>` : ''}
+          ${po.status === 'ordered' ? `<button class="action-btn" style="color:var(--success);font-weight:600;" onclick="poReceive('${escJs(po.id)}')">📥 Receive</button>` : ''}
+          ${po.status === 'draft' || po.status === 'ordered'
+            ? kcRowMenuHtml([{ label: '✕ Cancel this order', onclick: `poSetStatus('${escJs(po.id)}','cancelled')`, danger: true }], { label: 'More for this order' })
+            : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+let poLines = [];
+
+function openPurchaseOrderModal() {
+  if (!suppliers.length) {
+    toast('Add a supplier first — the Returns panel below has the box for it.', 'warning');
+    return;
+  }
+  poLines = [{ stockItemId: '', qty: 1, unitCost: '' }];
+  showDynamicModal(`
+    <div class="modal-title">📦 New purchase order</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
+      What has been ordered from a wholesaler. Nothing is charged and the shelf does not move —
+      receiving it later is what puts the quantities on.</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label" for="poSupplier">Supplier *</label>
+        <select class="form-input" id="poSupplier">
+          ${suppliers.filter(x => x.active !== false).map(x => `<option value="${escHtml(x.id)}">${escHtml(x.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="poRef">Their reference</label>
+        <input class="form-input" id="poRef" type="text" placeholder="e.g. INV-4471" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="poExpected">Expected</label>
+        <input class="form-input" id="poExpected" type="date">
+      </div>
+      <div class="form-group form-full">
+        <div class="section-divider" style="margin-bottom:8px;">What was ordered</div>
+        <div id="poLines"></div>
+        <button type="button" class="kc-add-more" onclick="poAddLine()">+ Add another line</button>
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label" for="poNotes">Notes</label>
+        <input class="form-input" id="poNotes" type="text" placeholder="Anything to remember about this order" autocomplete="off">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <span class="modal-actions-group">
+        <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+        <button class="btn btn-outline" onclick="poSave('draft')">Save as draft</button>
+        <button class="btn btn-primary" onclick="poSave('ordered')">📤 Save &amp; mark ordered</button>
+      </span>
+    </div>
+  `);
+  poRenderLines();
+}
+
+function poRenderLines() {
+  const box = document.getElementById('poLines');
+  if (!box) return;
+  const items = shopItems.filter(i => i.active);
+  box.innerHTML = poLines.map((l, i) => `
+    <div class="po-line">
+      <select class="form-input" aria-label="Item" onchange="poLineSet(${i},'stockItemId',this.value)">
+        <option value="">— free text —</option>
+        ${items.map(it => `<option value="${escHtml(it.id)}"${l.stockItemId === it.id ? ' selected' : ''}>${
+          escHtml([it.company, it.model].filter(Boolean).join(' '))}</option>`).join('')}
+      </select>
+      <input class="form-input" placeholder="or describe it" value="${escHtml(l.description || '')}"
+        aria-label="Description" oninput="poLineSet(${i},'description',this.value)">
+      <input class="form-input po-qty" type="number" min="1" step="1" value="${escHtml(String(l.qty))}"
+        aria-label="Quantity" oninput="poLineSet(${i},'qty',this.value)">
+      <input class="form-input po-cost" type="number" min="0" step="0.01" placeholder="£ each" value="${escHtml(String(l.unitCost ?? ''))}"
+        aria-label="Cost each" oninput="poLineSet(${i},'unitCost',this.value)">
+      ${poLines.length > 1 ? `<button type="button" class="action-btn danger" aria-label="Remove this line" onclick="poRemoveLine(${i})">✕</button>` : ''}
+    </div>`).join('');
+}
+function poLineSet(i, key, value) { if (poLines[i]) poLines[i][key] = value; }
+function poAddLine() { poLines.push({ stockItemId: '', qty: 1, unitCost: '' }); poRenderLines(); }
+function poRemoveLine(i) { poLines.splice(i, 1); poRenderLines(); }
+
+async function poSave(status) {
+  const payload = {
+    supplierId: document.getElementById('poSupplier')?.value,
+    reference: document.getElementById('poRef')?.value || '',
+    expectedAt: document.getElementById('poExpected')?.value || '',
+    notes: document.getElementById('poNotes')?.value || '',
+    status,
+    lines: poLines.map(l => ({
+      stockItemId: l.stockItemId || null,
+      description: l.description || '',
+      qty: parseInt(l.qty, 10),
+      unitCost: l.unitCost === '' ? null : parseFloat(l.unitCost),
+    })),
+  };
+  const res = await kcFetch('/api/purchase-orders', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not save that order.', 'error'); return; }
+  closeDynamicModal();
+  toast(status === 'ordered' ? 'Order saved and marked as ordered.' : 'Draft order saved.', 'success');
+  renderShopTab();
+}
+
+async function poSetStatus(id, status) {
+  const res = await kcFetch('/api/purchase-orders', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not update that order.', 'error'); return; }
+  toast(status === 'cancelled' ? 'Order cancelled.' : 'Marked as ordered.', 'success');
+  renderShopTab();
+}
+
+// Receiving is the one step that moves stock, so it asks first and says
+// exactly what will land on the shelf.
+async function poReceive(id) {
+  const po = purchaseOrders.find(x => x.id === id);
+  if (!po) return;
+  const onShelf = po.lines.filter(l => l.stockItemId);
+  const names = onShelf.map(l => {
+    const it = shopItems.find(x => x.id === l.stockItemId);
+    return `${l.qty} × ${escHtml(it ? [it.company, it.model].filter(Boolean).join(' ') : 'an item')}`;
+  });
+  const ok = await kcConfirm({
+    title: 'Everything on this order arrived?',
+    body: names.length
+      ? `This adds to the shelf:<br><strong>${names.join('<br>')}</strong>${
+          po.lines.length > onShelf.length ? `<br><span style="color:var(--muted);">${po.lines.length - onShelf.length} free-text line(s) are not counted — add those by hand.</span>` : ''}`
+      : 'None of these lines is linked to a stock item, so nothing will be added to the shelf — the order just closes.',
+    okLabel: 'Receive it',
+  });
+  if (!ok) return;
+  const res = await kcFetch('/api/purchase-orders', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status: 'received' }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not receive that order.', 'error'); return; }
+  toast('Received — the stock is on the shelf.', 'success');
+  renderShopTab();
+}
+
 async function renderShopTab() {
   const content = document.getElementById('mainContent');
   content.innerHTML = skeletonHtml('shop');
@@ -13063,6 +13248,12 @@ async function renderShopTab() {
   }
   shopItems = data.items; shopSales = data.sales;
   if (retData?.success) { suppliers = retData.suppliers; supplierReturns = retData.returns; }
+  const poData = await kcFetch('/api/purchase-orders').then(r => r.json()).catch(() => null);
+  // Shape-checked, not just success-checked: a success with no orders array
+  // would blank the list and throw on the next render. (The offline harness
+  // answers unknown paths with a bare {success:true}, which is exactly that
+  // case, and is how this was caught rather than shipped.)
+  if (Array.isArray(poData?.orders)) purchaseOrders = poData.orders;
   if (giData?.success) { goodsIn = giData.deliveries; goodsInBalances = giData.balances; }
 
   const today = localISO();
@@ -13208,6 +13399,14 @@ async function renderShopTab() {
         </table>
       </div>
       <div>
+        <div class="table-card" style="padding:8px 18px 14px;margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+            <div class="section-divider" style="margin-top:12px;">On order</div>
+            <button class="btn btn-outline btn-sm" onclick="openPurchaseOrderModal()">📦 New order</button>
+          </div>
+          ${poRowsHtml()}
+        </div>
+
         <div class="table-card" style="padding:8px 18px 14px;margin-bottom:14px;">
           <div class="section-divider" style="margin-top:12px;">Returns to supplier${openReturns.length
             ? ` <span style="color:var(--danger-ink);font-weight:600;">· ${openReturns.length} open${openClaim ? ' · ' + fmtGbp(openClaim) + ' claimed' : ''}</span>` : ''}</div>
