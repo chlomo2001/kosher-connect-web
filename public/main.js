@@ -10287,8 +10287,28 @@ function renderSimsTab() {
       ${renewing.map(s => `<span style="margin-left:8px;">· ${escHtml(capName(s.customerName))} (${escHtml(s.simNumber)})</span>`).join('')}</span>
     </div>` : '';
 
+  // ── Which mailbox is this line's carrier account in? ────────────────────
+  //
+  // Owner, 17 Aug, on finding the SIM estate spread over seven of the shop's
+  // own Gmail accounts: "really i WOULD like to have everything focused on 1
+  // gmail only". Consolidating the REGISTERED addresses is a long job — 734
+  // carrier accounts, one login at a time — so it happens opportunistically,
+  // a SIM at a time, as each one is touched anyway. This is how you see where
+  // it has got to: the mailbox on every row, and a filter to take one at a
+  // time.
+  //
+  // The +tag is deliberately NOT shown in the cell and IS kept in the tooltip:
+  // the tag identifies the SIM (336 of them share the gittbilig base), but
+  // what you are scanning for here is the base.
+  const simMailboxes = simMailboxCounts();
   const simBar = kcFilterSort('sim', [
     { value: 'all', label: 'All plans' },
+    ...simMailboxes.map(m => ({
+      value: `mb:${m.base}`,
+      label: `📮 ${m.base.replace('@gmail.com', '')} (${m.n})`,
+      test: s => simMailboxBase(s.email) === m.base,
+    })),
+    { value: 'mb:none', label: '📭 No carrier account on file', test: s => !simMailboxBase(s.email) },
   ], [
     { value: 'name', label: 'Sort: Customer A–Z', cmp: kcCmpStr(s => s.customerName) },
     { value: 'renewal', label: 'Renewal (soonest)', cmp: (a, b) => String(a.renewalDate || '9999').localeCompare(String(b.renewalDate || '9999')) },
@@ -10355,7 +10375,7 @@ function renderSimsTab() {
             <th style="width:28px;"><input type="checkbox" id="simSelAll" aria-label="Select every SIM plan in this view"
               onclick="toggleAllSimSel(this.checked)"></th>
             <th>Customer</th><th>Provider</th><th>SIM Number</th><th>Plan</th>
-            <th>Renewal</th><th>Payment</th><th>Status</th><th>Actions</th>
+            <th>Mailbox</th><th>Renewal</th><th>Payment</th><th>Status</th><th>Actions</th>
           </tr>
         </thead>
         <tbody id="simTableBody"></tbody>
@@ -10363,6 +10383,44 @@ function renderSimsTab() {
     </div>`;
 
   renderSimRows();
+}
+
+/**
+ * The mailbox a carrier account really lives in — the base address, tag off.
+ *
+ * Mirrors lib/simMailMatch.mjs::mailboxKey in the one respect that matters
+ * here: Gmail ignores dots, and the shop has written the same account four
+ * ways (`red.far.bilig`, `redfarbilig`). Without collapsing them, one mailbox
+ * appears in the list six times.
+ */
+function simMailboxBase(email) {
+  let v = String(email == null ? '' : email).trim().toLowerCase();
+  const angled = v.match(/<([^>]+)>/);
+  if (angled) v = angled[1].trim();
+  const at = v.lastIndexOf('@');
+  if (at < 1) return '';
+  let local = v.slice(0, at);
+  const domain = v.slice(at + 1);
+  if (!domain) return '';
+  const plus = local.indexOf('+');
+  if (plus > -1) local = local.slice(0, plus);
+  const gmail = domain === 'gmail.com' || domain === 'googlemail.com';
+  if (gmail) local = local.replace(/\./g, '');
+  if (!local) return '';
+  return `${local}@${gmail ? 'gmail.com' : domain}`;
+}
+
+/** The shop's own mailboxes, busiest first — the ones worth filtering by. */
+function simMailboxCounts(limit = 8) {
+  const n = new Map();
+  for (const s of sims) {
+    const base = simMailboxBase(s.email);
+    if (base) n.set(base, (n.get(base) || 0) + 1);
+  }
+  return [...n.entries()]
+    .map(([base, count]) => ({ base, n: count }))
+    .sort((a, b) => b.n - a.n)
+    .slice(0, limit);
 }
 
 function renderSimRows() {
@@ -10397,7 +10455,7 @@ function renderSimRows() {
     // Same trap as Rentals: with 800+ SIMs on file, "No SIM plans yet" reads
     // as the list having been wiped rather than filtered.
     const narrowed = sims.length > 0;
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="emoji">💳</div>
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="emoji">💳</div>
       <p>${narrowed ? 'No SIM plans match this view.' : 'No SIM plans yet.'}</p>
       <small>${narrowed ? '' : 'Click "+ New SIM plan" to add one.'}</small>
       ${narrowed ? kcClearFiltersBtn('sim') : ''}</div></td></tr>`;
@@ -10427,6 +10485,9 @@ function renderSimRows() {
       <td>${providerBadge(s.provider)}</td>
       <td data-label="SIM" style="font-weight:600;font-size:var(--fs-small);">${escHtml(s.simNumber || '—')}${simIsTheirContact(s) ? ' <span class="kc-contact-ours" title="This is also the number we ring the customer on.">☎️ contact</span>' : ''}</td>
       <td class="kc-cell-clip" data-label="Plan" style="font-size:var(--fs-small);">${escHtml(s.plan || '—')}</td>
+      <td class="kc-drop-sm" data-label="Mailbox" style="font-size:var(--fs-micro);color:var(--muted);white-space:nowrap;"
+        title="${s.email ? escHtml(s.email) : 'No carrier account on file — this SIM can only ever be matched by its number'}">${
+        simMailboxBase(s.email) ? escHtml(simMailboxBase(s.email).replace('@gmail.com', '')) : '—'}</td>
       <td class="kc-date" data-label="Renews" style="font-size:var(--fs-small);${renewalClass}">${fmtDate(s.renewalDate)}${renewalLabel}</td>
       <td data-label="Payment" style="font-size:var(--fs-small);">${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}</td>
       <td>${statusBadge}</td>

@@ -1032,3 +1032,34 @@ taken, then:
 | `EMAIL ADDRESS` | 1 | **`pl-sim-0` is the spreadsheet's HEADER ROW imported as a SIM** — no number, provider "UK SIM", currently attached to Fishel Cohen. Flagged in its notes, left for the owner to delete |
 
 Carrier logins now: 734 real addresses, 0 junk, across 797 SIMs.
+
+## Owner request — 2026-08-17: the mailbox column, and Carrier Mail moves
+
+**Mailbox column + filter on SIM Plans.** The SIM estate turned out to be spread
+over seven of the shop's own Gmail accounts, not one:
+
+| Mailbox | SIMs |
+|---|---|
+| gittbilig@gmail.com | 336 |
+| redfarbilig@gmail.com | 86 |
+| shevabruches111@gmail.com | 64 |
+| heimishecentre@gmail.com | 59 |
+| hashomrimmcr@gmail.com | 55 |
+| mendlhersh / shloimea1 | 30 |
+
+Consolidating the *registered* addresses is 734 carrier logins one at a time,
+so it happens opportunistically — each SIM moved as it is touched anyway. The
+column is how that progress is watched: the base mailbox on every row (dots
+collapsed, so `red.far.bilig` and `redfarbilig` are one thing), the full
+per-SIM address in the tooltip, and a filter per mailbox plus "no carrier
+account on file" for the 63 that can only ever pair by number.
+
+The `+tag` is deliberately kept out of the cell and kept in the tooltip: the
+tag identifies the SIM, but the base is what you scan for.
+
+**Carrier Mail moved from Services to Manage.** The other four under Services
+are things the shop sells; this is a queue of work arriving from carriers,
+read at the same moment as Tasks and Confirm Data.
+
+Verified: gate green, no overflow at 390/768/1280/1440, names and contrast
+clean, picker sweep green.

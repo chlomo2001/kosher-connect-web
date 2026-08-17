@@ -49,8 +49,12 @@ const NAV = [
   { items: [['dashboard', 'Dashboard']] },
   { label: 'People', items: [['customers', 'Customers'], ['wallet', 'Wallet']] },
   { label: 'Counter', items: [['rentals', 'Phone Rentals'], ['repairs', 'Repairs'], ['shop', 'Shop'], ['koltorah', 'Kol Torah']] },
-  { label: 'Services', items: [['sim', 'SIM Plans'], ['mail', 'Carrier Mail'], ['virtual', 'Virtual Numbers'], ['services', 'Online & Print'], ['bookings', 'Tickets & Flights']] },
-  { label: 'Manage', items: [['tasks', 'Tasks'], ['review', 'Confirm Data'], ['settings', 'Settings']] },
+  { label: 'Services', items: [['sim', 'SIM Plans'], ['virtual', 'Virtual Numbers'], ['services', 'Online & Print'], ['bookings', 'Tickets & Flights']] },
+  // Carrier Mail sits under Manage, not Services (owner, 17 Aug): the other
+  // four are things the shop SELLS. This is a queue of work arriving from the
+  // carriers — the same kind of thing as Tasks and Confirm Data, and read at
+  // the same moment.
+  { label: 'Manage', items: [['tasks', 'Tasks'], ['mail', 'Carrier Mail'], ['review', 'Confirm Data'], ['settings', 'Settings']] },
 ]
 
 // The converter tools. Real pages, not SPA tabs, so they are <a> links and
