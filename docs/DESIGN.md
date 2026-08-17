@@ -158,6 +158,41 @@ Waiting is disguised, not announced:
 - Async repaints must not blank what's already painted — paint over, never
   clear-then-load (the dashboard's `dashPaint` is the precedent).
 
+## Row actions: one primary, the rest behind ⋯
+
+Owner ask 08-17 ("a comfortable view like Lightspeed has"), settled by
+measurement rather than taste. The finding: the app's spacing was already
+generous — 15/18px cells, 70–91px rows — and what felt uncomfortable was the
+row-action column, where 6 of 6 Customers rows had "Delete" wrapped onto a
+line of its own.
+
+The rule, following [Carbon](https://carbondesignsystem.com/components/data-table/usage/)
+and [NN/g](https://www.nngroup.com/articles/contextual-menus-guidelines/):
+
+- **Under three actions, keep them inline.** A menu there costs a click and
+  hides what is available.
+- **Three or more: one primary action stays on the row, the rest go behind
+  `kcRowMenuHtml`.** Leaving the primary visible is the "information scent"
+  NN/g asks for — you can see the kind of thing the ⋯ holds.
+- **Persistent, never hover-only.** The counter runs on a tablet, and a control
+  that only exists on hover does not exist to a finger.
+- **Only actions belonging to the same object.** A row menu is that row's.
+- **Destructive last, set apart** by a hairline as well as by colour.
+
+The menu keeps the ARIA menu-button contract: `aria-haspopup="menu"` and
+`aria-expanded` on the button, `role="menu"` / `role="menuitem"` inside,
+opening moves focus to the first item, Up/Down/Home/End move, Escape closes
+**and returns focus to the button**. It renders into a portal on `<body>`
+because `.table-wrap` scrolls horizontally and a box positioned inside a
+scrolling container is clipped by it.
+
+**Widths.** `.row-actions` stays on one line from **1440px** up. That number
+was measured, not chosen: holding the line at 1280 pushes Rentals — nine
+columns, and already 44px too wide before any of this — to +143px of sideways
+scroll, and a table you must scroll sideways is worse than a button on a
+second line. Below 1440 the menu has already cut most rows to two controls.
+Rentals needs one column fewer; which one is an owner decision.
+
 ## If a screen needs explaining, it has failed
 
 Owner standard, 08-17, brought over from another project: *anyone should

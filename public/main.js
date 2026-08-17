@@ -2674,10 +2674,12 @@ function renderRentalRows() {
       <td>
         <div class="row-actions">
           ${computedStatus === 'booked' ? `<button class="action-btn" style="color:var(--success);font-weight:600;" onclick="startReservation('${r.id}')">▶ Start</button>` : ''}
-          <button class="action-btn" onclick="openRemindModal('rental','${r.id}')" title="Remind me">⏰</button>
-          <button class="action-btn" onclick="openRentalSmsModal('${r.id}')" title="Draft a status SMS (does not send)">✉️</button>
           <button class="action-btn" onclick="openManageRentalModal('${r.id}')">⚙ Manage</button>
-          <button class="action-btn danger" onclick="deleteRental('${r.id}')">Delete</button>
+          ${kcRowMenuHtml([
+            { label: '⏰ Remind me about this', onclick: `openRemindModal('rental','${r.id}')` },
+            { label: '✉️ Draft a status text', onclick: `openRentalSmsModal('${r.id}')` },
+            { label: '🗑 Delete this rental', onclick: `deleteRental('${r.id}')`, danger: true },
+          ], { label: 'More for this rental' })}
         </div>
       </td>
     </tr>`;
@@ -6342,9 +6344,11 @@ function renderTableRows() {
         : `${fmtGbp(customerPaid)}`}</td>
       <td>
         <div class="row-actions">
-          <button class="action-btn" data-action="edit" data-id="${c.id}">Edit</button>
           <button class="action-btn" data-action="details" data-id="${c.id}">Details</button>
-          <button class="action-btn danger" data-action="delete" data-id="${c.id}">Delete</button>
+          ${kcRowMenuHtml([
+            { label: '✏️ Edit their record', onclick: `kcCustomerRowAction('edit','${escJs(String(c.id))}')` },
+            { label: '🗑 Delete this customer', onclick: `kcCustomerRowAction('delete','${escJs(String(c.id))}')`, danger: true },
+          ], { label: 'More for this customer' })}
         </div>
       </td>
     </tr>`;
@@ -6361,9 +6365,7 @@ function renderTableRows() {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const { action, id } = btn.dataset;
-      if (action === 'edit') openEditModal(id);
-      else if (action === 'details') toggleDetail(id);
-      else if (action === 'delete') deleteCustomer(id);
+      if (action) kcCustomerRowAction(action, id);
     });
   });
 
@@ -10254,9 +10256,11 @@ function renderSimRows() {
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
-          <button class="action-btn" onclick="openRemindModal('sim','${s.id}')" title="Remind me">⏰</button>
           <button class="action-btn" onclick="openManageSimModal('${s.id}')">⚙ Manage</button>
-          <button class="action-btn danger" onclick="deleteSim('${s.id}')">Delete</button>
+          ${kcRowMenuHtml([
+            { label: '⏰ Remind me about this', onclick: `openRemindModal('sim','${s.id}')` },
+            { label: '🗑 Delete this SIM plan', onclick: `deleteSim('${s.id}')`, danger: true },
+          ], { label: 'More for this SIM plan' })}
         </div>
       </td>
     </tr>`;
@@ -16516,6 +16520,142 @@ async function simCancelContactCheck(sim, customer) {
   if (idx !== -1) customers[idx] = { ...customers[idx], altPhone: number };
   toast(`Saved ${fmtPhone(number)} for ${escName(name)}.`, 'success');
   return true;
+}
+
+// ── Row overflow menu ─────────────────────────────────────────────────────
+// Owner, 17 Aug: "a comfortable view like Lightspeed has". Measured, the
+// discomfort was the row-action column: six of six Customers rows had "Delete"
+// wrapped onto a line of its own. Widening the column made three tables scroll
+// sideways instead, so the answer is FEWER controls per row, which is what the
+// design systems say too.
+//
+// Carbon's rule: under three actions, keep them inline as buttons — an
+// overflow menu there costs a click and hides what is available. Three or
+// more, and the secondary ones go behind one control. NN/g adds: leave a
+// couple of icons visible before the ⋯ so there is some scent of what is
+// inside, and only group actions that belong to the same object.
+//
+// Persistent, never hover-only: the counter runs on a tablet, and a control
+// that only exists on hover does not exist to a finger.
+//
+// The menu obeys the ARIA menu-button pattern: aria-haspopup + aria-expanded
+// on the button, role=menu / role=menuitem inside, opening moves focus to the
+// first item, Up/Down move, Enter and Space act, and Escape closes AND puts
+// focus back on the button it came from.
+//
+// It renders into a portal on <body> rather than inside the cell, because
+// .table-wrap scrolls horizontally — and a box positioned inside a scrolling
+// container is clipped by it. The items are authored markup carried across
+// verbatim, so their onclick handlers survive the move with nothing evaluated.
+let kcRowMenuSeq = 0;
+let kcRowMenuOpen = null;   // the id of the button whose menu is open
+
+/**
+ * items: [{ label, onclick, danger }] — `label` is HTML, `onclick` is the same
+ * attribute string the inline button would have carried.
+ */
+function kcRowMenuHtml(items, { label = 'More actions' } = {}) {
+  const id = `kcrm${++kcRowMenuSeq}`;
+  const rows = items.map(i =>
+    `<button type="button" role="menuitem" class="kc-rowmenu-item${i.danger ? ' danger' : ''}" onclick="${i.onclick}">${i.label}</button>`
+  ).join('');
+  return `<button type="button" class="action-btn kc-rowmenu-btn" id="${id}"
+      aria-haspopup="menu" aria-expanded="false" aria-label="${escHtml(label)}" title="${escHtml(label)}"
+      onclick="event.stopPropagation();kcRowMenuToggle('${id}')"
+      onkeydown="kcRowMenuBtnKey(event,'${id}')">⋯</button>
+    <template id="${id}_t">${rows}</template>`;
+}
+
+function kcRowMenuPortal() {
+  let el = document.getElementById('kcRowMenuPortal');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'kcRowMenuPortal';
+    el.className = 'kc-rowmenu';
+    el.setAttribute('role', 'menu');
+    el.addEventListener('keydown', kcRowMenuKey);
+    // An item's own onclick runs first; this closes afterwards, so the action
+    // never fires against a menu that has already gone.
+    el.addEventListener('click', (e) => { if (e.target.closest('[role=menuitem]')) setTimeout(kcRowMenuClose, 0); });
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function kcRowMenuToggle(id) {
+  if (kcRowMenuOpen === id) { kcRowMenuClose(); return; }
+  kcRowMenuClose();
+  const btn = document.getElementById(id);
+  const tpl = document.getElementById(id + '_t');
+  if (!btn || !tpl) return;
+  const el = kcRowMenuPortal();
+  el.innerHTML = tpl.innerHTML;
+  el.setAttribute('aria-labelledby', id);
+  el.classList.add('open');
+
+  // Position under the button, flipped above when the page has no room below —
+  // a menu that opens off the bottom of a laptop screen is a menu with no
+  // Delete in it.
+  const r = btn.getBoundingClientRect();
+  el.style.visibility = 'hidden';
+  el.style.top = '0px'; el.style.left = '0px';
+  const h = el.offsetHeight, w = el.offsetWidth;
+  const below = window.innerHeight - r.bottom;
+  const top = below > h + 12 ? r.bottom + 6 : Math.max(8, r.top - h - 6);
+  const left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8));
+  el.style.top = `${Math.round(top + window.scrollY)}px`;
+  el.style.left = `${Math.round(left + window.scrollX)}px`;
+  el.style.visibility = '';
+
+  btn.setAttribute('aria-expanded', 'true');
+  kcRowMenuOpen = id;
+  el.querySelector('[role=menuitem]')?.focus();
+}
+
+function kcRowMenuClose(returnFocus = false) {
+  const el = document.getElementById('kcRowMenuPortal');
+  const btn = kcRowMenuOpen ? document.getElementById(kcRowMenuOpen) : null;
+  if (el) { el.classList.remove('open'); el.innerHTML = ''; }
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+  kcRowMenuOpen = null;
+  if (returnFocus && btn) btn.focus();
+}
+
+// Enter/Space/Down open the menu from the button — the pattern's own contract.
+function kcRowMenuBtnKey(e, id) {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); kcRowMenuToggle(id); }
+}
+
+function kcRowMenuKey(e) {
+  const el = document.getElementById('kcRowMenuPortal');
+  if (!el) return;
+  const items = [...el.querySelectorAll('[role=menuitem]')];
+  const i = items.indexOf(document.activeElement);
+  if (e.key === 'Escape') { e.preventDefault(); kcRowMenuClose(true); return; }
+  if (e.key === 'Tab') { kcRowMenuClose(); return; }          // leaving is closing
+  if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length]?.focus(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length]?.focus(); }
+  else if (e.key === 'Home') { e.preventDefault(); items[0]?.focus(); }
+  else if (e.key === 'End') { e.preventDefault(); items[items.length - 1]?.focus(); }
+}
+
+// Anywhere else, any scroll, any resize — the menu is positioned against a
+// point on the screen, so it must not outlive it.
+document.addEventListener('click', (e) => {
+  if (!kcRowMenuOpen) return;
+  if (e.target.closest('#kcRowMenuPortal') || e.target.closest('.kc-rowmenu-btn')) return;
+  kcRowMenuClose();
+}, true);
+window.addEventListener('resize', () => kcRowMenuClose());
+window.addEventListener('scroll', () => kcRowMenuClose(), true);
+
+// The customer row's actions, in one place. The delegated listener on the
+// table calls it, and so does the overflow menu — which is rendered on <body>
+// and therefore out of reach of any listener bound inside the table.
+function kcCustomerRowAction(action, id) {
+  if (action === 'edit') openEditModal(id);
+  else if (action === 'details') toggleDetail(id);
+  else if (action === 'delete') deleteCustomer(id);
 }
 
 function contactChip(c) {

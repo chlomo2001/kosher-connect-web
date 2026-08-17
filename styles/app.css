@@ -914,6 +914,38 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   .kc-stack-sm .row-actions { justify-content: flex-start; }
 }
 
+/* ---------- Row overflow menu ---------- */
+/* Fewer controls per row (owner, 17 Aug — "a comfortable view like Lightspeed
+   has"). The primary action stays on the row; the rest sit behind ⋯.
+
+   The menu itself renders on <body>, because .table-wrap scrolls horizontally
+   and anything positioned inside a scrolling box is clipped by it. */
+.kc-rowmenu-btn { font-weight: 700; letter-spacing: 1px; line-height: 1; }
+
+.kc-rowmenu {
+  position: absolute; z-index: 2400; display: none;
+  min-width: 210px; max-width: min(280px, calc(100vw - 16px));
+  padding: 6px; border: 1px solid var(--border);
+  border-radius: var(--radius-lg); background: var(--surface);
+  box-shadow: var(--shadow-2);
+}
+.kc-rowmenu.open { display: block; }
+
+.kc-rowmenu-item {
+  display: block; width: 100%; text-align: start;
+  padding: 9px 12px; min-height: 40px;
+  border: 0; border-radius: var(--radius); background: none;
+  font: inherit; font-size: var(--fs-body); color: var(--text);
+  cursor: pointer; white-space: normal;
+}
+.kc-rowmenu-item:hover { background: var(--accent-wash); color: var(--accent); }
+.kc-rowmenu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* The destructive one is set apart as well as coloured — a hairline above it
+   so a fast hand does not land on Delete while aiming for the item above. */
+.kc-rowmenu-item.danger { color: var(--danger-ink); margin-top: 4px; border-top: 1px solid var(--border); padding-top: 11px; }
+.kc-rowmenu-item.danger:hover { background: rgba(239, 68, 68, 0.10); color: var(--danger-ink); }
+
 /* ---------- "How do I…?" walk-throughs ---------- */
 /* A reading surface for someone who is stuck, so: generous line height, one
    question per row, and the steps numbered rather than bulleted — order is the
@@ -1112,7 +1144,34 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
    column at 1280, where the last button then sat under the scroll edge. Now a
    tight width stacks the buttons onto a second line and the table fits; from
    1440 up they sit on one line exactly as before. */
-.row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+/* 6px, not 8: at 1280 the actions cell is 139px wide and its content box only
+   103px after padding, so "Details" (68) + "⋯" (39) + an 8px gap did not fit
+   and the menu button dropped to a second line — the very thing the menu was
+   added to stop. Measured, not guessed. */
+.row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* From 561px up the row's controls stay on ONE line, which is what tells the
+   table algorithm to give that column the width they need — shrinking the
+   padding alone does not, it simply hands the saved pixels to another column
+   (measured: cell 139→127px, content box 103px either way).
+   This was tried BEFORE the overflow menu existed, with four and five buttons
+   per row, and it pushed three tables into sideways scroll. With a primary
+   action and a ⋯ it costs almost nothing — the numbers are in the commit.
+   1440px, not 561px, and that number was measured too. Rentals carries nine
+   columns and was ALREADY 44px too wide at 1280 before any of this; holding
+   its controls on one line there costs +143px, and even at 1360 it costs +63.
+   At 1440 and above it costs nothing at all, on any table. Below it, the
+   menu has cut the row to two controls anyway, so a wrap is rarer and shorter.
+   The real fix for Rentals is one column fewer — an owner decision about which
+   one, not a stylesheet's to make. */
+@media (min-width: 1440px) {
+  .row-actions { flex-wrap: nowrap; }
+}
+
+/* The actions column gives back some of its side padding for the same reason.
+   Only the last cell, and only in a table — everything else keeps the roomy
+   18px the rest of the app uses. */
+.table-wrap td:last-child { padding-left: 12px; padding-right: 12px; }
 
 .action-btn {
   padding: 5px 12px;

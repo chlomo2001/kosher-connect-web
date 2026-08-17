@@ -120,46 +120,21 @@ Safe (loop-eligible), ranked value ÷ effort:
       (Loyverse.) *money persistence — careful design.*
 
 ## UX / smoothness / delight
-- [ ] **P1 · M** — **"A comfortable view like Lightspeed has"** (owner ask
-      08-17). Measured before changing anything, and the premise turned out to
-      be half wrong: the spacing is already generous — 15/18px table cells,
-      70–91px rows, 34/44px page padding — and content stops widening on a big
-      screen. The app does not feel cramped because it is tightly packed.
+- [x] **P1 · M** — ~~"A comfortable view like Lightspeed has"~~ — **DONE 08-17**
+      via the row overflow menu (see docs/DESIGN.md §Row actions). Measured
+      before and after at every width:
 
-      **What is actually uncomfortable is the row-action column.** At 1440px,
-      6 of 6 Customers rows, 2 of 2 SIM rows and 3 of 7 Rentals rows have their
-      buttons wrapped onto a second line — "Delete" sitting alone under
-      "⚙ Manage" — which reads as unfinished and pushes every row taller.
+      | | wrapped rows (cust / sim / rentals) | rentals width @1280 |
+      |---|---|---|
+      | before | 6/6 · 2/2 · 3/7 | +44px |
+      | after ≥1440 | **0/6 · 0/2 · 0/7** | 0 |
+      | after @1280 | 6/6 · 2/2 · 3/7 (2 controls, not 3) | **+32px** |
 
-      **Two cheap fixes were tried and BOTH measurably made it worse**, so
-      neither was shipped:
-      1. `td:last-child { width:1%; white-space:nowrap }` (shrink the actions
-         column to fit) — fixed every wrap, and started the SIM and Rentals
-         tables scrolling sideways at 1280 (+47px, +319px, against a baseline
-         of rentals +44px alone). A desktop table you must scroll sideways is
-         worse than a button on a second line.
-      2. Tighter gap + non-wrapping button labels — did not fix the wrapping at
-         all (6/2/3 unchanged) and widened Rentals at 1280 from +44 to +58px,
-         because labels that cannot wrap make buttons wider.
-
-      **The real fix is fewer controls per row**, which is what Lightspeed
-      actually does: keep the primary action visible (⚙ Manage) and put the
-      rest behind an overflow "⋯" menu. That narrows the table instead of
-      widening it, and it is a proper piece of work — a menu component with
-      keyboard access and a focus trap, applied across six tables — not a
-      spacing tweak. Do it deliberately, with the harness measuring wrapped
-      rows AND table width before and after.
-
-      Baseline to beat, measured 08-17 at 1440px: wrapped action rows
-      customers 6/6, sim 2/2, rentals 3/7; table overflow at 1280 rentals
-      +44px, everything else 0.
-- [x] **P2 · S** ⚠ — ~~Till overflows sideways at 320px in Simple Mode~~ —
-      **DONE 08-17 on the owner's nod.** `.pos-methods` now wraps and each
-      button may shrink and take two lines (`flex: 1 1 88px; min-width: 0`);
-      the +43px at `largest` is gone and `.pos-main`, `.pos-cats` and
-      `.pos-tiles` went clean with it, confirming one cause. A wrapping rule
-      only — no charge logic was touched. **The largest-size modal sweep is now
-      wired into `audit-all.sh`**, which was waiting on this.
+      Better or equal at every width measured, worse at none. Still open, and
+      an owner decision rather than a styling one: **Rentals carries nine
+      columns** and cannot fit 1280 whatever the buttons do. One column has to
+      go — Days is derivable from the dates, and Price sits beside a Balance
+      that already says "£75 owed" or "✓ Paid".
 - [ ] **P1 · L** — **"Google-feel" polish (owner ask 08-03**, after "why does
       business.google.com feel so much nicer/richer/smoother?"). Owner wants
       the **first three** of the four gaps. **Session 1 shipped 08-04**
