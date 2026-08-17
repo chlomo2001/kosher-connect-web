@@ -25,7 +25,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { round2, priceFromDays, ticketFeeFor, ddSurcharge, poolScore } from '../lib/rentalMath.mjs'
+import { round2, priceFromPeriods, ticketFeeFor, ddSurcharge, poolScore } from '../lib/rentalMath.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const SRC = readFileSync(path.join(ROOT, 'public/main.js'), 'utf8')
@@ -49,13 +49,19 @@ function lift(name, prelude = '') {
 // per-30-day cap scaling, an uncapped rate, and the fractional/half-penny
 // rates that expose rounding.
 const RATES = [
+  { ratePerDay: 5,     minCharge: 10,   cap: 90,   capPeriodDays: 30, afterCapPerDay: 2 },
+  { ratePerDay: 5.5,   minCharge: 10,   cap: 90,   capPeriodDays: 30, afterCapPerDay: 2.5 },
+  { ratePerDay: 5.35,  minCharge: 12.5, cap: 92.5, capPeriodDays: 30, afterCapPerDay: 1.75 },
+  { ratePerDay: 1.15,  minCharge: 5,    cap: null, afterCapPerDay: 2 },
+  { ratePerDay: 2.675, minCharge: 0,    cap: 200,  capPeriodDays: 30, afterCapPerDay: 2 },
+  // A row from before the 08-17 migration: no after-cap rate at all. Both
+  // copies must fall back to the full day rate, and to the SAME answer.
   { ratePerDay: 5,     minCharge: 10,   cap: 90,   capPeriodDays: 30 },
-  { ratePerDay: 5.5,   minCharge: 10,   cap: 90,   capPeriodDays: 30 },
-  { ratePerDay: 5.35,  minCharge: 12.5, cap: 92.5, capPeriodDays: 30 },
-  { ratePerDay: 1.15,  minCharge: 5,    cap: null },
-  { ratePerDay: 2.675, minCharge: 0,    cap: 200,  capPeriodDays: 30 },
 ]
-const DAY_COUNTS = [0, 1, 3, 6, 13, 29, 30, 31, 60, 100]
+// Chargeable days per cap window — one window, several, and the edges.
+const PERIOD_SPLITS = [
+  [0], [1], [3], [29], [30], [30, 1], [30, 5], [25, 15], [30, 30, 5], [30, 30, 30, 12], [0, 0], [12, 0, 7],
+]
 
 test('public/main.js round2 IS lib/rentalMath round2', () => {
   // eslint-disable-next-line no-new-func
@@ -66,13 +72,15 @@ test('public/main.js round2 IS lib/rentalMath round2', () => {
   }
 })
 
-test('public/main.js priceFromDays agrees with lib/rentalMath to the penny', () => {
-  const clientPriceFromDays = lift('priceFromDays', CLIENT_ROUND2)()
+test('public/main.js priceFromPeriods agrees with lib/rentalMath to the penny', () => {
+  // priceFromPeriods calls priceForWindow, so the window helper is lifted with it.
+  const CLIENT_WINDOW = (SRC.match(/function priceForWindow\s*\([^)]*\)\s*\{[\s\S]*?\n\}/) || [])[0]
+  assert.ok(CLIENT_WINDOW, 'public/main.js must define its priceForWindow mirror')
+  const clientPriceFromPeriods = lift('priceFromPeriods', `${CLIENT_ROUND2}; ${CLIENT_WINDOW}`)()
   for (const rate of RATES) {
-    for (const cd of DAY_COUNTS) {
-      const totalDays = cd + 2 // a couple of free (Shabbos) days in the range
-      assert.equal(clientPriceFromDays(cd, totalDays, rate), priceFromDays(cd, totalDays, rate),
-        `public/main.js priceFromDays(${cd}, ${totalDays}, ${JSON.stringify(rate)}) has drifted from lib/rentalMath`)
+    for (const periods of PERIOD_SPLITS) {
+      assert.equal(clientPriceFromPeriods(periods, rate), priceFromPeriods(periods, rate),
+        `public/main.js priceFromPeriods(${JSON.stringify(periods)}, ${JSON.stringify(rate)}) has drifted from lib/rentalMath`)
     }
   }
 })

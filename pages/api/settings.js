@@ -99,6 +99,10 @@ async function handler(req, res) {
           minCharge: Number(r.min_charge),
           cap: Number(r.cap),
           capPeriodDays: r.cap_period_days,
+          // Null only on a row older than the 08-17 migration; lib/rentalMath
+          // reads null as "no after-cap rate" and keeps the old behaviour.
+          afterCapPerDay: r.after_cap_per_day === null || r.after_cap_per_day === undefined
+            ? null : Number(r.after_cap_per_day),
           vnWeekly: r.vn_weekly === null ? null : Number(r.vn_weekly),
           vnPer30Days: r.vn_per_30_days === null ? null : Number(r.vn_per_30_days),
           active: r.active,
@@ -137,8 +141,14 @@ async function handler(req, res) {
         const nums = {}
         for (const [f, col, type] of [['ratePerDay', 'rate_per_day', 'money'], ['minCharge', 'min_charge', 'money'],
           ['cap', 'cap', 'money'], ['capPeriodDays', 'cap_period_days', 'days'],
+          ['afterCapPerDay', 'after_cap_per_day', 'money'],
           ['vnWeekly', 'vn_weekly', 'money'], ['vnPer30Days', 'vn_per_30_days', 'money']]) {
-          if (b[f] === undefined || b[f] === '') { nums[col] = col === 'cap_period_days' ? 30 : (col.startsWith('vn_') ? null : 0); continue }
+          if (b[f] === undefined || b[f] === '') {
+            nums[col] = col === 'cap_period_days' ? 30
+              : col === 'after_cap_per_day' ? 2
+              : (col.startsWith('vn_') ? null : 0)
+            continue
+          }
           const v = validateTyped(type, b[f])
           if (!v.ok) return res.status(400).json({ success: false, error: `${f}: ${v.error}` })
           nums[col] = v.value
@@ -395,13 +405,14 @@ async function handler(req, res) {
 
       if (table === 'rental_rates') {
         const patch = {}
-        for (const [field, type] of [['ratePerDay', 'money'], ['minCharge', 'money'], ['cap', 'money'], ['capPeriodDays', 'days'], ['vnWeekly', 'money'], ['vnPer30Days', 'money']]) {
+        for (const [field, type] of [['ratePerDay', 'money'], ['minCharge', 'money'], ['cap', 'money'], ['capPeriodDays', 'days'], ['afterCapPerDay', 'money'], ['vnWeekly', 'money'], ['vnPer30Days', 'money']]) {
           if (values?.[field] === undefined) continue
           const v = validateTyped(type, values[field])
           if (!v.ok) return res.status(400).json({ success: false, error: `${field}: ${v.error}` })
           patch[{
             ratePerDay: 'rate_per_day', minCharge: 'min_charge', cap: 'cap',
-            capPeriodDays: 'cap_period_days', vnWeekly: 'vn_weekly', vnPer30Days: 'vn_per_30_days',
+            capPeriodDays: 'cap_period_days', afterCapPerDay: 'after_cap_per_day',
+            vnWeekly: 'vn_weekly', vnPer30Days: 'vn_per_30_days',
           }[field]] = v.value
         }
         if (!Object.keys(patch).length) return res.status(400).json({ success: false, error: 'Nothing to update.' })

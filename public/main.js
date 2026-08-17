@@ -1645,14 +1645,16 @@ let pricingConfig = null;
 // Values follow the customer price list (30 Jun 2026): "Monthly" = the cap,
 // and the virtual-number add-on is per-country (£5/£10 USA+Canada,
 // £7/£15 Israel+UK).
+// afterCapPerDay: what every day past the first cap window costs (owner,
+// 08-17). £2 across the board today; per-row so one country can move alone.
 const FALLBACK_RATES = {
-  'USA':       { ratePerDay: 3, minCharge: 20, cap: 50, capPeriodDays: 30, vnWeekly: 5, vnPer30Days: 10 },
-  'USA-NoSIM': { ratePerDay: 2, minCharge: 15, cap: 30, capPeriodDays: 30, vnWeekly: 5, vnPer30Days: 10 },
-  'UK-UKmins': { ratePerDay: 2, minCharge: 20, cap: 35, capPeriodDays: 30, vnWeekly: 7, vnPer30Days: 15 },
-  'UK-Intl':   { ratePerDay: 2, minCharge: 25, cap: 40, capPeriodDays: 30, vnWeekly: 7, vnPer30Days: 15 },
-  'Israel':    { ratePerDay: 3, minCharge: 20, cap: 50, capPeriodDays: 30, vnWeekly: 7, vnPer30Days: 15 },
-  'Canada':    { ratePerDay: 3, minCharge: 25, cap: 50, capPeriodDays: 30, vnWeekly: 5, vnPer30Days: 10 },
-  'EU':        { ratePerDay: 3, minCharge: 20, cap: 45, capPeriodDays: 30, vnWeekly: 5, vnPer30Days: 10 },
+  'USA':       { ratePerDay: 3, minCharge: 20, cap: 50, capPeriodDays: 30, afterCapPerDay: 2, vnWeekly: 5, vnPer30Days: 10 },
+  'USA-NoSIM': { ratePerDay: 2, minCharge: 15, cap: 30, capPeriodDays: 30, afterCapPerDay: 2, vnWeekly: 5, vnPer30Days: 10 },
+  'UK-UKmins': { ratePerDay: 2, minCharge: 20, cap: 35, capPeriodDays: 30, afterCapPerDay: 2, vnWeekly: 7, vnPer30Days: 15 },
+  'UK-Intl':   { ratePerDay: 2, minCharge: 25, cap: 40, capPeriodDays: 30, afterCapPerDay: 2, vnWeekly: 7, vnPer30Days: 15 },
+  'Israel':    { ratePerDay: 3, minCharge: 20, cap: 50, capPeriodDays: 30, afterCapPerDay: 2, vnWeekly: 7, vnPer30Days: 15 },
+  'Canada':    { ratePerDay: 3, minCharge: 25, cap: 50, capPeriodDays: 30, afterCapPerDay: 2, vnWeekly: 5, vnPer30Days: 10 },
+  'EU':        { ratePerDay: 3, minCharge: 20, cap: 45, capPeriodDays: 30, afterCapPerDay: 2, vnWeekly: 5, vnPer30Days: 10 },
 };
 
 // App country + phone plan → priced country code (same mapping as the
@@ -1769,31 +1771,53 @@ function round2(v) {
   return (n < 0 ? -1 : 1) * Math.round(Math.abs(n) * 100 + 1e-7) / 100;
 }
 
-function priceFromDays(chargeableDays, totalDays, rate) {
-  let price = chargeableDays * rate.ratePerDay;
-  if (chargeableDays > 0 && price < rate.minCharge) price = rate.minCharge;
-  // Cap scales per calendar window (default 30 days): chargeable days set the
-  // £, calendar days set how many cap periods the rental spans — so a 60-day
-  // rental caps at 2× cap, not 1×.
-  if (rate.cap != null) {
-    const capTotal = rate.cap * Math.max(1, Math.ceil(totalDays / (rate.capPeriodDays || 30)));
-    if (price > capTotal) price = capTotal;
-  }
-  return round2(price);
+// One cap window. `dayRate` overrides the day rate for the windows after the
+// first; the minimum is a first-window idea only (it makes a two-day hire
+// worth serving — it is not a floor under every extra month).
+function priceForWindow(chargeableDays, rate, dayRate, applyMin) {
+  const cd = Number(chargeableDays) || 0;
+  let price = cd * (dayRate == null ? rate.ratePerDay : dayRate);
+  if (applyMin && cd > 0 && price < rate.minCharge) price = rate.minCharge;
+  if (rate.cap != null && price > rate.cap) price = rate.cap;
+  return price;
+}
+
+// Owner's rule, 08-17: rolling past the cap does not buy another month at full
+// price. Window 1 prices as it always has; every window after it charges
+// afterCapPerDay and is capped in its own right. `periods` is the chargeable
+// day count per window — where Shabbos and Yom Tov fall decides which window
+// loses them, so the split is passed in, never derived from the totals.
+// Mirrors lib/rentalMath.mjs::priceFromPeriods exactly; change both together.
+function priceFromPeriods(periods, rate) {
+  const list = Array.isArray(periods) ? periods : [Number(periods) || 0];
+  if (!list.length) return 0;
+  const after = rate.afterCapPerDay == null ? null : Number(rate.afterCapPerDay);
+  let total = 0;
+  list.forEach((cd, i) => {
+    total += i === 0 ? priceForWindow(cd, rate, null, true) : priceForWindow(cd, rate, after, false);
+  });
+  return round2(total);
 }
 
 function calcRentalPrice(fromDate, toDate, country = 'USA', ukPlan = 'standard', simGiven = true) {
+  const rate = rateFor(country, ukPlan, simGiven);
+  const windowLen = rate.capPeriodDays || 30;
+  const periods = [];
   let chargeableDays = 0;
   let totalDays = 0;
   const cur = parseLocalDate(fromDate);
   const end = parseLocalDate(toDate);
   while (cur <= end) {
+    // Windows are counted in CALENDAR days from the start, so a free day still
+    // uses up its place in the window it falls in.
+    const w = Math.floor(totalDays / windowLen);
+    while (periods.length <= w) periods.push(0);
     totalDays++;
-    if (!isShabbatOrHoliday(cur, country)) chargeableDays++;
+    if (!isShabbatOrHoliday(cur, country)) { chargeableDays++; periods[w]++; }
     cur.setDate(cur.getDate() + 1);
   }
-  const price = priceFromDays(chargeableDays, totalDays, rateFor(country, ukPlan, simGiven));
-  return { chargeableDays, totalDays, price };
+  const price = priceFromPeriods(periods, rate);
+  return { chargeableDays, totalDays, periods, price };
 }
 
 // Price list: "Third phone and more — 15% Off". A rental counts as a 3rd+
@@ -3637,11 +3661,9 @@ function updateRentalCalc() {
   const country  = phone?.country || 'USA';
   const ukPlan   = phone?.ukPlan  || 'standard';
   const simGiven = document.getElementById('nrGiven_sim')?.dataset.given !== '0';
-  const { chargeableDays, totalDays, price } = calcRentalPrice(from, to, country, ukPlan, simGiven);
+  const { chargeableDays, totalDays, periods, price } = calcRentalPrice(from, to, country, ukPlan, simGiven);
   const excluded = totalDays - chargeableDays;
   const rate = rateFor(country, ukPlan, simGiven);
-  const capTotal = rate.cap == null ? Infinity
-    : rate.cap * Math.max(1, Math.ceil(totalDays / (rate.capPeriodDays || 30)));
   let finalPrice = price;
   let discountLine = '';
   const addDiscount = document.getElementById('rAddDiscount')?.checked;
@@ -3662,15 +3684,28 @@ function updateRentalCalc() {
   box.style.display = 'block';
   // Full reasoning: rate math, which days were dropped for Shabbat/Yom Tov,
   // and whether the minimum or the cap kicked in.
-  const raw = chargeableDays * rate.ratePerDay;
-  const capPeriods = rate.cap == null ? 0 : Math.max(1, Math.ceil(totalDays / (rate.capPeriodDays || 30)));
+  // The sum is now window by window, so the explanation is too: staff being
+  // asked "why is a five-week hire £60?" should be able to read the answer off
+  // the box rather than work it out.
+  const first = periods[0] || 0;
+  const rawFirst = first * rate.ratePerDay;
+  const windowLen = rate.capPeriodDays || 30;
   const steps = [
-    `${chargeableDays} chargeable day${chargeableDays === 1 ? '' : 's'} × £${rate.ratePerDay}/day = ${fmtGbp(raw)}`,
+    `${first} chargeable day${first === 1 ? '' : 's'} × £${rate.ratePerDay}/day = ${fmtGbp(rawFirst)}${
+      periods.length > 1 ? ` (first ${windowLen} days)` : ''}`,
   ];
-  if (rate.minCharge && chargeableDays > 0 && raw < rate.minCharge)
+  if (rate.minCharge && first > 0 && rawFirst < rate.minCharge)
     steps.push(`below the £${rate.minCharge} minimum → £${rate.minCharge}`);
-  if (rate.cap != null && price >= capTotal)
-    steps.push(`capped at £${rate.cap}${capPeriods > 1 ? ` × ${capPeriods} periods (${rate.capPeriodDays || 30}d each) = £${capTotal}` : ''}`);
+  if (rate.cap != null && Math.min(Math.max(rawFirst, first > 0 ? rate.minCharge : 0), rate.cap) === rate.cap)
+    steps.push(`capped at £${rate.cap}`);
+  periods.slice(1).forEach((cd, i) => {
+    const dayRate = rate.afterCapPerDay == null ? rate.ratePerDay : rate.afterCapPerDay;
+    const rawWin = cd * dayRate;
+    const capped = rate.cap != null && rawWin > rate.cap;
+    steps.push(`then ${cd} day${cd === 1 ? '' : 's'} × £${dayRate}/day${
+      rate.afterCapPerDay == null ? '' : ' (after the cap)'} = ${fmtGbp(capped ? rate.cap : rawWin)}${
+      capped ? ` (capped at £${rate.cap})` : ''}`);
+  });
   if (country === 'USA' && !simGiven) steps.push('no-SIM rate applied');
   // USA pool suggestion: recommend the phone whose pool expiry best fits the
   // return date, unless the chosen phone is already the top pick.
@@ -17123,6 +17158,7 @@ async function renderSettingsTab() {
       <td>${num(`rr_min_${r.countryCode}`, r.minCharge)}</td>
       <td>${num(`rr_cap_${r.countryCode}`, r.cap)}</td>
       <td>${num(`rr_period_${r.countryCode}`, r.capPeriodDays, '1')}</td>
+      <td>${num(`rr_after_${r.countryCode}`, r.afterCapPerDay ?? 2)}</td>
       <td>${num(`rr_vnw_${r.countryCode}`, r.vnWeekly ?? '')}</td>
       <td>${num(`rr_vnm_${r.countryCode}`, r.vnPer30Days ?? '')}</td>
       <td style="white-space:nowrap;"><button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 12px;"
@@ -17135,7 +17171,7 @@ async function renderSettingsTab() {
         <input class="form-input" id="rrNew_code" placeholder="FR" style="width:70px;padding:5px 7px;font-size:var(--fs-small);min-height:0;text-transform:uppercase;">
         <input class="form-input" id="rrNew_name" placeholder="France" style="width:100px;padding:5px 7px;font-size:var(--fs-small);min-height:0;margin-top:3px;"></td>
       <td>${num('rrNew_rate', '')}</td><td>${num('rrNew_min', '')}</td><td>${num('rrNew_cap', '')}</td>
-      <td>${num('rrNew_period', '30', '1')}</td><td>${num('rrNew_vnw', '')}</td><td>${num('rrNew_vnm', '')}</td>
+      <td>${num('rrNew_period', '30', '1')}</td><td>${num('rrNew_after', '2')}</td><td>${num('rrNew_vnw', '')}</td><td>${num('rrNew_vnm', '')}</td>
       <td><button class="btn btn-primary btn-sm" onclick="addRentalRate()">+ Add</button></td>
     </tr>`;
 
@@ -17381,7 +17417,7 @@ async function renderSettingsTab() {
   const pricingCards = [
     menuHtml, extraHtml,
     settingsCard('rates', '📱 Rental Rates', `${cfg.rentalRates.length} countries`, `
-      <div class="table-wrap"><table><thead><tr><th>Country</th><th>£/day</th><th>Min £</th><th>Cap £</th><th>Cap period (days)</th><th>VN £/wk</th><th>VN £/30d</th><th></th></tr></thead>
+      <div class="table-wrap"><table><thead><tr><th>Country</th><th>£/day</th><th>Min £</th><th>Cap £</th><th>Cap period (days)</th><th title="Every day past the first cap period charges this instead of the full day rate. Each period is still capped.">After-cap £/day</th><th>VN £/wk</th><th>VN £/30d</th><th></th></tr></thead>
       <tbody>${rateRows}</tbody></table></div>`),
     settingsCard('damage', '💥 Damage / Loss Charges', 'what a lost/broken item costs', `
       <div class="table-wrap"><table><thead><tr><th>Country</th><th>Phone £</th><th>Charger £</th><th>SIM £</th><th></th></tr></thead>
@@ -17876,6 +17912,7 @@ async function saveRentalRate(code) {
     minCharge:     document.getElementById(`rr_min_${code}`).value,
     cap:           document.getElementById(`rr_cap_${code}`).value,
     capPeriodDays: document.getElementById(`rr_period_${code}`).value,
+    afterCapPerDay: document.getElementById(`rr_after_${code}`).value,
     vnWeekly:      document.getElementById(`rr_vnw_${code}`).value,
     vnPer30Days:   document.getElementById(`rr_vnm_${code}`).value,
   };
@@ -18249,6 +18286,7 @@ async function addRentalRate() {
     minCharge: document.getElementById('rrNew_min').value,
     cap: document.getElementById('rrNew_cap').value,
     capPeriodDays: document.getElementById('rrNew_period').value,
+    afterCapPerDay: document.getElementById('rrNew_after').value,
     vnWeekly: document.getElementById('rrNew_vnw').value,
     vnPer30Days: document.getElementById('rrNew_vnm').value,
   });

@@ -266,6 +266,7 @@
         "minCharge": 18,
         "cap": 90,
         "capPeriodDays": 30,
+        "afterCapPerDay": 2,
         "vnWeekly": 8,
         "vnPer30Days": 25,
         "active": true
@@ -277,6 +278,7 @@
         "minCharge": 18,
         "cap": 60,
         "capPeriodDays": 30,
+        "afterCapPerDay": 2,
         "vnWeekly": 8,
         "vnPer30Days": 25,
         "active": true
@@ -288,6 +290,7 @@
         "minCharge": 15,
         "cap": 45,
         "capPeriodDays": 30,
+        "afterCapPerDay": 2,
         "vnWeekly": null,
         "vnPer30Days": null,
         "active": true

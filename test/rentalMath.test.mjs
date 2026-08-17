@@ -2,50 +2,53 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  round2, capPeriods, priceFromDays, countDays,
+  round2, capPeriods, priceFromPeriods, countDays,
   lateFeeAmount, ddSurcharge, discountApplies, ticketFeeFor, poolScore,
 } from '../lib/rentalMath.mjs'
 
-const USA = { ratePerDay: 3, minCharge: 20, cap: 50, capPeriodDays: 30 }
+const USA = { ratePerDay: 3, minCharge: 20, cap: 50, capPeriodDays: 30, afterCapPerDay: 2 }
+// The same row as it was before the 08-17 migration — no after-cap rate at all.
+const USA_LEGACY = { ratePerDay: 3, minCharge: 20, cap: 50, capPeriodDays: 30 }
 
-test('priceFromDays — days × rate above the minimum', () => {
-  assert.equal(priceFromDays(10, 10, USA), 30) // 10 × £3
+test('priceFromPeriods — days × rate above the minimum', () => {
+  assert.equal(priceFromPeriods([10], USA), 30) // 10 × £3
 })
 
-test('priceFromDays — lifts to the minimum', () => {
-  assert.equal(priceFromDays(3, 3, USA), 20) // 3 × £3 = 9 → min £20
+test('priceFromPeriods — lifts to the minimum', () => {
+  assert.equal(priceFromPeriods([3], USA), 20) // 3 × £3 = 9 → min £20
 })
 
-test('priceFromDays — never below minimum but zero days = £0', () => {
-  assert.equal(priceFromDays(0, 5, USA), 0)
+test('priceFromPeriods — never below minimum but zero days = £0', () => {
+  assert.equal(priceFromPeriods([0], USA), 0)
 })
 
-test('priceFromDays — clamps to the monthly cap', () => {
-  assert.equal(priceFromDays(30, 30, USA), 50) // 30 × £3 = 90 → cap £50
+test('priceFromPeriods — clamps to the monthly cap', () => {
+  assert.equal(priceFromPeriods([30], USA), 50) // 30 × £3 = 90 → cap £50
 })
 
-test('priceFromDays — cap scales per 30-day window', () => {
-  // 60 calendar days → 2 cap periods → cap £100; 40 chargeable × £3 = 120 → 100
-  assert.equal(priceFromDays(40, 60, USA), 100)
+test('priceFromPeriods — a second window is charged at the after-cap rate, not a second cap', () => {
+  // Owner's rule, 08-17. 60 calendar days, 40 chargeable, split 25/15:
+  // window 1 = 25 × £3 = £75 → cap £50; window 2 = 15 × £2 = £30. £80, not £100.
+  assert.equal(priceFromPeriods([25, 15], USA), 80)
 })
 
-test('priceFromDays — uncapped when cap is null', () => {
-  assert.equal(priceFromDays(40, 40, { ratePerDay: 3, minCharge: 20, cap: null }), 120)
+test('priceFromPeriods — uncapped when cap is null', () => {
+  assert.equal(priceFromPeriods([40], { ratePerDay: 3, minCharge: 20, cap: null }), 120)
 })
 
-test('priceFromDays — a cap below the minimum wins (cap clamps AFTER the min lift)', () => {
+test('priceFromPeriods — a cap below the minimum wins (cap clamps AFTER the min lift)', () => {
   // Misconfigured rate: cap £15 < minCharge £20. One chargeable day lifts to £20,
   // then the cap clamps it down to £15 — the cap is the hard ceiling.
   const rate = { ratePerDay: 3, minCharge: 20, cap: 15, capPeriodDays: 30 }
-  assert.equal(priceFromDays(1, 1, rate), 15)
-  assert.equal(priceFromDays(10, 10, rate), 15) // 10×3=30 → cap 15
+  assert.equal(priceFromPeriods([1], rate), 15)
+  assert.equal(priceFromPeriods([10], rate), 15) // 10×3=30 → cap 15
 })
 
-test('priceFromDays — an all-free rental (every day Shabbos/Yom Tov) is £0', () => {
+test('priceFromPeriods — an all-free rental (every day Shabbos/Yom Tov) is £0', () => {
   // 0 chargeable days: the min lift is skipped (guarded on cd>0) and the cap
   // never raises a price, so a fully-free span charges nothing.
-  assert.equal(priceFromDays(0, 3, USA), 0)
-  assert.equal(priceFromDays(0, 3, { ratePerDay: 3, minCharge: 20, cap: null }), 0)
+  assert.equal(priceFromPeriods([0], USA), 0)
+  assert.equal(priceFromPeriods([0], { ratePerDay: 3, minCharge: 20, cap: null }), 0)
 })
 
 test('capPeriods — ceil over the window', () => {
@@ -56,15 +59,15 @@ test('capPeriods — ceil over the window', () => {
 
 test('countDays — inclusive span, free-day predicate', () => {
   const r = countDays('2026-07-01', '2026-07-05', (iso) => iso === '2026-07-04')
-  assert.deepEqual(r, { chargeableDays: 4, totalDays: 5 })
+  assert.deepEqual(r, { chargeableDays: 4, totalDays: 5, periods: [4] })
 })
 
 test('countDays — no free days', () => {
-  assert.deepEqual(countDays('2026-07-01', '2026-07-01'), { chargeableDays: 1, totalDays: 1 })
+  assert.deepEqual(countDays('2026-07-01', '2026-07-01'), { chargeableDays: 1, totalDays: 1, periods: [1] })
 })
 
 test('countDays — bad range = zero', () => {
-  assert.deepEqual(countDays('2026-07-05', '2026-07-01'), { chargeableDays: 0, totalDays: 0 })
+  assert.deepEqual(countDays('2026-07-05', '2026-07-01'), { chargeableDays: 0, totalDays: 0, periods: [] })
 })
 
 test('countDays — feeds the LOCAL calendar day to the free-day predicate (audit C10)', () => {
@@ -75,7 +78,59 @@ test('countDays — feeds the LOCAL calendar day to the free-day predicate (audi
   const seen = []
   const r = countDays('2026-07-01', '2026-07-04', (iso) => { seen.push(iso); return iso === '2026-07-04' })
   assert.deepEqual(seen, ['2026-07-01', '2026-07-02', '2026-07-03', '2026-07-04'])
-  assert.deepEqual(r, { chargeableDays: 3, totalDays: 4 }) // the Shabbos on the 4th is free
+  assert.deepEqual(r, { chargeableDays: 3, totalDays: 4, periods: [3] }) // the Shabbos on the 4th is free
+})
+
+test('priceFromPeriods — the owner\'s three worked examples (08-17)', () => {
+  // USA · £3/day · min £20 · cap £50/30d · after-cap £2, no free days.
+  assert.equal(priceFromPeriods([30], USA), 50)            // 30 × £3 = 90 → cap
+  assert.equal(priceFromPeriods([30, 5], USA), 60)         // £50 + 5 × £2
+  assert.equal(priceFromPeriods([30, 30, 5], USA), 110)    // £50 + (30×£2=60 → cap £50) + £10
+})
+
+test('priceFromPeriods — a long hire can never cost less than a shorter one', () => {
+  let last = 0
+  for (let d = 1; d <= 95; d++) {
+    const periods = []
+    for (let i = 0; i < d; i++) {
+      const w = Math.floor(i / 30)
+      periods[w] = (periods[w] || 0) + 1
+    }
+    const p = priceFromPeriods(periods, USA)
+    assert.ok(p >= last, `${d} days (${p}) came out cheaper than ${d - 1} days (${last})`)
+    last = p
+  }
+})
+
+test('priceFromPeriods — the minimum charge is a first-window idea only', () => {
+  // Two days into a second window must not be lifted to the £20 minimum: the
+  // customer already paid a full first window.
+  assert.equal(priceFromPeriods([30, 2], USA), 54)         // £50 + 2 × £2
+})
+
+test('priceFromPeriods — a rate row with no after-cap rate keeps the old behaviour', () => {
+  // An unconfigured rate must not silently become cheaper: every window prices
+  // at the full day rate, which is what the cap × periods rule used to give.
+  assert.equal(priceFromPeriods([30, 30], USA_LEGACY), 100)  // £50 + (30×£3 → cap £50)
+  assert.equal(priceFromPeriods([25, 15], USA_LEGACY), 95)   // £50 + 15 × £3
+})
+
+test('countDays — splits chargeable days into cap windows, calendar-counted', () => {
+  // 35 days from 1 Jul, Saturdays free. Window 1 = calendar days 1–30,
+  // window 2 = 31–35, and a free day still uses up its place in its window.
+  const isSat = (iso) => new Date(`${iso}T00:00:00`).getDay() === 6
+  const r = countDays('2026-07-01', '2026-08-04', isSat)
+  assert.equal(r.totalDays, 35)
+  assert.equal(r.periods.length, 2)
+  assert.equal(r.periods.reduce((a, b) => a + b, 0), r.chargeableDays)
+  assert.ok(r.periods[1] <= 5, 'the second window holds at most the 5 days left')
+})
+
+test('countDays — a window boundary lands where the calendar says, not the charge', () => {
+  const r = countDays('2026-07-01', '2026-07-30', () => false)
+  assert.deepEqual(r.periods, [30])                        // exactly one window
+  const r2 = countDays('2026-07-01', '2026-07-31', () => false)
+  assert.deepEqual(r2.periods, [30, 1])                    // day 31 opens the next
 })
 
 test('lateFeeAmount', () => {
