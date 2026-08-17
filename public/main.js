@@ -2187,7 +2187,7 @@ function renderRentalsTab() {
           <button class="btn btn-outline btn-sm" id="rentalBulkSameCust" style="display:none;" onclick="selectSameCustomerRentals()"></button>
           <button class="btn btn-outline btn-sm" onclick="clearRentalSel()">Clear selection</button>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap kc-stack-sm">
           <table>
             <thead>
               <tr>
@@ -2568,7 +2568,7 @@ function renderRentalRows() {
     const totalOwed = rentalGrandTotal(r) - paid;
     const debtColor = totalOwed > 0 ? 'color:var(--danger-ink);' : 'color:var(--success);';
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('.action-btn')&&!event.target.closest('input[type=checkbox]'))openManageRentalModal('${r.id}')">
-      <td onclick="event.stopPropagation()">
+      <td class="kc-stack-lead" onclick="event.stopPropagation()">
         <input type="checkbox" aria-label="Select this rental" ${rentalSelected.has(r.id) ? 'checked' : ''}
           onclick="toggleRentalSel('${r.id}', this.checked)">
       </td>
@@ -2577,9 +2577,9 @@ function renderRentalRows() {
         <div class="customer-email" style="font-size:var(--fs-micro);">${r.vn ? '🔢 +'+escHtml(r.vnPrefix || '') : ''}</div>
       </td>
       <td class="kc-phone">${rentalDeviceChip(r, { stacked: true })}</td>
-      <td class="kc-date" style="font-size:var(--fs-micro);">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}${r.pickupDate && r.pickupDate !== r.fromDate ? `<br><span style="color:var(--muted);" title="Physically taken — the charge runs from here">↳ took ${fmtDate(r.pickupDate)}</span>` : ''}</td>
+      <td class="kc-date" data-label="From → To" style="font-size:var(--fs-micro);">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}${r.pickupDate && r.pickupDate !== r.fromDate ? `<br><span style="color:var(--muted);" title="Physically taken — the charge runs from here">↳ took ${fmtDate(r.pickupDate)}</span>` : ''}</td>
       <td style="text-align:center;">${r.chargeableDays}d</td>
-      <td style="color:var(--success);font-weight:700;">${fmtGbp(r.price)}</td>
+      <td data-label="Price" style="color:var(--success);font-weight:700;">${fmtGbp(r.price)}</td>
       <td class="kc-money" style="font-weight:700;${debtColor}">${totalOwed > 0 ? '£'+totalOwed+' owed' : '✓ Paid'}</td>
       <td>${statusBadge}</td>
       <td>

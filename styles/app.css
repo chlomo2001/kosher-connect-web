@@ -873,9 +873,10 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 
    Opt-IN rather than global: stacking drops the column headers, so it only
    works where every cell already says what it is (a name, a phone number,
-   "£45.00 debt", service chips, buttons). A table of bare dates or bare
-   numbers would become unreadable, so those keep their horizontal scroll
-   until someone has looked at them one at a time. */
+   "£45.00 debt", service chips, buttons). A cell that only makes sense under
+   its header carries data-label="…" and gets that word back as a prefix; a
+   table where most cells would need one is better left scrolling until
+   someone has looked at it one at a time. */
 @media (max-width: 560px) {
   .kc-stack-sm table { min-width: 0; width: 100%; }
   .kc-stack-sm thead { display: none; }
@@ -883,10 +884,22 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   .kc-stack-sm tr { padding: 12px 14px; border-top: 1px solid var(--border); }
   .kc-stack-sm tbody tr:first-child { border-top: 0; }
   .kc-stack-sm td { border: 0; padding: 3px 0; }
+  /* Rows are written for columns, so several cells centre or right-align
+     themselves inline. Down here everything is a line in a card and starts
+     at the same edge — inline styles mean !important is the only lever. */
+  .kc-stack-sm td { text-align: start !important; }
   /* A cell with nothing in it would otherwise leave a blank line in the card. */
   .kc-stack-sm td:empty { display: none; }
+  /* The header the cell lost, given back to it. */
+  .kc-stack-sm td[data-label]::before {
+    content: attr(data-label) ": ";
+    color: var(--muted); font-size: var(--fs-small);
+  }
+  /* A tick-box column is one control, not a line of its own: it floats out of
+     the way and the next cell — a name, always — comes up beside it. */
+  .kc-stack-sm td.kc-stack-lead { float: inline-start; padding: 4px 10px 0 0; }
   /* The buttons get a little air above them and sit in a row of their own. */
-  .kc-stack-sm td:last-child { padding-top: 10px; }
+  .kc-stack-sm td:last-child { padding-top: 10px; clear: both; }
   .kc-stack-sm .row-actions { justify-content: flex-start; }
 }
 

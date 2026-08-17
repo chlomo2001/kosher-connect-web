@@ -844,4 +844,5 @@ data not glyph-sniffing. Owner live-judges on the dev branch before any ship
 | Item | Commit | Screens |
 |------|--------|---------|
 | Search that matches nothing offers "✕ Clear search" and quotes the term back — every other list already had this; Customers was a dead end with the term still in the topbar box | 429666b | Customers · empty state |
-| Customers stops scrolling sideways on a phone: 711px of table in a 360px viewport became one card per person (name · email · phone · service chips · balance · buttons). Opt-in `.kc-stack-sm`, desktop table unchanged | (this commit) | Customers · list at ≤560px |
+| Customers stops scrolling sideways on a phone: 711px of table in a 360px viewport became one card per person (name · email · phone · service chips · balance · buttons). Opt-in `.kc-stack-sm`, desktop table unchanged | ca022eb | Customers · list at ≤560px |
+| Rentals gets the same treatment — the widest list in the app, 1026px inside a 360px viewport, so the balance, the status and every row button were off-screen. `.kc-stack-sm` grew `data-label` (a cell that only made sense under its header gets the header back: "From → To", "Price") and `.kc-stack-lead` (the select tick-box floats beside the name instead of taking a line) | (this commit) | Rentals · list at ≤560px |
