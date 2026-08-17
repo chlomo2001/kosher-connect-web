@@ -1018,3 +1018,17 @@ against, so those SIMs can never be matched by address.
 
 Verified: gate green (435 tests ×2 TZ + build), popout harness extended to
 drive the minutes box, modals/names/contrast clean.
+
+## Owner request — 2026-08-17: clean the 29 SIM carrier logins
+
+The field inbound carrier mail pairs on held a non-email on 29 SIMs. Snapshot
+taken, then:
+
+| What it said | SIMs | What happened |
+|---|---|---|
+| `N/A`, `-`, `.` | 21 | Cleared — they only ever meant "no login" |
+| `main account` | 5 | Cleared, and the fact kept as a note: five Red Pocket lines sit on the shop's own account rather than one of their own |
+| A reference (`7435245347`, `5374101101730689.0926.699`) | 2 | Cleared, kept as a note on the SIM it belongs to |
+| `EMAIL ADDRESS` | 1 | **`pl-sim-0` is the spreadsheet's HEADER ROW imported as a SIM** — no number, provider "UK SIM", currently attached to Fishel Cohen. Flagged in its notes, left for the owner to delete |
+
+Carrier logins now: 734 real addresses, 0 junk, across 797 SIMs.
