@@ -965,6 +965,23 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   .dash-spark-row { gap: 8px; }
 }
 
+/* A row of controls that narrow a list together. Airy on purpose: the point of
+   a facet row is that you can see all of it at once and know what is on. */
+.kc-facets {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  padding: 4px 14px 12px;
+}
+.kc-facets .form-input { min-height: 36px; width: auto; }
+.kc-facet-q { flex: 1 1 220px; min-width: 0; }
+.kc-facet-count { font-size: var(--fs-small); color: var(--muted); margin-inline-start: auto; white-space: nowrap; }
+
+@media (max-width: 560px) {
+  /* Search takes its own line; the two dropdowns share the next. */
+  .kc-facet-q { flex: 1 1 100%; }
+  .kc-facets .form-input:not(.kc-facet-q) { flex: 1 1 40%; }
+  .kc-facet-count { margin-inline-start: 0; }
+}
+
 /* ---------- Carrier mail ---------- */
 /* A log, not a table: the useful unit is one message with its verdict and the
    action it needs, and a message's subject is long. Three columns — when, what,
@@ -989,6 +1006,11 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .cm-subject { font-weight: 500; word-break: break-word; }
 .cm-meta { font-size: var(--fs-small); color: var(--muted); margin-top: 3px; word-break: break-word; }
 .cm-pick { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+/* "Which SIM is this?" offers a button per candidate, labelled with a number
+   AND a name — 348px of label on a 320px screen at the largest text size, so
+   the row ran off the edge and the choice with it. The label wraps inside its
+   own button instead. Found by the nightly 320 × largest sweep. */
+.cm-pick .btn { max-width: 100%; white-space: normal; text-align: start; }
 .cm-actions { display: flex; gap: 8px; align-items: center; }
 
 @media (max-width: 560px) {

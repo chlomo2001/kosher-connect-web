@@ -12839,6 +12839,48 @@ let goodsIn = [];
 let goodsInBalances = {};
 
 const STOCK_CATEGORY_LABELS = { phone: '📱 Phone', accessory: '🔌 Accessory', sim: '💳 SIM', other: '📦 Other' };
+
+// Narrowing the shelf by several things at once (owner, 17 Aug — the Lightspeed
+// products screen). Held at module scope so a re-render keeps what was typed.
+let shopFacets = { q: '', category: 'all', brand: 'all' };
+
+// Mirrors lib/shopFilter.mjs — change both together; test/shopFilter.test.mjs
+// covers the canon. An empty facet narrows NOTHING: a filter that quietly
+// excludes rows because a control sat on its default is how stock goes missing
+// from a list and gets re-ordered by mistake.
+function matchStockItem(item, facets = {}) {
+  const { q = '', category = 'all', brand = 'all' } = facets || {};
+  if (category && category !== 'all' && String(item?.category || '') !== String(category)) return false;
+  if (brand && brand !== 'all' && String(item?.company || '') !== String(brand)) return false;
+  const words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return true;
+  const hay = [item.company, item.model, item.code, item.barcode, item.name]
+    .filter(Boolean).join(' ').toLowerCase();
+  return words.every(w => hay.includes(w));
+}
+function stockBrands(items = []) {
+  const seen = new Set();
+  for (const i of (Array.isArray(items) ? items : [])) {
+    const b = String(i?.company || '').trim();
+    if (b) seen.add(b);
+  }
+  return [...seen].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+}
+function shopFacetsActive() {
+  return !!String(shopFacets.q || '').trim() || shopFacets.category !== 'all' || shopFacets.brand !== 'all';
+}
+function shopSetFacet(key, value) {
+  shopFacets = { ...shopFacets, [key]: value };
+  renderShopRows();
+}
+function shopClearFacets() {
+  shopFacets = { q: '', category: 'all', brand: 'all' };
+  const box = document.getElementById('shopFacetQ');
+  if (box) box.value = '';
+  const cat = document.getElementById('shopFacetCat'); if (cat) cat.value = 'all';
+  const br = document.getElementById('shopFacetBrand'); if (br) br.value = 'all';
+  renderShopRows();
+}
 // What the shelf actually carries (owner's list) — offered as type-ahead
 // suggestions when adding stock, so new items land with consistent names.
 const STOCK_TYPE_SUGGESTIONS = [
@@ -12847,6 +12889,53 @@ const STOCK_TYPE_SUGGESTIONS = [
   'TomTom sat nav', 'Waze auto device', 'Tello SIM (USA)', 'US Mobile SIM (USA)',
   'Replacement screen', 'Phone battery', 'CD',
 ];
+
+/**
+ * The inventory rows, on their own so a facet change repaints the table rather
+ * than the tab. renderShopTab() refetches the shop, returns and goods-in — on
+ * every keystroke that would be three requests and a lost cursor.
+ */
+function shopRowsHtml() {
+  const active = shopItems.filter(i => i.active);
+  const faceted = active.filter(i => matchStockItem(i, shopFacets));
+  const shopShown = kcViewApply('shop', faceted);
+  if (shopShown.length === 0) {
+    const narrowed = active.length > 0;
+    return `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🛍️</div>
+      <p>${narrowed ? 'No stock matches this view.' : 'No stock yet — add your first item.'}</p>
+      ${narrowed && shopFacetsActive()
+        ? '<button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="shopClearFacets()">✕ Clear the filters</button>'
+        : (narrowed ? kcClearFiltersBtn('shop') : '')}</div></td></tr>`;
+  }
+  return shopShown.map(i => `
+      <tr class="${i.quantity <= i.lowStockAt ? 'row-lowstock' : ''}">
+        <td><strong>${escHtml([i.company, i.model].filter(Boolean).join(' '))}</strong>
+          <div class="customer-email">${escHtml(i.code || '')}</div></td>
+        <td>${STOCK_CATEGORY_LABELS[i.category] || escHtml(i.category)}</td>
+        <td style="color:var(--muted);">${i.netPrice === null ? '—' : fmtGbp(i.netPrice)}</td>
+        <td><strong>${fmtGbp((i.sellingPrice || 0))}</strong></td>
+        <td style="color:${i.profit === null ? 'var(--muted)' : i.profit >= 0 ? 'var(--success)' : 'var(--danger-ink)'};">
+          ${i.profit === null ? '—' : fmtGbp(i.profit)}</td>
+        <td style="font-weight:700;${i.quantity <= i.lowStockAt ? 'color:var(--danger-ink);' : ''}">${i.quantity}</td>
+        <td style="white-space:nowrap;">
+          <button class="action-btn" onclick="openSaleModal('${i.id}')">💷 Sell</button>
+          <button class="action-btn" aria-label="Edit ${escHtml(i.name || 'item')}" onclick="openStockItemModal('${i.id}')">✏️</button>
+        </td>
+      </tr>`).join('');
+}
+
+function renderShopRows() {
+  const tbody = document.getElementById('shopTableBody');
+  if (tbody) tbody.innerHTML = shopRowsHtml();
+  const count = document.getElementById('shopFacetCount');
+  if (count) {
+    const active = shopItems.filter(i => i.active);
+    const shown = active.filter(i => matchStockItem(i, shopFacets));
+    count.textContent = shown.length === active.length
+      ? `${active.length} item${active.length === 1 ? '' : 's'}`
+      : `${shown.length} of ${active.length}`;
+  }
+}
 
 async function renderShopTab() {
   const content = document.getElementById('mainContent');
@@ -12888,24 +12977,7 @@ async function renderShopTab() {
     { value: 'price', label: 'Price (high–low)', cmp: kcCmpNum(i => i.sellingPrice || 0) },
     { value: 'profit', label: 'Profit (high–low)', cmp: kcCmpNum(i => i.profit || 0) },
   ], renderShopTab);
-  const shopShown = kcViewApply('shop', active);
-  const itemRows = shopShown.length === 0
-    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🛍️</div><p>${active.length ? 'No stock matches this filter.' : 'No stock yet — add your first item.'}</p>${kcClearFiltersBtn('shop')}</div></td></tr>`
-    : shopShown.map(i => `
-      <tr class="${i.quantity <= i.lowStockAt ? 'row-lowstock' : ''}">
-        <td><strong>${escHtml([i.company, i.model].filter(Boolean).join(' '))}</strong>
-          <div class="customer-email">${escHtml(i.code || '')}</div></td>
-        <td>${STOCK_CATEGORY_LABELS[i.category] || escHtml(i.category)}</td>
-        <td style="color:var(--muted);">${i.netPrice === null ? '—' : fmtGbp(i.netPrice)}</td>
-        <td><strong>${fmtGbp((i.sellingPrice || 0))}</strong></td>
-        <td style="color:${i.profit === null ? 'var(--muted)' : i.profit >= 0 ? 'var(--success)' : 'var(--danger-ink)'};">
-          ${i.profit === null ? '—' : fmtGbp(i.profit)}</td>
-        <td style="font-weight:700;${i.quantity <= i.lowStockAt ? 'color:var(--danger-ink);' : ''}">${i.quantity}</td>
-        <td style="white-space:nowrap;">
-          <button class="action-btn" onclick="openSaleModal('${i.id}')">💷 Sell</button>
-          <button class="action-btn" aria-label="Edit ${escHtml(i.name || 'item')}" onclick="openStockItemModal('${i.id}')">✏️</button>
-        </td>
-      </tr>`).join('');
+  const itemRows = shopRowsHtml();
 
   // Returns to supplier: open ones first (the bag by the counter), then the
   // last few settled ones for reference. Money shown is a claim, not ledger.
@@ -12998,9 +13070,30 @@ async function renderShopTab() {
           <div class="section-divider" style="margin:12px 0 4px;">Inventory</div>
           ${shopBar}
         </div>
+        ${/* Narrow by several things at once, the way the Lightspeed products
+             screen does. Each control repaints the table in place — the search
+             box especially, which would otherwise refetch the whole tab and
+             lose the cursor on every keystroke. */''}
+        <div class="kc-facets">
+          <input class="form-input kc-facet-q" id="shopFacetQ" type="search" autocomplete="off"
+            placeholder="Find an item, code or barcode…" value="${escHtml(shopFacets.q)}"
+            oninput="shopSetFacet('q', this.value)">
+          <select class="form-input" id="shopFacetCat" aria-label="Category" onchange="shopSetFacet('category', this.value)">
+            <option value="all">Every category</option>
+            ${Object.entries(STOCK_CATEGORY_LABELS).map(([k, label]) =>
+              `<option value="${escHtml(k)}"${shopFacets.category === k ? ' selected' : ''}>${escHtml(label)}</option>`).join('')}
+          </select>
+          <select class="form-input" id="shopFacetBrand" aria-label="Brand" onchange="shopSetFacet('brand', this.value)">
+            <option value="all">Every brand</option>
+            ${stockBrands(active).map(bnd =>
+              `<option value="${escHtml(bnd)}"${shopFacets.brand === bnd ? ' selected' : ''}>${escHtml(bnd)}</option>`).join('')}
+          </select>
+          <span class="kc-facet-count" id="shopFacetCount">${active.length} item${active.length === 1 ? '' : 's'}</span>
+          ${shopFacetsActive() ? '<button class="btn btn-outline btn-sm" onclick="shopClearFacets()">✕ Clear</button>' : ''}
+        </div>
         <table>
           <thead><tr><th>Item</th><th>Category</th><th>Cost</th><th>Price</th><th>Profit</th><th>Qty</th><th></th></tr></thead>
-          <tbody>${itemRows}</tbody>
+          <tbody id="shopTableBody">${itemRows}</tbody>
         </table>
       </div>
       <div>
