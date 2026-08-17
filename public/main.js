@@ -8459,8 +8459,27 @@ async function kcPickerSaveNew(valueId) {
 function custNameLink(customerId, html) {
   if (!customerId || customerId === 'walkin') return html;
   return `<a href="/customers/${encodeURIComponent(String(customerId))}"
-    style="color:inherit;text-decoration:underline dotted;text-underline-offset:3px;" title="Open customer card"
-    onclick="event.stopPropagation();if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();openCustomerById('${escJs(String(customerId))}')">${html}</a>`;
+    style="color:inherit;text-decoration:underline dotted;text-underline-offset:3px;" title="Open this customer's profile"
+    onclick="event.stopPropagation();if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();kcOpenCustomerLink('${escJs(String(customerId))}')">${html}</a>`;
+}
+
+/**
+ * Where a customer's NAME goes when you click it — the full profile.
+ *
+ * Owner, 17 Aug: "make the left click open the profile too". It used to open
+ * the detail panel on the Customers list, while a middle click (which follows
+ * the href) landed on /customers/<id>. Two screens from one link, depending on
+ * which button you pressed, is the kind of thing that makes an app feel
+ * arbitrary — and the profile is the superset, so it is the one that wins.
+ *
+ * openCustomerById is left alone: the duplicate scanner and the palette use it
+ * deliberately to land on the LIST with a row selected, which is a different
+ * intention from opening one person's profile.
+ */
+function kcOpenCustomerLink(id) {
+  closeDynamicModal();
+  closeStackedModal();
+  openCustomerPage(id);
 }
 
 // Open a customer's card by id from anywhere (e.g. the duplicate scanner).
@@ -17780,7 +17799,7 @@ async function renderTasksTab() {
     const custLabel = t.customerName
       ? (t.customerId
           ? `<a class="dash-link" href="/customers/${encodeURIComponent(String(t.customerId))}" style="color:var(--accent);cursor:pointer;"
-            onclick="event.stopPropagation();if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();goToTab('customers',{customerId:'${escHtml(String(t.customerId))}'})">👤 ${escName(t.customerName)}</a> · `
+            onclick="event.stopPropagation();if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();kcOpenCustomerLink('${escJs(String(t.customerId))}')">👤 ${escName(t.customerName)}</a> · `
           : '👤 ' + escName(t.customerName) + ' · ')
       : '';
     return `

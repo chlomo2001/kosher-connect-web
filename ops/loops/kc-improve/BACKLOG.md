@@ -1146,9 +1146,10 @@ The click handler's order is deliberate: `stopPropagation` **always** runs, so
 the table row underneath never also fires and opens the customer in place
 behind the new tab; `preventDefault` runs only for a plain left click.
 
-Worth knowing: a plain click still opens the detail panel in place, while a
-middle-click lands on the full Customer-360 profile. That is the canonical URL
-for a person, and the profile is a superset of the panel — but they are not the
-same screen.
+Then, at the owner's ask, both buttons were made to agree: a plain click opens
+the **profile** too (`kcOpenCustomerLink`), so one link means one destination
+whichever button you press. `openCustomerById` is untouched — the duplicate
+scanner and the command palette use it deliberately to land on the LIST with a
+row selected, which is a different intention from opening one person.
 
 Verified: gate green, names/focus/contrast clean, modals clean.
