@@ -1193,6 +1193,11 @@ function filterCustomerDropdown() {
         <span style="color:var(--muted);font-size:var(--fs-micro);margin-left:8px;">${escHtml(fmtPhone(c.phone||''))} ${c.email ? '· '+escHtml(c.email) : ''}</span>
       </div>`).join('');
   }
+  // Every other picker in the app offers to create the person you were looking
+  // for; this one — on the form the shop opens most — used to say "No customers
+  // found" and stop. Same panel, same three fields, via the adapter above.
+  dropdown.innerHTML += `<div class="customer-dropdown-item kc-combo-add"
+    onmousedown="kcComboAddNew('rCustomer')">➕ Add <strong>${escName(input.value.trim())}</strong> as a new customer</div>`;
   dropdown.classList.add('open');
 }
 
@@ -3109,8 +3114,25 @@ function renderPhoneDropdown(open = null) {
             p.hadOn ? ` · ↺ had ${fmtDate(p.hadOn)}` : ''}</span>
         </div>`).join('')
     : `<div class="customer-dropdown-empty">${term ? `No handset matches “${escHtml(term)}”` : 'No phone is free for these dates'}</div>`;
+  // The same offer the customer picker makes: the thing you were looking for
+  // can be created from here rather than by abandoning the form. Typing
+  // "Pool 39" and finding nothing is exactly when a pool gets named.
+  dd.innerHTML += `<div class="customer-dropdown-item kc-combo-add" role="option"
+    onmousedown="nrNewPoolFromPicker()">＋ New pool…</div>`;
   const shouldOpen = open === null ? dd.classList.contains('open') : open;
   dd.classList.toggle('open', !!shouldOpen);
+}
+
+// "＋ New pool…" from the rental phone picker. The real card, stacked over the
+// half-filled rental so nothing typed is lost, seeded with the name that was
+// being searched for.
+function nrNewPoolFromPicker() {
+  const term = (document.getElementById('rPhoneSearch')?.value || '').trim();
+  const prefill = /pool/i.test(term) ? term.replace(/^\s*pool\s*/i, 'Pool ').trim() : '';
+  openNewPoolCard({
+    prefill,
+    after: () => { refreshRentalPhoneOptions(); renderPhoneDropdown(true); },
+  });
 }
 
 function phoneSearchFocus() { refreshRentalPhoneOptions(); renderPhoneDropdown(true); }
@@ -4772,12 +4794,27 @@ function rentalPools() {
 // a pool. It now opens the real card, the same three fields the Pools manager
 // asks for, stacked on top of the phone form so the half-filled form behind it
 // is never disturbed.
-let poolNewForSelect = null;   // which dropdown asked, and what it showed before
+let poolNewForSelect = null;   // who asked, what they showed before, what to do after
 
 function poolSelectChanged(sel) {
   if (!sel || sel.value !== '__new__') return;
-  poolNewForSelect = { id: sel.id, previous: sel.dataset.kcPrevPool || '' };
-  sel.value = poolNewForSelect.previous;   // put the dropdown back; the card decides
+  const previous = sel.dataset.kcPrevPool || '';
+  sel.value = previous;                    // put the dropdown back; the card decides
+  openNewPoolCard({ selectId: sel.id, previous });
+}
+
+/**
+ * The New pool card, openable from anywhere.
+ *
+ * A <select> is only one of the places the shop realises a pool is missing —
+ * the other is the New rental phone picker, where they type "Pool 39" and it
+ * isn't there yet. Both get the same real card rather than the one growing a
+ * private copy: `selectId` is the dropdown to fill in afterwards (if any),
+ * `prefill` seeds the name from whatever was typed, and `after` lets the
+ * caller refresh whatever it was showing.
+ */
+function openNewPoolCard({ selectId = null, previous = '', prefill = '', after = null } = {}) {
+  poolNewForSelect = { id: selectId, previous, after };
   const today = localISO();
   showStackedModal(`
     <div class="modal-title">📶 New pool</div>
@@ -4789,7 +4826,7 @@ function poolSelectChanged(sel) {
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Pool name *</label>
-        <input class="form-input" id="npcName" type="text" placeholder="e.g. Pool 39" autocomplete="off">
+        <input class="form-input" id="npcName" type="text" placeholder="e.g. Pool 39" autocomplete="off" value="${escHtml(prefill)}">
       </div>
       <div class="form-group">
         <label class="form-label">Activated from</label>
@@ -4822,7 +4859,8 @@ async function createPoolFromPicker() {
   if (!name) { toast('Give the pool a name.', 'warning'); return; }
   if (from && till && till < from) { toast('The window ends before it starts.', 'warning'); return; }
 
-  const sel = poolNewForSelect ? document.getElementById(poolNewForSelect.id) : null;
+  const sel = poolNewForSelect?.id ? document.getElementById(poolNewForSelect.id) : null;
+  const after = poolNewForSelect?.after || null;
   const pick = (value) => {
     if (!sel) return;
     if (![...sel.options].some(o => o.value === value)) {
@@ -4839,13 +4877,20 @@ async function createPoolFromPicker() {
   if (clash) {
     pick(clash.name);
     closeStackedModal();
-    toast(`“${clash.name}” already exists — selected it.`, 'warning');
+    after?.(clash.name);
+    toast(`“${clash.name}” already exists — ${sel ? 'selected it' : 'nothing to create'}.`, 'warning');
     return;
   }
   if (!(await saveRentalPools([...pools, { name, from, till }]))) return;  // already warned
   pick(name);
   closeStackedModal();
-  toast(`Pool “${name}” created${till ? ` — active till ${fmtDate(till)}` : ''}.`, 'success');
+  after?.(name);
+  // Opened from a dropdown, the pool is now the phone's pool and the job is
+  // done. Opened from anywhere else it is a name with no lines in it yet, and
+  // saying so beats letting someone go looking for handsets that can't be there.
+  toast(sel
+    ? `Pool “${name}” created${till ? ` — active till ${fmtDate(till)}` : ''}.`
+    : `Pool “${name}” created — no phones in it yet; pick it in ✏️ Edit Phone.`, 'success');
 }
 
 async function saveRentalPools(pools) {
@@ -7603,16 +7648,42 @@ function customerComboHtml(valueId, preselectId = null) {
 // Three fields, not the full customer card: a name and a number is what the
 // counter has when someone walks in. Address, notes, passport and house
 // account are all editable later from the customer record.
+// New rental was built before kcCombo* existed and keeps its own ids and its
+// own "open" class on the dropdown. Rather than leave the busiest form in the
+// shop as the one picker that cannot create a customer, it registers what it
+// calls things and borrows the panel.
+const KC_COMBO_ADAPTERS = {
+  rCustomer: {
+    search: 'rCustomerSearch',
+    dd: 'rCustomerDropdown',
+    hide: (dd) => dd.classList.remove('open'),
+    pick: (id) => selectRentalCustomer(id),
+  },
+};
+function kcComboEl(valueId, part) {
+  const a = KC_COMBO_ADAPTERS[valueId];
+  return document.getElementById(a ? a[part] : `${valueId}_${part}`);
+}
+function kcComboHideDd(valueId) {
+  const dd = kcComboEl(valueId, 'dd');
+  if (!dd) return;
+  const a = KC_COMBO_ADAPTERS[valueId];
+  if (a?.hide) a.hide(dd); else dd.style.display = 'none';
+}
+function kcComboSelect(valueId, id) {
+  const a = KC_COMBO_ADAPTERS[valueId];
+  if (a?.pick) a.pick(id); else kcComboPick(valueId, id);
+}
+
 function kcComboAddNew(valueId) {
-  const wrap = document.getElementById(valueId + '_search')?.closest('.customer-search-wrap');
+  const wrap = kcComboEl(valueId, 'search')?.closest('.customer-search-wrap');
   if (!wrap || document.getElementById(valueId + '_qa')) return;
-  const typed = (document.getElementById(valueId + '_search')?.value || '').trim();
+  const typed = (kcComboEl(valueId, 'search')?.value || '').trim();
   // "Moshe Adler" → first "Moshe", last "Adler". One word goes in first name.
   const bits = typed.split(/\s+/).filter(Boolean);
   const first = bits.length ? bits[0] : '';
   const last = bits.length > 1 ? bits.slice(1).join(' ') : '';
-  const dd = document.getElementById(valueId + '_dd');
-  if (dd) dd.style.display = 'none';
+  kcComboHideDd(valueId);
 
   const panel = document.createElement('div');
   panel.id = valueId + '_qa';
@@ -7633,42 +7704,164 @@ function kcComboAddNew(valueId) {
   document.getElementById(`${valueId}_qa${first ? 'Phone' : 'First'}`)?.focus();
 }
 
+// ── Pickers create what they pick ─────────────────────────────────────────
+// The rule (docs/DESIGN.md): a picker never dead-ends. If the thing you are
+// looking for isn't there, the list itself offers to make it, and what opens
+// is the REAL card for that thing — not a private half-copy that quietly skips
+// fields. The form you were filling in stays exactly as you left it.
+//
+// The type-ahead pickers do this with the quick-add panel above; every plain
+// <select> of customers does it with the row this builder appends.
+// `phone: true` where the form has the width for it — half this community
+// shares a surname, and the number is what tells two Adlers apart.
+function kcCustomerOptions({ selected = '', phone = false } = {}) {
+  return [...customers]
+    .sort((a, b) => `${a.firstName || ''} ${a.lastName || ''}`.trim()
+      .localeCompare(`${b.firstName || ''} ${b.lastName || ''}`.trim(), undefined, { sensitivity: 'base' }))
+    .map(c => `<option value="${escHtml(String(c.id))}"${String(c.id) === String(selected) ? ' selected' : ''}>${
+      escName(c.firstName)} ${escName(c.lastName || '')}${
+      phone && c.phone ? ` · ${escHtml(fmtPhone(c.phone))}` : ''}</option>`)
+    .join('') + '<option value="__new_customer__">＋ New customer…</option>';
+}
+
+// Remember what a dropdown showed before it was touched, so choosing "＋ New…"
+// and then cancelling puts the previous pick back rather than blanking it.
+document.addEventListener('focusin', (e) => {
+  if (e.target instanceof HTMLSelectElement) e.target.dataset.kcPrev = e.target.value;
+}, true);
+
+// Capture phase on purpose: the select is put back to its previous value and
+// the event stopped BEFORE the form's own onchange runs, so no handler ever
+// sees "__new_customer__" as if it were a customer id.
+document.addEventListener('change', (e) => {
+  const sel = e.target;
+  if (!(sel instanceof HTMLSelectElement) || sel.value !== '__new_customer__') return;
+  sel.value = sel.dataset.kcPrev || '';
+  e.stopPropagation();
+  openNewCustomerCard(sel);
+}, true);
+
+let kcNewCustomerForSelect = null;
+
+function openNewCustomerCard(sel) {
+  kcNewCustomerForSelect = sel ? sel.id : null;
+  showStackedModal(`
+    <div class="modal-title">➕ New customer</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
+      A name and a number is what the counter has when someone walks in. Address,
+      notes, passport and house account are all editable later from their record.
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">First name *</label>
+        <input class="form-input" id="ncFirst" type="text" autocomplete="off"></div>
+      <div class="form-group"><label class="form-label">Surname *</label>
+        <input class="form-input" id="ncLast" type="text" autocomplete="off"></div>
+      <div class="form-group form-full"><label class="form-label">Phone *</label>
+        <input class="form-input" id="ncPhone" type="tel" inputmode="tel" dir="ltr" placeholder="07911 123456" autocomplete="off"></div>
+    </div>
+    <div class="kc-quickadd-msg" id="ncMsg"></div>
+    <div class="modal-actions">
+      <span class="modal-actions-group">
+        <button class="btn btn-outline" onclick="closeStackedModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="createCustomerFromCard()">Save &amp; use</button>
+      </span>
+    </div>
+  `);
+  document.getElementById('ncFirst')?.focus();
+}
+
+async function createCustomerFromCard() {
+  const msg = document.getElementById('ncMsg');
+  const say = (html) => { if (msg) msg.innerHTML = html; };
+  const res = await kcCreateCustomerQuick({
+    firstName: document.getElementById('ncFirst')?.value,
+    lastName: document.getElementById('ncLast')?.value,
+    phone: document.getElementById('ncPhone')?.value,
+    onProgress: () => say('Saving…'),
+  });
+  if (res.error) return say(res.error);
+
+  const sel = kcNewCustomerForSelect ? document.getElementById(kcNewCustomerForSelect) : null;
+  const c = res.customer;
+  if (sel) {
+    if (![...sel.options].some(o => o.value === String(c.id))) {
+      const opt = document.createElement('option');
+      opt.value = String(c.id);
+      opt.textContent = `${c.firstName} ${c.lastName || ''}`.trim();
+      sel.insertBefore(opt, sel.querySelector('option[value="__new_customer__"]'));
+    }
+    sel.value = String(c.id);
+    sel.dataset.kcPrev = String(c.id);
+    // Now that it holds a real id, let the form react as it would to any pick.
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  closeStackedModal();
+  showToast(`✓ ${escName(c.firstName)} ${escName(c.lastName || '')} added`);
+}
+
+/**
+ * Create a customer from the three fields the counter can always fill in.
+ * Shared by the quick-add panel and the New customer card so the duplicate
+ * guard can never be enforced in one of them and not the other.
+ * → { customer } | { error: html } | { error: html, clash }
+ */
+async function kcCreateCustomerQuick({ firstName, lastName, phone, onProgress = null }) {
+  const first = capName(firstName || '');
+  const last = capName(lastName || '');
+  const phoneRaw = String(phone || '').trim();
+  if (!first || !last) return { error: 'Both names, please — that is how they are found later.' };
+  if (!phoneRaw) return { error: 'A number, please — it is how the shop finds someone.' };
+
+  // The same number on two records is the duplicate that costs most, so the
+  // caller is offered the existing person rather than the save being refused.
+  // Compared on digits, so 07…, +447… and 447… all meet.
+  const digits = phoneRaw.replace(/\D/g, '').slice(-10);
+  const clash = digits.length === 10
+    ? customers.find(c => (c.phone || '').replace(/\D/g, '').slice(-10) === digits)
+    : null;
+  if (clash) {
+    return {
+      clash,
+      error: `That number is already <strong>${escName(clash.firstName)} ${escName(clash.lastName || '')}</strong>.`,
+    };
+  }
+
+  onProgress?.();
+  const res = await window.api.addCustomer({
+    id: uid(), firstName: first, lastName: last, phone: phoneRaw, email: '', address: '', notes: '',
+  }).catch(() => null);
+  if (!res || !res.success || !res.customer) return { error: 'Couldn’t save that — try again.' };
+  customers.push(res.customer);
+  return { customer: res.customer };
+}
+
 function kcComboCancelNew(valueId) {
   document.getElementById(valueId + '_qa')?.remove();
-  document.getElementById(valueId + '_search')?.focus();
+  kcComboEl(valueId, 'search')?.focus();
 }
 
 async function kcComboSaveNew(valueId) {
   const msg = document.getElementById(valueId + '_qaMsg');
-  const firstName = capName(document.getElementById(valueId + '_qaFirst')?.value || '');
-  const lastName = capName(document.getElementById(valueId + '_qaLast')?.value || '');
-  const phoneRaw = (document.getElementById(valueId + '_qaPhone')?.value || '').trim();
   const say = (html) => { if (msg) msg.innerHTML = html; };
 
-  if (!firstName || !lastName) return say('Both names, please — that is how they are found later.');
-  if (!phoneRaw) return say('A number, please — it is how the shop finds someone.');
-
-  // The same number on two records is the duplicate that costs most, so offer
-  // the existing person rather than refusing the save. Compared on digits, so
-  // 07…, +447… and 447… all meet.
-  const digits = phoneRaw.replace(/\D/g, '').slice(-10);
-  const clash = customers.find(c => (c.phone || '').replace(/\D/g, '').slice(-10) === digits && digits.length === 10);
-  if (clash) {
-    return say(`That number is already <strong>${escName(clash.firstName)} ${escName(clash.lastName || '')}</strong>.
+  const res = await kcCreateCustomerQuick({
+    firstName: document.getElementById(valueId + '_qaFirst')?.value,
+    lastName: document.getElementById(valueId + '_qaLast')?.value,
+    phone: document.getElementById(valueId + '_qaPhone')?.value,
+    onProgress: () => say('Saving…'),
+  });
+  // A clash is an offer, not a refusal: the person is already on file, so the
+  // panel hands them over rather than making someone go and look.
+  if (res.clash) {
+    return say(`${res.error}
       <button type="button" class="btn btn-outline btn-sm" style="margin-left:6px;"
-        onclick="kcComboPick('${valueId}','${escHtml(clash.id)}');kcComboCancelNew('${valueId}')">Use them</button>`);
+        onclick="kcComboSelect('${valueId}','${escHtml(String(res.clash.id))}');kcComboCancelNew('${valueId}')">Use them</button>`);
   }
+  if (res.error) return say(res.error);
 
-  say('Saving…');
-  const res = await window.api.addCustomer({
-    id: uid(), firstName, lastName, phone: phoneRaw, email: '', address: '', notes: '',
-  }).catch(() => null);
-  if (!res || !res.success || !res.customer) return say('Couldn’t save that — try again.');
-
-  customers.push(res.customer);
-  kcComboPick(valueId, res.customer.id);
+  kcComboSelect(valueId, res.customer.id);
   kcComboCancelNew(valueId);
-  showToast(`✓ ${escName(firstName)} ${escName(lastName)} added`);
+  showToast(`✓ ${escName(res.customer.firstName)} ${escName(res.customer.lastName || '')} added`);
 }
 
 function kcComboFilter(valueId) {
@@ -8612,10 +8805,7 @@ async function renderWalletTab() {
           ${e.customerId ? '<span class="feed-go">›</span>' : ''}
         </div>`).join('');
 
-  const customerOptions = [...customers]
-    .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))
-    .map(c => `<option value="${escHtml(c.id)}">${escName(c.firstName)} ${escName(c.lastName)}</option>`)
-    .join('');
+  const customerOptions = kcCustomerOptions();
 
   content.innerHTML = `
     <div class="stats-row">
@@ -9918,9 +10108,7 @@ function openSimFormModal(id, preselectCustomerId = null, prefill = null) {
   const isEdit = !!id && !!s;
   const preselect = s && s.customerId ? s.customerId : preselectCustomerId;
 
-  const customerOptions = customers.map(c =>
-    `<option value="${c.id}" ${preselect === c.id ? 'selected' : ''}>${escHtml(c.firstName + ' ' + c.lastName)}</option>`
-  ).join('');
+  const customerOptions = kcCustomerOptions({ selected: preselect });
 
   showDynamicModal(`
     <div class="modal-title">${isEdit ? '✏️ Edit SIM plan' : '➕ New SIM plan'}</div>
@@ -10903,9 +11091,7 @@ async function openNewBookingModal(preselectCustomerId = null) {
     ticketsMenu = await window.api.getServiceMenu('tickets').catch(() => []);
     if (!Array.isArray(ticketsMenu)) ticketsMenu = [];
   }
-  const customerOptions = customers.map(c =>
-    `<option value="${c.id}" ${c.id === preselectCustomerId ? 'selected' : ''}>${escName(c.firstName)} ${escName(c.lastName)} · ${escHtml(fmtPhone(c.phone || ''))}</option>`
-  ).join('');
+  const customerOptions = kcCustomerOptions({ selected: preselectCustomerId, phone: true });
   const startFee = ticketsMenu.find(s => /start fee/i.test(s.name));
   const svcOptions = ticketsMenu
     .filter(s => !/start fee/i.test(s.name))
@@ -11741,9 +11927,7 @@ async function renderRepairsTab() {
 }
 
 function openNewRepairModal(preselectCustomerId = null) {
-  const customerOptions = customers.map(c =>
-    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escName(c.firstName)} ${escName(c.lastName)} · ${escHtml(fmtPhone(c.phone || ''))}</option>`
-  ).join('');
+  const customerOptions = kcCustomerOptions({ selected: preselectCustomerId, phone: true });
   const serviceChecks = repairMenu.map(m => `
     <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:var(--fs-body);cursor:pointer;">
       <input type="checkbox" class="rpService" value="${escHtml(m.id)}"
@@ -12290,8 +12474,7 @@ async function openNewServiceModal(preselectCustomerId = null) {
     onlineMenu = await window.api.getServiceMenu('online').catch(() => []);
     if (!Array.isArray(onlineMenu)) onlineMenu = [];
   }
-  const customerOptions = customers.map(c =>
-    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escName(c.firstName)} ${escName(c.lastName)} · ${escHtml(fmtPhone(c.phone || ''))}</option>`).join('');
+  const customerOptions = kcCustomerOptions({ selected: preselectCustomerId, phone: true });
   const svcOptions = onlineMenu.map(m =>
     `<option value="${escHtml(String(m.id))}">${escHtml(m.name)} — ${fmtGbp(m.price)}${m.repeatPrice !== null ? ` (${onlineRepeatFrom()}+ ${fmtGbp(m.repeatPrice)})` : ''}</option>`).join('');
   showDynamicModal(`
@@ -12966,8 +13149,7 @@ function renderPosView() {
   // Full-screen takeover: hide the sidebar/topbar so the till fills the
   // display like a real POS. Any tab switch clears it (renderTab guard).
   document.body.classList.add('pos-mode');
-  const customerOptions = customers.map(c =>
-    `<option value="${c.id}">${escName(c.firstName)} ${escName(c.lastName)}</option>`).join('');
+  const customerOptions = kcCustomerOptions();
   const cats = [...new Set(shopItems.filter(i => i.active && i.quantity > 0).map(i => i.category))];
   const parkedN = posParkedCount();
   content.innerHTML = `
@@ -13749,8 +13931,7 @@ async function renderKolTorahTab() {
     .filter(s => Date.now() - new Date(s.createdAt).getTime() < 30 * 86400000)
     .reduce((s, x) => s + x.received, 0);
 
-  const customerOptions = customers.map(c =>
-    `<option value="${escHtml(String(c.id))}">${escName(c.firstName)} ${escName(c.lastName)}</option>`).join('');
+  const customerOptions = kcCustomerOptions();
   const titleOptions = activeTitles.map(t =>
     `<option value="${t.id}">${escHtml(t.name)}${t.price ? ` — ${fmtGbp(t.price)}` : ''}</option>`).join('');
 
@@ -13812,7 +13993,7 @@ async function renderKolTorahTab() {
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0;padding:8px;border-radius:6px;background:var(--bg-secondary);">
           <input class="form-input" id="ktShulContact_${s.id}" value="${escHtml(s.contact || '')}" placeholder="Contact / gabbai" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:170px;">
           <select class="form-input" id="ktShulCust_${s.id}" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);max-width:220px;">
-            <option value="">No wallet link</option>${s.customerId ? customerOptions.replace(`value="${escHtml(String(s.customerId))}"`, '$& selected') : customerOptions}
+            <option value="">No wallet link</option>${kcCustomerOptions({ selected: s.customerId })}
           </select>
           <button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);" onclick="ktSaveShul('${s.id}')">💾 Save</button>
         </div>` : ''}
@@ -16529,9 +16710,7 @@ async function renderVirtualTab() {
 }
 
 function openNewVNModal(preselectCustomerId) {
-  const customerOptions = customers.map(c =>
-    `<option value="${c.id}" ${preselectCustomerId === c.id ? 'selected' : ''}>${escName(c.firstName)} ${escName(c.lastName)}</option>`
-  ).join('');
+  const customerOptions = kcCustomerOptions({ selected: preselectCustomerId });
   showDynamicModal(`
     <div class="modal-title">🔢 New Virtual Number</div>
     <div class="form-grid">

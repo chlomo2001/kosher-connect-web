@@ -158,6 +158,38 @@ Waiting is disguised, not announced:
 - Async repaints must not blank what's already painted — paint over, never
   clear-then-load (the dashboard's `dashPaint` is the precedent).
 
+## Pickers create what they pick
+
+Owner rule, 08-17: **a picker never dead-ends, and everything is interlinked.**
+Someone is standing at the counter with a half-filled form open. If the thing
+they are choosing isn't in the list yet, the list itself offers to make it —
+they never abandon the form, go to another tab, create the record, come back
+and start again.
+
+Three parts, all required:
+
+1. **The offer lives in the list.** The last row of the dropdown, or the last
+   option of the `<select>`, is `＋ New <thing>…`. Not a button parked
+   elsewhere on the form — the moment of noticing is the moment of typing.
+2. **What opens is the real card.** The same fields the thing's own manager
+   asks for, so a record born from a picker is never a thinner record than one
+   born the long way. The New pool card is the worked example: it used to be a
+   `prompt()` that took a name, and every pool created that way arrived with no
+   activation window — the one field that makes a pool mean anything. If the
+   real card is genuinely too big for the moment (the full customer card), the
+   short form is a **deliberate subset** with the rest editable later, and it
+   says so.
+3. **The form you were on is untouched.** `showStackedModal` layers the card
+   over it; the quick-add panel opens inside the field's own wrapper. Nothing
+   typed is lost, and on save the new record arrives as the selection.
+
+Mechanics: `kcCustomerOptions()` builds every customer `<select>` in the app and
+appends the `__new_customer__` row; a **capture-phase** `change` listener
+intercepts that value, puts the select back and opens the card before the
+form's own `onchange` can ever see the sentinel as an id. Type-ahead pickers use
+`kcComboAddNew` (register non-standard ids in `KC_COMBO_ADAPTERS`).
+`openNewPoolCard({ selectId, prefill, after })` is the same shape for pools.
+
 ## Where a rule lives
 
 The stylesheet is in two halves, and which half a new rule belongs in is
