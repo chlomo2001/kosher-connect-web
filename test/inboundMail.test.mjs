@@ -98,3 +98,33 @@ test('carrier comes from the sender, not the forwarding path', () => {
   assert.equal(carrierOf('someone@kosher-connect.com'), null)
   assert.equal(carrierOf(''), null)
 })
+
+// ── The route a message took ─────────────────────────────────────────────
+test('the delivery route keeps the hops that pairing throws away', async () => {
+  const { deliveryRoute, normaliseInbound } = await import('../lib/inboundMail.mjs')
+  // Carrier → gitt.bilig → the shop hub → the app: three names on the envelope.
+  const chained = {
+    'delivered-to': 'sims-in@kosher-connect.com',
+    to: 'gitt.bilig+m29@gmail.com',
+    cc: '5311386k@gmail.com',
+    from: 'LebaraMobile@lebara.com',
+    subject: 'Your Lebara mobile plan has been successfully renewed',
+  }
+  assert.deepEqual(deliveryRoute(chained), [
+    'sims-in@kosher-connect.com', 'gitt.bilig+m29@gmail.com', '5311386k@gmail.com',
+  ])
+  // Pairing still sees only the address that can name a SIM…
+  const m = normaliseInbound(chained, { hopDomain: 'kosher-connect.com' })
+  assert.deepEqual(m.recipients, ['gitt.bilig+m29@gmail.com', '5311386k@gmail.com'])
+  // …while the route keeps every hop, which is the whole point.
+  assert.equal(m.route.length, 3)
+
+  // A message that came straight from the source mailbox has no hub in it —
+  // that difference is what settles which forwarding path is doing the work.
+  const direct = {
+    'delivered-to': 'sims-in@kosher-connect.com',
+    to: 'gitt.bilig+m29@gmail.com',
+    from: 'LebaraMobile@lebara.com',
+  }
+  assert.equal(deliveryRoute(direct).includes('5311386k@gmail.com'), false)
+})

@@ -102,6 +102,9 @@ export default async function handler(req, res) {
       // forwarding into one business-only inbox, recipients[0] is the hub on
       // every single message, which tells a human nothing.
       recipient: match.matchedOn || mail.recipients[0] || null,
+      // The hops as well, so the route a message took is a fact on the row
+      // rather than a thing to argue about — see the migration for why.
+      route: mail.route && mail.route.length ? mail.route : null,
       from_address: mail.from || null,
       carrier: carrierOf(mail.from),
       subject: mail.subject || null,
