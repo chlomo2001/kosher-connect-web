@@ -41,9 +41,11 @@ retried request; they do not guard against two cron jobs both waking up at
 06:00. If a copy of the app needs somewhere to point, point it at Kc-staging.
 
 **Rule 2 — copy the code freely, never copy the data.** A duplicate repo costs
-nothing and can be thrown away. A duplicate of Kc-Live is ~1,800 real
-customers, their numbers, addresses and passport records — a second thing that
-can leak, and the shop's liability twice over. If the worry is safety, take a
+nothing and can be thrown away. A duplicate of Kc-Live is 609 real customers
+and 797 SIMs — their numbers, addresses and passport records — a second thing
+that can leak, and the shop's liability twice over. (Counted 17 Aug 2026. An
+earlier draft of this file said "~1,800 customers"; that figure was imported
+ROWS across every table, not people.) If the worry is safety, take a
 *backup*: dated, encrypted, deletable. A live second copy is not a backup, it
 is an exposure.
 
