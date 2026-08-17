@@ -2099,7 +2099,17 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
   border-radius: var(--radius-lg); padding: 18px 20px; box-shadow: var(--shadow-1);
 }
 
-.kc-skel-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+.kc-skel-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
+
+/* The ghost runs to the fold. It used to stop halfway down a desktop screen
+   (owner, 17 Aug), leaving a page that looked like it had given up rather than
+   one that was still arriving — and the real lists it stands in for do reach
+   the bottom. skeletonHtml counts the rows; this lets the last panel take up
+   whatever is left over. */
+.kc-skel-wrap { display: flex; flex-direction: column; min-height: calc(100vh - 190px); }
+.kc-skel-wrap > .kc-skel-cols,
+.kc-skel-wrap > .kc-skel-panel { flex: 1 1 auto; }
+.kc-skel-panel > .kc-skel:last-child { margin-bottom: 0; }
 
 @media (max-width: 900px) { .kc-skel-cols { grid-template-columns: 1fr; } }
 

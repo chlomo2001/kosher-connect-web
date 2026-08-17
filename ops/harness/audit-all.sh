@@ -95,6 +95,9 @@ run "one customer picker, everywhere" \
 run "help timer · floating window, both themes" \
   bash -c 'node ops/harness/popout.mjs | tail -3'
 
+run "loading · no flash, and the ghost reaches the fold" \
+  bash -c 'node ops/harness/loading.mjs | tail -3'
+
 run "staff app · Simple Mode text sizes, every tab" \
   bash -c 'for f in large largest; do node ops/harness/render.mjs --audit --width 390 --fs $f | tail -1; done
            node ops/harness/render.mjs --audit --width 320 --fs largest | tail -1

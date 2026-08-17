@@ -65,6 +65,7 @@ const who = await p.evaluate(() => {
   return { id: String(c.id), first: c.firstName, last: c.lastName, phone: c.phone }
 })
 
+const who_id = who.id
 for (const [where, tab, opener, id, wantsOnPick] of PICKERS) {
   await p.evaluate(async (t) => { await goToTab(t) }, tab)
   await p.waitForTimeout(320)
@@ -150,7 +151,24 @@ for (const [where, tab, opener, id, wantsOnPick] of PICKERS) {
   const stale = await p.evaluate((pid) => document.getElementById(pid).value, id)
   say(stale === '' || stale === 'walkin', where, `typing over a pick left the old id (${stale})`)
 
-  // 7. The form's own reaction still runs.
+  // 7. A full name typed and then left — reaching straight for the button next
+  // to the box — is taken, not thrown away. Ambiguous stays refused.
+  await p.fill(`#${id}_search`, `${who.first} ${who.last}`)
+  await p.evaluate((pid) => document.getElementById(pid + '_search').blur(), id)
+  await p.waitForTimeout(320)
+  const onBlur = await p.evaluate((pid) => document.getElementById(pid).value, id)
+  say(onBlur === who_id, where, `typing a full name and tabbing away lost it (value ${onBlur || 'empty'})`)
+  await p.fill(`#${id}_search`, 'Zz Ambiguous Nobody')
+  await p.evaluate((pid) => document.getElementById(pid + '_search').blur(), id)
+  await p.waitForTimeout(320)
+  const junk = await p.evaluate((pid) => ({
+    v: document.getElementById(pid).value, text: document.getElementById(pid + '_search').value }), id)
+  // A name nobody has never becomes a pick, and never stays on screen looking
+  // like one — the box goes back to whatever is actually held.
+  say(junk.v === '' || junk.v === 'walkin', where, `a name nobody has was taken as a customer (${junk.v})`)
+  say(junk.text.trim() !== 'Zz Ambiguous Nobody', where, 'a name nobody has was left sitting in the box')
+
+  // 8. The form's own reaction still runs.
   if (wantsOnPick) {
     const fires = await p.evaluate((pid) => new Promise((res) => {
       const el = document.getElementById(pid)

@@ -8088,8 +8088,20 @@ function kcPickerKey(valueId, e) {
   }
 }
 
-// Leaving a box with half a name typed in it and nothing picked reads as
-// "done" and saves as blank. Put back whatever is actually held.
+/**
+ * Leaving the box.
+ *
+ * Typing a name and then reaching straight for the button next to it is what
+ * people actually do — and the first version of this threw the name away and
+ * left the form empty, so pressing Start timer answered "Pick who you are
+ * helping" about the person whose name was still on screen a moment earlier
+ * (owner, 17 Aug, with the toast in the corner of the screenshot).
+ *
+ * So a typed name that matches exactly ONE person is taken as that person.
+ * That is the same bargain Enter already makes, and the ✓ line underneath says
+ * who was taken. Anything ambiguous is still put back rather than guessed at,
+ * because guessing here files a rental against the wrong man.
+ */
 function kcPickerBlur(valueId) {
   setTimeout(() => {
     kcPickerOpen(valueId, false);
@@ -8098,7 +8110,13 @@ function kcPickerBlur(valueId) {
     if (!search || !hidden) return;
     if (document.getElementById(valueId + '_qa')) return;   // quick-add is open
     const held = kcPickerLabel(valueId, hidden.value);
-    if (search.value.trim() !== held) search.value = held;
+    const typed = search.value.trim();
+    if (typed === held) return;
+    if (typed) {
+      const hits = customers.filter(c => customerMatches(typed, c));
+      if (hits.length === 1) return kcPickerSet(valueId, hits[0].id);
+    }
+    search.value = held;
   }, 150);
 }
 // Quick-add a customer WITHOUT leaving the form you are in.
@@ -9082,7 +9100,7 @@ async function saveWalletEntry(customerId) {
 
 async function renderWalletTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml('wallet');
+  kcSkeleton('wallet');
 
   const today = localISO();
   const data = await kcFetch(`/api/ledger?since=${today}&recent=50`)
@@ -9311,7 +9329,7 @@ function bankPatchRow(txnId, patch) {
 async function renderBankRecon() {
   const content = document.getElementById('mainContent');
   document.getElementById('pageTitle').innerHTML = 'Bank <span>Reconciliation</span>';
-  content.innerHTML = skeletonHtml('bank');
+  kcSkeleton('bank');
   const data = await kcFetch('/api/bank').then(r => r.json()).catch(() => null);
   if (!data || !data.success) {
     content.innerHTML = `<div class="empty-state"><div class="emoji">🏦</div>
@@ -11030,12 +11048,61 @@ function skeletonHtml(shape = 'stats') {
         : { cards: 3, toolbar: false, cols: 1 }))
     : shape;
 
+  // Enough rows to reach the bottom of the screen (owner, 17 Aug: "its also
+  // only half of the page's length"). A ghost that stops halfway down reads as
+  // a page that has given up rather than one still arriving — and the real
+  // lists it stands in for do run to the fold.
+  //
+  // Measured, not guessed: the column starts 114px down and wants ~40px of air
+  // under it, a stats row is 118px, a toolbar 54, and a panel spends 36px on
+  // padding and 33 on its title. A row is 13px of bar and 9px of margin — the
+  // two 9px margins COLLAPSE into one between rows, which is what made the
+  // first attempt at this stop two-thirds of the way down.
+  const vh = (typeof window !== 'undefined' ? window.innerHeight : 900);
+  const room = vh - 114 - 40 - (cfg.cards ? 118 : 0) - (cfg.toolbar ? 54 : 0) - 69;
+  const n = Math.max(4, Math.min(26, Math.round(room / 22)));
+
   const stats = cfg.cards ? `<div class="stats-row">${card.repeat(cfg.cards)}</div>` : '';
   const bar = cfg.toolbar ? '<div class="kc-skel kc-skel-bar"></div>' : '';
   const body = cfg.cols === 2
-    ? `<div class="kc-skel-cols">${rows(5, title)}${rows(5, title)}</div>`
-    : rows(7, title);
-  return `${sr}<div aria-hidden="true">${stats}${bar}${body}</div>`;
+    ? `<div class="kc-skel-cols">${rows(n, title)}${rows(n, title)}</div>`
+    : rows(n, title);
+  return `${sr}<div class="kc-skel-wrap" aria-hidden="true">${stats}${bar}${body}</div>`;
+}
+
+// ── When a skeleton is worth showing at all ───────────────────────────────
+//
+// Owner, 17 Aug: "dont feel that this pre-loading thing is correct for each
+// screen". Most of these loads come back in well under a quarter of a second,
+// and a ghost layout that appears and is replaced inside 200ms does not read
+// as loading — it reads as the page changing its mind. The measured advice is
+// the same everywhere it has been studied: under ~250ms show nothing at all,
+// because the eye reads a fast blank as "instant" and a fast flash as a fault.
+//
+// So the wait now starts EMPTY and the ghost only arrives if the wait is long
+// enough to need explaining. Nothing else changes: a slow tab still ghosts in
+// its own measured silhouette.
+//
+// Cancelling is automatic rather than something every render has to remember:
+// the pending paint checks that its own render is still the current one, and
+// that nothing has painted into the column since — the "Loading…" marker it
+// left behind is still the only child. Either test failing means the real
+// screen has arrived, or a newer one has started, and the ghost is dropped.
+const KC_SKELETON_DELAY_MS = 250;
+let kcSkelSeq = 0;
+
+function kcSkeleton(shape = 'stats') {
+  const content = document.getElementById('mainContent');
+  if (!content) return;
+  const seq = String(++kcSkelSeq);
+  content.dataset.kcSkel = seq;
+  content.innerHTML = '<span class="kc-sr-only" role="status">Loading…</span>';
+  setTimeout(() => {
+    if (content.dataset.kcSkel !== seq) return;                       // a newer render began
+    const only = content.children.length === 1 && content.firstElementChild;
+    if (!only || !only.classList.contains('kc-sr-only')) return;      // the real screen arrived
+    content.innerHTML = skeletonHtml(shape);
+  }, KC_SKELETON_DELAY_MS);
 }
 
 // An error state with a Retry — never a dead-end, and never a reassuring
@@ -12245,7 +12312,7 @@ function repairStatusBadge(status) {
 
 async function renderRepairsTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml('repairs');
+  kcSkeleton('repairs');
   try {
     [repairs, repairMenu] = await Promise.all([
       window.api.getRepairs(),
@@ -12848,7 +12915,7 @@ function svcFloatDragStart(e) {
 
 async function renderServicesTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml('services');
+  kcSkeleton('services');
   if (svcTimerInterval) { clearInterval(svcTimerInterval); svcTimerInterval = null; }
   try {
     [serviceOrders, onlineMenu] = await Promise.all([
@@ -13404,7 +13471,7 @@ async function poReceive(id) {
 
 async function renderShopTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml('shop');
+  kcSkeleton('shop');
   const [data, retData, giData] = await Promise.all([
     kcFetch('/api/shop').then(r => r.json()).catch(() => null),
     // Returns and goods-in are additive: if either fetch fails the shop still renders.
@@ -14732,7 +14799,7 @@ function ktSectionHead(title, sub) {
 
 async function renderKolTorahTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml('koltorah');
+  kcSkeleton('koltorah');
   const res = await kcFetch('/api/kol-torah').then(r => r.json()).catch(() => null);
   if (!res || !res.success) { content.innerHTML = errorHtml('Couldn’t load Kol Torah'); return; }
   ktData = res;
@@ -16836,7 +16903,7 @@ let cmBusy = false;
 
 async function renderCarrierMailTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml('stats');
+  kcSkeleton('stats');
   let data = null;
   try { data = await window.api.getCarrierMail(cmFilter); }
   catch { content.innerHTML = errorHtml('Couldn’t load carrier mail'); return; }
@@ -17232,7 +17299,7 @@ let confirmBusy = false;
 
 async function renderConfirmTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml('stats');
+  kcSkeleton('stats');
   let data = null;
   try { data = await window.api.getReviewQueue(12); }
   catch { content.innerHTML = errorHtml('Couldn’t load the confirmation queue'); return; }
@@ -17340,7 +17407,7 @@ async function confirmBundle() {
 
 async function renderTasksTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml('tasks');
+  kcSkeleton('tasks');
   tasksList = await window.api.getTasks();
   if (!Array.isArray(tasksList)) tasksList = [];
 
@@ -17948,7 +18015,7 @@ let vnPriceMatrix = []; // bundle price matrix (also drives the billing modal)
 
 async function renderVirtualTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml('virtual');
+  kcSkeleton('virtual');
   try {
     [virtualNumbers, vnPriceMatrix] = await Promise.all([
       window.api.getVirtualNumbers(),
@@ -18253,7 +18320,7 @@ async function deleteSelectedVNs() {
 
 async function renderSettingsTab() {
   const content = document.getElementById('mainContent');
-  content.innerHTML = skeletonHtml('settings');
+  kcSkeleton('settings');
   const [cfg, team, autos, aliases, menu, extra, bizacc, pguide, health, elidSummary, aiUsage] = await Promise.all([
     window.api.getSettings(),
     kcFetch('/api/team').then(r => r.status === 403 ? null : r.json()).catch(() => null),

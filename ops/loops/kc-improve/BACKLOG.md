@@ -945,3 +945,39 @@ Three things the merge itself was missing, all fixed the same day:
 | The carrier login (`accountEmail`) was lost with the deleted record, though its SIMs were moving to the survivor | `merge.js` carries it into the gap (a survivor that has one keeps it) |
 
 Gate green (435 tests ×2 TZ + build); picker + names sweeps clean.
+
+## Owner request — 2026-08-17: the loading state
+
+> "dont feel that this pre-loading thing is correct for each screen, and its
+> also only half of the page's length"
+
+Two faults in one sentence, both fixed.
+
+**It should not usually be there at all.** Every one of these loads comes back
+in well under a quarter of a second, so the ghost appeared and was replaced
+inside 200ms — which does not read as loading, it reads as the page changing
+its mind. The wait now starts empty and the ghost only arrives after 250ms, so
+in normal use it is never seen. Cancellation is automatic rather than something
+each render has to remember: the pending paint checks its render is still the
+current one and that nothing has painted into the column since.
+
+Five tabs turn out never to wait on the network at all (Shop, Repairs, Virtual
+Numbers, Kol Torah, Settings) — they now show nothing instead of a ghost.
+
+**When it is there it reaches the fold.** It was stopping at 658px of a 900px
+screen. The row count is now measured from the viewport — and the pitch is 22px
+per row, not 31: the 9px margins COLLAPSE between rows, which is what made the
+first attempt still stop two-thirds of the way down. Ghost now ends at 874 of
+900, rows and all.
+
+Also fixed, same session, from the red toast in the corner of the owner's
+screenshot: typing a name into a picker and reaching straight for the button
+next to it threw the name away, so "Start timer" answered "Pick who you are
+helping" about the person whose name was on screen a second earlier. A typed
+name that matches exactly one person is now taken as that person — the same
+bargain Enter already made. Ambiguous input is still refused rather than
+guessed at.
+
+New: `node ops/harness/loading.mjs` — fails if any tab flashes a ghost on a
+fast load, or if a real (1.5s) wait ghosts short of the fold, at 1280 and 390.
+Wired into `audit-all.sh`. Gate green.
