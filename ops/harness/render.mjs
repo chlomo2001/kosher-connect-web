@@ -123,6 +123,9 @@ export function buildAppHtml(out = path.join(HERE, 'app.html'), { empty = false,
   const css = readFileSync(path.join(ROOT, 'styles/globals.css'), 'utf8') +
     '\n' + readFileSync(path.join(ROOT, 'styles/app.css'), 'utf8')
   const main = readFileSync(path.join(ROOT, 'public/main.js'), 'utf8')
+  // The curated guide library, loaded before main.js in production
+  // (components/AppShell.js) and therefore before it here too.
+  const guides = readFileSync(path.join(ROOT, 'public/guides.js'), 'utf8')
   const seedRaw = readFileSync(path.join(HERE, 'seed.json'), 'utf8')
   const seed = empty ? emptySeed(seedRaw) : long ? longSeed(seedRaw) : seedRaw
   writeFileSync(out, `<!doctype html>
@@ -160,6 +163,7 @@ window.fetch = function (url) {
 };
 </script>
 </head><body>${shell}
+<script>${guides}</script>
 <script>${main}</script>
 </body></html>`)
   return out

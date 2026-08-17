@@ -9497,6 +9497,20 @@ function setupTopbarButtons() {
     a.addEventListener('click', () => openAssistantModal());
     btnNew.parentElement.insertBefore(a, document.getElementById('btnPalette'));
   }
+  // "How do I…" — the curated walk-throughs. Its own button beside Ask,
+  // because someone who does not know how to do the job also does not know
+  // that the robot button is where you would ask.
+  if (btnNew && !document.getElementById('btnHowTo')) {
+    const h = document.createElement('button');
+    h.id = 'btnHowTo';
+    h.className = 'btn btn-outline';
+    h.style.cssText = 'font-size:var(--fs-small);padding:8px 12px;margin-right:8px;';
+    h.title = 'How do I…? — step-by-step for any job in the shop';
+    h.setAttribute('aria-label', 'How do I');
+    h.innerHTML = '❓<span class="kc-btn-label"> How do I…</span>';
+    h.addEventListener('click', () => openHowToModal());
+    btnNew.parentElement.insertBefore(h, document.getElementById('btnAssistant'));
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -14794,6 +14808,84 @@ const openOnTab = (tab, fn) => { goToTab(tab); setTimeout(() => fn(), 130); };
 // like the on-page dropdowns — the tab's own "Clear" button resets them.
 const filterView = (tab, apply, reRender) => { apply(); goToTab(tab); if (reRender) setTimeout(reRender, 60); };
 
+// ── "How do I…?" — the curated walk-throughs ──────────────────────────────
+// Owner's standard, 08-17: "If a screen needs explaining, it has failed.
+// Anyone should understand any screen on first sight, with no training and no
+// manual." This panel is the honest admission that no system clears that bar
+// every day, and the safety net for the afternoon when someone new is covering
+// the counter.
+//
+// The steps live in lib/guides.mjs and arrive here as public/guides.js,
+// generated at build time — one place to edit a guide, and no chance of the
+// counter reading a step that was corrected somewhere else.
+function openHowToModal(prefill = '') {
+  showDynamicModal(`
+    <div class="modal-title">❓ How do I…?</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
+      Every job in the shop, step by step. Ask in your own words — "someone brought a phone back",
+      "the writing is too small".</div>
+    <input class="form-input" id="howToSearch" placeholder="What do you want to do?" autocomplete="off"
+      oninput="renderHowTo()" onkeydown="if(event.key==='Enter')renderHowTo()">
+    <div id="howToOut" style="margin-top:12px;"></div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
+  `);
+  setTimeout(() => {
+    const i = document.getElementById('howToSearch');
+    if (i) { if (prefill) i.value = prefill; i.focus(); }
+    renderHowTo();
+  }, 40);
+}
+
+function howToGuides() { return Array.isArray(window.KC_GUIDES) ? window.KC_GUIDES : []; }
+
+function renderHowTo() {
+  const out = document.getElementById('howToOut');
+  if (!out) return;
+  const all = howToGuides();
+  if (!all.length) {
+    out.innerHTML = `<div class="empty-state"><div class="emoji">❓</div><p>The guides did not load.</p>
+      <small>Reload the page — and the 🤖 Ask button still works meanwhile.</small></div>`;
+    return;
+  }
+  const q = (document.getElementById('howToSearch')?.value || '').trim();
+  const list = q ? (window.kcMatchGuides ? window.kcMatchGuides(q, all, { limit: 6 }) : []) : all;
+
+  if (!list.length) {
+    // An honest miss beats a confident wrong answer — hand it to the model,
+    // which is good at questions about DATA, and say which is which.
+    out.innerHTML = `<div class="customer-dropdown-empty" style="padding:0 0 10px;">
+        Nothing in the guides matches “${escHtml(q)}”.</div>
+      <button class="btn btn-outline" style="white-space:normal;text-align:left;"
+        onclick="closeDynamicModal();openAssistantModal('${escJs(q)}')">
+        🤖 Ask the assistant instead</button>
+      <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;">
+        It answers questions about the shop's own numbers — who owes, what is overdue.</div>`;
+    return;
+  }
+
+  out.innerHTML = list.map((g, i) => `
+    <details class="kc-howto" ${list.length === 1 || (q && i === 0) ? 'open' : ''}>
+      <summary>${escHtml(g.q)}</summary>
+      <ol class="kc-howto-steps">${g.steps.map(st => `<li>${escHtml(st)}</li>`).join('')}</ol>
+      <button class="btn btn-primary btn-sm" onclick="howToTakeMeThere('${escJs(g.id)}')">→ ${escHtml(g.go)}</button>
+    </details>`).join('');
+}
+
+// "Take me there": the answer ends where the work starts, not with the reader
+// hunting for the screen it just described.
+function howToTakeMeThere(id) {
+  const g = howToGuides().find(x => x.id === id);
+  if (!g) return;
+  closeDynamicModal();
+  goToTab(g.tab);
+  // The tab's own primary button is the action the guide was describing, so
+  // the guides never repeat a list of button names that could go stale.
+  const primary = TAB_META[g.tab]?.primary;
+  if (primary && /^(Open (New|the till)|Open Tickets|Open Repairs|Open SIM|Open Virtual|Open Customers)/.test(g.go)) {
+    setTimeout(() => primary.run(), 200);
+  }
+}
+
 // ── In-house AI assistant — "Ask / do anything" ──
 // Gemini (server) turns plain language into ONE structured action; the client
 // answers reads from data it already holds, and shows a confirm card for any
@@ -14821,6 +14913,20 @@ async function runAssistant() {
   const msg = input && input.value.trim();
   const out = document.getElementById('askOut');
   if (!msg) return;
+  // A "how do I…" question is answered from the curated library first — no
+  // network, no cost, and the same right answer every time. The model is good
+  // at questions about the shop's DATA; it is the wrong thing to ask how the
+  // shop works, because the person asking cannot tell a confident wrong answer
+  // from a right one. (owner, 08-17)
+  const guide = window.kcBestGuide ? window.kcBestGuide(msg) : null;
+  if (guide && /\b(how|where|what).{0,30}\b(do|does|is|are|can)\b/i.test(msg)) {
+    if (out) out.innerHTML = `
+      <div style="font-size:var(--fs-body);font-weight:600;margin-bottom:8px;">${escHtml(guide.q)}</div>
+      <ol class="kc-howto-steps">${guide.steps.map(st => `<li>${escHtml(st)}</li>`).join('')}</ol>
+      <button class="btn btn-primary btn-sm" onclick="howToTakeMeThere('${escJs(guide.id)}')">→ ${escHtml(guide.go)}</button>
+      <button class="btn btn-outline btn-sm" style="margin-left:6px;" onclick="closeDynamicModal();openHowToModal()">All guides</button>`;
+    return;
+  }
   assistantBusy = true; assistantPending = null;
   const btn = document.getElementById('askGo'); if (btn) { btn.disabled = true; btn.textContent = '…'; }
   if (out) out.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-body);">Thinking…</div>';
@@ -14988,6 +15094,7 @@ const PALETTE_COMMANDS = [
   { icon: '📇', label: 'Manage Phone Inventory', sub: 'tool', run: () => openOnTab('rentals', openManagePhonesModal) },
   { icon: '🧾', label: 'Cash-up (Z-report)', sub: 'tool', keys: ['cashup', 'z report', 'eod', 'end of day', 'takings'], run: () => openCashupModal() },
   { icon: '⌨️', label: 'Keyboard shortcuts', sub: 'help', run: () => openShortcuts() },
+  { icon: '❓', label: 'How do I…?', sub: 'help', keys: ['how do i', 'help', 'guide', 'steps', 'teach', 'show me', 'training', 'manual'], run: () => openHowToModal() },
   { icon: '⏰', label: 'New reminder', sub: 'tool', run: () => openRemindModal('note', '') },
   { icon: '🔑', label: 'Change my password', sub: 'tool', run: () => openChangePasswordModal() },
   { icon: '🌓', label: 'Toggle dark mode', sub: 'tool', run: () => toggleTheme() },

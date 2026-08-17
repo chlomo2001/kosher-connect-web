@@ -10,6 +10,10 @@
 // route, and the staff app served its own sign-in page as a stylesheet. The
 // public pages were fine, which is exactly why it was easy to miss.
 require('./scripts/build-app-css.cjs')
+// Same reasoning for the curated "How do I…" library: public/guides.js is
+// generated from lib/guides.mjs, and a missing file here would leave the
+// counter's help button empty on production only.
+require('./scripts/build-guides.cjs')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

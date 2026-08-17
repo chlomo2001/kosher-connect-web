@@ -158,6 +158,39 @@ Waiting is disguised, not announced:
 - Async repaints must not blank what's already painted — paint over, never
   clear-then-load (the dashboard's `dashPaint` is the precedent).
 
+## If a screen needs explaining, it has failed
+
+Owner standard, 08-17, brought over from another project: *anyone should
+understand any screen on first sight, with no training and no manual.*
+
+That is the bar for every new screen. It is a **judgement**, not a check — it
+is signed off by watching someone who has never seen the system use it, not by
+reading the code, and no harness can assert it.
+
+The curated guide library (`lib/guides.mjs` → `public/guides.js`, the ❓ button)
+is the safety net for the days the bar is missed, not permission to miss it. If
+a guide has to explain a screen at length, the screen is the thing to fix.
+
+Three rules for the library:
+
+1. **Curated, never generated.** The people who need it — a helper covering the
+   counter, someone new — cannot tell a confident wrong answer from a right
+   one, and here a wrong answer mis-charges a customer. Steps written once by a
+   person are correct every time, work with no network and no API key, and cost
+   nothing to ask. The generative assistant sits BEHIND this: `matchGuides`
+   runs first and only an unmatched question reaches the model.
+2. **Plain words in, plain words out.** Someone types "the phone came back",
+   not "process rental return". No jargon in the steps — `test/guides.test.mjs`
+   fails on developer words.
+3. **Every answer ends where the work starts.** Each guide carries a "Take me
+   there" button. An answer that leaves the reader hunting for the screen it
+   just described has done half the job.
+
+Coverage is enforced: a screen in `ALL_TABS` with no guide fails the tests.
+The browser copy is GENERATED from the module, like `public/app.css` — 20
+guides of prose copied by hand would drift, and the drifted copy is the one the
+counter reads.
+
 ## Pickers create what they pick
 
 Owner rule, 08-17: **a picker never dead-ends, and everything is interlinked.**

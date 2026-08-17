@@ -384,6 +384,11 @@ export default function AppShell({ initialTab = 'dashboard' }) {
         {`window.KC_MAPS_KEY=${JSON.stringify(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '')};`}
       </Script>
       <Script src="/address-autocomplete.js" strategy="afterInteractive" />
+      {/* The curated "How do I…" library, generated from lib/guides.mjs.
+          Loaded before main.js so the help button has its answers the moment
+          it can be pressed; if it somehow fails, main.js says so plainly
+          rather than opening an empty panel. */}
+      <Script src="/guides.js" strategy="afterInteractive" />
       <Script src="/main.js" strategy="afterInteractive" />
       {/* Safety net: if main.js never loads (bad network), don't trap the user
           behind the splash — fade it out after 12s regardless. */}
