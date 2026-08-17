@@ -89,6 +89,25 @@ async function handler(req, res) {
         }
         // Revenue report: charges (debits) grouped by entry_type + money
         // actually received (payments/top-ups), for entries since `from`.
+        // The shape of the last N days, for the dashboard's trend line. Kept
+        // beside the report because it reads the same ledger with the same
+        // split — the sparkline under a figure has to be that figure's own
+        // history, not a second definition of "money in".
+        if (req.query.series) {
+          const days = Math.min(120, Math.max(2, parseInt(req.query.series, 10) || 30))
+          const to = londonDate()
+          const from = londonDate(-(days - 1))   // londonDate takes an offset in DAYS
+          const rows = await db.rpc('ledger_daily_series', { p_from: from, p_to: to })
+          const round = (v) => Math.round((Number(v) || 0) * 100) / 100
+          return res.json({
+            success: true, from, to,
+            days: (rows || []).map(r => ({
+              day: r.day,
+              charged: round(r.charged),
+              received: round(r.received),
+            })),
+          })
+        }
         if (req.query.report) {
           const from = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.from || ''))
             ? req.query.from : londonDate()

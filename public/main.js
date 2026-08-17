@@ -16809,7 +16809,7 @@ function hebrewDateString(d) {
 // The dashboard paints INSTANTLY from what's already in memory (rentals,
 // phones, sims, bookings, repairs) plus the last-known money/tasks, then
 // repaints once the fresh ledger + tasks arrive. No blank "Loading…" wait.
-let dashCache = { money: null, tasks: null, shop: null, returns: null };
+let dashCache = { money: null, tasks: null, shop: null, returns: null, series: null };
 
 // "£17 more than last Sunday by this time" — a figure with nothing to compare
 // it against is not information. The API measures the same weekday last week
@@ -16817,6 +16817,67 @@ let dashCache = { money: null, tasks: null, shop: null, returns: null };
 // (owner, 08-16; the idea is lifted from a Lightspeed dashboard that compares
 // to "last Friday" rather than to yesterday, which is the right instinct — a
 // shop's week has a shape).
+// The shape of the last 30 days under the money figure (owner, 17 Aug — the
+// Lightspeed dashboard puts a small line under each number). Mirrors
+// lib/sparkline.mjs::sparklinePath exactly; test/sparkline.test.mjs holds the
+// pair together. Change both or neither.
+//
+// Baseline zero, never the minimum: a line scaled from its own low point turns
+// £120, £125, £130 into a dramatic climb, and a dashboard that overstates a
+// flat week is worse than one with no line at all.
+function sparklinePath(values, { width = 120, height = 28, pad = 2 } = {}) {
+  const r2 = (n) => Math.round(n * 100) / 100;
+  const nums = (Array.isArray(values) ? values : [])
+    .map(v => Number(v) || 0)
+    .filter(v => Number.isFinite(v));
+  if (!nums.length) return { d: '', dots: [], max: 0, first: null, last: null, count: 0 };
+  const max = Math.max(0, ...nums);
+  const usable = Math.max(1, height - pad * 2);
+  const y = (v) => r2(pad + usable - (max > 0 ? (v / max) * usable : 0));
+  if (nums.length === 1) {
+    const only = { x: r2(width / 2), y: y(nums[0]) };
+    return { d: '', dots: [only], max, first: nums[0], last: nums[0], count: 1 };
+  }
+  const step = width / (nums.length - 1);
+  const pts = nums.map((v, i) => ({ x: r2(i * step), y: y(v) }));
+  const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x} ${p.y}`).join(' ');
+  return { d, dots: [pts[pts.length - 1]], max, first: nums[0], last: nums[nums.length - 1], count: nums.length };
+}
+
+// The line itself. An <svg> with no text in it is invisible to a screen
+// reader, so the figure it sits under carries the words and this is marked
+// aria-hidden — the numbers are already on screen, this only shows their shape.
+function sparklineHtml(values, { width = 132, height = 30, title = '' } = {}) {
+  const s = sparklinePath(values, { width, height });
+  if (!s.count) return '';
+  const dot = s.dots[0];
+  return `<svg class="kc-spark" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"
+      preserveAspectRatio="none" aria-hidden="true" focusable="false"${title ? ` role="img"><title>${escHtml(title)}</title` : '>'}>
+    ${s.d ? `<path d="${s.d}" fill="none" stroke="currentColor" stroke-width="1.5"
+      stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>` : ''}
+    <circle cx="${dot.x}" cy="${dot.y}" r="2.5" fill="currentColor"/>
+  </svg>`;
+}
+
+/**
+ * The trend line under a dashboard figure, with the words that make it mean
+ * something. Nothing is drawn until the series has loaded, and nothing is
+ * drawn if every day is zero — a flat line on the floor says "no money at all
+ * this month", which on a quiet day is a lie about the month.
+ */
+function dashSparkHtml(which = 'received') {
+  const days = Array.isArray(dashCache.series) ? dashCache.series : null;
+  if (!days || days.length < 2) return '';
+  const values = days.map(d => Number(d[which]) || 0);
+  const total = values.reduce((a, b) => a + b, 0);
+  if (total <= 0) return '';
+  const best = Math.max(...values);
+  return `<div class="dash-spark-row">
+    ${sparklineHtml(values, { title: `${values.length} days, ${fmtGbp(total)} in total, best day ${fmtGbp(best)}` })}
+    <span class="dash-spark-note">last ${values.length} days · ${fmtGbp(total)} in</span>
+  </div>`;
+}
+
 function weekOnWeekHtml(money) {
   const now = Number(money.todayIn) || 0;
   const then = Number(money.lastWeekIn) || 0;
@@ -16852,14 +16913,18 @@ async function renderDashboardTab() {
   dashPaint(dashCache.money, dashCache.tasks, dashCache.money === null, dashCache.shop, dashCache.returns);
 
   const today = localISO();
-  const [ledgerSummary, tasksData, shopData, retData] = await Promise.all([
+  const [ledgerSummary, tasksData, shopData, retData, series] = await Promise.all([
     kcFetch('/api/ledger?since=' + today).then(r => r.ok ? r.json() : null).catch(() => null),
     window.api.getTasks().catch(() => []),
     kcFetch('/api/shop').then(r => r.ok ? r.json() : null).catch(() => null),
     kcFetch('/api/supplier-returns').then(r => r.ok ? r.json() : null).catch(() => null),
+    // 30 days of shape for the trend line. Its own request, and a failure is
+    // just no line — the figures above it do not wait on it.
+    kcFetch('/api/ledger?series=30').then(r => r.ok ? r.json() : null).catch(() => null),
   ]);
   dashCache = {
     money: ledgerSummary?.success ? ledgerSummary : dashCache.money,
+    series: series?.success ? series.days : dashCache.series,
     tasks: Array.isArray(tasksData) ? tasksData : (dashCache.tasks || []),
     shop: shopData?.success ? shopData.items : dashCache.shop,
     returns: retData?.success ? retData.returns : dashCache.returns,
@@ -16934,6 +16999,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
       <div class="dash-hero-sub">${money && money.todayOut ? fmtGbp(Math.abs(money.todayOut)) + ' charged out today' : (stillLoading ? '&nbsp;' : 'no charges yet today')}</div>
       ${stillLoading || !money ? '' : `<div class="dash-hero-sub">${weekOnWeekHtml(money)}</div>`}
       ${stillLoading || !money ? '' : monthTargetHtml(money)}
+      ${dashSparkHtml('received')}
       <div class="dash-hero-divider"></div>
       <div class="dash-hero-label">Outstanding</div>
       <div class="dash-hero-value" style="font-size:var(--fs-hero);letter-spacing:-0.28px;">${stillLoading ? '…' : fmtGbp(arrearsTotal)}</div>

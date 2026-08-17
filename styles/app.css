@@ -953,6 +953,18 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   .biz-range .btn:last-child { margin-inline-start: 0 !important; }
 }
 
+/* The dashboard trend line. Sits under the figure it belongs to, in the same
+   ink as the hero's supporting text — it is a supporting detail, and a line
+   drawn in the brand blue would compete with the number above it. */
+.dash-spark-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.kc-spark { color: var(--accent); opacity: 0.75; overflow: visible; flex: 0 0 auto; }
+.dash-spark-note { font-size: var(--fs-micro); color: var(--muted); }
+
+@media (max-width: 560px) {
+  /* The line is decoration on a phone; the figure and its words are not. */
+  .dash-spark-row { gap: 8px; }
+}
+
 /* ---------- Carrier mail ---------- */
 /* A log, not a table: the useful unit is one message with its verdict and the
    action it needs, and a message's subject is long. Three columns — when, what,
