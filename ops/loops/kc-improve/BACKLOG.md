@@ -130,11 +130,10 @@ Safe (loop-eligible), ranked value ÷ effort:
       | after ≥1440 | **0/6 · 0/2 · 0/7** | 0 |
       | after @1280 | 6/6 · 2/2 · 3/7 (2 controls, not 3) | **+32px** |
 
-      Better or equal at every width measured, worse at none. Still open, and
-      an owner decision rather than a styling one: **Rentals carries nine
-      columns** and cannot fit 1280 whatever the buttons do. One column has to
-      go — Days is derivable from the dates, and Price sits beside a Balance
-      that already says "£75 owed" or "✓ Paid".
+      Better or equal at every width measured, worse at none. **Rentals' ninth
+      column went on the owner's call the same day** — Price now sits under the
+      Balance it explains rather than in a column of its own — and the table
+      fits 1280 exactly: +44px before all this, +32 after the menu, **0 now**.
 - [ ] **P1 · L** — **"Google-feel" polish (owner ask 08-03**, after "why does
       business.google.com feel so much nicer/richer/smoother?"). Owner wants
       the **first three** of the four gaps. **Session 1 shipped 08-04**

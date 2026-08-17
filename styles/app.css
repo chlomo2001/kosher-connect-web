@@ -914,6 +914,10 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   .kc-stack-sm .row-actions { justify-content: flex-start; }
 }
 
+/* The agreed price, under the balance it explains. Quiet — the balance is the
+   number being scanned down the column; this is the reference behind it. */
+.kc-money-sub { font-size: var(--fs-micro); font-weight: 400; color: var(--muted); white-space: nowrap; }
+
 /* ---------- Row overflow menu ---------- */
 /* Fewer controls per row (owner, 17 Aug — "a comfortable view like Lightspeed
    has"). The primary action stays on the row; the rest sit behind ⋯.
@@ -1567,6 +1571,17 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .detail-name { font-size: var(--fs-display-1); font-weight: 300; letter-spacing: -0.2px; }
 
 .detail-meta { font-size: var(--fs-body); color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
+/* `overflow-wrap: anywhere` above is there for long email addresses, which
+   have no spaces to break at. It must not reach the phone number: the owner's
+   screenshot showed "+44" left at the end of one line and "7311 492 097"
+   beginning the next, which is not a phone number, it is two pieces of one.
+   A value a person might read aloud or dial stays in one piece; if it cannot
+   fit, it takes its own line. Same for the contact chips, whose two words
+   ("outside line") were splitting apart from each other. */
+.detail-meta .kc-fact,
+.detail-meta .kc-contact-ours,
+.detail-meta .kc-contact-outside,
+.detail-meta .kc-contact-flag { white-space: nowrap; }
 
 
 

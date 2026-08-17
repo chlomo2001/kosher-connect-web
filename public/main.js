@@ -2283,7 +2283,7 @@ function renderRentalsTab() {
                 <th style="width:28px;"><input type="checkbox" id="rentalSelAll" aria-label="Select every rental in this view"
                   onclick="toggleAllRentalSel(this.checked)"></th>
                 <th>Customer</th><th>Phone</th><th>From → To</th>
-                <th>Days</th><th>Price</th><th>Balance</th><th>Status</th><th>Actions</th>
+                <th>Days</th><th>Balance</th><th>Status</th><th>Actions</th>
               </tr>
             </thead>
             <tbody id="rentalTableBody"></tbody>
@@ -2633,7 +2633,7 @@ function renderRentalRows() {
     // "No rentals yet" was shown even with a full pool behind an active
     // filter — the one message a busy shop would read as data loss.
     const narrowed = rentals.length > 0;
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="emoji">📱</div>
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="emoji">📱</div>
       <p>${narrowed ? 'No rentals match this view.' : 'No rentals yet.'}</p>
       <small>${narrowed ? '' : 'Click "New rental" to get started.'}</small>
       ${narrowed ? kcClearFiltersBtn('rentals') : ''}</div></td></tr>`;
@@ -2668,8 +2668,13 @@ function renderRentalRows() {
       <td class="kc-phone">${rentalDeviceChip(r, { stacked: true })}</td>
       <td class="kc-date" data-label="From → To" style="font-size:var(--fs-micro);">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}${r.pickupDate && r.pickupDate !== r.fromDate ? `<br><span style="color:var(--muted);" title="Physically taken — the charge runs from here">↳ took ${fmtDate(r.pickupDate)}</span>` : ''}</td>
       <td style="text-align:center;">${r.chargeableDays}d</td>
-      <td data-label="Price" style="color:var(--success);font-weight:700;">${fmtGbp(r.price)}</td>
-      <td class="kc-money" style="font-weight:700;${debtColor}">${totalOwed > 0 ? '£'+totalOwed+' owed' : '✓ Paid'}</td>
+      ${/* Nine columns could not fit a 1280px screen whatever the buttons did
+            (docs/DESIGN.md §Row actions). The owner's call, 17 Aug: Price goes.
+            It is not lost — it sits under the balance it explains, so "£75
+            owed" still says what the hire was agreed at. */''}
+      <td class="kc-money" data-label="Balance" style="font-weight:700;${debtColor}">
+        ${totalOwed > 0 ? '£'+totalOwed+' owed' : '✓ Paid'}
+        <div class="kc-money-sub">${fmtGbp(r.price)} hire</div></td>
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
@@ -6680,7 +6685,15 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         <div class="avatar">${initials}</div>
         <div class="detail-headline">
           <div class="detail-name">${c.title ? `<span class="cust-title">${escHtml(capName(c.title))}</span> ` : ''}${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:var(--fs-lead);">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
-          <div class="detail-meta">${unconfirmedChip(c) ? unconfirmedChip(c) + ' · ' : ''}${contactChip(c)}${contactChip(c) ? ' ' : ''}${c.phone ? `<a href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${c.altPhone ? ` <a href="tel:${escHtml(String(c.altPhone).replace(/\s/g, ''))}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional number">${escHtml(fmtPhone(c.altPhone))}</a>` : ''}${waLink(c, '') ?` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ✉️ ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">${escHtml(c.email)}</a>` : escHtml(c.email || 'no contact email')}${c.altEmail ? ` · <a href="mailto:${escHtml(c.altEmail)}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional email">${escHtml(c.altEmail)}</a>` : ''}${c.accountEmail ?` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr}${since ? ` · Since ${since}` : ''}</div>
+          ${/* One fact per unit. The owner's screenshot had "+44" ending a line
+                and "7311 492 097" starting the next — which is not a phone
+                number, it is two pieces of one — and "no contact email" split
+                across "no" / "contact email". `overflow-wrap: anywhere` on this
+                line is there for long email addresses, which have nowhere else
+                to break; everything that is not an address is now wrapped in a
+                .kc-fact that holds together, so the line breaks BETWEEN facts
+                and never inside one. */''}
+          <div class="detail-meta">${unconfirmedChip(c) ? unconfirmedChip(c) + ' · ' : ''}${contactChip(c)}${contactChip(c) ? ' ' : ''}${c.phone ? `<a class="kc-fact" href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${c.altPhone ? ` <a class="kc-fact" href="tel:${escHtml(String(c.altPhone).replace(/\s/g, ''))}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional number">${escHtml(fmtPhone(c.altPhone))}</a>` : ''}${waLink(c, '') ?` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">✉️ ${escHtml(c.email)}</a>` : `<span class="kc-fact">✉️ ${escHtml(c.email || 'no contact email')}</span>`}${c.altEmail ? ` · <a href="mailto:${escHtml(c.altEmail)}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional email">${escHtml(c.altEmail)}</a>` : ''}${c.accountEmail ?` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr}${since ? ` · <span class="kc-fact">Since ${since}</span>` : ''}</div>
         </div>
         <!-- Three menus, not nine icons. Grouping them by what they DO was the
              first fix; the row was still nine identical squares to read, and
