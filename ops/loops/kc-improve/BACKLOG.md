@@ -838,3 +838,9 @@ while a live rental sits on the line (reconcile would silently undo it), picker
 resort cleared when the customer is retyped, hint copy degendered + count from
 data not glyph-sniffing. Owner live-judges on the dev branch before any ship
 (their explicit ask, so no auto-ff).
+
+## UX loop — night of 2026-08-17
+
+| Item | Commit | Screens |
+|------|--------|---------|
+| Search that matches nothing offers "✕ Clear search" and quotes the term back — every other list already had this; Customers was a dead end with the term still in the topbar box | (this commit) | Customers · empty state |

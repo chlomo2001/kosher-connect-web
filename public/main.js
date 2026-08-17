@@ -6068,8 +6068,14 @@ function renderTableRows() {
       <tr><td colspan="5">
         <div class="empty-state">
           <div class="emoji">👥</div>
-          <p>${searchTerm ? 'No customers match your search.' : 'No customers yet.'}</p>
-          <small>${searchTerm ? '' : 'Click "+ New customer" to add your first customer.'}</small>
+          <p>${searchTerm ? `No customers match “${escHtml(searchTerm)}”.` : 'No customers yet.'}</p>
+          ${/* A search that matches nothing used to be a dead end: an empty
+               table with the term still in a box at the top of the screen, and
+               nothing on the empty state to undo it. Every other list in the
+               app offers kcClearFiltersBtn in the same situation. */''}
+          ${searchTerm
+            ? `<button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="clearCustomerSearch()">✕ Clear search</button>`
+            : '<small>Click "+ New customer" to add your first customer.</small>'}
         </div>
       </td></tr>`;
     return;
@@ -9117,6 +9123,18 @@ async function addPayment(id) {
 // ─────────────────────────────────────────────
 //  SEARCH
 // ─────────────────────────────────────────────
+// Empty the topbar search and show the whole list again — reached from the
+// "no matches" state, which otherwise leaves the operator to find the box and
+// clear it by hand.
+function clearCustomerSearch() {
+  const box = document.getElementById('searchBox');
+  if (box) box.value = '';
+  searchTerm = '';
+  applySearch();
+  renderTableRows();
+  box?.focus();
+}
+
 function setupSearch() {
   document.getElementById('searchBox').addEventListener('input', e => {
     searchTerm = e.target.value.trim().toLowerCase();
