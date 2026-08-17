@@ -3073,14 +3073,21 @@ td { border-top-color: color-mix(in srgb, var(--border) 55%, transparent); }
   }
 }
 
-.settings-find { min-height: 0; padding: 8px 10px; font-size: var(--fs-body); margin-bottom: 6px; }
+/* Shorter than a form field — it sits above the rail, not in a form — but not
+   shorter than a thing you can hit: min-height:0 left it an 18px sliver. */
+.settings-find { min-height: 34px; padding: 8px 10px; font-size: var(--fs-body); margin-bottom: 6px; }
 
 .rail-group {
   font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.08em;
   color: var(--muted); margin: 12px 0 3px 10px;
 }
 
+/* 226×23 was the last target in the app under the 24px floor: a long thin
+   sliver you had to hit dead-centre, on a list of twenty of them. A settings
+   jump is one line of text, so the height has to be asked for — the text
+   alone will not carry it. */
 .rail-item {
+  min-height: 34px;
   text-align: left; background: transparent; border: none;
   border-radius: var(--radius); padding: 6px 10px;
   font-size: var(--fs-body); color: var(--text); cursor: pointer;
