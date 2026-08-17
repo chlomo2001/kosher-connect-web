@@ -76,16 +76,15 @@ run "staff app · modals at 320px" \
 # copy and `largest` is 17px. It found Manage Rental's Save button 53px off a
 # 390px screen, and nothing had ever run it over the tabs.
 #
-# The MODAL sweep at largest is deliberately not wired in here yet: the till
-# still overflows at 320px from `large` upward (a row of payment-method buttons
-# that will not wrap), and until that is fixed adding it would paint this whole
-# report red every night and hide the next real finding. Run it by hand:
-#   node ops/harness/modals.mjs --width 320 --theme light --fs largest
-#
-# 320 × largest IS wired in, for the tabs: it is the hardest corner of the grid
-# (narrowest screen, biggest type) and the tabs pass it today, so it can only
-# ever go red on a regression. The till's problem lives one layer down, in the
-# modal sweep, so keeping that one out does not cost this.
+# 320 × largest is the hardest corner of the grid — narrowest screen, biggest
+# type — and both sweeps pass it today, so from here they can only go red on a
+# regression. The MODAL half was held out until 08-17 because the till really
+# did overflow there (a row of payment-method buttons that would not wrap,
+# taking .pos-main, .pos-cats and .pos-tiles with it); .pos-methods now wraps,
+# the sweep is clean, and it is wired in below.
+run "staff app · modals at 320px, text largest" \
+  bash -c 'node ops/harness/modals.mjs --width 320 --theme light --fs largest | tail -1'
+
 run "staff app · Simple Mode text sizes, every tab" \
   bash -c 'for f in large largest; do node ops/harness/render.mjs --audit --width 390 --fs $f | tail -1; done
            node ops/harness/render.mjs --audit --width 320 --fs largest | tail -1

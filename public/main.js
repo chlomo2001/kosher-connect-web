@@ -193,6 +193,24 @@ window.api = {
 // ─────────────────────────────────────────────
 let customers = [];
 let filteredCustomers = [];
+
+// Is this actually a phone number? Mirrors lib/phoneNumber.mjs phoneProblem —
+// change both together, test/phoneMirror.test.mjs holds them to each other.
+// Catches only what CANNOT be a number (too short, too long, letters); every
+// plausible international number passes, because refusing a real customer's
+// number is worse than passing an odd one through.
+function phoneProblem(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s) return { code: 'missing', message: 'No number.' };
+  if (/[a-z]/i.test(s)) return { code: 'letters', message: 'That has letters in it — a number, please.' };
+  if (/\+/.test(s.slice(1))) return { code: 'shape', message: 'The + belongs at the front, once.' };
+  const d = s.replace(/\D/g, '');
+  if (!d) return { code: 'missing', message: 'No number.' };
+  if (d.length < 7) return { code: 'short', message: `Too short to be a phone number — ${d.length} digit${d.length === 1 ? '' : 's'}.` };
+  if (d.length > 15) return { code: 'long', message: `Too long to be a phone number — ${d.length} digits, the most any number has is 15.` };
+  return null;
+}
+
 // Phone numbers for HUMANS — display-only grouping; storage stays canonical
 // (+447974924585). Mirrors lib/ukPhone.mjs formatPhoneDisplay: UK mobiles
 // 4-3-3 (+44 7974 924 585), UK landlines 3-3-4, +972 and +1 their usual
@@ -1159,6 +1177,43 @@ function showHebrewDate(inputId, labelId) {
 // ─────────────────────────────────────────────
 let selectedRentalCustomerId = '';
 
+/**
+ * Who to show before anything is typed.
+ *
+ * A picker that opens empty makes you type a name you may not be sure how to
+ * spell; the phone picker beside it has always opened with its list showing
+ * (owner, 08-17, comparing the two side by side). The useful default for a
+ * shop is not the alphabet — it is who has been in lately, so the family that
+ * brought a phone back on Sunday is one tap away on Monday.
+ *
+ * Most-recent rental first, then anyone left over by name.
+ */
+function customerDropdownRow(c) {
+  return `<div class="customer-dropdown-item" onclick="selectRentalCustomer('${c.id}')">
+    <strong>${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}</strong>
+    <span style="color:var(--muted);font-size:var(--fs-micro);margin-left:8px;">${escHtml(fmtPhone(c.phone || ''))} ${
+      c.email ? '· ' + escHtml(c.email) : ''}</span>
+  </div>`;
+}
+
+function kcCustomersByRecency(limit = 8) {
+  const last = new Map();
+  for (const r of rentals) {
+    if (!r.customerId) continue;
+    const when = r.createdAt || r.fromDate || '';
+    const prev = last.get(String(r.customerId));
+    if (!prev || when > prev) last.set(String(r.customerId), when);
+  }
+  const seen = [...customers]
+    .filter(c => last.has(String(c.id)))
+    .sort((a, b) => String(last.get(String(b.id))).localeCompare(String(last.get(String(a.id)))));
+  const rest = [...customers]
+    .filter(c => !last.has(String(c.id)))
+    .sort((a, b) => `${a.firstName || ''} ${a.lastName || ''}`.trim()
+      .localeCompare(`${b.firstName || ''} ${b.lastName || ''}`.trim(), undefined, { sensitivity: 'base' }));
+  return [...seen, ...rest].slice(0, limit);
+}
+
 function filterCustomerDropdown() {
   const input = document.getElementById('rCustomerSearch');
   const dropdown = document.getElementById('rCustomerDropdown');
@@ -1175,7 +1230,16 @@ function filterCustomerDropdown() {
   // "↺ had before" ordering too — otherwise the hint and sort go stale.
   if (hadCustomer) refreshRentalPhoneOptions();
 
-  if (!term) { dropdown.classList.remove('open'); return; }
+  // Empty box, open list: the eight most recent customers, so the common case
+  // (someone who was in last week) is a tap and the rest is a search.
+  if (!term) {
+    const recent = kcCustomersByRecency(8);
+    dropdown.innerHTML = recent.length
+      ? `<div class="customer-dropdown-head">Recent</div>` + recent.map(customerDropdownRow).join('')
+      : '<div class="customer-dropdown-empty">No customers yet</div>';
+    dropdown.classList.add('open');
+    return;
+  }
 
   const matches = customers.filter(c =>
     (`${c.firstName} ${c.lastName}`).toLowerCase().includes(term) ||
@@ -1187,11 +1251,7 @@ function filterCustomerDropdown() {
   if (matches.length === 0) {
     dropdown.innerHTML = '<div class="customer-dropdown-empty">No customers found</div>';
   } else {
-    dropdown.innerHTML = matches.map(c => `
-      <div class="customer-dropdown-item" onclick="selectRentalCustomer('${c.id}')">
-        <strong>${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}</strong>
-        <span style="color:var(--muted);font-size:var(--fs-micro);margin-left:8px;">${escHtml(fmtPhone(c.phone||''))} ${c.email ? '· '+escHtml(c.email) : ''}</span>
-      </div>`).join('');
+    dropdown.innerHTML = matches.map(customerDropdownRow).join('');
   }
   // Every other picker in the app offers to create the person you were looking
   // for; this one — on the form the shop opens most — used to say "No customers
@@ -7811,6 +7871,10 @@ async function kcCreateCustomerQuick({ firstName, lastName, phone, onProgress = 
   const phoneRaw = String(phone || '').trim();
   if (!first || !last) return { error: 'Both names, please — that is how they are found later.' };
   if (!phoneRaw) return { error: 'A number, please — it is how the shop finds someone.' };
+  // A number that cannot be dialled is worth catching while the person is
+  // still standing there, not weeks later when a text does not arrive.
+  const shape = phoneProblem(phoneRaw);
+  if (shape) return { error: shape.message };
 
   // The same number on two records is the duplicate that costs most, so the
   // caller is offered the existing person rather than the save being refused.
@@ -7871,9 +7935,13 @@ function kcComboFilter(valueId) {
   // Typing again invalidates the previous pick — the hidden value only holds
   // an id the operator actually chose from the list.
   document.getElementById(valueId).value = '';
-  const list = customers.filter(c => !q ||
-    `${c.firstName} ${c.lastName || ''}`.toLowerCase().includes(q) || phoneDigitsMatch(q, c)
-  ).slice(0, 12);
+  // Nothing typed yet: the same "who has been in lately" list the rental
+  // picker opens with, rather than whatever order the array happens to be in.
+  const list = q
+    ? customers.filter(c =>
+        `${c.firstName} ${c.lastName || ''}`.toLowerCase().includes(q) || phoneDigitsMatch(q, c)
+      ).slice(0, 12)
+    : kcCustomersByRecency(8);
   // "No match" used to be the end of the road: the operator had to abandon a
   // half-filled rental/SIM/repair form, go to Customers, create the person,
   // come back and start again — with someone standing at the counter. The
@@ -9659,7 +9727,13 @@ async function saveCustomer() {
   if (!lastName) { setErr('errLastName', true); setInputErr('fLastName', true); valid = false; }
   else { setErr('errLastName', false); setInputErr('fLastName', false); }
 
+  // Required, and then actually a number. The country code lives in its own
+  // field, so what is checked here is the subscriber part on its own — a UK
+  // "7911 123456" is 10 digits and must not be read as too short. The check
+  // runs on the two of them joined, the way the number is stored.
+  const phoneShape = phoneNum ? phoneProblem(`${code} ${phoneNum}`) : null;
   if (!phoneNum) { setErr('errPhone', 'Phone number is required'); setInputErr('fPhoneNumber', true); valid = false; }
+  else if (phoneShape) { setErr('errPhone', phoneShape.message); setInputErr('fPhoneNumber', true); valid = false; }
   else { setErr('errPhone', false); setInputErr('fPhoneNumber', false); }
 
   if (!valid) return;
@@ -17698,6 +17772,10 @@ async function saveTravelRule(btn) {
 async function sendTestSms() {
   const to = document.getElementById('smsTestTo')?.value?.trim();
   if (!to) { toast('Type the number to text first (your own).', 'warning'); return; }
+  // TEST mode redirects everything to the shop's handset, so without this the
+  // reply is a cheerful "sent" for a number nothing could ever reach.
+  const bad = phoneProblem(to);
+  if (bad) { toast(bad.message, 'warning'); return; }
   const res = await kcFetch('/api/sms-test', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

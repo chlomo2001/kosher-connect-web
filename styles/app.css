@@ -2003,6 +2003,13 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 
 .customer-dropdown-empty { padding: 9px 12px; font-size: var(--fs-body); color: var(--muted); }
 
+/* Says what the list IS before anything is typed, so eight names under an
+   empty search box read as "recent" rather than as a search that already ran. */
+.customer-dropdown-head {
+  padding: 7px 12px 3px; font-size: var(--fs-micro); color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+
 /* Flag picker — the one country <select> that needed real flag artwork (a
    native <option> can't hold an image) rides the same wrap/dropdown as the
    customer combo above; this is just the trigger button + row layout. */
@@ -2489,12 +2496,20 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 
 .pos-summary { border-top: 1px dashed var(--border); padding-top: 10px; }
 
-.pos-methods { display: flex; gap: 5px; flex: 1; }
+/* Cash · Card · Transfer. Three buttons that would not wrap and could not
+   shrink: at text size `largest` on a 320px phone their labels were wider
+   than the row, and the whole till went with them — .pos-main, .pos-cats and
+   .pos-tiles all pushed sideways, so a tender could sit off the edge of the
+   screen for the member of staff who needs bigger text. They now wrap to a
+   second line rather than push, and a label may take two lines inside its own
+   button. One row at every ordinary size; never wider than the till. */
+.pos-methods { display: flex; gap: 5px; flex: 1; flex-wrap: wrap; }
 
 .pos-method {
-  flex: 1; border: 1px solid var(--border); border-radius: var(--radius); padding: 7px 4px;
+  flex: 1 1 88px; min-width: 0;
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 7px 4px;
   background: var(--surface); cursor: pointer; font-size: var(--fs-micro); font-weight: 500;
-  white-space: nowrap; color: var(--ink-secondary);
+  overflow-wrap: anywhere; color: var(--ink-secondary);
 }
 
 .pos-method.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }

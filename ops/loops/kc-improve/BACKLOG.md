@@ -120,17 +120,13 @@ Safe (loop-eligible), ranked value ÷ effort:
       (Loyverse.) *money persistence — careful design.*
 
 ## UX / smoothness / delight
-- [ ] **P2 · S** ⚠ — **Till overflows sideways at 320px in Simple Mode** (found
-      08-13). `.pos-methods` — the row of payment-method buttons — will not
-      wrap: +13px at text `large`, +43px at `largest`, where `.pos-main`,
-      `.pos-cats` and `.pos-tiles` go with it. A tender can end up off the
-      screen on a small phone for the staff member who needs bigger text. The
-      fix is a wrapping rule, not charge logic, but the till is the
-      customer-charge surface, so it wants the owner's nod rather than a night
-      loop. Reproduce:
-      `node ops/harness/modals.mjs --width 320 --theme light --fs largest`.
-      **Wiring the largest-size modal sweep into `audit-all.sh` is waiting on
-      this** — see the comment there.
+- [x] **P2 · S** ⚠ — ~~Till overflows sideways at 320px in Simple Mode~~ —
+      **DONE 08-17 on the owner's nod.** `.pos-methods` now wraps and each
+      button may shrink and take two lines (`flex: 1 1 88px; min-width: 0`);
+      the +43px at `largest` is gone and `.pos-main`, `.pos-cats` and
+      `.pos-tiles` went clean with it, confirming one cause. A wrapping rule
+      only — no charge logic was touched. **The largest-size modal sweep is now
+      wired into `audit-all.sh`**, which was waiting on this.
 - [ ] **P1 · L** — **"Google-feel" polish (owner ask 08-03**, after "why does
       business.google.com feel so much nicer/richer/smoother?"). Owner wants
       the **first three** of the four gaps. **Session 1 shipped 08-04**
