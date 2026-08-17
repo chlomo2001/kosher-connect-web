@@ -79,6 +79,25 @@ async function handler(req, res) {
   const extras = { ...(keep.legacy_extras || {}) }
   if (elid.length) { extras.elidUsernames = elid; extras.elidUsername = elid[0] }
 
+  // The carrier login lives in legacy_extras too, and the same reasoning
+  // applies: it names the mailbox the duplicate's SIM accounts are registered
+  // under, and those SIMs are moving here. Only fills a gap — a survivor that
+  // already has one keeps it.
+  const dupAccount = String(dup.legacy_extras?.accountEmail || '').trim()
+  if (dupAccount && !String(extras.accountEmail || '').trim()) extras.accountEmail = dupAccount
+
+  // Keep the losing spelling findable. The shop had been typing "Shmiel" for a
+  // year when that record was merged into "Shmuel" — a search that reads only
+  // the surviving name turns the old spelling into a dead end, which is worse
+  // than the duplicate was. lib/customerSearch.mjs matches on this.
+  const aka = Array.isArray(extras.aka) ? [...extras.aka] : (extras.aka ? [String(extras.aka)] : [])
+  const known = new Set([nameOf(keep).toLowerCase(), ...aka.map((x) => String(x).toLowerCase())])
+  for (const n of [nameOf(dup), ...(Array.isArray(dup.legacy_extras?.aka) ? dup.legacy_extras.aka : [])]) {
+    const v = String(n || '').trim()
+    if (v && v !== '(no name)' && !known.has(v.toLowerCase())) { aka.push(v); known.add(v.toLowerCase()) }
+  }
+  if (aka.length) extras.aka = aka
+
   await db.update('customers', `id=eq.${keep.id}`, {
     notes: keep.notes ? `${keep.notes}\n${line}` : line,
     legacy_extras: extras,
@@ -89,7 +108,7 @@ async function handler(req, res) {
   return res.json({
     success: true,
     deletedId: dupId,
-    kept: { id: survivorId, name: nameOf(keep), elid },
+    kept: { id: survivorId, name: nameOf(keep), elid, aka },
 
     removed: { name: nameOf(dup), phone: dupPhone },
     moved,

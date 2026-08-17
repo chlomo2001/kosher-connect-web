@@ -277,15 +277,44 @@ function waLink(customer, text) {
 }
 
 // Phone search that survives formatting: "07871 385566" must find a customer
-// stored as "+44 7871385566". Engages only when the query holds 3+ digits;
-// callers keep their name/email matching and OR this in.
+// stored as "+44 7871385566". Engages only when the query holds 3+ digits.
+// Mirrors lib/customerSearch.mjs — change both together
+// (test/customerSearch.test.mjs holds them to the same answers).
 function phoneDigitsMatch(query, customer) {
-  const qd = String(query || '').replace(/\D/g, '');
+  const qd = String(query == null ? '' : query).replace(/\D/g, '');
   if (qd.length < 3 || !customer) return false;
   const hay = String(customer.phone || '').replace(/\D/g, '');
   if (!hay) return false;
   if (hay.includes(qd)) return true;
   return qd.startsWith('0') && hay.includes('44' + qd.slice(1));
+}
+
+// Every name this person is filed under — the current one first.
+//
+// A merged-away spelling still has to find him. When two records of one man
+// are merged, the losing spelling is kept on the survivor as `aka`: Shmuel
+// Bleier was also filed as "Shmiel Y Bleier" and the shop had been typing
+// "Shmiel" for a year. Search that reads only the surviving name turns the old
+// spelling into a dead end, which is worse than the duplicate was.
+function customerNames(c) {
+  const out = [`${c?.firstName || ''} ${c?.lastName || ''}`.trim()];
+  const aka = c?.aka;
+  for (const n of (Array.isArray(aka) ? aka : aka ? [aka] : [])) {
+    const v = String(n || '').trim();
+    if (v && !out.some(x => x.toLowerCase() === v.toLowerCase())) out.push(v);
+  }
+  return out.filter(Boolean);
+}
+
+// THE customer match — the Customers list, the picker and the palette all ask
+// this, so a query can never find someone in one box and not in the next.
+function customerMatches(query, c) {
+  const q = String(query == null ? '' : query).toLowerCase().trim();
+  if (!q) return true;
+  if (!c) return false;
+  if (customerNames(c).some(n => n.toLowerCase().includes(q))) return true;
+  if (String(c.email || '').toLowerCase().includes(q)) return true;
+  return phoneDigitsMatch(q, c);
 }
 
 // The master customers array stays sorted A–Z (first name, then surname) at
@@ -7951,13 +7980,7 @@ function kcPickerFilter(valueId, typed = true) {
     ? row(cfg.special.value, escHtml(cfg.special.label), '', 'kc-picker-special')
     : '';
 
-  const matches = q
-    ? customers.filter(c =>
-        `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase().includes(q) ||
-        (c.phone || '').toLowerCase().includes(q) ||
-        (c.email || '').toLowerCase().includes(q) ||
-        phoneDigitsMatch(q, c))
-    : kcCustomersByRecency(8);
+  const matches = q ? customers.filter(c => customerMatches(q, c)) : kcCustomersByRecency(8);
 
   const shown = matches.slice(0, 12);
   const head = q
@@ -9654,13 +9677,7 @@ function applySearch() {
     filteredCustomers = [...customers];
     return;
   }
-  filteredCustomers = customers.filter(c => {
-    const fullName = `${c.firstName} ${c.lastName}`.toLowerCase();
-    return fullName.includes(searchTerm)
-      || (c.phone || '').toLowerCase().includes(searchTerm)
-      || (c.email || '').toLowerCase().includes(searchTerm)
-      || phoneDigitsMatch(searchTerm, c);
-  });
+  filteredCustomers = customers.filter(c => customerMatches(searchTerm, c));
 }
 
 // ─────────────────────────────────────────────
@@ -16018,10 +16035,8 @@ function paletteSearch(q) {
   for (const c of customers) {
     if (out.length >= 12) break;
     const name = `${c.firstName} ${c.lastName}`;
-    if (name.toLowerCase().includes(needle) ||
-        (digits.length >= 4 && (c.phone || '').replace(/\D/g, '').includes(digits)) ||
-        phoneDigitsMatch(needle, c) ||
-        (c.email || '').toLowerCase().includes(needle)) {
+    if (customerMatches(needle, c) ||
+        (digits.length >= 4 && (c.phone || '').replace(/\D/g, '').includes(digits))) {
       out.push({ icon: '👤', label: name, sub: fmtPhone(c.phone || '') || c.email || 'customer',
         kind: 'customer', id: c.id, run: () => goToTab('customers', { customerId: c.id }) });
     }

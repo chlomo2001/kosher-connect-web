@@ -919,3 +919,29 @@ New: `node ops/harness/popout.mjs` drives the window in both themes — clock
 moves, pause from the window pauses the app, stop from the window opens the
 charge form with the customer and the money in it. Wired into `audit-all.sh`
 alongside `picker.mjs`. Gate green.
+
+## Owner request — 2026-08-17: Shmuel = Shmiel Y Bleier
+
+Merged, on the owner's instruction ("merge, but only the name is duplicated —
+all other records shall be at the merged contact"). Survivor **Bleier, Shmuel**
+(`pl-shmuel-bleier`, +44 7703 572 578); `pl-smiel-yecheskel-bleier` folded in.
+Snapshot taken first. Moved: 3 SIMs, 7 money lines. Result: one record, 4 SIMs
+(1pMobile 07918 917728, two Lebara, Tello 3472328220), 22 flight bookings, 1
+virtual number, 23 money lines, £1,085.00 balance, no orphans.
+
+**Still open, for the owner.** That £1,085 is not credit he earned — it is
+seven Stripe card payments dated 16 Aug (£670, £178, £120, £47, £35, £25, £10)
+with no charges behind them, and the £670 is exactly the ticket price of his
+Booked flight for 3 Nov. His 22 bookings carry £16,416 of tickets and £445 of
+fees, and none of it was ever posted to his wallet. Needs a decision about
+posting the missing charges, not a guess.
+
+Three things the merge itself was missing, all fixed the same day:
+
+| Gap | Fix |
+|---|---|
+| A merged-away spelling stopped being findable — the shop had typed "Shmiel" for a year, and search reads only the surviving name | `lib/customerSearch.mjs` — ONE `customerMatches()` for the Customers list, the picker and the palette (they had three), matching on `aka` as well as the current name. `merge.js` now writes `aka` on every merge. Mirror-tested |
+| `merge_customers()` never moved `sim_mail`, and that FK is ON DELETE SET NULL — so a merge silently unlinked the duplicate's carrier mail and it would reappear in the queue as unpaired work | migration `20260817200000`, applied. This pair had none, but 470 customers carry a SIM the shop runs |
+| The carrier login (`accountEmail`) was lost with the deleted record, though its SIMs were moving to the survivor | `merge.js` carries it into the gap (a survivor that has one keeps it) |
+
+Gate green (435 tests ×2 TZ + build); picker + names sweeps clean.
