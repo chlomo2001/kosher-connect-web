@@ -61,7 +61,7 @@ const T = {
   en: {
     dir: 'ltr', langLabel: 'EN',
     brandName: 'Kosher Connect',
-    nav: { mobile: 'Mobile & SIM', travel: 'Travel phones', intl: 'International numbers', repairs: 'Repairs & more', repair: 'Book a repair', faq: 'Questions', visit: 'Visit us', message: 'Message us', account: 'My account', join: 'New here?' },
+    nav: { mobile: 'Mobile & SIM', travel: 'Travel phones', intl: 'International numbers', repairs: 'Repairs & more', repair: 'Book a repair', faq: 'Questions', visit: 'Visit us', message: 'Message us', account: 'My account' },
     heroEyebrow: 'Kosher Connect · Salford, Manchester',
     heroTitle: 'Your phone bill, halved.',
     heroBody: 'Kosher Connect is a phone and SIM shop in Salford, Manchester. Most people are quietly on the wrong SIM — bring us your last bill and we’ll match a plan to how you actually use your phone, same coverage, same number, far less money.',
@@ -182,7 +182,7 @@ const T = {
   he: {
     dir: 'rtl', langLabel: 'HE',
     brandName: 'כשר קונקט',
-    nav: { mobile: 'חבילות וסים', travel: 'טלפון לחו״ל', intl: 'מספרים בינלאומיים', repairs: 'תיקונים ועוד', repair: 'לקבוע תיקון', faq: 'שאלות', visit: 'בואו לבקר', message: 'דברו איתנו', account: 'האזור האישי', join: 'חדשים אצלנו?' },
+    nav: { mobile: 'חבילות וסים', travel: 'טלפון לחו״ל', intl: 'מספרים בינלאומיים', repairs: 'תיקונים ועוד', repair: 'לקבוע תיקון', faq: 'שאלות', visit: 'בואו לבקר', message: 'דברו איתנו', account: 'האזור האישי' },
     heroEyebrow: 'כשר קונקט · סלפורד, מנצ׳סטר',
     heroTitle: 'למה לשלם כפול על הסלולר?',
     heroBody: 'כשר קונקט היא חנות סלולר וסים בסלפורד, מנצ׳סטר. רוב האנשים משלמים כל חודש על חבילה שפשוט לא מתאימה להם — תביאו לנו את החשבונית האחרונה ונתאים לכם חבילה לפי השימוש האמיתי שלכם. אותה רשת, אותו מספר, והרבה פחות בסוף החודש.',
@@ -798,9 +798,14 @@ export default function Welcome() {
               </nav>
               {/* No staff sign-in here — the public page is for customers;
                   staff go straight to /login (owner call, 08-04). */}
+              {/* "New here?" used to sit above this and went to #contact — the
+                  same place as "Message us" two links away. A second door into
+                  one room is not a service, it is a thing to read and dismiss
+                  (owner, 17 Aug: "why do we need new if it only directs to
+                  contact us"). The account column now offers the one thing it
+                  is for. */}
               <nav className="sk-foot-col" aria-label={t.footAccount}>
                 <strong>{t.footAccount}</strong>
-                <a href="#contact">{t.nav.join}</a>
                 <a href="/portal">{t.nav.account}</a>
               </nav>
               <nav className="sk-foot-col" aria-label={t.footLegal}>
