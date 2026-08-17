@@ -5928,7 +5928,12 @@ function renderCustomersTab() {
       </div>
     </div>
 
-    <div class="table-wrap">
+    ${/* kc-stack-sm: below 560px this table stops being a table and becomes a
+         list of cards. Five columns is 711px of table inside a 360px phone —
+         two sideways scrolls to reach the balance and the buttons, on the list
+         staff open more than any other. Opt-in per table, because a stacked
+         row only works when every cell says what it is, and these do. */''}
+    <div class="table-wrap kc-stack-sm">
       <table>
         <thead>
           <tr>

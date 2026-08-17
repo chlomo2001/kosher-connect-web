@@ -865,6 +865,31 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   .kc-quickadd-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* ---------- Tables that become cards on a phone ---------- */
+/* Opt-in with .kc-stack-sm on the .table-wrap.
+   The Customers table is 711px wide inside a 360px viewport: the balance and
+   the row buttons are two sideways scrolls away, on the list staff open more
+   than any other. Below 560px each row becomes a card instead.
+
+   Opt-IN rather than global: stacking drops the column headers, so it only
+   works where every cell already says what it is (a name, a phone number,
+   "£45.00 debt", service chips, buttons). A table of bare dates or bare
+   numbers would become unreadable, so those keep their horizontal scroll
+   until someone has looked at them one at a time. */
+@media (max-width: 560px) {
+  .kc-stack-sm table { min-width: 0; width: 100%; }
+  .kc-stack-sm thead { display: none; }
+  .kc-stack-sm tbody, .kc-stack-sm tr, .kc-stack-sm td { display: block; width: auto; }
+  .kc-stack-sm tr { padding: 12px 14px; border-top: 1px solid var(--border); }
+  .kc-stack-sm tbody tr:first-child { border-top: 0; }
+  .kc-stack-sm td { border: 0; padding: 3px 0; }
+  /* A cell with nothing in it would otherwise leave a blank line in the card. */
+  .kc-stack-sm td:empty { display: none; }
+  /* The buttons get a little air above them and sit in a row of their own. */
+  .kc-stack-sm td:last-child { padding-top: 10px; }
+  .kc-stack-sm .row-actions { justify-content: flex-start; }
+}
+
 /* ---------- Carrier mail ---------- */
 /* A log, not a table: the useful unit is one message with its verdict and the
    action it needs, and a message's subject is long. Three columns — when, what,

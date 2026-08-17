@@ -843,4 +843,5 @@ data not glyph-sniffing. Owner live-judges on the dev branch before any ship
 
 | Item | Commit | Screens |
 |------|--------|---------|
-| Search that matches nothing offers "✕ Clear search" and quotes the term back — every other list already had this; Customers was a dead end with the term still in the topbar box | (this commit) | Customers · empty state |
+| Search that matches nothing offers "✕ Clear search" and quotes the term back — every other list already had this; Customers was a dead end with the term still in the topbar box | 429666b | Customers · empty state |
+| Customers stops scrolling sideways on a phone: 711px of table in a 360px viewport became one card per person (name · email · phone · service chips · balance · buttons). Opt-in `.kc-stack-sm`, desktop table unchanged | (this commit) | Customers · list at ≤560px |
