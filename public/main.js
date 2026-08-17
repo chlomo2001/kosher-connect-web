@@ -8445,10 +8445,22 @@ async function kcPickerSaveNew(valueId) {
 // #8 — a customer's name on any card is a doorway to their customer card,
 // not dead text. Wrap the rendered name wherever the record carries the
 // customer id; records without one (walk-ins, unlinked imports) stay plain.
+//
+// The href is REAL (owner, 17 Aug: "do the customer names too"). It used to be
+// `href="#"`, which meant a middle click opened a second copy of the page you
+// were already on — worse than nothing. `/customers/<id>` is that person's own
+// URL and pages/customers/[id].js serves it, so middle-click, ⌘-click and
+// "open in a new tab" all land on their profile.
+//
+// The click handler is ordered on purpose. stopPropagation ALWAYS runs, so the
+// table row underneath never also fires and opens the customer in place behind
+// the new tab. preventDefault runs only for a plain left click, which is the
+// one the app handles itself.
 function custNameLink(customerId, html) {
   if (!customerId || customerId === 'walkin') return html;
-  return `<a href="#" style="color:inherit;text-decoration:underline dotted;text-underline-offset:3px;" title="Open customer card"
-    onclick="event.preventDefault();event.stopPropagation();openCustomerById('${escJs(String(customerId))}')">${html}</a>`;
+  return `<a href="/customers/${encodeURIComponent(String(customerId))}"
+    style="color:inherit;text-decoration:underline dotted;text-underline-offset:3px;" title="Open customer card"
+    onclick="event.stopPropagation();if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();openCustomerById('${escJs(String(customerId))}')">${html}</a>`;
 }
 
 // Open a customer's card by id from anywhere (e.g. the duplicate scanner).
@@ -17767,7 +17779,8 @@ async function renderTasksTab() {
     const chaseCust = isChaseTask ? customers.find(c => c.id === t.customerId) : null;
     const custLabel = t.customerName
       ? (t.customerId
-          ? `<span class="dash-link" style="color:var(--accent);cursor:pointer;" onclick="goToTab('customers',{customerId:'${escHtml(String(t.customerId))}'})">👤 ${escName(t.customerName)}</span> · `
+          ? `<a class="dash-link" href="/customers/${encodeURIComponent(String(t.customerId))}" style="color:var(--accent);cursor:pointer;"
+            onclick="event.stopPropagation();if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();goToTab('customers',{customerId:'${escHtml(String(t.customerId))}'})">👤 ${escName(t.customerName)}</a> · `
           : '👤 ' + escName(t.customerName) + ' · ')
       : '';
     return `

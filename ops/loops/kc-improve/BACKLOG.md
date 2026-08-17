@@ -1131,3 +1131,24 @@ page. They have a real route — `/customers/<id>` — so the same treatment wor
 
 Verified: gate green, names/focus/contrast/targets clean, no overflow at
 390/1280, modals + picker + window sweeps green.
+
+## Owner request — 2026-08-17: customer names middle-click too
+
+The follow-on from the sidebar. `custNameLink` — the helper behind a customer's
+name on seven cards — used `href="#"`, so a middle click opened a second copy
+of the page you were already on. Worse than nothing.
+
+Every customer has a real URL (`/customers/<id>`, served by
+`pages/customers/[id].js`), so that is the href now. Same for the customer name
+on a task card, which was a `<span class="dash-link">` with no href at all.
+
+The click handler's order is deliberate: `stopPropagation` **always** runs, so
+the table row underneath never also fires and opens the customer in place
+behind the new tab; `preventDefault` runs only for a plain left click.
+
+Worth knowing: a plain click still opens the detail panel in place, while a
+middle-click lands on the full Customer-360 profile. That is the canonical URL
+for a person, and the profile is a superset of the panel — but they are not the
+same screen.
+
+Verified: gate green, names/focus/contrast clean, modals clean.
