@@ -895,6 +895,9 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   .kc-stack-sm td { text-align: start !important; }
   /* A cell with nothing in it would otherwise leave a blank line in the card. */
   .kc-stack-sm td:empty { display: none; }
+  /* And one whose only job was to hold a column's place — "N/A" under a
+     header this row has nothing to do with — goes the same way. */
+  .kc-stack-sm td.kc-drop-sm { display: none; }
   /* The header the cell lost, given back to it. */
   .kc-stack-sm td[data-label]::before {
     content: attr(data-label) ": ";

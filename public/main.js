@@ -2216,7 +2216,7 @@ function renderRentalsTab() {
             aria-label="Resize the phone inventory list"
             onpointerdown="invGripDown(event)" onkeydown="invGripKey(event)"
             ondblclick="invGripFit()"></button>
-          <div class="table-wrap">
+          <div class="table-wrap kc-stack-sm">
             <table>
               <thead>
                 <tr>
@@ -2937,8 +2937,12 @@ function renderPhoneRows() {
             as two facts. */''}
       <td class="kc-phone">${deviceChip(p, { flag: false, stacked: true })}</td>
       <td>${countryFlag(p.country)} ${escHtml(p.country)}</td>
-      <td style="font-size:var(--fs-small);color:${isUSA?'':'var(--muted)'};">${isUSA ? escHtml(poolDisplay) : poolDisplay}</td>
-      <td style="font-size:var(--fs-micro);color:${poolExpired?'var(--danger-ink)':isUSA?'var(--muted)':'var(--muted)'};">${isUSA ? expiryDisplay : '<span style="color:var(--muted);">N/A</span>'}</td>
+      ${/* Pool and its expiry are a USA-only fact. In the table the other
+            countries say "N/A" under the header; on a card there is no header
+            and no column, so a line reading "Pool: N/A" would be a line about
+            nothing — those two cells drop out of the card entirely. */''}
+      <td class="${isUSA ? '' : 'kc-drop-sm'}" data-label="Pool" style="font-size:var(--fs-small);color:${isUSA?'':'var(--muted)'};">${isUSA ? escHtml(poolDisplay) : poolDisplay}</td>
+      <td class="${isUSA ? '' : 'kc-drop-sm'}" data-label="Pool expires" style="font-size:var(--fs-micro);color:${poolExpired?'var(--danger-ink)':isUSA?'var(--muted)':'var(--muted)'};">${isUSA ? expiryDisplay : '<span style="color:var(--muted);">N/A</span>'}</td>
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
