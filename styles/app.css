@@ -865,6 +865,11 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   .kc-quickadd-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* A column that would otherwise be as wide as its longest entry — a plan
+   name, a note — cut off at a readable width with an ellipsis. A class
+   rather than an inline style so the stacked layout below can let it out. */
+.kc-cell-clip { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ---------- Tables that become cards on a phone ---------- */
 /* Opt-in with .kc-stack-sm on the .table-wrap.
    The Customers table is 711px wide inside a 360px viewport: the balance and
@@ -898,6 +903,9 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   /* A tick-box column is one control, not a line of its own: it floats out of
      the way and the next cell — a name, always — comes up beside it. */
   .kc-stack-sm td.kc-stack-lead { float: inline-start; padding: 4px 10px 0 0; }
+  /* A cell clipped to keep a column narrow has a whole card's width down
+     here, so it says the rest of what it had to say. */
+  .kc-stack-sm td.kc-cell-clip { max-width: none; white-space: normal; overflow: visible; }
   /* The buttons get a little air above them and sit in a row of their own. */
   .kc-stack-sm td:last-child { padding-top: 10px; clear: both; }
   .kc-stack-sm .row-actions { justify-content: flex-start; }

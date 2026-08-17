@@ -9755,7 +9755,7 @@ function renderSimsTab() {
       <button class="btn btn-outline btn-sm" onclick="clearSimSel()">Clear selection</button>
     </div>
 
-    <div class="table-wrap">
+    <div class="table-wrap kc-stack-sm">
       <table>
         <thead>
           <tr>
@@ -9826,16 +9826,16 @@ function renderSimRows() {
     const renewalLabel = isRenewingToday ? ' ⚠️ Today!' : isRenewingTomorrow ? ' ⚠️ Tomorrow' : '';
 
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a,input'))openManageSimModal('${s.id}')" title="Open SIM">
-      <td onclick="event.stopPropagation()">
+      <td class="kc-stack-lead" onclick="event.stopPropagation()">
         <input type="checkbox" aria-label="Select this SIM plan" ${simSelected.has(s.id) ? 'checked' : ''}
           onclick="toggleSimSel('${s.id}', this.checked)">
       </td>
       <td><div class="customer-name">${escHtml(capName(s.customerName) || '—')}${unconfirmedChip(s)}</div></td>
       <td>${providerBadge(s.provider)}</td>
-      <td style="font-weight:600;font-size:var(--fs-small);">${escHtml(s.simNumber || '—')}${simIsTheirContact(s) ? ' <span class="kc-contact-ours" title="This is also the number we ring the customer on.">☎️ contact</span>' : ''}</td>
-      <td style="font-size:var(--fs-small);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(s.plan || '—')}</td>
-      <td class="kc-date" style="font-size:var(--fs-small);${renewalClass}">${fmtDate(s.renewalDate)}${renewalLabel}</td>
-      <td style="font-size:var(--fs-small);">${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}</td>
+      <td data-label="SIM" style="font-weight:600;font-size:var(--fs-small);">${escHtml(s.simNumber || '—')}${simIsTheirContact(s) ? ' <span class="kc-contact-ours" title="This is also the number we ring the customer on.">☎️ contact</span>' : ''}</td>
+      <td class="kc-cell-clip" data-label="Plan" style="font-size:var(--fs-small);">${escHtml(s.plan || '—')}</td>
+      <td class="kc-date" data-label="Renews" style="font-size:var(--fs-small);${renewalClass}">${fmtDate(s.renewalDate)}${renewalLabel}</td>
+      <td data-label="Payment" style="font-size:var(--fs-small);">${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}</td>
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
