@@ -5789,6 +5789,57 @@ function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm cha
     if (cancelBtn) { try { cancelBtn.focus({ preventScroll: true }); } catch { cancelBtn.focus(); } }
   });
 }
+// kcConfirm asks yes/no. This asks for a VALUE, and has three answers, which
+// is the point: "here it is", "there genuinely isn't one", and "stop, I did
+// not mean to do this". A prompt that folded the last two together would read
+// a backing-out as a deliberate "no number".
+//   resolves to a string  → they typed one (may be '' via the skip button)
+//   resolves to null      → they backed out; the caller must not proceed
+let kcPromptResolve = null;
+function kcPrompt({ title = '', body = '', label = '', placeholder = '', okLabel = 'Save', skipLabel = null }) {
+  return new Promise(resolve => {
+    kcPromptResolve = resolve;
+    kcSaveReturnFocus('kcPrompt');
+    let el = document.getElementById('kcPrompt');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'kcPrompt';
+      el.className = 'modal-overlay';
+      el.style.zIndex = '3000';
+      el.addEventListener('click', e => { if (e.target === el) kcPromptDone(null); });
+      document.body.appendChild(el);
+    }
+    el.innerHTML = `
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="kcPromptTitle" style="width:460px;">
+        <div class="modal-title" id="kcPromptTitle">${escHtml(title)}</div>
+        <div style="font-size:var(--fs-ui);line-height:1.65;margin:4px 0 14px;color:var(--text);">${body}</div>
+        <div class="form-group">
+          <label class="form-label" for="kcPromptInput">${escHtml(label)}</label>
+          <input class="form-input" id="kcPromptInput" type="tel" inputmode="tel" dir="ltr"
+            placeholder="${escHtml(placeholder)}" autocomplete="off"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();kcPromptDone(document.getElementById('kcPromptInput').value)}">
+        </div>
+        <div class="modal-actions">
+          <span class="modal-actions-group">
+            <button class="btn btn-outline" onclick="kcPromptDone(null)">Back</button>
+            ${skipLabel ? `<button class="btn btn-outline" onclick="kcPromptDone('')">${escHtml(skipLabel)}</button>` : ''}
+            <button class="btn btn-primary" onclick="kcPromptDone(document.getElementById('kcPromptInput').value)">${escHtml(okLabel)}</button>
+          </span>
+        </div>
+      </div>`;
+    el.classList.remove('hidden');
+    const input = el.querySelector('#kcPromptInput');
+    if (input) { try { input.focus({ preventScroll: true }); } catch { input.focus(); } }
+  });
+}
+function kcPromptDone(value) {
+  const el = document.getElementById('kcPrompt');
+  if (el) el.classList.add('hidden');
+  const r = kcPromptResolve; kcPromptResolve = null;
+  kcRestoreReturnFocus('kcPrompt');
+  if (r) r(value);
+}
+
 function kcConfirmDone(ok) {
   const el = document.getElementById('kcConfirm');
   if (el) el.classList.add('hidden');
@@ -6055,6 +6106,7 @@ function renderCustomersTab() {
           <option value="repair" ${customerFilter==='repair'?'selected':''}>🔧 Open repair</option>
           <option value="arrears" ${customerFilter==='arrears'?'selected':''}>💰 In arrears</option>
           <option value="passport" ${customerFilter==='passport'?'selected':''}>🛂 Passport on file</option>
+          <option value="unreachable" ${customerFilter==='unreachable'?'selected':''}>⚠️ No way to reach them</option>
         </select>
         <select class="form-input" style="width:170px;padding:6px 10px;font-size:var(--fs-body);min-height:0;"
           onchange="customerSort=this.value; renderTableRows()">
@@ -6187,6 +6239,12 @@ function customerMatchesFilter(c) {
     case 'repair':   return repairs.some(r => r.customerId === c.id && r.status !== 'Collected' && r.status !== 'Cancelled');
     case 'arrears':  return customerOwed(c) > 0;
     case 'passport': return customerHasPassport(c);
+    // Owner, 17 Aug, after the count: 89 customers have no contact number, and
+    // 57 of those hold no SIM with us either — so there is no number anywhere
+    // on their record, ours or theirs. Those 57 are the ones nobody can ring.
+    // A customer with no contact number but a SIM we run is NOT in here: that
+    // line reaches them today, it is just ours rather than theirs.
+    case 'unreachable': return !kcTail10(c.phone) && !kcTail10(c.altPhone) && customerSimsOf(c).length === 0;
     default:         return true;
   }
 }
@@ -10371,6 +10429,16 @@ async function saveSimForm(editId) {
     ddDate:         paymentType !== 'direct' ? Math.min(31, Math.max(1, parseInt(document.getElementById('simDdDate')?.value) || 1)) : null,
     simMonthlyCost: paymentType !== 'direct' ? (parseFloat(document.getElementById('simMonthlyCost')?.value) || 0) : 0,
   };
+
+  // Cancelling the only line we can reach them on (owner, 17 Aug). For 470 of
+  // 609 customers the contact number IS a SIM we sell them, so ending the SIM
+  // ends the shop's way of ringing them — and the moment to ask for another
+  // number is now, while they are still standing there, not next year when
+  // something needs saying and nothing works.
+  if (editId && fields.status === 'cancelled') {
+    const prev = sims.find(s => s.id === editId);
+    if (prev && prev.status !== 'cancelled' && !(await simCancelContactCheck(prev, customer))) return;
+  }
 
   let newSimId = null;
   let setupHistoryId = null;
@@ -15154,6 +15222,7 @@ const PALETTE_COMMANDS = [
   { icon: '💰', label: 'Who owes money (arrears)', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'arrears'; }, renderTableRows) },
   { icon: '✈️', label: 'Customers flying soon', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'flight'; }, renderTableRows) },
   { icon: '🛂', label: 'Customers with passport on file', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'passport'; }, renderTableRows) },
+  { icon: '⚠️', label: 'Customers with no way to reach them', sub: 'view', keys: ['unreachable', 'no number', 'no phone', 'missing number', 'cannot ring'], run: () => filterView('customers', () => { customerFilter = 'unreachable'; }, renderTableRows) },
   { icon: '📶', label: 'SIMs that renew this week', sub: 'view', run: () => filterView('sim', () => { simFilterStatus = 'week'; simFilterPay = 'all'; }, renderSimRows) },
   { icon: '🔧', label: 'Repairs waiting for collection', sub: 'view', run: () => filterView('repairs', () => { kcView('repairs').filter = 'ready'; }) },
   // (the old one-off 'Payment / top-up for open customer' entry is superseded
@@ -16195,6 +16264,54 @@ function simIsTheirContact(sim) {
   return !!t && kcTail10(sim.simNumber) === t;
 }
 
+/**
+ * About to cancel a SIM: is it the only way we can reach this customer?
+ *
+ * True to carry on, false to stop. Three cases:
+ *   · the SIM is not their contact number     → nothing to ask, carry on
+ *   · they have another number or another SIM → nothing to ask, carry on
+ *   · this line is the last one               → ask for a number, and take it
+ *
+ * The number typed here is saved to the customer as their contact number
+ * BEFORE the cancellation goes through, so a failure to save is a reason not
+ * to cancel yet rather than a lost number.
+ */
+async function simCancelContactCheck(sim, customer) {
+  if (!customer) return true;
+  const t = kcTail10(customer.phone);
+  if (!t || kcTail10(sim.simNumber) !== t) return true;          // not their contact line
+  if (kcTail10(customer.altPhone)) return true;                   // a second number exists
+  const othersLive = customerSimsOf(customer)
+    .some(s => s.id !== sim.id && s.status === 'active' && kcTail10(s.simNumber));
+  if (othersLive) return true;                                    // another line of ours reaches them
+
+  const name = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+  const typed = await kcPrompt({
+    title: 'This is the only number we can ring them on',
+    body: `<strong>${escName(name)}</strong> is on file as ${escHtml(fmtPhone(customer.phone))} —
+      which is this SIM. Cancel it and the shop has no way to contact them.
+      <br><br>Ask them for another number now; leave it blank only if there genuinely isn't one.`,
+    label: 'Another number for them',
+    placeholder: '07911 123456',
+    okLabel: 'Save and cancel the SIM',
+    skipLabel: 'Cancel anyway — no other number',
+  });
+  if (typed === null) return false;                               // they backed out
+  const number = String(typed).trim();
+  if (!number) return true;                                       // deliberately none
+
+  const bad = phoneProblem(number);
+  if (bad) { toast(bad.message, 'warning'); return false; }
+
+  const res = await window.api.updateCustomer({ ...customer, altPhone: number }).catch(() => null);
+  if (!res || !res.success) { toast('Could not save that number — the SIM has not been cancelled.', 'error'); return false; }
+  customer.altPhone = number;
+  const idx = customers.findIndex(c => c.id === customer.id);
+  if (idx !== -1) customers[idx] = { ...customers[idx], altPhone: number };
+  toast(`Saved ${fmtPhone(number)} for ${escName(name)}.`, 'success');
+  return true;
+}
+
 function contactChip(c) {
   const kind = contactKind(c);
   if (kind === 'none') {
@@ -16803,6 +16920,15 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
       `<strong>${openRets.length} return${openRets.length === 1 ? '' : 's'} to supplier open</strong>${claim ? ` — ${fmtGbp(claim)} claimed` : ''}${names ? ` (${names})` : ''}`,
       () => goToTab('shop')]);
   }
+  // Nobody can ring these people: no contact number, no second number, and no
+  // SIM of ours either — so there is no number anywhere on the record (owner,
+  // 17 Aug). One rolled-up line, because it is a backlog to work through rather
+  // than something that happened today.
+  const unreachable = customers.filter(c =>
+    !kcTail10(c.phone) && !kcTail10(c.altPhone) && customerSimsOf(c).length === 0);
+  if (unreachable.length) attention.push(['⚠️',
+    `<strong>${unreachable.length} customer${unreachable.length === 1 ? '' : 's'} with no way to reach them</strong> — no number of theirs and no SIM of ours`,
+    () => filterView('customers', () => { customerFilter = 'unreachable'; }, renderTableRows)]);
   highTasks.slice(0, 5).forEach(t => attention.push(['❗', escHtml(t.title), () => goToTab('tasks')]));
 
   const shown = attention.slice(0, 10);
