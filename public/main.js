@@ -9529,6 +9529,12 @@ function setupModal() {
     const f = document.getElementById('fHouseFields');
     if (f) f.style.display = e.target.checked ? 'flex' : 'none';
   });
+  // The "+ Add another …" openers. Bound here rather than in the JSX, because
+  // every other control on this form is wired the same way — and a handler
+  // that only exists in React is a handler the offline harness cannot press.
+  KC_OPTIONAL_FIELDS.forEach(id => {
+    document.getElementById(id + 'Add')?.addEventListener('click', () => kcRevealField(id));
+  });
   document.getElementById('fPhoneNumber').addEventListener('blur', checkPhoneDuplicate);
   document.getElementById('fEmail').addEventListener('blur', checkEmailDuplicate);
   document.getElementById('fFirstName').addEventListener('blur', checkNameDuplicate);
@@ -9540,6 +9546,26 @@ function setupModal() {
   }
 }
 
+// An optional field that is offered rather than presented. The "+" opens it;
+// having a value opens it too, so editing someone who does have a second
+// number never hides it. (owner, 08-17)
+function kcRevealField(id) {
+  const group = document.getElementById(id + 'Group');
+  const add = document.getElementById(id + 'Add');
+  if (group) group.style.display = '';
+  if (add) add.style.display = 'none';
+  document.getElementById(id)?.focus();
+}
+function kcCollapseField(id) {
+  const group = document.getElementById(id + 'Group');
+  const add = document.getElementById(id + 'Add');
+  const input = document.getElementById(id);
+  const filled = !!(input && String(input.value || '').trim());
+  if (group) group.style.display = filled ? '' : 'none';
+  if (add) add.style.display = filled ? 'none' : '';
+}
+const KC_OPTIONAL_FIELDS = ['fAltPhone', 'fAltEmail'];
+
 function openAddModal() {
   clearModal();
   document.getElementById('modalTitle').textContent = '➕ Add new customer';
@@ -9549,6 +9575,11 @@ function openAddModal() {
   // later, when the SIM is. Hidden here, still on the edit form.
   const aeg = document.getElementById('fAccountEmailGroup');
   if (aeg) aeg.style.display = 'none';
+  // Neither is a counter field: a house account needs a saved card this person
+  // does not have yet (owner, 08-17). Both stay on the edit form.
+  const hg = document.getElementById('fHouseGroup');
+  if (hg) hg.style.display = 'none';
+  KC_OPTIONAL_FIELDS.forEach(kcCollapseField);
   showModal();
 }
 
@@ -9592,8 +9623,12 @@ function openEditModal(id) {
   { const ap = document.getElementById('fAltPhone'); if (ap) ap.value = c.altPhone || ''; }
   document.getElementById('fEmail').value   = c.email   || '';
   { const ae2 = document.getElementById('fAltEmail'); if (ae2) ae2.value = c.altEmail || ''; }
+  { const pm = document.getElementById('fPayMethod'); if (pm) pm.value = c.defaultPaymentMethod || ''; }
+  KC_OPTIONAL_FIELDS.forEach(kcCollapseField);   // open only what holds a value
   const aeg = document.getElementById('fAccountEmailGroup');
   if (aeg) aeg.style.display = '';   // hidden while adding, always shown here
+  const hg = document.getElementById('fHouseGroup');
+  if (hg) hg.style.display = '';     // ditto
   const aeEl = document.getElementById('fAccountEmail');
   if (aeEl) aeEl.value = c.accountEmail || '';
   document.getElementById('fAddress').value = c.address || '';
@@ -9657,7 +9692,9 @@ function clearModal() {
   const hw = document.getElementById('fHasWhatsapp'); if (hw) hw.checked = false;
   const ae = document.getElementById('fAccountEmail'); if (ae) ae.value = '';
   const nt = document.getElementById('fNotes'); if (nt) nt.value = '';
+  const pm = document.getElementById('fPayMethod'); if (pm) pm.value = '';
   document.getElementById('fCountryCode').value = '+44';
+  KC_OPTIONAL_FIELDS.forEach(kcCollapseField);
   ['errFirstName','errLastName','errPhone'].forEach(id => document.getElementById(id).classList.remove('visible'));
   ['warnPhone','warnEmail','warnName'].forEach(id => document.getElementById(id).classList.remove('visible'));
 }
@@ -9836,6 +9873,9 @@ async function saveCustomer() {
 
   const payload = { title, firstName, lastName, phone: fullPhone, altPhone, email: contactEmail, altEmail, address, notes,
     accountEmail,
+    // How this customer usually pays. '' means "ask each time" — the till and
+    // the wallet start on it, they do not enforce it.
+    defaultPaymentMethod: document.getElementById('fPayMethod')?.value || '',
     // Only sent when the field is on screen — the PUT merges over the stored
     // row, so omitting it while the WhatsApp channel is off preserves whatever
     // was already recorded instead of silently clearing it.
@@ -13409,6 +13449,15 @@ function posSplitText() {
 
 function posCustomerChange() {
   posWallet = 0;            // wallet credit is per-customer — reset on switch
+  // Start on how this customer usually pays (their card, owner 08-17). The
+  // till is the one place this is safe to preselect: a sale here is always
+  // being tendered by one of these three, so the default saves a tap and can
+  // never record a payment that did not happen. Forms that can also put a
+  // charge ON ACCOUNT are left alone deliberately — preselecting "paid now"
+  // there would mean an unnoticed default books money nobody handed over.
+  const id = document.getElementById('posCustomer')?.value;
+  const c = id && id !== 'walkin' ? customers.find(x => String(x.id) === String(id)) : null;
+  if (c?.defaultPaymentMethod) posSetMethod(c.defaultPaymentMethod);
   posRenderTender();
   document.getElementById('posScan')?.focus();
 }

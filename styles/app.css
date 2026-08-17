@@ -1321,23 +1321,50 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   .name-row > :nth-child(3) { grid-column: 1 / -1; }
 }
 
-.phone-row { display: flex; gap: 8px; min-width: 0; }
+/* Wraps rather than starves: in Simple Mode's largest step the dial-code box
+   grows with the text and the cell does not, which left the number field too
+   narrow to show a full number. Below its own minimum the number takes a line
+   of its own instead of being squeezed. */
+.phone-row { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
 
-.phone-row .form-input { min-width: 0; }
+/* The number is the field being typed into, so it gets the room. It was
+   sharing a two-column form cell with a 130px dial-code box that only ever
+   holds a flag and up to four digits — "7911 1234" was clipped mid-number
+   while "+44" sat in half the width (owner, 08-17). */
+/* width:auto matters: .form-input carries width:100%, which a flex-basis of
+   `auto` reads as the basis — the number field then never fits beside the dial
+   code and wrapped at every size. Basis in ch so the threshold moves with
+   Simple Mode: side by side at normal text, and at the largest step the number
+   takes a line of its own rather than shrinking to eight visible digits. */
+.phone-row .form-input { flex: 1 1 14ch; width: auto; min-width: 0; }
 
 .country-select {
   flex: 0 0 auto;
   background: var(--surface);
   border: 1px solid var(--border-input);
   border-radius: 6px;
-  padding: 8px;
+  padding: 8px 6px;
   font-family: inherit; font-size: var(--fs-body); font-weight: 400;
   color: var(--text); outline: none; cursor: pointer;
-  width: 130px; flex-shrink: 0;
+  /* Enough for the widest option — a flag, "+972" and the chevron — and no
+     more. In ch units so Simple Mode grows it with the text inside it. */
+  width: 9.5ch; min-width: 82px; flex-shrink: 0;
 }
 
 .country-select:focus { border-color: var(--accent); }
 
+
+/* An optional field offered rather than presented: reads as an action, sits
+   quietly under the field it extends, and is a real button so it is reachable
+   by keyboard and big enough to tap. */
+.kc-add-more {
+  align-self: flex-start; margin-top: 6px;
+  background: none; border: 0; padding: 4px 0; min-height: 30px;
+  font: inherit; font-size: var(--fs-small); color: var(--accent);
+  cursor: pointer; text-align: start;
+}
+.kc-add-more:hover { text-decoration: underline; }
+.kc-add-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius); }
 
 .form-error { font-size: var(--fs-micro); color: var(--danger); margin-top: 2px; display: none; }
 

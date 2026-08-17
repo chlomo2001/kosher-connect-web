@@ -274,13 +274,16 @@ export default function AppShell({ initialTab = 'dashboard' }) {
                   inputMode="tel"
                   dir="ltr"
                   placeholder="7911 123456"
-                  style={{ flex: 1 }}
                   autoComplete="off"
                   aria-describedby="errPhone warnPhone"
                 />
               </div>
               <span className="form-error" id="errPhone">Required</span>
               <div className="form-warning" id="warnPhone">⚠️ This phone number already exists for another customer.</div>
+              {/* Owner, 08-17: most customers have one number, so a second
+                  empty box on every card is a field to skip 1,800 times over.
+                  The offer stays; the box only appears when it is wanted. */}
+              <button type="button" className="kc-add-more" id="fAltPhoneAdd">+ Add another number</button>
               {WHATSAPP_ENABLED && (
                 <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 6, fontWeight: 400 }}>
                   <input type="checkbox" id="fHasWhatsapp" style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
@@ -289,7 +292,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
               )}
             </div>
 
-            <div className="form-group">
+            <div className="form-group" id="fAltPhoneGroup" style={{ display: 'none' }}>
               <label className="form-label" htmlFor="fAltPhone">Additional number <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(optional)</span></label>
               {/* Free text, not a code + digits pair: the second number is as
                   often a landline, an Israeli mobile or "wife's phone" as it is
@@ -308,9 +311,10 @@ export default function AppShell({ initialTab = 'dashboard' }) {
               <label className="form-label" htmlFor="fEmail">✉️ Contact email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(their own)</span></label>
               <input className="form-input" id="fEmail" type="email" placeholder="customer@gmail.com" autoComplete="off" aria-describedby="warnEmail" />
               <div className="form-warning" id="warnEmail">⚠️ This email already exists for another customer.</div>
+              <button type="button" className="kc-add-more" id="fAltEmailAdd">+ Add another email</button>
             </div>
 
-            <div className="form-group">
+            <div className="form-group" id="fAltEmailGroup" style={{ display: 'none' }}>
               <label className="form-label" htmlFor="fAltEmail">Additional email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(optional)</span></label>
               <input className="form-input" id="fAltEmail" type="email" placeholder="work@example.com" autoComplete="off" />
             </div>
@@ -323,6 +327,20 @@ export default function AppShell({ initialTab = 'dashboard' }) {
             <div className="form-group" id="fAccountEmailGroup">
               <label className="form-label" htmlFor="fAccountEmail">⚙️ Account email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(our login for Lebara etc.)</span></label>
               <input className="form-input" id="fAccountEmail" type="email" placeholder="kosherconnect+levi@gmail.com" autoComplete="off" />
+            </div>
+
+            {/* Owner, 08-17. Saved with the customer and used as the default
+                at the till and on a wallet payment — the counter still chooses,
+                it just starts on the right one. "Ask each time" is the default
+                so nobody is silently assumed to pay by card. */}
+            <div className="form-group">
+              <label className="form-label" htmlFor="fPayMethod">💷 Usual payment</label>
+              <select className="form-input" id="fPayMethod">
+                <option value="">Ask each time</option>
+                <option value="cash">💵 Cash</option>
+                <option value="card">💳 Card</option>
+                <option value="bank_transfer">🏦 Bank transfer</option>
+              </select>
             </div>
 
             <div className="form-group form-full">
@@ -345,7 +363,11 @@ export default function AppShell({ initialTab = 'dashboard' }) {
             {/* Owner #2 — house account: this customer clears their wallet on a
                 set day each month, charged to their saved card. The sweep raises
                 the settlement task; the card's Settle-month button does the rest. */}
-            <div className="form-group form-full">
+            {/* Hidden while ADDING, shown when editing — same reasoning as the
+                account email above (owner, 08-17). A house account needs a
+                saved card, which a new customer at the counter does not have
+                yet, so it is set up later rather than asked for now. */}
+            <div className="form-group form-full" id="fHouseGroup">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                 <input type="checkbox" id="fHouseEnabled" style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
                 💳 House account — settle their wallet monthly on their saved card
