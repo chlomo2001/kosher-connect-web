@@ -93,6 +93,36 @@ for (const theme of ['light', 'dark']) {
   const total = await p.inputValue('#svTotal').catch(() => '')
   say(Number(total) > 0, `${theme}: the charge form came up with no money in it (${total})`)
 
+  // The minutes on that form are editable and the money follows them — the
+  // owner tried to change the charge by editing the NOTE, which quite rightly
+  // moved nothing, because the line said "editable" without saying what.
+  await p.fill('#svMins', '44')
+  await p.waitForTimeout(150)
+  const edited = await p.evaluate(() => ({
+    total: document.getElementById('svTotal').value,
+    shown: document.getElementById('svTimedAmount')?.textContent,
+    notes: document.getElementById('svNotes').value,
+  }))
+  say(edited.total === '33.00', `${theme}: 44 min at £45/hr should charge £33.00, form says ${edited.total}`)
+  say(edited.shown === '£33.00', `${theme}: the line still reads ${edited.shown} after the minutes changed`)
+  say(/44 min/.test(edited.notes), `${theme}: the note did not follow the minutes (${edited.notes})`)
+
+  // Under the ten-minute minimum it charges ten and SAYS it is charging ten.
+  await p.fill('#svMins', '5')
+  await p.waitForTimeout(150)
+  const floor = await p.evaluate(() => ({
+    total: document.getElementById('svTotal').value,
+    note: document.getElementById('svTimedNote')?.textContent || '',
+  }))
+  say(floor.total === '7.50', `${theme}: 5 min should still charge the 10-minute minimum £7.50, got ${floor.total}`)
+  say(/minimum/i.test(floor.note), `${theme}: charging the minimum without saying so (${floor.note})`)
+
+  // And a total typed by hand wins, without the line going on claiming otherwise.
+  await p.fill('#svTotal', '25')
+  await p.waitForTimeout(150)
+  const byHand = await p.evaluate(() => document.getElementById('svTimedNote')?.textContent || '')
+  say(/25/.test(byHand), `${theme}: the timed line ignores a total typed by hand (${byHand})`)
+
   await ctx.close()
 }
 

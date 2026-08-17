@@ -12683,9 +12683,74 @@ function svcTimerStop() {
     if (svcSel && hourly) svcSel.value = String(hourly.id);
     document.getElementById('svTotal').value = amount.toFixed(2);
     document.getElementById('svNotes').value = `Timed help — ${minutes} min`;
-    const bd = document.getElementById('svBreakdown');
-    if (bd) bd.innerHTML = `⏱ ${minutes} min at £${settingNum('online_hourly_rate', 45)}/hr (10-min minimum) = <strong>${fmtGbp(amount)}</strong> — editable.`;
+    svTimedBreakdown(minutes);
   }, 60);
+}
+
+// ── The timed-help line, with the minutes actually editable ───────────────
+//
+// Owner, 17 Aug, arrow pointing at the words "— editable": "where is it
+// editable from - u see i treid to change in notes but no real effect on
+// calc". Fair. The line claimed something was editable without saying WHAT or
+// WHERE, the nearest box to it was the note, and editing a note quite rightly
+// changes no money at all — so the app looked like it was ignoring them.
+//
+// What they were actually trying to do was charge 44 minutes instead of 43.
+// So that is now the thing you can type into, and the money follows it. The
+// Total stays editable in its own right for the times the answer is not about
+// minutes at all, and the line says so in those words.
+function svTimedBreakdown(minutes) {
+  const bd = document.getElementById('svBreakdown');
+  if (!bd) return;
+  bd.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <span>⏱</span>
+      <input class="form-input kc-inline-num" id="svMins" type="number" min="1" step="1"
+        value="${minutes}" aria-label="Minutes to charge for" oninput="svTimedRecalc()">
+      <span>min at £${settingNum('online_hourly_rate', 45)}/hr =</span>
+      <strong id="svTimedAmount"></strong>
+      <span id="svTimedNote" style="color:var(--muted);"></span>
+    </div>
+    <div style="margin-top:6px;">Change the minutes here and the total follows.
+      To charge something else entirely, type straight into <strong>Total (£)</strong> above.</div>`;
+  svTimedRecalc();
+}
+
+function svTimedCharge(typed) {
+  const rate = settingNum('online_hourly_rate', 45);
+  const minutes = Math.max(10, Math.max(1, Math.round(Number(typed) || 0)));  // 10-minute minimum
+  return { minutes, rate, amount: Math.round((minutes / 60) * rate * 100) / 100 };
+}
+
+function svTimedRecalc() {
+  const el = document.getElementById('svMins');
+  if (!el) return;
+  const typed = Math.max(1, Math.round(Number(el.value) || 0));
+  const { minutes, amount } = svTimedCharge(typed);
+  const total = document.getElementById('svTotal');
+  if (total) { total.value = amount.toFixed(2); delete total.dataset.byHand; }
+  const amt = document.getElementById('svTimedAmount');
+  if (amt) amt.textContent = fmtGbp(amount);
+  // Say it out loud rather than quietly charging more than the box shows.
+  const note = document.getElementById('svTimedNote');
+  if (note) note.textContent = typed < minutes ? `(10-minute minimum — charging ${minutes})` : '';
+  // The note follows the minutes only while it is still the one the app wrote;
+  // a note the operator has put their own words into is left alone.
+  const notes = document.getElementById('svNotes');
+  if (notes && /^Timed help — \d+ min$/.test(notes.value.trim())) {
+    notes.value = `Timed help — ${minutes} min`;
+  }
+}
+
+// Typing in Total wins — but the timed line must not go on claiming a sum that
+// is no longer what will be charged.
+function svTotalByHand() {
+  const total = document.getElementById('svTotal');
+  const amt = document.getElementById('svTimedAmount');
+  if (!total || !amt) return;
+  total.dataset.byHand = '1';
+  const note = document.getElementById('svTimedNote');
+  if (note) note.textContent = `— charging ${fmtGbp(Number(total.value) || 0)} instead`;
 }
 
 // ── Floating help-timer chip ──────────────────────────────────────────────
@@ -13074,7 +13139,8 @@ async function openNewServiceModal(preselectCustomerId = null) {
       </div>
       <div class="form-group">
         <label class="form-label">Total (£)</label>
-        <input class="form-input" type="number" id="svTotal" min="0" step="0.01" value="0">
+        <input class="form-input" type="number" id="svTotal" min="0" step="0.01" value="0"
+          oninput="svTotalByHand()">
       </div>
       <div class="form-group">
         <label class="form-label">Paid now?</label>

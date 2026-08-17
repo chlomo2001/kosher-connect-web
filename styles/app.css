@@ -865,6 +865,15 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   .kc-quickadd-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* A number you type INSIDE a sentence — the minutes in the timed-help line.
+   Sized to its content so it reads as part of the sentence rather than as a
+   form field that wandered in, but still obviously a box you can type in. */
+.kc-inline-num {
+  width: 4.5ch; min-width: 52px; text-align: center;
+  padding: 3px 4px; min-height: 0; font-size: inherit; font-weight: 700;
+  color: var(--text); background: var(--surface);
+}
+
 /* A column that would otherwise be as wide as its longest entry — a plan
    name, a note — cut off at a readable width with an ellipsis. A class
    rather than an inline style so the stacked layout below can let it out. */

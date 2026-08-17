@@ -981,3 +981,40 @@ guessed at.
 New: `node ops/harness/loading.mjs` — fails if any tab flashes a ghost on a
 fast load, or if a real (1.5s) wait ghosts short of the fold, at 1280 and 390.
 Wired into `audit-all.sh`. Gate green.
+
+## Owner request — 2026-08-17: "where is it editable from"
+
+> [arrow pointing at "= £32.25 — editable"] "where is it editable from - u see
+> i treid to change in notes but no real effect on calc"
+
+The line claimed something was editable without saying **what** or **where**.
+The nearest box to it was the Notes field, so that is what got edited — and
+editing a note quite rightly moves no money, so the app looked like it was
+ignoring them. What they were actually trying to do was charge 44 minutes
+instead of 43.
+
+The minutes are now the thing you type into, and the money follows:
+
+| | |
+|---|---|
+| `⏱ [44] min at £45/hr = £33.00` | the number is an input; the total and the note follow it |
+| Under ten minutes | charges the ten-minute minimum and says so — "(10-minute minimum — charging 10)" |
+| A note the operator wrote themselves | left alone; only the app's own "Timed help — N min" is kept in step |
+| A total typed by hand | wins, and the line says "— charging £25.00 instead" rather than going on claiming £37.50 |
+
+Also cleared while here, at the owner's instruction: the last nine junk values
+in the customer email column. Seven placeholders (`N/A`, `-`), one carrier name
+("1pmobile" — its right place is the SIM's provider field, which already said
+1pMobile, so it only had to come out of his email and that SIM's carrier-login
+box), and one reference moved into a note. Plus one the first pass could not
+see: a record whose typed column was already empty while the app's own copy
+still said "N/A". Customer email column now: 0 junk, 38 real addresses, no
+drift, 610 customers.
+
+**Open, and worth a decision:** 29 SIMs hold a non-email in their carrier-login
+field — 20 placeholders, 6 words (one literally reads "EMAIL ADDRESS"), 2 bare
+punctuation, 1 all digits. That field is what inbound carrier mail pairs
+against, so those SIMs can never be matched by address.
+
+Verified: gate green (435 tests ×2 TZ + build), popout harness extended to
+drive the minutes box, modals/names/contrast clean.
