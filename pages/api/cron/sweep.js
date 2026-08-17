@@ -665,7 +665,11 @@ async function handler(req, res) {
       await upsertOpenTask({
         reference: 'SIMPAIR',
         title: `📬 ${ambiguous} carrier email${ambiguous === 1 ? '' : 's'} need pairing`,
-        priority: 'normal',
+        // 'medium', not 'normal': the app SAYS Normal, the column is an enum of
+        // low/medium/high, and a bad value throws. This line had never run —
+        // it only fires the first time a pool address arrives with no number
+        // in it, which had not happened yet.
+        priority: 'medium',
         notes: 'Sent to a shared pool address with no number in the message, so the app '
              + 'will not guess which SIM it belongs to.',
       })
