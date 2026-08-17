@@ -1098,3 +1098,36 @@ a phone still gets the plain dialog.
 
 Wired into `audit-all.sh`. Gate green; modals clean at 390 and 1280; names,
 focus, contrast and targets all clean.
+
+## Owner request — 2026-08-17: the sparkline, and middle-click
+
+> "is this clickable and linked to summary?" · "with press on the middle button
+> of the mouse instead of left button to open in a new tab - is this working
+> throughout the app?"
+
+**The sparkline was not clickable.** It was a picture of the month with nothing
+behind it, which is exactly the kind of thing a person goes to click. It is now
+a real `<button>` opening the **business summary** — the same money over the
+same window, with the working shown. A button rather than a clickable div, so
+it is one tab stop with a name and a focus ring; no chrome until hovered, so it
+still reads as part of the figure above it rather than a control bolted under
+it.
+
+**Middle-click was not working, anywhere in the sidebar.** The nav rows were
+`<div data-tab>` with a JS click handler — and middle-click, ⌘-click and "Open
+link in new tab" all need an `href`. Every tab already has a real URL
+(`pages/[tab].js`), so the rows are now real `<a href="/rentals">` and main.js
+takes only the plain left click: anything with a modifier, or a non-primary
+button, goes to the browser untouched.
+
+Two things that had to move with it: the `role="button"`/`tabindex` shims came
+off (an anchor already has both), and `goToTab()` stopped firing a synthetic
+`.click()` — on an anchor that is a real navigation, i.e. a full page load in
+place of an in-app switch.
+
+Still not middle-clickable, and worth doing next: customer names inside tables
+(`custNameLink`) use `href="#"`, so a middle click opens a copy of the current
+page. They have a real route — `/customers/<id>` — so the same treatment works.
+
+Verified: gate green, names/focus/contrast/targets clean, no overflow at
+390/1280, modals + picker + window sweeps green.

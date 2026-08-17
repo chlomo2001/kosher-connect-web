@@ -137,10 +137,19 @@ export default function AppShell({ initialTab = 'dashboard' }) {
           {NAV.map((section, si) => (
             <Fragment key={si}>
               {section.label && <div className="nav-group-label">{section.label}</div>}
+              {/* Real anchors, not divs (owner, 17 Aug: "with press on the
+                  middle button of the mouse instead of left button to open in
+                  a new tab - is this working throughout the app?"). It was
+                  not: middle-click, ⌘-click and "Open link in new tab" all
+                  need an href, and every tab already has a real URL — see
+                  pages/[tab].js. main.js swallows the plain left click and
+                  renders in place; every other kind of click is left to the
+                  browser. */}
               {section.items.map(([tab, label]) => (
-                <div key={tab} className={'nav-item' + (tab === initialTab ? ' active' : '')} data-tab={tab}>
+                <a key={tab} className={'nav-item' + (tab === initialTab ? ' active' : '')}
+                   data-tab={tab} href={tab === 'dashboard' ? '/' : `/${tab}`}>
                   <span className="nav-icon">{ICONS[tab]}</span> {label}
-                </div>
+                </a>
               ))}
             </Fragment>
           ))}

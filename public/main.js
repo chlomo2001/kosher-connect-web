@@ -587,10 +587,15 @@ function renderSidebarUser() {
 
 function setupNav() {
   document.querySelectorAll('.nav-item').forEach(item => {
-    // These are <div>s — give them real button semantics so Tab/Enter/Space work. U11.
-    if (!item.hasAttribute('role')) item.setAttribute('role', 'button');
-    if (!item.hasAttribute('tabindex')) item.tabIndex = 0;
-    item.addEventListener('click', () => {
+    // These are real <a href="/rentals"> now, so Tab/Enter and the browser's
+    // own "open in a new tab" work without help. Only the plain left click is
+    // ours to take: ⌘/Ctrl/Shift-click and middle-click must reach the browser
+    // untouched, or the app quietly breaks a thing every other site does.
+    // (Middle-click fires auxclick, not click, so it never gets here anyway —
+    // the guard is for the modified left clicks.)
+    item.addEventListener('click', (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      e.preventDefault();
       const tab = item.dataset.tab;
       syncNavActive(tab);
       currentTab = tab;
@@ -17936,7 +17941,13 @@ function goToTab(tab, opts = {}) {
     rentalSearchTerm = opts.rentalSearch;
     kcView('rentals').dims = { balance: 'all', status: 'all' };
   }
-  document.querySelector(`.nav-item[data-tab="${tab}"]`)?.click();
+  // Not a synthetic .click(): the nav items are real links now, and a
+  // dispatched click on an anchor makes the browser navigate for real —
+  // a full page load in place of an in-app switch.
+  syncNavActive(tab);
+  currentTab = tab;
+  renderTab(tab);
+  pushTabUrl(tab);
   // Customers tab renders synchronously from memory; open the detail after it.
   if (opts.customerId) setTimeout(() => {
     selectedId = opts.customerId;
@@ -18025,10 +18036,16 @@ function dashSparkHtml(which = 'received') {
   const total = values.reduce((a, b) => a + b, 0);
   if (total <= 0) return '';
   const best = Math.max(...values);
-  return `<div class="dash-spark-row">
+  // The line was a picture of the month with nothing behind it — the owner
+  // went to click it (17 Aug). It is a button now, and it opens the business
+  // summary, which is the same money over the same window with the working
+  // shown. Kept as a real <button> rather than a clickable div so it is one
+  // Tab stop with a name and a focus ring.
+  return `<button type="button" class="dash-spark-row" onclick="openBusinessSummary()"
+      aria-label="Money in over the last ${values.length} days, ${fmtGbp(total)} in total — open the business summary">
     ${sparklineHtml(values, { title: `${values.length} days, ${fmtGbp(total)} in total, best day ${fmtGbp(best)}` })}
-    <span class="dash-spark-note">last ${values.length} days · ${fmtGbp(total)} in</span>
-  </div>`;
+    <span class="dash-spark-note">last ${values.length} days · ${fmtGbp(total)} in ›</span>
+  </button>`;
 }
 
 function weekOnWeekHtml(money) {
