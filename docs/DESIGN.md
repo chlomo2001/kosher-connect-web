@@ -251,12 +251,44 @@ Three parts, all required:
    over it; the quick-add panel opens inside the field's own wrapper. Nothing
    typed is lost, and on save the new record arrives as the selection.
 
-Mechanics: `kcCustomerOptions()` builds every customer `<select>` in the app and
-appends the `__new_customer__` row; a **capture-phase** `change` listener
-intercepts that value, puts the select back and opens the card before the
-form's own `onchange` can ever see the sentinel as an id. Type-ahead pickers use
-`kcComboAddNew` (register non-standard ids in `KC_COMBO_ADAPTERS`).
-`openNewPoolCard({ selectId, prefill, after })` is the same shape for pools.
+Mechanics: `kcPickerAddNew(valueId)` opens the quick-add panel inside the
+picker's own wrapper, from the "➕ Add … as a new customer" row every customer
+picker offers. `openNewPoolCard({ selectId, prefill, after })` is the same shape
+for pools.
+
+## One picker per kind of thing
+
+> "i need same customer dropdown logic throughout the system!…. copy from other
+> places in our app, or even better, make it should always uses from the same
+> place." — owner, 17 Aug, looking at the help timer
+
+There was one way to pick a customer written three times: a plain `<select>` of
+all 609 names in alphabetical order (ten places), a bespoke type-ahead on the
+rental form, and a generic combo used by SIM plans alone. Nothing was wrong with
+any of them in isolation; what was wrong is that improving one improved a third
+of the shop, and the alphabetical `<select>` — the one nobody had got to —
+listed four repeated surnames with nothing to tell them apart.
+
+**`customerPicker(valueId, opts)` in `public/main.js` is the only customer
+picker in the app.** Everything else calls it:
+
+```js
+customerPicker('svcTimerCustomer', { placeholder: 'Who are you helping?' })
+customerPicker('posCustomer', { special: { value: 'walkin', label: '🚶 Walk-in' },
+                                onPick: 'posCustomerChange()' })
+```
+
+Every caller gets recency-first ordering, search by name **or** phone digits,
+the number beside each name, arrow keys and Enter, a `✓ 07…` line naming who
+was picked, quick-add, and a list that hangs upwards or scrolls rather than
+being clipped. `special` is a real choosable non-customer value (walk-in,
+unassigned, no wallet link); `placeholder` is only a prompt. The hidden input
+keeps the id the form always used — `document.getElementById('svCustomer').value`
+is unchanged — and a `change` event fires on it, which is what `onPick` hangs
+off, so a handler that used to sit on the `<select>` keeps working.
+
+`node ops/harness/picker.mjs` drives all eleven of them and fails if a twelfth
+ever turns up hand-built.
 
 ## Where a rule lives
 

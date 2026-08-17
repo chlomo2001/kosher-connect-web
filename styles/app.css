@@ -2187,7 +2187,7 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 
 
 
-/* CUSTOMER SEARCH DROPDOWN */
+/* THE CUSTOMER PICKER — one control, everywhere (see customerPicker in main.js) */
 
 .customer-search-wrap { position: relative; }
 
@@ -2195,17 +2195,50 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
   position: absolute; top: 100%; left: 0; right: 0;
   background: var(--surface); border: 1px solid var(--accent);
   border-top: none; border-radius: 0 0 8px 8px;
-  max-height: 200px; overflow-y: auto; z-index: 999; display: none;
+  max-height: 260px; overflow-y: auto; z-index: 999; display: none;
   box-shadow: var(--shadow-2);
+  /* The picker in a Kol Torah row is 150px wide because the row is. A list of
+     names is not, so it is allowed to be wider than the box it hangs from. */
+  min-width: min(280px, 86vw);
 }
 
 .customer-dropdown.open { display: block; }
 
+/* Not enough room underneath — a picker low on a long page, or near the foot
+   of a modal that scrolls. Hangs upwards instead of being clipped. */
+.customer-dropdown.up {
+  top: auto; bottom: 100%;
+  border-radius: 8px 8px 0 0;
+  border-top: 1px solid var(--accent); border-bottom: none;
+}
+
 .customer-dropdown-item { padding: 9px 12px; font-size: var(--fs-body); cursor: pointer; border-bottom: 1px solid var(--border); }
 
-.customer-dropdown-item:hover { background: rgba(0, 96, 168,0.06); color: var(--accent); }
+/* Keyboard and mouse land on the same highlight — an arrow key that looked
+   different from a hover made the list read as two different lists. */
+.customer-dropdown-item:hover,
+.customer-dropdown-item.kc-active { background: rgba(0, 96, 168,0.06); color: var(--accent); }
 
 .customer-dropdown-item:last-child { border-bottom: none; }
+
+/* A list has to be able to leave the box it hangs from. .table-card clips its
+   contents — that is what keeps a table's corners rounded — and it cut the
+   help timer's dropdown off two pixels below the search box. Only cards that
+   actually hold a picker give that up. */
+.table-card:has(.customer-search-wrap) { overflow: visible; }
+
+/* The number (and email) beside a name. Half this community shares a surname,
+   so this is what tells two Fishel Thalers apart. */
+.kc-picker-meta { color: var(--muted); font-size: var(--fs-micro); margin-left: 8px; }
+
+/* Walk-in / unassigned / no wallet link — a real choice, kept at the top. */
+.kc-picker-special { background: var(--bg-secondary); }
+
+/* Confirms WHICH person was picked, under the box. Empty most of the time, so
+   it must take no room until it says something. */
+.kc-picker-hint:not(:empty) {
+  font-size: var(--fs-small); color: var(--success-ink); margin-top: 4px;
+}
 
 .customer-dropdown-empty { padding: 9px 12px; font-size: var(--fs-body); color: var(--muted); }
 

@@ -1173,9 +1173,8 @@ function showHebrewDate(inputId, labelId) {
 }
 
 // ─────────────────────────────────────────────
-//  CUSTOMER SEARCH DROPDOWN (rental modal)
+//  CUSTOMER PICKER — shared ordering
 // ─────────────────────────────────────────────
-let selectedRentalCustomerId = '';
 
 /**
  * Who to show before anything is typed.
@@ -1188,14 +1187,6 @@ let selectedRentalCustomerId = '';
  *
  * Most-recent rental first, then anyone left over by name.
  */
-function customerDropdownRow(c) {
-  return `<div class="customer-dropdown-item" onclick="selectRentalCustomer('${c.id}')">
-    <strong>${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}</strong>
-    <span style="color:var(--muted);font-size:var(--fs-micro);margin-left:8px;">${escHtml(fmtPhone(c.phone || ''))} ${
-      c.email ? '· ' + escHtml(c.email) : ''}</span>
-  </div>`;
-}
-
 function kcCustomersByRecency(limit = 8) {
   const last = new Map();
   for (const r of rentals) {
@@ -1214,80 +1205,14 @@ function kcCustomersByRecency(limit = 8) {
   return [...seen, ...rest].slice(0, limit);
 }
 
-function filterCustomerDropdown() {
-  const input = document.getElementById('rCustomerSearch');
-  const dropdown = document.getElementById('rCustomerDropdown');
-  const hiddenInput = document.getElementById('rCustomer');
-  const selectedDiv = document.getElementById('rCustomerSelected');
-  if (!input || !dropdown) return;
-
-  const term = input.value.trim().toLowerCase();
-  const hadCustomer = !!hiddenInput.value;
-  selectedRentalCustomerId = '';
-  hiddenInput.value = '';
-  selectedDiv.textContent = '';
-  // Retyping clears the pick, so the phone list must forget that customer's
-  // "↺ had before" ordering too — otherwise the hint and sort go stale.
-  if (hadCustomer) refreshRentalPhoneOptions();
-
-  // Empty box, open list: the eight most recent customers, so the common case
-  // (someone who was in last week) is a tap and the rest is a search.
-  if (!term) {
-    const recent = kcCustomersByRecency(8);
-    dropdown.innerHTML = recent.length
-      ? `<div class="customer-dropdown-head">Recent</div>` + recent.map(customerDropdownRow).join('')
-      : '<div class="customer-dropdown-empty">No customers yet</div>';
-    dropdown.classList.add('open');
-    return;
-  }
-
-  const matches = customers.filter(c =>
-    (`${c.firstName} ${c.lastName}`).toLowerCase().includes(term) ||
-    (c.phone || '').toLowerCase().includes(term) ||
-    (c.email || '').toLowerCase().includes(term) ||
-    phoneDigitsMatch(term, c)
-  ).slice(0, 10);
-
-  if (matches.length === 0) {
-    dropdown.innerHTML = '<div class="customer-dropdown-empty">No customers found</div>';
-  } else {
-    dropdown.innerHTML = matches.map(customerDropdownRow).join('');
-  }
-  // Every other picker in the app offers to create the person you were looking
-  // for; this one — on the form the shop opens most — used to say "No customers
-  // found" and stop. Same panel, same three fields, via the adapter above.
-  dropdown.innerHTML += `<div class="customer-dropdown-item kc-combo-add"
-    onmousedown="kcComboAddNew('rCustomer')">➕ Add <strong>${escName(input.value.trim())}</strong> as a new customer</div>`;
-  dropdown.classList.add('open');
-}
-
-// Enter commits the one visible match — the same bargain posScanEnter already
-// makes at the till. With several matches it does nothing rather than guess,
-// because guessing here attaches a rental to the wrong person.
-function rentalPickerKey(e) {
-  if (e.key !== 'Enter') return;
-  e.preventDefault();
-  const items = document.querySelectorAll('#rCustomerDropdown .customer-dropdown-item');
-  if (items.length === 1) items[0].click();
-}
-
-function selectRentalCustomer(id) {
-  const c = customers.find(x => x.id === id);
-  if (!c) return;
-  document.getElementById('rCustomer').value = id;
-  document.getElementById('rCustomerSearch').value = `${c.firstName} ${c.lastName}`;
-  document.getElementById('rCustomerSelected').textContent = `✓ ${fmtPhone(c.phone || '')}`;
-  document.getElementById('rCustomerDropdown').classList.remove('open');
-  selectedRentalCustomerId = id;
+// What the rental form has to redo when the customer changes — whether that
+// was a pick, a clear, or a preselect. Wired as the picker's onPick.
+function rentalCustomerChanged() {
   refreshRentalPhoneOptions(); // resort the phone list — his old numbers first
-  updateRentalCalc(); // customer drives the multi-phone (3rd+) auto-discount
+  updateRentalCalc();          // customer drives the multi-phone (3rd+) auto-discount
 }
 
 document.addEventListener('click', e => {
-  if (!e.target.closest('.customer-search-wrap')) {
-    const dd = document.getElementById('rCustomerDropdown');
-    if (dd) dd.classList.remove('open');
-  }
   if (!e.target.closest('.phone-search-wrap')) {
     const pd = document.getElementById('rPhoneDropdown');
     if (pd) pd.classList.remove('open');
@@ -3398,16 +3323,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
-        <div class="customer-search-wrap">
-          <!-- #79 — ONE type-ahead control; rCustomer is now the hidden value it fills -->
-          <input type="hidden" id="rCustomer">
-          <input class="form-input" type="text" id="rCustomerSearch"
-            placeholder="Type a name or number…" autocomplete="off"
-            oninput="filterCustomerDropdown()" onfocus="filterCustomerDropdown()"
-            onkeydown="rentalPickerKey(event)">
-          <div class="customer-dropdown" id="rCustomerDropdown"></div>
-        </div>
-        <div id="rCustomerSelected" style="font-size:var(--fs-small);color:var(--success);margin-top:4px;"></div>
+        ${customerPicker('rCustomer', { onPick: 'rentalCustomerChanged()' })}
       </div>
 
       <div class="form-group form-full">
@@ -3557,7 +3473,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
     </div>
   `);
 
-  if (preselectCustomerId) selectRentalCustomer(preselectCustomerId); // #79 fills the one picker
+  if (preselectCustomerId) kcPickerSet('rCustomer', preselectCustomerId); // #79 fills the one picker
   const today = localISO();
   const next7 = localISO(new Date(Date.now() + 7*86400000));
   document.getElementById('rFrom').value = today;
@@ -7884,20 +7800,283 @@ function providerDatalist(id = 'kcProviderList') {
   return `<datalist id="${id}">${knownProviders().map(n => `<option value="${escHtml(n)}"></option>`).join('')}</datalist>`;
 }
 
-// Owner #1 (part 2) — a generic type-ahead customer combo, same look as the
-// rentals picker: type the first letters of a name (or phone digits) and pick.
-// The hidden field keeps the ORIGINAL element id, so save paths don't change.
-function customerComboHtml(valueId, preselectId = null) {
-  const pre = preselectId ? customers.find(c => c.id === preselectId) : null;
+// ══ THE customer picker ═══════════════════════════════════════════════════
+//
+// Owner, 17 Aug, looking at the help-timer dropdown on Services: "something's
+// wrong with this dropdown…. i need same customer dropdown logic throughout
+// the system!…. copy from other places in our app, or even better, make it
+// should always uses from the same place."
+//
+// What was wrong with it: a plain <select> holding all 609 customers in
+// alphabetical order, four of the names repeated (two Fishel Thalers, two
+// Frishmans) with nothing to tell them apart, and no way to type. There were
+// THREE implementations of "pick a customer" — that <select> in ten places,
+// a bespoke type-ahead on the rental form, and a generic combo used by SIM
+// plans alone — so fixing any one of them fixed a third of the shop.
+//
+// This is now the only one. Every caller gets, whether it asked or not:
+//   · who was in lately first, not who starts with A
+//   · search by name OR phone digits, with the number shown beside each name
+//   · arrow keys and Enter, not just the mouse
+//   · "➕ Add … as a new customer" so a picker never dead-ends (docs/DESIGN.md)
+//   · a ✓ line under the box confirming WHICH person was picked
+//
+// The hidden input keeps the id the form always used, so every save path still
+// reads `document.getElementById('svCustomer').value`, and a `change` event is
+// fired on it — so a handler that used to hang off the <select> keeps working
+// by passing `onPick`.
+//
+//   customerPicker('svcTimerCustomer', { placeholder: 'Who are you helping?' })
+//   customerPicker('posCustomer', { special: { value: 'walkin', label: '🚶 Walk-in' },
+//                                   onPick: 'posCustomerChange()' })
+//
+// `special` is a real, choosable non-customer value (walk-in, unassigned, no
+// wallet link) — it is pinned to the top of the list and is what the box shows
+// when nothing else is picked. `placeholder` is only a prompt.
+const KC_PICKERS = {};
+
+function customerPicker(valueId, {
+  selected = '', special = null, placeholder = 'Type a name or number…',
+  onPick = '', style = '', label = '',
+} = {}) {
+  KC_PICKERS[valueId] = { special, onPick };
+  const pre = selected ? customers.find(c => String(c.id) === String(selected)) : null;
+  const value = pre ? String(pre.id) : (special ? String(special.value) : '');
   return `<div class="customer-search-wrap">
-    <input type="hidden" id="${valueId}" value="${pre ? escHtml(pre.id) : ''}">
-    <input class="form-input" type="text" id="${valueId}_search"
-      placeholder="Type a name or number…" autocomplete="off"
-      value="${pre ? escName(pre.firstName) + ' ' + escName(pre.lastName || '') : ''}"
-      oninput="kcComboFilter('${valueId}')" onfocus="kcComboFilter('${valueId}')"
-      onblur="setTimeout(() => { const d = document.getElementById('${valueId}_dd'); if (d) d.style.display = 'none'; }, 150)">
-    <div class="customer-dropdown" id="${valueId}_dd"></div>
+    <input type="hidden" id="${escHtml(valueId)}" value="${escHtml(value)}"${
+      onPick ? ` onchange="${escHtml(onPick)}"` : ''}>
+    <input class="form-input kc-picker-input" type="text" id="${escHtml(valueId)}_search"
+      role="combobox" aria-expanded="false" aria-autocomplete="list"
+      aria-controls="${escHtml(valueId)}_dd"${label ? ` aria-label="${escHtml(label)}"` : ''}
+      placeholder="${escHtml(placeholder)}" autocomplete="off"
+      value="${escHtml(kcPickerLabel(valueId, value))}"${style ? ` style="${escHtml(style)}"` : ''}
+      oninput="kcPickerFilter('${escJs(valueId)}', true)"
+      onfocus="this.select();kcPickerFilter('${escJs(valueId)}', false)"
+      onkeydown="kcPickerKey('${escJs(valueId)}', event)"
+      onblur="kcPickerBlur('${escJs(valueId)}')">
+    <div class="customer-dropdown" id="${escHtml(valueId)}_dd" role="listbox"></div>
+    <div class="kc-picker-hint" id="${escHtml(valueId)}_hint">${kcPickerHint(value)}</div>
   </div>`;
+}
+
+/** How a held value reads in the box: a customer's name, or the special's label. */
+function kcPickerLabel(valueId, value) {
+  const cfg = KC_PICKERS[valueId] || {};
+  const c = customers.find(x => String(x.id) === String(value));
+  if (c) return `${capName(c.firstName)} ${capName(c.lastName || '')}`.trim();
+  if (cfg.special && String(value) === String(cfg.special.value)) return cfg.special.label;
+  return '';
+}
+
+// Half this community shares a surname. The name in the box is not proof the
+// right person was picked; the number under it is.
+function kcPickerHint(value) {
+  const c = customers.find(x => String(x.id) === String(value));
+  return c && c.phone ? `✓ ${escHtml(fmtPhone(c.phone))}` : '';
+}
+
+function kcPickerOpen(valueId, open) {
+  const dd = document.getElementById(valueId + '_dd');
+  const search = document.getElementById(valueId + '_search');
+  if (dd) dd.classList.toggle('open', !!open);
+  if (search) search.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+/**
+ * Put a value in, from anywhere — a preselect, a resumed parked sale, the
+ * timer handing its customer to the charge form. Same path a click takes, so
+ * the box, the ✓ line and the form's own onPick all stay in step.
+ */
+function kcPickerSet(valueId, value) {
+  const hidden = document.getElementById(valueId);
+  if (!hidden) return;
+  const cfg = KC_PICKERS[valueId] || {};
+  const known = customers.some(x => String(x.id) === String(value));
+  const v = known ? String(value) : (cfg.special ? String(cfg.special.value) : '');
+  const before = hidden.value;
+  hidden.value = v;
+  const search = document.getElementById(valueId + '_search');
+  if (search) search.value = kcPickerLabel(valueId, v);
+  const hint = document.getElementById(valueId + '_hint');
+  if (hint) hint.innerHTML = kcPickerHint(v);
+  kcPickerOpen(valueId, false);
+  // Only when it really moved: an onPick that re-renders half a form should
+  // not fire on every keystroke that happens to leave the value alone.
+  if (before !== v) hidden.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function kcPickerFocus(valueId) {
+  const search = document.getElementById(valueId + '_search');
+  if (search) { search.focus(); search.select(); }
+}
+
+/**
+ * Build the list. `typed` distinguishes someone editing the box (which
+ * invalidates the pick) from someone merely clicking into it (which must not
+ * — that was silently unlinking a shul's wallet on every edit).
+ */
+function kcPickerFilter(valueId, typed = true) {
+  const search = document.getElementById(valueId + '_search');
+  const dd = document.getElementById(valueId + '_dd');
+  const hidden = document.getElementById(valueId);
+  if (!search || !dd || !hidden) return;
+  const cfg = KC_PICKERS[valueId] || {};
+  const raw = search.value.trim();
+  // What is already in the box is the CURRENT PICK, not a search for it — a
+  // till showing "🚶 Walk-in" would otherwise open on a search for those words
+  // and find nobody. Clicking into a filled box opens the recent list; typing
+  // (which replaces the selected text) searches.
+  const held = kcPickerLabel(valueId, hidden.value);
+  const q = raw && raw !== held ? raw.toLowerCase() : '';
+
+  // Typing something other than the name that is held means the pick is no
+  // longer what the box says. Clear it rather than let a save use a stale id.
+  if (typed && raw !== held) {
+    const before = hidden.value;
+    hidden.value = cfg.special ? String(cfg.special.value) : '';
+    const hint = document.getElementById(valueId + '_hint');
+    if (hint) hint.innerHTML = '';
+    if (before !== hidden.value) hidden.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  const row = (value, main, meta, cls = '') =>
+    `<div class="customer-dropdown-item${cls ? ' ' + cls : ''}" role="option"
+      onmousedown="event.preventDefault();kcPickerSet('${escJs(valueId)}','${escJs(String(value))}')">
+      <strong>${main}</strong>${meta ? `<span class="kc-picker-meta">${meta}</span>` : ''}</div>`;
+
+  // Walk-in belongs at the top of the list you browse, never in the results of
+  // a name you typed: an Arrow-Down + Enter meant for the first match must not
+  // land on "🚶 Walk-in" and put the sale through against nobody.
+  const specialRow = cfg.special && !q
+    ? row(cfg.special.value, escHtml(cfg.special.label), '', 'kc-picker-special')
+    : '';
+
+  const matches = q
+    ? customers.filter(c =>
+        `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase().includes(q) ||
+        (c.phone || '').toLowerCase().includes(q) ||
+        (c.email || '').toLowerCase().includes(q) ||
+        phoneDigitsMatch(q, c))
+    : kcCustomersByRecency(8);
+
+  const shown = matches.slice(0, 12);
+  const head = q
+    ? (matches.length > shown.length
+        ? `<div class="customer-dropdown-head">${matches.length} matches — showing ${shown.length}, keep typing</div>` : '')
+    : (shown.length ? '<div class="customer-dropdown-head">Recent</div>' : '');
+
+  // The number, or the email when there is no number. Both together wrapped
+  // every row onto two lines in a picker as narrow as the till's side panel,
+  // and the number is what tells two people with one surname apart anyway.
+  const list = shown.map(c => row(
+    c.id,
+    nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim()),
+    c.phone ? escHtml(fmtPhone(c.phone)) : escHtml(c.email || ''),
+  )).join('');
+
+  // No match used to be the end of the road: abandon a half-filled form, go to
+  // Customers, create the person, come back and start again — with someone
+  // standing at the counter. The list offers to create them from here.
+  const addRow = q
+    ? `<div class="customer-dropdown-item kc-combo-add" role="option"
+        onmousedown="event.preventDefault();kcPickerAddNew('${escJs(valueId)}')">
+        ➕ Add <strong>${escName(raw)}</strong> as a new customer</div>`
+    : '';
+
+  dd.innerHTML = specialRow + head + list
+    + (q && !shown.length ? '<div class="customer-dropdown-empty">No one by that name</div>' : '')
+    + addRow;
+  kcPickerOpen(valueId, true);
+  kcPickerPlace(valueId);
+}
+
+/**
+ * Hang the list downwards, unless it would be cut off — then hang it upwards.
+ *
+ * A picker near the bottom of a scrolling modal, or low on a long page, had
+ * its list painted and then clipped: the box looked open and showed two
+ * pixels of the first name. The room to work in is the nearest ancestor that
+ * clips (a modal box, a side panel), or the window itself.
+ */
+function kcPickerPlace(valueId) {
+  const search = document.getElementById(valueId + '_search');
+  const dd = document.getElementById(valueId + '_dd');
+  if (!search || !dd) return;
+  dd.classList.remove('up');
+  let top = 0, bottom = window.innerHeight;
+  for (let el = search.parentElement; el && el !== document.body; el = el.parentElement) {
+    const o = getComputedStyle(el);
+    if (/auto|scroll|hidden/.test(o.overflow + o.overflowY)) {
+      const r = el.getBoundingClientRect();
+      top = Math.max(top, r.top);
+      bottom = Math.min(bottom, r.bottom);
+      break;
+    }
+  }
+  const box = search.getBoundingClientRect();
+  const need = dd.getBoundingClientRect().height;
+  const below = bottom - box.bottom;
+  const above = box.top - top;
+  const up = need > below && above > below;
+  dd.classList.toggle('up', up);
+  // Whichever side it hangs from, it may still be taller than the room there —
+  // then it scrolls inside itself rather than being cut off by the modal.
+  dd.style.maxHeight = Math.max(96, (up ? above : below) - 8) + 'px';
+}
+
+/**
+ * Arrows move, Enter commits, Escape gives up.
+ *
+ * With nothing highlighted, Enter takes the ONE visible match — the same
+ * bargain the till's scanner makes — and with several it does nothing rather
+ * than guess, because guessing here files a rental against the wrong person.
+ */
+function kcPickerKey(valueId, e) {
+  const dd = document.getElementById(valueId + '_dd');
+  if (!dd) return;
+  const items = [...dd.querySelectorAll('.customer-dropdown-item')];
+  const at = items.findIndex(el => el.classList.contains('kc-active'));
+
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (!dd.classList.contains('open')) return kcPickerFilter(valueId, false);
+    if (!items.length) return;
+    const next = e.key === 'ArrowDown'
+      ? (at + 1) % items.length
+      : (at <= 0 ? items.length - 1 : at - 1);
+    items.forEach(el => el.classList.remove('kc-active'));
+    items[next].classList.add('kc-active');
+    items[next].scrollIntoView({ block: 'nearest' });
+    return;
+  }
+  if (e.key === 'Enter') {
+    const pickable = items.filter(el => !el.classList.contains('kc-combo-add'));
+    const target = at >= 0 ? items[at] : (pickable.length === 1 ? pickable[0] : null);
+    if (!target) return;
+    e.preventDefault();
+    target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    return;
+  }
+  if (e.key === 'Escape') {
+    kcPickerOpen(valueId, false);
+    const search = document.getElementById(valueId + '_search');
+    const hidden = document.getElementById(valueId);
+    if (search && hidden) search.value = kcPickerLabel(valueId, hidden.value);
+  }
+}
+
+// Leaving a box with half a name typed in it and nothing picked reads as
+// "done" and saves as blank. Put back whatever is actually held.
+function kcPickerBlur(valueId) {
+  setTimeout(() => {
+    kcPickerOpen(valueId, false);
+    const search = document.getElementById(valueId + '_search');
+    const hidden = document.getElementById(valueId);
+    if (!search || !hidden) return;
+    if (document.getElementById(valueId + '_qa')) return;   // quick-add is open
+    const held = kcPickerLabel(valueId, hidden.value);
+    if (search.value.trim() !== held) search.value = held;
+  }, 150);
 }
 // Quick-add a customer WITHOUT leaving the form you are in.
 //
@@ -7910,42 +8089,20 @@ function customerComboHtml(valueId, preselectId = null) {
 // Three fields, not the full customer card: a name and a number is what the
 // counter has when someone walks in. Address, notes, passport and house
 // account are all editable later from the customer record.
-// New rental was built before kcCombo* existed and keeps its own ids and its
-// own "open" class on the dropdown. Rather than leave the busiest form in the
-// shop as the one picker that cannot create a customer, it registers what it
-// calls things and borrows the panel.
-const KC_COMBO_ADAPTERS = {
-  rCustomer: {
-    search: 'rCustomerSearch',
-    dd: 'rCustomerDropdown',
-    hide: (dd) => dd.classList.remove('open'),
-    pick: (id) => selectRentalCustomer(id),
-  },
-};
-function kcComboEl(valueId, part) {
-  const a = KC_COMBO_ADAPTERS[valueId];
-  return document.getElementById(a ? a[part] : `${valueId}_${part}`);
-}
-function kcComboHideDd(valueId) {
-  const dd = kcComboEl(valueId, 'dd');
-  if (!dd) return;
-  const a = KC_COMBO_ADAPTERS[valueId];
-  if (a?.hide) a.hide(dd); else dd.style.display = 'none';
-}
-function kcComboSelect(valueId, id) {
-  const a = KC_COMBO_ADAPTERS[valueId];
-  if (a?.pick) a.pick(id); else kcComboPick(valueId, id);
-}
-
-function kcComboAddNew(valueId) {
-  const wrap = kcComboEl(valueId, 'search')?.closest('.customer-search-wrap');
+//
+// One panel, because there is one picker: the rental form used to need an
+// adapter here to describe what it called its own search box and dropdown.
+// It doesn't — it uses the same picker as everything else now.
+function kcPickerAddNew(valueId) {
+  const search = document.getElementById(valueId + '_search');
+  const wrap = search?.closest('.customer-search-wrap');
   if (!wrap || document.getElementById(valueId + '_qa')) return;
-  const typed = (kcComboEl(valueId, 'search')?.value || '').trim();
+  const typed = (search.value || '').trim();
   // "Moshe Adler" → first "Moshe", last "Adler". One word goes in first name.
   const bits = typed.split(/\s+/).filter(Boolean);
   const first = bits.length ? bits[0] : '';
   const last = bits.length > 1 ? bits.slice(1).join(' ') : '';
-  kcComboHideDd(valueId);
+  kcPickerOpen(valueId, false);
 
   const panel = document.createElement('div');
   panel.id = valueId + '_qa';
@@ -7959,8 +8116,8 @@ function kcComboAddNew(valueId) {
     </div>
     <div class="kc-quickadd-msg" id="${valueId}_qaMsg"></div>
     <div class="kc-quickadd-actions">
-      <button type="button" class="btn btn-primary btn-sm" onclick="kcComboSaveNew('${valueId}')">Save &amp; use</button>
-      <button type="button" class="btn btn-outline btn-sm" onclick="kcComboCancelNew('${valueId}')">Cancel</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="kcPickerSaveNew('${valueId}')">Save &amp; use</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="kcPickerCancelNew('${valueId}')">Cancel</button>
     </div>`;
   wrap.appendChild(panel);
   document.getElementById(`${valueId}_qa${first ? 'Phone' : 'First'}`)?.focus();
@@ -7972,94 +8129,10 @@ function kcComboAddNew(valueId) {
 // is the REAL card for that thing — not a private half-copy that quietly skips
 // fields. The form you were filling in stays exactly as you left it.
 //
-// The type-ahead pickers do this with the quick-add panel above; every plain
-// <select> of customers does it with the row this builder appends.
-// `phone: true` where the form has the width for it — half this community
-// shares a surname, and the number is what tells two Adlers apart.
-function kcCustomerOptions({ selected = '', phone = false } = {}) {
-  return [...customers]
-    .sort((a, b) => `${a.firstName || ''} ${a.lastName || ''}`.trim()
-      .localeCompare(`${b.firstName || ''} ${b.lastName || ''}`.trim(), undefined, { sensitivity: 'base' }))
-    .map(c => `<option value="${escHtml(String(c.id))}"${String(c.id) === String(selected) ? ' selected' : ''}>${
-      escName(c.firstName)} ${escName(c.lastName || '')}${
-      phone && c.phone ? ` · ${escHtml(fmtPhone(c.phone))}` : ''}</option>`)
-    .join('') + '<option value="__new_customer__">＋ New customer…</option>';
-}
-
-// Remember what a dropdown showed before it was touched, so choosing "＋ New…"
-// and then cancelling puts the previous pick back rather than blanking it.
-document.addEventListener('focusin', (e) => {
-  if (e.target instanceof HTMLSelectElement) e.target.dataset.kcPrev = e.target.value;
-}, true);
-
-// Capture phase on purpose: the select is put back to its previous value and
-// the event stopped BEFORE the form's own onchange runs, so no handler ever
-// sees "__new_customer__" as if it were a customer id.
-document.addEventListener('change', (e) => {
-  const sel = e.target;
-  if (!(sel instanceof HTMLSelectElement) || sel.value !== '__new_customer__') return;
-  sel.value = sel.dataset.kcPrev || '';
-  e.stopPropagation();
-  openNewCustomerCard(sel);
-}, true);
-
-let kcNewCustomerForSelect = null;
-
-function openNewCustomerCard(sel) {
-  kcNewCustomerForSelect = sel ? sel.id : null;
-  showStackedModal(`
-    <div class="modal-title">➕ New customer</div>
-    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
-      A name and a number is what the counter has when someone walks in. Address,
-      notes, passport and house account are all editable later from their record.
-    </div>
-    <div class="form-grid">
-      <div class="form-group"><label class="form-label">First name *</label>
-        <input class="form-input" id="ncFirst" type="text" autocomplete="off"></div>
-      <div class="form-group"><label class="form-label">Surname *</label>
-        <input class="form-input" id="ncLast" type="text" autocomplete="off"></div>
-      <div class="form-group form-full"><label class="form-label">Phone *</label>
-        <input class="form-input" id="ncPhone" type="tel" inputmode="tel" dir="ltr" placeholder="07911 123456" autocomplete="off"></div>
-    </div>
-    <div class="kc-quickadd-msg" id="ncMsg"></div>
-    <div class="modal-actions">
-      <span class="modal-actions-group">
-        <button class="btn btn-outline" onclick="closeStackedModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="createCustomerFromCard()">Save &amp; use</button>
-      </span>
-    </div>
-  `);
-  document.getElementById('ncFirst')?.focus();
-}
-
-async function createCustomerFromCard() {
-  const msg = document.getElementById('ncMsg');
-  const say = (html) => { if (msg) msg.innerHTML = html; };
-  const res = await kcCreateCustomerQuick({
-    firstName: document.getElementById('ncFirst')?.value,
-    lastName: document.getElementById('ncLast')?.value,
-    phone: document.getElementById('ncPhone')?.value,
-    onProgress: () => say('Saving…'),
-  });
-  if (res.error) return say(res.error);
-
-  const sel = kcNewCustomerForSelect ? document.getElementById(kcNewCustomerForSelect) : null;
-  const c = res.customer;
-  if (sel) {
-    if (![...sel.options].some(o => o.value === String(c.id))) {
-      const opt = document.createElement('option');
-      opt.value = String(c.id);
-      opt.textContent = `${c.firstName} ${c.lastName || ''}`.trim();
-      sel.insertBefore(opt, sel.querySelector('option[value="__new_customer__"]'));
-    }
-    sel.value = String(c.id);
-    sel.dataset.kcPrev = String(c.id);
-    // Now that it holds a real id, let the form react as it would to any pick.
-    sel.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-  closeStackedModal();
-  showToast(`✓ ${escName(c.firstName)} ${escName(c.lastName || '')} added`);
-}
+// There used to be two ways to do that for a customer: the quick-add panel
+// above, and a "＋ New customer…" option on every plain <select>, which had to
+// be intercepted in the capture phase so no form ever read the sentinel as an
+// id. The selects are gone, and so is all of that.
 
 /**
  * Create a customer from the three fields the counter can always fill in.
@@ -8101,12 +8174,12 @@ async function kcCreateCustomerQuick({ firstName, lastName, phone, onProgress = 
   return { customer: res.customer };
 }
 
-function kcComboCancelNew(valueId) {
+function kcPickerCancelNew(valueId) {
   document.getElementById(valueId + '_qa')?.remove();
-  kcComboEl(valueId, 'search')?.focus();
+  kcPickerFocus(valueId);
 }
 
-async function kcComboSaveNew(valueId) {
+async function kcPickerSaveNew(valueId) {
   const msg = document.getElementById(valueId + '_qaMsg');
   const say = (html) => { if (msg) msg.innerHTML = html; };
 
@@ -8121,51 +8194,13 @@ async function kcComboSaveNew(valueId) {
   if (res.clash) {
     return say(`${res.error}
       <button type="button" class="btn btn-outline btn-sm" style="margin-left:6px;"
-        onclick="kcComboSelect('${valueId}','${escHtml(String(res.clash.id))}');kcComboCancelNew('${valueId}')">Use them</button>`);
+        onclick="kcPickerSet('${escJs(valueId)}','${escJs(String(res.clash.id))}');kcPickerCancelNew('${escJs(valueId)}')">Use them</button>`);
   }
   if (res.error) return say(res.error);
 
-  kcComboSelect(valueId, res.customer.id);
-  kcComboCancelNew(valueId);
+  kcPickerSet(valueId, res.customer.id);
+  kcPickerCancelNew(valueId);
   showToast(`✓ ${escName(res.customer.firstName)} ${escName(res.customer.lastName || '')} added`);
-}
-
-function kcComboFilter(valueId) {
-  const q = (document.getElementById(valueId + '_search')?.value || '').toLowerCase().trim();
-  const dd = document.getElementById(valueId + '_dd');
-  if (!dd) return;
-  // Typing again invalidates the previous pick — the hidden value only holds
-  // an id the operator actually chose from the list.
-  document.getElementById(valueId).value = '';
-  // Nothing typed yet: the same "who has been in lately" list the rental
-  // picker opens with, rather than whatever order the array happens to be in.
-  const list = q
-    ? customers.filter(c =>
-        `${c.firstName} ${c.lastName || ''}`.toLowerCase().includes(q) || phoneDigitsMatch(q, c)
-      ).slice(0, 12)
-    : kcCustomersByRecency(8);
-  // "No match" used to be the end of the road: the operator had to abandon a
-  // half-filled rental/SIM/repair form, go to Customers, create the person,
-  // come back and start again — with someone standing at the counter. The
-  // dropdown now offers to create them from here (owner, 08-16, after watching
-  // a Lightspeed demo do exactly this).
-  const addRow = q
-    ? `<div class="customer-dropdown-item kc-combo-add" onmousedown="kcComboAddNew('${valueId}')">
-        ➕ Add <strong>${escName(q)}</strong> as a new customer</div>`
-    : '';
-  dd.innerHTML = (list.length
-    ? list.map(c => `<div class="customer-dropdown-item" onmousedown="kcComboPick('${valueId}','${c.id}')">
-        ${escName(c.firstName)} ${escName(c.lastName || '')} <span style="color:var(--muted);font-size:var(--fs-micro);">${escHtml(c.phone || '')}</span></div>`).join('')
-    : `<div class="customer-dropdown-item" style="color:var(--muted);">No match — check the spelling</div>`) + addRow;
-  dd.style.display = 'block';
-}
-function kcComboPick(valueId, id) {
-  const c = customers.find(x => x.id === id);
-  document.getElementById(valueId).value = id;
-  const s = document.getElementById(valueId + '_search');
-  if (s && c) s.value = `${capName(c.firstName)} ${capName(c.lastName || '')}`.trim();
-  const dd = document.getElementById(valueId + '_dd');
-  if (dd) dd.style.display = 'none';
 }
 
 // #8 — a customer's name on any card is a doorway to their customer card,
@@ -9075,8 +9110,6 @@ async function renderWalletTab() {
           ${e.customerId ? '<span class="feed-go">›</span>' : ''}
         </div>`).join('');
 
-  const customerOptions = kcCustomerOptions();
-
   content.innerHTML = `
     <div class="stats-row">
       <div class="stat-card"><div class="stat-label">Money In Today</div>
@@ -9092,9 +9125,10 @@ async function renderWalletTab() {
     </div>
 
     <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
-      <select class="form-input" id="wtCustomer" style="width:260px;min-height:0;padding:8px 12px;font-size:var(--fs-body);">
-        <option value="">Choose a customer…</option>${customerOptions}
-      </select>
+      <div style="width:260px;">${customerPicker('wtCustomer', {
+        placeholder: 'Choose a customer…', label: 'Customer',
+        style: 'min-height:0;padding:8px 12px;font-size:var(--fs-body);',
+      })}</div>
       <button class="btn btn-primary" onclick="(()=>{const id=document.getElementById('wtCustomer').value;
         if(!id){toast('Choose a customer first.','error');return;}openWalletModal(id)})()">💰 Record payment / credit</button>
       <button class="btn btn-outline" onclick="openCashupModal()" style="margin-left:auto;">🧾 Cash-up</button>
@@ -10440,14 +10474,12 @@ function openSimFormModal(id, preselectCustomerId = null, prefill = null) {
   const isEdit = !!id && !!s;
   const preselect = s && s.customerId ? s.customerId : preselectCustomerId;
 
-  const customerOptions = kcCustomerOptions({ selected: preselect });
-
   showDynamicModal(`
     <div class="modal-title">${isEdit ? '✏️ Edit SIM plan' : '➕ New SIM plan'}</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
-        ${customerComboHtml('simCustomer', preselect)}
+        ${customerPicker('simCustomer', { selected: preselect })}
         <span class="form-error" id="errSimCustomer">Required</span>
       </div>
       <div class="form-group">
@@ -11433,7 +11465,6 @@ async function openNewBookingModal(preselectCustomerId = null) {
     ticketsMenu = await window.api.getServiceMenu('tickets').catch(() => []);
     if (!Array.isArray(ticketsMenu)) ticketsMenu = [];
   }
-  const customerOptions = kcCustomerOptions({ selected: preselectCustomerId, phone: true });
   const startFee = ticketsMenu.find(s => /start fee/i.test(s.name));
   const svcOptions = ticketsMenu
     .filter(s => !/start fee/i.test(s.name))
@@ -11444,9 +11475,7 @@ async function openNewBookingModal(preselectCustomerId = null) {
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
-        <select class="form-input" id="bkCustomer" onchange="bkOnCustomerChange()">
-          <option value="">Select customer…</option>${customerOptions}
-        </select>
+        ${customerPicker('bkCustomer', { selected: preselectCustomerId, onPick: 'bkOnCustomerChange()' })}
       </div>
       <div class="form-group form-full">
         <label class="form-label">Passengers <span style="color:var(--muted);font-weight:400;">(name · date of birth · passport)</span></label>
@@ -12269,7 +12298,6 @@ async function renderRepairsTab() {
 }
 
 function openNewRepairModal(preselectCustomerId = null) {
-  const customerOptions = kcCustomerOptions({ selected: preselectCustomerId, phone: true });
   const serviceChecks = repairMenu.map(m => `
     <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:var(--fs-body);cursor:pointer;">
       <input type="checkbox" class="rpService" value="${escHtml(m.id)}"
@@ -12283,9 +12311,7 @@ function openNewRepairModal(preselectCustomerId = null) {
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
-        <select class="form-input" id="rpCustomer">
-          <option value="">Select customer…</option>${customerOptions}
-        </select>
+        ${customerPicker('rpCustomer', { selected: preselectCustomerId })}
       </div>
       <div class="form-group form-full">
         <label class="form-label">Device</label>
@@ -12567,8 +12593,7 @@ function svcTimerStop() {
   svcTimerSet(null);
   openNewServiceModal();
   setTimeout(() => {
-    const cust = document.getElementById('svCustomer');
-    if (cust && [...cust.options].some(o => o.value === t.customerId)) cust.value = t.customerId;
+    kcPickerSet('svCustomer', t.customerId);
     const svcSel = document.getElementById('svService');
     const hourly = onlineMenu.find(m => /per hour|hourly|regular online/i.test(m.name));
     if (svcSel && hourly) svcSel.value = String(hourly.id);
@@ -12752,22 +12777,18 @@ async function renderServicesTab() {
           <button class="btn btn-outline btn-sm" onclick="svcTimerDiscard()">✕ Discard</button>
         </div>`;
       }
-      const opts = [...customers]
-        .sort((a, b) => `${a.firstName || ''} ${a.lastName || ''}`.trim()
-          .localeCompare(`${b.firstName || ''} ${b.lastName || ''}`.trim(), undefined, { sensitivity: 'base' }))
-        .map(c => `<option value="${c.id}">${escName(c.firstName)} ${escName(c.lastName)}</option>`).join('');
       return `
         <div class="table-card" style="margin-bottom:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <span style="font-size:20px;">⏱</span>
           <span style="font-size:var(--fs-body);color:var(--muted);">Hourly help timer (£${settingNum('online_hourly_rate', 45)}/hr, 10-min minimum)</span>
-          <!-- 230px is what "Who are you helping?" needs in this type once the
-               select's own arrow is allowed for. Below that the row squeezed it
-               to 189px and truncated its own prompt to "Who are you helpi" —
-               oddly only at 390px, since by 320 the Start button had already
-               wrapped away and left the select the whole row. -->
-          <select class="form-input" id="svcTimerCustomer" style="flex:1;min-width:230px;min-height:0;padding:8px 12px;">
-            <option value="">Who are you helping?</option>${opts}
-          </select>
+          <!-- 230px is what "Who are you helping?" needs in this type. Below
+               that the row squeezed it to 189px and truncated its own prompt to
+               "Who are you helpi" — oddly only at 390px, since by 320 the Start
+               button had already wrapped away and left it the whole row. -->
+          <div style="flex:1;min-width:230px;">${customerPicker('svcTimerCustomer', {
+            placeholder: 'Who are you helping?', label: 'Who are you helping?',
+            style: 'min-height:0;padding:8px 12px;',
+          })}</div>
           <button class="btn btn-primary" onclick="svcTimerStart()">▶ Start timer</button>
         </div>`;
     })()}
@@ -12816,7 +12837,6 @@ async function openNewServiceModal(preselectCustomerId = null) {
     onlineMenu = await window.api.getServiceMenu('online').catch(() => []);
     if (!Array.isArray(onlineMenu)) onlineMenu = [];
   }
-  const customerOptions = kcCustomerOptions({ selected: preselectCustomerId, phone: true });
   const svcOptions = onlineMenu.map(m =>
     `<option value="${escHtml(String(m.id))}">${escHtml(m.name)} — ${fmtGbp(m.price)}${m.repeatPrice !== null ? ` (${onlineRepeatFrom()}+ ${fmtGbp(m.repeatPrice)})` : ''}</option>`).join('');
   showDynamicModal(`
@@ -12824,7 +12844,7 @@ async function openNewServiceModal(preselectCustomerId = null) {
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
-        <select class="form-input" id="svCustomer"><option value="">Select customer…</option>${customerOptions}</select>
+        ${customerPicker('svCustomer', { selected: preselectCustomerId })}
       </div>
       <div class="form-group form-full">
         <label class="form-label">Service *</label>
@@ -13783,7 +13803,6 @@ function renderPosView() {
   // Full-screen takeover: hide the sidebar/topbar so the till fills the
   // display like a real POS. Any tab switch clears it (renderTab guard).
   document.body.classList.add('pos-mode');
-  const customerOptions = kcCustomerOptions();
   const cats = [...new Set(shopItems.filter(i => i.active && i.quantity > 0).map(i => i.category))];
   const parkedN = posParkedCount();
   content.innerHTML = `
@@ -13815,9 +13834,10 @@ function renderPosView() {
         <div id="posLastSale"></div>
         <div id="posBasket" class="pos-receipt"></div>
         <div class="pos-summary">
-          <select class="form-input" id="posCustomer" onchange="posCustomerChange()" style="width:100%;min-height:0;padding:8px 12px;margin-bottom:8px;">
-            <option value="walkin">🚶 Walk-in</option>
-            ${customerOptions}
+          ${customerPicker('posCustomer', {
+            special: { value: 'walkin', label: '🚶 Walk-in' }, label: 'Customer',
+            onPick: 'posCustomerChange()', style: 'min-height:0;padding:8px 12px;',
+          })}
           </select>
           <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
             <label style="display:flex;align-items:center;gap:6px;font-size:var(--fs-body);cursor:pointer;flex-shrink:0;">
@@ -13930,7 +13950,10 @@ function posCustomerChange() {
   const c = id && id !== 'walkin' ? customers.find(x => String(x.id) === String(id)) : null;
   if (c?.defaultPaymentMethod) posSetMethod(c.defaultPaymentMethod);
   posRenderTender();
-  document.getElementById('posScan')?.focus();
+  // Straight back to scanning once someone is chosen — but not while the
+  // operator is still typing a name, which also lands here the moment the
+  // first keystroke invalidates the previous pick.
+  if (document.activeElement?.id !== 'posCustomer_search') document.getElementById('posScan')?.focus();
 }
 
 // Update on wallet-field keystrokes WITHOUT re-rendering (keeps the field
@@ -14168,7 +14191,7 @@ function posResumeSale(id) {
   posBasket = (target.basket || []).map(l => ({ itemId: l.itemId, qty: l.qty, imei: l.imei || '' }));
   posMethod = target.method || 'cash';
   posWallet = 0; posLastSale = null;
-  const custEl = document.getElementById('posCustomer'); if (custEl) custEl.value = target.customerId || 'walkin';
+  kcPickerSet('posCustomer', target.customerId || 'walkin');
   const paidEl = document.getElementById('posPaid'); if (paidEl) paidEl.checked = target.paidNow !== false;
   const methodsEl = document.getElementById('posMethods'); if (methodsEl) methodsEl.innerHTML = posMethodsHtml();
   posRenderBasket(); posShowLastSale(); posRenderTender(); posSyncParkedButton();
@@ -14574,7 +14597,6 @@ async function renderKolTorahTab() {
     .filter(s => Date.now() - new Date(s.createdAt).getTime() < 30 * 86400000)
     .reduce((s, x) => s + x.received, 0);
 
-  const customerOptions = kcCustomerOptions();
   const titleOptions = activeTitles.map(t =>
     `<option value="${t.id}">${escHtml(t.name)}${t.price ? ` — ${fmtGbp(t.price)}` : ''}</option>`).join('');
 
@@ -14635,9 +14657,10 @@ async function renderKolTorahTab() {
         ${editing ? `
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0;padding:8px;border-radius:6px;background:var(--bg-secondary);">
           <input class="form-input" id="ktShulContact_${s.id}" value="${escHtml(s.contact || '')}" placeholder="Contact / gabbai" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:170px;">
-          <select class="form-input" id="ktShulCust_${s.id}" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);max-width:220px;">
-            <option value="">No wallet link</option>${kcCustomerOptions({ selected: s.customerId })}
-          </select>
+          <div style="max-width:220px;">${customerPicker(`ktShulCust_${s.id}`, {
+            selected: s.customerId, special: { value: '', label: 'No wallet link' },
+            label: 'Wallet link', style: 'min-height:0;padding:6px 9px;font-size:var(--fs-small);',
+          })}</div>
           <button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);" onclick="ktSaveShul('${s.id}')">💾 Save</button>
         </div>` : ''}
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
@@ -14692,8 +14715,10 @@ async function renderKolTorahTab() {
           unchanged — ktAddJob() reads the same fields. */}
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;padding:10px 12px;border:1px dashed var(--border);border-radius:8px;">
       <span style="font-size:var(--fs-small);font-weight:700;color:var(--accent);">➕ New job</span>
-      <select class="form-input" id="ktJobCust" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:150px;max-width:180px;">
-        <option value="walkin">🚶 Walk-in</option>${customerOptions}</select>
+      <div style="min-width:150px;max-width:180px;">${customerPicker('ktJobCust', {
+        special: { value: 'walkin', label: '🚶 Walk-in' }, label: 'Customer for this job',
+        style: 'min-height:0;padding:6px 9px;font-size:var(--fs-small);',
+      })}</div>
       <input class="form-input" id="ktJobName" placeholder="Name if walk-in" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:140px;max-width:180px;">
       <select class="form-input" id="ktJobKind" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:132px;">
         ${Object.entries(KT_JOB_KINDS).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select>
@@ -14716,9 +14741,11 @@ async function renderKolTorahTab() {
       <span style="font-size:var(--fs-small);font-weight:700;color:var(--accent);">➕ Add a shul</span>
       <input class="form-input" id="ktNewShulName" placeholder="Shul name" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:170px;">
       <input class="form-input" id="ktNewShulContact" placeholder="Contact / gabbai (optional)" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:170px;">
-      <select class="form-input" id="ktNewShulCust" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);max-width:210px;" title="Link a customer record so settlements hit the ledger">
-        <option value="">No wallet link yet</option>${customerOptions}
-      </select>
+      <div style="max-width:210px;" title="Link a customer record so settlements hit the ledger">${
+        customerPicker('ktNewShulCust', {
+          special: { value: '', label: 'No wallet link yet' }, label: 'Wallet link',
+          style: 'min-height:0;padding:6px 9px;font-size:var(--fs-small);',
+        })}</div>
       <button class="btn btn-outline btn-sm" onclick="ktSaveShul()">+ Add shul</button>
     </div>
 
@@ -14757,7 +14784,7 @@ async function renderKolTorahTab() {
 }
 
 function ktFocusNewJob() {
-  const el = document.getElementById('ktJobCust');
+  const el = document.getElementById('ktJobCust_search');
   if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.focus(); }
 }
 
@@ -15773,7 +15800,7 @@ const PALETTE_COMMANDS = [
   { icon: '🖨️', label: 'Charge a service', sub: 'create', run: () => openOnTab('services', openNewServiceModal) },
   { icon: '📦', label: 'Add Stock Item', sub: 'create', run: () => openOnTab('shop', openStockItemModal) },
   // ── Tools ──
-  { icon: '⏱', label: 'Start help timer', sub: 'tool', run: () => openOnTab('services', () => document.getElementById('svcTimerCustomer')?.focus()) },
+  { icon: '⏱', label: 'Start help timer', sub: 'tool', run: () => openOnTab('services', () => kcPickerFocus('svcTimerCustomer')) },
   { icon: '🛒', label: 'Point of Sale (Till)', sub: 'tool', keys: ['pos', 'till', 'sell', 'checkout'], run: () => goToTab('shop') },
   { icon: '📇', label: 'Manage Phone Inventory', sub: 'tool', run: () => openOnTab('rentals', openManagePhonesModal) },
   { icon: '🧾', label: 'Cash-up (Z-report)', sub: 'tool', keys: ['cashup', 'z report', 'eod', 'end of day', 'takings'], run: () => openCashupModal() },
@@ -17870,7 +17897,6 @@ async function renderVirtualTab() {
 }
 
 function openNewVNModal(preselectCustomerId) {
-  const customerOptions = kcCustomerOptions({ selected: preselectCustomerId });
   showDynamicModal(`
     <div class="modal-title">🔢 New Virtual Number</div>
     <div class="form-grid">
@@ -17880,9 +17906,8 @@ function openNewVNModal(preselectCustomerId) {
       </div>
       <div class="form-group">
         <label class="form-label">Customer</label>
-        <select class="form-input" id="vnCustomer">
-          <option value="">— unassigned —</option>${customerOptions}
-        </select>
+        ${customerPicker('vnCustomer', { selected: preselectCustomerId,
+          special: { value: '', label: '— unassigned —' } })}
       </div>
       <div class="form-group">
         <label class="form-label">Platform / IVR provider</label>

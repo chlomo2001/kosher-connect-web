@@ -861,3 +861,33 @@ data not glyph-sniffing. Owner live-judges on the dev branch before any ship
 | SIM Plans stacks too — 884px inside a 360px viewport. Four labels (`SIM`, `Plan`, `Renews`, `Payment`), because a bare number next to a bare number next to a bare date is where a stacked table stops being readable. The plan column's clip-to-160px moved out of an inline style into `.kc-cell-clip`, so on a card it says the whole plan | a007663 | SIM Plans · list at ≤560px |
 | Kol Torah's two tables stack: conversion jobs (+369px) and the titles catalogue (+391px). The titles table is a row of bare inputs, so stacked it becomes what it always was on a phone — an edit form, one field per line under its own word | 0c85ed9 | Kol Torah · jobs + titles at ≤560px |
 | Phone inventory (+251px) stacks too, which leaves no list in the app scrolling sideways on a phone. New `.kc-drop-sm`: pool and pool-expiry are a USA-only fact, so on the other rows those two cells leave the card rather than say "N/A" twice | 71ba0b3 | Rentals · phone inventory at ≤560px |
+
+## Owner request — 2026-08-17: one customer picker
+
+> "something's wrong with this dropdown…. i need same customer dropdown logic
+> throughout the system!…. copy from other places in our app, or even better,
+> make it should always uses from the same place."
+
+The screenshot was the Services help timer: 609 names in alphabetical order, two
+Fishel Thalers and two Frishmans with nothing to tell them apart, no way to type.
+
+There were **three** implementations of "pick a customer" — a plain `<select>`
+in ten places, a bespoke type-ahead on the rental form, and a generic combo used
+by SIM plans alone — plus a twelfth hand-rolled option list on the timer itself.
+Now there is one: `customerPicker()` in `public/main.js`.
+
+| | |
+|---|---|
+| Pickers now built by the one function | 11 (wallet, help timer, charge a service, rental, SIM plan, booking, repair, virtual number, Kol Torah job, Kol Torah shul, till) |
+| Lines of picker code deleted | `kcCustomerOptions`, `customerComboHtml`, `filterCustomerDropdown`, `selectRentalCustomer`, `rentalPickerKey`, `customerDropdownRow`, `KC_COMBO_ADAPTERS`, `openNewCustomerCard`, `createCustomerFromCard`, the `__new_customer__` capture-phase interceptor |
+| What every picker gained | recency-first list · search by phone digits · the number beside each name · arrow keys + Enter · a ✓ line naming who was picked · quick-add · drop-up/scroll instead of clipping |
+
+Three real bugs fell out of the unification, each caught by the new harness:
+`.table-card { overflow: hidden }` was clipping the timer's list to two pixels;
+the till's list opened on a search for the words "🚶 Walk-in" and found nobody;
+and clicking into an already-linked picker used to clear the pick (which is how
+a shul's wallet link was being silently unset on edit).
+
+New: `node ops/harness/picker.mjs` drives all eleven and fails if a twelfth ever
+turns up hand-built. Verified: gate (429 tests ×2 TZ + build) exit 0, picker
+harness green, modals/names/focus/contrast/targets sweeps clean.
