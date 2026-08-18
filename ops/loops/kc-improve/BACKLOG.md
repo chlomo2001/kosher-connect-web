@@ -1424,3 +1424,37 @@ the recommendation instead:
   Kayak, Momondo, Flight Network, Booking.com), with a test that an agent NOT on
   the list still gets in on the phrases — the list is a convenience, not the
   gate, and the test is there to stop it quietly becoming the gate again.
+
+## Round trips, and saying what was read (18 Aug)
+
+Owner set up the ch7023518 filter — Gmail's own forwarding confirmation landed
+at 10:13, which is the alias and the webhook proven end to end. Then: *"cant we
+include roundtrips?! does the parser know how many passengers in booking and
+suggest to confirm accordingly?"*
+
+**Round trips are one booking with two dates.** `bookings.return_date`, nullable,
+with a check constraint that a trip cannot come back before it leaves. One row
+and not two on purpose: a return is one reference, one price and one booking
+fee, so splitting it would either charge the fee twice or need a rule about
+which half carries it — and the customer would appear twice in the register for
+one trip. Every read that filters on `travel_date` is untouched; the outbound
+date is still when the trip starts. The parser had been reading the return leg
+all along and writing it into the notes as prose, where nothing could use it;
+it now goes in its own field, on the New Booking form, the edit form and the
+register (`12 Sept ↩ / back 26 Sept`).
+
+**Passengers: it knew, and that was the problem.** The parser extracts the
+names, fills the passenger editor and sets the fee calculator's count — and the
+tiered fee therefore already prices for all of them the moment a service is
+chosen. Nothing on the screen said so, which for the person confirming is the
+same as it not happening. The form now says "**2 passengers** read from the
+email — pick the service below and the fee prices for all 2."
+
+**What it deliberately does NOT do is pick the service.** £20 ready-planned,
+£25 standard and £30 self-transfer differ by how much work the shop did, and no
+email can answer that. Auto-selecting one would be the app guessing at money,
+which is the single thing this whole feature refuses to do.
+
+**Still open:** the sweep's flight reminders and the check-in prompt all key on
+the outbound date, so nothing prompts the check-in for the flight home. The date
+is stored now, which was the hard part.

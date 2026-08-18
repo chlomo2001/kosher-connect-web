@@ -11813,7 +11813,7 @@ function tmCardHtml(t) {
         <div class="tm-pax">${t.passengers.length
           ? t.passengers.map(p => escName(p)).join(' · ')
           : '<span class="tm-gap">no passenger name in the mail</span>'}</div>
-        ${t.returnDate ? `<div class="tm-pax">Return leg ${escHtml(fmtDate(t.returnDate))} — that is a second booking.</div>` : ''}
+        ${t.returnDate ? `<div class="tm-pax">↩ Returns ${escHtml(fmtDate(t.returnDate))} — carried onto the booking.</div>` : ''}
         <div class="tm-cust">${who}</div>
         ${t.missing.length ? `<div class="tm-missing">The red parts didn’t parse — fill them in on the form.</div>` : ''}
       </div>
@@ -11852,9 +11852,13 @@ function tmBook(id) {
     // and converting it silently at whatever rate would be a made-up number.
     price: t.price !== null && (!t.currency || t.currency === 'GBP') ? t.price : null,
     passengers: t.passengers,
+    // The return leg used to be written into the notes as prose, because there
+    // was nowhere else for it. It has its own field now (owner, 18 Aug: "cant
+    // we include roundtrips?!"), so the booking knows when they are back
+    // instead of a human re-reading a sentence.
+    returnDate: t.returnDate,
     notes: [
       t.reference ? `From ${t.airline || 'airline'} email, ref ${t.reference}` : 'From airline email',
-      t.returnDate ? `return ${fmtDate(t.returnDate)}` : '',
       t.price !== null && t.currency && t.currency !== 'GBP' ? `airline charged ${t.currency} ${t.price.toFixed(2)}` : '',
     ].filter(Boolean).join(' · '),
   });
@@ -11961,8 +11965,11 @@ function renderBookingsTab() {
             <div class="customer-email">${escName(b.passenger || '')}${(b.passengers || []).length ? ` · 👥 ${b.passengers.length}` : ''}</div></td>
         <td style="white-space:nowrap;">${escHtml(b.route)}</td>
         <td>${escHtml(b.airline || '—')}<div class="customer-email">${escHtml(b.bookingReference || '')}</div></td>
-        <td class="kc-date">${b.travelDate ? fmtDate(b.travelDate) : '—'}
-            <div class="customer-email">${escHtml(b.departureTime || '')}${b.arrivalTime ? ' → ' + escHtml(b.arrivalTime) : ''}</div></td>
+        <td class="kc-date">${b.travelDate ? fmtDate(b.travelDate) : '—'}${
+          b.returnDate ? `<span title="Returns ${escHtml(fmtDate(b.returnDate))}"> ↩</span>` : ''}
+            <div class="customer-email">${b.returnDate
+              ? `back ${escHtml(fmtDate(b.returnDate))}`
+              : `${escHtml(b.departureTime || '')}${b.arrivalTime ? ' → ' + escHtml(b.arrivalTime) : ''}`}</div></td>
         <td>${fmtGbp((b.price || 0))}</td>
         <td>${fmtGbp((b.bookingFee || 0))}</td>
         <td>${bookingStatusBadge(b.status)}</td>
@@ -12193,7 +12200,16 @@ async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
     <div class="modal-title">✈️ ${prefill ? 'Confirm booking details' : 'New booking'}</div>
     ${prefill ? `<div class="tm-prefill">✉️ Filled in from the ${escHtml(prefill.airline || 'airline')} email${
       prefill.bookingReference ? ` · ${escHtml(prefill.bookingReference)}` : ''
-    } — this is what the app read, not what it decided. Change anything that is wrong, then save.</div>` : ''}
+    } — this is what the app read, not what it decided. Change anything that is wrong, then save.${
+      /* The fee is tiered per passenger and the email says how many. The
+         calculator already prices for that count — but only once somebody
+         picks the service, and nothing said so. Which service (£20 ready
+         planned / £25 standard / £30 self-transfer) is a judgement about how
+         much work the shop did, and no email can answer it. */
+      (prefill.passengers || []).length > 1
+        ? `<br><strong>${(prefill.passengers || []).length} passengers</strong> read from the email — pick the service below and the fee prices for all ${(prefill.passengers || []).length}.`
+        : ''
+    }${prefill.returnDate ? `<br>↩ Round trip — returning ${escHtml(fmtDate(prefill.returnDate))}.` : ''}</div>` : ''}
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
@@ -12222,6 +12238,14 @@ async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
         <label class="form-label">Travel Date *</label>
         <input class="form-input" type="date" id="bkTravelDate" onchange="showHebrewDate('bkTravelDate','bkTravelHeb')">
         <div class="hebrew-date" id="bkTravelHeb"></div>
+      </div>
+      ${/* One booking, two dates — a return is one purchase with one reference
+           and one fee, not two rows in the register. Optional, because most of
+           the book is one-way. */''}
+      <div class="form-group">
+        <label class="form-label">Return Date <span style="color:var(--muted);font-weight:400;">(round trip only)</span></label>
+        <input class="form-input" type="date" id="bkReturnDate" onchange="showHebrewDate('bkReturnDate','bkReturnHeb')">
+        <div class="hebrew-date" id="bkReturnHeb"></div>
       </div>
       <div class="form-group">
         <label class="form-label">Departure / Arrival</label>
@@ -12316,11 +12340,13 @@ async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
     put('bkAirline', prefill.airline);
     put('bkRef', prefill.bookingReference);
     put('bkTravelDate', prefill.travelDate);
+    put('bkReturnDate', prefill.returnDate);
     put('bkDep', prefill.departureTime);
     put('bkArr', prefill.arrivalTime);
     put('bkPrice', prefill.price === null || prefill.price === undefined ? '' : String(prefill.price));
     put('bkNotes', prefill.notes);
     if (prefill.travelDate) showHebrewDate('bkTravelDate', 'bkTravelHeb');
+    if (prefill.returnDate) showHebrewDate('bkReturnDate', 'bkReturnHeb');
     // The fee calculator counts passengers, and the email just supplied them.
     const pax = document.getElementById('bkPax');
     if (pax) pax.value = Math.max(1, bkPassengers.length);
@@ -12447,6 +12473,7 @@ async function saveNewBooking() {
     airline:          document.getElementById('bkAirline').value.trim(),
     bookingReference: document.getElementById('bkRef').value.trim(),
     travelDate:       document.getElementById('bkTravelDate').value,
+    returnDate:       document.getElementById('bkReturnDate')?.value || '',
     departureTime:    document.getElementById('bkDep').value,
     arrivalTime:      document.getElementById('bkArr').value,
     price:            parseFloat(document.getElementById('bkPrice').value),
@@ -12464,6 +12491,9 @@ async function saveNewBooking() {
   if (!payload.customerId) { toast('Select a customer.', 'error'); return; }
   if (!payload.route)      { toast('Route is required.', 'error'); return; }
   if (!payload.travelDate) { toast('Travel date is required.', 'error'); return; }
+  if (payload.returnDate && payload.returnDate < payload.travelDate) {
+    toast('The return date is before the outbound date.', 'error'); return;
+  }
   if (!Number.isFinite(payload.price) || payload.price < 0) { toast('Enter a valid ticket price.', 'error'); return; }
 
   // Idempotent booking: one token for this submit (dedupes a retry server-side) and
@@ -12707,6 +12737,8 @@ function openEditBookingModal(id) {
         <input class="form-input" id="ebRef" value="${escHtml(b.bookingReference || '')}"></div>
       <div class="form-group"><label class="form-label">Travel date</label>
         <input class="form-input" type="date" id="ebTravel" value="${escHtml(b.travelDate || '')}"></div>
+      <div class="form-group"><label class="form-label">Return date <span style="color:var(--muted);font-weight:400;">(round trip only)</span></label>
+        <input class="form-input" type="date" id="ebReturn" value="${escHtml(b.returnDate || '')}"></div>
       <div class="form-group"><label class="form-label">Departure / Arrival</label>
         <div style="display:flex;gap:6px;">
           <input class="form-input" type="time" id="ebDep" value="${escHtml(b.departureTime || '')}">
@@ -12755,6 +12787,7 @@ async function saveEditBooking(id) {
     airline: document.getElementById('ebAirline').value.trim(),
     bookingReference: document.getElementById('ebRef').value.trim(),
     travelDate: document.getElementById('ebTravel').value,
+    returnDate: document.getElementById('ebReturn')?.value || '',
     departureTime: document.getElementById('ebDep').value,
     arrivalTime: document.getElementById('ebArr').value,
     status: document.getElementById('ebStatus').value,

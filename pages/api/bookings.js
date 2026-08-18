@@ -50,6 +50,7 @@ function toAppFull(row) {
     destinationCountry: row.destination_country || '',
     bookingReference: row.booking_reference || '',
     travelDate: row.travel_date || '',
+    returnDate: row.return_date || '',
     departureTime: row.departure_time ? String(row.departure_time).slice(0, 5) : '',
     arrivalTime: row.arrival_time ? String(row.arrival_time).slice(0, 5) : '',
     price: row.price === null ? 0 : Number(row.price),
@@ -199,10 +200,16 @@ async function handler(req, res) {
       if (!b.travelDate) return res.status(400).json({ success: false, error: 'Travel date is required.' })
       // Booking-level dates hit Postgres `date` columns — ISO only, or a slash
       // date parses month-first (sweep 2026-08-02 #22).
-      for (const [label, v] of [['Travel date', b.travelDate], ['Check-in date', b.checkinDate], ['Passport expiry', b.passportExpiry]]) {
+      for (const [label, v] of [['Travel date', b.travelDate], ['Return date', b.returnDate],
+        ['Check-in date', b.checkinDate], ['Passport expiry', b.passportExpiry]]) {
         if (v && !ISO_DATE.test(String(v))) {
           return res.status(400).json({ success: false, error: `${label} must be a full date (year-month-day).` })
         }
+      }
+      // The database enforces this too; catching it here is the difference
+      // between a sentence and a constraint-violation stack trace.
+      if (b.returnDate && b.travelDate && b.returnDate < b.travelDate) {
+        return res.status(400).json({ success: false, error: 'The return date is before the outbound date.' })
       }
       if (!Number.isFinite(price) || price < 0) return res.status(400).json({ success: false, error: 'Price must be a number ≥ 0.' })
       if (fee < 0) return res.status(400).json({ success: false, error: 'Booking fee cannot be negative.' })
@@ -263,6 +270,7 @@ async function handler(req, res) {
             destination_country: b.destinationCountry || null,
             booking_reference: b.bookingReference || null,
             travel_date: b.travelDate,
+            return_date: b.returnDate || null,
             departure_time: b.departureTime || null,
             arrival_time: b.arrivalTime || null,
             price,
@@ -370,8 +378,8 @@ async function handler(req, res) {
       // MONEY (price/booking_fee) stays immutable once charged — corrections
       // go through an explicit wallet adjustment, so the ledger stays honest.
       const { id, status, notes, passengers, checkinDone, checkinBy, checkinDate,
-        passenger, route, airline, destinationCountry, bookingReference, travelDate, departureTime,
-        arrivalTime, passportOnFile, passportExpiry } = req.body || {}
+        passenger, route, airline, destinationCountry, bookingReference, travelDate, returnDate,
+        departureTime, arrivalTime, passportOnFile, passportExpiry } = req.body || {}
       if (!id) return res.status(400).json({ success: false, error: 'Booking id is required.' })
       const patch = {}
       if (status !== undefined) {
@@ -390,6 +398,12 @@ async function handler(req, res) {
       if (destinationCountry !== undefined) patch.destination_country = destinationCountry || null
       if (bookingReference !== undefined) patch.booking_reference = bookingReference || null
       if (travelDate !== undefined) patch.travel_date = travelDate || null
+      if (returnDate !== undefined) {
+        if (returnDate && !ISO_DATE.test(String(returnDate))) {
+          return res.status(400).json({ success: false, error: 'Return date must be a full date (year-month-day).' })
+        }
+        patch.return_date = returnDate || null
+      }
       if (departureTime !== undefined) patch.departure_time = departureTime || null
       if (arrivalTime !== undefined) patch.arrival_time = arrivalTime || null
       if (passportOnFile !== undefined) patch.passport_on_file = !!passportOnFile

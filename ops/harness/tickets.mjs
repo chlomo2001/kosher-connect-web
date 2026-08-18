@@ -71,7 +71,7 @@ const form = await p.evaluate(() => {
   const v = (id) => document.getElementById(id)?.value || ''
   return {
     route: v('bkRoute'), airline: v('bkAirline'), ref: v('bkRef'),
-    date: v('bkTravelDate'), dep: v('bkDep'), arr: v('bkArr'), price: v('bkPrice'),
+    date: v('bkTravelDate'), ret: v('bkReturnDate'), dep: v('bkDep'), arr: v('bkArr'), price: v('bkPrice'),
     notes: v('bkNotes'),
     customer: document.getElementById('bkCustomer')?.value || '',
     pax: [...document.querySelectorAll('#bkPaxEditor input')]
@@ -87,8 +87,28 @@ say(form.price === '428.6' || form.price === '428.60', `price did not carry over
 say(form.customer === 'c1', `the matched customer should be preselected — got "${form.customer}"`)
 say(form.pax.includes('Menachem Adler') && form.pax.includes('Rivka Adler'),
   `both passengers should be in the editor — got ${JSON.stringify(form.pax)}`)
-say(/return 26/i.test(form.notes),
-  `the return leg is a second booking and the note should say so — got "${form.notes}"`)
+say(form.ret === '2026-09-26',
+  `the return leg belongs in its own field, not prose in the notes — got "${form.ret}"`)
+say(!/return/i.test(form.notes),
+  `the notes should no longer carry the return as prose — got "${form.notes}"`)
+
+// ── the count and the round trip are SAID, not just filled in ─────────────
+// Owner, 18 Aug: "does the parser know how many passengers in booking and
+// suggest to confirm accordingly?" It knew, and it set the fee calculator's
+// count — but nothing on the screen said so, which is the same as not knowing.
+say(await p.evaluate(() => {
+  const banner = document.querySelector('#dynamicModal .tm-prefill')
+  return !!banner && /2 passengers/.test(banner.textContent) &&
+    /prices for all 2/.test(banner.textContent)
+}), 'a two-passenger ticket should say so, and say the fee will price for both')
+say(await p.evaluate(() => {
+  const banner = document.querySelector('#dynamicModal .tm-prefill')
+  return !!banner && /Round trip/i.test(banner.textContent)
+}), 'a round trip should be named on the form, not left to be noticed')
+say(await p.evaluate(() => {
+  // The count the tiered fee is computed from.
+  return document.getElementById('bkPax')?.value === '2'
+}), 'the fee calculator should already be counting both passengers')
 
 // ── the form admits it filled itself in ───────────────────────────────────
 say(await p.evaluate(() => {

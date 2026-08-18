@@ -145,8 +145,10 @@ form offline, so a fix for one airline cannot quietly break another.
 
 ## What is not built
 
-- **No return legs.** A booking holds one travel date, so a return is a second
-  booking. The card says so when the mail mentions one; it does not raise it.
+- **No second check-in reminder for the return.** A round trip is one booking
+  with two dates since 18 Aug, and the sweep's reminders all key on the outbound
+  — so nothing prompts the check-in 24h before the flight home. The date is
+  stored, which is the hard part; the reminder is not built.
 - **No refunds.** A cancellation email raises a high-priority task and stops.
   What happens to the customer's money is a decision, and the July Wizz Air
   reconcile is the reason it will stay one.
