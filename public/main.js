@@ -4675,9 +4675,6 @@ function openManagePhonesModal() {
             <span class="badge ${p.status==='rented'?'badge-rental':'badge-active'}">${p.status}</span>
           </div>`).join('')}
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
-    </div>
   `);
 }
 
@@ -5230,7 +5227,6 @@ function openPoolsModal() {
     ${names.length ? names.map(poolCard).join('')
       : `<div class="empty-state"><div class="emoji">📶</div><p>No pools yet.</p><small>Add the first pool above, then pick it on each phone.</small></div>`}
     ${unpooled ? `<div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">${unpooled} USA phone${unpooled === 1 ? '' : 's'} have no pool yet — open ✏️ Edit Phone to assign one.</div>` : ''}
-    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
   `);
 }
 
@@ -8028,7 +8024,6 @@ function openElidModal(customerId) {
       <button class="btn btn-primary" id="elidGo" onclick="elidAddLine('${cid}')">Add &amp; look up</button>
     </div>
     <div id="elidAddMsg" style="font-size:var(--fs-body);margin-top:6px;"></div>
-    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
   `);
   renderElidLines(customerId);
 }
@@ -8932,7 +8927,6 @@ function renderDupScan(j) {
       amounts never change. Same name is not proof: brothers share names, so check what each side holds first.
     </div>
     <div class="dup-list">${rows}</div>
-    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
   `);
 }
 
@@ -10919,6 +10913,7 @@ function renderSimsTab() {
         <option value="active" ${simFilterStatus==='active'?'selected':''}>Active only</option>
         <option value="renewing" ${simFilterStatus==='renewing'?'selected':''}>Renewing (today/tomorrow)</option>
         <option value="week" ${simFilterStatus==='week'?'selected':''}>Renews this week</option>
+        <option value="late" ${simFilterStatus==='late'?'selected':''}>⏰ Past renewal date</option>
       </select>
       ${simBar}
       <span id="simCount" style="font-size:var(--fs-small);color:var(--muted);"></span>
@@ -11005,6 +11000,10 @@ function renderSimRows() {
     if (simFilterStatus === 'active' && s.status !== 'active') return false;
     if (simFilterStatus === 'renewing' && !(s.renewalDate === today || s.renewalDate === tomorrow)) return false;
     if (simFilterStatus === 'week' && !(s.status === 'active' && s.renewalDate && s.renewalDate >= today && s.renewalDate <= in7)) return false;
+    // The overdue half. The dashboard's SIM card and its attention row both
+    // land here — owner, 19 Aug: the link "takes me to the normal sims tab,
+    // without even the ability to filter the overdue ones".
+    if (simFilterStatus === 'late' && !(s.status === 'active' && s.renewalDate && s.renewalDate < today)) return false;
     return true;
   });
 
@@ -12587,7 +12586,6 @@ function tmShowMail(id) {
     <div style="font-size:var(--fs-micro);color:var(--muted);margin-bottom:8px;">
       From ${escHtml(t.from || 'unknown')}${t.receivedAt ? ' · ' + escHtml(fmtDate(t.receivedAt)) : ''}</div>
     <pre class="tm-body" data-kc-scroller>${escHtml(t.body || '(the message had no readable text)')}</pre>
-    <div class="modal-actions"><button class="btn btn-outline" onclick="closeStackedModal()">Close</button></div>
   `);
 }
 
@@ -17047,8 +17045,8 @@ let bizCustom = null;   // { from, to, now, prev, prevLabel }
 async function openBusinessSummary() {
   showDynamicModal(`
     <div class="modal-title">📊 Business summary</div>
-    <div id="bizSummaryBody" style="color:var(--muted);padding:20px 4px;">Loading…</div>
-    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>`);
+    <div id="bizSummaryBody" style="color:var(--muted);padding:20px 4px;">Loading…</div>`);
+
   const rep = (from) => kcFetch('/api/ledger?report=1&from=' + from)
     .then(r => r.json()).catch(() => null);
   const day = (back) => localISO(new Date(Date.now() - back * 86400000));
@@ -17429,9 +17427,6 @@ function openHowToModal(prefill = '') {
       <a class="btn btn-outline btn-sm" href="/manual" target="_blank" rel="noopener">📖 The full manual</a>
     </div>
     <div id="howToOut" style="margin-top:12px;"></div>
-    <div class="modal-actions">
-      <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
-    </div>
   `);
   setTimeout(() => {
     const i = document.getElementById('howToSearch');
@@ -17534,7 +17529,6 @@ function openAssistantModal(prefill) {
       <button class="btn btn-primary" id="askGo" onclick="runAssistant()">Ask</button>
     </div>
     <div id="askOut" style="margin-top:14px;"></div>
-    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
   `);
   setTimeout(() => { const i = document.getElementById('askInput'); if (i) { if (prefill) i.value = prefill; i.focus(); if (prefill) runAssistant(); } }, 40);
 }
@@ -19483,6 +19477,7 @@ function addCustomerFromTask(id) {
 // the problem can actually be dealt with. Uses the real sidebar click so the
 // active nav state stays consistent.
 let dashFeedActions = [];
+let dashMetricActions = [];   // a metric card that opens its tab WITH its filter
 function goToTab(tab, opts = {}) {
   if (opts.rentalSearch !== undefined) {
     rentalSearchTerm = opts.rentalSearch;
@@ -19733,8 +19728,12 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
     </div>`;
 
   // ── Metric cards (each links to its tab) ──
-  const metric = (label, value, sub, tab, valueStyle = '') => `
-    <div class="stat-card dash-link" onclick="goToTab('${tab}')" title="Open ${tab}">
+  // onGo lets a card open its tab WITH the filter that matches what the number
+  // counted. A card that says "12 past their date" and then shows all 290
+  // plans has made the reader do the filtering twice.
+  dashMetricActions = [];
+  const metric = (label, value, sub, tab, valueStyle = '', onGo = null) => `
+    <div class="stat-card dash-link" onclick="${onGo ? `dashMetricActions[${dashMetricActions.push(onGo) - 1}]()` : `goToTab('${tab}')`}" title="Open ${tab}">
       <div class="stat-label">${label}</div>
       <div class="stat-value" ${valueStyle ? `style="${valueStyle}"` : ''}>${value}</div>
       ${sub ? `<div class="stat-sub">${sub}</div>` : ''}
@@ -19763,7 +19762,8 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
         renewalsLate.length
           ? `<span style="color:var(--danger-ink);">${renewalsLate.length} past their date</span>`
           : 'next 7 days · none overdue',
-        'sim', renewalsLate.length ? 'color:var(--danger-ink);' : '')}
+        'sim', renewalsLate.length ? 'color:var(--danger-ink);' : '',
+        () => filterView('sim', () => { simFilterStatus = renewalsLate.length ? 'late' : 'week'; }, renderSimRows))}
       ${metric('Open Tasks', openTasks.length,
         highTasks.length ? `<span style="${statBandStyle('highTasks', highTasks.length) || 'color:var(--danger-ink);'}">${highTasks.length} high priority</span>` : 'none urgent', 'tasks',
         statBand('highTasks', highTasks.length) === 'clear' ? '' : statBandStyle('highTasks', highTasks.length))}
@@ -19802,7 +19802,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
     () => goToTab('sim')]);
   if (renewalsLate.length) attention.push(['⏰',
     `<strong>${renewalsLate.length} active SIM${renewalsLate.length === 1 ? '' : 's'}</strong> past the renewal date on record`,
-    () => goToTab('sim')]);
+    () => filterView('sim', () => { simFilterStatus = 'late'; }, renderSimRows)]);
   // Low-stock accessories/phones (display-only; the Shop tab holds the editable
   // per-SKU threshold + the full list). One rolled-up line → opens Shop.
   const lowStock = (shopList || []).filter(i => i.active && i.quantity <= i.lowStockAt);
