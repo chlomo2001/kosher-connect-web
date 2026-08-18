@@ -89,7 +89,14 @@ run "staff app · every control says what it is" \
 # because every one of the first seven was clean at standard and broken at
 # largest — pixel widths against text that grows 30%.
 run "staff app · no control hides its own label" \
-  bash -eo pipefail -c 'for f in standard largest; do node ops/harness/clipped.mjs --fs $f | tail -1; done'
+  bash -eo pipefail -c 'for f in standard largest; do node ops/harness/clipped.mjs --fs $f | tail -1; done
+                        node ops/harness/clipped.mjs --width 390 | tail -1'
+
+# NOT 390 × largest, yet. Three search boxes still cannot hold their placeholder
+# in that corner — the box is already the whole screen, so the only fix left is
+# shorter wording, and wording is the owner's call. Adding it today would leave
+# this sweep permanently red, which is exactly how the last one stopped being
+# read. The measurements are in BACKLOG.md.
 
 run "staff app · modals open + geometry, 390px both themes" \
   bash -eo pipefail -c 'for t in light dark; do node ops/harness/modals.mjs --width 390 --theme $t | tail -1; done'

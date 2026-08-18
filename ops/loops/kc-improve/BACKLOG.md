@@ -1320,3 +1320,34 @@ whatever was not looked at.
 | 08-18 | **Kol Torah's settle boxes say what they are.** `placeholder="£ collected"` did not fit its own 98px box and rendered as **"£ collectec"** — and a placeholder is the wrong thing to be truncating: it was the field's only accessible name, and it disappears the moment anyone types, which is exactly when "which box was the money we got?" gets asked. Both money boxes now carry a real label above them (Sold · Collected) with `£` as the placeholder. The title select's `max-width:230px` was also cutting its own option mid-price — "Shiur — Parshas Devarim — £8." — now `min(330px, 100%)`, which also stops the Return button being orphaned on a line of its own | ✅ gate + names + audit 320/390/largest + targets + dark contrast + shot | owner live-test pending |
 | 08-18 | **Seven controls were hiding their own labels in Simple Mode** — and every one was clean at the standard text size, so nothing had ever seen them. Boxes sized in pixels against text that grows 30%: the SIM search lost **136px** of "Search customer, number, provider…", Rentals lost its scan and search hints, and the customer picker was cut to "Type a name or n…". Fixed at the cause — `.search-box` sized in `ch` so it grows with the type (the three inline `width:` overrides deleted with it), the picker's placeholder shortened to "Name or number…" so it fits the deliberately narrow rows, and three hand-rolled filter/sort selects put onto the shared `.kc-fs-sel` control they should always have used, which already solved this. **New sweep `ops/harness/clipped.mjs`** measures every placeholder and selected option against its own box at both text sizes, and is wired into `audit-all.sh` | ✅ gate + new sweep 0/0 at standard and largest + audit 320/1280/largest + targets + names + picker | owner live-test pending |
 | 08-18 | **Kol Torah's nameless number boxes.** Three boxes in the busiest rows on the tab were a bare `1` and a bare `£` among eight controls — the New Job row's quantity and price, and the consignment row's quantity. Two carried an `aria-label` and one carried nothing but a currency symbol, so a screen reader was better served than the person looking at it. All three now sit in a wrapping `<label>` (How many · Price) on the same `.kt-fld` pattern as the Settle boxes, and their rows align on the control rather than the label. The details box keeps its placeholder deliberately: "e.g. 3 CDs of R' Shloime onto one SD" is an **example**, which is what a placeholder is actually for | ✅ gate + names + clipped + audit 320/390/largest + targets + dark contrast + shot | owner live-test pending |
+
+| 08-18 | **The phone-width half of the same problem.** At 390px the Shop's two facet dropdowns were pinned to `flex: 1 1 40%` — 136px — so "Every category" read "Every catego" **at the ordinary text size**, and the task composer's priority box was a `width:110px` typed once that "Normal" outgrew in Simple Mode. A flex basis that starts from the text lets the dropdowns share their line when there is room and wrap when there is not, which is right either way. 390px is now clean at the standard size and wired into `audit-all.sh`; 390 × largest is deliberately NOT, and the reason is in the script | ✅ gate + clipped 390 clean + audit 320/390/largest + targets + names + modals | owner live-test pending |
+
+**Found, not fixed — for the next night**
+
+- **Three search boxes still cannot hold their placeholder at 390px × largest
+  text** — `simSearch` −83px, `ktJobDetails` −55px, `shopFacetQ` −24px. On a
+  phone the box is already the whole screen, so the only fix left is shorter
+  wording, and **wording is the owner's call**: "Search customer, number,
+  provider…" is what tells you what is searchable, which was the whole argument
+  for sizing the box to it. `ktJobDetails` is the least urgent of the three —
+  its text is an example, not a label.
+- ~~The tightest corner of the grid, 390px × largest text, has six controls that
+  still cannot hold their own label.~~ **Three of the six fixed the same night**
+  (see the row above). For the record, the original set was: Measured with the new sweep:
+  `simSearch` −83px, `ktJobDetails` −55px, `shopFacetCat` −40px, `shopFacetQ`
+  −24px, `shopFacetBrand` −9px, `tkPriority` −9px. Two of them (`shopFacetCat`,
+  `shopFacetBrand`) are already short at 390px at the **standard** size, −30px
+  and −6px. On a phone the box IS the screen, so widening cannot fix the search
+  boxes — the honest fix is shorter wording, and **wording is the owner's call**:
+  "Search customer, number, provider…" says what is searchable, which was the
+  whole argument for sizing the box to it in the first place. The selects are
+  fixable in CSS alone. `clipped.mjs` is wired into `audit-all.sh` at 1280 only
+  for now, deliberately: adding 390 today would leave the sweep permanently red,
+  and a red sweep nobody can act on is how the last one stopped being read.
+- **Repairs / Bookings / Virtual / Shop: the table is 982px wide inside its
+  984px card, but its rows are only 943px** — so the header's beige band stops
+  39px short of the card's right edge. Not padding (computed `0px`), not a
+  short `<th>` (7 header cells, 7 body cells, no colspan), and not
+  `border-spacing`. Measured but not explained, and the fix would touch every
+  table, so it was skipped rather than guessed at.

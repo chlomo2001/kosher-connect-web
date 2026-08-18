@@ -18269,7 +18269,10 @@ async function renderTasksTab() {
         <input class="form-input" id="tkTitle" placeholder="Add a task…" style="flex:1 1 200px;min-width:180px;"
           onkeydown="if(event.key==='Enter')saveNewTask()">
         <input class="form-input" type="date" id="tkDue" style="width:150px;" aria-label="Due date for the new task">
-        <select class="form-input" id="tkPriority" style="width:110px;" aria-label="Priority for the new task">
+        ${/* width:auto so the box follows its longest option instead of a
+             number typed once — at the largest text size "Normal" no longer
+             fitted the 110px it was given. */''}
+        <select class="form-input" id="tkPriority" style="width:auto;min-width:110px;" aria-label="Priority for the new task">
           <option value="Normal">Normal</option>
           <option value="High">High</option>
           <option value="Low">Low</option>

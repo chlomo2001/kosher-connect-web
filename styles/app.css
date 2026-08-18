@@ -1082,9 +1082,15 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .kc-facet-count { font-size: var(--fs-small); color: var(--muted); margin-inline-start: auto; white-space: nowrap; }
 
 @media (max-width: 560px) {
-  /* Search takes its own line; the two dropdowns share the next. */
+  /* Search takes its own line; the two dropdowns share the next — but only if
+     they FIT on it. `flex: 1 1 40%` forced them to 136px on a 390px screen and
+     "Every category" was cut to "Every catego". A basis that starts from the
+     text lets them share the line when there is room and wrap when there is
+     not, which is the answer either way. */
   .kc-facet-q { flex: 1 1 100%; }
-  .kc-facets .form-input:not(.kc-facet-q) { flex: 1 1 40%; }
+  .kc-facets .form-input:not(.kc-facet-q) {
+    flex: 1 1 auto; min-width: min(calc(15ch + 44px), 100%);
+  }
   .kc-facet-count { margin-inline-start: 0; }
 }
 
