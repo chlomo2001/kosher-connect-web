@@ -9230,12 +9230,18 @@ function logComm(c, { type, text, icon }) {
 }
 async function recordComm(customerId, entry) {
   const c = customers.find(x => x.id === customerId);
-  if (!c) return;
+  if (!c) return false;
   logComm(c, entry);
-  await window.api.updateCustomer(c).catch(() => null);
+  // The save used to be swallowed (.catch(() => null)), so a dropped
+  // connection still left "Logged to the customer timeline." on screen with
+  // nothing saved. Callers toast their own success; this makes a failure say
+  // so, whoever called.
+  const saved = await window.api.updateCustomer(c).then(() => true).catch(() => false);
+  if (!saved) toast('Could not save that to the timeline — check the connection and try again.', 'error');
   const idx = customers.findIndex(x => x.id === customerId);
   if (idx !== -1) customers[idx] = c;
   if (selectedId === customerId) renderDetailPanel(customerId);
+  return saved;
 }
 function openLogCommModal(customerId) {
   const c = customers.find(x => x.id === customerId);
@@ -9352,7 +9358,11 @@ function customerContextForAi(c) {
   for (const r of rentals.filter(r => r.customerId === c.id && r.status === 'overdue')) {
     lines.push(`Rental phone ${r.phoneNumber || ''} is OVERDUE (was due back ${fmtDate(r.toDate)}).`);
   }
-  for (const r of rentals.filter(r => r.customerId === c.id && (r.status === 'out' || r.status === 'booked'))) {
+  // 'active' is the stored status for a phone that is with the customer right
+  // now — 'out' is the word the SCREEN shows, and it is not in the enum
+  // ('booked','active','overdue','returned'). Filtering on it matched nothing,
+  // so the AI drafter was told a customer holding a phone had no rental.
+  for (const r of rentals.filter(r => r.customerId === c.id && (r.status === 'active' || r.status === 'booked'))) {
     lines.push(`Has a rental phone ${r.phoneNumber || ''} (${getComputedStatus(r)}) due back ${fmtDate(r.toDate)}.`);
   }
   for (const s of sims.filter(s => s.customerId === c.id && s.status === 'active' && s.renewalDate && s.renewalDate >= today && s.renewalDate <= soon)) {
@@ -15965,7 +15975,7 @@ function posShowLastSale() {
         ? ` — <strong>change ${fmtGbp(posLastSale.change)}</strong>` : ''}
       ${canEmail ? `<button class="btn btn-secondary" style="margin-top:8px;width:100%;"
         onclick="emailSaleReceipt(this)" ${posLastSale.emailed ? 'disabled' : ''}>
-        ${posLastSale.emailed ? '✉️ Receipt sent' : '✉️ Email receipt'}</button>` : ''}
+        ${posLastSale.emailed === 'test' ? '✉️ Sent to the test inbox' : posLastSale.emailed ? '✉️ Receipt sent' : '✉️ Email receipt'}</button>` : ''}
     </div>`;
 }
 
@@ -16107,7 +16117,7 @@ async function emailSaleReceipt(btn) {
   if (res && res.success && res.held) {
     toast(res.note || 'Email is on hold — receipt not sent.', 'warning');
   } else if (res && res.success && res.redirected) {
-    posLastSale.emailed = true;
+    posLastSale.emailed = 'test';   // the customer got nothing — say so on the chip
     toast(res.note || `Test mode — sent to ${res.sentTo}.`, 'warning');
   } else if (res && res.success) {
     posLastSale.emailed = true;
@@ -16241,7 +16251,7 @@ window.kcTillResult = (result) => {
   const done = kcTillPending[ref];
   if (done) { delete kcTillPending[ref]; done(result); return; }
   if (result.approved) {
-    toast('The card machine approved after the till gave up — re-ring the SAME items to record the sale; the card will NOT be charged again.', 'warning');
+    toast('The card machine approved after the till gave up — re-ring the SAME items now, on this screen and without refreshing, to record the sale; this till will reuse the approval instead of charging the card again.', 'warning');
   }
 };
 // Attach the terminal's references to the ledger payment row (reconciliation).
@@ -19763,6 +19773,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   // Handlers live in dashFeedActions (closures), not inline strings, so
   // customer names with quotes can't break the HTML.
   const attention = [];
+  const coming = [];   // happens by itself — worth seeing, not worth nagging about
   overdue.forEach(r => attention.push(['📱',
     `<strong>${escName(r.customerName || '?')}</strong> — rental overdue since ${fmtDate(r.toDate)}`,
     () => goToTab('rentals', { rentalSearch: r.customerName || '' })]));
@@ -19778,10 +19789,15 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   // Three named renewals, then a roll-up. The feed shows ten lines in total, so
   // 83 renewals would have pushed every overdue rental, ready repair and flight
   // off the bottom of it — the loudest item silencing the urgent ones.
-  renewals7.slice(0, 3).forEach(s => attention.push(['💳',
+  // Owner, 19 Aug: "why is auto renew a needs attention? its just auto, no?"
+  // Right — a plan that renews by itself is news, not work, and it was pushing
+  // genuine work off a ten-line feed. Upcoming renewals now sit under Coming
+  // up; a renewal past its date still counts as attention, because that one
+  // did NOT happen by itself.
+  renewals7.slice(0, 3).forEach(s => coming.push(['💳',
     `<strong>${escName(s.customerName || '?')}</strong> — SIM renews ${fmtDate(s.renewalDate)}`,
     () => openOnTab('sim', () => openManageSimModal(s.id))]));
-  if (renewals7.length > 3) attention.push(['💳',
+  if (renewals7.length > 3) coming.push(['💳',
     `<strong>${renewals7.length - 3} more SIM plans</strong> renew in the next 7 days`,
     () => goToTab('sim')]);
   if (renewalsLate.length) attention.push(['⏰',
@@ -19818,7 +19834,8 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   highTasks.slice(0, 5).forEach(t => attention.push(['❗', escHtml(t.title), () => goToTab('tasks')]));
 
   const shown = attention.slice(0, 10);
-  dashFeedActions = shown.map(a => a[2]);
+  const comingShown = coming.slice(0, 5);
+  dashFeedActions = shown.concat(comingShown).map(a => a[2]);
   const attentionHtml = shown.length === 0
     ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">All clear. 🎉</div>`
     : shown.map(([icon, html], i) => `
@@ -19826,6 +19843,14 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
           <span class="feed-icon">${icon}</span><span>${html}</span>
           <span class="feed-go">›</span>
         </div>`).join('');
+
+  const comingHtml = comingShown.length === 0 ? '' : `
+    <div class="section-divider" style="margin-top:14px;">Coming up</div>
+    ${comingShown.map(([icon, html], i) => `
+      <div class="feed-item dash-link" onclick="dashFeedActions[${shown.length + i}]()" title="Open">
+        <span class="feed-icon">${icon}</span><span>${html}</span>
+        <span class="feed-go">›</span>
+      </div>`).join('')}`;
 
   // Each row deep-links to its customer (same as the wallet tab's feed).
   const activityHtml = !money || money.recent.length === 0
@@ -19872,6 +19897,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
       <div class="table-card" style="padding:8px 18px 14px;">
         <div class="section-divider" style="margin-top:12px;">Needs attention</div>
         ${attentionHtml}
+        ${comingHtml}
       </div>
       <div class="table-card" style="padding:8px 18px 14px;">
         <div class="section-divider" style="margin-top:12px;">Recent wallet activity</div>

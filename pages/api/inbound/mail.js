@@ -33,7 +33,7 @@ import { db, tablesMode, selectAllPaged } from '../../../lib/db.js'
 import { normaliseInbound, carrierOf } from '../../../lib/inboundMail.mjs'
 import { buildSimIndex, matchSimForMail } from '../../../lib/simMailMatch.mjs'
 import { looksLikeTicket, parseTicketMail, suggestCustomer, ticketTaskTitle } from '../../../lib/ticketMail.mjs'
-import { carrierMailKind, carrierMailTask, ACTIONABLE } from '../../../lib/carrierMail.mjs'
+import { carrierMailKind, carrierMailTask, ACTIONABLE, NEVER_FILE } from '../../../lib/carrierMail.mjs'
 
 // Bodies are parsed mail, not attachments — but a forwarded message with an
 // inline image can still be chunky, and a 413 would make Forward Email retry
@@ -254,6 +254,15 @@ export default async function handler(req, res) {
     // code and a failed payment each mean somebody has something to do; the
     // renewals are the ones that can simply be filed.
     const kind = carrierMailKind({ subject: mail.subject, snippet: mail.snippet, text: mail.text })
+
+    // An advert is not news about a plan. Filing it would put a row in the
+    // carrier queue for a person to read and dismiss, which is how a queue
+    // teaches people to skim it (owner, 19 Aug). Dropped, but said out loud so
+    // a wrong classification is findable in the log rather than silent.
+    if (NEVER_FILE.has(kind)) {
+      console.log(`[inbound/mail] dropped an advert: ${String(mail.subject || '').slice(0, 80)}`)
+      return res.json({ ok: true, queue: 'ignored', stored: false, reason: 'marketing' })
+    }
 
     const inserted = await db.insertIgnoreDup('sim_mail', [{
       message_id: mail.messageId,
