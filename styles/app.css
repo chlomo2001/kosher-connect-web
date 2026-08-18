@@ -2028,7 +2028,7 @@ body.kc-win-dragging .kc-wgrip::after { opacity: 0.55; }
 }
 
 @media (max-width: 560px) {
-  .card-action-grid { grid-template-columns: repeat(2, 1fr); }
+  .card-action-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   /* Two-column forms are unusable in a ~95vw modal on a handset — collapse to
      a single column so every field gets full width. */
   .form-grid { grid-template-columns: minmax(0, 1fr); }
