@@ -48,6 +48,50 @@ Nothing here has been built yet. Loop-safe UX items are filed in
 | 2 / 6 | Why not save/suggest as a task? Where else does text land besides Settings → Text — carrier mail? Why not taskable? | The same idea twice: anything that arrives should be able to become a task in one click. Carrier mail already raises tasks for actionable kinds; SMS and other inbound do not. A general "make this a task" affordance is the right shape. |
 | 4 | A folder per customer for documents, for us or for them | Customer documents already exist and are attached per customer. What is missing is the *folder* view, and the question of whether the customer sees it in the portal — that second half is a privacy decision, not a UI one. |
 
+
+## ⚠ Found live, 19 Aug 00:56 — Google sign-in on the portal is broken in production
+
+The owner pressed **Continue with Google** on the portal and landed on
+`http://localhost:3000/#access_token=…` — "This site can't be reached".
+
+**It is not our code.** Both sign-in buttons build the redirect from the page
+they are on:
+
+- `pages/portal.js:576` → `${window.location.origin}/portal`
+- `pages/login.js:15` → `${window.location.origin}/auth/google`
+
+and the portal already reads the returned token out of the URL fragment
+(`pages/portal.js:348`), so the app half is complete.
+
+**It is Supabase's URL configuration.** Supabase only honours `redirect_to`
+when the URL is on the project's allow-list; when it is not, it silently falls
+back to the project's **Site URL**. Landing on the *root* of `localhost:3000`
+— not on `/portal` — is exactly that fallback, which tells us two things:
+
+1. **Site URL is still `http://localhost:3000`**, left from development.
+2. **`https://app.kosher-connect.com/portal` is not in the allow-list.**
+
+If staff Google sign-in works today, then `/auth/google` was allow-listed at
+some point and the portal callback was simply never added.
+
+**The fix (owner, Supabase dashboard → Authentication → URL Configuration):**
+
+- **Site URL** → `https://app.kosher-connect.com`
+- **Redirect URLs** → add `https://app.kosher-connect.com/portal`,
+  `https://app.kosher-connect.com/auth/google`, and — if customers ever reach
+  the portal on the www domain — the same two under
+  `https://www.kosher-connect.com`. Keep `http://localhost:3000/**` for
+  development.
+
+There is no MCP tool for auth configuration, so this cannot be done from here;
+it is a two-minute dashboard change. Until it is made, **no customer can sign
+in to the portal with Google** — they land on a dead localhost page.
+
+Minor, for completeness: the failed URL carried a real access token in its
+fragment. It was never loaded by any server, it is short-lived, and it is now
+only in that browser's history — worth clearing that history entry, not worth
+alarm.
+
 ## One thing I noticed while reading the drafts
 
 Two of your saved Gmail drafts hold **live secret keys** in plain text — a
