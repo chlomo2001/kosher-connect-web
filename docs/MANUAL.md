@@ -10,7 +10,7 @@ do I…?** on any screen — and the numbers (rates, free days, caps) live in
 BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
-**16 of 28 screens written out in full; 12 still short entries.**
+**28 of 28 screens written out in full.**
 
 ---
 
@@ -531,89 +531,221 @@ Everything the shop can change without anyone writing code: prices, people, what
 
 ## Pages with their own address
 
-- The front page — What a customer sees first: what the shop does, where it is, and the form that files an enquiry as a task.
-- Customer portal — A customer's own page — their rentals, bookings and balance, without ringing the shop to ask.
-- The phone guide — Every handset the shop stands behind, compared honestly. The content is owner-written in Settings, not in code.
-- Repair request — The form a customer fills in to book a repair before coming in.
-- Staff sign-in — Where staff sign in. Nobody reaches the app without passing through here.
-- Contacts tool — Staff tool: turns a list of contacts into a file a phone can import.
-- Convert tool — Staff tool: converts a file a customer has brought in into a format that is usable.
-- Read-a-document tool — Staff tool: reads the text off a photographed or scanned document.
-- Transfer tool — Staff tool: moves a large file between the shop and a customer.
+- The front page — What somebody sees when they find the shop online: what it does, when it is open, and a way to send a message.
+- Customer portal — A customer's own account page — what they have with the shop, what they owe, and the documents between them and us.
+- The phone guide — Every handset the shop sells and stands behind, compared honestly, for the customer trying to choose one.
+- Repair request — The short form a customer fills in before bringing a phone in, so the bench knows it is coming.
+- Staff sign-in — Where staff sign in. Nobody reaches the app, or any of the shop's data, without coming through here.
+- Contacts tool — Staff tool: turns whatever contact list a customer arrives with into one clean file their new phone can import.
+- Convert tool — Staff tool: the everyday file conversions — images to and from PDF, pages out of a PDF, several files into one download.
+- Read-a-document tool — Staff tool: gets the text out of a photograph or a scan, in English or Hebrew, ready to copy.
+- Transfer tool — Staff tool: moves someone from an old phone to a new one — their messages and their contacts, whatever format the old phone gave you.
 - The manual — This page: every screen in the system described in order, on one page that prints.
-- Privacy notice — What the shop holds about a customer and why. Linked from the front page footer and the sign-up form.
-- Terms — The terms a customer is agreeing to. Linked from the front page footer.
-- Refund policy — When money is given back and how. Linked from the front page footer.
+- Privacy notice — What the shop holds about a customer, why, and what it does with it. Written plainly, and readable without signing in.
+- Terms — The terms a customer is agreeing to when they use the shop's services. Plainly written and open to anyone.
+- Refund policy — When money is given back, when it is not, and how. Required for taking cards, and the answer to an awkward conversation.
 
 ### The front page — `/welcome`
 
-What a customer sees first: what the shop does, where it is, and the form that files an enquiry as a task.
+What somebody sees when they find the shop online: what it does, when it is open, and a way to send a message.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **The bands down the page** — What the shop offers, said plainly. It is written for someone deciding whether to come in, not for someone who already has.
+- **Opening hours** — Read from the shop details in Settings, so the hours on the page are the hours the owner set and not a number frozen into the page.
+- **Send us a message** — The contact form. What someone sends lands as a task in the shop, so an enquiry is work on a list rather than an email somebody has to remember.
+- **English / lashon hakodesh** — The whole page turns over, right to left included. The choice is remembered and shared with the other public pages.
+- **My account · sign in** — The doors into the portal for customers and the app for staff.
+
+**Rules that bite here**
+
+- This is the page the outside world judges the shop by, and the one Google and the card processors look at. It has to work signed out, on a phone, in both languages.
+- The hours come from Settings. Changing them there changes them here — never by editing the page.
+- A message sent from here becomes a task. Nobody has to be watching an inbox for it to be picked up.
+
+**When it goes wrong**
+
+- **The hours on the page are wrong** — Fix them in Settings under the shop details. The page reads them from there every time it loads.
+- **Somebody says they filled the form in and heard nothing** — Look in Tasks. The enquiry lands there, and an unanswered one is a task nobody has closed.
 
 ---
 
 ### Customer portal — `/portal`
 
-A customer's own page — their rentals, bookings and balance, without ringing the shop to ask.
+A customer's own account page — what they have with the shop, what they owe, and the documents between them and us.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **Their account** — What they have on the go and what their balance is, read-only. It answers the questions the shop is otherwise rung up about.
+- **Documents** — What staff have shared with them to download, and a way to send files back. What they send arrives marked as waiting, and a person approves it before it counts.
+- **Pay by card** — Clears what they owe through Stripe. It says plainly when card payment is not switched on rather than failing quietly.
+- **English / lashon hakodesh** — The same language choice as the front page, because some customers do not read English.
+
+**Rules that bite here**
+
+- The portal is switched off until the shop turns it on. Until then the address is simply not there — nothing customer-facing goes live by accident.
+- It is read-only about money and records. A customer can see what they owe and pay it; they cannot change what the shop's books say.
+- A file a customer uploads waits for a person. Nothing they send lands on their record unread.
+
+**When it goes wrong**
+
+- **A customer says the portal is not there** — It is off until the owner enables it. That is a setting, not a fault.
+- **They cannot pay by card** — Card payment needs Stripe to be connected. The page says so; it does not pretend to take a payment it cannot.
 
 ---
 
 ### The phone guide — `/phone-guide`
 
-Every handset the shop stands behind, compared honestly. The content is owner-written in Settings, not in code.
+Every handset the shop sells and stands behind, compared honestly, for the customer trying to choose one.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **The handsets** — Each phone with its price and the facts people actually ask at the counter — whether it takes two SIMs, whether it does Hebrew, whether it texts, whether the screen is a touch screen.
+- **The owner's own pros and cons** — Written by the shop, not lifted from a brochure. It is the honest comparison the counter conversation would give.
+- **English / lashon hakodesh** — The page chrome turns over with the language choice shared across the public pages.
+
+**Rules that bite here**
+
+- The content comes from the phone guide in Settings. Adding a handset or correcting a price is a change the shop makes itself, with no code change and no waiting.
+- It is a comparison, not a sales page. The honest note about a handset's weakness is the reason a customer trusts the rest of it.
+
+**When it goes wrong**
+
+- **A handset is missing or the price is old** — Settings, phone guide. The public page follows immediately.
+- **A customer asks something the page does not answer** — That is a question worth adding to the guide — if one person asked at the counter, others are wondering online.
 
 ---
 
 ### Repair request — `/repair`
 
-The form a customer fills in to book a repair before coming in.
+The short form a customer fills in before bringing a phone in, so the bench knows it is coming.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **Who you are** — Name and a number, so the shop can ring back.
+- **Which device · what is wrong** — Enough to know whether it is worth them making the journey, and whether a part needs ordering.
+- **What happens next** — The request lands as a task in the shop. A real repair ticket is opened when the phone actually arrives.
+
+**Rules that bite here**
+
+- A request is a heads-up, not a booking. Nothing is promised, no price is quoted, and no slot is held — this is a walk-in shop and the form respects that.
+- It asks two questions fewer than the software it competes with, deliberately. A long form is a form nobody finishes.
+- The repair ticket is opened on the Repairs screen when the device is in your hand, not from the request.
+
+**When it goes wrong**
+
+- **A customer arrives saying they booked online** — They sent a request. Open the task, then open a real repair ticket with the phone in front of you.
+- **A request has no useful detail** — Ring them. The number is the part of the form that matters most.
 
 ---
 
 ### Staff sign-in — `/login`
 
-Where staff sign in. Nobody reaches the app without passing through here.
+Where staff sign in. Nobody reaches the app, or any of the shop's data, without coming through here.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **Email and password** — The ordinary way in, with the address the account was set up under.
+- **The code step** — After the password, a code sent to the email address. Two steps, because one is what a stolen password defeats.
+- **Sign in with Google** — Where the shop has it switched on, the same account without a second password to forget.
+
+**Rules that bite here**
+
+- Every screen in the app is behind this, and so is every action. A tab that looks reachable without signing in is a fault, not a shortcut.
+- The password is personal, not the shop's. Sharing one makes the history of who did what worthless.
+- A staff member who leaves is removed under People in Settings. That is the step that actually closes the door.
+
+**When it goes wrong**
+
+- **The code never arrives** — Check the address is the one on the account, and look in junk. The owner can reset a password from Settings.
+- **Signed in but a screen is missing** — That is access, not sign-in: a helper sees the screens they have been granted, and the owner sets that in Settings.
 
 ---
 
 ### Contacts tool — `/tools/contacts`
 
-Staff tool: turns a list of contacts into a file a phone can import.
+Staff tool: turns whatever contact list a customer arrives with into one clean file their new phone can import.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **Drop the files** — Spreadsheets, CSVs and existing contact files, several at once. The page works out what each one is.
+- **Map the columns** — Say which column is the name and which is the number, for a spreadsheet that does not say so itself.
+- **Tidy the numbers** — Puts UK numbers into one consistent form, so the same person is not three different entries.
+- **Merge and de-duplicate** — Everything dropped in becomes one list with the duplicates collapsed.
+- **Download** — One contact file to load onto the new phone.
+
+**Rules that bite here**
+
+- Everything happens in the browser on the machine in front of you. The customer's contacts are not uploaded anywhere, which is the entire reason this exists rather than a website.
+- Charge the work as a service on Online & Print, and save the finished file against the customer, so the next phone change is one click rather than the whole job again.
+
+**When it goes wrong**
+
+- **The columns come out in the wrong places** — Set them by hand at the mapping step — the guess is only a guess when the spreadsheet has no headings.
+- **Some numbers look wrong afterwards** — They were probably stored oddly to begin with. Fix them here before the download rather than on the new phone.
 
 ---
 
 ### Convert tool — `/tools/convert`
 
-Staff tool: converts a file a customer has brought in into a format that is usable.
+Staff tool: the everyday file conversions — images to and from PDF, pages out of a PDF, several files into one download.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **Drop the file** — Images or PDFs, one or many.
+- **Choose what you want out** — The conversion is picked from what went in and what is wanted.
+- **Download** — The result, as one file or a bundle where there are several.
+
+**Rules that bite here**
+
+- It all runs on this machine, in the browser. Nothing is uploaded, which matters because these files are usually somebody's documents.
+- A conversion is a service like any other. Charge it on Online & Print rather than doing it for nothing because the tool made it quick.
+
+**When it goes wrong**
+
+- **A very large file is slow** — The work is happening on this computer rather than on a server. Give it a moment before assuming it has failed.
 
 ---
 
 ### Read-a-document tool — `/tools/ocr`
 
-Staff tool: reads the text off a photographed or scanned document.
+Staff tool: gets the text out of a photograph or a scan, in English or Hebrew, ready to copy.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **Drop the picture** — A photo a customer sent, or something off the scanner.
+- **Read it** — The text comes out on screen to copy into whatever needs it.
+- **English or Hebrew** — Both are read on this machine, with nothing sent away.
+
+**Rules that bite here**
+
+- The document never leaves the computer. These are usually somebody's private papers, and that is exactly why this is not a website that wants an upload.
+- What comes out is a machine reading a picture. Check it against the document before anything is acted on — a mis-read digit in a reference is worth nothing.
+
+**When it goes wrong**
+
+- **The text comes out as nonsense** — The picture is the problem, not the tool. A flat, straight, well-lit photograph reads; a crumpled one at an angle does not.
 
 ---
 
 ### Transfer tool — `/tools/transfer`
 
-Staff tool: moves a large file between the shop and a customer.
+Staff tool: moves someone from an old phone to a new one — their messages and their contacts, whatever format the old phone gave you.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **Drop what the old phone produced** — A message backup, a phone's own contact file, or an ordinary contact file. The page recognises which it is.
+- **It produces what the new phone needs** — The matching file for the new handset, including UK numbers put right on the way through.
+- **Download and load it on** — One file to restore on the new phone.
+
+**Rules that bite here**
+
+- This is the whole migration in one place, and it runs on this machine — somebody's messages are not going up to a website.
+- Charge it as a service and save the finished file against the customer. The next handset change then starts from something rather than nothing.
+
+**When it goes wrong**
+
+- **The old phone gave a format the page does not know** — Do not force it. Say what the phone was, and it can be added — a wrong conversion loses messages silently.
 
 ---
 
@@ -643,23 +775,75 @@ This page: every screen in the system described in order, on one page that print
 
 ### Privacy notice — `/privacy`
 
-What the shop holds about a customer and why. Linked from the front page footer and the sign-up form.
+What the shop holds about a customer, why, and what it does with it. Written plainly, and readable without signing in.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **What is collected, and why** — The details the shop actually keeps, what they are used for, and the grounds for keeping them. It describes this shop rather than repeating a template.
+- **Google sign-in** — Named in its own right, because signing in that way is what a customer will ask about.
+- **How it is stored, and who else sees it** — Where the information sits and which other services are involved in providing the shop's own services.
+- **A customer's rights** — What they can ask for, including a copy of what is held and its correction or removal.
+- **Cookies, changes and how to reach the shop** — The remaining sections, and the address to write to.
+- **Where it is linked from** — The front page footer and the sign-up form, so a customer meets it before handing anything over.
+
+**Rules that bite here**
+
+- The address must stay as it is. Sign-in with Google and the card processor both point at it, and moving the page breaks them.
+- The words are the owner's to approve. Changing what the shop actually does with customer data is a change to this page, not the other way round.
+- It has to open without signing in. A privacy notice behind a login is no notice at all.
+
+**When it goes wrong**
+
+- **A customer asks what is held about them** — This page is the answer, and it is meant to be honest enough to send them.
 
 ---
 
 ### Terms — `/terms`
 
-The terms a customer is agreeing to. Linked from the front page footer.
+The terms a customer is agreeing to when they use the shop's services. Plainly written and open to anyone.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **What the shop does · your account** — The services being agreed to, and what is expected of the person holding an account.
+- **Prices and payment** — How charging works, stated once so the counter and the page agree.
+- **Rentals** — The terms a hire is taken under.
+- **Travel bookings and entry requirements** — The important one: the traveller remains responsible for meeting their destination's requirements, and any guidance the shop gives is help rather than a guarantee. The app's document checks are that same help — they do not transfer the responsibility.
+- **Repairs** — Asking the customer to back up anything important first, because data can be lost in a repair.
+- **Acceptable use, responsibility and the law** — What the shop is answerable for and what it is not, and which law governs the agreement.
+- **Where it is linked from** — The front page footer, beside the privacy notice and the refund policy.
+
+**Rules that bite here**
+
+- The address must stay as it is — sign-in points at it.
+- The owner approves the wording. This page is what the shop can be held to, so it should say what the shop actually does.
+
+**When it goes wrong**
+
+- **A customer disputes something not covered here** — Do not improvise a rule at the counter. Take it to the owner: either the page is wrong or the answer is.
 
 ---
 
 ### Refund policy — `/refund`
 
-When money is given back and how. Linked from the front page footer.
+When money is given back, when it is not, and how. Required for taking cards, and the answer to an awkward conversation.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **Goods, SIMs and subscriptions** — What can be brought back and what cannot, kept apart because a physical thing and an airtime service are not the same promise.
+- **Repairs** — Where a repair charge stands if the customer changes their mind.
+- **Phone rentals** — A hire cancelled before the phone is collected is refunded in full; a deposit comes back once the phone is returned on time and checked. Late and damage charges are a cost the shop has incurred, not a purchase to be refunded.
+- **Travel bookings** — The airline's rules decide the ticket. The shop's own fee is separate, and comes back only where the work has not been done.
+- **How a refund is made** — Money goes back the way it came — a card refund to the same card, account credit to their balance.
+- **How to ask** — What the customer should do, so the counter can point at it instead of improvising.
+- **Where it is linked from** — The front page footer, and it is what the card processor expects to find.
+
+**Rules that bite here**
+
+- The address must stay as it is. Card processing points at this page.
+- The specifics — the window, how deposits are treated — are the owner's to set, and they are written to line up with UK consumer law.
+- What this page says is what a customer can hold the shop to. Do not agree something different at the counter without asking.
+
+**When it goes wrong**
+
+- **A customer wants money back and you are not sure** — Read this page with them. If it does not cover their case, it is the owner's decision, not the counter's.
 
