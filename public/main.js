@@ -862,6 +862,27 @@ function fmtDate(iso) {
   return String(parseInt(d, 10)) + ' ' + MONTHS[mi] + ' ' + y;
 }
 
+// Date AND time, in the time the shop is standing in.
+//
+// Carrier mail used to build this inline as fmtDate(x) + x.slice(11,16) — the
+// hours and minutes cut straight out of the stored text. Every timestamp is
+// stored as UTC (lib/inboundMail.mjs writes toISOString()), so from late March
+// to late October that printed an hour early: mail that arrived at 15:32 read
+// 14:32, which is exactly the kind of small wrongness nobody reports and
+// everybody works around. Parsing it and asking for local time fixes both
+// lists at once.
+//
+// A plain date with no time in it (2026-08-18) stays a plain date — there is no
+// time to show and midnight would be a lie.
+function fmtWhen(iso) {
+  if (!iso) return '—';
+  const str = String(iso);
+  if (!/\d{2}:\d{2}/.test(str)) return fmtDate(str);
+  const d = new Date(str);
+  if (Number.isNaN(d.getTime())) return fmtDate(str);
+  return `${fmtDate(str)} ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
 // "Thu 2 Apr" — fmtDate minus the year, plus the weekday. Used inside a date
 // range that already states the year, where the weekday is the load-bearing
 // part: on a rental breakdown you are checking that the free day really is the
@@ -11820,6 +11841,19 @@ async function tmEnsure(force = false) {
   if (currentTab === 'bookings') renderBookingsTab();
 }
 
+// Force a re-read, past the one-minute cache. Says what it is doing while it
+// does it, because the honest answer to "did it work?" is usually "nothing has
+// arrived yet", and a button that flickers cannot tell you that.
+async function tmRefresh() {
+  const btn = document.getElementById('tmRefresh');
+  if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }
+  const before = tmData?.tickets?.length || 0;
+  await tmEnsure(true);
+  const after = tmData?.tickets?.length || 0;
+  if (after === before) toast(after ? 'Nothing new has arrived.' : 'No tickets waiting.', 'info');
+  else toast(`${after - before} new ticket${after - before === 1 ? '' : 's'}.`, 'success');
+}
+
 function tmQueueHtml() {
   if (!tmData || !tmData.tickets || !tmData.tickets.length) return '';
   return `
@@ -11829,6 +11863,12 @@ function tmQueueHtml() {
           <span class="tm-count">${tmData.tickets.length}</span></h2>
         <span style="font-size:var(--fs-micro);color:var(--muted);">
           Read from the airline's own confirmation — confirm the details and it becomes a booking.</span>
+        <!-- The list is cached for a minute and refreshed when the tab is
+             opened, which is right for reading and wrong for the case that
+             actually happens: someone at the counter has just forwarded the
+             confirmation and is waiting for it to appear. -->
+        <button class="btn btn-outline btn-sm" id="tmRefresh" onclick="tmRefresh()"
+          title="Check for tickets that have just arrived">↻ Check now</button>
       </div>
       <div class="tm-list">${tmData.tickets.map(tmCardHtml).join('')}</div>
     </div>`;
@@ -11859,7 +11899,7 @@ function tmCardHtml(t) {
           <strong>${escHtml(t.airline || 'Airline')}</strong>
           ${t.reference ? `<code class="tm-ref">${escHtml(t.reference)}</code>` : ''}
           ${kind[0] ? `<span class="tm-kind" style="color:${kind[1]}">${kind[0]}</span>` : ''}
-          <span class="tm-when">${t.receivedAt ? escHtml(fmtDate(t.receivedAt)) : ''}</span>
+          <span class="tm-when">${t.receivedAt ? escHtml(fmtWhen(t.receivedAt)) : ''}</span>
         </div>
         <div class="tm-flight">
           ${t.route ? `<span class="tm-route">${escHtml(t.route)}</span>` : '<span class="tm-gap">route?</span>'}
@@ -18293,8 +18333,10 @@ function paintCarrierMail() {
     <div class="card">
       <div class="card-head">
         <h2 class="card-title">Carrier mail</h2>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           ${chip('pending', 'Needs a human')}${chip('paired', 'Filed')}${chip('all', 'Everything')}
+          <button class="btn btn-outline btn-sm" onclick="renderCarrierMailTab()"
+            title="Check for mail that has just arrived">↻ Check now</button>
         </div>
       </div>
       <div class="cm-list">${rows}</div>
@@ -18302,7 +18344,7 @@ function paintCarrierMail() {
 }
 
 function cmRowHtml(m) {
-  const when = m.receivedAt ? `${fmtDate(m.receivedAt)} ${String(m.receivedAt).slice(11, 16)}` : '—';
+  const when = fmtWhen(m.receivedAt);
   const badge = {
     address: ['Paired by address', 'var(--success-ink)'],
     'address+number': ['Paired by address + number', 'var(--success-ink)'],
