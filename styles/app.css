@@ -103,7 +103,12 @@
 /* ─── SIDEBAR — the dark-app track ─── */
 
 .sidebar {
-  width: 208px;
+  /* Width is a variable so the grip on its right edge can move it (main.js,
+     kcNavWidth). The default is the 208px this rail has always been; the rail
+     collapse and the phone drawer below both set their own width and win on
+     specificity, so neither can be dragged into a bad state. */
+  width: var(--sb-w, 208px);
+  position: relative;
   background: var(--brand-dark);
   display: flex; flex-direction: column;
   padding: 13px 0 0; flex-shrink: 0;
@@ -471,10 +476,44 @@
 
 
 
+/* The grip on the sidebar's right edge. Invisible until you go looking for it —
+   the same manners as the window grips further up — then an accent line under
+   the cursor. Full height, because the edge IS the target: a small handle
+   somewhere along it would have to be found first.
+
+   Hidden in the two states that own their own width: the collapsed rail (where
+   dragging would fight the ⌘B animation) and the phone drawer (where the sidebar
+   slides over the content and a 6px edge target is a mis-tap waiting to happen). */
+.sb-grip {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 7px; z-index: 4;
+  cursor: ew-resize; touch-action: none; border: 0; padding: 0; background: none;
+}
+.sb-grip::after {
+  content: ''; position: absolute; top: 0; bottom: 0; right: 0; width: 3px;
+  background: var(--accent); opacity: 0; transition: opacity var(--dur-1) var(--ease-out);
+}
+.sb-grip:hover::after { opacity: 0.75; }
+.sb-grip:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sb-grip:focus-visible::after { opacity: 1; }
+body.nav-collapsed .sb-grip { display: none; }
+@media (max-width: 820px) { .sb-grip { display: none; } }
+
+/* Sideways twin of body.kc-resizing: while a drag is live the pointer keeps the
+   resize cursor everywhere, and nothing under it selects text. */
+body.kc-resizing-x, body.kc-resizing-x * { user-select: none !important; cursor: ew-resize !important; }
+/* The rail carries a 0.2s width transition for ⌘B. Leave it on during a drag
+   and the edge trails the cursor by a fifth of a second, which reads as the app
+   being slow rather than as an animation. */
+body.kc-resizing-x .sidebar { transition: none; }
+
 /* Desktop rail collapse (body.nav-collapsed, ⌘B) — the sidebar narrows to an
    icon column: labels, group headings and footer text disappear, icons stay
    centred, group breaks become hairlines. Titles (set by main.js) carry the
-   labels. Two states only — full or rail — no drag-to-resize by design. */
+   labels.
+
+   Two states, PLUS a width you can set yourself (18 Aug 2026, owner asked).
+   The rail and the full sidebar are still the two the burger toggles; the grip
+   only decides how wide "full" is. */
 
 @media (min-width: 821px) {
   .sidebar { transition: width 0.2s var(--ease-out); }

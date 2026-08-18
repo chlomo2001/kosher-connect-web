@@ -256,12 +256,15 @@ const GUIDES = [
   },
   {
     id: 'bigger-text', tab: 'settings', q: 'The writing is too small — how do I make it bigger?',
-    words: ['text size', 'bigger', 'larger', 'font', 'simple mode', 'small', 'cannot read', 'eyes'],
+    words: ['text size', 'bigger', 'larger', 'font', 'simple mode', 'small', 'cannot read', 'eyes',
+      'menu', 'sidebar', 'wider', 'narrower', 'resize', 'width'],
     go: 'Open Settings',
     steps: [
       'Press the "Aa" button at the top of any screen. Each press steps the whole app up a size.',
       'The setting sticks — it is remembered for next time on this device.',
       'The moon button next to it switches between the light and dark screen.',
+      'To make the menu down the left wider or narrower, drag its right-hand edge. Double-click that edge to put it back as it was.',
+      'The button beside the screen title shrinks the menu to icons only, and brings it back.',
       'Every screen in the app is checked at the largest size, so nothing goes off the edge when you turn it up.',
     ],
   },

@@ -115,6 +115,16 @@ export default function AppShell({ initialTab = 'dashboard' }) {
       {/* SIDEBAR — on phones it becomes an off-canvas drawer (body.nav-open),
           driven by the topbar burger; the scrim below catches outside taps. */}
       <div className="sidebar" id="appSidebar">
+        {/* Drag the right edge to set how wide the menu is (main.js wires it;
+            width is remembered per browser). A focusable separator rather than
+            a button, because that is what it is — and a drag is the one gesture
+            with no keyboard equivalent unless you give it one, so it takes the
+            arrow keys too. Hidden in the collapsed rail and on phones, both of
+            which set their own width. */}
+        <div className="sb-grip" id="navGrip" role="separator" aria-orientation="vertical"
+          tabIndex={0} aria-label="Resize the menu"
+          title="Drag to resize the menu — double-click to reset" />
+
         {/* A horizontal lockup, not a stacked crest. The centred version spent
             about 90px of the rail on a mark and two centred lines before the
             first destination — this says the same in ~46px and leaves the
