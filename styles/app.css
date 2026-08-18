@@ -1637,7 +1637,20 @@ body.kc-win-dragging .kc-wgrip::after { opacity: 0.55; }
    themselves containers — they are the only ones with a width that can change,
    and they always carry an explicit one, which `container-type: inline-size`
    requires. In every other dialog these rules simply never match. */
-.modal.kc-win { container-type: inline-size; }
+.modal { container-type: inline-size; }
+
+/* Why EVERY dialog and not only windowed ones (changed 19 Aug). The container
+   context used to arrive with .kc-win, which is added by kcWinPin — and
+   kcWinPin only runs when somebody GRIPS the dialog. So a 520px dialog on a
+   1280px screen matched no container query until it was dragged: the
+   two-column form stayed two-column and cut its own labels off ("Type the
+   first letters — U"), and one touch of the gripper reflowed it correctly.
+   The owner sent a before-and-after of exactly that: "it only rearranges after
+   a grip". The rules were right; they were being asked of a box that had not
+   been told it was a box yet. Safe to widen because .modal carries an explicit
+   width (520px above), which is what container-type: inline-size requires, and
+   because gripped dialogs have been running with this same containment all
+   along. */
 
 /* The rules themselves are at the FOOT of this file, not here. A container
    query carries no extra specificity — it is an ordinary rule that happens to
