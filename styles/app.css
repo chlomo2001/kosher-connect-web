@@ -1506,11 +1506,11 @@ body.kc-win-dragging .kc-wgrip::after { opacity: 0.55; }
    requires. In every other dialog these rules simply never match. */
 .modal.kc-win { container-type: inline-size; }
 
-@container (max-width: 660px) {
-  /* Its own row, rather than squeezed against the name. */
-  .detail-header .card-tools { flex-basis: 100%; justify-content: flex-start; }
-  .detail-stats { grid-template-columns: minmax(0, 1fr); }
-}
+/* The rules themselves are at the FOOT of this file, not here. A container
+   query carries no extra specificity — it is an ordinary rule that happens to
+   ask a different question — so `@container … .customer-dropdown` sitting up
+   here lost to the plain `.customer-dropdown` 900 lines below it, silently.
+   They only work last. */
 
 /* ── A window is not a modal ──────────────────────────────────────────────
    Owner, 18 Aug: "i cant scroll in background, so whats the idea of pushing to
@@ -2000,7 +2000,11 @@ body.kc-win-dragging .kc-wgrip::after { opacity: 0.55; }
    frequency, so shape+icon carry recognition instead of six tinted pills. */
 
 .card-action-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 18px;
+  /* minmax(0, 1fr), not 1fr — a bare 1fr is minmax(auto, 1fr), so a track
+     refuses to shrink below "✈️ Flight" and the row pushes out of the card
+     instead of squeezing. That is what made the customer card scroll sideways
+     by 39px once a dialog could be dragged down to 320px. */
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 18px;
 }
 
 @media (max-width: 560px) {
@@ -3766,4 +3770,37 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
   .bizbar-val { min-width: 96px; }
   .bizbar-share { min-width: 28px; margin-left: 4px; }
   .biz-trend { height: 108px; }
+}
+
+
+/* ══ Windowed dialogs, laid out against their OWN width ═══════════════════
+   Last in the file ON PURPOSE — see .modal.kc-win above. Every rule here
+   restates a `@media (max-width: …)` collapse that already exists for phones,
+   asked of the dialog instead of the screen: a window dragged to its 300px
+   floor on a 1280px display is exactly as narrow as a handset, and the media
+   query never hears about it. */
+
+@container (max-width: 660px) {
+  /* Its own row, rather than squeezed against the name. */
+  .detail-header .card-tools { flex-basis: 100%; justify-content: flex-start; }
+  .detail-stats { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* The narrow-screen rules a dialog needs, asked of the DIALOG.
+   These same two collapses already exist as `@media (max-width: 560px)` further
+   up — written when the only way to get a narrow dialog was a narrow phone. A
+   window dragged to 320px on a 1280px screen is exactly as narrow and the media
+   query never hears about it: six-across action tiles and two-column forms both
+   ran off the edge. Same numbers, asked of the right box. */
+@container (max-width: 560px) {
+  .card-action-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .form-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 380px) {
+  /* Two tiles still do not fit "Virtual number" at the 300px floor. */
+  .card-action-grid { grid-template-columns: minmax(0, 1fr); }
+  /* The picker's list is allowed to be wider than the box it hangs from, which
+     is right in a Kol Torah row and wrong in a 300px dialog — there is no
+     "wider" left to be. */
+  .customer-dropdown { min-width: 0; }
 }

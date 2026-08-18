@@ -1311,3 +1311,9 @@ Five faults, four of them mine from the day before:
 queries. Only `.card-tools` and `.detail-stats` were converted, because those
 are what visibly broke at half-screen. The next narrow-window bug will be in
 whatever was not looked at.
+
+## UX loop — night of 2026-08-18
+
+| date | item | gate | accepted? |
+|------|------|------|-----------|
+| 08-18 | **A dialog dragged narrow now lays itself out narrow.** Every narrow-screen collapse in the app was written as `@media (max-width: 560px)`, from when the only way to get a narrow dialog was a narrow phone. A window pulled to its 300px floor on a 1280px screen is exactly as narrow and the media query never hears about it: the customer card's action tiles ran **39px** off its edge and the picker's dropdown **10px** off New Rental's. Three fixes — `repeat(3, 1fr)` → `minmax(0, 1fr)` (a bare `1fr` is `minmax(auto, 1fr)`, so a track will not shrink below "✈️ Flight"), the phone collapses restated as `@container` rules, and the picker's "allowed to be wider than its box" min-width dropped below 380px where there is no wider left to be. **The container rules had to MOVE to the foot of the sheet**: a container query carries no extra specificity, so sitting beside `.modal.kc-win` they lost to the plain component rules 900 lines below and did nothing at all | ✅ gate + window/tickets/modals harnesses + audit 320/390/largest | owner live-test pending |

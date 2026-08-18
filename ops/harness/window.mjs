@@ -295,6 +295,44 @@ say(await p.evaluate(() => {
   return t.top >= h.bottom - 2
 }), 'at half-screen width the card tools should drop to their own row, not overlap the contact line')
 
+// ── squeezed to the floor, nothing runs off the edge ──────────────────────
+// The narrow-screen collapses were all written as `@media (max-width: 560px)`,
+// back when the only narrow dialog was a dialog on a phone. A window dragged to
+// its 300px floor on a 1280px screen is exactly as narrow and the media query
+// never hears about it.
+for (const [what, open] of [
+  ['the customer card', async () => {
+    await p.evaluate(() => openCustomerById(customers[0].id))
+    await p.waitForTimeout(600)
+    return '#customerCard'
+  }],
+  ['a form dialog', async () => {
+    await p.evaluate(() => { try { dismissCustomerCard() } catch {} })
+    await p.evaluate(async () => { await goToTab('rentals') })
+    await p.waitForTimeout(250)
+    await p.evaluate(() => openNewRentalModal())
+    await p.waitForTimeout(400)
+    return '#dynamicModal'
+  }],
+]) {
+  const sel = await open()
+  await p.evaluate((s) => {
+    const d = document.querySelector(`${s} .modal`)
+    kcWinPin(d); kcWinPlace(d, 20, 20, 300, 700)
+  }, sel)
+  await p.waitForTimeout(300)
+  const fit = await p.evaluate((s) => {
+    const d = document.querySelector(`${s} .modal`)
+    return { over: d.scrollWidth - d.clientWidth, w: Math.round(d.getBoundingClientRect().width) }
+  }, sel)
+  say(fit.over <= 0, `${what} scrolls sideways by ${fit.over}px when squeezed to ${fit.w}px`)
+}
+await p.evaluate(() => { try { closeDynamicModal() } catch {} })
+await p.evaluate(async () => { await goToTab('customers') })
+await p.waitForTimeout(300)
+await p.evaluate(() => openCustomerById(customers[0].id))
+await p.waitForTimeout(600)
+
 // …and a drag that finishes over the backdrop is not a backdrop click.
 say(await p.evaluate(() => {
   const o = document.getElementById('customerCard')
