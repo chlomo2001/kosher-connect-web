@@ -90,16 +90,17 @@ test('every public page has a manual entry, at the address it actually lives at'
   }
 })
 
-test('every dialog in the app has a manual entry, on the screen it opens from', () => {
+test('every dialog in the app has a manual entry', () => {
+  // Coverage only, NOT "filed under the tab the harness uses". The harness's
+  // tab is merely somewhere the box can be opened from for a screenshot —
+  // cash-up is listed there under the dashboard and staff actually reach it
+  // from Wallet and from the till. The manual has to say where a person finds
+  // it, so the manual owns that mapping and this test does not second-guess it.
   const modals = harnessModals()
   assert.ok(modals.size >= 20, 'the modal registry did not parse — a bad regex must fail loudly')
-  const documented = new Map()
-  for (const s of SCREENS) for (const [id] of s.dialogs) documented.set(id, s.id)
-
-  for (const [id, tab] of modals) {
+  const documented = new Set(manualDialogs())
+  for (const id of modals.keys()) {
     assert.ok(documented.has(id), `the "${id}" dialog is in the harness but nowhere in the manual`)
-    assert.equal(documented.get(id), tab,
-      `the manual files "${id}" under ${documented.get(id)}; it opens from ${tab}`)
   }
 })
 
@@ -189,7 +190,7 @@ test('the manual carries no customer data', () => {
 // screen cannot raise it without an edit here that shows up in review — which
 // is the point, because "I will document it later" is how the last thirty
 // documents in docs/ got the way they are.
-const DRAFT_BUDGET = 26
+const DRAFT_BUDGET = 23
 
 test('the unwritten screens are exactly the ones we admit to', () => {
   const drafts = draftScreens().map((s) => s.id)

@@ -10,17 +10,17 @@ do I…?** on any screen — and the numbers (rates, free days, caps) live in
 BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
-**2 of 28 screens written out in full; 26 still short entries.**
+**5 of 28 screens written out in full; 23 still short entries.**
 
 ---
 
 ## The staff app
 
-- Dashboard — The morning and evening screen: what the shop took today, what needs attention now, and the end-of-day cash up.
-- Customers — Everyone on the books — how to reach them, what they owe, everything they have ever had from the shop.
+- Dashboard — The morning and evening screen: what the shop took today, what needs doing now, and a way into whichever job is shouting loudest.
+- Customers — Everyone on the books: how to reach them, what they owe, and everything they have ever had from the shop in one place.
 - Phone Rentals — Every phone the shop hires out: what is out with whom, what is due back, and what is free to rent today.
 - SIM Plans — UK SIM-only plans the shop manages for customers — which network, which plan, what it renews at.
-- Wallet — Money in and out against a customer: payments taken, charges raised, and what the balance is now.
+- Wallet — The money side of the shop: what came in today, who owes, who is in credit, and every payment and charge as it lands.
 - Tickets & Flights — Flights booked for customers: the ticket, who is travelling, what it cost, and whether their documents will still be valid.
 - Repairs — Phones handed in for repair: what is wrong, where it is up to, and what to tell the customer when they ring.
 - Online & Print — The one-off jobs done at the counter — printing, forms, online tasks — charged to a customer or taken as a walk-in.
@@ -34,17 +34,86 @@ list.
 
 ### Dashboard
 
-The morning and evening screen: what the shop took today, what needs attention now, and the end-of-day cash up.
+The morning and evening screen: what the shop took today, what needs doing now, and a way into whichever job is shouting loudest.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **The date line** — Today in English and in Hebrew, with a running clock. The greeting uses your own first name, so it is obvious whose sign-in the screen is on.
+- **↻ Refresh** — Re-reads today's money and tasks. The screen paints from what it already had and then updates, so an old figure for a moment is normal; this forces it.
+- **📊 Summary** — Takings broken down by what earned them — rentals, tickets, the till — for the week and the month. Owner only: it is not on the screen for a helper.
+- **📱 New rental · ✈️ New booking · 🔧 New repair · 👤 New customer** — The four jobs that start at the counter, opened from here without hunting for the right tab first.
+- **Money in today** — What has actually come in today — not what has been invoiced. Underneath: what was charged out, how the week compares with the last one, and progress against the month's target if one is set.
+- **Outstanding** — What the shop is owed, then the customers who owe it, biggest first. Press a name to open that customer. A walk-in has no name to open, so it is marked as one.
+- **The row of counts** — Active rentals, open repairs, flights, SIM renewals and open tasks. Each is a button: it opens the tab it counts, already on the right list.
+- **Needs attention** — The one list to read first thing. Overdue rentals, repairs waiting to be collected, flights coming up, SIM plans renewing or already past their date, stock running low, returns still open with a supplier, customers with no number anywhere on their record, and high-priority tasks. Every line goes straight to the thing it is about.
+- **Recent wallet activity** — The last payments and charges as they land, so money going on the books is visible without opening the ledger.
+
+**Boxes that open on top of it**
+
+- **business-summary** — The owner's read of the business: what each service earned this week and this month.
+
+**Rules that bite here**
+
+- "Today" is the shop's own day, not the clock in a data centre — the takings line changes at midnight here, and cash-up counts the same day it does.
+- Needs attention shows the ten most pressing lines and no more. It is a queue to work through, not an inbox: a long tail of renewals is rolled into one line so it cannot push an overdue rental off the bottom.
+- The flights count asks who is DEPARTING in the week ahead. A customer already abroad is not on it and should not be — the trip-long checks live on their booking.
+- Nothing here is a place to fix anything. Every line hands you to the screen that owns it, so a correction is made once, where the record lives.
+
+**When it goes wrong**
+
+- **The figures look wrong or stale** — Press ↻ Refresh. The screen shows what it last read while the new numbers arrive, so a figure can lag a change made seconds ago on another screen.
+- **"All clear" but you know something is outstanding** — The feed only knows what has been recorded. A rental never marked returned, a repair left on the wrong stage or a payment taken but not entered are all invisible here — and all fixable on their own tab.
+- **Money in today looks too low** — It counts money RECEIVED today. Work done today and charged to an account is money owed, not money in — it shows under Outstanding until they pay.
+- **📊 Summary is not on the screen** — It is owner-only. A helper signed in sees the rest of the dashboard without it.
 
 ---
 
 ### Customers
 
-Everyone on the books — how to reach them, what they owe, everything they have ever had from the shop.
+Everyone on the books: how to reach them, what they owe, and everything they have ever had from the shop in one place.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **The counts along the top** — How many customers are registered, how many rentals and SIM plans are running, and what the shop has taken from rentals all told.
+- **Customer List** — The list itself, surname first so it reads the way you would say it. A row shows their number, what they have on the go, and their balance.
+- **Filter** — Narrows the list to one kind of customer: an active rental, a flight coming up, a SIM plan, a virtual number, an open repair, money owed, a passport on file, or nobody-can-ring-them — no number of theirs and no SIM of ours either.
+- **Sort** — Surname or first name, either direction; most owed first when chasing money; recently added after an import; most services first to find the shop's busiest customers.
+- **Export CSV** — The list as it is filtered and sorted, as a file — for a mail merge, or for anything the app does not do itself.
+- **👥 Duplicates** — Owner only. Reviews the whole book for records that look like the same person entered twice, with the evidence beside each pair.
+- **+ New customer** — Adds someone. A name and a number is enough to start; everything else can follow.
+- **Details** — Opens their card beside the list — the whole history without leaving the list you were working through.
+- **⤢ Open as a full page** — The same customer on their own address, which survives a refresh and can be sent to someone else. It has an Overview and an Activity timeline.
+- **💬 Contact** — Draft a reminder (written for you, and nothing is sent from here), draft a reply to a message they sent, or log a call or note so the next person knows what was said.
+- **💷 Money** — Charge the card they have saved, save one for next time, or make a payment link to send them. The card number is entered on Stripe's own screen — the shop never sees it and never holds it.
+- **⚙️ Manage** — Set yourself a reminder about them, edit their details, and — for the owner — look up what their line is doing with the carrier.
+- **Documents** — Files shared with the customer, which they see in their own portal, and anything they have sent back. What they upload waits for you to approve or reject it, so nothing lands on the record unread.
+
+**Boxes that open on top of it**
+
+- **customer-new** — Adding someone: name, number, address, and how they should be billed.
+- **customer-edit** — The same details afterwards. The carrier-login field appears here and not on the add form.
+- **customer-card** — The card beside the list: balance, everything they have on the go, their history, and the three tool menus.
+- **customer-page** — The same thing as a page of its own, with an address you can refresh or send on.
+- **customer-page-log** — The Activity tab of that page: everything that has ever happened to this customer, newest first.
+- **remind** — A reminder for YOU about this customer. It becomes a task on your own list, and nothing reaches them.
+- **draft-reminder** — Writes a chasing message for you to read, correct and send yourself. It is a draft, not a send.
+- **log-comm** — Records a call, a text or a conversation on their history, so the next person picking up the phone knows what was already said.
+- **dup-scan** — The duplicate review: likely pairs, the evidence on each side, and two answers — merge into the record you are keeping, or not the same person.
+
+**Rules that bite here**
+
+- Two records with the same name are as often two brothers as one man typed twice. The duplicate review puts the evidence on the screen — the SIMs, rentals, bookings and money on each side — and "not the same" is remembered, so the pair never asks again.
+- Nothing on this screen sends anything to a customer. Drafting a reminder writes it; sending it is a separate, deliberate act.
+- A passport on file is shown as a yes on the list and nowhere as a number. Passport details are the customer's private data and the app treats them that way in every list, export and report.
+- The balance is the one from the ledger, counting charges as well as payments. For a moment after the screen opens you may see the rental-only figure while the real one arrives.
+
+**When it goes wrong**
+
+- **The list is empty** — Read the words. "No customers yet" and "could not load your customers" are different screens on purpose — the second offers a retry, and is not a reason to start typing the book back in.
+- **A search finds nobody** — The empty result offers ✕ Clear search. The term stays in the box until you clear it, which is why the next search can look broken.
+- **The same person is on the list twice** — Owner: 👥 Duplicates. Merge into the record you want to keep — history from both sides follows the merge, so keep the one with the better details.
+- **The balance is not what you expected** — Open their wallet. The card shows what the ledger says, and a charge raised but not yet paid moves the balance exactly as a payment does.
+- **👥 Duplicates or the carrier lookup is missing** — Both are owner-only. A helper signed in has the rest of the screen.
 
 ---
 
@@ -96,9 +165,38 @@ UK SIM-only plans the shop manages for customers — which network, which plan, 
 
 ### Wallet
 
-Money in and out against a customer: payments taken, charges raised, and what the balance is now.
+The money side of the shop: what came in today, who owes, who is in credit, and every payment and charge as it lands.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **The four figures** — Money in today, charged out today, what the shop is owed altogether, and how much prepaid credit it is holding for people.
+- **Choose a customer · 💰 Record payment / credit** — The way in: pick the person, then record what they handed over. Nothing is recorded against nobody.
+- **🧾 Cash-up** — The end-of-day count. What the app says came in, by method, against what is actually in the drawer.
+- **🏦 Bank & card reconciliation** — Owner only. What the bank says arrived, matched against what the books say was taken.
+- **In arrears** — Everyone who owes, largest first. Take the payment straight from the row, or press the name to open them.
+- **In credit** — Everyone the shop is holding money for, so a prepayment is never quietly forgotten when they come in.
+- **Recent activity** — The last payments and charges in order, each showing the customer, what it was for and how they paid.
+
+**Boxes that open on top of it**
+
+- **wallet** — Recording money: payment (settles what they owe) or top-up (credit for later), the amount, how they paid — cash, card, bank transfer, voucher — and a note. There is a button that fills in exactly what they owe.
+- **cashup** — The day's count: what came in by method, what you counted in cash, the difference either way, and room for a note. It can count an earlier day, and says clearly when it is doing so.
+- **bank-recon** — Owner only. Bank lines beside the shop's own record, with a suggested match and how confident it is, filtered by account or by what is still open. A match is only made when you confirm it.
+
+**Rules that bite here**
+
+- Money in is money RECEIVED. Work charged to an account is money owed, and it moves the Outstanding figure, not the takings.
+- A payment settles what someone owes; a top-up is money held for them in advance. Choosing the wrong one leaves the balance wrong in both directions.
+- The card number is never typed into this app. Card payments go through Stripe on its own screen, and the shop never sees or holds the number.
+- A cash-up that is over or short records the difference rather than hiding it. The count is the record — a tidy number that was never counted is worth nothing.
+- Bank reconciliation is owner-only, and a suggested match is a suggestion: nothing is matched until someone confirms it.
+
+**When it goes wrong**
+
+- **The wallet will not open** — The screen says what went wrong. A helper without wallet access sees balances on the customer card instead; that is a permission, set in Settings, not a fault.
+- **Somebody is in arrears who has definitely paid** — The payment was either never recorded or went on another record. Check their history first — the customer card lists every entry against them, with the method and the note.
+- **A payment is on the wrong customer** — Do not quietly delete it. The ledger is where the shop's accounts come from, so tell the owner what happened and let the correction be made deliberately, with a note that explains it.
+- **The drawer does not match the cash-up** — Record what you actually counted and write what you think happened in the note — a float top-up, a customer given change from the wrong pocket. The difference is the useful part.
 
 ---
 
