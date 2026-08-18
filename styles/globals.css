@@ -352,12 +352,23 @@ button, summary { user-select: none; }
 /* Fixed on purpose, and the one control that should be: the button that
    changes the text size must not change its own — it would grow under the
    finger that is pressing it, and each press would move the next one. */
-.kc-textsize { position: relative; font-size: 15px; font-weight: 600; letter-spacing: -0.3px; color: var(--muted); }
-.kc-textsize[data-size="large"]::after,
-.kc-textsize[data-size="largest"]::after {
-  content: ''; position: absolute; top: 5px; right: 5px;
-  width: 6px; height: 6px; border-radius: 50%; background: var(--gold);
+/* The text-size button shows WHICH of the three modes is set, not just "on".
+   The Aa grows with the mode, and three pips fill to the level — an absolute
+   readout, because a single growing "Aa" has nothing to be measured against.
+   Was a lone gold dot that meant "not Standard" and could not tell Large from
+   Largest apart (owner, 18 Aug: "isnt visual enough as per on wich mode"). */
+.kc-textsize {
+  flex-direction: column; gap: 3px; line-height: 1;
+  /* Fixed sizes on purpose — the control that sets --fs-scale must not scale
+     with it, or it would move under its own press. */
+  font-size: 15px; font-weight: 600; letter-spacing: -0.3px; color: var(--muted);
 }
+.kc-fs-aa { font-size: 13px; line-height: 1; transition: font-size var(--dur-1, 0.15s) ease; }
+.kc-textsize[data-size="large"]   .kc-fs-aa { font-size: 15px; }
+.kc-textsize[data-size="largest"] .kc-fs-aa { font-size: 18px; color: var(--text); }
+.kc-fs-steps { display: flex; gap: 2px; }
+.kc-fs-steps i { width: 4px; height: 4px; border-radius: 50%; background: var(--border-input, var(--border)); transition: background var(--dur-1, 0.15s) ease; }
+.kc-fs-steps i.on { background: var(--gold); }
 
 /* ─── BUTTONS — tight-radius pills ─── */
 /* Button size (owner, 08-16: "the sizes of buttons… fills the screen").

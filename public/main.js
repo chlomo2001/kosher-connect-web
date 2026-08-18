@@ -11679,6 +11679,17 @@ function currentTextSize() {
   return TEXT_SIZES.find(s => s.mark === mark) || TEXT_SIZES[0];
 }
 
+// The button's face: an "Aa" that grows with the mode, and three pips filled to
+// the level — so which of the three is set reads at a glance and in the
+// absolute (a lone growing "Aa" has no reference to be judged against; the pips
+// do). One builder, used by the topbar button, the till button, and the
+// on-load/on-cycle refresh, so all three always show the same thing.
+function textSizeBtnInner() {
+  const idx = TEXT_SIZES.indexOf(currentTextSize());
+  const pips = TEXT_SIZES.map((_, i) => `<i${i <= idx ? ' class="on"' : ''}></i>`).join('');
+  return `<span class="kc-fs-aa">Aa</span><span class="kc-fs-steps" aria-hidden="true">${pips}</span>`;
+}
+
 // Cycles rather than opening a menu. Three steps is few enough that pressing
 // through them is faster than choosing from a list, and the whole app resizing
 // under the press is its own preview.
@@ -11700,6 +11711,7 @@ function updateTextSizeBtns() {
     // currently are.
     b.setAttribute('aria-label', `Text size: ${size.label}. Press to change.`);
     b.dataset.size = size.key;
+    b.innerHTML = textSizeBtnInner();
   });
 }
 
@@ -15553,7 +15565,7 @@ function renderPosView() {
             aria-label="Toggle light or dark mode">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙'}</button>
           <button class="theme-toggle kc-textsize" data-textsize-btn onclick="cycleTextSize()"
             data-size="${escHtml(currentTextSize().key)}" title="Text size: ${escHtml(currentTextSize().label)}"
-            aria-label="Text size: ${escHtml(currentTextSize().label)}. Press to change.">Aa</button>
+            aria-label="Text size: ${escHtml(currentTextSize().label)}. Press to change.">${textSizeBtnInner()}</button>
         </div>
         <div class="pos-cats">
           <button class="pos-cat${posCat === 'all' ? ' on' : ''}" onclick="posSetCat('all')">All</button>

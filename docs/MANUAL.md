@@ -31,7 +31,7 @@ The menu, the top bar and the buttons that are there whatever tab you are on —
 - **❓ Help** — One door for every kind of help. It opens on the jobs that belong to the screen you are standing on, under "On this screen", with the rest of the library below — written by hand, the same answer every time. Inside it: 🤖 Ask about the shop's numbers, and 📖 The full manual.
 - **🤖 Ask about the shop's numbers** — Inside the Help panel, and on Ctrl and K. Questions about the shop's own data in plain words — who owes money, what is overdue. It proposes; nothing happens until you tap to confirm it. It is not the place to ask how to do a job: the steps above are written by a person and are right every time.
 - **The blue button on the right** — Whatever creating something means on this screen — a new customer on Customers, a new rental on Phone Rentals. It changes with the tab so the main action is always in the same place.
-- **🌙 · Aa** — Light or dark, and the size of every word in the app. Both are per device and remembered, so the screen on the counter can be set for whoever stands at it.
+- **🌙 · Aa** — Light or dark, and the size of every word in the app. Press Aa to step through Standard, Large and Largest — the button shows which is set with three pips filled to the level and an Aa that grows with it. Both are per device and remembered, so the screen on the counter can be set for whoever stands at it.
 - **📖 The manual, under Help in the menu** — This book, in its own tab: every screen described in order, and the copy to print for somebody starting on Sunday.
 - **Your name at the bottom of the menu** — Who is signed in on this machine, and how to sign out. Worth checking before recording money.
 
