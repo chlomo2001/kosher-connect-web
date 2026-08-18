@@ -523,7 +523,8 @@ Post arriving from the networks — bills, warnings, confirmations — matched t
 - **Tick the ones that are nothing** — Each message has a tick box and there is a select-all above the list, so a run of identical circulars can be cleared in one press. Pairing a message to a SIM stays one at a time — that answer is different on every row.
 - **Filed on a SIM** — What has been matched, so the letter about a plan is on the plan when someone asks about it.
 - **Messages received** — Everything that has ever arrived, matched or not.
-- **Which SIM is this?** — The pairing question on an unmatched message, with the number it mentions. Answer it and the message files itself and stays filed.
+- **Which SIM is this?** — The pairing question on an unmatched message. A shared address can carry hundreds of SIMs, so it offers the likeliest few first — the number named in the message, plans that are live, and plans renewing around the date the message arrived — and says how many there are altogether. Answer it and the message files itself and stays filed.
+- **Type a name or number** — Appears when there are more SIMs on the address than fit. Type any part of a name or a number and the list narrows to it; “+ N more” shows the rest.
 - **Add as a new SIM plan** — For post about a plan the shop has never recorded. It opens the usual new-plan form with the number and network already filled, and files the message on the plan once it is saved.
 - **Dismiss** — For post that belongs to nobody — a circular, a wrong number. It leaves the queue without pretending to be filed.
 

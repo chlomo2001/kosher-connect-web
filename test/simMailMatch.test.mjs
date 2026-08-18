@@ -177,3 +177,62 @@ test('a hub address no SIM is registered at contributes nothing either way', () 
   assert.equal(none.confidence, 'unknown')
   assert.equal(none.matchedOn, null)
 })
+
+// ── the real Lebara shape (18 Aug 2026) ──────────────────────────────────────
+// Fourteen messages were sitting in the queue asking a person to pick between
+// up to thirteen SIMs, and every one of them named its own number in the body:
+//
+//   "Mobile Number: 07776659703 … Your 5GB Monthly Plan for mobile number
+//    07776659703 is scheduled to renew"
+//
+// The matcher read the subject and the snippet only, and for an HTML-only email
+// the snippet is the <style> block. So the answer was in the message and nobody
+// looked. giffgaff worked the whole time because it puts the number in the
+// SUBJECT.
+test('a carrier email that names its number in the BODY is filed, not queued', () => {
+  const index = buildSimIndex([
+    { id: 'sim-a', email: 'gitt.bilig@gmail.com', simNumber: '07776659703' },
+    { id: 'sim-b', email: 'gitt.bilig@gmail.com', simNumber: '07423423516' },
+    { id: 'sim-c', email: 'gitt.bilig@gmail.com', simNumber: '07392319095' },
+  ])
+  const mail = {
+    to: 'gitt.bilig@gmail.com',
+    subject: 'Your Lebara Mobile UK Auto Renew reminder',
+    // What the app actually stored for these: the stylesheet.
+    snippet: '96 * { box-sizing: border-box; } body { margin: 0; padding: 0; } p { line-height: inherit }',
+    text: 'Please ensure you have sufficient funds and your payment details are up to date. '
+      + 'Mobile Number: 07776659703 Hello, Your 5GB Monthly Plan for mobile number 07776659703 is scheduled to renew.',
+  }
+  const out = matchSimForMail(mail, index)
+  assert.equal(out.simId, 'sim-a', 'the message names one of the three SIMs — it should be filed on it')
+  assert.equal(out.confidence, 'address+number')
+  assert.deepEqual(out.numbers, ['7776659703'])
+})
+
+test('without the body it is still ambiguous — which is the bug this replaces', () => {
+  // Pins the CAUSE, so a future refactor that stops passing the body fails here
+  // with a message that says why rather than merely going quiet.
+  const index = buildSimIndex([
+    { id: 'sim-a', email: 'gitt.bilig@gmail.com', simNumber: '07776659703' },
+    { id: 'sim-b', email: 'gitt.bilig@gmail.com', simNumber: '07423423516' },
+  ])
+  const out = matchSimForMail({
+    to: 'gitt.bilig@gmail.com',
+    subject: 'Your Lebara Mobile UK Auto Renew reminder',
+    snippet: '* { box-sizing: border-box; }',
+  }, index)
+  assert.equal(out.simId, null)
+  assert.equal(out.confidence, 'ambiguous')
+})
+
+test('a shared mailbox with the number in the body beats the pool', () => {
+  // The pool address carries hundreds; naming the number settles it outright.
+  const sims = [{ id: 'target', email: 'pool@gmail.com', simNumber: '07999888777' }]
+  for (let i = 0; i < 40; i++) sims.push({ id: `other-${i}`, email: 'pool@gmail.com', simNumber: `0790000${String(i).padStart(4, '0')}` })
+  const out = matchSimForMail({
+    to: 'pool@gmail.com', subject: 'Your plan renews soon',
+    text: 'Mobile Number: +44 7999 888 777 — your plan renews on 2 September.',
+  }, buildSimIndex(sims))
+  assert.equal(out.simId, 'target')
+  assert.equal(out.confidence, 'address+number')
+})

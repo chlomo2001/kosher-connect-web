@@ -240,6 +240,10 @@ export default async function handler(req, res) {
       to: mail.recipients.join(','),
       subject: mail.subject,
       snippet: mail.snippet,
+      // The body too. Carriers put the mobile number in the message, not in the
+      // subject — leaving it out is what filled the queue with "which of these
+      // thirteen?" on messages that name their own number.
+      text: mail.text,
     }, index)
 
     const inserted = await db.insertIgnoreDup('sim_mail', [{

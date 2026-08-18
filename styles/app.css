@@ -1187,6 +1187,9 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
    the row ran off the edge and the choice with it. The label wraps inside its
    own button instead. Found by the nightly 320 × largest sweep. */
 .cm-pick .btn { max-width: 100%; white-space: normal; text-align: start; }
+/* The type-to-find box sits in the same row as the chips it filters, and stays
+   narrow: it is looking for one name in a dozen, not composing a message. */
+.cm-pick-filter { width: min(220px, 100%); padding: 5px 10px; font-size: var(--fs-small); }
 .cm-actions { display: flex; gap: 8px; align-items: center; }
 
 @media (max-width: 560px) {

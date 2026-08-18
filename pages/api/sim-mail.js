@@ -33,6 +33,9 @@ async function simDirectory() {
   const rows = await selectAllPaged(
     'sims', 'id,legacy_id,customer_id,provider,status,legacy_extras', 'order=id.asc'
   )
+  // renewalDate and status come along for the ranking below — a renewal notice
+  // is about a plan that is renewing, which is a strong hint at WHICH plan.
+
   const byId = new Map()
   // The browser holds the app's own SIM ids (legacy_id), not the row UUIDs, so
   // every id that arrives from the client is resolved through here.
@@ -46,6 +49,7 @@ async function simDirectory() {
       status: r.status || '',
       customerId: r.customer_id,
       customerName: r.legacy_extras?.customerName || '',
+      renewalDate: r.legacy_extras?.renewalDate || '',
     }
     byId.set(String(r.id), entry)
     if (entry.legacyId) byLegacyId.set(entry.legacyId, entry)
@@ -58,6 +62,41 @@ async function simDirectory() {
   const sims = { byId, byLegacyId, index }
   cache = { at: Date.now(), sims }
   return sims
+}
+
+// WHICH OF THESE THIRTEEN? — put the likely ones first.
+//
+// A pool address can carry hundreds of SIMs, and the queue used to offer them
+// in database order: a wall of equally-plausible chips, which is the same as
+// offering no help at all. Three signals, cheap and honest:
+//
+//   1. the message names the number      → it IS that SIM, not a guess
+//   2. the plan is live                  → a dead plan is not renewing
+//   3. its renewal is near the email     → a renewal notice comes days before
+//                                          the renewal it is about
+//
+// This RANKS. It never drops a candidate below the display cap on its own, and
+// it never decides — a person still picks, which is the whole point of the
+// queue. Ordering is a hint; hiding would be a lie.
+function rankCandidates(list, m) {
+  const named = new Set(m.numbers || [])
+  const at = m.received_at ? Date.parse(m.received_at) : NaN
+  const score = (c) => {
+    let s = 0
+    const tail = String(c.number || '').replace(/\D/g, '').slice(-10)
+    if (tail && named.has(tail)) s += 100
+    if (String(c.status || '').toLowerCase() === 'active') s += 10
+    if (!Number.isNaN(at) && c.renewalDate) {
+      const days = Math.abs(Date.parse(`${c.renewalDate}T12:00:00Z`) - at) / 86400000
+      // Inside a fortnight is a real signal; beyond that it is noise, and a
+      // linear score would keep sorting on it long after it stopped meaning
+      // anything.
+      if (days <= 14) s += 8 - Math.min(8, days / 2)
+    }
+    return s
+  }
+  return [...list].sort((a, b) => score(b) - score(a)
+    || String(a.customerName || '').localeCompare(String(b.customerName || '')))
 }
 
 async function handler(req, res) {
@@ -100,13 +139,24 @@ async function handler(req, res) {
       const sim = m.sim_id ? byId.get(String(m.sim_id)) || null : null
       // Candidates only matter for a row a human still has to settle.
       let candidates = []
+      let candidatesTotal = 0
       if (!m.sim_id && !m.resolved_at) {
-        const fromAddress = index.byAddress.get(mailboxKey(m.recipient) || '') || []
+        // A tagged address that nothing is registered at falls back to its
+        // base: mail to gitt.bilig+kalush@ where only gitt.bilig@ is on record
+        // used to offer NOTHING — a dead end reading "not on the books" — when
+        // the postbox behind it has candidates to choose from. The tag is a
+        // narrower answer when it exists; when it does not, the postbox beats
+        // an empty screen.
+        const key = mailboxKey(m.recipient) || ''
+        const baseKey = key.includes('+') ? `${key.slice(0, key.indexOf('+'))}@${key.split('@')[1]}` : ''
+        const fromAddress = index.byAddress.get(key)
+          || (baseKey ? index.byAddress.get(baseKey) : null) || []
         const fromNumber = (m.numbers || []).flatMap((n) => index.byNumber.get(n) || [])
-        candidates = [...new Set([...fromAddress, ...fromNumber])]
+        const all = [...new Set([...fromAddress, ...fromNumber])]
           .map((id) => byId.get(String(id)))
           .filter(Boolean)
-          .slice(0, 12)
+        candidatesTotal = all.length
+        candidates = rankCandidates(all, m).slice(0, 12)
       }
       return {
         id: m.id,
@@ -119,7 +169,7 @@ async function handler(req, res) {
         confidence: m.confidence,
         numbers: m.numbers || [],
         resolvedAt: m.resolved_at,
-        sim, candidates,
+        sim, candidates, candidatesTotal,
       }
     })
 

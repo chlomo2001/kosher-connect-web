@@ -18480,6 +18480,60 @@ function paintCarrierMail() {
     </div>`;
 }
 
+// "Which SIM is this?" — the shortlist, not the phone book.
+//
+// A pool address carries up to 308 SIMs and the answer used to be all of them,
+// in database order: thirteen chips wrapping over four lines, no two more
+// likely than the others, which is a question rather than help. The server puts
+// the likely ones first (rankCandidates: the number named in the message, a
+// live plan, a renewal near the email date); this shows a few of those and asks
+// before it shows the rest. Typing filters by number or by name, because when
+// none of the first few is right the person usually knows who it is.
+const CM_SHOW = 4;
+const cmExpanded = new Set();
+const cmFilterText = {};
+
+function cmPickHtml(m) {
+  const key = String(m.id);
+  const q = (cmFilterText[key] || '').trim().toLowerCase();
+  const digits = q.replace(/\D/g, '');
+  const matches = (c) => !q
+    || String(c.customerName || '').toLowerCase().includes(q)
+    || (digits && String(c.number || '').replace(/\D/g, '').includes(digits));
+  const all = m.candidates.filter(matches);
+  const open = cmExpanded.has(key) || !!q;
+  const shown = open ? all : all.slice(0, CM_SHOW);
+  const hidden = all.length - shown.length;
+  const total = m.candidatesTotal || m.candidates.length;
+
+  return `
+    <div class="cm-pick">
+      <span class="rv-label">Which SIM is this?</span>
+      ${total > CM_SHOW ? `<input class="form-input cm-pick-filter" placeholder="Type a name or number…"
+          value="${escHtml(cmFilterText[key] || '')}" aria-label="Filter the SIMs"
+          oninput="cmPickFilter('${escJs(key)}', this.value)">` : ''}
+      ${shown.map(c => `<button class="btn btn-outline btn-sm"
+          onclick="cmPair(${m.id}, '${escHtml(String(c.id))}')">
+          ${escHtml(fmtPhone(c.number) || '—')} · ${escName(c.customerName || '')}</button>`).join('')}
+      ${hidden > 0 ? `<button class="btn btn-outline btn-sm" style="border-style:dashed;"
+          onclick="cmExpanded.add('${escJs(key)}');paintCarrierMail()">+ ${hidden} more</button>` : ''}
+      ${q && !all.length ? `<span style="font-size:var(--fs-small);color:var(--muted);">
+          Nothing on this address matches “${escHtml(q)}”.</span>` : ''}
+      ${total > m.candidates.length ? `<span style="font-size:var(--fs-micro);color:var(--muted);">
+          ${total} SIMs use this address — the closest ${m.candidates.length} are offered.</span>` : ''}
+    </div>`;
+}
+
+// Re-render on every keystroke rather than filtering the chips in place: the
+// list is a dozen buttons, and one code path for "what is on screen" beats two.
+function cmPickFilter(key, value) {
+  cmFilterText[key] = value;
+  paintCarrierMail();
+  const el = document.querySelector(`.cm-row .cm-pick-filter[value="${CSS.escape(value)}"]`)
+    || document.querySelector('.cm-pick-filter');
+  if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+}
+
 function cmRowHtml(m) {
   const when = fmtWhen(m.receivedAt);
   const badge = {
@@ -18510,13 +18564,7 @@ function cmRowHtml(m) {
         </div>
         ${m.sim ? `<div class="cm-meta">Filed on ${escHtml(fmtPhone(m.sim.number))} ·
             ${escHtml(m.sim.provider || '')} · ${escName(m.sim.customerName || '')}</div>` : ''}
-        ${!settled && m.candidates.length ? `
-          <div class="cm-pick">
-            <span class="rv-label">Which SIM is this?</span>
-            ${m.candidates.map(c => `<button class="btn btn-outline btn-sm"
-                onclick="cmPair(${m.id}, '${escHtml(String(c.id))}')">
-                ${escHtml(fmtPhone(c.number) || '—')} · ${escName(c.customerName || '')}</button>`).join('')}
-          </div>` : ''}
+        ${!settled && m.candidates.length ? cmPickHtml(m) : ''}
         ${!settled && !m.candidates.length ? `
           <div class="cm-pick">
             ${m.numbers.length ? `<button class="btn btn-primary btn-sm"
