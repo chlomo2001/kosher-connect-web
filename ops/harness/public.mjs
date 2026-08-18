@@ -41,7 +41,11 @@ export const PAGES = { welcome: 'pages/welcome.js', portal: 'pages/portal.js', '
   // The three LEGAL pages. They are linked from the welcome footer and from the
   // sign-up form's privacy line, so a customer reaches them from the most-read
   // page on the site — and neither harness had ever rendered one.
-  privacy: 'pages/privacy.js', terms: 'pages/terms.js', refund: 'pages/refund.js' }
+  privacy: 'pages/privacy.js', terms: 'pages/terms.js', refund: 'pages/refund.js',
+  // The staff manual. It is a page like any other and it prints, so it gets
+  // looked at like any other — a reference nobody can read on a phone at the
+  // counter is a reference nobody reads.
+  manual: 'pages/manual.js' }
 
 // The product has FOUR theme states, not two, and conflating them is how a
 // page can look right here and wrong on a phone:

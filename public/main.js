@@ -17002,7 +17002,13 @@ function openHowToModal(prefill = '') {
     <input class="form-input" id="howToSearch" placeholder="What do you want to do?" autocomplete="off"
       oninput="renderHowTo()" onkeydown="if(event.key==='Enter')renderHowTo()">
     <div id="howToOut" style="margin-top:12px;"></div>
-    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
+    <div class="modal-actions">
+      <!-- The guides answer the job in hand; the manual is the screen-by-screen
+           reference behind them, and the thing you can print for someone's
+           first Sunday. New tab on purpose: it is read ALONGSIDE the work. -->
+      <a class="btn btn-outline" href="/manual" target="_blank" rel="noopener">📖 The full manual</a>
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
+    </div>
   `);
   setTimeout(() => {
     const i = document.getElementById('howToSearch');

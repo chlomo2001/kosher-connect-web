@@ -1644,3 +1644,46 @@ since it shipped — `lib/bookingGate.mjs` and a hand-written mirror inside
 be made twice, which is precisely how mirrors drift, so the test now lifts the
 browser copy out of `main.js` and holds it to the module's verdict over nine
 bookings. Mutation-tested: reverting either copy alone fails it.
+
+## The manual, and why it is code (18 Aug)
+
+Owner asked for "an instruction guide for the whole site… as simple as possible
+but w/o missing any detail… updated live while we work on the site". The last
+clause is the whole problem: `docs/` holds thirty-odd files and most are dated
+snapshots, true the day they were written and never touched again. A manual that
+goes stale is worse than none, because the helper covering the counter believes
+it.
+
+So the manual is not a document. It is `lib/manual.mjs` — one entry per screen —
+with `docs/MANUAL.md` and the printable `/manual` page generated from it, and
+`test/manual.test.mjs` holding it to the app:
+
+| tooth | what makes it bite |
+|---|---|
+| coverage — screens | a tab in `ALL_TABS` with no entry fails |
+| coverage — pages | a page in the harness `PAGES` registry with no entry fails, and its address is checked against the file it lives in |
+| coverage — dialogs | every one of the 25 modals in the harness `MODALS` registry must be documented, on the screen it opens from |
+| drift — names | a screen's name must equal its `TAB_META` label |
+| drift — buttons | a written screen must name its own primary button, spelled the way the button is |
+| freshness | `docs/MANUAL.md` is regenerated in memory and compared with what is committed |
+| the ratchet | `DRAFT_BUDGET` must equal the number of drafts, so it can only go down — a new screen has to be written now, not "later" |
+
+Plus two standing rules the tests enforce on the prose: no developer words (the
+same jargon check the guides get), and **no prices, rates or periods** — those
+live in Settings and BUSINESS_RULES.md, and a number copied into the manual is a
+second price list waiting to disagree with the till.
+
+**Mutation-tested, and one tooth was a fake.** The freshness check imported
+`scripts/build-manual.mjs`, whose top-level code wrote the file — so the import
+regenerated `docs/MANUAL.md` and then compared the fresh copy with itself. It
+passed on a deliberately stale manual. The write is now guarded to run only as a
+command; an import must be pure or the check it feeds is theatre. The other six
+teeth were confirmed by breaking each one in turn.
+
+**Where it is:** ❓ How do I…? → 📖 The full manual (new tab), and `/manual`
+directly. Staff-only, behind the same cookie gate as the tools pages — it
+describes how the shop is run.
+
+**State:** 2 of 28 screens written out in full (Phone Rentals, and the manual
+page itself); 26 are honest one-line entries marked as such on the page. The
+prose lands screen by screen from here, each one dropping the budget by one.

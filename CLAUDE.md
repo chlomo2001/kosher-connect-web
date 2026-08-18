@@ -28,6 +28,15 @@ is gitignored, and every web session clones the repo into a fresh container, so
 an approval that lands only in the local file is thrown away with the container
 and the owner gets asked again next session.
 
+## The manual
+- Every screen is described once in `lib/manual.mjs`. The printable page (`/manual`) and
+  `docs/MANUAL.md` are generated from it — never edit those by hand.
+- A change to what a screen does updates that screen's entry in the same commit.
+  `test/manual.test.mjs` insists anyway: a new tab, a new dialog or a renamed primary
+  button fails the gate until the manual matches.
+- No prices, rates, free-day lists or periods in the manual. They live in Settings and
+  BUSINESS_RULES.md, so the business has one price list and the till is holding it.
+
 ## Hard rules
 - Secrets live only in Vercel env vars — never in code, the repo, or chat. Never ask the owner
   to paste secret keys into chat (non-secret `pk_` prefixes are fine).

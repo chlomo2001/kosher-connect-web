@@ -1,0 +1,214 @@
+// The teeth. lib/manual.mjs is only worth having if it cannot fall behind the
+// app, and nothing in this repo has ever stayed current on good intentions —
+// docs/ is thirty files of proof. So the manual is held to the code:
+//
+//   • a screen with no entry fails       (ALL_TABS, and the harness page list)
+//   • a dialog with no entry fails       (the harness MODALS registry)
+//   • a renamed tab or button fails      (TAB_META)
+//   • a stale docs/MANUAL.md fails       (it is generated, so it is checkable)
+//
+// Add a tab, add a modal, rename a primary button — npm test goes red and the
+// gate refuses to ship until the sentence is written.
+//
+// The registries are read as TEXT rather than imported, the same trick and for
+// the same reason as test/tabs.test.mjs: main.js is a browser script and the
+// harness modules pull in playwright, neither of which loads in a plain node
+// test. They are plain literals, so a regex is honest here.
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { SCREENS, screen, screensOf, draftScreens, manualDialogs } from '../lib/manual.mjs'
+import { manualMarkdown } from '../scripts/build-manual.mjs'
+import { ALL_TABS } from '../lib/auth.js'
+
+const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
+
+/** name → tab, from the harness modal registry. */
+function harnessModals() {
+  const src = read('ops/harness/modals.mjs')
+  const m = src.match(/export const MODALS = \[([\s\S]*?)\n\]/)
+  assert.ok(m, 'MODALS not found in ops/harness/modals.mjs')
+  const rows = [...m[1].matchAll(/^\s*\['([a-z0-9-]+)',\s*'([a-z]+)'/gm)]
+  return new Map(rows.map((r) => [r[1], r[2]]))
+}
+
+/** page key → source file, from the harness public-page registry. */
+function harnessPages() {
+  const src = read('ops/harness/public.mjs')
+  const m = src.match(/export const PAGES = \{([\s\S]*?)\}/)
+  assert.ok(m, 'PAGES not found in ops/harness/public.mjs')
+  const rows = [...m[1].matchAll(/'?([a-z-]+)'?\s*:\s*'(pages\/[^']+)'/g)]
+  return new Map(rows.map((r) => [r[1], r[2]]))
+}
+
+/** tab → { label, primary } from the browser app's tab table. */
+function tabMeta() {
+  const src = read('public/main.js')
+  const m = src.match(/const TAB_META = \{([\s\S]*?)\n\};/)
+  assert.ok(m, 'TAB_META not found in public/main.js')
+  const out = new Map()
+  for (const line of m[1].split('\n')) {
+    const id = line.match(/^\s{2}([a-z]+):\s*\{/)
+    if (!id) continue
+    const label = line.match(/label:\s*'([^']+)'/)
+    const primary = line.match(/primary:\s*\{\s*label:\s*'([^']+)'/)
+    out.set(id[1], { label: label ? label[1] : null, primary: primary ? primary[1] : null })
+  }
+  return out
+}
+
+const staff = () => screensOf('staff')
+const written = () => SCREENS.filter((s) => s.status === 'written')
+const prose = (s) => [s.what, ...s.parts.flat(), ...s.dialogs.flat(), ...s.rules, ...s.wrong.flat()].join(' ')
+
+// ── Coverage: nothing in the app is left undescribed ──────────────────────
+test('every screen in the app has a manual entry', () => {
+  const covered = new Set(staff().map((s) => s.id))
+  const missing = ALL_TABS.filter((t) => !covered.has(t))
+  assert.deepEqual(missing, [], `no manual entry for: ${missing.join(', ')}`)
+})
+
+test('every manual entry points at a real screen', () => {
+  for (const s of staff()) {
+    assert.ok(ALL_TABS.includes(s.id), `the manual describes "${s.id}", which is not a tab`)
+  }
+  const pages = harnessPages()
+  for (const s of screensOf('public')) {
+    assert.ok(pages.has(s.id), `the manual describes "${s.id}", which is not a page`)
+  }
+})
+
+test('every public page has a manual entry, at the address it actually lives at', () => {
+  const pages = harnessPages()
+  for (const [key, file] of pages) {
+    const s = screen(key)
+    assert.ok(s, `no manual entry for the ${key} page`)
+    // pages/tools/contacts.js → /tools/contacts. A page that moves takes its
+    // manual entry with it or this fails.
+    const expected = '/' + file.replace(/^pages\//, '').replace(/\.js$/, '')
+    assert.equal(s.path, expected, `the manual sends people to ${s.path} for ${key}; it lives at ${expected}`)
+  }
+})
+
+test('every dialog in the app has a manual entry, on the screen it opens from', () => {
+  const modals = harnessModals()
+  assert.ok(modals.size >= 20, 'the modal registry did not parse — a bad regex must fail loudly')
+  const documented = new Map()
+  for (const s of SCREENS) for (const [id] of s.dialogs) documented.set(id, s.id)
+
+  for (const [id, tab] of modals) {
+    assert.ok(documented.has(id), `the "${id}" dialog is in the harness but nowhere in the manual`)
+    assert.equal(documented.get(id), tab,
+      `the manual files "${id}" under ${documented.get(id)}; it opens from ${tab}`)
+  }
+})
+
+test('the manual does not describe dialogs that no longer exist', () => {
+  const modals = harnessModals()
+  for (const id of manualDialogs()) {
+    assert.ok(modals.has(id), `the manual describes a "${id}" dialog that the harness does not know about`)
+  }
+})
+
+test('a dialog is documented once, not twice', () => {
+  const ids = manualDialogs()
+  assert.equal(new Set(ids).size, ids.length, 'two screens claim the same dialog')
+})
+
+// ── Drift: a rename in the app must be a rename in the manual ─────────────
+test('every screen is called what the app calls it', () => {
+  const meta = tabMeta()
+  for (const s of staff()) {
+    assert.equal(s.name, meta.get(s.id)?.label,
+      `the manual calls ${s.id} "${s.name}"; the app calls it "${meta.get(s.id)?.label}"`)
+  }
+})
+
+test("a written screen names its own main button, spelled the way the button is", () => {
+  // The drift tooth. It only bites written entries — a draft has no button list
+  // yet — so it gets sharper with every screen that lands.
+  const meta = tabMeta()
+  for (const s of written().filter((x) => x.kind === 'staff')) {
+    const primary = meta.get(s.id)?.primary
+    if (!primary) continue
+    const labels = s.parts.map(([label]) => label).join(' | ')
+    // Compared without the leading "+ " / emoji, which differ between the
+    // topbar button and the one on the screen itself.
+    const bare = primary.replace(/^[+\s]*/, '').toLowerCase()
+    assert.ok(labels.toLowerCase().includes(bare),
+      `${s.id}: the app's main button is "${primary}"; the manual lists ${labels}`)
+  }
+})
+
+// ── The standard for a finished entry ─────────────────────────────────────
+test('a written screen is actually usable', () => {
+  for (const s of written()) {
+    assert.match(s.what, /\.$/, `${s.id}: "what" should be a full sentence`)
+    assert.ok(s.what.length > 40, `${s.id}: "what" is too thin to tell anyone anything`)
+    assert.ok(s.parts.length >= 3, `${s.id}: ${s.parts.length} part(s) is not a description of a screen`)
+    assert.ok(s.rules.length >= 1, `${s.id}: no rules — if there are genuinely none, say so in one`)
+    assert.ok(s.wrong.length >= 1, `${s.id}: nothing about what to do when it goes wrong`)
+    for (const [label, text] of [...s.parts, ...s.dialogs, ...s.wrong]) {
+      assert.ok(label.length > 2, `${s.id}: "${label}" is not a label`)
+      assert.ok(text.length > 20, `${s.id}: "${label}" — "${text}" is too terse to help anyone`)
+    }
+  }
+})
+
+test('the manual is written for someone with no training', () => {
+  // Same standard the guides are held to. A helper covering the counter for an
+  // afternoon has never heard of a payload.
+  for (const s of SCREENS) {
+    assert.doesNotMatch(prose(s), /\b(API|JSON|endpoint|payload|null|boolean|schema|PostgREST|webhook)\b/,
+      `${s.id}: the manual uses developer words`)
+  }
+})
+
+test('the manual quotes no prices — there is one price list and this is not it', () => {
+  // Rates, caps, deposits and day counts live in BUSINESS_RULES.md and in
+  // Settings. A number copied here is a second price list, and the day it
+  // disagrees with the till is the day someone is charged the wrong amount.
+  for (const s of SCREENS) {
+    assert.doesNotMatch(prose(s), /£\s*\d/, `${s.id}: the manual quotes a price — point at Settings instead`)
+    assert.doesNotMatch(prose(s), /\b\d+\s*(days?|months?)\b/i,
+      `${s.id}: the manual quotes a period — say what changes it, not what it is`)
+  }
+})
+
+test('the manual carries no customer data', () => {
+  // It is generated into a file, printed and pinned up by the till. Passport
+  // numbers are PII (CLAUDE.md), and a real phone number or IMEI has no
+  // business being an example either.
+  for (const s of SCREENS) {
+    assert.doesNotMatch(prose(s), /\d{6,}/, `${s.id}: a long number in the manual looks like real customer data`)
+  }
+})
+
+// ── The ratchet ───────────────────────────────────────────────────────────
+// May only ever go DOWN. Writing a screen out in full lowers it by one; a new
+// screen cannot raise it without an edit here that shows up in review — which
+// is the point, because "I will document it later" is how the last thirty
+// documents in docs/ got the way they are.
+const DRAFT_BUDGET = 26
+
+test('the unwritten screens are exactly the ones we admit to', () => {
+  const drafts = draftScreens().map((s) => s.id)
+  assert.equal(drafts.length, DRAFT_BUDGET,
+    `${drafts.length} screens are still drafts, the budget says ${DRAFT_BUDGET}: ${drafts.join(', ')}`)
+})
+
+test('every entry says something true even while it is a draft', () => {
+  for (const s of SCREENS) {
+    assert.ok(s.what && s.what.length > 40, `${s.id}: even a draft owes the reader one honest sentence`)
+    assert.ok(['written', 'draft'].includes(s.status), `${s.id}: unknown status "${s.status}"`)
+    assert.match(s.id, /^[a-z0-9-]+$/, `${s.id} is not a plain slug`)
+  }
+  const ids = SCREENS.map((s) => s.id)
+  assert.equal(new Set(ids).size, ids.length, 'two screens share an id')
+})
+
+// ── The printed copy ──────────────────────────────────────────────────────
+test('docs/MANUAL.md is up to date', () => {
+  assert.equal(read('docs/MANUAL.md'), manualMarkdown(),
+    'docs/MANUAL.md has fallen behind lib/manual.mjs — run: node scripts/build-manual.mjs')
+})
