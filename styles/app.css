@@ -1128,7 +1128,12 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 
 .cm-list { display: flex; flex-direction: column; }
 .cm-row {
-  display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 14px;
+  /* max-content, not 120px: the when column holds "18 Aug 2026 09:24" and
+     .cm-when refuses to wrap it, so a fixed track it does not fit spills into
+     the gap and the date ends up almost touching the subject. Sizing the track
+     to the date is the same answer as everywhere else tonight — and it follows
+     Simple Mode for free, which 120px never could. */
+  display: grid; grid-template-columns: max-content minmax(0, 1fr) auto; gap: 14px;
   padding: 12px 0; border-top: 1px solid var(--border); align-items: start;
 }
 .cm-row:first-child { border-top: 0; }

@@ -27,6 +27,7 @@ import { advanceOneMonth, advancePastDate } from '../../../lib/money.mjs'
 import { displayDate } from '../../../lib/localDay.mjs'
 import { requirementFor, coverageStatus, KNOWN_DESTINATIONS } from '../../../lib/travelRules.mjs'
 import { loadTravelRules } from '../../../lib/travelRulesDb.js'
+import { buildSimIndex, matchSimForMail } from '../../../lib/simMailMatch.mjs'
 
 const DEST_NAME = Object.fromEntries(KNOWN_DESTINATIONS.map(d => [d.code, d.name]))
 const RECORDABLE = new Set(['ESTA', 'ETA_CA', 'ETA_IL', 'ETIAS', 'ETA_UK'])
@@ -636,6 +637,49 @@ async function handler(req, res) {
     // ONE rolling task per pile, not one per message. Lebara alone mails
     // hundreds of times a month; a task each would bury the list it lives in.
     // The count is the signal, the numbers are in the notes.
+    // ── first, try the queue again against TODAY's SIM list ──
+    //
+    // Pairing happens once, at the moment a message lands, and it is only ever
+    // as good as the SIM list at that instant. Two things change afterwards:
+    // somebody adds the SIM the message was about, and — 18 Aug — the matcher
+    // itself gets better. Neither reached the pile already sitting in the
+    // queue, so a message filed as unpairable stayed unpairable for ever, and
+    // the only way out was a human clicking it.
+    //
+    // So the queue is re-read here every night. Nothing is guessed at: this
+    // calls exactly the same matcher the webhook does, on the same envelope
+    // (`route` holds every recipient the message arrived with), and only a
+    // result certain enough to carry a sim_id is written back. An ambiguous
+    // message stays ambiguous.
+    let repaired = 0
+    const simRows = await selectAllPaged('sims', 'id,customer_id,legacy_extras', 'order=id.asc')
+    const simIndex = buildSimIndex(simRows.map((r) => ({
+      id: r.id,
+      email: r.legacy_extras?.email || '',
+      simNumber: r.legacy_extras?.simNumber || '',
+    })))
+    const customerBySim = new Map(simRows.map((r) => [String(r.id), r.customer_id]))
+    const stuck = await selectAllPaged(
+      'sim_mail', 'id,recipient,route,subject,snippet',
+      'resolved_at=is.null&sim_id=is.null&order=id.asc'
+    )
+    for (const m of stuck) {
+      const envelope = (m.route && m.route.length ? m.route : [m.recipient]).filter(Boolean).join(',')
+      if (!envelope) continue
+      const again = matchSimForMail(
+        { to: envelope, subject: m.subject || '', snippet: m.snippet || '' }, simIndex
+      )
+      if (!again.simId) continue
+      await db.update('sim_mail', `id=eq.${m.id}`, {
+        sim_id: again.simId,
+        customer_id: customerBySim.get(String(again.simId)) || null,
+        confidence: again.confidence,
+        recipient: again.matchedOn || m.recipient,
+      })
+      repaired++
+    }
+    if (repaired) console.log(`[sweep] re-paired ${repaired} carrier message(s) against today's SIM list`)
+
     const pending = await selectAllPaged(
       'sim_mail', 'confidence,numbers,carrier',
       'resolved_at=is.null&sim_id=is.null&order=received_at.desc'
@@ -678,6 +722,7 @@ async function handler(req, res) {
     }
     counts.simMailUnknownNumbers = unknownNumbers.size
     counts.simMailAmbiguous = ambiguous
+    counts.simMailRepaired = repaired
     })
 
     await section('sms-delivery', async () => {

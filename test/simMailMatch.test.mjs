@@ -54,6 +54,34 @@ test('a tagged address alone pairs the SIM', () => {
   assert.equal(m.confidence, 'address')
 })
 
+test('THE FORWARDING MAILBOX MUST NOT DROWN THE ANSWER', () => {
+  // The real shape since the mailboxes started forwarding into one inbox: the
+  // message carries the address that names ONE SIM and the postbox it passed
+  // through, which 253 SIMs are also registered at. Unioning them made this
+  // 'ambiguous' — three live messages were stuck like that on 18 Aug.
+  const m = matchSimForMail({
+    to: 'gitt.bilig+moshe@gmail.com',
+    deliveredTo: 'shevabruches111@gmail.com',   // the postbox: two SIMs below
+    subject: 'Your plan renews',
+  }, index)
+  assert.equal(m.simId, 's1')
+  assert.equal(m.confidence, 'address')
+  // …and the queue must name the address that did the work, not the postbox.
+  assert.equal(m.matchedOn, 'gitt.bilig+moshe@gmail.com')
+})
+
+test('two addresses naming two DIFFERENT single SIMs stay ambiguous', () => {
+  // The tie the narrowest-wins rule must not resolve by header order: picking
+  // one would write a customer's line onto another customer's account.
+  const m = matchSimForMail({
+    to: 'gitt.bilig+moshe@gmail.com, gittbilig+rivky@gmail.com',
+    subject: 'Your plan renews',
+  }, index)
+  assert.equal(m.simId, null)
+  assert.equal(m.confidence, 'ambiguous')
+  assert.deepEqual(m.candidates.sort(), ['s1', 's2'])
+})
+
 test('a pool address is narrowed by the number in the text', () => {
   const m = matchSimForMail({
     deliveredTo: 'shevabruches111@gmail.com',

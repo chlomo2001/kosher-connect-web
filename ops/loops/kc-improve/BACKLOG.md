@@ -1346,3 +1346,52 @@ whatever was not looked at.
 - ~~Repairs / Bookings / Virtual / Shop: the table is 982px inside its 984px
   card but its rows are only 943px.~~ **Explained and fixed the same night** —
   see the row above.
+
+## Carrier mail — the forwarding mailbox was drowning the answer (18 Aug)
+
+Owner asked for the route query to be re-run. It answered its question — and
+reading it turned up a bug underneath.
+
+**The route question, settled.** Five of the shop's seven mailboxes have
+delivered mail to the app, and **only gitt.bilig was ever given its own
+forward**:
+
+| source mailbox | messages | via the hub |
+|---|---|---|
+| gittbilig | 10 | 8 |
+| shevabruches111 | 3 | 3 |
+| shloimea1 · hashomrimmcr · elimelechgrunnfeld | 1 each | 1 each |
+
+Every non-gittbilig message arrived carrying `gitt.bilig@gmail.com` AND
+`5311386k@gmail.com` in its route, so the chain works end to end and the five
+remaining per-mailbox forwards are unnecessary. **redfarbilig (86 SIMs) and
+mendlhersh (16) have never appeared** — unconfirmed rather than broken; Lebara
+renewals cluster monthly, so a quiet day proves nothing.
+
+**The bug it exposed.** `matchSimForMail` unioned the candidates from every
+recipient on the envelope. Once the mailboxes started forwarding through one
+another, a message carried both the address that names ONE SIM and the postbox
+it passed through:
+
+    shevabruches111+s9@gmail.com     1 SIM    ← the answer
+    gitt.bilig@gmail.com           308 SIMs   ← the postbox
+
+309 candidates, no number in the text to narrow them, verdict `ambiguous` — on
+a message whose answer was the first line of its own route. Three of the ten in
+the queue were exactly this, each already solved: `+s9` → Mayer Kraus, `+s11` →
+Mordcge Y Goldberg, `+s30` → Mendl Hersh Grinfeld, all three SIMs on file since
+13 July. The narrowest address now wins, and a tie between two addresses each
+naming a DIFFERENT single SIM stays ambiguous rather than being settled by
+header order. Two tests named after both.
+
+**And a re-pass, since a fix that leaves the wrong rows wrong is half a fix.**
+Pairing only ever ran at the instant a message landed, so it was only as good as
+the SIM list at that moment — and neither a SIM added later nor a better matcher
+ever reached the pile already in the queue. The nightly sweep now re-reads it
+through the same matcher on the same envelope (`route` holds it), writing back
+only results certain enough to carry a `sim_id`.
+
+**Spacing** (owner, with a screenshot): the queue's date column was a fixed
+120px holding "18 Aug 2026 09:24", which `.cm-when` refuses to wrap — so it
+spilled into the gap and the date almost touched the subject. `max-content`
+sizes the track to the date, and follows Simple Mode for free.
