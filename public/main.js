@@ -5764,10 +5764,9 @@ function kcWinSnap(btn, how) {
   if (how === 'reset') return kcWinReset(dlg);
   kcWinPin(dlg);
   const W = window.innerWidth, H = window.innerHeight, p = KC_WIN_PAD;
-  const halfW = W / 2 - p * 1.5;
-  if (how === 'left')  kcWinPlace(dlg, p, p, halfW, H - p * 2);
-  if (how === 'right') kcWinPlace(dlg, W / 2 + p / 2, p, halfW, H - p * 2);
-  if (how === 'max')   kcWinPlace(dlg, p, p, W - p * 2, H - p * 2);
+  // 'left'/'right' were dropped from the menu (kcWinMenuHtml); 'max' is the only
+  // placement left, plus 'reset' handled above.
+  if (how === 'max') kcWinPlace(dlg, p, p, W - p * 2, H - p * 2);
 }
 
 /** The chrome — grips, drag band and menu — painted over the dialog's edges. */
@@ -5876,18 +5875,30 @@ function kcWinGrab(e, dlg, dir) {
  * dialog is four controls competing with the ✕ for a corner that only ever
  * needed one.
  */
+// Crisp inline SVGs, not font glyphs. ⛶ ◧ ◨ ▭ rendered as broken smudges in the
+// corner (owner, 18 Aug: "this isn't nice") and varied wildly by platform — a
+// stroked square is the same at every size on every machine.
+const KC_WIN_ICON = {
+  // Fill the screen — a rounded square filling its box.
+  max: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2.5"/></svg>',
+  // Normal size — a smaller square, so it reads as "make it smaller again".
+  reset: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>',
+};
 function kcWinMenuHtml() {
-  const b = (how, glyph, label) =>
+  const b = (how, label) =>
     `<button type="button" class="kc-win-opt" onclick="kcWinSnap(this,'${how}')">
-      <span class="kc-win-glyph" aria-hidden="true">${glyph}</span>${label}</button>`;
+      <span class="kc-win-glyph" aria-hidden="true">${KC_WIN_ICON[how]}</span>${label}</button>`;
+  // Left/right dropped (owner, 18 Aug: "i cant scroll in background, so whats
+  // the idea of pushing to right or left?"). A dialog snapped to half the screen
+  // is only useful if the half behind it can be worked in, and it cannot — so
+  // the two options that promised that are gone, leaving the two that mean
+  // something: fill the screen, and back to normal.
   return `<div class="kc-win-menu">
     <button type="button" class="kc-win-btn" aria-label="Window size" title="Window size"
-      aria-haspopup="true">⛶</button>
+      aria-haspopup="true">${KC_WIN_ICON.max}</button>
     <div class="kc-win-pop" role="group" aria-label="Window size">
-      ${b('left', '◧', 'Left half')}
-      ${b('max', '⛶', 'Fill the screen')}
-      ${b('right', '◨', 'Right half')}
-      ${b('reset', '▭', 'Normal size')}
+      ${b('max', 'Fill the screen')}
+      ${b('reset', 'Normal size')}
     </div>
   </div>`;
 }
