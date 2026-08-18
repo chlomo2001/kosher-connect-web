@@ -11826,6 +11826,8 @@ function tmCardHtml(t) {
              <button class="btn btn-outline btn-sm" onclick="tmShowMail(${t.id})">Read the email</button>
              <button class="btn btn-primary btn-sm" onclick="tmDismiss(${t.id})">Dealt with</button>`
           : `<button class="btn btn-primary btn-sm" onclick="tmBook(${t.id})">✈️ Confirm booking details</button>
+             ${t.passengers.length > 1 ? `<button class="btn btn-outline btn-sm" onclick="tmSplit(${t.id})" title="Each passenger pays their own">👥 Split across payers</button>` : ''}
+             <button class="btn btn-outline btn-sm" onclick="tmAttach(${t.id})" title="Another leg of a journey already booked">➕ Add to a booking</button>
              <button class="btn btn-outline btn-sm" onclick="tmShowMail(${t.id})">Read the email</button>
              <button class="btn btn-outline btn-sm" onclick="tmDismiss(${t.id})">Dismiss</button>`}
       </div>
@@ -11875,6 +11877,286 @@ async function tmOpenFromTask(reference) {
   const t = (tmData?.tickets || []).find(x => String(x.id) === id);
   if (!t) { toast('That ticket email has already been dealt with.', 'info'); return; }
   tmBook(t.id);
+}
+
+// ── one ticket, several people, each paying their own ────────────────────
+//
+// Owner, 18 Aug: "sometimes its 2 passengers, each one chargable on his own,
+// and sometimes its 2 people like family under same customer." The family case
+// was always fine — those are passengers on one booking. This is the other one.
+//
+// The register shows the shop already doing it by hand: XU2WWH is three
+// bookings, three customers, one PNR. That IS the right model — one booking is
+// one wallet charge — so this does not invent a new shape, it just stops the
+// job taking three passes and three chances to mistype the fee.
+//
+// THE FEE IS THE PART THAT NEEDED A DECISION, and it was the owner's to make
+// (18 Aug): staff choose at the moment of confirming — a fee each, split
+// evenly, or all on one payer. No stored rule, because the honest answer is
+// that it depends on who asked for the trip.
+let tsState = null;
+
+function tmSplit(id) {
+  const t = (tmData?.tickets || []).find(x => String(x.id) === String(id));
+  if (!t) return;
+  tsState = {
+    ticketId: t.id,
+    rows: (t.passengers.length ? t.passengers : ['']).map((name, i) => ({
+      name, customerId: i === 0 ? (t.customerId || '') : '',
+    })),
+    price: t.price !== null && (!t.currency || t.currency === 'GBP') ? t.price : 0,
+    feeEach: 25,
+    feeMode: 'each',
+    payment: 'account',
+    route: t.route, airline: t.airline, reference: t.reference,
+    travelDate: t.travelDate, returnDate: t.returnDate,
+    departureTime: t.departureTime, arrivalTime: t.arrivalTime,
+  };
+  tsRender();
+}
+
+// Every payer's share, worked out in one place so the screen and the save
+// cannot disagree. Pennies from an uneven division go to the FIRST payer —
+// somebody has to carry them and it must be deterministic.
+function tsShares() {
+  const n = Math.max(1, tsState.rows.length);
+  const price = Math.max(0, Number(tsState.price) || 0);
+  const fee = Math.max(0, Number(tsState.feeEach) || 0);
+  const split = (total) => {
+    const each = Math.floor((total * 100) / n) / 100;
+    const short = Math.round((total - each * n) * 100) / 100;
+    return tsState.rows.map((_, i) => round2(each + (i === 0 ? short : 0)));
+  };
+  const ticketShare = split(price);
+  const feeShare = tsState.feeMode === 'each' ? tsState.rows.map(() => fee)
+    : tsState.feeMode === 'split' ? split(fee)
+      : tsState.rows.map((_, i) => (i === 0 ? fee : 0));
+  return tsState.rows.map((r, i) => ({ ...r, ticket: ticketShare[i], fee: feeShare[i] }));
+}
+
+function tsRender() {
+  const shares = tsShares();
+  const total = shares.reduce((s, r) => s + r.ticket + r.fee, 0);
+  const mode = (v, label, hint) => `
+    <label style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;cursor:pointer;">
+      <input type="radio" name="tsFeeMode" value="${v}" ${tsState.feeMode === v ? 'checked' : ''}
+        onchange="tsState.feeMode=this.value; tsRender();" style="margin-top:3px;">
+      <span><strong>${label}</strong><br>
+        <span style="font-size:var(--fs-micro);color:var(--muted);">${hint}</span></span>
+    </label>`;
+
+  showStackedModal(`
+    <div class="modal-title">👥 Split this ticket across payers</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
+      ${escHtml(tsState.airline || 'Flight')}${tsState.route ? ' · ' + escHtml(tsState.route) : ''}${
+        tsState.travelDate ? ' · ' + escHtml(fmtDate(tsState.travelDate)) : ''}${
+        tsState.reference ? ' · ' + escHtml(tsState.reference) : ''}
+      <br>One booking each — one wallet charge each — sharing the reference.
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Ticket total (£)</label>
+      <input class="form-input" type="number" min="0" step="0.01" value="${escHtml(String(tsState.price))}"
+        oninput="tsState.price=this.value; tsRender();" style="width:140px;">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Booking fee (£ per payer, before the rule below)</label>
+      <input class="form-input" type="number" min="0" step="0.01" value="${escHtml(String(tsState.feeEach))}"
+        oninput="tsState.feeEach=this.value; tsRender();" style="width:140px;">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Who pays the fee?</label>
+      ${mode('each', 'A fee each', 'Every payer carries the full fee. What the register shows you doing today.')}
+      ${mode('split', 'Split it evenly', 'One fee for the trip, divided between them.')}
+      ${mode('one', 'All on the first payer', 'Whoever asked for the trip carries it; the rest pay only their ticket.')}
+    </div>
+
+    <div class="form-group form-full">
+      <label class="form-label">Payers</label>
+      ${shares.map((r, i) => `
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;padding-bottom:8px;border-bottom:1px dashed var(--border);">
+          <label class="kt-fld" style="flex:1 1 160px;">Passenger
+            <input class="form-input" value="${escName(r.name || '')}" oninput="tsState.rows[${i}].name=this.value"
+              placeholder="Name on the ticket" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);"></label>
+          <div style="flex:2 1 220px;min-width:0;">
+            <span style="font-size:var(--fs-micro);color:var(--muted);">Charge to</span>
+            ${customerPicker('tsCust' + i, {
+              selected: r.customerId,
+              onPick: `tsState.rows[${i}].customerId=document.getElementById('tsCust${i}').value`,
+              style: 'min-height:0;padding:6px 9px;font-size:var(--fs-small);',
+              label: 'Customer paying for ' + (r.name || 'this passenger'),
+            })}
+          </div>
+          <div style="font-size:var(--fs-small);white-space:nowrap;padding-bottom:7px;">
+            ${fmtGbp(r.ticket)} + ${fmtGbp(r.fee)} = <strong>${fmtGbp(r.ticket + r.fee)}</strong>
+          </div>
+          ${tsState.rows.length > 1 ? `<button type="button" class="action-btn" style="margin-bottom:5px;"
+            onclick="tsRemove(${i})" aria-label="Remove payer ${i + 1}">✕</button>` : ''}
+        </div>`).join('')}
+      <button type="button" class="btn btn-outline" onclick="tsAdd()"
+        style="padding:5px 12px;font-size:var(--fs-small);">+ Add a payer</button>
+    </div>
+
+    <div class="form-group form-full">
+      <label class="form-label">Payment</label>
+      <select class="form-input" style="width:220px;" onchange="tsState.payment=this.value">
+        <option value="account" ${tsState.payment === 'account' ? 'selected' : ''}>Put on account (wallet)</option>
+        <option value="cash" ${tsState.payment === 'cash' ? 'selected' : ''}>Paid now — 💵 Cash</option>
+        <option value="card" ${tsState.payment === 'card' ? 'selected' : ''}>Paid now — 💳 Card</option>
+        <option value="bank_transfer" ${tsState.payment === 'bank_transfer' ? 'selected' : ''}>Paid now — 🏦 Transfer</option>
+      </select>
+      <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">Applies to every booking made here.</div>
+    </div>
+
+    <div style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-secondary);font-size:var(--fs-small);">
+      <strong>${tsState.rows.length} booking${tsState.rows.length === 1 ? '' : 's'}</strong>,
+      <strong>${fmtGbp(total)}</strong> charged in total.
+      Each is a separate wallet charge and can be cancelled on its own.
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeStackedModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="tsSave()">👥 Create ${tsState.rows.length} booking${tsState.rows.length === 1 ? '' : 's'}</button>
+    </div>
+  `, { width: 720 });
+}
+
+function tsAdd() { tsState.rows.push({ name: '', customerId: '' }); tsRender(); }
+function tsRemove(i) { tsState.rows.splice(i, 1); tsRender(); }
+
+async function tsSave() {
+  const shares = tsShares();
+  const missing = shares.findIndex(r => !r.customerId);
+  if (missing > -1) { toast(`Pick who pays for ${shares[missing].name || 'payer ' + (missing + 1)}.`, 'error'); return; }
+  if (!tsState.route) { toast('This ticket has no route — confirm it as a single booking instead.', 'error'); return; }
+  if (!tsState.travelDate) { toast('This ticket has no travel date — confirm it as a single booking instead.', 'error'); return; }
+
+  const total = shares.reduce((s, r) => s + r.ticket + r.fee, 0);
+  // ONE confirmation for the whole split, not one per booking. Three passport
+  // gates and three charge prompts for a single decision is how people start
+  // clicking through them.
+  if (!(await kcConfirm({
+    title: `Charge ${shares.length} customers`,
+    body: shares.map(r => {
+      const c = customers.find(x => String(x.id) === String(r.customerId));
+      return `<strong>${c ? escName(c.firstName + ' ' + (c.lastName || '')) : 'Customer'}</strong> — ${fmtGbp(r.ticket + r.fee)}`;
+    }).join('<br>') + `<br><br>${escHtml(tsState.route)} · ${fmtDate(tsState.travelDate)}`,
+    amount: total,
+    okLabel: `Charge ${fmtGbp(total)}`,
+  }))) return;
+
+  const done = [];
+  const failed = [];
+  for (const r of shares) {
+    const payload = {
+      customerId: r.customerId,
+      passenger: r.name || '',
+      passengers: r.name ? [{ fullName: capName(r.name) }] : [],
+      route: tsState.route,
+      airline: tsState.airline || '',
+      bookingReference: tsState.reference || '',
+      travelDate: tsState.travelDate,
+      returnDate: tsState.returnDate || '',
+      departureTime: tsState.departureTime || '',
+      arrivalTime: tsState.arrivalTime || '',
+      price: r.ticket,
+      bookingFee: r.fee,
+      payment: tsState.payment,
+      notes: `Split booking — ${shares.length} payers on ${tsState.reference || 'one ticket'}`,
+      // Its own token, so a retry of ONE payer's booking cannot dedupe against
+      // another's. This is the guarantee that makes a partial failure safe to
+      // retry: the ones that succeeded stay exactly one charge each.
+      clientRef: kcRef(),
+    };
+    try {
+      const res = await window.api.addBooking(payload);
+      if (res && res.success) done.push(res.booking); else failed.push({ r, error: res?.error });
+    } catch (e) { failed.push({ r, error: 'network' }); }
+  }
+
+  done.forEach(b => { if (b && !bookings.some(x => x.id === b.id)) bookings.unshift(b); });
+
+  if (done.length && !failed.length) {
+    closeStackedModal();
+    closeDynamicModal();
+    // The whole email is settled by the first of them; the rest share its ref.
+    if (tsState.ticketId && done[0]) {
+      try { await window.api.settleTicketMail({ id: tsState.ticketId, op: 'booked', bookingId: done[0].id }); }
+      catch { /* the bookings exist; the card simply stays in the queue */ }
+    }
+    toast(`✓ ${done.length} bookings created, ${fmtGbp(total)} charged`);
+    await tmEnsure(true);
+  } else if (done.length) {
+    // Partial: say exactly which ones landed. Silently retrying the lot would
+    // double-charge the ones that worked.
+    toast(`${done.length} of ${shares.length} created — ${failed.length} failed. Add the rest by hand.`, 'error');
+  } else {
+    toast(failed[0]?.error || 'Could not create the bookings.', 'error');
+  }
+  if (currentTab === 'bookings') renderBookingsTab();
+}
+
+// ── this email is another flight on a booking that already exists ─────────
+//
+// A self-transfer journey arrives as two or four separate confirmations. The
+// first becomes the booking; the rest are legs of it. Without this they sit in
+// the queue asking to be booked when they have already been paid for — and
+// somebody eventually books one twice.
+function tmAttach(id) {
+  const t = (tmData?.tickets || []).find(x => String(x.id) === String(id));
+  if (!t) return;
+  const today = localISO();
+  // The customer's own bookings first, then anything else recent. A journey's
+  // other legs are almost always for the same person and around the same date.
+  const mine = t.customerId ? bookings.filter(b => String(b.customerId) === String(t.customerId)) : [];
+  const rest = bookings.filter(b => !mine.includes(b) && b.status !== 'Cancelled' &&
+    (!b.travelDate || b.travelDate >= today));
+  const near = (b) => t.travelDate && b.travelDate
+    ? Math.abs(Date.parse(b.travelDate) - Date.parse(t.travelDate)) : Infinity;
+  const candidates = [...mine, ...rest]
+    .sort((a, b) => near(a) - near(b))
+    .slice(0, 8);
+
+  const row = (b) => `
+    <button type="button" class="btn btn-outline" style="display:block;width:100%;text-align:start;margin-bottom:6px;white-space:normal;"
+      onclick="tmAttachTo(${t.id}, '${escHtml(String(b.id))}')">
+      <strong>${escName(b.customerName || 'Customer')}</strong> · ${escHtml(b.route || '')}
+      ${b.travelDate ? ' · ' + escHtml(fmtDate(b.travelDate)) : ''}
+      ${b.bookingReference ? ' · ' + escHtml(b.bookingReference) : ''}
+      ${(b.legs || []).length ? `<span class="bk-legs"> · ${b.legs.length} flights already</span>` : ''}
+    </button>`;
+
+  showStackedModal(`
+    <div class="modal-title">➕ Add this flight to a booking</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
+      ${escHtml(t.airline || 'This flight')}${t.route ? ' · ' + escHtml(t.route) : ''}${
+        t.travelDate ? ' · ' + escHtml(fmtDate(t.travelDate)) : ''}${
+        t.reference ? ' · ' + escHtml(t.reference) : ''}
+      <br>It becomes a <strong>flight on that booking</strong> — no new charge, because the
+      booking was already charged when it was made.
+    </div>
+    ${candidates.length ? candidates.map(row).join('')
+      : '<div class="empty-state"><div class="emoji">✈️</div><p>No booking to add it to yet.</p><small>Confirm one of these tickets as a booking first, then add the other legs to it.</small></div>'}
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeStackedModal()">Cancel</button></div>
+  `, { width: 560 });
+}
+
+async function tmAttachTo(id, bookingId) {
+  try {
+    const res = await window.api.settleTicketMail({ id, op: 'attach', bookingId });
+    if (!res || !res.success) throw new Error(res?.error || 'failed');
+    closeStackedModal();
+    toast(`✓ Added as flight ${res.position}${res.direction === 'return' ? ' (the way back)' : ''}`);
+    // The booking's leg list changed, so the register has to be re-read.
+    // Re-read the register: the booking's leg list changed under it. Same
+    // loader the tab boot uses, so a failed read degrades the same way.
+    const fresh = await safeLoadArray('bookings', '/api/bookings');
+    if (fresh.length) bookings = fresh;
+    await tmEnsure(true);
+    if (currentTab === 'bookings') renderBookingsTab();
+  } catch (e) { toast('Couldn’t add that flight — try again.', 'error'); }
 }
 
 // Called from saveNewBooking: the email became this booking.

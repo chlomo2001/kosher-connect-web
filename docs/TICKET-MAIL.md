@@ -143,6 +143,37 @@ parser gets a test: `test/ticketMail.test.mjs` is where every airline's layout
 is pinned down, and `ops/harness/tickets.mjs` drives the whole path from card to
 form offline, so a fix for one airline cannot quietly break another.
 
+## One journey, several emails, several payers
+
+Two things a real booking does that one email cannot express, both on the card:
+
+**➕ Add to a booking** — a self-transfer journey arrives as two or four
+separate confirmations. The first is confirmed as the booking; the rest are
+**flights on it**, not bookings of their own. Attaching appends a
+`booking_legs` row carrying that email's own airline and its own PNR, and
+settles the card. **No money moves** — the wallet charge was posted when the
+booking was made, and the modal says so in those words. A flight dated later
+than the day the trip starts is guessed to be the way home, which a person can
+change in one click.
+
+**👥 Split across payers** — shown only when the email names more than one
+passenger. One booking per payer, each with its own wallet charge, sharing the
+reference: exactly what the register shows the shop already doing by hand
+(`XU2WWH` is three bookings, three customers, one PNR). The fee rule is chosen
+at that moment, because the owner's answer on 18 Aug was that it depends:
+
+| | |
+|---|---|
+| A fee each | Every payer carries the full fee — what the register shows today |
+| Split it evenly | One fee for the trip, divided |
+| All on the first payer | Whoever asked for the trip carries it |
+
+Two details worth knowing. **The odd penny goes to the first payer** — £100.01
+across three is 33.35 / 33.33 / 33.33, and it has to be somebody, deterministically.
+And **each booking gets its own idempotency token**, so a partial failure is
+safe to retry: the ones that succeeded stay exactly one charge each, and the
+toast says which landed rather than silently re-running the lot.
+
 ## What is not built
 
 - **No second check-in reminder for the return.** A round trip is one booking

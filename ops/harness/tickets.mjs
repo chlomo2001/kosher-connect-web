@@ -181,6 +181,74 @@ say(await p.evaluate(() => {
 await p.evaluate(() => { try { closeDynamicModal() } catch {} })
 await p.waitForTimeout(200)
 
+// ── splitting one ticket across payers ────────────────────────────────────
+// Owner, 18 Aug: "sometimes its 2 passengers, each one chargable on his own".
+// The arithmetic here decides who is charged what, so it is checked directly
+// rather than by reading the screen.
+await p.evaluate(async () => { await goToTab('bookings') })
+await p.waitForTimeout(400)
+say(await p.evaluate(() => {
+  const card = [...document.querySelectorAll('.tm-row')].find(r => /XU2WWH/.test(r.innerText))
+  const single = [...document.querySelectorAll('.tm-row')].find(r => /QK4T2M/.test(r.innerText))
+  // Offered on the two-passenger ticket, absent on the one-passenger ticket.
+  return /Split across payers/.test(card?.innerText || '') &&
+    !/Split across payers/.test(single?.innerText || '')
+}), 'the split should be offered only where there is more than one passenger to split')
+
+await p.evaluate(() => tmSplit(71))
+await p.waitForTimeout(500)
+const split = await p.evaluate(() => {
+  const modes = {}
+  for (const m of ['each', 'split', 'one']) {
+    tsState.feeMode = m
+    modes[m] = tsShares().map(r => ({ ticket: r.ticket, fee: r.fee }))
+  }
+  return { modes, rows: tsState.rows.length, price: tsState.price }
+})
+say(split.rows === 2, `two passengers should make two payers — got ${split.rows}`)
+// £428.60 over two: 214.30 each, and the fee rule decides the rest.
+say(JSON.stringify(split.modes.each) === JSON.stringify([{ ticket: 214.3, fee: 25 }, { ticket: 214.3, fee: 25 }]),
+  `"a fee each" should charge both the full fee — got ${JSON.stringify(split.modes.each)}`)
+say(JSON.stringify(split.modes.split) === JSON.stringify([{ ticket: 214.3, fee: 12.5 }, { ticket: 214.3, fee: 12.5 }]),
+  `"split evenly" should halve one fee — got ${JSON.stringify(split.modes.split)}`)
+say(JSON.stringify(split.modes.one) === JSON.stringify([{ ticket: 214.3, fee: 25 }, { ticket: 214.3, fee: 0 }]),
+  `"all on the first payer" should leave the second paying only their ticket — got ${JSON.stringify(split.modes.one)}`)
+
+// THE PENNY. An odd total divided three ways must still add up to the total —
+// somebody carries the rounding and it has to be deterministic.
+say(await p.evaluate(() => {
+  tsState.price = 100.01
+  tsState.feeMode = 'split'
+  tsState.feeEach = 25
+  tsState.rows = [{ name: 'A', customerId: 'c1' }, { name: 'B', customerId: 'c2' }, { name: 'C', customerId: 'c3' }]
+  const s = tsShares()
+  const tickets = Math.round(s.reduce((n, r) => n + r.ticket, 0) * 100) / 100
+  const fees = Math.round(s.reduce((n, r) => n + r.fee, 0) * 100) / 100
+  return tickets === 100.01 && fees === 25 && s[0].ticket > s[1].ticket
+}), 'an uneven split must still total the ticket and the fee, with the odd penny on the first payer')
+
+await p.evaluate(() => { try { closeStackedModal() } catch {} })
+await p.waitForTimeout(200)
+
+// ── attaching a second confirmation to a booking already made ─────────────
+// A self-transfer journey arrives as several emails; the later ones are legs.
+await p.evaluate(() => tmAttach(70))
+await p.waitForTimeout(500)
+const attach = await p.evaluate(() => {
+  const m = document.querySelector('#stackedModal') || document.querySelectorAll('.modal-overlay:not(.hidden)')[1]
+  const text = m ? m.innerText : ''
+  return {
+    open: /Add this flight to a booking/.test(text),
+    saysNoCharge: /no new charge/i.test(text),
+    offers: (m ? m.querySelectorAll('button[onclick^="tmAttachTo"]').length : 0),
+  }
+})
+say(attach.open, 'the attach picker should open')
+say(attach.saysNoCharge, 'attaching must say plainly that no new charge is posted')
+say(attach.offers > 0, 'the attach picker should offer at least one booking to attach to')
+await p.evaluate(() => { try { closeStackedModal() } catch {} })
+await p.waitForTimeout(200)
+
 // ── a foreign price is NOT converted into the pounds box ──────────────────
 await p.evaluate(() => { try { closeDynamicModal() } catch {} })
 await p.waitForTimeout(200)

@@ -23,6 +23,8 @@ import { db, tablesMode, selectAllPaged } from '../../lib/db.js'
 
 const enc = encodeURIComponent
 
+// Raw column list — used by the read endpoint AND by `attach`, which builds a
+// flight leg out of exactly these fields.
 const SELECT = 'id,received_at,from_address,subject,airline,kind,booking_reference,' +
   'passengers,origin,destination,travel_date,return_date,departure_time,arrival_time,' +
   'price,currency,confidence,missing,customer_id,customer_confidence,candidates,body,' +
@@ -140,6 +142,66 @@ async function handler(req, res) {
       if (!rows.length) return res.status(404).json({ success: false, error: 'No such ticket.' })
       await closeTicketTask(id)
       return res.json({ success: true, dismissed: true })
+    }
+
+    // ── attach: this email is ANOTHER FLIGHT on a booking that already exists ──
+    //
+    // A self-transfer journey does not arrive as one email. Owner, 18 Aug:
+    // "sometimes we do 2 airlines for there and 2 additional for back.. all for
+    // one person's one time 2-way journey" — that is two to four separate
+    // confirmations, each landing as its own card. Confirming the first makes
+    // the booking; the rest are legs of it, not bookings of their own.
+    //
+    // No money moves here. The wallet charge was posted when the booking was
+    // made, and a leg is detail beneath it — see the booking_legs migration.
+    // What this does is stop three more cards sitting in the queue asking to be
+    // booked when they have already been paid for.
+    if (op === 'attach') {
+      if (!bookingId) return res.status(400).json({ success: false, error: 'Which booking?' })
+      const [ticket] = await db.select('ticket_mail', `select=${SELECT}&id=eq.${enc(id)}&limit=1`)
+      if (!ticket) return res.status(404).json({ success: false, error: 'No such ticket.' })
+      if (ticket.booking_id) {
+        return res.status(400).json({ success: false, error: 'That email is already on a booking.' })
+      }
+      const [booking] = await db.select('bookings',
+        `select=id,travel_date,booking_legs(position)&id=eq.${enc(bookingId)}&limit=1`)
+      if (!booking) return res.status(404).json({ success: false, error: 'No such booking.' })
+
+      const taken = (booking.booking_legs || []).map(l => Number(l.position) || 0)
+      const position = (taken.length ? Math.max(...taken) : 0) + 1
+      // A flight later than the day the trip starts is the way home, near
+      // enough to be worth guessing — and it sits in an editor where a person
+      // can say otherwise in one click.
+      const direction = ticket.travel_date && booking.travel_date &&
+        ticket.travel_date > booking.travel_date ? 'return' : 'out'
+
+      await db.insert('booking_legs', [{
+        booking_id: booking.id,
+        position,
+        direction,
+        airline: ticket.airline || null,
+        booking_reference: ticket.booking_reference || null,
+        origin: ticket.origin || null,
+        destination: ticket.destination || null,
+        flight_date: ticket.travel_date || null,
+        departure_time: ticket.departure_time || null,
+        arrival_time: ticket.arrival_time || null,
+        // The leg's own price is recorded when the airline stated one in
+        // POUNDS. A foreign amount is not converted here for the same reason
+        // it is not converted on the form: nobody chose the rate.
+        price: ticket.price !== null && (!ticket.currency || ticket.currency === 'GBP')
+          ? ticket.price : null,
+        notes: ticket.currency && ticket.currency !== 'GBP' && ticket.price !== null
+          ? `Airline charged ${ticket.currency} ${Number(ticket.price).toFixed(2)}`
+          : null,
+      }])
+
+      const rows = await db.update('ticket_mail', `id=eq.${enc(id)}`, {
+        booking_id: booking.id, resolved_at: now,
+      })
+      if (!rows.length) return res.status(404).json({ success: false, error: 'No such ticket.' })
+      await closeTicketTask(id)
+      return res.json({ success: true, attached: true, position, direction })
     }
 
     if (op === 'booked') {

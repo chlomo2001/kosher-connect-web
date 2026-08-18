@@ -1511,3 +1511,42 @@ Left alone; it is data, not code, and the owner should see it first.
 attaching several ticket emails to ONE booking, which is how a self-transfer
 journey actually arrives — as two or four separate confirmations, each landing
 as its own card.
+
+## The split, and the second email (18 Aug)
+
+Owner: *"so do the split flow and the multi-email attach."*
+
+**➕ Add to a booking.** A self-transfer journey does not arrive as one email —
+it arrives as two or four, each landing as its own card asking to be booked.
+Confirming them all would book one journey four times. The card now offers
+attaching instead: the email becomes a `booking_legs` row on a booking that
+already exists, carrying its OWN airline and its OWN PNR, and the card settles.
+**No money moves**, and the modal says so in those words, because a button next
+to three that all post charges must be unmistakable about which one does not.
+A flight dated after the day the trip starts is guessed to be the way home —
+worth guessing, trivially corrected.
+
+**👥 Split across payers.** Offered only when the email names more than one
+passenger. One booking per payer, one wallet charge each, sharing the
+reference — which is what the register shows the shop already doing by hand.
+The owner's decision (18 Aug) was that the fee rule *depends*, so it is chosen
+at that moment: a fee each · split evenly · all on the first payer.
+
+Three things it does that are easy to get wrong:
+
+- **One confirmation for the whole split**, not one per booking. Three passport
+  gates and three charge prompts for a single decision is how people learn to
+  click through them.
+- **The odd penny goes to the first payer.** £100.01 across three is
+  33.35 / 33.33 / 33.33. Somebody carries it and it must be deterministic —
+  the harness asserts the shares still total the ticket AND the fee.
+- **Each booking gets its own idempotency token.** A partial failure is
+  therefore safe: the ones that succeeded stay exactly one charge each, and the
+  toast names how many landed instead of silently re-running the lot.
+
+`ops/harness/tickets.mjs` checks the arithmetic directly rather than by reading
+the screen — all three fee modes and the penny case. Mutation-tested: removing
+the rounding correction and the all-on-one rule fails it.
+
+**Still not built:** the check-in reminder for the return leg. Every sweep
+reminder keys on the outbound date.
