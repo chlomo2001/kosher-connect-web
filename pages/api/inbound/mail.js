@@ -1,4 +1,10 @@
-// Inbound carrier email → the SIM it is about.
+// Inbound email → the thing it is about.
+//
+// Two jobs down one pipe, decided by what the message says rather than which
+// alias it came through (see the branch in the handler):
+//
+//   a carrier notice        → sim_mail, paired to the SIM it names
+//   an airline confirmation → ticket_mail, parsed into a booking to confirm
 //
 // Forward Email delivers here. The shop mailbox auto-forwards everything to an
 // alias on kosher-connect.com whose recipient is this URL, so a Lebara renewal
@@ -26,6 +32,7 @@ import crypto from 'node:crypto'
 import { db, tablesMode, selectAllPaged } from '../../../lib/db.js'
 import { normaliseInbound, carrierOf } from '../../../lib/inboundMail.mjs'
 import { buildSimIndex, matchSimForMail } from '../../../lib/simMailMatch.mjs'
+import { looksLikeTicket, parseTicketMail, suggestCustomer, ticketTaskTitle } from '../../../lib/ticketMail.mjs'
 
 // Bodies are parsed mail, not attachments — but a forwarded message with an
 // inline image can still be chunky, and a 413 would make Forward Email retry
@@ -70,6 +77,105 @@ async function simIndex() {
   return index
 }
 
+// The customer list, for putting a name on a ticket. Same short cache as the
+// SIM index and for the same reason: a burst of forwarded mail must not re-read
+// 610 rows per message, and a customer added at the counter should be matchable
+// within the minute.
+let people = { at: 0, data: null }
+
+async function customerIndex() {
+  if (people.data && Date.now() - people.at < INDEX_TTL_MS) return people.data
+  const [customers, pax] = await Promise.all([
+    selectAllPaged('customers', 'id,first_name,last_name', 'order=id.asc'),
+    // Who has flown on whose account before — the strongest evidence there is,
+    // because families book the same names every year and the wife's ticket
+    // goes on the husband's wallet.
+    selectAllPaged(
+      'booking_passengers',
+      'full_name,bookings(customer_id,customers(first_name,last_name))',
+      'order=id.asc'
+    ).catch(() => []),
+  ])
+  const data = {
+    customers: customers.map((c) => ({ id: c.id, firstName: c.first_name, lastName: c.last_name })),
+    priorPassengers: pax
+      .filter((p) => p.full_name && p.bookings?.customer_id)
+      .map((p) => ({
+        name: p.full_name,
+        customerId: p.bookings.customer_id,
+        customerName: `${p.bookings.customers?.first_name || ''} ${p.bookings.customers?.last_name || ''}`.trim(),
+      })),
+  }
+  people = { at: Date.now(), data }
+  return data
+}
+
+/**
+ * An airline confirmation: parse it, guess whose it is, and raise the task.
+ *
+ * Deliberately writes nothing to `bookings` and nothing to `ledger`. Every row
+ * here is a SUGGESTION a person confirms at the counter — see the migration.
+ */
+async function fileTicket(mail) {
+  const parsed = parseTicketMail({ from: mail.from, subject: mail.subject, text: mail.text })
+  const { customers, priorPassengers } = await customerIndex()
+  const who = suggestCustomer(parsed.passengers, { customers, priorPassengers })
+
+  const inserted = await db.insertIgnoreDup('ticket_mail', [{
+    message_id: mail.messageId,
+    ...(mail.receivedAt ? { received_at: mail.receivedAt } : {}),
+    from_address: mail.from || null,
+    subject: mail.subject || null,
+    route_addresses: mail.route && mail.route.length ? mail.route : null,
+    airline: parsed.airline,
+    kind: parsed.kind,
+    booking_reference: parsed.reference,
+    passengers: parsed.passengers,
+    origin: parsed.origin,
+    destination: parsed.destination,
+    travel_date: parsed.travelDate,
+    return_date: parsed.returnDate,
+    departure_time: parsed.departureTime,
+    arrival_time: parsed.arrivalTime,
+    price: parsed.price,
+    currency: parsed.currency,
+    confidence: parsed.confidence,
+    missing: parsed.missing,
+    customer_id: who.customerId,
+    customer_confidence: who.confidence,
+    candidates: who.candidates,
+    body: mail.text ? mail.text.slice(0, 12000) : null,
+  }], 'message_id')
+
+  // A duplicate delivery must not raise a second task.
+  if (!inserted.length) return { stored: false, duplicate: true }
+  const row = inserted[0]
+
+  // The task is what makes this visible to whoever is on the counter. It is
+  // best-effort ON PURPOSE: a task that fails to insert must not 500 the
+  // webhook, because Forward Email would then redeliver the message forever and
+  // the ticket itself is already safely filed.
+  try {
+    const top = who.candidates[0]
+    // A plain insert, not an upsert on the reference: `TICKET-<id>` names a row
+    // that was created by the insert above, so it cannot already exist. (The
+    // one-open-task-per-reference index is partial, and PostgREST cannot use a
+    // partial index as a conflict target — see upsertOpenTask in cron/sweep.)
+    await db.insert('tasks', [{
+      title: ticketTaskTitle(parsed, { customerName: top ? top.name : '' }),
+      customer_id: who.customerId,
+      source: 'auto',
+      priority: parsed.kind === 'cancellation' ? 'high' : 'medium',
+      reference: `TICKET-${row.id}`,
+      raw_text: `From ${mail.from || 'an airline'} — ${mail.subject || '(no subject)'}`,
+    }])
+  } catch (e) {
+    console.error('[inbound/mail] ticket task not raised', row.id, e)
+  }
+
+  return { stored: true, duplicate: false, ticketId: row.id, confidence: parsed.confidence }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'POST only.' })
   if (!secretOk(req)) return res.status(401).json({ ok: false, error: 'Bad or missing key.' })
@@ -85,6 +191,22 @@ export default async function handler(req, res) {
     if (!mail.recipients.length && !mail.subject && !mail.snippet) {
       console.warn('[inbound/mail] unreadable payload, top-level keys:',
         Object.keys(payload).join(',') || '(none)')
+    }
+
+    // ── which queue is this? ──────────────────────────────────────────────
+    //
+    // Two different jobs arrive down one pipe: carrier notices about SIMs, and
+    // airline confirmations from the mailbox flights get booked in. Content
+    // decides, not the alias — a forwarding rule can be edited by anyone in
+    // Gmail, and a message that took the wrong route should still land in the
+    // right queue. `?kind=ticket` on the alias URL forces the ticket path for a
+    // filter that only ever sends tickets; `?kind=sim` forces the other way.
+    const forced = String(req.query?.kind || '').toLowerCase()
+    const isTicket = forced === 'ticket' ||
+      (forced !== 'sim' && looksLikeTicket({ from: mail.from, subject: mail.subject, text: mail.text }))
+    if (isTicket) {
+      const result = await fileTicket(mail)
+      return res.json({ ok: true, queue: 'ticket', ...result })
     }
 
     const index = await simIndex()
@@ -119,6 +241,7 @@ export default async function handler(req, res) {
     // Forward Email redeliver it indefinitely.
     return res.json({
       ok: true,
+      queue: 'sim',
       stored: inserted.length > 0,
       duplicate: inserted.length === 0,
       confidence: match.confidence,

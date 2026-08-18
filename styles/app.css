@@ -1118,6 +1118,59 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   .cm-actions { justify-content: flex-start; }
 }
 
+/* ---------- Tickets from email ---------- */
+/* Same idea as carrier mail and a different unit: one flight, everything read
+   off the confirmation on one line, and the actions kept together on the right.
+   What the parser could NOT read is styled to be noticed (.tm-gap) — a missing
+   price has to look different from a £0 one, or someone confirms a blank. */
+.tm-count {
+  display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px;
+  background: var(--accent); color: var(--on-accent); font-size: var(--fs-micro);
+}
+.tm-list { display: flex; flex-direction: column; }
+.tm-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px;
+  padding: 12px 0; border-top: 1px solid var(--border); align-items: start;
+}
+.tm-row:first-child { border-top: 0; }
+.tm-main { min-width: 0; }
+.tm-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.tm-ref { font-family: var(--mono, ui-monospace, monospace); font-size: var(--fs-small); color: var(--accent); }
+.tm-kind { font-size: var(--fs-small); font-weight: 600; }
+.tm-when { font-size: var(--fs-micro); color: var(--muted); margin-left: auto; white-space: nowrap; }
+.tm-flight { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; margin-top: 4px; }
+.tm-route { font-weight: 600; white-space: nowrap; }
+.tm-time, .tm-flight span { font-size: var(--fs-small); color: var(--muted); }
+.tm-price { font-size: var(--fs-body); font-weight: 600; color: var(--text); }
+.tm-pax, .tm-cust { font-size: var(--fs-small); color: var(--muted); margin-top: 3px; word-break: break-word; }
+.tm-cust { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tm-who { font-weight: 600; color: var(--text); }
+.tm-why { font-size: var(--fs-micro); color: var(--muted); }
+.tm-gap { color: var(--danger-ink); font-size: var(--fs-small); }
+.tm-missing { font-size: var(--fs-micro); color: var(--danger-ink); margin-top: 4px; }
+.tm-actions { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.tm-cust .btn { max-width: 100%; white-space: normal; text-align: start; }
+/* Said on the form itself, because a form that filled itself in has to admit
+   it: nothing here was decided, and every box is still a box. */
+.tm-prefill {
+  margin: 0 0 12px; padding: 8px 12px; border-radius: 8px;
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  font-size: var(--fs-small); color: var(--muted); line-height: 1.5;
+}
+/* The raw message: pre-formatted because an itinerary IS its layout, but it
+   must never widen the dialog — it scrolls inside itself. */
+.tm-body {
+  max-height: 50vh; overflow: auto; white-space: pre-wrap; word-break: break-word;
+  background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; font-size: var(--fs-small); line-height: 1.5; margin: 0;
+}
+
+@media (max-width: 560px) {
+  .tm-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .tm-actions { flex-direction: row; flex-wrap: wrap; }
+  .tm-when { margin-left: 0; }
+}
+
 /* ---------- Confirm imported data ---------- */
 /* One customer per card, so this is a reading surface first: the values want
    to be scannable in a column, not squeezed into a form. */
@@ -1374,40 +1427,109 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   animation: none;
 }
 
-/* The grips sit on the OVERLAY, painted over the dialog's edges — the dialog
-   scrolls its own content, and anything inside it would scroll away. */
-.kc-grips { position: fixed; inset: 0; pointer-events: none; z-index: 4; }
-.kc-grip { position: fixed; pointer-events: auto; }
-.kc-grip-n, .kc-grip-s { cursor: ns-resize; }
-.kc-grip-e, .kc-grip-w { cursor: ew-resize; }
-.kc-grip-nw, .kc-grip-se { cursor: nwse-resize; }
-.kc-grip-ne, .kc-grip-sw { cursor: nesw-resize; }
+/* The chrome sits on the OVERLAY, painted over the dialog's edges — the dialog
+   scrolls its own content, and anything inside it would scroll away.
+
+   `kc-wgrip`, not `kc-grip`: that name was already taken by the drag handle on
+   a resizable box (further down this file), and being second in source order it
+   was winning — every window grip inherited `cursor: ns-resize`, so the east
+   and west edges showed an up-down arrow, and each one wore the little dotted
+   triangle meant for the other control. Two different things cannot share a
+   class and both be right. */
+.kc-wgrips { position: fixed; inset: 0; pointer-events: none; z-index: 4; }
+.kc-wgrip { position: fixed; pointer-events: auto; }
+.kc-wgrip-n, .kc-wgrip-s { cursor: ns-resize; }
+.kc-wgrip-e, .kc-wgrip-w { cursor: ew-resize; }
+.kc-wgrip-nw, .kc-wgrip-se { cursor: nwse-resize; }
+.kc-wgrip-ne, .kc-wgrip-sw { cursor: nesw-resize; }
 /* Invisible until you go looking for one, then obvious. */
-.kc-grip::after {
+.kc-wgrip::after {
   content: ""; position: absolute; inset: 2px; border-radius: 3px;
   background: var(--accent); opacity: 0; transition: opacity var(--dur-1) var(--ease-out);
 }
-.kc-grip:hover::after { opacity: 0.55; }
+.kc-wgrip:hover::after { opacity: 0.55; }
 body.kc-win-dragging { user-select: none; cursor: grabbing; }
-body.kc-win-dragging .kc-grip::after { opacity: 0.55; }
+body.kc-win-dragging .kc-wgrip::after { opacity: 0.55; }
 
-/* The four snap buttons, sticky beside the ✕ for the same reason it is. */
-.kc-snap {
-  position: sticky; top: 0; float: right; z-index: 3;
-  display: flex; gap: 2px; margin: -12px 6px 0 0;
-}
-.kc-snap-b {
-  width: 28px; height: 34px; display: flex; align-items: center; justify-content: center;
+/* Grab the top and the whole card moves — owner, 18 Aug: "besides the corner
+   grip, the whole card shall be movable by gripping at top". A band over the
+   dialog's top padding, inset so the north resize grip still owns the very
+   edge, and stopped short of the menu and the ✕. */
+.kc-wdrag { position: fixed; pointer-events: auto; cursor: move; }
+
+/* ── The window menu ──────────────────────────────────────────────────────
+   One button that opens on hover, the way the green button on a Mac does.
+   It lives in the chrome layer rather than in the dialog: as four floated
+   buttons beside the ✕ it dragged the customer card's heading around the
+   float and broke the top of the card outright. */
+.kc-win-menu { position: fixed; pointer-events: auto; z-index: 5; }
+.kc-win-btn {
+  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
   background: var(--surface); border: none; border-radius: var(--radius-lg);
-  color: var(--muted); font-size: 14px; line-height: 1; cursor: pointer;
+  color: var(--muted); font-size: 13px; line-height: 1; cursor: pointer;
+  opacity: 0.4; transition: opacity var(--dur-1) var(--ease-out);
 }
-.kc-snap-b:hover { background: var(--bg-secondary); color: var(--accent); }
-.kc-snap-b:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.kc-win-menu:hover .kc-win-btn,
+.kc-win-menu:focus-within .kc-win-btn { opacity: 1; color: var(--accent); background: var(--bg-secondary); }
+.kc-win-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; opacity: 1; }
+
+.kc-win-pop {
+  position: absolute; top: 100%; right: 0; margin-top: 2px;
+  display: none; flex-direction: column; min-width: 160px; padding: 4px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-2);
+}
+/* Hover OR keyboard focus — a menu that only opens to a mouse is not a menu. */
+.kc-win-menu:hover .kc-win-pop,
+.kc-win-menu:focus-within .kc-win-pop { display: flex; }
+.kc-win-opt {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; border: none; background: none; border-radius: var(--radius);
+  color: var(--text); font: inherit; font-size: var(--fs-small); text-align: start;
+  cursor: pointer; white-space: nowrap;
+}
+.kc-win-opt:hover { background: var(--bg-secondary); color: var(--accent); }
+.kc-win-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.kc-win-glyph { width: 14px; text-align: center; color: var(--muted); }
+.kc-win-opt:hover .kc-win-glyph { color: var(--accent); }
+
+/* ── A resized dialog answers to its OWN width ────────────────────────────
+   Everything inside a dialog was laid out against media queries — the viewport
+   — because a dialog's width used to be a constant. It isn't any more: snap the
+   customer card to the left half of a 1280px screen and it is 618px wide while
+   the viewport still says 1280, so the "make the tools their own row" rule
+   never fires and the Contact menu lands on top of the phone number.
+
+   A container query asks the right question. Only windowed dialogs declare
+   themselves containers — they are the only ones with a width that can change,
+   and they always carry an explicit one, which `container-type: inline-size`
+   requires. In every other dialog these rules simply never match. */
+.modal.kc-win { container-type: inline-size; }
+
+@container (max-width: 660px) {
+  /* Its own row, rather than squeezed against the name. */
+  .detail-header .card-tools { flex-basis: 100%; justify-content: flex-start; }
+  .detail-stats { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── A window is not a modal ──────────────────────────────────────────────
+   Owner, 18 Aug: "i cant scroll in background, so whats the idea of pushing to
+   right or left?" — there was none. Half a screen of dialog next to half a
+   screen you cannot touch is a worse arrangement than the centred dialog it
+   replaced. So the moment a dialog is dragged, resized or snapped, it stops
+   being modal: the scrim goes and the overlay lets the pointer through to the
+   page, which scrolls and clicks as normal. The dialog and its chrome take
+   their own clicks back.
+
+   This is opt-in by definition — nothing enters window mode on its own — so a
+   confirmation the app really does need answered stays a plain modal. */
+.modal-overlay:has(.modal.kc-win) { background: transparent; pointer-events: none; }
+.modal-overlay:has(.modal.kc-win) > .modal { pointer-events: auto; }
 
 /* A dialog on a phone IS the screen: nothing to snap it to, and a 6px grip
    nobody can hit is worse than no grip. Same for any coarse pointer. */
-@media (max-width: 900px) { .kc-grips, .kc-snap { display: none; } }
-@media (pointer: coarse) { .kc-grips, .kc-snap { display: none; } }
+@media (max-width: 900px) { .kc-wgrips { display: none; } }
+@media (pointer: coarse) { .kc-wgrips { display: none; } }
 .modal-title { cursor: default; }
 @media (min-width: 901px) and (pointer: fine) {
   .modal-title { cursor: move; }
@@ -1485,7 +1607,16 @@ body.kc-win-dragging .kc-grip::after { opacity: 0.55; }
 /* Shared compact filter/sort selects (feature #4) — the two-dropdown control
    every list tab carries, matching the Customers-tab styling. */
 
-.kc-fs-sel { width: auto; min-width: 150px; padding: 6px 10px; font-size: var(--fs-body); min-height: 0; }
+/* max-width, because a <select> is as wide as its LONGEST OPTION whether the
+   screen has room or not. The SIM tab's mailbox filter (added 17 Aug) carries
+   "📭 No carrier account on file", which pushed this control 32px off a 320px
+   screen at the largest text size — printed by the sweep, and reported clean
+   underneath it, until the exit codes were fixed on 18 Aug. min-width has to
+   yield too, or max-width cannot win. */
+.kc-fs-sel {
+  width: auto; min-width: min(150px, 100%); max-width: 100%;
+  padding: 6px 10px; font-size: var(--fs-body); min-height: 0;
+}
 
 
 /* Saved views — named filter+sort presets shown as chips beside the selects. */
@@ -2291,8 +2422,15 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
   max-height: 260px; overflow-y: auto; z-index: 999; display: none;
   box-shadow: var(--shadow-2);
   /* The picker in a Kol Torah row is 150px wide because the row is. A list of
-     names is not, so it is allowed to be wider than the box it hangs from. */
-  min-width: min(280px, 86vw);
+     names is not, so it is allowed to be wider than the box it hangs from.
+
+     The second term used to be 86vw, which at 320px is 275px — two pixels wider
+     than the content box of a dialog on that screen, so New Rental, New Booking
+     and Add SIM all scrolled sideways by a rounded-up 1px whenever the picker
+     was open. `100vw - 48px` is the same idea written against what actually
+     constrains it: the dialog is viewport − 16, and its padding takes the rest.
+     Nothing gets narrower on any screen where there was room anyway. */
+  min-width: min(280px, calc(100vw - 48px));
 }
 
 .customer-dropdown.open { display: block; }
@@ -3135,7 +3273,12 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 
 .task-done { opacity: 0.45; }
 
-.task-actions { display: flex; gap: 6px; margin: 7px 0 0 25px; }
+/* Wraps: a task can carry a doorway button ("✈️ Confirm booking details") on
+   top of the priority and snooze pickers, and at 320px / largest text that row
+   ran past the card. The 25px indent lines the actions up under the title,
+   which leaves them the least room of anything on the screen. */
+.task-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 7px 0 0 25px; }
+.task-actions .btn { max-width: 100%; white-space: normal; text-align: start; }
 
 .task-mini {
   font-size: var(--fs-micro); padding: 3px 8px; border-radius: var(--radius);

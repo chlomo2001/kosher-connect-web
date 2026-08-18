@@ -1210,3 +1210,104 @@ exactly as it was.
 
 Verified: gate green, window/picker/modals/names/focus/contrast/targets all
 clean, public pages clean in EN+HE and all three theme states.
+
+---
+
+## Airline confirmations become bookings (18 Aug)
+
+Owner: *"can we add a filter to the ch702 gmail to forward all airline tickets…
+the app should match with customer name and suggest a task to confirm this
+customer bought a ticket from x to x for this price? and take from there to
+charge wallet etc."* — and then: *"it should come up as task needing
+confirmation, and confirm booking details is better wording than just make the
+booking, cuz it shall autofill (editable) the data it thinks is right."*
+
+Built: `lib/ticketMail.mjs` (parser, 26 tests), `ticket_mail`, a branch in
+`/api/inbound/mail`, `/api/ticket-mail`, the queue on Tickets & Flights, and
+`ops/harness/tickets.mjs`. Setup in `docs/TICKET-MAIL.md`.
+
+**Still open**
+
+- The Gmail filter itself is the owner's to create in `ch7023518@gmail.com` —
+  nothing arrives until it exists. Steps are in the doc.
+- Return legs are recognised and shown, never raised. A booking holds one
+  travel date.
+- Attachment-only itineraries (a PDF and nothing in the body) parse `thin`.
+  The OCR path already in the app is where that would go if it turns out to be
+  common.
+- The parser knows 23 airlines and ~70 airports. Both lists are in
+  `lib/ticketMail.mjs` and both should grow from real mail, not from guessing.
+
+## The sweep that could not go red (18 Aug)
+
+`ops/harness/render.mjs` only ever printed its findings — it never exited
+non-zero — and every check in `audit-all.sh` is piped through `tail -1`, whose
+own exit status is what the script read. So on 17 Aug the log said
+
+    1 tab(s) overflow at 320px / text largest
+    …
+    AUDIT: all checks reported clean.
+
+Both are fixed: findings reach the exit code, and every check runs under
+`bash -eo pipefail -c`. The overflow it had been hiding was the SIM tab's
+mailbox filter — a `<select>` is as wide as its longest option, and
+"📭 No carrier account on file" is a long option.
+
+Wiring it up immediately caught two more things, both of which had been sitting
+under that green light: the SIM tab's mailbox filter overflowing, and — once
+pipefail was on — a `… | tail -3 | head -1` in the script itself, where `head`
+closing the pipe kills `tail` with SIGPIPE and the run fails with nothing wrong.
+`sed -n 1p` reads to the end and prints the same line.
+
+**And a third, once the script could name the check that went red:** New
+Rental, New Booking and Add SIM had all been scrolling sideways by 1px at 320px
+whenever the customer picker was open. The picker's dropdown is allowed to be
+wider than the box it hangs from (a Kol Torah row is 150px; a list of names is
+not), and the `86vw` that allowed it is 275px at 320px — two pixels wider than
+the content box of a dialog on that screen. `calc(100vw - 48px)` says the same
+thing against what actually constrains it. That one was mine, from 17 Aug, and
+`modals.mjs` had been reporting it into a pipe the whole time.
+
+**Checked since:** every harness (`focus`, `names`, `picker`, `popout`,
+`loading`, `window`, `tickets`, `textscale`, `theme-pairs`, `modals`, `public`)
+and all fourteen `render.mjs` sweep variants were run individually and their
+exit codes read. All exit 0 clean and non-zero on a finding.
+
+## Dialogs became windows properly (18 Aug)
+
+Owner, on the first version: *"the grip works, but after any expand, the card
+instantly collapses"* · *"i cant scroll in background, so whats the idea of
+pushing to right or left?"* · *"the ui here is all messed up"* · *"the view thing
+should be only seen when hovering over the button like say the mac attachment"* ·
+*"besides the corner grip, the whole card shall be movable by gripping at top"*.
+
+Five faults, four of them mine from the day before:
+
+1. **The collapse was two bugs wearing one coat.** A drag that ENDED over the
+   backdrop fired a click whose target was the overlay, and the customer card —
+   unlike #dynamicModal — had no press-started-on-the-backdrop guard, so sizing
+   the card closed it. And the card's render function is also its repaint path:
+   it rebuilds `overlay.innerHTML`, which threw the size away on every save.
+2. **The snap bar was in the document flow**, floated beside the ✕. The card's
+   two-line heading wrapped around it and the top of the card came apart. The
+   chrome now lives in the overlay layer and is positioned in viewport
+   coordinates — measured against the real ✕, not against a guess about where
+   the corner is.
+3. **Left/right snap was pointless while the dialog stayed modal.** It isn't
+   any more: window mode drops the scrim and lets the pointer through, so the
+   page behind scrolls and clicks. That is the answer to "whats the idea".
+4. **`.kc-grip` was already taken** by the resizable-box handle, further down
+   the same stylesheet and therefore winning: every window grip showed
+   `cursor: ns-resize` and wore the other control's dotted triangle. Renamed to
+   `.kc-wgrip`.
+5. **Everything inside a dialog was laid out against the viewport.** A dialog
+   with a fixed width can get away with that; one you can drag to 618px cannot
+   — the Contact menu landed on the phone number. Windowed dialogs are now
+   container-query contexts.
+
+`ops/harness/window.mjs` covers all five. Each new check was mutation-tested.
+
+**Worth doing next:** the rest of the card's internals still answer to media
+queries. Only `.card-tools` and `.detail-stats` were converted, because those
+are what visibly broke at half-screen. The next narrow-window bug will be in
+whatever was not looked at.

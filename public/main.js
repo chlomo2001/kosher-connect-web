@@ -149,6 +149,11 @@ window.api = {
   settleCarrierMail: (body) => kcFetch('/api/sim-mail', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   }).then(r => r.json()),
+  getTicketMail: (filter = 'pending') => kcFetch(`/api/ticket-mail?filter=${encodeURIComponent(filter)}&limit=40`)
+    .then(r => r.ok ? r.json() : null).catch(() => null),
+  settleTicketMail: (body) => kcFetch('/api/ticket-mail', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  }).then(r => r.json()),
   getReviewQueue: (limit = 12) => kcFetch(`/api/review?limit=${limit}`).then(r => r.ok ? r.json() : null),
   confirmReviewed: (customerId) => kcFetch('/api/review', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -5630,6 +5635,14 @@ function kcWinPin(dlg) {
   // whole original style attribute back.
   dlg.style.maxWidth = 'none';
   dlg.style.maxHeight = 'none';
+  // It is no longer modal, so it must stop SAYING it is. aria-modal="true"
+  // tells a screen reader the rest of the page is inert; once the scrim is
+  // gone and the page behind is usable, that is simply false, and a blind
+  // user would be the only person still locked out of it.
+  if (dlg.getAttribute('aria-modal') === 'true') {
+    dlg.dataset.kcWasModal = '1';
+    dlg.setAttribute('aria-modal', 'false');
+  }
   dlg.style.left = `${Math.round(r.left)}px`;
   dlg.style.top = `${Math.round(r.top)}px`;
   dlg.style.width = `${Math.round(r.width)}px`;
@@ -5640,6 +5653,7 @@ function kcWinPin(dlg) {
 function kcWinReset(dlg) {
   if (!dlg) return;
   dlg.classList.remove('kc-win');
+  if (dlg.dataset.kcWasModal) { dlg.setAttribute('aria-modal', 'true'); delete dlg.dataset.kcWasModal; }
   dlg.setAttribute('style', dlg.dataset.kcCss || '');
   kcWinSync(dlg.closest('.modal-overlay'));
 }
@@ -5656,8 +5670,14 @@ function kcWinPlace(dlg, x, y, w, h) {
 }
 
 // ◧ ⛶ ◨ ▭ — the four Windows does, in the order it does them.
+//
+// Left and right are only worth having because a dialog in window mode STOPS
+// BEING MODAL: the scrim goes, the overlay lets the pointer through, and the
+// page behind scrolls and clicks normally. Owner, 18 Aug: "i cant scroll in
+// background, so whats the idea of pushing to right or left?" — there wasn't
+// one, which is the answer to why this changed rather than a defence of it.
 function kcWinSnap(btn, how) {
-  const dlg = btn.closest('.modal');
+  const dlg = btn.closest('.modal-overlay')?.querySelector('.modal') || btn.closest('.modal');
   if (!dlg) return;
   if (how === 'reset') return kcWinReset(dlg);
   kcWinPin(dlg);
@@ -5668,10 +5688,10 @@ function kcWinSnap(btn, how) {
   if (how === 'max')   kcWinPlace(dlg, p, p, W - p * 2, H - p * 2);
 }
 
-/** The grips, painted over the dialog's own edges. */
+/** The chrome — grips, drag band and menu — painted over the dialog's edges. */
 function kcWinSync(overlay) {
   if (!overlay) return;
-  const layer = overlay.querySelector('.kc-grips');
+  const layer = overlay.querySelector('.kc-wgrips');
   const dlg = overlay.querySelector('.modal');
   if (!layer) return;
   if (!dlg) { layer.hidden = true; return; }
@@ -5689,10 +5709,49 @@ function kcWinSync(overlay) {
     se: [r.right - 16 + T / 2, r.bottom - 16 + T / 2, 16, 16],
   };
   for (const d of KC_WIN_DIRS) {
-    const el = layer.querySelector(`.kc-grip-${d}`);
+    const el = layer.querySelector(`.kc-wgrip-${d}`);
     if (!el) continue;
     const [x, y, w, h] = box[d];
     el.style.cssText = `left:${x}px;top:${y}px;width:${Math.max(0, w)}px;height:${Math.max(0, h)}px;`;
+  }
+
+  // The window menu, pinned to the dialog's top-right in VIEWPORT coordinates.
+  //
+  // It used to be a row of four buttons floated next to the ✕, inside the
+  // dialog. On the customer card — whose heading is a large two-line name — the
+  // content wrapped around the float and the top of the card came apart (owner,
+  // 18 Aug, with a screenshot: "the ui here is all messed up"). Chrome does not
+  // belong in the document flow. Up here it cannot disturb any layout, and it
+  // cannot scroll away with the form either.
+  const menu = layer.querySelector('.kc-win-menu');
+  const MENU_W = 30, MENU_H = 30;
+  // Beside the ✕ — wherever the ✕ actually IS. Guessing the dialog's top-right
+  // corner put it 56px above the close button on the customer card, because
+  // that dialog scrolls its own content and .modal-x is sticky inside the
+  // padding rather than pinned to the frame. Measuring beats assuming.
+  let menuLeft = Math.round(r.right - 46 - MENU_W);
+  let menuTop = Math.round(r.top + 8);
+  const closeBtn = dlg.querySelector('.modal-x');
+  if (closeBtn) {
+    const cr = closeBtn.getBoundingClientRect();
+    if (cr.width) {
+      menuLeft = Math.round(cr.left - 4 - MENU_W);
+      menuTop = Math.round(cr.top + (cr.height - MENU_H) / 2);
+    }
+  }
+  if (menu) {
+    menu.style.left = `${menuLeft}px`;
+    menu.style.top = `${menuTop}px`;
+  }
+
+  // Drag by the top, like every other window on the machine. Inset from the
+  // very edge so the north resize grip still wins there, and stopped short of
+  // the menu and the ✕ so both stay pressable.
+  const bar = layer.querySelector('.kc-wdrag');
+  if (bar) {
+    const right = Math.min(menuLeft - 6, r.right - 6);
+    bar.style.cssText = `left:${Math.round(r.left + 6)}px;top:${Math.round(r.top + 5)}px;` +
+      `width:${Math.max(0, Math.round(right - r.left - 6))}px;height:24px;`;
   }
 }
 
@@ -5727,54 +5786,60 @@ function kcWinGrab(e, dlg, dir) {
   window.addEventListener('pointerup', up);
 }
 
-/** The snap buttons, sticky beside the ✕ so they survive the dialog scrolling. */
-function kcWinBarHtml() {
+/**
+ * One button that opens on hover, the way the green button on a Mac does.
+ *
+ * Owner, 18 Aug: "the view thing should be only seen when hovering over the
+ * button like say the mac attachment". Four buttons sitting open on every
+ * dialog is four controls competing with the ✕ for a corner that only ever
+ * needed one.
+ */
+function kcWinMenuHtml() {
   const b = (how, glyph, label) =>
-    `<button type="button" class="kc-snap-b" aria-label="${label}" title="${label}"
-      onclick="kcWinSnap(this,'${how}')">${glyph}</button>`;
-  return `<div class="kc-snap" role="group" aria-label="Window size">
-    ${b('left', '◧', 'Snap to the left half')}
-    ${b('max', '⛶', 'Fill the screen')}
-    ${b('right', '◨', 'Snap to the right half')}
-    ${b('reset', '▭', 'Back to the normal size')}
+    `<button type="button" class="kc-win-opt" onclick="kcWinSnap(this,'${how}')">
+      <span class="kc-win-glyph" aria-hidden="true">${glyph}</span>${label}</button>`;
+  return `<div class="kc-win-menu">
+    <button type="button" class="kc-win-btn" aria-label="Window size" title="Window size"
+      aria-haspopup="true">⛶</button>
+    <div class="kc-win-pop" role="group" aria-label="Window size">
+      ${b('left', '◧', 'Left half')}
+      ${b('max', '⛶', 'Fill the screen')}
+      ${b('right', '◨', 'Right half')}
+      ${b('reset', '▭', 'Normal size')}
+    </div>
   </div>`;
 }
 
-/** Give an open overlay its grips, its drag handle and its snap bar. */
+/** Give an open overlay its grips, its drag band and its window menu. */
 function kcWindowise(overlay) {
   if (!overlay || !kcWinEnabled()) return;
   const dlg = overlay.querySelector('.modal');
   if (!dlg) return;
   if (!('kcCss' in dlg.dataset)) dlg.dataset.kcCss = dlg.getAttribute('style') || '';
 
-  // The snap bar is injected, not written into each opener's markup. It was
-  // the latter for an evening, and the customer card — which builds its own
-  // innerHTML — got the grips but no buttons. One place owns it now, so a
-  // dialog added next year gets it without anyone remembering to.
-  if (!dlg.querySelector('.kc-snap')) {
-    const x = dlg.querySelector('.modal-x');
-    // Right after the ✕: both float right and stick to the top, so the order
-    // in the source is the order along the edge.
-    if (x) x.insertAdjacentHTML('afterend', kcWinBarHtml());
-    else dlg.insertAdjacentHTML('afterbegin', kcWinBarHtml());
-  }
-
-  let layer = overlay.querySelector('.kc-grips');
+  let layer = overlay.querySelector('.kc-wgrips');
   if (!layer) {
     layer = document.createElement('div');
-    layer.className = 'kc-grips';
-    layer.setAttribute('aria-hidden', 'true');
-    layer.innerHTML = KC_WIN_DIRS.map(d => `<div class="kc-grip kc-grip-${d}"></div>`).join('');
+    layer.className = 'kc-wgrips';
+    layer.innerHTML =
+      KC_WIN_DIRS.map(d => `<div class="kc-wgrip kc-wgrip-${d}" aria-hidden="true"></div>`).join('') +
+      '<div class="kc-wdrag" aria-hidden="true" title="Drag to move"></div>' +
+      kcWinMenuHtml();
     layer.addEventListener('pointerdown', (e) => {
-      const g = e.target.closest('.kc-grip');
+      // The menu is a control, not a handle — pressing it must not start a drag.
+      if (e.target.closest('.kc-win-menu')) return;
+      const g = e.target.closest('.kc-wgrip, .kc-wdrag');
       if (!g) return;
-      const dir = [...g.classList].find(c => c.startsWith('kc-grip-'))?.slice(8);
+      const dir = g.classList.contains('kc-wdrag')
+        ? 'move'
+        : [...g.classList].find(c => c.startsWith('kc-wgrip-'))?.slice(9);
       kcWinGrab(e, overlay.querySelector('.modal'), dir);
     });
     overlay.appendChild(layer);
   }
 
-  // Drag by the title, the way every window on the machine already works.
+  // A dialog that has a title bar can still be dragged by it — the band above
+  // covers the padding, and the title is the obvious place to grab.
   const title = dlg.querySelector('.modal-title');
   if (title && !title.dataset.kcDrag) {
     title.dataset.kcDrag = '1';
@@ -5784,6 +5849,45 @@ function kcWindowise(overlay) {
     });
   }
   kcWinSync(overlay);
+}
+
+/**
+ * Window geometry, saved across a repaint that throws the dialog away.
+ *
+ * The customer card's render function IS its repaint path — every save handler
+ * re-enters it, and it rebuilds `overlay.innerHTML`, which destroys the .modal
+ * element along with its size and position. So a card you had just pulled
+ * bigger snapped back to 720px the moment anything on it saved (owner, 18 Aug:
+ * "after any expand, the card instantly collapses"). Capture before, restore
+ * after.
+ */
+function kcWinCapture(overlay) {
+  const dlg = overlay && overlay.querySelector('.modal.kc-win');
+  if (!dlg) return null;
+  const r = dlg.getBoundingClientRect();
+  return { x: r.left, y: r.top, w: r.width, h: r.height };
+}
+
+function kcWinRestore(overlay, saved) {
+  if (!overlay || !saved) return;
+  const dlg = overlay.querySelector('.modal');
+  if (!dlg) return;
+  kcWinPin(dlg);
+  kcWinPlace(dlg, saved.x, saved.y, saved.w, saved.h);
+}
+
+/**
+ * Close on a backdrop click — but only when the press STARTED on the backdrop.
+ *
+ * A drag that merely ENDS there fires a click whose target is the overlay: pull
+ * a resize grip past the dialog's edge, let go, and the dialog you were sizing
+ * closes. That is what "after any expand, the card instantly collapses" was.
+ * #dynamicModal has had this guard since the resize corner existed; the
+ * customer card never got it, and it is the surface people actually resize.
+ */
+function kcBackdropClose(overlay, close) {
+  overlay.addEventListener('pointerdown', e => { overlay._pressedOnBackdrop = e.target === overlay; });
+  overlay.addEventListener('click', e => { if (e.target === overlay && overlay._pressedOnBackdrop) close(); });
 }
 
 // A dialog pinned to the left half is wrong the moment the window changes size.
@@ -5806,13 +5910,7 @@ function showDynamicModal(html) {
     overlay = document.createElement('div');
     overlay.id = 'dynamicModal';
     overlay.className = 'modal-overlay';
-    // Close on a backdrop click — but only when the press STARTED on the
-    // backdrop too. A drag that merely ends there (pulling the resize corner
-    // past the edge, selecting text and overshooting) still fires a click with
-    // the overlay as target, and treating that as "close" throws away a
-    // half-filled form.
-    overlay.addEventListener('pointerdown', e => { overlay._pressedOnBackdrop = e.target === overlay; });
-    overlay.addEventListener('click', e => { if (e.target === overlay && overlay._pressedOnBackdrop) closeDynamicModal(); });
+    kcBackdropClose(overlay, closeDynamicModal);
     document.body.appendChild(overlay);
   } else {
     wasOpen = !overlay.classList.contains('hidden');
@@ -5897,8 +5995,7 @@ function showStackedModal(html, { width = 460 } = {}) {
     overlay.className = 'modal-overlay kc-stacked';
     // Same backdrop rule as the layer below: close only when the press STARTED
     // on the backdrop, so a drag that merely ends there keeps the form.
-    overlay.addEventListener('pointerdown', e => { overlay._pressedOnBackdrop = e.target === overlay; });
-    overlay.addEventListener('click', e => { if (e.target === overlay && overlay._pressedOnBackdrop) closeStackedModal(); });
+    kcBackdropClose(overlay, closeStackedModal);
     document.body.appendChild(overlay);
   }
   overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:${width}px;"><button type="button" class="modal-x" aria-label="Close" title="Close (Esc)" onclick="closeStackedModal()">✕</button>${html}</div>`;
@@ -6067,8 +6164,14 @@ function kcFilterSort(key, filters, sorts, render) {
           aria-label="Delete view ${escHtml(v.name)}"
           onclick="kcViewDeleteSaved('${key}',${i},event)">×</button>
       </span>`).join('');
+  // min-width:0 because this row is itself a flex ITEM, and a flex item will not
+  // shrink below its content by default. Its content is a <select>, which is as
+  // wide as its longest option whether the screen has room or not — so the SIM
+  // tab's "📭 No carrier account on file" pushed this whole bar 32px off a
+  // 320px screen at the largest text size, with max-width on the select unable
+  // to help because the box it measures against had already grown.
   return `
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-width:0;">
       ${filterSelects}
       <select class="form-input kc-fs-sel" title="Sort by"
         onchange="kcViewSet('${key}','sort',this.value)">${opts(sorts, st.sort)}</select>
@@ -6991,13 +7094,15 @@ function renderDetailPanel(id) {
     overlay.id = 'customerCard';
     overlay.className = 'modal-overlay';
     overlay.style.zIndex = '90';
-    overlay.addEventListener('click', e => { if (e.target === overlay) dismissCustomerCard(); });
+    kcBackdropClose(overlay, dismissCustomerCard);
     document.body.appendChild(overlay);
   } else {
     wasOpen = !overlay.classList.contains('hidden');
   }
   // Named by the customer, so a screen reader announces WHOSE card opened.
   const cardName = `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Customer';
+  // How big the card was BEFORE this repaint threw the dialog away.
+  const winWas = kcWinCapture(overlay);
   overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="${escHtml(cardName)}" style="width:720px;max-width:94vw;max-height:90vh;overflow-y:auto;">${buildCustomerPanelHtml(c, 'card')}</div>`;
   // Save-handler repaints of the open card snap — only a fresh open animates
   // (innerHTML re-creates .modal, which would otherwise replay the enter).
@@ -7012,6 +7117,7 @@ function renderDetailPanel(id) {
   // one that missed out when dialogs became windows (owner, 17 Aug: "why
   // doesnt the windows thing work" — they were trying it on this).
   kcWindowise(overlay);
+  kcWinRestore(overlay, winWas);
   if (!wasOpen) {
     const card = overlay.firstElementChild;
     if (card) { card.setAttribute('tabindex', '-1'); card.focus({ preventScroll: true }); }
@@ -8462,7 +8568,7 @@ async function kcPickerSaveNew(valueId) {
 
   kcPickerSet(valueId, res.customer.id);
   kcPickerCancelNew(valueId);
-  showToast(`✓ ${escName(res.customer.firstName)} ${escName(res.customer.lastName || '')} added`);
+  toast(`✓ ${escName(res.customer.firstName)} ${escName(res.customer.lastName || '')} added`);
 }
 
 // #8 — a customer's name on any card is a doorway to their customer card,
@@ -11622,6 +11728,200 @@ function bookingStatusBadge(status) {
   return `<span class="badge ${cls[status] || 'badge-booking'}">${escHtml(label)}</span>`;
 }
 
+// ── Tickets that arrived by email ─────────────────────────────────────────
+//
+// A confirmation forwarded out of the mailbox flights are booked in, parsed
+// into the fields a booking needs and waiting for someone to say yes. Sits
+// above the register because it is work, not history: every card here is a
+// ticket the shop has bought and not yet charged for.
+//
+// It never books anything by itself. "Make the booking" opens the ordinary New
+// Booking form with the fields filled in, so the wallet charge, the booking
+// gate and the passenger rows all behave exactly as they do at the counter —
+// and whoever presses save sees what they are charging before they charge it.
+let tmData = null, tmAt = 0, tmBusy = false, tmPendingId = null;
+const TM_TTL_MS = 60_000;
+
+// Fetched OUT of renderBookingsTab, which is synchronous and re-entered after
+// every edit. Loading inside it would make each keystroke wait on the network.
+async function tmEnsure(force = false) {
+  if (tmBusy) return;
+  if (!force && tmData && Date.now() - tmAt < TM_TTL_MS) return;
+  tmBusy = true;
+  try {
+    const data = await window.api.getTicketMail('pending');
+    // A 403 (a helper without the bookings tab) or a database without the
+    // table yet both come back unusable — leave the section out rather than
+    // showing an error above an otherwise working register.
+    tmData = data && data.success ? data : { counts: { pending: 0 }, tickets: [] };
+    tmAt = Date.now();
+  } catch { tmData = { counts: { pending: 0 }, tickets: [] }; }
+  finally { tmBusy = false; }
+  if (currentTab === 'bookings') renderBookingsTab();
+}
+
+function tmQueueHtml() {
+  if (!tmData || !tmData.tickets || !tmData.tickets.length) return '';
+  return `
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-head">
+        <h2 class="card-title">✉️ Tickets from email
+          <span class="tm-count">${tmData.tickets.length}</span></h2>
+        <span style="font-size:var(--fs-micro);color:var(--muted);">
+          Read from the airline's own confirmation — confirm the details and it becomes a booking.</span>
+      </div>
+      <div class="tm-list">${tmData.tickets.map(tmCardHtml).join('')}</div>
+    </div>`;
+}
+
+function tmCardHtml(t) {
+  const kind = {
+    cancellation: ['Cancelled', 'var(--danger-ink)'],
+    change: ['Flight changed', 'var(--warning-ink)'],
+  }[t.kind] || ['', ''];
+  const money = t.price === null ? ''
+    : `${({ GBP: '£', EUR: '€', USD: '$', ILS: '₪' })[t.currency] || ''}${t.price.toFixed(2)}`;
+  const foreign = t.price !== null && t.currency && t.currency !== 'GBP';
+
+  const who = t.customerName
+    ? `<span class="tm-who">${escName(t.customerName)}</span>
+       <span class="tm-why">${t.customerConfidence === 'sure' ? 'flown before' : 'name match'}</span>`
+    : t.candidates.length
+      ? `<span class="tm-why">Which of these?</span> ${t.candidates.slice(0, 3).map(c =>
+          `<button class="btn btn-outline btn-sm" onclick="tmSetCustomer(${t.id}, '${escHtml(String(c.id))}')"
+             title="${escHtml(c.why || '')}">${escName(c.name)}</button>`).join('')}`
+      : '<span class="tm-why">No customer matched — pick one when you book it.</span>';
+
+  return `
+    <div class="tm-row">
+      <div class="tm-main">
+        <div class="tm-head">
+          <strong>${escHtml(t.airline || 'Airline')}</strong>
+          ${t.reference ? `<code class="tm-ref">${escHtml(t.reference)}</code>` : ''}
+          ${kind[0] ? `<span class="tm-kind" style="color:${kind[1]}">${kind[0]}</span>` : ''}
+          <span class="tm-when">${t.receivedAt ? escHtml(fmtDate(t.receivedAt)) : ''}</span>
+        </div>
+        <div class="tm-flight">
+          ${t.route ? `<span class="tm-route">${escHtml(t.route)}</span>` : '<span class="tm-gap">route?</span>'}
+          ${t.travelDate ? `<span>${escHtml(fmtDate(t.travelDate))}</span>` : '<span class="tm-gap">date?</span>'}
+          ${t.departureTime ? `<span class="tm-time">${escHtml(t.departureTime)}${t.arrivalTime ? ' → ' + escHtml(t.arrivalTime) : ''}</span>` : ''}
+          ${money ? `<span class="tm-price">${escHtml(money)}</span>` : '<span class="tm-gap">price?</span>'}
+          ${foreign ? '<span class="tm-gap">not GBP — check the rate</span>' : ''}
+        </div>
+        <div class="tm-pax">${t.passengers.length
+          ? t.passengers.map(p => escName(p)).join(' · ')
+          : '<span class="tm-gap">no passenger name in the mail</span>'}</div>
+        ${t.returnDate ? `<div class="tm-pax">Return leg ${escHtml(fmtDate(t.returnDate))} — that is a second booking.</div>` : ''}
+        <div class="tm-cust">${who}</div>
+        ${t.missing.length ? `<div class="tm-missing">The red parts didn’t parse — fill them in on the form.</div>` : ''}
+      </div>
+      <div class="tm-actions">
+        ${t.kind === 'cancellation'
+          // A cancellation is not something to book. The register is where the
+          // existing booking gets marked off, so booking is demoted here and
+          // dismissing — after the refund is dealt with — is the normal end.
+          ? `<button class="btn btn-outline btn-sm" onclick="tmBook(${t.id})">Confirm booking details</button>
+             <button class="btn btn-outline btn-sm" onclick="tmShowMail(${t.id})">Read the email</button>
+             <button class="btn btn-primary btn-sm" onclick="tmDismiss(${t.id})">Dealt with</button>`
+          : `<button class="btn btn-primary btn-sm" onclick="tmBook(${t.id})">✈️ Confirm booking details</button>
+             <button class="btn btn-outline btn-sm" onclick="tmShowMail(${t.id})">Read the email</button>
+             <button class="btn btn-outline btn-sm" onclick="tmDismiss(${t.id})">Dismiss</button>`}
+      </div>
+    </div>`;
+}
+
+// Open the ordinary booking form, filled in from the email. Everything stays
+// editable — this is a head start, not a decision.
+function tmBook(id) {
+  const t = (tmData?.tickets || []).find(x => String(x.id) === String(id));
+  if (!t) return;
+  if (t.kind === 'cancellation') {
+    toast('That email is a cancellation — check what it refers to before booking anything.', 'info');
+  }
+  openNewBookingModal(t.customerId || null, {
+    ticketId: t.id,
+    route: t.route,
+    airline: t.airline,
+    bookingReference: t.reference,
+    travelDate: t.travelDate,
+    departureTime: t.departureTime,
+    arrivalTime: t.arrivalTime,
+    // A price in another currency is NOT put in the box: the box is pounds,
+    // and converting it silently at whatever rate would be a made-up number.
+    price: t.price !== null && (!t.currency || t.currency === 'GBP') ? t.price : null,
+    passengers: t.passengers,
+    notes: [
+      t.reference ? `From ${t.airline || 'airline'} email, ref ${t.reference}` : 'From airline email',
+      t.returnDate ? `return ${fmtDate(t.returnDate)}` : '',
+      t.price !== null && t.currency && t.currency !== 'GBP' ? `airline charged ${t.currency} ${t.price.toFixed(2)}` : '',
+    ].filter(Boolean).join(' · '),
+  });
+}
+
+// A ticket task is a doorway, not a note. The task says "Confirm ticket:
+// Shmuel Bleier — LTN → TLV, 12 Sept, £428.60"; pressing it should put that
+// booking on the screen with the fields already in the boxes, rather than
+// leaving someone to find the right card on another tab.
+async function tmOpenFromTask(reference) {
+  const id = String(reference || '').replace(/^TICKET-/, '');
+  await goToTab('bookings');
+  await tmEnsure(true);
+  const t = (tmData?.tickets || []).find(x => String(x.id) === id);
+  if (!t) { toast('That ticket email has already been dealt with.', 'info'); return; }
+  tmBook(t.id);
+}
+
+// Called from saveNewBooking: the email became this booking.
+async function tmMarkBooked(bookingId) {
+  const id = tmPendingId;
+  tmPendingId = null;
+  if (!id || !bookingId) return;
+  try {
+    await window.api.settleTicketMail({ id, op: 'booked', bookingId });
+    await tmEnsure(true);
+  } catch { /* the booking is saved; the card simply stays in the queue */ }
+}
+
+async function tmSetCustomer(id, customerId) {
+  try {
+    const res = await window.api.settleTicketMail({ id, customerId });
+    if (!res || !res.success) throw new Error(res?.error || 'failed');
+    toast('✓ Noted whose ticket it is');
+    await tmEnsure(true);
+  } catch { toast('Couldn’t save that — try again.', 'error'); }
+}
+
+async function tmDismiss(id) {
+  const t = (tmData?.tickets || []).find(x => String(x.id) === String(id));
+  if (!(await kcConfirm({
+    title: 'Dismiss this ticket email?',
+    body: `${escHtml(t?.airline || 'This email')}${t?.reference ? ' · ' + escHtml(t.reference) : ''}<br>
+      It stays on file, but it stops asking to be booked. Do this when the
+      booking is already in the app, or the email isn't ours.`,
+    okLabel: 'Dismiss',
+  }))) return;
+  try {
+    const res = await window.api.settleTicketMail({ id, op: 'dismiss', reason: 'Dismissed at the counter' });
+    if (!res || !res.success) throw new Error(res?.error || 'failed');
+    toast('Dismissed.');
+    await tmEnsure(true);
+  } catch { toast('Couldn’t dismiss that — try again.', 'error'); }
+}
+
+// The mail itself, for the times the parser missed something and someone needs
+// to read what the airline actually wrote.
+function tmShowMail(id) {
+  const t = (tmData?.tickets || []).find(x => String(x.id) === String(id));
+  if (!t) return;
+  showStackedModal(`
+    <div class="modal-title">✉️ ${escHtml(t.subject || '(no subject)')}</div>
+    <div style="font-size:var(--fs-micro);color:var(--muted);margin-bottom:8px;">
+      From ${escHtml(t.from || 'unknown')}${t.receivedAt ? ' · ' + escHtml(fmtDate(t.receivedAt)) : ''}</div>
+    <pre class="tm-body" data-kc-scroller>${escHtml(t.body || '(the message had no readable text)')}</pre>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeStackedModal()">Close</button></div>
+  `);
+}
+
 function renderBookingsTab() {
   const content = document.getElementById('mainContent');
   const today = localISO();
@@ -11687,6 +11987,7 @@ function renderBookingsTab() {
       <div class="stat-card"><div class="stat-label">Booking Fees</div><div class="stat-value">${fmtGbp(feesEarned)}</div></div>
       <div class="stat-card"><div class="stat-label">Total Charged</div><div class="stat-value">${fmtGbp(totalCharged)}</div></div>
     </div>
+    ${tmQueueHtml()}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
       ${bkBar}
     </div>
@@ -11707,6 +12008,10 @@ function renderBookingsTab() {
         <tbody>${rows}</tbody>
       </table>
     </div>`;
+
+  // The email queue loads after the register paints, so a slow network delays
+  // nothing that is already on the screen.
+  tmEnsure();
 }
 
 // Bulk selection for bookings — same shape as rentals/SIMs. The single-row
@@ -11856,8 +12161,23 @@ async function savePassengers(bookingId) {
   renderBookingsTab();
 }
 
-async function openNewBookingModal(preselectCustomerId = null) {
-  bkPassengers = [{}];
+/**
+ * The New Booking form.
+ *
+ * `prefill` is how a ticket read out of an airline email gets here — route,
+ * date, price and passengers already in the boxes. Every field stays editable
+ * and nothing is charged until someone presses save and confirms the amount,
+ * which is the whole point: the email saves the typing, the person makes the
+ * decision.
+ */
+async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
+  // Which ticket email this form is answering, if any. Set on EVERY open, so
+  // abandoning a prefilled form and starting a fresh booking cannot file the
+  // new one against the old email.
+  tmPendingId = prefill?.ticketId || null;
+  bkPassengers = (prefill?.passengers || []).length
+    ? prefill.passengers.map(name => ({ fullName: name }))
+    : [{}];
   if (!ticketsMenu.length) {
     ticketsMenu = await window.api.getServiceMenu('tickets').catch(() => []);
     if (!Array.isArray(ticketsMenu)) ticketsMenu = [];
@@ -11868,7 +12188,10 @@ async function openNewBookingModal(preselectCustomerId = null) {
     .map(s => `<option value="${escHtml(s.id)}">${escHtml(s.name)} — ${fmtGbp(s.price)}</option>`)
     .join('');
   showDynamicModal(`
-    <div class="modal-title">✈️ New booking</div>
+    <div class="modal-title">✈️ ${prefill ? 'Confirm booking details' : 'New booking'}</div>
+    ${prefill ? `<div class="tm-prefill">✉️ Filled in from the ${escHtml(prefill.airline || 'airline')} email${
+      prefill.bookingReference ? ` · ${escHtml(prefill.bookingReference)}` : ''
+    } — this is what the app read, not what it decided. Change anything that is wrong, then save.</div>` : ''}
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
@@ -11981,6 +12304,25 @@ async function openNewBookingModal(preselectCustomerId = null) {
     </div>
   `);
   if (preselectCustomerId) bkOnCustomerChange(); // #48 — offer passenger reuse straight away
+
+  // Filled after the markup exists, rather than interpolated into it: these
+  // values come from an email, and a value that never touches the HTML cannot
+  // carry markup into the form.
+  if (prefill) {
+    const put = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+    put('bkRoute', prefill.route);
+    put('bkAirline', prefill.airline);
+    put('bkRef', prefill.bookingReference);
+    put('bkTravelDate', prefill.travelDate);
+    put('bkDep', prefill.departureTime);
+    put('bkArr', prefill.arrivalTime);
+    put('bkPrice', prefill.price === null || prefill.price === undefined ? '' : String(prefill.price));
+    put('bkNotes', prefill.notes);
+    if (prefill.travelDate) showHebrewDate('bkTravelDate', 'bkTravelHeb');
+    // The fee calculator counts passengers, and the email just supplied them.
+    const pax = document.getElementById('bkPax');
+    if (pax) pax.value = Math.max(1, bkPassengers.length);
+  }
 }
 
 // Fee calculator: tiered service fee × passengers (+ optional start fee)
@@ -12149,6 +12491,8 @@ async function saveNewBooking() {
   if (res.duplicate) {
     closeDynamicModal();
     if (res.booking && !bookings.some(x => x.id === res.booking.id)) bookings.unshift(res.booking);
+    // Same booking, so an email that produced it is still settled by it.
+    await tmMarkBooked(res.booking?.id);
     toast('Already booked — no double charge.', 'info');
     renderBookingsTab();
     return;
@@ -12156,6 +12500,9 @@ async function saveNewBooking() {
 
   bookings.unshift(res.booking);
   await maybeCheckinTask(res.booking);
+  // If this booking came off a ticket email, that email is now dealt with and
+  // its task closes with it.
+  await tmMarkBooked(res.booking.id);
   closeDynamicModal();
   let chargeMsg = '';
   if (res.chargePosted) {
@@ -17385,9 +17732,9 @@ async function cmPair(id, simId) {
   try {
     const res = await window.api.settleCarrierMail({ id, simId });
     if (!res || !res.success) throw new Error(res?.error || 'failed');
-    showToast('✓ Filed on that SIM');
+    toast('✓ Filed on that SIM');
     await renderCarrierMailTab();
-  } catch { showToast('Couldn’t file that message — try again.', 'error'); }
+  } catch { toast('Couldn’t file that message — try again.', 'error'); }
   finally { cmBusy = false; }
 }
 
@@ -17408,7 +17755,7 @@ async function cmPairAfterSimSaved(simLegacyId) {
   if (!messageId || !simLegacyId) return;
   try {
     const res = await window.api.settleCarrierMail({ id: messageId, simLegacyId });
-    if (res && res.success) showToast('✓ Message filed on the new SIM');
+    if (res && res.success) toast('✓ Message filed on the new SIM');
   } catch { /* the SIM is saved; the message simply stays in the queue */ }
 }
 
@@ -17417,9 +17764,9 @@ async function cmResolve(id) {
   try {
     const res = await window.api.settleCarrierMail({ id, op: 'resolve' });
     if (!res || !res.success) throw new Error(res?.error || 'failed');
-    showToast('Dismissed.');
+    toast('Dismissed.');
     await renderCarrierMailTab();
-  } catch { showToast('Couldn’t dismiss that — try again.', 'error'); }
+  } catch { toast('Couldn’t dismiss that — try again.', 'error'); }
   finally { cmBusy = false; }
 }
 
@@ -17775,11 +18122,11 @@ async function confirmBundle() {
     // about how many rows the card happened to show.
     confirmStats.done += res.confirmed;
     confirmStats.remaining = Math.max(0, confirmStats.remaining - res.confirmed);
-    showToast(`✓ Confirmed ${escName(b.name)}${res.attached ? ` and ${res.attached} attached record${res.attached === 1 ? '' : 's'}` : ''}`);
+    toast(`✓ Confirmed ${escName(b.name)}${res.attached ? ` and ${res.attached} attached record${res.attached === 1 ? '' : 's'}` : ''}`);
     confirmQueue.shift();
     if (confirmQueue.length) paintConfirm(); else renderConfirmTab();
   } catch (e) {
-    showToast('Couldn’t save that confirmation — try again.', 'error');
+    toast('Couldn’t save that confirmation — try again.', 'error');
     if (btn) { btn.disabled = false; btn.textContent = '✓ Yes — confirm'; }
   } finally { confirmBusy = false; }
 }
@@ -17843,6 +18190,7 @@ async function renderTasksTab() {
       ${!t.done ? `
       <div class="task-actions">
         ${/^New signup:/i.test(t.title || '') && !t.customerId ? `<button class="btn btn-primary btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="addCustomerFromTask('${escHtml(t.id)}')">➕ Add as customer</button>` : ''}
+        ${/^TICKET-/.test(t.reference || '') ? `<button class="btn btn-primary btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="tmOpenFromTask('${escHtml(t.reference)}')">✈️ Confirm booking details</button>` : ''}
         ${isMoneyTask ? `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="openWalletModal('${escHtml(String(t.customerId))}')">💰 Record</button>` : ''}
         ${chaseCust && waLink(chaseCust, '') ? `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="waChaseCustomer('${escHtml(String(t.customerId))}')" title="Open a chase message in WhatsApp">💬 WhatsApp</button>` : ''}
         <select class="task-mini" onchange="setTaskPriority('${escHtml(t.id)}', this.value)" title="Priority">

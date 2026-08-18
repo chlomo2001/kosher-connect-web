@@ -441,8 +441,8 @@
         "at": "2026-08-02T09:40:00Z"
       }
     ],
-    "lastWeekIn": 48.0,
-    "monthIn": 1240.0
+    "lastWeekIn": 48,
+    "monthIn": 1240
   },
   "/api/ledger?report=1": {
     "success": true,
@@ -479,6 +479,17 @@
       "status": "open",
       "priority": "Normal",
       "dueDate": "2026-08-04"
+    },
+    {
+      "id": "t3",
+      "title": "Confirm ticket: Menachem Adler — LTN → TLV, 12 Sept, £428.60",
+      "status": "open",
+      "priority": "Normal",
+      "dueDate": null,
+      "customerId": "c1",
+      "customerName": "Menachem Adler",
+      "source": "auto",
+      "reference": "TICKET-71"
     }
   ],
   "/api/supplier-returns": {
@@ -805,13 +816,13 @@
     "success": true,
     "date": "2026-08-03",
     "methods": {
-      "cash": 87.0,
-      "card": 45.0
+      "cash": 87,
+      "card": 45
     },
-    "totalIn": 132.0,
-    "totalOut": 12.0,
-    "openingFloat": 50.0,
-    "expectedCash": 137.0,
+    "totalIn": 132,
+    "totalOut": 12,
+    "openingFloat": 50,
+    "expectedCash": 137,
     "count": null
   },
   "/api/bank": {
@@ -908,7 +919,7 @@
         "accountRef": "Revolut main",
         "provider": "csv",
         "bookedAt": "2026-07-31",
-        "amount": 285.0,
+        "amount": 285,
         "currency": "GBP",
         "description": "Incoming transfer · BNKYRW",
         "counterparty": "KOPILOWITZ M",
@@ -938,7 +949,7 @@
         "accountRef": "Revolut savings",
         "provider": "csv",
         "bookedAt": "2026-07-28",
-        "amount": 45.0,
+        "amount": 45,
         "currency": "GBP",
         "description": "Faster payment",
         "counterparty": "GROSS R",
@@ -994,7 +1005,7 @@
         "accountRef": "Revolut main",
         "provider": "csv",
         "bookedAt": "2026-07-29",
-        "amount": 120.0,
+        "amount": 120,
         "currency": "GBP",
         "description": "Standing order",
         "counterparty": "LEIFER Y",
@@ -1381,6 +1392,129 @@
         "carrier": "Lebara",
         "subject": "Your plan renews on 2 September",
         "confidence": "address"
+      }
+    ]
+  },
+  "/api/ticket-mail": {
+    "success": true,
+    "counts": {
+      "pending": 3,
+      "booked": 11,
+      "total": 14
+    },
+    "tickets": [
+      {
+        "id": 71,
+        "receivedAt": "2026-08-18T09:12:00Z",
+        "from": "noreply@wizzair.com",
+        "subject": "Your booking is confirmed — XU2WWH",
+        "airline": "Wizz Air",
+        "kind": "confirmation",
+        "reference": "XU2WWH",
+        "passengers": [
+          "Menachem Adler",
+          "Rivka Adler"
+        ],
+        "origin": "LTN",
+        "destination": "TLV",
+        "route": "LTN → TLV",
+        "travelDate": "2026-09-12",
+        "returnDate": "2026-09-26",
+        "departureTime": "08:25",
+        "arrivalTime": "15:05",
+        "price": 428.6,
+        "currency": "GBP",
+        "confidence": "full",
+        "missing": [],
+        "customerId": "c1",
+        "customerName": "Menachem Adler",
+        "customerConfidence": "sure",
+        "candidates": [
+          {
+            "id": "c1",
+            "name": "Menachem Adler",
+            "why": "flew as Menachem Adler before"
+          }
+        ],
+        "body": "Confirmation number: XU2WWH\nLondon Luton (LTN) 08:25 → Tel Aviv (TLV) 15:05\nTotal price: GBP 428.60",
+        "bookingId": null,
+        "resolvedAt": null,
+        "dismissedReason": ""
+      },
+      {
+        "id": 70,
+        "receivedAt": "2026-08-17T19:40:00Z",
+        "from": "noreply@ryanair.com",
+        "subject": "Ryanair booking confirmation",
+        "airline": "Ryanair",
+        "kind": "confirmation",
+        "reference": "QK4T2M",
+        "passengers": [
+          "Yossi Taitelbaum"
+        ],
+        "origin": "MAN",
+        "destination": "KRK",
+        "route": "MAN → KRK",
+        "travelDate": "2026-10-03",
+        "returnDate": "",
+        "departureTime": "06:40",
+        "arrivalTime": "",
+        "price": null,
+        "currency": "",
+        "confidence": "partial",
+        "missing": [
+          "price"
+        ],
+        "customerId": "",
+        "customerName": "",
+        "customerConfidence": "many",
+        "candidates": [
+          {
+            "id": "c2",
+            "name": "Yossi Taitelbaum",
+            "why": "name matches the customer"
+          },
+          {
+            "id": "c3",
+            "name": "Chaim Kopilowitz",
+            "why": "name matches the customer"
+          }
+        ],
+        "body": "Reservation number: QK4T2M\nFlight FR 1234 from Manchester to Krakow",
+        "bookingId": null,
+        "resolvedAt": null,
+        "dismissedReason": ""
+      },
+      {
+        "id": 69,
+        "receivedAt": "2026-08-16T11:02:00Z",
+        "from": "noreply@wizzair.com",
+        "subject": "Your flight has been cancelled — IJEVNV",
+        "airline": "Wizz Air",
+        "kind": "cancellation",
+        "reference": "IJEVNV",
+        "passengers": [],
+        "origin": "LTN",
+        "destination": "TLV",
+        "route": "LTN → TLV",
+        "travelDate": "2026-09-12",
+        "returnDate": "",
+        "departureTime": "",
+        "arrivalTime": "",
+        "price": 170,
+        "currency": "EUR",
+        "confidence": "partial",
+        "missing": [
+          "passenger"
+        ],
+        "customerId": "",
+        "customerName": "",
+        "customerConfidence": "none",
+        "candidates": [],
+        "body": "We are sorry to inform you that flight W6 5623 has been cancelled.",
+        "bookingId": null,
+        "resolvedAt": null,
+        "dismissedReason": ""
       }
     ]
   }

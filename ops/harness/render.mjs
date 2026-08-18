@@ -339,6 +339,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       await page.waitForTimeout(200)
     }
     const fsNote = fsSize === 'standard' ? '' : ` / text ${fsSize}`
+    // Findings have to reach the EXIT CODE, not just the screen.
+    //
+    // They did not, until 18 Aug: this file only ever printed. audit-all.sh
+    // pipes each check through `tail -1`, so even a crash was invisible to it —
+    // and on 17 Aug it printed "1 tab(s) overflow at 320px / text largest" four
+    // lines above "AUDIT: all checks reported clean". A sweep that cannot go
+    // red is not a sweep; it is a screenshot of one.
+    let findings = 0
 
     if (process.argv.includes('--targets')) {
       const seen = new Map()
@@ -352,6 +360,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         console.log(`✗ ${String(r.min).padStart(3)}px min  ${(r.w + '×' + r.h).padEnd(9)} ${r.sel.padEnd(22)} "${r.text}"  [${[...r.tabs].slice(0, 4).join(' ')}]`)
       }
       console.log(rows.length ? `\n${rows.length} distinct target(s) under 24×24 at ${width}px${fsNote}` : `\nno target under 24×24 at ${width}px${fsNote}`)
+      findings = rows.length
     } else if (process.argv.includes('--contrast')) {
       const found = await contrast(page)
       const seen = new Map()
@@ -365,6 +374,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         console.log(`✗ ${String(r.ratio).padStart(5)}:1 (needs ${r.need}) ${String(Math.round(r.size)) + 'px'} ${r.sel.padEnd(24)} "${r.text}"  [${[...r.tabs].join(' ')}]`)
       }
       console.log(rows.length ? `\n${rows.length} distinct contrast failure(s) in ${theme}${fsNote}` : `\nno contrast failures in ${theme}${fsNote}`)
+      findings = rows.length
     } else if (process.argv.includes('--audit')) {
       let bad = 0, blank = 0
       for (const r of await audit(page)) {
@@ -383,6 +393,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       if (bad) notes.push(`${bad} tab(s) overflow`)
       if (blank) notes.push(`${blank} tab(s) never rendered — usually a seed.json shape, check pages/api/ before believing it`)
       console.log(notes.length ? `\n${notes.join('; ')} at ${width}px${fsNote}` : `\nall ${TABS.length} tabs render and none overflows at ${width}px${fsNote}`)
+      findings = bad + blank
     } else {
       const tab = arg('--shot', 'dashboard')
       await page.evaluate((t) => window.renderTab(t), tab)
@@ -392,5 +403,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       console.log('shot', path.relative(ROOT, out))
     }
     await browser.close()
+    if (findings) process.exit(1)
   }
 }

@@ -117,6 +117,18 @@ row:
 
 `confidence = 'unknown'` on a test message is correct — it isn't about a SIM.
 
+### Not every message is about a SIM (18 Aug)
+
+The same endpoint now files **airline confirmations** too. It decides from the
+content, not the alias — a Wizz Air sender or an e-ticket phrase goes to
+`ticket_mail` and raises a task to confirm the booking; everything else takes
+the SIM path above. `?kind=ticket` / `?kind=sim` on an alias URL forces one or
+the other for a mailbox that only ever sends one kind.
+
+Why content and not the alias: a forwarding rule can be edited by anyone in
+Gmail, and a message that took the wrong route should still land in the right
+queue. See `docs/TICKET-MAIL.md`.
+
 ## What happens daily
 
 The 06:00 sweep (`/api/cron/sweep`, section 6) turns the unpaired pile into two
