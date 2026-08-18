@@ -66,10 +66,26 @@ async function handler(req, res) {
       if (b.dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(String(b.dueDate))) {
         return res.status(400).json({ success: false, error: 'Due date must be a full date (year-month-day).' })
       }
+      // A keyed task is raised ONCE. Check-in reminders are re-sent every time
+      // the booking is saved, so without this a booking edited three times
+      // carries three identical "check in" tasks — and a round trip doubles
+      // that again. Same one-open-per-reference rule the sweep uses; the
+      // partial unique index means a closed one can be re-raised later.
+      const reference = /^[A-Z]+-[A-Za-z0-9-]{1,64}$/.test(String(b.reference || ''))
+        ? String(b.reference) : null
+      if (reference) {
+        const open = await db.select('tasks',
+          `select=id&reference=eq.${encodeURIComponent(reference)}&done=is.false&limit=1`)
+        if (open.length) {
+          const [existing] = await db.select('tasks', `select=*,${EMBED}&id=eq.${open[0].id}`)
+          return res.json({ success: true, task: toApp(existing), existing: true })
+        }
+      }
       const [row] = await db.insert('tasks', [{
         title: String(b.title).trim(),
         customer_id: customerUuid,
         due_date: b.dueDate || null,
+        reference,
         source: 'manual',
         priority: PRIORITY_TO_DB[b.priority] || 'medium',
         raw_text: b.notes || null,

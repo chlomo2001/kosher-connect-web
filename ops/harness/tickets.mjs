@@ -249,6 +249,50 @@ say(attach.offers > 0, 'the attach picker should offer at least one booking to a
 await p.evaluate(() => { try { closeStackedModal() } catch {} })
 await p.waitForTimeout(200)
 
+// ── the flight home gets its own check-in ─────────────────────────────────
+// Owner, 18 Aug. Every check-in field was singular, so a round trip prompted
+// the check-in out and never the one back — the half where the customer is
+// abroad and least able to sort it out themselves.
+await p.evaluate(() => { try { closeStackedModal() } catch {} })
+await p.evaluate(() => { try { closeDynamicModal() } catch {} })
+await p.waitForTimeout(200)
+await p.evaluate(() => openNewBookingModal())
+await p.waitForTimeout(600)
+const ci = await p.evaluate(() => {
+  document.getElementById('bkTravelDate').value = '2026-09-12'
+  document.getElementById('bkReturnDate').value = '2026-09-26'
+  document.getElementById('bkCheckinBy').value = 'us'
+  bkCheckinToggle()
+  const wrap = document.getElementById('bkRetCheckinWrap')
+  return {
+    out: document.getElementById('bkCheckinDate').value,
+    back: document.getElementById('bkRetCheckinDate').value,
+    shown: !!wrap && getComputedStyle(wrap).display !== 'none',
+  }
+})
+say(ci.out === '2026-09-11', `the outbound check-in should default to the day before — got "${ci.out}"`)
+say(ci.back === '2026-09-25', `the return check-in should default to the day before the flight home — got "${ci.back}"`)
+say(ci.shown, 'the return check-in field should appear once the journey has a way back')
+
+// It must NOT appear on a one-way — an empty second date on 389 of 394
+// bookings is noise, and noise is what makes people stop reading a form.
+say(await p.evaluate(() => {
+  document.getElementById('bkReturnDate').value = ''
+  bkCheckinToggle()
+  const wrap = document.getElementById('bkRetCheckinWrap')
+  return !!wrap && getComputedStyle(wrap).display === 'none'
+}), 'a one-way booking should not ask about a return check-in')
+
+// The chip must not say the job is done while the flight home is outstanding.
+say(await p.evaluate(() => {
+  const oneWayDone = checkinChip({ checkinDone: true })
+  const halfDone = checkinChip({ checkinDone: true, returnDate: '2026-09-26', checkinBy: 'us', returnCheckinDate: '2026-09-25' })
+  const bothDone = checkinChip({ checkinDone: true, returnDate: '2026-09-26', returnCheckinDone: true })
+  return /✅/.test(oneWayDone) && !/✅/.test(halfDone) && /✅/.test(bothDone) && /×2/.test(bothDone)
+}), 'the chip should only read done when BOTH legs are done')
+await p.evaluate(() => { try { closeDynamicModal() } catch {} })
+await p.waitForTimeout(200)
+
 // ── a foreign price is NOT converted into the pounds box ──────────────────
 await p.evaluate(() => { try { closeDynamicModal() } catch {} })
 await p.waitForTimeout(200)

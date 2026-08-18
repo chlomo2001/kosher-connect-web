@@ -456,14 +456,30 @@ async function handler(req, res) {
     const nowTime = new Intl.DateTimeFormat('en-GB', {
       timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false,
     }).format(new Date()) + ':00'
-    const flownPast = await db.update(
-      'bookings',
-      `status=in.(Booked,Ticketed)&travel_date=lt.${today}`,
-      { status: 'Completed' }
-    )
+    // A ROUND TRIP IS NOT FLOWN WHEN THE OUTBOUND IS. Bookings grew a
+    // return_date on 18 Aug, and this rule — untouched since it was written for
+    // one-way bookings — would have marked a trip Completed the morning after
+    // the flight out, while the customer was abroad with a return leg still to
+    // check in for. The journey ends on the last flight, so a booking with a
+    // return is judged on THAT date; one without is judged on its only date.
+    const flownPast = [
+      ...await db.update(
+        'bookings',
+        `status=in.(Booked,Ticketed)&return_date=is.null&travel_date=lt.${today}`,
+        { status: 'Completed' }
+      ),
+      ...await db.update(
+        'bookings',
+        `status=in.(Booked,Ticketed)&return_date=lt.${today}`,
+        { status: 'Completed' }
+      ),
+    ]
+    // Same on the day itself: only a one-way completes when its departure time
+    // passes. A round trip's outbound leaving at 08:25 says nothing about
+    // whether the trip is over.
     const flownTodayTimed = await db.update(
       'bookings',
-      `status=in.(Booked,Ticketed)&travel_date=eq.${today}&departure_time=lte.${nowTime}`,
+      `status=in.(Booked,Ticketed)&return_date=is.null&travel_date=eq.${today}&departure_time=lte.${nowTime}`,
       { status: 'Completed' }
     )
     // Today with no departure time recorded: leave until midnight (avoids
@@ -475,8 +491,10 @@ async function handler(req, res) {
     let flightsClosed = 0
     for (const t of openFlights) {
       const bookingId = t.reference.slice('FLIGHT-'.length)
-      const row = await db.select('bookings', `select=travel_date,status&id=eq.${enc(bookingId)}`)
-      if (!row.length || row[0].status === 'Cancelled' || row[0].travel_date < today) {
+      const row = await db.select('bookings', `select=travel_date,return_date,status&id=eq.${enc(bookingId)}`)
+      // The last date of the journey, for the same reason as above.
+      const ends = row.length ? (row[0].return_date || row[0].travel_date) : null
+      if (!row.length || row[0].status === 'Cancelled' || ends < today) {
         flightsClosed += await closeOpenTask(t.reference)
       }
     }

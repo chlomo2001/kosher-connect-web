@@ -1550,3 +1550,41 @@ the rounding correction and the all-on-one rule fails it.
 
 **Still not built:** the check-in reminder for the return leg. Every sweep
 reminder keys on the outbound date.
+
+## Check-in for the flight home (18 Aug)
+
+Owner: *"do the return check-in reminder too."*
+
+Every check-in field was singular — one date, one done flag — so a round trip
+prompted the check-in going out and never coming back. That is the half of the
+trip where the customer is abroad and least able to sort it out themselves.
+`return_checkin_date` + `return_checkin_done`; **`checkin_by` is deliberately
+NOT duplicated**, because who does the check-in is a fact about the arrangement
+with that customer, not about a direction of travel.
+
+The form defaults each date to the day before its own flight and only asks
+about the return once the journey has one — an empty second date on 389 of 394
+bookings is noise, and noise is what stops people reading a form. The chip only
+reads ✅ when BOTH legs are done: "done" on a booking with the flight home
+outstanding would be the app saying the job is finished when it is half
+finished.
+
+**Two bugs found on the way, both worth more than the feature.**
+
+**1. Check-in tasks were never keyed.** `/api/tasks` had no `reference` at all,
+so a booking edited three times carried three identical "check in" reminders —
+and the return leg would have doubled that again. The endpoint now accepts a
+validated reference and refuses to open a second task against a reference that
+is already open, which is the rule the sweep has always used.
+
+**2. A round trip completed itself the morning after the outbound.** The
+auto-complete rule (`travel_date < today → Completed`) was written when every
+booking was one-way and was untouched by this morning's `return_date` work — so
+a trip would have gone green in the register while the customer was still
+abroad with a return to check in for, and the FLIGHT task would have closed with
+it. Both now judge the journey on its LAST date. Mine, from this morning, and
+exactly the kind of thing a new column does to old rules.
+
+Harness: both defaults, the one-way case, and the chip's both-legs rule.
+Mutation-tested — removing the return default and the both-legs condition fails
+it.

@@ -65,6 +65,8 @@ function toAppFull(row) {
       .some(p => p.passport_number && String(p.passport_number).trim()),
     passportExpiry: row.passport_expiry || '',
     checkinDone: !!row.checkin_done,
+    returnCheckinDate: row.return_checkin_date || '',
+    returnCheckinDone: !!row.return_checkin_done,
     checkinBy: row.checkin_by || '',
     checkinDate: row.checkin_date || '',
     notes: row.notes || '',
@@ -256,7 +258,8 @@ async function handler(req, res) {
       // Booking-level dates hit Postgres `date` columns — ISO only, or a slash
       // date parses month-first (sweep 2026-08-02 #22).
       for (const [label, v] of [['Travel date', b.travelDate], ['Return date', b.returnDate],
-        ['Check-in date', b.checkinDate], ['Passport expiry', b.passportExpiry]]) {
+        ['Check-in date', b.checkinDate], ['Return check-in date', b.returnCheckinDate],
+        ['Passport expiry', b.passportExpiry]]) {
         if (v && !ISO_DATE.test(String(v))) {
           return res.status(400).json({ success: false, error: `${label} must be a full date (year-month-day).` })
         }
@@ -336,6 +339,8 @@ async function handler(req, res) {
             passport_on_file: !!b.passportOnFile,
             passport_expiry: b.passportExpiry || null,
             checkin_done: !!b.checkinDone,
+            return_checkin_date: b.returnCheckinDate || null,
+            return_checkin_done: !!b.returnCheckinDone,
             checkin_by: b.checkinBy === 'us' || b.checkinBy === 'customer' ? b.checkinBy : null,
             checkin_date: b.checkinDate || null,
             notes: b.notes || null,
@@ -439,7 +444,8 @@ async function handler(req, res) {
       // go through an explicit wallet adjustment, so the ledger stays honest.
       const { id, status, notes, passengers, checkinDone, checkinBy, checkinDate,
         passenger, route, airline, destinationCountry, bookingReference, travelDate, returnDate,
-        departureTime, arrivalTime, passportOnFile, passportExpiry, legs } = req.body || {}
+        departureTime, arrivalTime, passportOnFile, passportExpiry, legs,
+        returnCheckinDate, returnCheckinDone } = req.body || {}
       if (!id) return res.status(400).json({ success: false, error: 'Booking id is required.' })
       const patch = {}
       if (status !== undefined) {
@@ -471,6 +477,13 @@ async function handler(req, res) {
       if (checkinDone !== undefined) patch.checkin_done = !!checkinDone
       if (checkinBy !== undefined) patch.checkin_by = (checkinBy === 'us' || checkinBy === 'customer') ? checkinBy : null
       if (checkinDate !== undefined) patch.checkin_date = checkinDate || null
+      if (returnCheckinDate !== undefined) {
+        if (returnCheckinDate && !ISO_DATE.test(String(returnCheckinDate))) {
+          return res.status(400).json({ success: false, error: 'Return check-in date must be a full date (year-month-day).' })
+        }
+        patch.return_checkin_date = returnCheckinDate || null
+      }
+      if (returnCheckinDone !== undefined) patch.return_checkin_done = !!returnCheckinDone
       if (!Object.keys(patch).length && passengers === undefined && legs === undefined) {
         return res.status(400).json({ success: false, error: 'Nothing to update.' })
       }

@@ -12617,7 +12617,7 @@ async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
            the book is one-way. */''}
       <div class="form-group">
         <label class="form-label">Return Date <span style="color:var(--muted);font-weight:400;">(round trip only)</span></label>
-        <input class="form-input" type="date" id="bkReturnDate" onchange="showHebrewDate('bkReturnDate','bkReturnHeb')">
+        <input class="form-input" type="date" id="bkReturnDate" onchange="showHebrewDate('bkReturnDate','bkReturnHeb'); bkCheckinToggle();">
         <div class="hebrew-date" id="bkReturnHeb"></div>
       </div>
       <div class="form-group">
@@ -12683,8 +12683,12 @@ async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
             <input type="checkbox" id="bkCheckinDone"> already done
           </label>
           <span id="bkCheckinDateWrap" style="display:none;align-items:center;gap:6px;">
-            <span style="font-size:var(--fs-small);color:var(--muted);">do it on</span>
+            <span style="font-size:var(--fs-small);color:var(--muted);">out on</span>
             <input class="form-input" type="date" id="bkCheckinDate" style="width:150px;">
+          </span>
+          <span id="bkRetCheckinWrap" style="display:none;align-items:center;gap:6px;">
+            <span style="font-size:var(--fs-small);color:var(--muted);">↩ back on</span>
+            <input class="form-input" type="date" id="bkRetCheckinDate" style="width:150px;">
           </span>
         </div>
         <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">"We do check-in" + a date raises a task reminder for that day.</div>
@@ -12747,17 +12751,29 @@ function bkCalcFee() {
     `${n} passenger${n === 1 ? '' : 's'}: ${parts.join(' + ')} = ${fmtGbp(fee)}`;
 }
 
-// Show the check-in date only when WE do the check-in; default it to the day
-// before travel (online check-in typically opens ~24h out).
+// Show the check-in dates only when WE do the check-in, and default each to the
+// day before its own flight (online check-in typically opens ~24h out). The
+// return leg gets the same treatment: it is the one people forget, precisely
+// because it is a month away when the booking is made.
+const dayBefore = (iso) => {
+  if (!iso) return '';
+  const d = parseLocalDate(iso);
+  d.setDate(d.getDate() - 1);
+  return localISO(d);
+};
+
 function bkCheckinToggle() {
   const us = document.getElementById('bkCheckinBy')?.value === 'us';
   const wrap = document.getElementById('bkCheckinDateWrap');
   if (wrap) wrap.style.display = us ? 'inline-flex' : 'none';
+  const retWrap = document.getElementById('bkRetCheckinWrap');
+  const hasReturn = !!document.getElementById('bkReturnDate')?.value;
+  if (retWrap) retWrap.style.display = us && hasReturn ? 'inline-flex' : 'none';
+
   const dateEl = document.getElementById('bkCheckinDate');
-  if (us && dateEl && !dateEl.value) {
-    const travel = document.getElementById('bkTravelDate')?.value;
-    if (travel) { const d = parseLocalDate(travel); d.setDate(d.getDate() - 1); dateEl.value = localISO(d); }
-  }
+  if (us && dateEl && !dateEl.value) dateEl.value = dayBefore(document.getElementById('bkTravelDate')?.value);
+  const retEl = document.getElementById('bkRetCheckinDate');
+  if (us && retEl && !retEl.value) retEl.value = dayBefore(document.getElementById('bkReturnDate')?.value);
 }
 
 // The Booking Gate (owner, 08-16). Mirrors lib/bookingGate.mjs — change both
@@ -12861,6 +12877,8 @@ async function saveNewBooking() {
     checkinDone:      document.getElementById('bkCheckinDone').checked,
     checkinDate:      document.getElementById('bkCheckinBy').value === 'us'
                         ? document.getElementById('bkCheckinDate').value : '',
+    returnCheckinDate: document.getElementById('bkCheckinBy').value === 'us'
+                        ? (document.getElementById('bkRetCheckinDate')?.value || '') : '',
     notes:            document.getElementById('bkNotes').value.trim(),
   };
   if (!payload.customerId) { toast('Select a customer.', 'error'); return; }
@@ -12941,16 +12959,35 @@ async function saveNewBooking() {
 // day so it isn't forgotten. Idempotent-ish: keyed note so re-saves don't
 // spam (best-effort — the tasks API dedups on nothing, so we only call this
 // on explicit save/toggle).
+// A round trip needs TWO reminders. The one nobody was getting is the second:
+// the flight home, when the customer is abroad and least able to sort it out
+// themselves. `checkin_by` covers both legs — if the shop does check-in, it
+// does both — so only the dates and the done flags differ.
+//
+// Both are keyed (CHECKIN-<id> / CHECKINRET-<id>) so editing a booking three
+// times leaves one task per leg rather than three.
 async function maybeCheckinTask(b) {
-  if (!b || b.checkinBy !== 'us' || b.checkinDone || !b.checkinDate) return;
-  await window.api.addTask({
-    title: `🛫 Check in ${b.customerName || b.passenger || ''} — ${b.route}`.trim(),
-    dueDate: b.checkinDate,
-    priority: 'High',
-    notes: `Online check-in for flight ${b.route}${b.airline ? ' (' + b.airline + ')' : ''} on ${fmtDate(b.travelDate)}. Booking ref ${b.bookingReference || '—'}.`,
-    customerId: b.customerId || null,
-    snoozedUntil: b.checkinDate,
-  }).catch(() => null);
+  if (!b || b.checkinBy !== 'us') return;
+  const who = (b.customerName || b.passenger || '').trim();
+  const legs = [
+    { on: b.checkinDate, done: b.checkinDone, ref: `CHECKIN-${b.id}`,
+      label: '', flight: b.travelDate },
+    { on: b.returnCheckinDate, done: b.returnCheckinDone, ref: `CHECKINRET-${b.id}`,
+      label: ' (way back)', flight: b.returnDate },
+  ];
+  for (const leg of legs) {
+    if (!leg.on || leg.done) continue;
+    await window.api.addTask({
+      title: `🛫 Check in ${who}${leg.label} — ${b.route}`.trim(),
+      dueDate: leg.on,
+      priority: 'High',
+      notes: `Online check-in for flight ${b.route}${b.airline ? ' (' + b.airline + ')' : ''}`
+        + `${leg.flight ? ' on ' + fmtDate(leg.flight) : ''}. Booking ref ${b.bookingReference || '—'}.`,
+      customerId: b.customerId || null,
+      snoozedUntil: leg.on,
+      reference: leg.ref,
+    }).catch(() => null);
+  }
 }
 
 async function openCheckinModal(bookingId) {
@@ -13006,21 +13043,32 @@ async function openCheckinModal(bookingId) {
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">Who checks in?</label>
-        <select class="form-input" id="ciBy" onchange="document.getElementById('ciDateWrap').style.display=this.value==='us'?'block':'none'">
+        <select class="form-input" id="ciBy" onchange="ciToggle(this.value)">
           <option value="customer" ${b.checkinBy !== 'us' ? 'selected' : ''}>Customer does it</option>
           <option value="us" ${b.checkinBy === 'us' ? 'selected' : ''}>We do it</option>
         </select>
       </div>
       <div class="form-group" id="ciDateWrap" style="display:${b.checkinBy === 'us' ? 'block' : 'none'};">
-        <label class="form-label">Do it on</label>
+        <label class="form-label">${b.returnDate ? 'Outbound — do it on' : 'Do it on'}</label>
         <input class="form-input" type="date" id="ciDate" value="${escHtml(b.checkinDate || '')}">
       </div>
       <div class="form-group form-full">
         <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-ui);cursor:pointer;">
           <input type="checkbox" id="ciDone" ${b.checkinDone ? 'checked' : ''}>
-          ✅ Check-in is done
+          ✅ ${b.returnDate ? 'Outbound check-in is done' : 'Check-in is done'}
         </label>
       </div>
+      ${b.returnDate ? `
+      <div class="form-group" id="ciRetDateWrap" style="display:${b.checkinBy === 'us' ? 'block' : 'none'};">
+        <label class="form-label">↩ Way back (${escHtml(fmtDate(b.returnDate))}) — do it on</label>
+        <input class="form-input" type="date" id="ciRetDate" value="${escHtml(b.returnCheckinDate || '')}">
+      </div>
+      <div class="form-group form-full">
+        <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-ui);cursor:pointer;">
+          <input type="checkbox" id="ciRetDone" ${b.returnCheckinDone ? 'checked' : ''}>
+          ✅ Return check-in is done
+        </label>
+      </div>` : ''}
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
@@ -13029,13 +13077,27 @@ async function openCheckinModal(bookingId) {
   `);
 }
 
+// Both date fields belong to the same decision — who does the check-in.
+function ciToggle(by) {
+  for (const id of ['ciDateWrap', 'ciRetDateWrap']) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = by === 'us' ? 'block' : 'none';
+  }
+}
+
 async function saveCheckin(bookingId) {
   const by = document.getElementById('ciBy').value;
+  const retDate = document.getElementById('ciRetDate');
+  const retDone = document.getElementById('ciRetDone');
   const res = await window.api.updateBooking({
     id: bookingId,
     checkinBy: by,
     checkinDone: document.getElementById('ciDone').checked,
     checkinDate: by === 'us' ? document.getElementById('ciDate').value : '',
+    ...(retDate ? {
+      returnCheckinDate: by === 'us' ? retDate.value : '',
+      returnCheckinDone: !!(retDone && retDone.checked),
+    } : {}),
   });
   if (!res.success) { toast(res.error || 'Could not save check-in.', 'error'); return; }
   const idx = bookings.findIndex(x => x.id === bookingId);
@@ -13048,8 +13110,19 @@ async function saveCheckin(bookingId) {
 
 // Small status chip for a booking's check-in state.
 function checkinChip(b) {
-  if (b.checkinDone) return `<span class="badge badge-active" title="Check-in done">✅ In</span>`;
-  if (b.checkinBy === 'us') return `<span class="badge badge-rental" title="We check in${b.checkinDate ? ' on ' + fmtDate(b.checkinDate) : ''}">🛫 us${b.checkinDate ? ' ' + fmtDate(b.checkinDate).slice(0, 5) : ''}</span>`;
+  // A round trip is two check-ins. "✅ In" on a booking with the flight home
+  // still to do would be the app saying the job is finished when it is half
+  // finished — so the return only disappears from the chip once it is done too.
+  const twoLegs = !!b.returnDate;
+  const outDone = !!b.checkinDone;
+  const backDone = !twoLegs || !!b.returnCheckinDone;
+
+  if (outDone && backDone) return `<span class="badge badge-active" title="Check-in done${twoLegs ? ', both ways' : ''}">✅ In${twoLegs ? ' ×2' : ''}</span>`;
+  if (b.checkinBy === 'us') {
+    const next = !outDone ? b.checkinDate : b.returnCheckinDate;
+    const which = !outDone ? '' : ' back';
+    return `<span class="badge badge-rental" title="We check in${next ? ' on ' + fmtDate(next) : ''}${twoLegs ? ` · out ${outDone ? 'done' : 'to do'}, back ${backDone ? 'done' : 'to do'}` : ''}">🛫 us${which}${next ? ' ' + fmtDate(next).slice(0, 5) : ''}</span>`;
+  }
   if (b.checkinBy === 'customer') return `<span class="badge" style="background:rgba(148,163,184,0.15);color:var(--muted);" title="Customer checks in">👤 cust</span>`;
   return `<span class="badge" style="background:rgba(234,179,8,0.15);color:var(--warning-ink);" title="Check-in not set">⚠️ ?</span>`;
 }
