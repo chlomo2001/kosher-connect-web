@@ -35,6 +35,11 @@ const BY_DESIGN = [
   // A glyph, not a word: holding still keeps the icon column aligned as the
   // labels beside it scale. (app.css .card-action .ca-icon)
   'SPAN.ca-icon',
+  // The Aa inside the text-size button is a READOUT of the mode, not text in
+  // it: it is 13/15/18px BY the mode, so of course it does not scale with the
+  // mode. It sits inside the button above, which is itself by design.
+  // (globals.css .kc-fs-aa — added 18 Aug with the level pips.)
+  'SPAN.kc-fs-aa',
 ]
 
 const file = buildAppHtml()

@@ -20650,7 +20650,17 @@ async function renderSettingsTab() {
         ${activeBiz.map(a => `
           <tr>
             <td><strong>${escHtml(a.name)}</strong><div style="font-size:var(--fs-micro);color:var(--muted);">${BIZ_CAT_LABELS[a.category] || escHtml(a.category)}${a.notes ? ' · ' + escHtml(a.notes.slice(0, 60)) : ''}</div></td>
-            <td style="font-size:var(--fs-small);">${a.url ? `<a href="${escHtml(a.url)}" target="_blank" rel="noopener" style="color:var(--accent);">open ↗</a> ` : ''}${escHtml(a.loginEmail || '—')}</td>
+            ${/* The link and the login sat one space apart and read as one
+                  run-on string (owner, 19 Aug: "open and login details is too
+                  near - not proportional"). They are two different things —
+                  a place to go and a name to sign in with — so they get a
+                  gap and their own weights. */''}
+            <td style="font-size:var(--fs-small);">
+              <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+                ${a.url ? `<a href="${escHtml(a.url)}" target="_blank" rel="noopener" style="color:var(--accent);white-space:nowrap;">open ↗</a>` : ''}
+                <span style="color:var(--muted);">${escHtml(a.loginEmail || '—')}</span>
+              </div>
+            </td>
             <td style="font-feature-settings:'tnum';">${a.monthlyCost != null ? fmtGbp(a.monthlyCost) : '—'}</td>
             <td class="kc-date">${a.renewalDate ? `<span style="${a.renewalDate <= soon10 ? 'color:var(--danger-ink);font-weight:600;' : ''}">${fmtDate(a.renewalDate)}${a.renewalDate < today10 ? ' ⚠' : ''}</span>` : '—'}</td>
             <td style="white-space:nowrap;">
