@@ -46,18 +46,30 @@ await p.waitForTimeout(600)
 // ── the queue is there and says what it read ──────────────────────────────
 const queue = await p.evaluate(() => {
   const rows = [...document.querySelectorAll('.tm-row')]
+  const txt = (r) => r.innerText.replace(/\s+/g, ' ')
+  const btns = (r) => [...r.querySelectorAll('.tm-actions button')].map((b) => b.textContent.trim())
   return {
     n: rows.length,
-    first: rows[0] ? rows[0].innerText.replace(/\s+/g, ' ') : '',
+    // The Wizz confirmation, wherever it sits in the list now.
+    wizz: rows.map(txt).find((t) => /XU2WWH/.test(t)) || '',
     // The cancellation must not offer booking as its primary action.
-    cancelPrimary: rows.some((r) => /Cancelled/.test(r.innerText) &&
+    cancelPrimary: rows.some((r) => /Cancelled/.test(txt(r)) &&
       /Confirm booking details/.test(r.querySelector('.btn-primary')?.textContent || '')),
+    // A "not about a booking" row must offer NO way to confirm a booking.
+    marketingBook: rows.some((r) => /Not about a booking/.test(txt(r)) &&
+      btns(r).some((b) => /Confirm booking details/i.test(b))),
+    marketingSeen: rows.some((r) => /Not about a booking/.test(txt(r))),
+    // The unpaid hold is flagged and still bookable.
+    payFlagged: rows.some((r) => /Not paid yet/.test(txt(r))),
   }
 })
-say(queue.n === 3, `three tickets are waiting in the seed — the tab showed ${queue.n}`)
-say(/XU2WWH/.test(queue.first) && /LTN → TLV/.test(queue.first) && /£428.60/.test(queue.first),
-  `the first card should show the reference, the route and the price — got "${queue.first.slice(0, 120)}"`)
+say(queue.n === 5, `five tickets are waiting in the seed — the tab showed ${queue.n}`)
+say(/XU2WWH/.test(queue.wizz) && /LTN → TLV/.test(queue.wizz) && /£428.60/.test(queue.wizz),
+  `the Wizz card should show the reference, the route and the price — got "${queue.wizz.slice(0, 120)}"`)
 say(!queue.cancelPrimary, 'a cancellation offered booking as its primary action')
+say(queue.marketingSeen, 'the marketing message should be labelled "not about a booking"')
+say(!queue.marketingBook, 'a "not about a booking" message offered to be confirmed as a booking')
+say(queue.payFlagged, 'the unpaid reservation should be flagged "not paid yet"')
 
 // ── what did not parse is visible as missing, not as blank ────────────────
 say(await p.evaluate(() => [...document.querySelectorAll('.tm-row')]

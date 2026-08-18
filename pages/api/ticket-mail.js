@@ -20,6 +20,7 @@
 // closes is a queue that grows forever.
 
 import { withTab } from '../../lib/auth.js'
+import { ticketKindLabel, NOT_BOOKABLE } from '../../lib/ticketMail.mjs'
 import { db, tablesMode, selectAllPaged } from '../../lib/db.js'
 
 const enc = encodeURIComponent
@@ -57,7 +58,15 @@ function toApp(row, byUuid) {
     from: row.from_address || '',
     subject: row.subject || '',
     airline: row.airline || '',
-    kind: row.kind || 'confirmation',
+    // 'other', not 'confirmation', when a row carries no kind: a message the
+    // reader could not classify must not assert itself to be a booking. The
+    // default was 'confirmation' until 18 Aug 2026, which is how a privacy
+    // notice and a baggage advert sat in the register as flights to confirm.
+    kind: row.kind || 'other',
+    kindLabel: ticketKindLabel(row.kind || 'other'),
+    // Whether this message is a booking to MAKE. Marketing and the unclassified
+    // are not, so the card offers to read and dismiss them, not to book them.
+    bookable: !NOT_BOOKABLE.has(row.kind || 'other'),
     reference: row.booking_reference || '',
     passengers: row.passengers || [],
     origin: row.origin || '',

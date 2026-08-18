@@ -274,7 +274,9 @@ Flights booked for customers: the ticket and what it cost, who is travelling, wh
 - **Travel documents panel** — The check that runs on every booking as you fill it in. It blocks a booking where the passport dies before they are home, asks you to verify what it cannot see, and passes what is genuinely fine.
 - **Filter and sort** — Upcoming travel is the working list — and a customer already abroad stays on it until they land back, because they are still away.
 - **The list** — Customer, route, airline and reference, the travel date with a mark for a return leg, price, fee, status, and where the check-in has got to.
-- **✉️ Tickets from email** — Airline confirmations that have arrived, read and waiting to be confirmed into bookings. ↻ Check now re-reads them on the spot, for the customer standing at the counter who has just forwarded theirs. The timestamp is when the email arrived, in the shop's own time.
+- **✉️ Tickets from email** — Airline confirmations that have arrived, read and waiting to be confirmed into bookings. Each row says what the message IS — a booking confirmation, an unpaid reservation, a cancellation, or something that is not a booking at all — and only the real bookings offer to become one. ↻ Check now re-reads them on the spot, for the customer standing at the counter who has just forwarded theirs. The timestamp is when the email arrived, in the shop's own time.
+- **Not paid yet** — An airline holding seats it has not been paid for. It is a real reservation, so it can still be booked in, but the note says to deal with the payment first — the airline cancels it if nobody does.
+- **Not about a booking** — A privacy notice, an advert, a baggage message — airline post that is not a booking to make. It offers only to be read and dismissed, never to be confirmed into a flight. Most of these never reach the queue; the ones that do are cleared with Dismiss.
 - **Tick the ones that are nothing** — Every email in the queue has a tick box, with select-all above them. Ticking several offers to dismiss them together — for the morning when an airline sends thirty circulars and twenty-eight are nothing to do with a journey. Only dismissing works in bulk: confirming a booking charges somebody, so it stays one at a time.
 - **Already booked** — When the reference on an email is already live on a booking, the card says so and does not offer to book it again. The two answers it offers instead are that this email IS that booking, or that it is another flight on it.
 - **🛫 Online check-in** — Records who is doing the check-in and when it has been done, so a flight nobody has checked in for is visible before it is too late to matter.
@@ -292,6 +294,7 @@ Flights booked for customers: the ticket and what it cost, who is travelling, wh
 - A round trip needs its return date. Without one the app can only judge the outbound, and it will say so rather than pretend.
 - The ticket price and the shop's fee are separate numbers on purpose: one is the airline's money passing through, the other is what the shop earned.
 - Nothing is sent to the airline or the customer from here. The booking is made where it is always made; this is the shop's record of it.
+- A message the app cannot read for what it is does not pretend to be a booking. It reads as "not about a booking" and offers only to be read and cleared — a guess dressed as a confirmation is how a privacy notice once sat here asking to be booked as a flight.
 
 **When it goes wrong**
 
@@ -300,6 +303,7 @@ Flights booked for customers: the ticket and what it cost, who is travelling, wh
 - **The same confirmation has arrived twice** — The second card will say the reference is already booked and will not offer to book it again. File it on the booking it belongs to, or add it as another flight — never make a second booking, or the journey is charged twice.
 - **The upcoming list is missing someone who is away** — It should not be. Anyone still travelling belongs on it until the day they land back — if they are missing, the return date is probably missing too.
 - **The airline field has passenger names in it** — That came from an old import. Correct it on the booking; the airline field is what the check-in and the reference are read against.
+- **An airline advert or notice is in the queue** — It is marked "not about a booking" and offers no way to confirm it — Dismiss clears it. If adverts keep arriving, the tickets mailbox is being fed marketing as well as confirmations, which is worth narrowing at the forwarding rule.
 
 ---
 

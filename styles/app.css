@@ -1254,6 +1254,9 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .tm-why { font-size: var(--fs-micro); color: var(--muted); }
 .tm-gap { color: var(--danger-ink); font-size: var(--fs-small); }
 .tm-missing { font-size: var(--fs-micro); color: var(--danger-ink); margin-top: 4px; }
+/* A neutral note on a ticket card — a check-in reminder is information, not a
+   fault, so it does not wear the red of a missing field. */
+.tm-note { font-size: var(--fs-micro); color: var(--muted); margin-top: 4px; }
 /* "That reference is already booked." Green, because it is good news — the work
    is done — rather than a warning about something that went wrong. */
 .tm-booked {

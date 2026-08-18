@@ -13,6 +13,7 @@ import {
   looksLikeTicket, airlineOf, ticketKind, routeIn, routeLabel, referenceIn,
   datesIn, timesIn, priceIn, passengersIn, parseTicketMail, suggestCustomer,
   ticketTaskTitle, bookingForReference, refKey,
+  ticketKindLabel, NOT_BOOKABLE,
 } from '../lib/ticketMail.mjs'
 
 const TODAY = '2026-08-18'
@@ -60,9 +61,14 @@ A refund of GBP 170.00 has been issued.`,
 
 // ── is it even a ticket ───────────────────────────────────────────────────
 
-test('a known airline sender is a ticket, whatever it says', () => {
+test('a known airline sender is a ticket only when it is about a booking', () => {
+  // The sender is a HINT, not a verdict. It was a verdict until 18 Aug 2026,
+  // which is how eight airline circulars — a privacy policy, a bag-drop advert,
+  // baggage notices — sat in the register dressed as flights to confirm. A real
+  // confirmation still passes; an advert from the same address does not.
   assert.equal(looksLikeTicket(WIZZ), true)
-  assert.equal(looksLikeTicket({ from: 'promo@easyjet.com', subject: 'Sale now on' }), true)
+  assert.equal(looksLikeTicket({ from: 'promo@easyjet.com', subject: 'Sale now on' }), false)
+  assert.equal(looksLikeTicket({ from: 'BritishAirways@crm.ba.com', subject: "We're updating our Privacy Policy" }), false)
 })
 
 test('an unknown sender has to look like a flight, not just a booking', () => {
@@ -339,4 +345,87 @@ test('no bookings, or rubbish in the list, is a miss and not a crash', () => {
   assert.equal(bookingForReference('BNKYRW', []), null)
   assert.equal(bookingForReference('BNKYRW', undefined), null)
   assert.equal(bookingForReference('BNKYRW', [null, {}, { legs: null }]), null)
+})
+
+
+// ── what an airline email IS (18 Aug 2026) ──────────────────────────────────
+// Every subject below is a real one the ticket queue had FILED by 18 Aug. Nine
+// of the ten were not bookings, and the queue offered "✈️ Confirm booking
+// details" on all of them because the classifier's default was 'confirmation'
+// — a meaning asserted, never established. One even had a travel date parsed
+// out of a privacy-policy notice.
+const TICKET_QUEUE = [
+  // from,                                    subject,                                            text,                                                kind,          ticketish
+  ['forwarding-noreply@google.com', '(Gmail Forwarding confirmation – Receive mail from x@gmail.com', 'confirmation code 12345',                      'marketing',    false],
+  ['KLM_Royal_Dutch_Airlines@infos-klm.com', 'Your baggage is on board',                          'booking reference ABC123',                         'marketing',    false],
+  ['no-reply@ryanair.com',           'Avoid the Bag Drop Queues',                                 '',                                                  'marketing',    false],
+  ['BritishAirways@crm.ba.com',      "We're updating our Privacy Policy",                         'your booking 14 September 2026',                    'marketing',    false],
+  ['no-reply@brusselsairlines.com',  'Complete the payment for your reservation 8DGFF9',          'Please complete the payment for reservation 8DGFF9','payment_due',  true],
+  ['mybooking@jet2email.com',        'The countdown to Larnaca is on...',                         '',                                                  'marketing',    false],
+]
+
+test('every message the queue had wrongly filed is read for what it is', () => {
+  for (const [from, subject, text, kind, ticketish] of TICKET_QUEUE) {
+    assert.equal(looksLikeTicket({ from, subject, text }), ticketish,
+      `looksLikeTicket("${subject}") should be ${ticketish}`)
+    // Kind is only meaningful for the ones that were actually stored.
+    if (ticketish) assert.equal(ticketKind({ subject, text }), kind, `"${subject}" → ${ticketKind({ subject, text })}`)
+  }
+})
+
+test('an unpaid reservation is its own kind — it is the one that costs money to ignore', () => {
+  // The airline holds the seats and cancels them if nobody pays. It IS a real
+  // booking (it has a reference), so it stays bookable, but it is flagged.
+  const k = ticketKind({ subject: 'Complete the payment for your reservation 8DGFF9', text: 'reservation held, payment outstanding' })
+  assert.equal(k, 'payment_due')
+  assert.equal(ticketKindLabel(k), 'Not paid yet')
+  assert.ok(!NOT_BOOKABLE.has('payment_due'), 'a held reservation is still a booking to make')
+})
+
+test('a message nobody can classify is "other", never "confirmation"', () => {
+  // The core of the fix: an unreadable message must not assert itself a booking.
+  assert.equal(ticketKind({ subject: 'A note from your provider', text: 'hello' }), 'other')
+  assert.equal(ticketKind({}), 'other')
+  assert.equal(ticketKindLabel('other'), '')
+  assert.ok(NOT_BOOKABLE.has('other'), '"other" must not offer to become a booking')
+  assert.ok(NOT_BOOKABLE.has('marketing'))
+})
+
+test('marketing is decided on the subject, so a footer link cannot re-book a circular', () => {
+  // Airline adverts quote real booking words deep in the body ("manage your
+  // booking", a reference in the footer). Reading the body first would dress
+  // every circular as a confirmation, which is the trap in reverse.
+  const kind = ticketKind({
+    subject: 'Summer sale — 20% off',
+    text: 'Book now! Your booking reference for any purchase... itinerary... reservation...',
+  })
+  assert.equal(kind, 'marketing')
+})
+
+test('an airline sender with no booking content is not a ticket', () => {
+  // Isolates the sender-is-a-hint rule from the marketing gate: a neutral
+  // subject that no NOT_A_BOOKING pattern catches, from a real airline address,
+  // with nothing booking-shaped in it. The old "sender is a verdict" code let
+  // this in; the queue must not.
+  assert.equal(looksLikeTicket({
+    from: 'noreply@wizzair.com',
+    subject: 'A message about your account',
+    text: 'Hello, please sign in to review your details.',
+  }), false)
+  // …but the moment it carries booking evidence, the same sender IS a ticket.
+  assert.equal(looksLikeTicket({
+    from: 'noreply@wizzair.com',
+    subject: 'A message about your account',
+    text: 'Your itinerary LTN → TLV, confirmation number ABC123.',
+  }), true)
+})
+
+test('a real confirmation is never mistaken for marketing', () => {
+  // The failure that would make this worse than nothing: dropping a real
+  // booking because it happened to contain a marketing-ish word.
+  for (const fx of [WIZZ]) {
+    assert.equal(looksLikeTicket(fx), true, 'a genuine confirmation must stay a ticket')
+    assert.equal(ticketKind(fx), 'confirmation')
+    assert.ok(!NOT_BOOKABLE.has(ticketKind(fx)))
+  }
 })

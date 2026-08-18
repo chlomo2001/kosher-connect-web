@@ -11949,10 +11949,17 @@ function tmQueueHtml() {
 }
 
 function tmCardHtml(t) {
-  const kind = {
-    cancellation: ['Cancelled', 'var(--danger-ink)'],
-    change: ['Flight changed', 'var(--warning-ink)'],
-  }[t.kind] || ['', ''];
+  // The label comes from the API (lib/ticketMail.mjs), so it cannot drift from
+  // the classifier that produced it; the colour is presentation and lives here.
+  // Cancellations and unpaid holds are red — both cost money if missed; a
+  // change or an open check-in is amber; marketing is muted, because it should
+  // not have reached the queue and is here only as a historical row.
+  const kindColour = {
+    cancellation: 'var(--danger-ink)', payment_due: 'var(--danger-ink)',
+    change: 'var(--warning-ink)', checkin_open: 'var(--accent)',
+    marketing: 'var(--muted)', other: 'var(--muted)',
+  }[t.kind] || '';
+  const kindLabel = t.kindLabel || '';
   const money = t.price === null ? ''
     : `${({ GBP: '£', EUR: '€', USD: '$', ILS: '₪' })[t.currency] || ''}${t.price.toFixed(2)}`;
   const foreign = t.price !== null && t.currency && t.currency !== 'GBP';
@@ -11983,10 +11990,15 @@ function tmCardHtml(t) {
         <div class="tm-head">
           <strong>${escHtml(t.airline || 'Airline')}</strong>
           ${t.reference ? `<code class="tm-ref">${escHtml(t.reference)}</code>` : ''}
-          ${kind[0] ? `<span class="tm-kind" style="color:${kind[1]}">${kind[0]}</span>` : ''}
+          ${kindLabel ? `<span class="tm-kind" style="color:${kindColour}">${escHtml(kindLabel)}</span>` : ''}
           <span class="tm-when">${t.receivedAt ? escHtml(fmtWhen(t.receivedAt)) : ''}</span>
         </div>
-        <div class="tm-flight">
+        ${t.bookable === false
+          // Not a booking, so the "fill in the flight" prompts (route? date?
+          // pick a customer) would be asking staff to complete something that
+          // should never become a booking. Show what the message IS instead.
+          ? `<div class="tm-pax">${escHtml(t.subject || '(no subject)')}</div>`
+          : `<div class="tm-flight">
           ${t.route ? `<span class="tm-route">${escHtml(t.route)}</span>` : '<span class="tm-gap">route?</span>'}
           ${t.travelDate ? `<span>${escHtml(fmtDate(t.travelDate))}</span>` : '<span class="tm-gap">date?</span>'}
           ${t.departureTime ? `<span class="tm-time">${escHtml(t.departureTime)}${t.arrivalTime ? ' → ' + escHtml(t.arrivalTime) : ''}</span>` : ''}
@@ -11997,7 +12009,9 @@ function tmCardHtml(t) {
           ? t.passengers.map(p => escName(p)).join(' · ')
           : '<span class="tm-gap">no passenger name in the mail</span>'}</div>
         ${t.returnDate ? `<div class="tm-pax">↩ Returns ${escHtml(fmtDate(t.returnDate))} — carried onto the booking.</div>` : ''}
-        <div class="tm-cust">${who}</div>
+        <div class="tm-cust">${who}</div>`}
+        ${t.kind === 'payment_due' ? `<div class="tm-missing">Not paid yet — the airline is holding the seats and will cancel them if payment is not completed. Deal with the payment before booking it in.</div>` : ''}
+        ${t.kind === 'checkin_open' ? `<div class="tm-note">Check-in is open for this flight. This is a reminder about a trip, not a new booking — find it in the register if it needs checking in.</div>` : ''}
         ${already ? `<div class="tm-booked">✓ <strong>${escHtml(t.reference)}</strong> is already booked —
             <a href="#" onclick="event.preventDefault();tmOpenBooking('${escJs(String(already.id))}')">${escName(already.customerName || 'this booking')}${
               already.route ? ' · ' + escHtml(already.route) : ''}${
@@ -12013,6 +12027,13 @@ function tmCardHtml(t) {
           ? `<button class="btn btn-outline btn-sm" onclick="tmBook(${t.id})">Confirm booking details</button>
              <button class="btn btn-outline btn-sm" onclick="tmShowMail(${t.id})">Read the email</button>
              <button class="btn btn-primary btn-sm" onclick="tmDismiss(${t.id})">Dealt with</button>`
+          : t.bookable === false
+          // Marketing, or a message nobody could classify. It is not a booking
+          // to make, so it does not offer to become one — only to be read and
+          // cleared. Before 18 Aug 2026 a privacy notice and a bag-drop advert
+          // both showed "✈️ Confirm booking details" here.
+          ? `<button class="btn btn-outline btn-sm" onclick="tmShowMail(${t.id})">Read the email</button>
+             <button class="btn btn-primary btn-sm" onclick="tmDismiss(${t.id})">Dismiss</button>`
           : already
           // The reference is live on a booking already. The two honest answers
           // are "this email IS that booking" and "this is another flight on

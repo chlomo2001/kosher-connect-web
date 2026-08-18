@@ -1514,11 +1514,81 @@
  "/api/ticket-mail": {
   "success": true,
   "counts": {
-   "pending": 3,
+   "pending": 5,
    "booked": 11,
-   "total": 14
+   "total": 5
   },
   "tickets": [
+   {
+    "id": 73,
+    "receivedAt": "2026-08-18T13:05:00Z",
+    "from": "no-reply@brusselsairlines.com",
+    "subject": "Complete the payment for your reservation 8DGFF9",
+    "airline": "Brussels Airlines",
+    "kind": "payment_due",
+    "kindLabel": "Not paid yet",
+    "bookable": true,
+    "reference": "8DGFF9",
+    "passengers": [
+     "Chaim Kopilowitz"
+    ],
+    "origin": "BRU",
+    "destination": "TLV",
+    "route": "BRU → TLV",
+    "travelDate": "2026-10-02",
+    "returnDate": "",
+    "departureTime": "",
+    "arrivalTime": "",
+    "price": 312.4,
+    "currency": "EUR",
+    "confidence": "partial",
+    "missing": [],
+    "customerId": "",
+    "customerName": "",
+    "customerConfidence": "",
+    "candidates": [
+     {
+      "id": "c2",
+      "name": "Chaim Kopilowitz",
+      "why": "name match"
+     }
+    ],
+    "body": "Please complete the payment for reservation 8DGFF9.",
+    "bookingId": null,
+    "resolvedAt": null,
+    "dismissedReason": ""
+   },
+   {
+    "id": 72,
+    "receivedAt": "2026-08-18T08:44:00Z",
+    "from": "BritishAirways@crm.ba.com",
+    "subject": "We're updating our Privacy Policy",
+    "airline": "British Airways",
+    "kind": "marketing",
+    "kindLabel": "Not about a booking",
+    "bookable": false,
+    "reference": "",
+    "passengers": [],
+    "origin": "",
+    "destination": "",
+    "route": "",
+    "travelDate": "",
+    "returnDate": "",
+    "departureTime": "",
+    "arrivalTime": "",
+    "price": null,
+    "currency": "",
+    "confidence": "low",
+    "missing": [],
+    "customerId": "",
+    "customerName": "",
+    "customerConfidence": "",
+    "candidates": [],
+    "body": "We're updating our privacy policy.",
+    "bookingId": null,
+    "resolvedAt": null,
+    "dismissedReason": ""
+   },
    {
     "id": 71,
     "receivedAt": "2026-08-18T09:12:00Z",
@@ -1555,7 +1625,9 @@
     "body": "Confirmation number: XU2WWH\nLondon Luton (LTN) 08:25 → Tel Aviv (TLV) 15:05\nTotal price: GBP 428.60",
     "bookingId": null,
     "resolvedAt": null,
-    "dismissedReason": ""
+    "dismissedReason": "",
+    "kindLabel": "Booking confirmation",
+    "bookable": true
    },
    {
     "id": 70,
@@ -1599,7 +1671,9 @@
     "body": "Reservation number: QK4T2M\nFlight FR 1234 from Manchester to Krakow",
     "bookingId": null,
     "resolvedAt": null,
-    "dismissedReason": ""
+    "dismissedReason": "",
+    "kindLabel": "Booking confirmation",
+    "bookable": true
    },
    {
     "id": 69,
@@ -1630,7 +1704,9 @@
     "body": "We are sorry to inform you that flight W6 5623 has been cancelled.",
     "bookingId": null,
     "resolvedAt": null,
-    "dismissedReason": ""
+    "dismissedReason": "",
+    "kindLabel": "Cancelled",
+    "bookable": true
    }
   ]
  }
