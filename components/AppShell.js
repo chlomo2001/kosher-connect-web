@@ -95,6 +95,10 @@ export default function AppShell({ initialTab = 'dashboard' }) {
         <link rel="preload" as="script" href="/main.js" />
         <link rel="preload" as="script" href="/address-autocomplete.js" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        {/* The staff app must never appear in a search engine. robots.txt
+            ALLOWS crawling so this tag can be read — a Disallow'd URL can
+            still be listed from links alone, with no way to remove it. */}
+        <meta name="robots" content="noindex, nofollow" />
         <title>Kosher Connect – Customer Management</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

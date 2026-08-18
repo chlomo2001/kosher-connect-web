@@ -613,7 +613,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     // login-style card and then jump to a completely different layout.
     return (
       <>
-        <Head><title>{L.title}</title></Head>
+        <Head><title>{L.title}</title><meta name="robots" content="noindex, nofollow" /></Head>
         <div className="pd-shell" dir={dir}>
           <header className="pd-top">
             <img className="pd-logo" src="/logo-full-tight.png" alt="Kosher Connect" />
@@ -646,7 +646,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   if (account && !account.customer) {
     return (
       <>
-        <Head><title>{L.title}</title></Head>
+        <Head><title>{L.title}</title><meta name="robots" content="noindex, nofollow" /></Head>
         <div className="login-shell">
           <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
           {langBtn}
@@ -705,7 +705,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     }
     return (
       <>
-        <Head><title>{L.title}</title></Head>
+        <Head><title>{L.title}</title><meta name="robots" content="noindex, nofollow" /></Head>
         <div className="pd-shell" dir={dir}>
           <header className="pd-top">
             <img className="pd-logo" src="/logo-full-tight.png" alt="Kosher Connect" />
@@ -987,7 +987,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
     }
     return (
       <>
-        <Head><title>{L.title}</title></Head>
+        <Head><title>{L.title}</title><meta name="robots" content="noindex, nofollow" /></Head>
         <div className="login-shell" dir={dir}>
           <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
           <div className="login-card" role="alert">
@@ -1010,7 +1010,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
 
   return (
     <>
-      <Head><title>{L.title}</title></Head>
+      <Head><title>{L.title}</title><meta name="robots" content="noindex, nofollow" /></Head>
       <div className="login-shell">
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         {langBtn}

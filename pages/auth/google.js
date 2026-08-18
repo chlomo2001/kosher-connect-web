@@ -33,7 +33,7 @@ export default function GoogleAuth() {
 
   return (
     <>
-      <Head><title>Signing in · Kosher Connect</title></Head>
+      <Head><title>Signing in · Kosher Connect</title><meta name="robots" content="noindex, nofollow" /></Head>
       <div className="login-shell">
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         <div className="login-card" style={{ textAlign: 'center' }}>

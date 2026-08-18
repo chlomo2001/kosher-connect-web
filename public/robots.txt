@@ -1,14 +1,24 @@
+# Inverted 18 Aug 2026 (port item A1). Crawling is ALLOWED by default and
+# every private page carries its own <meta name="robots" content="noindex">.
+#
+# Why the old shape ("Disallow: /" plus an allow-list) was a trap: Disallow
+# forbids FETCHING, not LISTING. A private URL that Google learns from any
+# link can appear in results as a bare URL anyway — and the noindex tag that
+# would remove it sits on a page the crawler is forbidden to read. Private
+# pages must be READABLE so their noindex can be obeyed. It also silently
+# blocked /repair, a public page added after the allow-list was written —
+# an allow-list rots; a default-open file cannot rot that way.
+#
+# Disallow below is reserved for paths where the FETCH ITSELF is the harm.
+# test/robots.test.mjs holds this file and the pages to the contract: every
+# page is either public or carries noindex, and no bare "Disallow: /" returns.
+
 User-agent: *
-# The bare root serves /welcome (rewrite) on the shop domain — allow exactly
-# "/" so Google's OAuth verifier can read the homepage at kosher-connect.com/.
-Allow: /$
-Allow: /welcome
-Allow: /join
-Allow: /phone-guide
-Allow: /terms
-Allow: /privacy
-Allow: /refund
-Allow: /login
-Disallow: /
+Allow: /
+
+# The API is endpoints, not pages: a fetch does server work, some GETs carry
+# tokens in query strings (document downloads), and noindex cannot be put on
+# JSON. Nothing under /api/ is worth listing.
+Disallow: /api/
 
 Sitemap: https://app.kosher-connect.com/sitemap.xml
