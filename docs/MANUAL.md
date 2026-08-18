@@ -560,7 +560,7 @@ Everything the shop can change without anyone writing code: prices, people, what
 - **Shop** — The public-facing details — the shop's own information, the wording on receipts, and the phone guide customers read before choosing a handset. There is a link to view the public page as they see it.
 - **People & access** — 👥 Team is who works here, with a password reset. 🔓 What helpers can see ticks the screens a helper may open — the owner always sees everything.
 - **Prices & charges** — Rental rates per country with their minimum, cap and cap period; what a lost or broken phone, charger or SIM costs; the fees and rules; the service price menu behind Online & Print; extra charges; repair stages; void reasons; your own stock categories on top of the built-in ones; and the month's target that the dashboard measures against.
-- **Communications** — Email and SMS, each with its safety gate, the addresses post arrives at, a test send, and the log of everything that has gone out.
+- **Communications** — Email and SMS, each with its safety gate, the addresses post arrives at, a test send, and the log of every message — sent and, once the shop's number is wired, the replies customers text back, marked ↩ so the two directions read apart.
 - **Travel** — 🛂 Travel requirements: what each destination demands and how long a document must stay valid. This is what the booking screen checks against.
 - **Connectivity** — The providers behind virtual numbers and the phone lines.
 - **Workbench** — The tools for moving a customer from one handset to another, and the converters behind them.
