@@ -20,7 +20,7 @@
 // closes is a queue that grows forever.
 
 import { withTab } from '../../lib/auth.js'
-import { ticketKindLabel, NOT_BOOKABLE } from '../../lib/ticketMail.mjs'
+import { ticketKind, ticketKindLabel, NOT_BOOKABLE } from '../../lib/ticketMail.mjs'
 import { db, tablesMode, selectAllPaged } from '../../lib/db.js'
 
 const enc = encodeURIComponent
@@ -50,6 +50,16 @@ async function customerMaps() {
   return { byUuid, byLegacy }
 }
 
+// Cancellations and changes are the two kinds the INGEST decided and a re-read
+// of a trimmed body might miss (the tell can be past the 2500-char cut). Honour
+// those from the stored column; re-derive everything else — that is where the
+// old 'confirmation' default did its damage.
+function computedKind(row) {
+  const stored = row.kind
+  if (stored === 'cancellation' || stored === 'change') return stored
+  return ticketKind({ subject: row.subject || '', text: row.body || '' })
+}
+
 function toApp(row, byUuid) {
   const customer = row.customer_id ? byUuid.get(String(row.customer_id)) || null : null
   return {
@@ -58,15 +68,17 @@ function toApp(row, byUuid) {
     from: row.from_address || '',
     subject: row.subject || '',
     airline: row.airline || '',
-    // 'other', not 'confirmation', when a row carries no kind: a message the
-    // reader could not classify must not assert itself to be a booking. The
-    // default was 'confirmation' until 18 Aug 2026, which is how a privacy
-    // notice and a baggage advert sat in the register as flights to confirm.
-    kind: row.kind || 'other',
-    kindLabel: ticketKindLabel(row.kind || 'other'),
+    // The kind is worked out HERE, from the subject and body, not read from the
+    // stored column. Rows filed before 18 Aug 2026 were all stored as
+    // 'confirmation' — the old default — so trusting the column would leave a
+    // privacy notice and a bag-drop advert still dressed as bookings in the
+    // register. Re-deriving on read corrects them with no migration, and is the
+    // same thing the carrier-mail queue does with carrierMailKind.
+    kind: computedKind(row),
+    kindLabel: ticketKindLabel(computedKind(row)),
     // Whether this message is a booking to MAKE. Marketing and the unclassified
     // are not, so the card offers to read and dismiss them, not to book them.
-    bookable: !NOT_BOOKABLE.has(row.kind || 'other'),
+    bookable: !NOT_BOOKABLE.has(computedKind(row)),
     reference: row.booking_reference || '',
     passengers: row.passengers || [],
     origin: row.origin || '',
