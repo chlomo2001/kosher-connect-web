@@ -10704,7 +10704,7 @@ function renderSimsTab() {
 
     <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:center;">
       <input class="search-box" type="text" id="simSearch"
-        placeholder="Search customer, number, provider…"
+        placeholder="Name, number or provider…"
         value="${escHtml(simSearchTerm)}"
         oninput="simSearchTerm=this.value; renderSimRows()">
       <select class="form-input kc-fs-sel" onchange="simFilterPay=this.value; renderSimRows()">
@@ -14342,7 +14342,7 @@ async function renderShopTab() {
              lose the cursor on every keystroke. */''}
         <div class="kc-facets">
           <input class="form-input kc-facet-q" id="shopFacetQ" type="search" autocomplete="off"
-            placeholder="Find an item, code or barcode…" value="${escHtml(shopFacets.q)}"
+            placeholder="Item, code or barcode…" value="${escHtml(shopFacets.q)}"
             oninput="shopSetFacet('q', this.value)">
           <select class="form-input" id="shopFacetCat" aria-label="Category" onchange="shopSetFacet('category', this.value)">
             <option value="all">Every category</option>
@@ -15681,7 +15681,13 @@ async function renderKolTorahTab() {
              a label, which is what a placeholder is actually for. */''}
       <label class="kt-fld">How many
         <input class="form-input" id="ktJobQty" type="number" min="1" step="1" value="1" style="width:74px;min-height:0;padding:6px 9px;font-size:var(--fs-small);"></label>
-      <input class="form-input" id="ktJobDetails" placeholder="e.g. 3 CDs of R' Shloime onto one SD" style="flex:1;min-width:180px;min-height:0;padding:6px 9px;font-size:var(--fs-small);">
+      ${/* data-ph="example": this placeholder TEACHES THE FORMAT rather than
+             naming the field, and "of R' Shloime" is the part that shows you
+             can name the person. Owner kept it as it is on 18 Aug. The clipped
+             sweep skips examples for that reason and counts them out loud, so
+             the decision stays visible instead of becoming an exception
+             nobody remembers. */''}
+      <input class="form-input" id="ktJobDetails" data-ph="example" placeholder="e.g. 3 CDs of R' Shloime onto one SD" style="flex:1;min-width:180px;min-height:0;padding:6px 9px;font-size:var(--fs-small);">
       <label class="kt-fld">Price
         <input class="form-input" id="ktJobPrice" type="number" min="0" step="0.01" placeholder="£" style="width:80px;min-height:0;padding:6px 9px;font-size:var(--fs-small);"></label>
       <button class="btn btn-primary btn-sm" onclick="ktAddJob()">+ Add job</button>

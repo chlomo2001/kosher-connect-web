@@ -381,8 +381,16 @@
 .topbar-actions { display: flex; gap: 10px; align-items: center; }
 
 
+/* One magnifier, named once. Two boxes draw it and a third nearly didn't —
+   the Shop's filter box was the odd one out until 18 Aug, which is also why
+   its placeholder had to carry the verb ("Find an item…") that the others get
+   from the icon for free. */
+:root {
+  --kc-search-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+}
+
 .search-box {
-  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 13px 50%;
+  background: var(--surface) var(--kc-search-icon) no-repeat 13px 50%;
   border: 1px solid var(--border-input);
   border-radius: var(--radius);
   padding: 8px 16px 8px 38px;
@@ -391,9 +399,16 @@
      placeholder is the only thing on the screen saying what is searchable.
      At the largest text size a 280px box hid 36 characters of "Search
      customer, number, provider…" — Simple Mode exists for the people least
-     able to guess the rest. 33ch is the longest placeholder; the 54px is the
-     magnifier's own padding, which box-sizing counts inside the width. */
-  color: var(--text); width: min(calc(33ch + 54px), 100%); outline: none;
+     able to guess the rest. The 54px is the magnifier's own padding, which
+     box-sizing counts inside the width.
+
+     26ch, not 33: once the redundant verb came off the placeholders (the icon
+     already says "search") the longest one left is 22.7ch — "Search rentals +
+     inventory…" — so 33 was making every search box ~90px wider than anything
+     it had to hold. 26 lands back on the 280px this was originally drawn at,
+     with real margin, and now it grows with the type instead of standing
+     still. */
+  color: var(--text); width: min(calc(26ch + 54px), 100%); outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   user-select: text;
 }
@@ -1078,7 +1093,11 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   padding: 4px 14px 12px;
 }
 .kc-facets .form-input { min-height: 36px; width: auto; }
-.kc-facet-q { flex: 1 1 220px; min-width: 0; }
+.kc-facet-q {
+  flex: 1 1 220px; min-width: 0;
+  background: var(--surface) var(--kc-search-icon) no-repeat 13px 50%;
+  padding-inline-start: 38px;
+}
 .kc-facet-count { font-size: var(--fs-small); color: var(--muted); margin-inline-start: auto; white-space: nowrap; }
 
 @media (max-width: 560px) {

@@ -1326,15 +1326,10 @@ whatever was not looked at.
 
 | 08-18 | Tidy-up, no visible change: the phone rule for `.card-action-grid` still said `repeat(2, 1fr)` after the base rule and both container rules moved to `minmax(0, 1fr)`. A bare `1fr` is `minmax(auto, 1fr)` — the exact trap that let the action tiles run off the customer card — and leaving one of the four spellings behind is how it comes back | ✅ gate + audit 390/320-largest | preventive |
 
+| 08-18 | **The wording, settled by the owner — and the verb was the answer.** The two search boxes already draw a magnifier, so "Search" and "Find" were being paid for twice; dropping the verb bought the room at no cost to meaning, on every screen rather than only phones. `simSearch` → "Name, number or provider…", `shopFacetQ` → "Item, code or barcode…" — **and the Shop's box, which had no magnifier, now gets one**, so it reads like the others and losing "Find" is natural. The icon is a token (`--kc-search-icon`) rather than a data URI copied twice. `.search-box` retuned **33ch → 26ch**: with the verbs gone the longest placeholder left is 22.7ch, so the boxes had been ~90px wider than anything they had to hold; 26ch lands back on the 280px they were drawn at and now grows with the type. Kol Torah's example kept as it is by owner decision, and `clipped.mjs` learned the difference — `data-ph="example"` is skipped and **counted out loud**, because an exemption nobody can see is how an allowlist rots into a blindfold. All four corners green, so **390 × largest is now wired into `audit-all.sh`** | ✅ gate + clipped clean at 1280/390 × standard/largest + audit 320/390/1280 + targets + names + modals + picker + dark contrast + shots | owner live-test pending |
+
 **Found, not fixed — for the next night**
 
-- **Three search boxes still cannot hold their placeholder at 390px × largest
-  text** — `simSearch` −83px, `ktJobDetails` −55px, `shopFacetQ` −24px. On a
-  phone the box is already the whole screen, so the only fix left is shorter
-  wording, and **wording is the owner's call**: "Search customer, number,
-  provider…" is what tells you what is searchable, which was the whole argument
-  for sizing the box to it. `ktJobDetails` is the least urgent of the three —
-  its text is an example, not a label.
 - ~~The tightest corner of the grid, 390px × largest text, has six controls that
   still cannot hold their own label.~~ **Three of the six fixed the same night**
   (see the row above). For the record, the original set was: Measured with the new sweep:

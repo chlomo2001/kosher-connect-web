@@ -19,6 +19,13 @@
 // its content box (a select also spends ~20px on its arrow). Two pixels of
 // slack, because sub-pixel rounding is not a defect.
 //
+// EXAMPLES ARE NOT LABELS. `data-ph="example"` marks a placeholder that teaches
+// the format rather than naming the field — Kol Torah's "e.g. 3 CDs of R'
+// Shloime onto one SD" — and those are skipped, because a truncated example
+// still shows the shape and shortening it would cost the thing it is for. They
+// are counted out loud rather than silently dropped: an exemption nobody can
+// see is how an allowlist rots into a blindfold.
+//
 // Exits non-zero on a finding.
 import path from 'node:path'
 import { createRequire } from 'node:module'
@@ -45,13 +52,15 @@ if (fs !== 'standard') {
 }
 
 const findings = []
+let skippedExamples = 0
 for (const tab of TABS) {
   await p.evaluate((t) => window.renderTab(t), tab).catch(() => {})
   await p.waitForTimeout(300)
-  findings.push(...await p.evaluate((tab) => {
+  const res = await p.evaluate((tab) => {
     const cv = document.createElement('canvas')
     const cx = cv.getContext('2d')
     const out = []
+    let examples = 0
     const textWidth = (el, txt) => {
       const cs = getComputedStyle(el)
       cx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
@@ -67,12 +76,15 @@ for (const tab of TABS) {
       const room = r.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (isSelect ? 20 : 0)
       const need = textWidth(el, text)
       if (need - room > 2) {
+        if (el.dataset.ph === 'example') { examples++; return }
         out.push({ tab, kind: isSelect ? 'select' : 'input', id: el.id || el.name || '(no id)',
           text: text.slice(0, 46), box: Math.round(r.width), short: Math.round(need - room) })
       }
     })
-    return out
-  }, tab))
+    return { out, examples }
+  }, tab)
+  findings.push(...res.out)
+  skippedExamples += res.examples
 }
 await b.close()
 
@@ -81,7 +93,10 @@ findings.sort((a, b2) => b2.short - a.short)
 for (const f of findings) {
   console.log(`✗ ${String(f.short).padStart(4)}px short  ${f.kind.padEnd(6)} ${f.box}px box  ${f.id.padEnd(22)} "${f.text}"  [${f.tab}]`)
 }
+const note = skippedExamples
+  ? ` (${skippedExamples} example placeholder${skippedExamples === 1 ? '' : 's'} skipped — see data-ph)`
+  : ''
 console.log(findings.length
-  ? `\n${findings.length} control(s) hiding their own label at ${label}`
-  : `\nno control hides its own label at ${label}`)
+  ? `\n${findings.length} control(s) hiding their own label at ${label}${note}`
+  : `\nno control hides its own label at ${label}${note}`)
 if (findings.length) process.exit(1)

@@ -88,15 +88,13 @@ run "staff app · every control says what it is" \
 # it: a placeholder or a selected option cut off by its own box. Both sizes,
 # because every one of the first seven was clean at standard and broken at
 # largest — pixel widths against text that grows 30%.
+# All four corners, 390 × largest included — the hardest one, and green since
+# the owner settled the wording on 18 Aug. The verb came off the two search
+# placeholders (the magnifier already says it) and Kol Torah's example was kept
+# as it is, which is why clipped.mjs knows the difference between a label and an
+# example.
 run "staff app · no control hides its own label" \
-  bash -eo pipefail -c 'for f in standard largest; do node ops/harness/clipped.mjs --fs $f | tail -1; done
-                        node ops/harness/clipped.mjs --width 390 | tail -1'
-
-# NOT 390 × largest, yet. Three search boxes still cannot hold their placeholder
-# in that corner — the box is already the whole screen, so the only fix left is
-# shorter wording, and wording is the owner's call. Adding it today would leave
-# this sweep permanently red, which is exactly how the last one stopped being
-# read. The measurements are in BACKLOG.md.
+  bash -eo pipefail -c 'for w in 1280 390; do for f in standard largest; do node ops/harness/clipped.mjs --width $w --fs $f | tail -1; done; done'
 
 run "staff app · modals open + geometry, 390px both themes" \
   bash -eo pipefail -c 'for t in light dark; do node ops/harness/modals.mjs --width 390 --theme $t | tail -1; done'
