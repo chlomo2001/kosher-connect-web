@@ -1223,15 +1223,20 @@ function numToHebrew(n) {
   // rental date field. Day numbers (1–30) are untouched.
   n = Math.round(Number(n) || 0);
   if (n >= 1000) n %= 1000;
-  const h = Math.floor(n/100); n %= 100;
-  result += hunds[h] || '';
-  if (n === 15) return result + 'ט״ו';
-  if (n === 16) return result + 'ט״ז';
-  const t = Math.floor(n/10); const o = n%10;
-  const mid = (tens[t]||'') + (ones[o]||'');
-  if (mid.length > 1) result += mid.slice(0,-1) + '״' + mid.slice(-1);
-  else if (mid.length === 1) result += mid + '׳';
-  return result;
+  if (n <= 0) return result;
+  result += hunds[Math.floor(n/100)] || '';
+  const r = n % 100;
+  if (r === 15) result += 'טו';
+  else if (r === 16) result += 'טז';
+  else result += (tens[Math.floor(r/10)]||'') + (ones[r%10]||'');
+  // Gershayim before the last letter of a multi-letter numeral, geresh after
+  // a single one — over the WHOLE numeral. The old code punctuated only the
+  // tens-and-units part, so a decade year came out wrong: 5770 printed תשע׳
+  // instead of תש״ע, and 5800 would print bare תת. Nothing rendered today is
+  // in the broken range (תשפ״ו is identical both ways); the first year that
+  // would have printed wrong is 5790. Held to lib/hebrewDate.mjs by
+  // test/hebrewDateMirror.test.mjs.
+  return result.length > 1 ? result.slice(0,-1) + '״' + result.slice(-1) : result ? result + '׳' : '';
 }
 
 // Compact Hebrew day-of-month, in gematria, for a column header that has no
@@ -1292,6 +1297,103 @@ function showHebrewDate(inputId, labelId) {
     el.textContent = numToHebrew(dayNum) + ' ' + monthStr + ' ' + numToHebrew(yearNum);
   } catch(e) { el.textContent = ''; }
 }
+
+// MIRRORS lib/hebrewDate.mjs — the pure molad arithmetic, browser copy. The
+// Intl-based helpers above stay the renderers for now; this closure exists so
+// screens CAN move to one tested implementation shared with the server
+// (receipts, emails) once the owner decides where Hebrew dates appear.
+// Wired to nothing yet, deliberately. test/hebrewDateMirror.test.mjs lifts
+// this region and holds every function to the lib over anchors and a sweep.
+// ── KC_HEBREW mirror start ──
+const KC_HEBREW = (() => {
+  function gregorianToRd(gy, gm, gd) {
+    const a = Math.floor((14 - gm) / 12);
+    const y = gy + 4800 - a;
+    const m = gm + 12 * a - 3;
+    const jdn = gd + Math.floor((153 * m + 2) / 5) + 365 * y +
+      Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+    return jdn - 1721425;
+  }
+  const HEBREW_EPOCH = -1373427;
+  function isHebrewLeapYear(hy) { return ((7 * hy + 1) % 19) < 7; }
+  function monthsInHebrewYear(hy) { return isHebrewLeapYear(hy) ? 13 : 12; }
+  function elapsedDays(hy) {
+    const monthsElapsed = Math.floor((235 * hy - 234) / 19);
+    const partsElapsed = 12084 + 13753 * monthsElapsed;
+    let days = monthsElapsed * 29 + Math.floor(partsElapsed / 25920);
+    if (((3 * (days + 1)) % 7) < 3) days += 1;
+    return days;
+  }
+  function roshHashanaRd(hy) {
+    const ny0 = elapsedDays(hy - 1);
+    const ny1 = elapsedDays(hy);
+    const ny2 = elapsedDays(hy + 1);
+    let delay = 0;
+    if (ny2 - ny1 === 356) delay = 2;
+    else if (ny1 - ny0 === 382) delay = 1;
+    return HEBREW_EPOCH + ny1 + delay;
+  }
+  function daysInHebrewYear(hy) { return roshHashanaRd(hy + 1) - roshHashanaRd(hy); }
+  function monthDays(hy, hm) {
+    if (hm === 2 || hm === 4 || hm === 6 || hm === 10 || hm === 13) return 29;
+    if (hm === 12 && !isHebrewLeapYear(hy)) return 29;
+    if (hm === 8 && daysInHebrewYear(hy) % 10 !== 5) return 29;
+    if (hm === 9 && daysInHebrewYear(hy) % 10 === 3) return 29;
+    return 30;
+  }
+  function hebrewToRd(hy, hm, hd) {
+    let rd = roshHashanaRd(hy) + hd - 1;
+    if (hm < 7) {
+      for (let m = 7; m <= monthsInHebrewYear(hy); m++) rd += monthDays(hy, m);
+      for (let m = 1; m < hm; m++) rd += monthDays(hy, m);
+    } else {
+      for (let m = 7; m < hm; m++) rd += monthDays(hy, m);
+    }
+    return rd;
+  }
+  function hebrewFromGregorian(gy, gm, gd) {
+    const rd = gregorianToRd(gy, gm, gd);
+    let year = Math.floor((rd - HEBREW_EPOCH) / 365.2468) + 1;
+    while (roshHashanaRd(year) > rd) year -= 1;
+    while (roshHashanaRd(year + 1) <= rd) year += 1;
+    let month = rd < hebrewToRd(year, 1, 1) ? 7 : 1;
+    while (rd > hebrewToRd(year, month, monthDays(year, month))) month += 1;
+    const day = rd - hebrewToRd(year, month, 1) + 1;
+    return { year, month, day };
+  }
+  const ONES = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'];
+  const TENS = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ'];
+  const HUNDREDS = ['', 'ק', 'ר', 'ש', 'ת'];
+  function numeral(n) {
+    let v = Math.floor(n);
+    if (!(v >= 1 && v <= 999)) return String(n);
+    let s = '';
+    while (v >= 400) { s += 'ת'; v -= 400; }
+    if (v >= 100) { s += HUNDREDS[Math.floor(v / 100)]; v %= 100; }
+    if (v === 15) { s += 'טו'; v = 0; }
+    else if (v === 16) { s += 'טז'; v = 0; }
+    if (v >= 10) { s += TENS[Math.floor(v / 10)]; v %= 10; }
+    if (v > 0) s += ONES[v];
+    return s.length > 1 ? s.slice(0, -1) + '״' + s.slice(-1) : s + '׳';
+  }
+  const MONTHS_HE = ['', 'ניסן', 'אייר', 'סיון', 'תמוז', 'אב', 'אלול',
+    'תשרי', 'חשון', 'כסלו', 'טבת', 'שבט', 'אדר', 'אדר ב׳'];
+  function monthName(hy, hm) {
+    if (hm === 12 && isHebrewLeapYear(hy)) return 'אדר א׳';
+    return MONTHS_HE[hm] || '';
+  }
+  function format(gy, gm, gd) {
+    const h = hebrewFromGregorian(gy, gm, gd);
+    return `${numeral(h.day)} ${monthName(h.year, h.month)} ${numeral(h.year % 1000)}`;
+  }
+  function weekday(gy, gm, gd) {
+    const dow = ((gregorianToRd(gy, gm, gd) % 7) + 7) % 7;
+    return dow === 6 ? 'שבת' : ONES[dow + 1] + '׳';
+  }
+  return { gregorianToRd, isHebrewLeapYear, monthsInHebrewYear, roshHashanaRd,
+    monthDays, hebrewToRd, hebrewFromGregorian, numeral, monthName, format, weekday };
+})();
+// ── KC_HEBREW mirror end ──
 
 // ─────────────────────────────────────────────
 //  CUSTOMER PICKER — shared ordering
