@@ -1458,3 +1458,56 @@ which is the single thing this whole feature refuses to do.
 **Still open:** the sweep's flight reminders and the check-in prompt all key on
 the outbound date, so nothing prompts the check-in for the flight home. The date
 is stored now, which was the hard part.
+
+## A journey is made of flights (18 Aug)
+
+Owner: *"sometimes its 2 passengers, each one chargable on his own, and sometimes
+its 2 people like family under same customer"* and *"sometimes we do 2 airlines
+for there and 2 additional for back.. all for one person's one time 2-way
+journey."*
+
+**Both were already in the data, written as prose in fields that cannot hold
+them.** Worth recording, because it turned a design question into a reading
+exercise:
+
+| what the shop does | how it is stored today |
+|---|---|
+| split one PNR across payers | already separate bookings — `XU2WWH` is 3 bookings, 3 customers, £500 of tickets and **£150 of fees** |
+| a self-transfer journey | `route "MAN_JFK"`, `airline "Aer lingus, Virgin"` — two airlines in one field |
+| a round trip | `route "LGW-TLV-LTN"` — out of Gatwick, back into Luton, as one string |
+
+11 bookings share a PNR with a different payer; 5 routes name three airports;
+2 airline fields hold two airlines. Out of 394.
+
+**The diagnosis:** a booking was being asked to be three things at once — a
+payer's charge, a journey, and a flight. The payer's-charge half already works
+(one booking, one wallet charge, which is why splitting is done by making
+several). The flight half had nowhere to live, so `booking_legs` was added:
+position, direction (out/return), airline, its OWN reference, origin,
+destination, date, times, price.
+
+**A leg belongs to the booking, not to a trip** — two payers on one itinerary
+each get their own copy. Redundant on purpose: a booking stays a complete record
+of what that person bought, every existing read is untouched, and cancelling one
+payer's half cannot rewrite the other's. The booking's own route/airline/
+travel_date stay authoritative for the sweeps and the register; legs are detail
+beneath, never a second source of truth for money.
+
+The register says so quietly — `Wizz +2 / AL9K2M +2 refs · 4 flights` — and the
+editor is folded away behind "+ Add a flight", because 389 of 394 bookings are
+one flight and always will be.
+
+**Owner decision taken (18 Aug), on the split fee:** *staff choose at confirm
+time* — a fee each, split evenly, or all on the organiser. So the fee stays on
+the booking (as now) and the choice is made per trip rather than stored as a
+rule. **The split flow itself is not built yet**; making several bookings by
+hand still works, which is what the register shows people already doing.
+
+**Found while reading:** the `MAN-YUL` booking has `airline: "Shmuel, Miriam"` —
+passenger names landed in the airline field during the 9 Aug workbook import.
+Left alone; it is data, not code, and the owner should see it first.
+
+**Next, in order:** the split-across-payers flow with the three fee modes; then
+attaching several ticket emails to ONE booking, which is how a self-transfer
+journey actually arrives — as two or four separate confirmations, each landing
+as its own card.

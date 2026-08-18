@@ -143,6 +143,44 @@ if (taskBtn.found) {
   await p.waitForTimeout(500)
 }
 
+// ── a journey with several airlines says so ───────────────────────────────
+// Owner, 18 Aug: "sometimes we do 2 airlines for there and 2 additional for
+// back.. all for one person's one time 2-way journey." The register must not
+// imply there is one airline and one PNR when there are four legs.
+await p.evaluate(() => { try { closeDynamicModal() } catch {} })
+await p.waitForTimeout(200)
+const legRow = await p.evaluate(() => {
+  const row = [...document.querySelectorAll('#mainContent table tbody tr')]
+    .find(r => /\+1|flights/.test(r.innerText))
+  return row ? row.innerText.replace(/\s+/g, ' ') : ''
+})
+say(/\+2\b/.test(legRow), `two extra airlines beyond the booking's own should be counted — got "${legRow}"`)
+say(/4 flights/.test(legRow), `a four-leg journey should say how many flights — got "${legRow}"`)
+// +2, not +3: the reference shown as the headline must not also be counted
+// as extra. That off-by-one was real and this line is what found it.
+say(/\+2 refs/.test(legRow), `the extra PNRs beyond the one displayed should be counted — got "${legRow}"`)
+
+// …and both forms can edit those legs.
+await p.evaluate(() => openNewBookingModal())
+await p.waitForTimeout(600)
+say(await p.evaluate(() => !!document.getElementById('bkLegEditor')),
+  'the new booking form should offer the flight-legs editor')
+say(await p.evaluate(() => {
+  bkAddLeg('bkLegs'); bkAddLeg('bkLegs')
+  // Second leg added is almost always the way home.
+  return bkLegs.length === 2 && bkLegs[0].direction === 'out' && bkLegs[1].direction === 'out'
+}), 'adding flights should build the itinerary in order')
+say(await p.evaluate(() => {
+  bkAddLeg('bkLegs')
+  return bkLegs[2].direction === 'return'
+}), 'the third flight of a journey is the way back, and should default that way')
+say(await p.evaluate(() => {
+  bkRemoveLeg('bkLegs', 0)
+  return bkLegs.length === 2
+}), 'a flight should be removable')
+await p.evaluate(() => { try { closeDynamicModal() } catch {} })
+await p.waitForTimeout(200)
+
 // ── a foreign price is NOT converted into the pounds box ──────────────────
 await p.evaluate(() => { try { closeDynamicModal() } catch {} })
 await p.waitForTimeout(200)

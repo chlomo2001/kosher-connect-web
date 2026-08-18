@@ -69,6 +69,23 @@ function toAppFull(row) {
     checkinDate: row.checkin_date || '',
     notes: row.notes || '',
     createdAt: row.created_at,
+    legs: (row.booking_legs || [])
+      .slice()
+      .sort((a, b) => (a.position || 0) - (b.position || 0))
+      .map(l => ({
+        id: l.id,
+        position: l.position,
+        direction: l.direction || 'out',
+        airline: l.airline || '',
+        bookingReference: l.booking_reference || '',
+        origin: l.origin || '',
+        destination: l.destination || '',
+        flightDate: l.flight_date || '',
+        departureTime: l.departure_time ? String(l.departure_time).slice(0, 5) : '',
+        arrivalTime: l.arrival_time ? String(l.arrival_time).slice(0, 5) : '',
+        price: l.price === null || l.price === undefined ? null : Number(l.price),
+        notes: l.notes || '',
+      })),
     passengers: (row.booking_passengers || [])
       .slice()
       .sort((a, b) => (a.position || 0) - (b.position || 0))
@@ -87,6 +104,8 @@ function toAppFull(row) {
 
 const CUSTOMER_EMBED = 'customers(legacy_id,first_name,last_name)'
 const PASSENGER_EMBED = 'booking_passengers(id,position,full_name,dob,passport_number,passport_expiry,nationality,passport_issue_date,issuing_country)'
+// The flights beneath the journey. Nothing about money or PII, so no masking.
+const LEG_EMBED = 'booking_legs(id,position,direction,airline,booking_reference,origin,destination,flight_date,departure_time,arrival_time,price,notes)'
 
 // The unmasked check-in view is the only place passport numbers leave the
 // server, so reads through it are throttled per staff member and audited
@@ -148,6 +167,42 @@ function passengerRows(bookingId, passengers) {
     }))
 }
 
+// A leg is worth storing when it says WHERE or WHO — an empty row from a
+// half-filled editor is not an itinerary and must not become one.
+function legRows(bookingId, legs) {
+  if (!Array.isArray(legs)) return []
+  return legs
+    .filter(l => l && (String(l.origin || '').trim() || String(l.destination || '').trim() ||
+      String(l.airline || '').trim() || String(l.bookingReference || '').trim()))
+    .map((l, i) => ({
+      booking_id: bookingId,
+      position: i + 1,
+      direction: l.direction === 'return' ? 'return' : 'out',
+      airline: String(l.airline || '').trim() || null,
+      booking_reference: String(l.bookingReference || '').trim() || null,
+      origin: String(l.origin || '').trim() || null,
+      destination: String(l.destination || '').trim() || null,
+      flight_date: l.flightDate || null,
+      departure_time: l.departureTime || null,
+      arrival_time: l.arrivalTime || null,
+      price: Number.isFinite(Number(l.price)) && String(l.price ?? '') !== '' ? Number(l.price) : null,
+      notes: String(l.notes || '').trim() || null,
+    }))
+}
+
+// Same rule the passenger rows follow: a bad date must be refused BEFORE the
+// old rows are deleted, or a failed insert destroys an itinerary nobody can
+// re-enter from memory.
+function badLegDate(legs) {
+  for (const l of Array.isArray(legs) ? legs : []) {
+    if (!l) continue
+    if (l.flightDate && !ISO_DATE.test(String(l.flightDate))) {
+      return 'Each flight date must be a full date (year-month-day).'
+    }
+  }
+  return null
+}
+
 async function walletBalance(customerUuid) {
   const rows = await db.select('customer_balances', `customer_id=eq.${customerUuid}`)
   return rows.length ? Number(rows[0].balance) : 0
@@ -178,14 +233,14 @@ async function handler(req, res) {
         console.log(`[audit] check-in passport view: staff=${req.staff?.id || 'auth-off'} booking=${String(req.query.checkin)}`)
         const [full] = await db.select(
           'bookings',
-          `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&id=eq.${encodeURIComponent(String(req.query.checkin))}`
+          `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED},${LEG_EMBED}&id=eq.${encodeURIComponent(String(req.query.checkin))}`
         )
         if (!full) return res.status(404).json({ success: false, error: 'Booking not found.' })
         return res.json({ success: true, booking: toAppFull(full) }) // toAppFull = no masking
       }
       const rows = await db.select(
         'bookings',
-        `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&order=created_at.desc`
+        `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED},${LEG_EMBED}&order=created_at.desc`
       )
       return res.json(rows.map(r => toApp(r, req.staff)))
     }
@@ -213,6 +268,8 @@ async function handler(req, res) {
       }
       if (!Number.isFinite(price) || price < 0) return res.status(400).json({ success: false, error: 'Price must be a number ≥ 0.' })
       if (fee < 0) return res.status(400).json({ success: false, error: 'Booking fee cannot be negative.' })
+      const badLeg = badLegDate(b.legs)
+      if (badLeg) return res.status(400).json({ success: false, error: badLeg })
       const badDate = badPassengerDate(b.passengers)
       if (badDate) return res.status(400).json({ success: false, error: badDate })
 
@@ -236,7 +293,7 @@ async function handler(req, res) {
           `charge_reference=eq.${encodeURIComponent('BOOKING-' + clientRef)}&select=related_booking_id&limit=1`)
         if (!dup.length || !dup[0].related_booking_id) return null
         const [existing] = await db.select('bookings',
-          `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&id=eq.${dup[0].related_booking_id}`)
+          `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED},${LEG_EMBED}&id=eq.${dup[0].related_booking_id}`)
         return existing || null
       }
       const bookingDuplicate = async (existing) => res.json({
@@ -288,6 +345,9 @@ async function handler(req, res) {
 
         const paxRows = passengerRows(booking.id, b.passengers)
         if (paxRows.length) await db.insert('booking_passengers', paxRows)
+
+        const legs = legRows(booking.id, b.legs)
+        if (legs.length) await db.insert('booking_legs', legs)
 
         // Wallet charge: one signed, idempotent ledger row. A £0 booking posts
         // nothing (the ledger forbids zero amounts by design).
@@ -355,7 +415,7 @@ async function handler(req, res) {
         const balance = await walletBalance(customerUuid)
         const [full] = await db.select(
           'bookings',
-          `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&id=eq.${booking.id}`
+          `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED},${LEG_EMBED}&id=eq.${booking.id}`
         )
         return res.json({
           success: true, booking: toApp(full, req.staff), chargePosted,
@@ -379,7 +439,7 @@ async function handler(req, res) {
       // go through an explicit wallet adjustment, so the ledger stays honest.
       const { id, status, notes, passengers, checkinDone, checkinBy, checkinDate,
         passenger, route, airline, destinationCountry, bookingReference, travelDate, returnDate,
-        departureTime, arrivalTime, passportOnFile, passportExpiry } = req.body || {}
+        departureTime, arrivalTime, passportOnFile, passportExpiry, legs } = req.body || {}
       if (!id) return res.status(400).json({ success: false, error: 'Booking id is required.' })
       const patch = {}
       if (status !== undefined) {
@@ -411,7 +471,7 @@ async function handler(req, res) {
       if (checkinDone !== undefined) patch.checkin_done = !!checkinDone
       if (checkinBy !== undefined) patch.checkin_by = (checkinBy === 'us' || checkinBy === 'customer') ? checkinBy : null
       if (checkinDate !== undefined) patch.checkin_date = checkinDate || null
-      if (!Object.keys(patch).length && passengers === undefined) {
+      if (!Object.keys(patch).length && passengers === undefined && legs === undefined) {
         return res.status(400).json({ success: false, error: 'Nothing to update.' })
       }
       for (const [label, v] of [['Travel date', patch.travel_date], ['Check-in date', patch.checkin_date], ['Passport expiry', patch.passport_expiry]]) {
@@ -478,6 +538,22 @@ async function handler(req, res) {
         }
       }
 
+      if (legs !== undefined) {
+        // Same replace-all discipline as the passengers below, and the same
+        // ordering: validate first, insert the new rows, then delete the old.
+        // Legs carry no PII so there is nothing to merge back — but there is
+        // still an itinerary worth not destroying on a failed write.
+        const badEditLeg = badLegDate(legs)
+        if (badEditLeg) return res.status(400).json({ success: false, error: badEditLeg })
+        const fresh = legRows(String(id), legs)
+        // Positions are unique per booking, so the new rows cannot be inserted
+        // while the old ones hold those numbers. Delete first here, and accept
+        // it: the worst case is an itinerary that has to be retyped, not a
+        // passport that cannot be.
+        await db.delete('booking_legs', `booking_id=eq.${bid}`)
+        if (fresh.length) await db.insert('booking_legs', fresh)
+      }
+
       if (passengers !== undefined) {
         // Replace-all, with two wrinkles. First: helpers never see passport
         // fields, so a blank passport on a row they round-trip means
@@ -515,7 +591,7 @@ async function handler(req, res) {
         }
       }
 
-      const [full] = await db.select('bookings', `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED}&id=eq.${bid}`)
+      const [full] = await db.select('bookings', `select=*,${CUSTOMER_EMBED},${PASSENGER_EMBED},${LEG_EMBED}&id=eq.${bid}`)
       return res.json({ success: true, booking: toApp(full, req.staff) })
     }
 

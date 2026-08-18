@@ -11964,7 +11964,26 @@ function renderBookingsTab() {
         <td><div class="customer-name">${custNameLink(b.customerId, escName(b.customerName || '—'))}</div>
             <div class="customer-email">${escName(b.passenger || '')}${(b.passengers || []).length ? ` · 👥 ${b.passengers.length}` : ''}</div></td>
         <td style="white-space:nowrap;">${escHtml(b.route)}</td>
-        <td>${escHtml(b.airline || '—')}<div class="customer-email">${escHtml(b.bookingReference || '')}</div></td>
+        <td>${(() => {
+          // A self-transfer journey is several airlines and several PNRs. The
+          // column still leads with the booking's own, because that is the
+          // journey's name — but it must not imply there is only one.
+          const legs = b.legs || [];
+          const airlines = [...new Set(legs.map(l => l.airline).filter(Boolean))];
+          const refs = [...new Set(legs.map(l => l.bookingReference).filter(Boolean))];
+          // Count what is EXTRA to what is actually shown. When the booking
+          // carries no airline of its own the first leg's becomes the headline,
+          // and counting it as extra as well says "+3 refs" over three refs.
+          const leadAir = b.airline || airlines[0] || '';
+          const leadRef = b.bookingReference || refs[0] || '';
+          const extraAir = airlines.filter(a => a && a !== leadAir).length;
+          const extraRef = refs.filter(r => r && r !== leadRef).length;
+          return `${escHtml(leadAir || '—')}${
+            extraAir ? `<span class="bk-legs" title="${escHtml(airlines.join(' · '))}"> +${extraAir}</span>` : ''}
+          <div class="customer-email">${escHtml(leadRef)}${
+            extraRef ? `<span class="bk-legs" title="${escHtml(refs.join(' · '))}"> +${extraRef} ref${extraRef === 1 ? '' : 's'}</span>` : ''}${
+            legs.length > 1 ? `<span class="bk-legs"> · ${legs.length} flights</span>` : ''}</div>`;
+        })()}</td>
         <td class="kc-date">${b.travelDate ? fmtDate(b.travelDate) : '—'}${
           b.returnDate ? `<span title="Returns ${escHtml(fmtDate(b.returnDate))}"> ↩</span>` : ''}
             <div class="customer-email">${b.returnDate
@@ -12095,6 +12114,77 @@ function paxEditorHtml() {
     </div>`).join('');
 }
 
+// ── Flight legs ───────────────────────────────────────────────────────────
+//
+// Owner, 18 Aug: "sometimes we do 2 airlines for there and 2 additional for
+// back.. all for one person's one time 2-way journey." One booking, several
+// flights, each with its own airline and its own reference.
+//
+// Deliberately OPTIONAL and out of the way. Most bookings are one flight and
+// always will be — the register has 394 of them and five multi-stop routes —
+// so this stays folded away until somebody says the journey has more than one
+// leg. The booking's own Route/Airline/Reference keep describing the journey as
+// a whole; these add the detail underneath.
+let bkLegs = [];
+let ebLegs = [];
+
+const KC_LEG_DIRS = [['out', '→ Out'], ['return', '↩ Back']];
+
+function legEditorHtml(legs, arrName) {
+  const fld = (label, inner) => `<label style="display:flex;flex-direction:column;gap:2px;font-size:var(--fs-micro);color:var(--muted);">${label}${inner}</label>`;
+  if (!legs.length) return `<div style="font-size:var(--fs-small);color:var(--muted);">One flight each way — nothing to add.</div>`;
+  return legs.map((l, i) => `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <strong style="font-size:var(--fs-small);">Flight ${i + 1}</strong>
+        <button type="button" class="action-btn" onclick="bkRemoveLeg('${arrName}',${i})"
+          title="Remove flight ${i + 1}" aria-label="Remove flight ${i + 1}">✕</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${fld('Direction', `<select class="form-input" onchange="${arrName}[${i}].direction=this.value" style="width:110px;">
+          ${KC_LEG_DIRS.map(([v, lab]) => `<option value="${v}" ${l.direction === v ? 'selected' : ''}>${lab}</option>`).join('')}
+        </select>`)}
+        ${fld('Airline', `<input class="form-input" value="${escHtml(l.airline || '')}" oninput="${arrName}[${i}].airline=this.value" placeholder="e.g. Wizz Air" style="width:150px;">`)}
+        ${fld('Reference', `<input class="form-input" value="${escHtml(l.bookingReference || '')}" oninput="${arrName}[${i}].bookingReference=this.value" placeholder="own PNR" style="width:120px;">`)}
+        ${fld('From', `<input class="form-input" value="${escHtml(l.origin || '')}" oninput="${arrName}[${i}].origin=this.value" placeholder="LTN" style="width:80px;">`)}
+        ${fld('To', `<input class="form-input" value="${escHtml(l.destination || '')}" oninput="${arrName}[${i}].destination=this.value" placeholder="TLV" style="width:80px;">`)}
+        ${fld('Date', `<input class="form-input" type="date" value="${escHtml(l.flightDate || '')}" onchange="${arrName}[${i}].flightDate=this.value" style="width:150px;">`)}
+        ${fld('Dep / Arr', `<span style="display:flex;gap:4px;">
+          <input class="form-input" type="time" value="${escHtml(l.departureTime || '')}" onchange="${arrName}[${i}].departureTime=this.value" aria-label="Departure time for flight ${i + 1}" style="width:105px;">
+          <input class="form-input" type="time" value="${escHtml(l.arrivalTime || '')}" onchange="${arrName}[${i}].arrivalTime=this.value" aria-label="Arrival time for flight ${i + 1}" style="width:105px;"></span>`)}
+      </div>
+    </div>`).join('');
+}
+
+function bkLegBlockHtml(arrName, targetId) {
+  return `
+    <div class="form-group form-full">
+      <label class="form-label">Flights <span style="color:var(--muted);font-weight:400;">(only if the journey has more than one)</span></label>
+      <div id="${targetId}">${legEditorHtml(arrName === 'bkLegs' ? bkLegs : ebLegs, arrName)}</div>
+      <button type="button" class="btn btn-outline" onclick="bkAddLeg('${arrName}')"
+        style="padding:5px 12px;font-size:var(--fs-small);margin-top:2px;">+ Add a flight</button>
+    </div>`;
+}
+
+function kcLegArr(arrName) { return arrName === 'bkLegs' ? bkLegs : ebLegs; }
+function kcLegTarget(arrName) { return arrName === 'bkLegs' ? 'bkLegEditor' : 'ebLegEditor'; }
+
+function bkRenderLegs(arrName) {
+  const el = document.getElementById(kcLegTarget(arrName));
+  if (el) el.innerHTML = legEditorHtml(kcLegArr(arrName), arrName);
+}
+function bkAddLeg(arrName) {
+  const arr = kcLegArr(arrName);
+  // A second leg is almost always the way home; a fourth is the second half of
+  // a self-transfer. Guessing the direction saves the commonest click.
+  arr.push({ direction: arr.length >= 2 ? 'return' : 'out' });
+  bkRenderLegs(arrName);
+}
+function bkRemoveLeg(arrName, i) {
+  kcLegArr(arrName).splice(i, 1);
+  bkRenderLegs(arrName);
+}
+
 function bkRenderPax() {
   const el = document.getElementById('bkPaxEditor');
   if (el) el.innerHTML = paxEditorHtml();
@@ -12180,6 +12270,7 @@ async function savePassengers(bookingId) {
  * decision.
  */
 async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
+  bkLegs = Array.isArray(prefill?.legs) ? prefill.legs.map(l => ({ ...l })) : [];
   // Which ticket email this form is answering, if any. Set on EVERY open, so
   // abandoning a prefilled form and starting a fresh booking cannot file the
   // new one against the old email.
@@ -12316,6 +12407,7 @@ async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
         </div>
         <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">"We do check-in" + a date raises a task reminder for that day.</div>
       </div>
+      ${bkLegBlockHtml('bkLegs', 'bkLegEditor')}
       <div class="form-group form-full">
         <label class="form-label">Notes</label>
         <input class="form-input" id="bkNotes">
@@ -12474,6 +12566,7 @@ async function saveNewBooking() {
     bookingReference: document.getElementById('bkRef').value.trim(),
     travelDate:       document.getElementById('bkTravelDate').value,
     returnDate:       document.getElementById('bkReturnDate')?.value || '',
+    legs:             bkLegs,
     departureTime:    document.getElementById('bkDep').value,
     arrivalTime:      document.getElementById('bkArr').value,
     price:            parseFloat(document.getElementById('bkPrice').value),
@@ -12722,6 +12815,7 @@ function deleteBookingRow(id) {
 function openEditBookingModal(id) {
   const b = bookings.find(x => x.id === id);
   if (!b) return;
+  ebLegs = Array.isArray(b.legs) ? b.legs.map(l => ({ ...l })) : [];
   showDynamicModal(`
     <div class="modal-title">✈️ ${custNameLink(b.customerId, escName(b.customerName || 'Booking'))} — ${escHtml(b.route || '')}</div>
     <div class="form-grid">
@@ -12756,6 +12850,7 @@ function openEditBookingModal(id) {
             <input class="form-input" type="date" id="ebPExp" value="${escHtml(b.passportExpiry || '')}" title="Passport expiry">
           </div>
         </div></div>
+      ${bkLegBlockHtml('ebLegs', 'ebLegEditor')}
       <div class="form-group form-full"><label class="form-label">Notes</label>
         <textarea class="form-input" id="ebNotes" rows="2">${escHtml(b.notes || '')}</textarea></div>
     </div>
@@ -12788,6 +12883,7 @@ async function saveEditBooking(id) {
     bookingReference: document.getElementById('ebRef').value.trim(),
     travelDate: document.getElementById('ebTravel').value,
     returnDate: document.getElementById('ebReturn')?.value || '',
+    legs: ebLegs,
     departureTime: document.getElementById('ebDep').value,
     arrivalTime: document.getElementById('ebArr').value,
     status: document.getElementById('ebStatus').value,

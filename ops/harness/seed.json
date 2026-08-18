@@ -191,7 +191,65 @@
       "price": 285,
       "amountPaid": 285,
       "customerName": "Menachem Adler",
-      "returnDate": "2026-08-26"
+      "returnDate": "2026-08-26",
+      "legs": [
+        {
+          "id": "l1",
+          "position": 1,
+          "direction": "out",
+          "airline": "Aer Lingus",
+          "bookingReference": "AL9K2M",
+          "origin": "MAN",
+          "destination": "DUB",
+          "flightDate": "2026-08-20",
+          "departureTime": "07:10",
+          "arrivalTime": "08:05",
+          "price": null,
+          "notes": ""
+        },
+        {
+          "id": "l2",
+          "position": 2,
+          "direction": "out",
+          "airline": "Virgin Atlantic",
+          "bookingReference": "VS4TQ1",
+          "origin": "DUB",
+          "destination": "JFK",
+          "flightDate": "2026-08-20",
+          "departureTime": "10:40",
+          "arrivalTime": "13:25",
+          "price": null,
+          "notes": ""
+        },
+        {
+          "id": "l3",
+          "position": 3,
+          "direction": "return",
+          "airline": "Virgin Atlantic",
+          "bookingReference": "VS4TQ1",
+          "origin": "JFK",
+          "destination": "LHR",
+          "flightDate": "2026-08-26",
+          "departureTime": "19:00",
+          "arrivalTime": "07:15",
+          "price": null,
+          "notes": ""
+        },
+        {
+          "id": "l4",
+          "position": 4,
+          "direction": "return",
+          "airline": "Aer Lingus",
+          "bookingReference": "AL7P3X",
+          "origin": "LHR",
+          "destination": "MAN",
+          "flightDate": "2026-08-27",
+          "departureTime": "09:30",
+          "arrivalTime": "10:20",
+          "price": null,
+          "notes": ""
+        }
+      ]
     }
   ],
   "/api/virtual-numbers": [

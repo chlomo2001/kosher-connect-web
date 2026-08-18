@@ -1162,6 +1162,10 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   font-size: var(--fs-micro); color: var(--muted);
 }
 
+/* A journey with more than one airline says so in the register, quietly — the
+   booking's own airline stays the headline because that is the trip's name. */
+.bk-legs { color: var(--accent); font-size: var(--fs-micro); white-space: nowrap; }
+
 /* ---------- Tickets from email ---------- */
 /* Same idea as carrier mail and a different unit: one flight, everything read
    off the confirmation on one line, and the actions kept together on the right.
