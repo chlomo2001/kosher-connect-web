@@ -137,6 +137,27 @@ in the design note; the loop-safe (no money-read / no nav / no auth) items:
 Held for owner (money-read or nav decision, NOT loop-autofix): running-balance
 column in Wallet; grouped sidebar sub-labels; בעזהשי״ת header phrase/placement.
 
+## From the owner's list, 19 Aug (docs/OWNER-LIST-2026-08-19.md)
+Twenty-one items sent overnight; full triage in the doc. Loop-safe UX ones:
+- [ ] **P1 · S** — **Extra-large text overflows the card** (owner #14). Follows
+      the 18 Aug text-size work — the card is sized for the standard ramp.
+- [ ] **P2 · S** — **One dropdown style throughout** (owner #10): some selects
+      are native, some custom. One sweep.
+- [ ] **P2 · S** — **"Open" and "login details" sit too near** (owner #19) —
+      spacing/proportion on that row.
+- [ ] **P2 · S** — **Overdue link drops the filter** (owner #15): the dashboard
+      overdue line opens the plain SIMs tab. Open it with the overdue filter on
+      (saved views already exist).
+- [ ] **P2 · S** — **Marketing never reaches the carrier queue** (owner #3):
+      `carrierMailKind` already classifies it; the ticket queue drops it, the
+      carrier queue still files it.
+- [ ] **P3 · S** — Owner items #7, #8, #9, #16 arrived with screenshots this
+      session cannot see — **ask before guessing**.
+Needs an owner decision first (do NOT loop-autofix): #20 forwarding carrier mail
+to customers (live send, HOLD-gated), #12 auto-renew in Needs attention, #2/#6
+make-anything-a-task, #4 customer document folders + portal visibility, #21 a
+reply box on the message log, #13 wiring lib/identity.mjs to the Duplicates tool.
+
 ## UX / smoothness / delight
 - [x] **P1 · M** — ~~"A comfortable view like Lightspeed has"~~ — **DONE 08-17**
       via the row overflow menu (see docs/DESIGN.md §Row actions). Measured
