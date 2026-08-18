@@ -6,7 +6,7 @@
 // exists to prevent.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { GUIDES, guideTabs, matchGuides, bestGuide } from '../lib/guides.mjs'
+import { GUIDES, guideTabs, matchGuides, bestGuide, guidesByScreen } from '../lib/guides.mjs'
 import { ALL_TABS } from '../lib/auth.js'
 
 test('every screen in the app has at least one guide', () => {
@@ -89,4 +89,52 @@ test('null and rubbish input are a miss, not a crash', () => {
   for (const q of [null, undefined, 0, {}, []]) {
     assert.deepEqual(matchGuides(q), [])
   }
+})
+
+// ── Where the asker is standing ──────────────────────────────────────────────
+// The panel opens with no question typed more often than not: someone presses ❓
+// because they are stuck on the screen in front of them. Leading with that
+// screen's jobs is the difference between an answer and a list.
+
+test('the panel leads with the screen you are on', () => {
+  const { here, rest } = guidesByScreen('repairs')
+  assert.ok(here.length, 'repairs has guides, so some should be first')
+  for (const g of here) assert.equal(g.tab, 'repairs')
+  for (const g of rest) assert.notEqual(g.tab, 'repairs')
+  assert.equal(here.length + rest.length, GUIDES.length, 'no guide may be dropped by the split')
+})
+
+test('a screen with no guides of its own still shows the whole library', () => {
+  const { here, rest } = guidesByScreen('not-a-tab')
+  assert.deepEqual(here, [])
+  assert.equal(rest.length, GUIDES.length)
+})
+
+test('the screen you are on breaks a tie', () => {
+  // "phone" alone is genuinely ambiguous — renting one out, taking one back, a
+  // repair. Standing on Repairs should settle it.
+  const onRepairs = matchGuides('phone', GUIDES, { limit: 1, boostTab: 'repairs' })[0]
+  assert.equal(onRepairs?.tab, 'repairs', `"phone" on the Repairs screen reached ${onRepairs?.id}`)
+})
+
+test('the screen you are on never beats a real answer', () => {
+  // The failure that would make this feature worse than nothing: someone asks a
+  // clear question and gets the answer for the screen they happen to be on.
+  const cases = [
+    ['how do I take a payment', 'rentals', 'take-payment'],
+    ['someone brought the phone back', 'shop', 'return-phone'],
+    ['book a flight', 'repairs', 'new-booking'],
+    ['the writing is too small', 'wallet', 'bigger-text'],
+  ]
+  for (const [asked, standingOn, expected] of cases) {
+    const got = matchGuides(asked, GUIDES, { limit: 1, boostTab: standingOn })[0]
+    assert.equal(got?.id, expected, `"${asked}" from the ${standingOn} screen → ${got?.id}`)
+  }
+})
+
+test('the boost cannot conjure a match out of nothing', () => {
+  // A guide that matched no word at all must not appear just because it belongs
+  // to this screen — that would turn an honest miss into a wrong answer.
+  assert.deepEqual(matchGuides('what is the weather', GUIDES, { boostTab: 'rentals' }), [])
+  assert.deepEqual(matchGuides('', GUIDES, { boostTab: 'rentals' }), [])
 })

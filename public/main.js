@@ -17090,7 +17090,13 @@ function renderHowTo() {
     return;
   }
   const q = (document.getElementById('howToSearch')?.value || '').trim();
-  const list = q ? (window.kcMatchGuides ? window.kcMatchGuides(q, all, { limit: 6 }) : []) : all;
+  // Where they are standing is the best guess at what they are stuck on. With
+  // nothing typed the panel leads with this screen's jobs; while searching it
+  // is only a tie-break (lib/guides.mjs), so asking about a payment from the
+  // Rentals screen still finds the payment guide.
+  const list = q
+    ? (window.kcMatchGuides ? window.kcMatchGuides(q, all, { limit: 6, boostTab: currentTab }) : [])
+    : all;
 
   if (!list.length) {
     // An honest miss beats a confident wrong answer — hand it to the model,
@@ -17105,12 +17111,33 @@ function renderHowTo() {
     return;
   }
 
-  out.innerHTML = list.map((g, i) => `
-    <details class="kc-howto" ${list.length === 1 || (q && i === 0) ? 'open' : ''}>
+  const item = (g, open) => `
+    <details class="kc-howto" ${open ? 'open' : ''}>
       <summary>${escHtml(g.q)}</summary>
       <ol class="kc-howto-steps">${g.steps.map(st => `<li>${escHtml(st)}</li>`).join('')}</ol>
       <button class="btn btn-primary btn-sm" onclick="howToTakeMeThere('${escJs(g.id)}')">→ ${escHtml(g.go)}</button>
-    </details>`).join('');
+    </details>`;
+
+  if (q) {
+    out.innerHTML = list.map((g, i) => item(g, list.length === 1 || i === 0)).join('');
+    return;
+  }
+
+  // Nothing typed: this screen's jobs first, under a heading that says so, then
+  // everything else. The heading matters — without it the reordering is
+  // invisible and reads as an arbitrary order.
+  const split = window.kcGuidesByScreen
+    ? window.kcGuidesByScreen(currentTab, all)
+    : { here: [], rest: all };
+  const head = (t) => `<div style="font-size:var(--fs-micro);font-weight:700;text-transform:uppercase;
+    letter-spacing:.04em;color:var(--muted);margin:2px 0 6px;">${escHtml(t)}</div>`;
+  out.innerHTML =
+    (split.here.length
+      ? head(`On this screen — ${TAB_META[currentTab]?.label || 'here'}`)
+        + split.here.map(g => item(g, split.here.length === 1)).join('')
+        + head('Everything else')
+      : '')
+    + split.rest.map(g => item(g, false)).join('');
 }
 
 // "Take me there": the answer ends where the work starts, not with the reader

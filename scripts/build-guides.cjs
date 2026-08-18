@@ -39,6 +39,7 @@ ${body}
 window.KC_GUIDES = GUIDES
 window.kcMatchGuides = matchGuides
 window.kcBestGuide = bestGuide
+window.kcGuidesByScreen = guidesByScreen
 `
 
   const prev = fs.existsSync(OUT) ? fs.readFileSync(OUT, 'utf8') : null
