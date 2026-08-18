@@ -14675,6 +14675,35 @@ const STOCK_CATEGORY_LABELS = {
   accessory: '🧩 Accessory', other: '📦 Other',
 };
 
+// The merged category list: the twelve built-in labels above, plus the owner's
+// own from the stock_categories setting. MIRRORS mergeStockCategories in
+// lib/stockCategories.mjs — test/stockCategories.test.mjs holds the two to the
+// same output. A custom category's key IS its label, so the existing
+// `STOCK_CATEGORY_LABELS[cat] || cat` label lookups render it with no change.
+const kcBareCat = (s) => String(s || '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().toLowerCase();
+function stockCategories() {
+  const merged = Object.entries(STOCK_CATEGORY_LABELS);
+  const taken = new Set();
+  for (const [k, label] of merged) { taken.add(k.toLowerCase()); taken.add(kcBareCat(label)); }
+  const csv = pricingConfig?.settings?.find(x => x.key === 'stock_categories')?.textValue || '';
+  for (const raw of String(csv).split(',')) {
+    const label = raw.replace(/[<>,]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40).trim();
+    const key = kcBareCat(label);
+    if (!label || !key || taken.has(key)) continue;
+    taken.add(key);
+    merged.push([label, label]);
+  }
+  return merged;
+}
+// key → label for the shelf/dropdown; a custom key is its own label.
+function stockCatLabel(cat) { return STOCK_CATEGORY_LABELS[cat] || cat; }
+
+// Just the owner's own categories (everything the merged list holds beyond the
+// twelve defaults) — for the Settings editor to show back what is saved.
+function customStockCategoriesClient() {
+  return stockCategories().slice(Object.keys(STOCK_CATEGORY_LABELS).length).map(([, l]) => l);
+}
+
 // Narrowing the shelf by several things at once (owner, 17 Aug — the Lightspeed
 // products screen). Held at module scope so a re-render keeps what was typed.
 let shopFacets = { q: '', category: 'all', brand: 'all' };
@@ -15106,7 +15135,7 @@ async function renderShopTab() {
             oninput="shopSetFacet('q', this.value)">
           <select class="form-input" id="shopFacetCat" aria-label="Category" onchange="shopSetFacet('category', this.value)">
             <option value="all">Every category</option>
-            ${Object.entries(STOCK_CATEGORY_LABELS).map(([k, label]) =>
+            ${stockCategories().map(([k, label]) =>
               `<option value="${escHtml(k)}"${shopFacets.category === k ? ' selected' : ''}>${escHtml(label)}</option>`).join('')}
           </select>
           <select class="form-input" id="shopFacetBrand" aria-label="Brand" onchange="shopSetFacet('brand', this.value)">
@@ -15382,8 +15411,8 @@ function openStockItemModal(itemId = null) {
       <div class="form-group">
         <label class="form-label">Category</label>
         <select class="form-input" id="siCategory">
-          ${Object.entries(STOCK_CATEGORY_LABELS).map(([k, l]) =>
-            `<option value="${k}" ${i?.category === k ? 'selected' : ''}>${l}</option>`).join('')}
+          ${stockCategories().map(([k, l]) =>
+            `<option value="${escHtml(k)}" ${i?.category === k ? 'selected' : ''}>${escHtml(l)}</option>`).join('')}
         </select>
       </div>
       <div class="form-group">
@@ -20402,7 +20431,21 @@ async function renderSettingsTab() {
         dropdown. A repair sitting on one of your stages still counts as an open job everywhere.<br>
         <strong>Open, In Progress, Ready, Collected and Cancelled cannot be changed</strong> — Collected is what
         charges the wallet and Cancelled is what closes a job without charging, so those two names carry money.
-        Removing a stage here leaves any repair already on it exactly where it is.</div>`);
+        Removing a stage here leaves any repair already on it exactly where it is.</div>
+
+      <div style="padding:10px 16px 2px;border-top:1px solid var(--border);font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;">📦 Stock categories</div>
+      <div style="padding:8px 16px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input class="form-input" id="stockCatsInput" value="${escHtml(customStockCategoriesClient().join(', '))}"
+          placeholder="Gift set, Watch strap, Bluetooth speaker…" style="flex:1;min-width:240px;min-height:0;padding:8px 12px;font-size:var(--fs-body);">
+        <button class="btn btn-outline btn-sm" onclick="saveStockCategories()">💾 Save categories</button>
+      </div>
+      <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
+        Your own stock types, added to the twelve built in (📱 Phone, 💳 SIM, 🔌 Charger, 🔗 Cable, 🎧 Earphones,
+        🛡️ Case &amp; cover, 🔋 Power bank, 💾 Memory card, 🚗 Car accessory, 🔧 Repair part, 🧩 Accessory, 📦 Other).
+        Comma-separated; add an emoji at the front if you like. A name that repeats a built-in one is ignored, and
+        <strong>the built-in twelve cannot be removed here</strong> — 📱 Phone in particular carries money
+        (it takes an IMEI at the till and books a phone sale). Removing one of your own leaves any item already
+        filed under it exactly where it is.</div>`);
 
   // ── Contact Tools reference card — the phone-migration workbench SOP.
   // A directory, not a launcher: a browser can't start a Windows program, so
@@ -21660,6 +21703,18 @@ async function saveRepairStages() {
     values: { textValue: list.join(',') },
   });
   if (ok) { toast('Repair stages updated.', 'success'); renderSettingsTab(); }
+}
+
+// Stock categories (owner, 18 Aug). Comma-separated; the server drops any that
+// repeat a built-in and de-dups. The built-in twelve are never in this list.
+async function saveStockCategories() {
+  const raw = document.getElementById('stockCatsInput')?.value || '';
+  const list = raw.split(',').map(x => x.trim()).filter(Boolean);
+  const ok = await saveSetting({
+    table: 'settings', key: 'stock_categories',
+    values: { textValue: list.join(',') },
+  });
+  if (ok) { toast('Stock categories updated.', 'success'); renderSettingsTab(); }
 }
 
 // IVR / VN provider list (feature #10). Comma-separated; the server sanitises

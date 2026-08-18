@@ -14,9 +14,19 @@
 import { withStaff, tabAllowedFor } from '../../lib/auth.js'
 import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 import { money, settleSale } from '../../lib/money.mjs'
-import { STOCK_CATEGORY_KEYS } from '../../lib/stockCategories.mjs'
+import { mergedStockCategoryKeys } from '../../lib/stockCategories.mjs'
 
 const METHODS = ['cash', 'card', 'bank_transfer', 'voucher', 'other']
+
+// The categories a stock item may be filed under: the twelve built-ins plus
+// whatever the owner has added in Settings (stock_categories). Read per write —
+// item saves are rare, and it must reflect a category added moments ago.
+async function allowedCategoryKeys() {
+  try {
+    const rows = await db.select('settings', 'select=text_value&key=eq.stock_categories&limit=1')
+    return mergedStockCategoryKeys(rows[0]?.text_value || '')
+  } catch { return mergedStockCategoryKeys('') }
+}
 // money() and settleSale() are imported from lib/money.mjs (single source of
 // truth for penny rounding — a local copy here silently diverged on half-pennies).
 
@@ -82,7 +92,7 @@ async function handler(req, res) {
 
     if (req.method === 'POST' && b.op === 'item') {
       if (!b.model || !String(b.model).trim()) return res.status(400).json({ success: false, error: 'Model / name is required.' })
-      if (!STOCK_CATEGORY_KEYS.includes(b.category)) return res.status(400).json({ success: false, error: 'Pick a category.' })
+      if (!(await allowedCategoryKeys()).includes(b.category)) return res.status(400).json({ success: false, error: 'Pick a category.' })
       const sell = Number(b.sellingPrice)
       if (!Number.isFinite(sell) || sell < 0) return res.status(400).json({ success: false, error: 'Selling price must be ≥ 0.' })
       const [row] = await db.insert('stock_items', [{
@@ -107,6 +117,13 @@ async function handler(req, res) {
       if (b.barcode !== undefined) patch.barcode = String(b.barcode || '').trim() || null
       if (b.company !== undefined) patch.company = b.company || null
       if (b.model !== undefined) patch.model = String(b.model).trim()
+      // Category was silently dropped on edit until 18 Aug — the form offered
+      // the dropdown but the change never saved. It saves now, and is validated
+      // against the same allowlist as an add.
+      if (b.category !== undefined) {
+        if (!(await allowedCategoryKeys()).includes(b.category)) return res.status(400).json({ success: false, error: 'Pick a category.' })
+        patch.category = b.category
+      }
       if (b.netPrice !== undefined) patch.net_price = Number.isFinite(Number(b.netPrice)) ? money(b.netPrice) : null
       if (b.sellingPrice !== undefined) {
         const s = Number(b.sellingPrice)

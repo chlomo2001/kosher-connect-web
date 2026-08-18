@@ -9,6 +9,7 @@
 
 import { withStaff, ALL_TABS } from '../../lib/auth.js'
 import { cleanStages } from '../../lib/repairStatuses.mjs'
+import { customStockCategories } from '../../lib/stockCategories.mjs'
 import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 
 // Typed rules for editable settings keys. A key not listed here is shown
@@ -318,6 +319,29 @@ async function handler(req, res) {
             key: 'void_reasons',
             text_value: list.join(','),
             description: 'Reasons offered when voiding a rental (owner-managed)',
+          }])
+        }
+        return res.json({ success: true, warnings, list })
+      }
+
+      // Stock categories (text CSV) — the owner's OWN types on top of the twelve
+      // built-ins (owner, 18 Aug). customStockCategories does the whole job: it
+      // strips a label that collides with a built-in (by key or by name, emoji
+      // ignored), sanitises each, and de-duplicates — so only genuinely new
+      // categories are stored. 'phone' and the rest of the defaults are never in
+      // this list and cannot be removed through it.
+      if (table === 'settings' && key === 'stock_categories') {
+        const list = customStockCategories(values?.textValue)
+        if (list.length > 30) return res.status(400).json({ success: false, error: 'Keep the extra categories under 30.' })
+        const updated = await db.update('settings', `key=eq.stock_categories`, {
+          text_value: list.join(','),
+          updated_at: new Date().toISOString(),
+        })
+        if (!updated.length) {
+          await db.insert('settings', [{
+            key: 'stock_categories',
+            text_value: list.join(','),
+            description: 'Extra stock categories on top of the built-in twelve (owner-managed)',
           }])
         }
         return res.json({ success: true, warnings, list })

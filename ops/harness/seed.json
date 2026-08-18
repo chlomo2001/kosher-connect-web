@@ -398,6 +398,11 @@
    {
     "key": "monthly_target",
     "textValue": "4000"
+   },
+   {
+    "key": "stock_categories",
+    "textValue": "Gift set, Watch strap",
+    "numValue": null
    }
   ]
  },

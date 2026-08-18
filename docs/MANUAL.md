@@ -396,6 +396,7 @@ Stock and the counter: what is on the shelf, what it cost and sells for, and the
 - The warn-when-below level is per item, because one of a rare handset is low and one phone case is not.
 - Cost and selling price are both kept so the margin is real. Booking goods in at the wrong cost quietly makes every profit figure wrong.
 - A phone counts as a phone, not just as stock: selling one asks for its IMEI at the till and records it as a phone sale. The other categories are labels for finding things and reading the shelf.
+- Twelve categories are built in and you can add your own in Settings. The built-in ones cannot be removed, a name that repeats one is ignored, and removing one of your own leaves any item already filed under it exactly where it is.
 
 **When it goes wrong**
 
@@ -558,7 +559,7 @@ Everything the shop can change without anyone writing code: prices, people, what
 
 - **Shop** — The public-facing details — the shop's own information, the wording on receipts, and the phone guide customers read before choosing a handset. There is a link to view the public page as they see it.
 - **People & access** — 👥 Team is who works here, with a password reset. 🔓 What helpers can see ticks the screens a helper may open — the owner always sees everything.
-- **Prices & charges** — Rental rates per country with their minimum, cap and cap period; what a lost or broken phone, charger or SIM costs; the fees and rules; the service price menu behind Online & Print; extra charges; repair stages; void reasons; and the month's target that the dashboard measures against.
+- **Prices & charges** — Rental rates per country with their minimum, cap and cap period; what a lost or broken phone, charger or SIM costs; the fees and rules; the service price menu behind Online & Print; extra charges; repair stages; void reasons; your own stock categories on top of the built-in ones; and the month's target that the dashboard measures against.
 - **Communications** — Email and SMS, each with its safety gate, the addresses post arrives at, a test send, and the log of everything that has gone out.
 - **Travel** — 🛂 Travel requirements: what each destination demands and how long a document must stay valid. This is what the booking screen checks against.
 - **Connectivity** — The providers behind virtual numbers and the phone lines.
