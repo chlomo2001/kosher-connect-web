@@ -34,6 +34,7 @@ function section(s) {
 
 export function manualMarkdown(screens = SCREENS) {
   const { total, written, drafts } = manualProgress(screens)
+  const frame = screensOf('frame', screens)
   const staff = screensOf('staff', screens)
   const pub = screensOf('public', screens)
   const contents = (list) => list.map(s => `- ${s.name} — ${s.what}`).join('\n')
@@ -51,6 +52,12 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **${written} of ${total} screens written out in full${drafts ? `; ${drafts} still short entries` : ''}.**
+
+---
+
+## The frame around every screen
+
+${frame.map(section).join('\n---\n\n')}
 
 ---
 

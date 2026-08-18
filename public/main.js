@@ -17338,7 +17338,10 @@ const PALETTE_COMMANDS = [
   { icon: '📇', label: 'Manage Phone Inventory', sub: 'tool', run: () => openOnTab('rentals', openManagePhonesModal) },
   { icon: '🧾', label: 'Cash-up (Z-report)', sub: 'tool', keys: ['cashup', 'z report', 'eod', 'end of day', 'takings'], run: () => openCashupModal() },
   { icon: '⌨️', label: 'Keyboard shortcuts', sub: 'help', run: () => openShortcuts() },
-  { icon: '❓', label: 'How do I…?', sub: 'help', keys: ['how do i', 'help', 'guide', 'steps', 'teach', 'show me', 'training', 'manual'], run: () => openHowToModal() },
+  { icon: '❓', label: 'How do I…?', sub: 'help', keys: ['how do i', 'help', 'guide', 'steps', 'teach', 'show me', 'training'], run: () => openHowToModal() },
+  // The manual is a page, so the palette opens it in its own tab rather than
+  // navigating away from whatever is half-finished on this one.
+  { icon: '📖', label: 'The manual', sub: 'help', keys: ['manual', 'handbook', 'instructions', 'reference', 'every screen', 'print'], run: () => window.open('/manual', '_blank', 'noopener') },
   { icon: '⏰', label: 'New reminder', sub: 'tool', run: () => openRemindModal('note', '') },
   { icon: '🔑', label: 'Change my password', sub: 'tool', run: () => openChangePasswordModal() },
   { icon: '🌓', label: 'Toggle dark mode', sub: 'tool', run: () => toggleTheme() },

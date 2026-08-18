@@ -90,6 +90,31 @@ test('every public page has a manual entry, at the address it actually lives at'
   }
 })
 
+test('the frame entry describes controls that still exist', () => {
+  // The chrome belongs to no tab, so there is no tab list to hold it to. Its
+  // anchors are the ids and attributes of the controls it describes, looked up
+  // in the shell and the browser script: rename the burger, drop the palette
+  // button, and the entry that explains them fails with it.
+  const src = read('components/AppShell.js') + read('public/main.js')
+  const frame = screensOf('frame')
+  assert.equal(frame.length, 1, 'there should be exactly one entry for the app frame')
+  for (const f of frame) {
+    assert.ok(f.anchors?.length >= 6, `${f.id}: too few anchors to catch a rename`)
+    for (const a of f.anchors) {
+      assert.ok(src.includes(a), `${f.id}: nothing in the app is called "${a}" any more`)
+    }
+    assert.equal(f.tab, undefined, 'the frame belongs to no tab')
+    assert.equal(f.path, undefined, 'the frame has no address of its own')
+  }
+})
+
+test('the frame is described where a reader will meet it — before the screens', () => {
+  // It is the part of the app you are looking at before you have chosen a
+  // screen, so it reads first. Also stops it being appended to the end and
+  // quietly never read.
+  assert.equal(SCREENS[0].kind, 'frame')
+})
+
 test('every dialog in the app has a manual entry', () => {
   // Coverage only, NOT "filed under the tab the harness uses". The harness's
   // tab is merely somewhere the box can be opened from for a screenshot —
@@ -202,6 +227,7 @@ test('every entry says something true even while it is a draft', () => {
   for (const s of SCREENS) {
     assert.ok(s.what && s.what.length > 40, `${s.id}: even a draft owes the reader one honest sentence`)
     assert.ok(['written', 'draft'].includes(s.status), `${s.id}: unknown status "${s.status}"`)
+    assert.ok(['staff', 'public', 'frame'].includes(s.kind), `${s.id}: unknown kind "${s.kind}"`)
     assert.match(s.id, /^[a-z0-9-]+$/, `${s.id} is not a plain slug`)
   }
   const ids = SCREENS.map((s) => s.id)

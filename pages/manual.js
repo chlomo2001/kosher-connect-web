@@ -64,6 +64,7 @@ function Screen({ s }) {
 }
 
 export default function Manual() {
+  const frame = screensOf('frame')
   const staff = screensOf('staff')
   const pages = screensOf('public')
   const { total, written, drafts } = manualProgress()
@@ -104,7 +105,12 @@ export default function Manual() {
           </div>
         </nav>
 
-        <h2 style={{ margin: '0 0 12px' }}>The staff app</h2>
+        {/* The chrome first: it is what someone is looking at before they have
+            chosen a screen, and it is where the three help buttons are explained. */}
+        <h2 style={{ margin: '0 0 12px' }}>The frame around every screen</h2>
+        {frame.map((s) => <Screen key={s.id} s={s} />)}
+
+        <h2 style={{ margin: '26px 0 12px' }}>The staff app</h2>
         {staff.map((s) => <Screen key={s.id} s={s} />)}
 
         <h2 style={{ margin: '26px 0 12px' }}>Pages with their own address</h2>
