@@ -4174,7 +4174,7 @@ async function kcTextReceiptSend(customerId) {
   if (res.held) toast(res.note, 'warning');
   else if (res.redirected) toast(res.note, 'warning');
   else toast('Receipt texted ✔', 'success');
-  recordComm(customerId, { type: 'message', text: res.held ? 'Text receipt built (HOLD, not sent)' : 'Text receipt sent' });
+  recordComm(customerId, { type: 'message', text: res.held ? 'Text receipt built (HOLD, not sent)' : res.redirected ? 'Text receipt sent to the test number, not the customer' : 'Text receipt sent' });
   closeDynamicModal();
 }
 async function kcTextReceiptCopy(customerId) {
@@ -9457,7 +9457,7 @@ function buildRentalSms(r) {
   if (status === 'booked') {
     body = `your ${r.country || ''} phone is reserved and ready — pickup ${fmtDate(r.fromDate)}. See you then!`;
   } else if (status === 'overdue') {
-    body = `your rental phone ${r.phoneNumber || ''} was due back ${fmtDate(r.toDate)}. Please return it, or reply to extend — late fees may apply.`;
+    body = `your rental phone ${r.phoneNumber || ''} was due back ${fmtDate(r.toDate)}. Please return it, or call us on 0161 531 1386 to extend — late fees may apply.`;
   } else if (r.status === 'returned') {
     body = `thanks for returning the phone!${owedLine || ' All settled — see you next trip!'}`;
   } else if (r.toDate === today) {
@@ -21008,7 +21008,7 @@ async function sendTestSms() {
 // went out — or what WOULD have gone out while a channel sits on HOLD/TEST.
 const MSG_STATUS_LABEL = {
   held: ['HELD', 'badge-rental', 'built but not sent — the safety gate is on'],
-  sent: ['SENT', 'badge-active', 'delivered to the customer'],
+  sent: ['SENT', 'badge-active', 'handed to the provider — delivery is confirmed separately'],
   redirected: ['TEST', 'badge-sim', 'sent to the test inbox/number instead of the customer'],
   delivered: ['DELIVERED', 'badge-active', 'the provider confirmed delivery'],
   failed: ['FAILED', '', 'the provider rejected it'],

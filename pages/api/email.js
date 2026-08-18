@@ -34,7 +34,7 @@ const COPY_FALLBACK = {
   email_receipt_subject: 'Your Kosher Connect receipt — {total}',
   email_payment_subject: 'Payment received — {amount}',
   email_greeting: 'Dear {first}, thank you for coming in — here are your details for your records.',
-  email_closing: 'Thank you for choosing Kosher Connect. If anything on this receipt looks wrong, simply reply to this email or call us and we’ll put it right.',
+  email_closing: 'Thank you for choosing Kosher Connect. If anything on this receipt looks wrong, call us on 0161 531 1386 and we’ll put it right.',
 }
 export async function emailCopy() {
   const out = { ...COPY_FALLBACK }

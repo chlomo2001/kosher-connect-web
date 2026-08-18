@@ -414,7 +414,7 @@ The audio side of the business: conversion jobs brought in by customers, CDs lef
 **On the screen**
 
 - **+ New job (top of the screen) · + Add job (on the jobs list)** — The same drop-off form either way — the button at the top scrolls you to it and puts the cursor in the customer box. Whose it is, and what is wanted: CD to MP3, CD to an SD card, copying, or other audio work.
-- **Conversion jobs** — Each job from drop-off to collection: ✅ Ready when it is done, 📤 Collected when it goes out — which charges a priced job to their account — and ↩ to put it back if it was pressed too soon.
+- **Conversion jobs** — Each job from drop-off to collection: ✅ Ready when it is done, 📤 Collected when it goes out — which charges a priced job to the account of a job filed against a real customer — and ↩ to put a Ready or Cancelled job back. Collected is final: the money has moved.
 - **Consignment by shul** — What is out with each shul. 📦 Deliver adds to what they are holding, 💿 Sold moves it to what they owe for, ↩ Return brings unsold stock back, and 🧾 Settle records the money coming in.
 - **Titles catalogue** — The recordings themselves — code, title, speaker and price. A title no longer sold is retired rather than deleted, so old sales still make sense.
 - **Takings — recent settlements** — What each shul sold and what was actually collected, with the method and any note.
@@ -429,7 +429,7 @@ The audio side of the business: conversion jobs brought in by customers, CDs lef
 **When it goes wrong**
 
 - **A shul's count is wrong** — Look at what has been recorded against them — a delivery entered twice, or stock sold and never marked. Deliver, Sold and Return are the three that move the count, and each one shows in their history.
-- **A job was marked collected too soon** — Put it back with ↩. The money follows the status, so leaving it wrong leaves a charge on somebody who has not had their disc.
+- **A job was marked collected too soon** — Collected is final — the money has moved, so the app will not quietly un-collect it. ↩ puts back a Ready or Cancelled job, not a collected one. Tell the owner, who corrects the charge on the account deliberately.
 - **A settlement does not match what the shul says they sold** — Record what was actually collected and put the difference in the note. A settlement is the money that changed hands, not the money that should have.
 
 ---
@@ -775,7 +775,7 @@ Staff tool: gets the text out of a photograph or a scan, in English or Hebrew, r
 
 **Rules that bite here**
 
-- The document never leaves the computer. These are usually somebody's private papers, and that is exactly why this is not a website that wants an upload.
+- On this device — the normal way — the document never leaves the computer. These are usually somebody's private papers, and that is exactly why this is not a website that wants an upload. The one exception is the ⚠ AI reading option, which sends the picture away to be read; it is opt-in for that reason.
 - What comes out is a machine reading a picture. Check it against the document before anything is acted on — a mis-read digit in a reference is worth nothing.
 
 **When it goes wrong**
