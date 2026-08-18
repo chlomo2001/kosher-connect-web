@@ -1588,3 +1588,59 @@ exactly the kind of thing a new column does to old rules.
 Harness: both defaults, the one-way case, and the chip's both-legs rule.
 Mutation-tested — removing the return default and the both-legs condition fails
 it.
+
+---
+
+## 18 Aug — the rest of the rules that only knew about the departure
+
+Owner: *"yes sweep the rest of the travel_date readers"*, after the round-trip
+auto-complete bug above. It was the right instinct — there were five more, and
+three of them are worse than the one that prompted it.
+
+`return_date` shipped this morning. Everything written before it asked the same
+question, "is the travel date past?", and meant one of three different things:
+when the trip **starts**, when it **ends**, or whether it **spans** a day. Only
+the first is safe to key on the departure.
+
+**Fixed — the document has to outlive the journey.**
+
+| where | was | now |
+|---|---|---|
+| `lib/travelRules.mjs` `passportCheck` | six months beyond the **departure** | beyond the last day of the trip |
+| `lib/travelRules.mjs` `coverageStatus` | ESTA/ETA valid on the **day they fly** | valid until they are home |
+| `lib/bookingGate.mjs` + its browser copy | BLOCKs a passport that dies before takeoff | BLOCKs one that dies before they fly home |
+| `cron/sweep.js` travel-requirement pass | trips departing in the next 120 days | those, **plus trips already under way** |
+
+A passport that expires while the customer is in Israel is worse than one that
+expires before they leave — they are turned away at a gate 2,000 miles from
+here, not at Manchester. Under the old rule the app would have said *"✓ Passport
+valid long enough"* about it. The wording follows the difference: **"expires
+while they are away"** and **"runs out WHILE THEY ARE AWAY"** are not the same
+sentence as "expires before travel", and staff have to act on them differently.
+
+The sweep window widened for the same reason. It looked at trips departing from
+today onwards, so somebody already abroad on an ETA lapsing next week had
+dropped off the list the morning they flew — exactly when the reminder is worth
+sending.
+
+**Fixed — still travelling is not the same as still to depart.**
+The register's ✈️ Upcoming travel filter and count, `customerUpcomingBookings`,
+and the list of bookings offered when attaching a second ticket email all tested
+`travelDate >= today`, so a customer mid-holiday vanished from every one of
+them. All four now judge on the last day of the trip (`tripLastDay`).
+
+**Fixed — and a rental has to cover the trip, not the day they leave.**
+The "no phone booked yet" nudge and the profile's trip bundle counted a rental
+as cover if it merely overlapped the departure date. A rental ending mid-trip is
+not cover; it is a phone they had for the first week.
+
+**Left alone, deliberately:** the flight-in-N-days reminder, "Flies TODAY", the
+7-day dashboard count and the SMS reminders. Those genuinely ask about the
+departure, and a return date must not move them.
+
+**New: `test/bookingGateMirror.test.mjs`.** The gate has lived in two copies
+since it shipped — `lib/bookingGate.mjs` and a hand-written mirror inside
+`public/main.js` — with nothing checking they agreed. This morning's edit had to
+be made twice, which is precisely how mirrors drift, so the test now lifts the
+browser copy out of `main.js` and holds it to the module's verdict over nine
+bookings. Mutation-tested: reverting either copy alone fails it.

@@ -336,9 +336,14 @@ async function handler(req, res) {
     // and stale ones closed. ~120-day look-ahead.
     const trips = await db.select(
       'bookings',
-      `select=id,travel_date,destination_country,customer_id,` +
+      `select=id,travel_date,return_date,destination_country,customer_id,` +
       `booking_passengers(full_name,nationality),customers(legacy_id)` +
-      `&travel_date=gte.${today}&travel_date=lte.${localDate(120)}` +
+      `&travel_date=lte.${localDate(120)}` +
+      // Trips still to come OR still happening. Somebody already abroad on an
+      // ETA that lapses next week can still do something about it, and a
+      // window keyed only on the departure date would have stopped looking at
+      // them the morning they flew.
+      `&or=(travel_date.gte.${today},return_date.gte.${today})` +
       `&destination_country=not.is.null&status=neq.Cancelled`
     )
     const wanted = new Set()
@@ -361,7 +366,9 @@ async function handler(req, res) {
         const req = requirementFor({ destination: b.destination_country, nationality: p.nationality })
         if (!RECORDABLE.has(req.code)) continue
         const mine = allAuths.filter(a => (a.traveller_name || '').trim().toLowerCase() === name.toLowerCase() && a.type === req.code)
-        const cov = coverageStatus({ requirement: req, travelDate: b.travel_date, auths: mine })
+        // returnDate: an ETA that runs out mid-holiday is as much a problem
+        // as one that had already run out on the day they flew.
+        const cov = coverageStatus({ requirement: req, travelDate: b.travel_date, returnDate: b.return_date, auths: mine })
         const needsTask = cov.status === 'missing' || (cov.status === 'expiring' && cov.expiresBeforeTravel)
         if (!needsTask) continue
         const ref = `TRAVELREQ-${b.id}-${i}`
@@ -369,7 +376,9 @@ async function handler(req, res) {
         const destName = DEST_NAME[b.destination_country] || b.destination_country
         const title = cov.status === 'missing'
           ? `${req.label} needed — ${name} (${destName}, ${b.travel_date})`
-          : `${req.label} expires before trip — ${name} (${destName}, ${b.travel_date})`
+          : cov.expiresDuringTrip
+            ? `${req.label} expires mid-trip — ${name} (${destName}, back ${b.return_date})`
+            : `${req.label} expires before trip — ${name} (${destName}, ${b.travel_date})`
         await upsertOpenTask({
           reference: ref,
           title,

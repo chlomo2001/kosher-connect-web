@@ -6438,13 +6438,16 @@ function customerOwed(c) {
   if (bal !== null) return bal < 0 ? -bal : 0;
   return rentals.filter(r => r.customerId === c.id).reduce((s, r) => s + rentalDebt(r), 0);
 }
-// Bookings that are still upcoming — booked/ticketed and NOT flown yet
-// (travel date today or later, or no date set). Cancelled/Completed excluded.
+// Bookings that are still upcoming — booked/ticketed and NOT finished yet.
+// Judged on the LAST day of the trip: somebody who flew out on Sunday and
+// comes home in a fortnight has not finished travelling, and a test on the
+// departure date dropped them off this list the moment they left.
+function tripLastDay(b) { return b.returnDate && b.returnDate > (b.travelDate || '') ? b.returnDate : (b.travelDate || ''); }
 function customerUpcomingBookings(c) {
   const today = localISO();
   return bookings.filter(b => b.customerId === c.id
     && b.status !== 'Cancelled' && b.status !== 'Completed'
-    && (!b.travelDate || b.travelDate >= today));
+    && (!b.travelDate || tripLastDay(b) >= today));
 }
 function customerServiceCount(c) {
   return rentals.filter(r => r.customerId === c.id && (r.status === 'active' || r.status === 'overdue')).length
@@ -6751,8 +6754,10 @@ function customerNextBestAction(c, balance) {
   const trip = bookings.filter(b => b.customerId === cid && b.status !== 'Cancelled' && b.travelDate && b.travelDate >= today)
     .sort((a, b) => a.travelDate.localeCompare(b.travelDate))[0];
   if (trip) {
+    // Covering the whole trip: a rental that ends while they are still in
+    // Israel is not cover, it is a phone they had for the first week.
     const phoneCover = rentals.find(r => r.customerId === cid && r.status !== 'returned'
-      && r.fromDate && r.toDate && r.fromDate <= trip.travelDate && r.toDate >= trip.travelDate);
+      && r.fromDate && r.toDate && r.fromDate <= trip.travelDate && r.toDate >= tripLastDay(trip));
     if (!phoneCover) {
       return { icon: '✈️', text: `Flies ${fmtDate(trip.travelDate)} — no phone booked yet`,
         btn: `<button class="btn btn-rental btn-sm" onclick="openNewRentalModal('${cid}')">Book a phone</button>` };
@@ -6842,7 +6847,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   let tripHtml = '';
   if (nextTrip) {
     const phoneCover = rentals.find(r => r.customerId === c.id && r.status !== 'returned' &&
-      r.fromDate && r.toDate && r.fromDate <= nextTrip.travelDate && r.toDate >= nextTrip.travelDate);
+      r.fromDate && r.toDate && r.fromDate <= nextTrip.travelDate && r.toDate >= tripLastDay(nextTrip));
     const simCover = sims.find(s => s.customerId === c.id && s.status === 'active');
     const vnCover = virtualNumbers.find(v => v.customerId === c.id && v.status === 'Active');
     const item = (ok, okLabel, missingLabel, fixHtml) => `
@@ -12112,7 +12117,7 @@ function tmAttach(id) {
   // other legs are almost always for the same person and around the same date.
   const mine = t.customerId ? bookings.filter(b => String(b.customerId) === String(t.customerId)) : [];
   const rest = bookings.filter(b => !mine.includes(b) && b.status !== 'Cancelled' &&
-    (!b.travelDate || b.travelDate >= today));
+    (!b.travelDate || tripLastDay(b) >= today));
   const near = (b) => t.travelDate && b.travelDate
     ? Math.abs(Date.parse(b.travelDate) - Date.parse(t.travelDate)) : Infinity;
   const candidates = [...mine, ...rest]
@@ -12214,13 +12219,13 @@ function renderBookingsTab() {
   const content = document.getElementById('mainContent');
   const today = localISO();
   const active = bookings.filter(b => b.status !== 'Cancelled');
-  const upcoming = active.filter(b => b.travelDate && b.travelDate >= today).length;
+  const upcoming = active.filter(b => b.travelDate && tripLastDay(b) >= today).length;
   const feesEarned = active.reduce((s, b) => s + (b.bookingFee || 0), 0);
   const totalCharged = active.reduce((s, b) => s + (b.price || 0) + (b.bookingFee || 0), 0);
 
   const bkBar = kcFilterSort('bookings', [
     { value: 'all', label: 'Filter: all bookings' },
-    { value: 'upcoming', label: '✈️ Upcoming travel', test: b => b.status !== 'Cancelled' && b.status !== 'Completed' && (!b.travelDate || b.travelDate >= today) },
+    { value: 'upcoming', label: '✈️ Upcoming travel', test: b => b.status !== 'Cancelled' && b.status !== 'Completed' && (!b.travelDate || tripLastDay(b) >= today) },
     { value: 'completed', label: '✓ Completed', test: b => b.status === 'Completed' },
     { value: 'cancelled', label: '✕ Cancelled', test: b => b.status === 'Cancelled' },
   ], [
@@ -12802,20 +12807,30 @@ function bookingGateFor(b, verifications = []) {
     detail: 'Take a photocopy or scan now — chasing it later is how a booking becomes a problem.',
   });
 
-  if (isDate(b.passportExpiry) && isDate(travelDate)) {
-    const after = dayDiff(b.passportExpiry, travelDate);
+  // The last day of the trip, not the departure: a passport that expires while
+  // the customer is abroad is worse than one that expires before they go —
+  // they are turned away at a gate 2,000 miles from here. Mirrors lastDayOf()
+  // in lib/bookingGate.mjs.
+  const returnDate = b.returnDate || '';
+  const lastDay = isDate(returnDate) && (!isDate(travelDate) || returnDate > travelDate) ? returnDate : travelDate;
+  const twoWay = isDate(lastDay) && lastDay !== travelDate;
+  if (isDate(b.passportExpiry) && isDate(lastDay)) {
+    const after = dayDiff(b.passportExpiry, lastDay);
+    const n = Math.abs(after);
     if (after < 0) checks.push({
       key: 'passport-expired', level: BK_BLOCK,
-      title: 'Passport expires before the travel date',
-      detail: `It runs out ${Math.abs(after)} day${Math.abs(after) === 1 ? '' : 's'} before they fly. The trip cannot go ahead on this document.`,
+      title: twoWay ? 'Passport expires before the trip is over' : 'Passport expires before the travel date',
+      detail: twoWay
+        ? `It runs out ${n} day${n === 1 ? '' : 's'} before they are due to fly home on ${fmtDate(lastDay)}. The trip cannot go ahead on this document.`
+        : `It runs out ${n} day${n === 1 ? '' : 's'} before they fly. The trip cannot go ahead on this document.`,
     });
     else if (after < BK_SIX_MONTHS) checks.push({
       key: 'passport-thin',
       level: seen.has('passport-thin') ? BK_PASS : BK_VERIFY,
-      title: `Passport valid only ${after} days after travel`,
+      title: `Passport valid only ${after} days after ${twoWay ? 'the return' : 'travel'}`,
       detail: 'Many destinations want six months beyond the return date. Check this one before booking.',
     });
-  } else if (isDate(travelDate) && b.passportOnFile && !isDate(b.passportExpiry)) {
+  } else if (isDate(lastDay) && b.passportOnFile && !isDate(b.passportExpiry)) {
     checks.push({
       key: 'passport-expiry-unknown',
       level: seen.has('passport-expiry-unknown') ? BK_PASS : BK_VERIFY,
@@ -13323,7 +13338,7 @@ async function openTravelReqModal(bookingId) {
       const covLine = cov.status === 'covered'
         ? `<span style="color:var(--success);">✓ ${escHtml(r.label)} on file — valid until ${escHtml(cov.validUntil || '')}</span>`
         : cov.status === 'expiring'
-          ? `<span style="color:var(--gold);">⚠ ${escHtml(r.label)} ${cov.expiresBeforeTravel ? 'expires BEFORE this trip' : 'expiring soon'} — valid until ${escHtml(cov.validUntil || '')}</span>`
+          ? `<span style="color:var(--gold);">⚠ ${escHtml(r.label)} ${cov.expiresDuringTrip ? 'runs out WHILE THEY ARE AWAY' : cov.expiresBeforeTravel ? 'expires BEFORE this trip' : 'expiring soon'} — valid until ${escHtml(cov.validUntil || '')}</span>`
           : `<span style="color:var(--danger-ink);">Not recorded yet — ${escHtml(r.label)} needed${validity}</span>`;
       cover = `
         <div style="font-size:var(--fs-body);margin-bottom:6px;">${covLine}</div>

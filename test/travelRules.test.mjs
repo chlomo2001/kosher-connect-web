@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   natCode, destCode, requirementFor, passportCheck, coverageStatus,
+  tripEnd,
 } from '../lib/travelRules.mjs'
 
 test('natCode folds common free-text forms', () => {
@@ -101,4 +102,57 @@ test('coverageStatus: missing, covered, expires-before-travel', () => {
   // home / not-needed short-circuits
   const none = requirementFor({ destination: 'USA', nationality: 'American' })
   assert.equal(coverageStatus({ requirement: none, travelDate: '2026-08-01', auths: [] }).status, 'not-needed')
+})
+
+// ── A round trip is judged on the day they come home ──────────────────────
+// Owner, 18 Aug: "all for one person's one time 2-way journey". A document
+// that dies while the customer is abroad is the problem these cover.
+
+test('tripEnd takes the later date, and copes with one-way and blanks', () => {
+  assert.equal(tripEnd({ travelDate: '2026-08-01', returnDate: '2026-08-20' }), '2026-08-20')
+  assert.equal(tripEnd({ travelDate: '2026-08-01' }), '2026-08-01')
+  assert.equal(tripEnd({ returnDate: '2026-08-20' }), '2026-08-20')
+  assert.equal(tripEnd({}), '')
+  // A return typed earlier than the outbound is not allowed to shorten the trip.
+  assert.equal(tripEnd({ travelDate: '2026-08-20', returnDate: '2026-08-01' }), '2026-08-20')
+  assert.equal(tripEnd({ travelDate: '01/08/2026', returnDate: 'soon' }), '')
+})
+
+test('passportCheck measures from the return, not the departure', () => {
+  // Out 1 Aug, home 1 Oct: six months from the RETURN is 2027-04-01.
+  const trip = { passportExpiry: '2027-03-01', travelDate: '2026-08-01', returnDate: '2026-10-01' }
+  assert.equal(passportCheck(trip).ok, false)
+  assert.equal(passportCheck(trip).needBy, '2027-04-01')
+  // The same passport on the one-way version of that trip is fine.
+  assert.equal(passportCheck({ passportExpiry: '2027-03-01', travelDate: '2026-08-01' }).ok, true)
+  // And days-to-expiry counts to the day they come home.
+  assert.equal(passportCheck(trip).daysToExpiry, 151)
+  assert.match(passportCheck(trip).note, /after the return/)
+})
+
+test('coverageStatus: an ETA that lapses mid-holiday is not cover', () => {
+  const esta = requirementFor({ destination: 'USA', nationality: 'British' })
+  const mid = coverageStatus({
+    requirement: esta, travelDate: '2026-08-01', returnDate: '2026-09-15',
+    auths: [{ type: 'ESTA', valid_until: '2026-09-01' }],
+  })
+  assert.equal(mid.status, 'expiring')
+  assert.equal(mid.expiresBeforeTravel, true)
+  assert.equal(mid.expiresDuringTrip, true)   // valid when they flew, not when they land back
+  // Expired before they even left — the other sentence.
+  const before = coverageStatus({
+    requirement: esta, travelDate: '2026-08-01', returnDate: '2026-09-15',
+    auths: [{ type: 'ESTA', valid_until: '2026-07-01' }],
+  })
+  assert.equal(before.expiresDuringTrip, false)
+  // Valid past the return: covered, and the 30-day warning is measured from
+  // the return too.
+  assert.equal(coverageStatus({
+    requirement: esta, travelDate: '2026-08-01', returnDate: '2026-09-15',
+    auths: [{ type: 'ESTA', valid_until: '2027-01-01' }],
+  }).status, 'covered')
+  assert.equal(coverageStatus({
+    requirement: esta, travelDate: '2026-08-01', returnDate: '2026-09-15',
+    auths: [{ type: 'ESTA', valid_until: '2026-09-20' }],
+  }).status, 'expiring')
 })

@@ -46,10 +46,13 @@ async function handler(req, res) {
       if (req.query.bookingId) {
         const bid = encodeURIComponent(String(req.query.bookingId))
         const [bk] = await db.select('bookings',
-          `select=id,route,travel_date,destination_country,customers(legacy_id),booking_passengers(full_name,nationality,passport_expiry)&id=eq.${bid}`)
+          `select=id,route,travel_date,return_date,destination_country,customers(legacy_id),booking_passengers(full_name,nationality,passport_expiry)&id=eq.${bid}`)
         if (!bk) return res.status(404).json({ success: false, error: 'Booking not found.' })
         const destination = bk.destination_country || ''
         const travelDate = bk.travel_date || ''
+        // Documents are judged against the whole journey, not the outbound —
+        // see tripEnd() in lib/travelRules.mjs.
+        const returnDate = bk.return_date || ''
         const legacyId = bk.customers?.legacy_id ?? null
         const auths = legacyId
           ? await db.select('travel_authorisations',
@@ -59,9 +62,9 @@ async function handler(req, res) {
         const passengers = (bk.booking_passengers || []).map(p => {
           const name = p.full_name || ''
           const requirement = requirementFor({ destination, nationality: p.nationality, rules })
-          const pass = passportCheck({ passportExpiry: p.passport_expiry, travelDate })
+          const pass = passportCheck({ passportExpiry: p.passport_expiry, travelDate, returnDate })
           const mine = auths.filter(a => (a.traveller_name || '').trim().toLowerCase() === name.trim().toLowerCase())
-          const coverage = coverageStatus({ requirement, travelDate, auths: mine })
+          const coverage = coverageStatus({ requirement, travelDate, returnDate, auths: mine })
           return {
             name,
             nationality: p.nationality || '',
@@ -75,7 +78,7 @@ async function handler(req, res) {
         })
         return res.json({
           success: true, view: true,
-          customerId: legacyId, destination, travelDate, route: bk.route || '',
+          customerId: legacyId, destination, travelDate, returnDate, route: bk.route || '',
           passengers,
           authorisations: auths.map(toApp),
         })

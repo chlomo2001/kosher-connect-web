@@ -108,3 +108,51 @@ test('the summary names the blocker, or counts the questions', () => {
   const asks = bookingGateFor({ ...base, passportOnFile: false }, { today: TODAY })
   assert.equal(bookingGateSummary(asks), '1 thing to confirm')
 })
+
+// ── Round trips: the document has to outlive the whole journey ────────────
+
+test('BLOCKS a passport that expires while they are abroad', () => {
+  // Flies 20 Sept on a passport good to 1 Oct — fine to leave, no way home.
+  const g = bookingGateFor(
+    { ...base, passportExpiry: '2026-10-01', returnDate: '2026-10-15' }, { today: TODAY })
+  assert.equal(g.worst, BLOCK)
+  assert.equal(g.canProceed, false)
+  const b = g.checks.find(c => c.key === 'passport-expired')
+  assert.equal(b.title, 'Passport expires before the trip is over')
+  assert.match(b.detail, /14 days before they are due to fly home on 2026-10-15/)
+})
+
+test('the same booking one-way is not blocked', () => {
+  const g = bookingGateFor({ ...base, passportExpiry: '2026-10-01' }, { today: TODAY })
+  assert.equal(g.worst, VERIFY)          // thin, but the trip can happen
+  assert.equal(g.checks.some(c => c.key === 'passport-expired'), false)
+})
+
+test('the six-month warning counts from the return', () => {
+  const g = bookingGateFor(
+    { ...base, passportExpiry: '2027-03-01', returnDate: '2026-10-15' }, { today: TODAY })
+  const thin = g.checks.find(c => c.key === 'passport-thin')
+  assert.equal(thin.title, 'Passport valid only 137 days after the return')
+})
+
+test('a return typed before the outbound cannot shorten the trip', () => {
+  const g = bookingGateFor(
+    { ...base, passportExpiry: '2026-10-01', returnDate: '2026-09-01' }, { today: TODAY })
+  assert.equal(g.checks.some(c => c.key === 'passport-expired'), false)
+})
+
+test('an authorisation that lapses mid-trip says so', () => {
+  const req = { code: 'ESTA', label: 'ESTA' }
+  const g = bookingGateFor({ ...base, returnDate: '2026-10-15' }, {
+    today: TODAY, requirement: req,
+    coverage: { status: 'expiring', expiresBeforeTravel: true, expiresDuringTrip: true, validUntil: '2026-10-01' },
+  })
+  assert.equal(g.worst, BLOCK)
+  assert.equal(g.checks[0].title, 'ESTA expires while they are away')
+  // Without the mid-trip flag it is still the old sentence.
+  const g2 = bookingGateFor(base, {
+    today: TODAY, requirement: req,
+    coverage: { status: 'expiring', expiresBeforeTravel: true, validUntil: '2026-09-01' },
+  })
+  assert.equal(g2.checks[0].title, 'ESTA expires before travel')
+})

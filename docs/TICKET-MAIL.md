@@ -174,6 +174,18 @@ And **each booking gets its own idempotency token**, so a partial failure is
 safe to retry: the ones that succeeded stay exactly one charge each, and the
 toast says which landed rather than silently re-running the lot.
 
+## A return date changes what the checks mean
+
+Once a booking has a way home, "is this passport valid?" is a different
+question. Everything that guards a trip — the passport rule, the ESTA/ETA
+coverage, the booking gate, the nightly reminder — now judges the **last day of
+the journey**, not the departure. A document that expires while the customer is
+abroad strands them there; the old rule called it valid.
+
+One-way bookings are untouched: with no return date the last day of the trip is
+the travel date, which is what every one of those rules already compared
+against. `tripEnd()` in `lib/travelRules.mjs` is the single statement of it.
+
 ## What is not built
 
 - *(built 18 Aug — the return check-in reminder, see BACKLOG.md)*
