@@ -14,8 +14,8 @@
 import { withStaff, tabAllowedFor } from '../../lib/auth.js'
 import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 import { money, settleSale } from '../../lib/money.mjs'
+import { STOCK_CATEGORY_KEYS } from '../../lib/stockCategories.mjs'
 
-const CATEGORIES = ['phone', 'accessory', 'sim', 'other']
 const METHODS = ['cash', 'card', 'bank_transfer', 'voucher', 'other']
 // money() and settleSale() are imported from lib/money.mjs (single source of
 // truth for penny rounding — a local copy here silently diverged on half-pennies).
@@ -82,7 +82,7 @@ async function handler(req, res) {
 
     if (req.method === 'POST' && b.op === 'item') {
       if (!b.model || !String(b.model).trim()) return res.status(400).json({ success: false, error: 'Model / name is required.' })
-      if (!CATEGORIES.includes(b.category)) return res.status(400).json({ success: false, error: 'Pick a category.' })
+      if (!STOCK_CATEGORY_KEYS.includes(b.category)) return res.status(400).json({ success: false, error: 'Pick a category.' })
       const sell = Number(b.sellingPrice)
       if (!Number.isFinite(sell) || sell < 0) return res.status(400).json({ success: false, error: 'Selling price must be ≥ 0.' })
       const [row] = await db.insert('stock_items', [{

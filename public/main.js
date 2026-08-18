@@ -14664,7 +14664,16 @@ const SUPPLIER_RETURN_OPEN = ['awaiting_send', 'sent'];
 let goodsIn = [];
 let goodsInBalances = {};
 
-const STOCK_CATEGORY_LABELS = { phone: '📱 Phone', accessory: '🔌 Accessory', sim: '💳 SIM', other: '📦 Other' };
+// MIRRORS lib/stockCategories.mjs — main.js is a classic browser script and
+// cannot import. test/stockCategories.test.mjs holds the two to the same
+// keys, labels and order. Owner-editable categories (BACKLOG) will merge a
+// Settings list on top of these defaults.
+const STOCK_CATEGORY_LABELS = {
+  phone: '📱 Phone', sim: '💳 SIM', charger: '🔌 Charger', cable: '🔗 Cable',
+  earphones: '🎧 Earphones', case: '🛡️ Case & cover', powerbank: '🔋 Power bank',
+  memory: '💾 Memory card', car: '🚗 Car accessory', repairpart: '🔧 Repair part',
+  accessory: '🧩 Accessory', other: '📦 Other',
+};
 
 // Narrowing the shelf by several things at once (owner, 17 Aug — the Lightspeed
 // products screen). Held at module scope so a re-render keeps what was typed.

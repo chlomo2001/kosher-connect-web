@@ -1711,3 +1711,25 @@ uniqueness are still enforced.
 added as a draft without deliberately raising a number in the test, in a diff a
 human will see. The manual is finished, and staying finished is now the default
 rather than the discipline.
+
+## Owner-editable stock categories (18 Aug — half done)
+
+Owner: "why so little option on stock types/categories? didnt we implement
+something about this from lightspeed?" — the Lightspeed thing was the FILTER
+VIEW (17 Aug), not the category list. Categories were a hardcoded four.
+
+DONE now: expanded to twelve sensible defaults in `lib/stockCategories.mjs`
+(phone, sim, charger, cable, earphones, case, powerbank, memory, car,
+repairpart, accessory, other), server + browser mirror + mirror test.
+
+TODO — make them OWNER-EDITABLE in Settings, the full Lightspeed answer, exactly
+like `repair_stages` / `void_reasons` already work:
+- a `stock_categories` settings key (comma-separated labels), edited in Settings.
+- `lib/stockCategories.mjs` gains a `mergeCustom(settingsValue)` that appends the
+  owner's categories to the defaults, keyed by a slug of the label.
+- the server reads the setting when validating a saved item (it validates
+  against `STOCK_CATEGORY_KEYS` today — that becomes defaults + custom).
+- the browser dropdown/filter read the merged list.
+- 'phone' stays load-bearing and non-removable (IMEI capture + phone_sale
+  ledger); the editor must not let it be deleted or renamed away.
+- emoji per custom category is a nice-to-have; a plain label is enough to ship.

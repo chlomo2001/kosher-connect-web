@@ -384,7 +384,7 @@ Stock and the counter: what is on the shelf, what it cost and sells for, and the
 
 **Boxes that open on top of it**
 
-- **stock-item** — Adding or editing one item: category, code, barcode, brand, name, cost, selling price, quantity, and the level to warn at.
+- **stock-item** — Adding or editing one item: its category (phone, SIM, charger, cable, earphones, case, power bank, memory card, car accessory, repair part, accessory or other), code, barcode, brand, name, cost, selling price, quantity, and the level to warn at.
 - **goods-in** — A delivery being booked in — supplier, date, one line per item, the invoice reference and total, and a note about anything odd.
 - **supplier-return** — Stock going back: the supplier, what is going, what it is worth, and where the claim stands.
 - **supplier-return-manage** — The same return afterwards — moving it along as the supplier replies, and closing it when they settle.
@@ -395,6 +395,7 @@ Stock and the counter: what is on the shelf, what it cost and sells for, and the
 - A walk-in sale needs no customer; choosing one puts the sale on their record and lets it go on account. Choose deliberately — it decides whether the money is in or owed.
 - The warn-when-below level is per item, because one of a rare handset is low and one phone case is not.
 - Cost and selling price are both kept so the margin is real. Booking goods in at the wrong cost quietly makes every profit figure wrong.
+- A phone counts as a phone, not just as stock: selling one asks for its IMEI at the till and records it as a phone sale. The other categories are labels for finding things and reading the shelf.
 
 **When it goes wrong**
 
