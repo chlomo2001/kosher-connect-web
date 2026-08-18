@@ -1687,3 +1687,27 @@ describes how the shop is run.
 **State:** 2 of 28 screens written out in full (Phone Rentals, and the manual
 page itself); 26 are honest one-line entries marked as such on the page. The
 prose lands screen by screen from here, each one dropping the budget by one.
+
+**Finished the same day (18 Aug).** Owner: "work down the sidebar in order."
+All 28 screens are now written out in full — 170 parts described, 91 rules that
+bite, 70 named failures with what to do about them — shipped in four batches so
+each landed readable rather than in one drop at the end.
+
+The tests earned their keep while writing, not just afterwards. The drift check
+caught the Kol Torah entry naming the button on the screen ("+ Add job") and not
+the one in the topbar ("+ New job"); the label rule rejected bare emoji as button
+names on Repairs; and the "too terse to help anyone" rule refused a two-line
+description of the privacy page, which is what sent me to read its real section
+headings instead of describing it in the abstract. Three corrections a human
+reviewer would have had to notice, made by a test that runs in two seconds.
+
+One deliberate loosening: the dialog check no longer insists a box is filed under
+the tab the harness opens it from. The harness picks any tab that can reach a box
+for a screenshot; the manual has to say where a PERSON finds it, and cash-up is
+reached from Wallet and from the till, not from the dashboard. Coverage and
+uniqueness are still enforced.
+
+`DRAFT_BUDGET` is now 0, which is the interesting state: a new screen cannot be
+added as a draft without deliberately raising a number in the test, in a diff a
+human will see. The manual is finished, and staying finished is now the default
+rather than the discipline.
