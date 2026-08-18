@@ -119,6 +119,24 @@ Safe (loop-eligible), ranked value ÷ effort:
 - [ ] **P3 · L** ⚠ — **Offline sale queue** + unsynced badge, auto-sync on reconnect.
       (Loyverse.) *money persistence — careful design.*
 
+## From AHT portal reference (owner shared 2026-08-18 — see docs/DESIGN-NOTES-AHT.md)
+Owner shared the AHT/Yordex charity portal as a UX reference. Full read + ranking
+in the design note; the loop-safe (no money-read / no nav / no auth) items:
+- [ ] **P1 · M** — **Hebrew dates beside Gregorian** on ledger/rentals/bookings/
+      receipts. Build `lib/hebrewDate.mjs` FIRST — a pure converter with a real
+      test table (leap years, Adar I/II, Rosh Hashana boundary), mirrored into
+      main.js like pricing. The converter is loop-safe to build; **placement is
+      owner-judge** (which screens, subline vs column, default on?).
+- [ ] **P2 · S** — **Direction badges** for ledger/till type — round colour-coded
+      in/out/transfer/bank glyph in place of the text word. Pure display.
+- [ ] **P3 · S** — **"(N loaded)" count** in list search boxes. Cheap, honest.
+- [ ] **P2 · S** — **Live "Preview" pattern** — show the computed result inline as
+      the owner edits (receipt text, SMS draft, public account string).
+- [ ] **P2 · M** — **Wizard stepper** component for multi-step flows (New Booking/
+      Rental, POS order): numbered progress + disabled-until-valid Next.
+Held for owner (money-read or nav decision, NOT loop-autofix): running-balance
+column in Wallet; grouped sidebar sub-labels; בעזהשי״ת header phrase/placement.
+
 ## UX / smoothness / delight
 - [x] **P1 · M** — ~~"A comfortable view like Lightspeed has"~~ — **DONE 08-17**
       via the row overflow menu (see docs/DESIGN.md §Row actions). Measured
