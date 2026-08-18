@@ -212,12 +212,16 @@ column in Wallet; grouped sidebar sub-labels; בעזהשי״ת header phrase/pla
       button deliver; (2) **upgrade off trial** (card on the account) — until
       then LIVE is impossible by construction, because a real customer's number
       is not a verified number, and every trial message is prefixed
-      "Sent from your Twilio trial account". No face pic or ID is needed for
-      either. **Owner decided 08-16: alphanumeric sender "KosherCnct" only, no
-      Twilio number** — which removes the regulatory bundle (no photo ID, no
-      proof of address) and means replies are impossible, so outgoing copy must
-      never say "reply STOP/YES". Alphanumeric senders need a PAID account, so
-      the upgrade is required, not optional. Runbook: `docs/TWILIO-SENDER.md`.
+      "Sent from your Twilio trial account". **08-16 plan superseded 08-18:
+      the owner BOUGHT a Twilio number**, the UK regulatory bundle
+      (`BUb9a351…`, Mobile-Business) was approved the same evening, and the
+      owner assigned it to the number immediately. So the number is
+      regulatorily complete and replies become possible. What's left, in
+      order: (1) upgrade off trial — the ONE remaining hard blocker;
+      (2) put the number in the Messaging Service sender pool (or
+      `TWILIO_FROM`); (3) TEST-mode proof send; (4) inbound-SMS endpoint
+      before any copy says "just reply" — nothing receives yet. Runbook
+      updated: `docs/TWILIO-SENDER.md`.
 - [ ] **P3 · done-but-dark** — **myPOS ↔ till** one-tap. **BUILT 08-04 and
       PARKED by owner decision 08-04** ("we wait and work manually with the
       current K300"). Facts that closed it: K300 will never do ePOS

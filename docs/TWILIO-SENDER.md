@@ -1,29 +1,61 @@
-# Twilio — going live with an alphanumeric sender
+# Twilio — going live (a real number, since 18 Aug)
 
-Owner decision, 16 Aug 2026: **"KosherCnct" alphanumeric sender only.** No
-Twilio phone number. That choice is what this runbook is written around, and it
-has one consequence worth stating plainly before the steps: **an alphanumeric
-sender cannot receive replies.** A customer who answers a KC text is texting
-into nothing — no bounce, no error, the message simply never arrives. Every
-message the app sends must therefore tell people how to reach a human
-(0161 531 1386), because "just reply" will not be true.
+**The 16 Aug decision ("KosherCnct alphanumeric only, no number") is
+superseded.** On 18 Aug 2026 the owner **bought a Twilio phone number**, and the
+account's UK Regulatory Bundle — *United Kingdom: Mobile - Business*, SID
+`BUb9a351c20ba7f5035e68e9d18826eb5d` — was **approved** the same evening
+(Twilio's approval mail, 19:29). That flips the trade-offs this runbook was
+written around:
 
-The upside is that it removes the whole regulatory path: no number purchase, so
-no Twilio Regulatory Bundle, so **no photo ID and no proof of address** for
-Shloime or for 421 Bury New Road.
+- **Replies become possible.** A number can receive; an alphanumeric sender
+  cannot. "Reply STOP / reply YES" copy can become true again — but ONLY once
+  inbound messages actually land somewhere (see step 5). Until then the
+  opt-out wording stays "call 0161 531 1386".
+- **The regulatory path is already paid for.** The bundle the alphanumeric
+  route existed to avoid is done and approved. Sunk and cleared — no reason
+  left to avoid the number.
+- The alphanumeric sender `KosherCnct` still sits in the sender pool and can
+  ride alongside the number later (branded outbound, number for two-way) —
+  that's a refinement, not a go-live requirement. The registration queue in
+  step 2b applies to it, not to the number.
 
-## Where we are
+## Where we are (18 Aug, evening)
 
 | | |
 |---|---|
 | App code | done — `lib/sms.js`, `/api/sms`, `/api/sms-test`, Settings → Messaging |
 | Credentials in Vercel | present (health 08-04: `sms: configured, provider twilio, mode test`) |
-| Twilio account | **trial** — console screenshot 08-16, £11.71 credit, registered `tech@kosher-connect.com`, opened 20 Jul |
+| Twilio account | **still trial** — this is now THE blocker for real sends |
+| Number | **bought 18 Aug** (console: `PNccde9202…`, IE1/US1 region tabs — config lives in US1, the Active one; IE1 is an empty EU data-residency slot, leave it) |
+| Regulatory bundle | **approved AND assigned to the number** (owner, 18 Aug ~20:00) |
 | Send gate | TEST — every message goes to `SMS_TEST_TO`, never a customer |
 
-The account is probably still the blocker, but less certainly than this page
-once claimed — see the section below, which records what the console actually
-did rather than what the documentation implies.
+## The go-live order, revised for the number
+
+1. ~~Assign the approved bundle to the number~~ — **done, 18 Aug** (owner
+   assigned it right after the approval mail). The number is regulatorily
+   complete.
+2. **Upgrade off trial** (step 1 below, unchanged). **This is the one remaining
+   hard blocker**: a trial account can only text verified handsets, so
+   customers are unreachable by construction.
+3. **Point the app at the number**: either add the number to the
+   `KosherConnect` Messaging Service sender pool (preferred — the `MG…` SID is
+   already the app's config shape, step 3 below), or set `TWILIO_FROM` to the
+   number in Vercel. No code change either way.
+4. **Prove it in TEST mode** (step 4 below) — the handset should show the new
+   number as sender.
+5. **Inbound (replies)** — nothing in the app receives SMS yet. Before any
+   outgoing copy says "just reply", the number's Messaging webhook must point
+   at an endpoint that files the reply (the natural shape: an `/api/sms-inbound`
+   that logs into the comm history the way `/api/sms-status` files delivery
+   verdicts, signature-verified the same way). Until that exists, replies land
+   in the Twilio console only — better than the alphanumeric black hole, but
+   not something to invite.
+6. **Go live on the owner's word only** (step 5 below, unchanged).
+
+Everything below is the original runbook: still-accurate mechanics, plus the
+alphanumeric findings kept for the record (they matter again if `KosherCnct`
+is ever added as a branded outbound sender).
 
 ## What is actually true, tested in the console (08-16)
 
