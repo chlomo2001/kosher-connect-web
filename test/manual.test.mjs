@@ -190,7 +190,7 @@ test('the manual carries no customer data', () => {
 // screen cannot raise it without an edit here that shows up in review — which
 // is the point, because "I will document it later" is how the last thirty
 // documents in docs/ got the way they are.
-const DRAFT_BUDGET = 23
+const DRAFT_BUDGET = 16
 
 test('the unwritten screens are exactly the ones we admit to', () => {
   const drafts = draftScreens().map((s) => s.id)
