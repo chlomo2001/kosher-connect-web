@@ -1395,3 +1395,32 @@ only results certain enough to carry a `sim_id`.
 120px holding "18 Aug 2026 09:24", which `.cm-when` refuses to wrap — so it
 spilled into the gap and the date almost touched the subject. `max-content`
 sizes the track to the date, and follows Simple Mode for free.
+
+## Tickets — a sender list can never be complete (18 Aug)
+
+Owner: *"what about the 702 gmail tickets filter, is it set up? also, sometimes
+its booked via 3rd party like wiki.com and much more."*
+
+**Not set up** — `ticket_mail` has never held a row, so nothing has come down
+that pipe yet. The alias and the Gmail filter are both still to do.
+
+The third-party point is the one that mattered. The doc's original recipe was a
+`from:` list, which is exactly the thing that cannot be finished: the shop books
+through whoever is cheapest that week. Three changes so a **broad** filter is
+the recommendation instead:
+
+- The filter is now `from:(…) OR subject:("booking reference" OR "e-ticket" OR …)`.
+  The sender list stopped being the gate and became the name-tagger — an agent
+  nobody has heard of gets through on the phrases and still parses.
+- **Anything on the tickets alias that is not ticket-shaped is dropped at the
+  door** — no row, no body, no task. That is what makes a broad filter safe out
+  of a PERSONAL mailbox: the subject terms will catch a hotel or an Amazon order
+  now and then, and a false positive should leave no trace of somebody's private
+  post in the shop's database. The one exception is Google's own forwarding
+  confirmation, which is not ticket-shaped and is the message that carries the
+  code to turn the forward on.
+- Fifteen more agents named (Trip.com, Gotogate, Mytrip, eSky, TravelUp,
+  Alternative Airlines, BudgetAir, Netflights, ebookers, CheapOair, Skyscanner,
+  Kayak, Momondo, Flight Network, Booking.com), with a test that an agent NOT on
+  the list still gets in on the phrases — the list is a convenience, not the
+  gate, and the test is there to stop it quietly becoming the gate again.

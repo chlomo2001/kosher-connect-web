@@ -32,12 +32,13 @@ a mail full of baggage fees and compensation limits gets no price at all, and
 the card says `price?` in red. A blank is a number someone types. A wrong one is
 money that moves.
 
-Three things it will not do:
+Four things it will not do:
 
 | | |
 |---|---|
 | convert a currency | A €170 ticket does not go in the pounds box at a rate nobody chose. The amount goes in the notes and the box stays empty. |
 | pick between two customers | The shop has three pairs of same-named customers. A tie preselects **nobody** and offers both. |
+| keep what isn't ours | Mail on the tickets alias that is not ticket-shaped is dropped at the door — no row, no body, no task. The filter is fed from a personal mailbox; what the app does not need, it does not store. |
 | book a cancellation | A cancellation email is flagged, and its main action is *Dealt with*, not *Book it*. |
 
 ## What lands where
@@ -86,28 +87,43 @@ confirmation link to it, which arrives at the webhook rather than an inbox — i
 will appear as a card in the ticket queue, and **Read the email** shows the
 link. (Or read it from `ticket_mail.body` directly.)
 
-Then **Settings → Filters and Blocked Addresses → Create a new filter**, and in
-the **From** box paste:
+Then **Settings → Filters and Blocked Addresses → Create a new filter**, and put
+this in **Has the words** (not the From box — the query below searches both):
 
-    wizzair.com OR ryanair.com OR easyjet.com OR elal.co.il OR elal.com OR
-    britishairways.com OR ba.com OR lufthansa.com OR klm.com OR airfrance.com
-    OR turkishairlines.com OR aerlingus.com OR jet2.com OR virginatlantic.com
-    OR israir.co.il OR arkia.co.il OR swiss.com OR austrian.com OR
+    from:(wizzair.com OR ryanair.com OR easyjet.com OR elal.co.il OR elal.com OR
+    britishairways.com OR ba.com OR lufthansa.com OR klm.com OR airfrance.com OR
+    turkishairlines.com OR aerlingus.com OR jet2.com OR virginatlantic.com OR
+    israir.co.il OR arkia.co.il OR swiss.com OR austrian.com OR
     brusselsairlines.com OR lot.com OR flypgs.com OR emirates.com OR
-    edreams.com OR opodo.co.uk OR kiwi.com OR expedia.co.uk
+    edreams.com OR opodo.co.uk OR kiwi.com OR expedia.co.uk OR trip.com OR
+    gotogate.com OR mytrip.com OR esky.co.uk OR travelup.com OR
+    alternativeairlines.com OR budgetair.co.uk OR netflights.com OR
+    ebookers.com OR cheapoair.com)
+    OR subject:("booking reference" OR "e-ticket" OR "your flight" OR
+    "flight confirmation" OR "boarding pass" OR itinerary OR PNR)
 
 → **Create filter** → tick **Forward it to** `tickets-in@kosher-connect.com` →
 **Create filter**.
 
-This is a personal mailbox, so a filter is the right shape here — unlike the
-SIM hub, where forwarding everything is what stops a new carrier being missed.
-Nothing that is not from an airline leaves the mailbox.
+**The second half of that query is the important half.** Owner, 18 Aug:
+*"sometimes its booked via 3rd party like wiki.com and much more."* A list of
+senders can never be complete — the shop books through whoever is cheapest that
+week — so the subject terms are what catch an agent nobody has heard of. The
+sender list is not there to decide what gets forwarded; it is there so a
+recognised agent gets its NAME on the booking.
 
-**A second filter is worth adding for the agents you book through by name**, if
-any of them mail from an address that is not on that list. Subject terms work
-too: `subject:("booking confirmation" OR "e-ticket" OR "your flight")` — but
-keep those in their own filter, because a subject match is where a hotel
-confirmation would sneak in.
+**And a broad filter out of a personal mailbox is safe here, by design.** The
+subject terms will occasionally catch a hotel, a restaurant or an Amazon order.
+Anything arriving on the tickets alias that is not ticket-shaped is **dropped at
+the door** — nothing stored, no row, no body, no task. A false positive costs one
+wasted webhook call and leaves no trace of private post in the shop's database.
+The single exception is Google's own forwarding confirmation, which is not
+ticket-shaped and is the one message that has to be readable: it carries the
+code that turns the forward on.
+
+If you start using an agent regularly, tell me its domain and it goes on the
+list — that only improves the name on the booking; the mail was already getting
+through.
 
 **3. Check it.** Book something, or forward yourself an old confirmation, and
 look:

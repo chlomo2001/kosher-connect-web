@@ -202,9 +202,35 @@ export default async function handler(req, res) {
     // right queue. `?kind=ticket` on the alias URL forces the ticket path for a
     // filter that only ever sends tickets; `?kind=sim` forces the other way.
     const forced = String(req.query?.kind || '').toLowerCase()
-    const isTicket = forced === 'ticket' ||
-      (forced !== 'sim' && looksLikeTicket({ from: mail.from, subject: mail.subject, text: mail.text }))
-    if (isTicket) {
+    const ticketish = looksLikeTicket({ from: mail.from, subject: mail.subject, text: mail.text })
+
+    if (forced === 'ticket') {
+      // The tickets alias is fed from a PERSONAL mailbox, and a sender list can
+      // never be complete — the shop books through Kiwi, eDreams and whoever is
+      // cheapest that week (owner, 18 Aug: "sometimes its booked via 3rd party
+      // like wiki.com and much more"). The only filter that catches an agent
+      // nobody has heard of yet is a broad one, and a broad one out of a
+      // personal mailbox will also catch hotels, restaurants and Amazon.
+      //
+      // So anything down this pipe that is not ticket-shaped is DROPPED, and
+      // dropped means nothing stored — not a thin row, not a body, not a task.
+      // That is what makes a broad filter safe to recommend: a false positive
+      // costs a wasted webhook call and leaves no trace of somebody's private
+      // post in the shop's database.
+      //
+      // The one exception is Google's own forwarding confirmation, which is
+      // not ticket-shaped and is the message that turns the forward on: it
+      // carries the code, and it has nowhere else to be read.
+      const isForwardConfirm = /forwarding-noreply@google\.com/i.test(mail.from || '') ||
+        /forwarding confirmation|verify your forwarding|confirm.*forwarding/i.test(mail.subject || '')
+      if (!ticketish && !isForwardConfirm) {
+        return res.json({ ok: true, queue: 'ignored', stored: false, reason: 'not a ticket' })
+      }
+      const result = await fileTicket(mail)
+      return res.json({ ok: true, queue: 'ticket', ...result })
+    }
+
+    if (forced !== 'sim' && ticketish) {
       const result = await fileTicket(mail)
       return res.json({ ok: true, queue: 'ticket', ...result })
     }

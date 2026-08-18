@@ -79,6 +79,21 @@ test('an unknown sender has to look like a flight, not just a booking', () => {
   }), true)
 })
 
+test('an agent nobody has heard of still gets through on the phrases', () => {
+  // The list of agents will never be complete — owner, 18 Aug: "sometimes its
+  // booked via 3rd party like wiki.com and much more". An unknown sender has to
+  // earn its way in on what the message SAYS, and this is that path.
+  assert.equal(looksLikeTicket({
+    from: 'confirmations@some-agent-nobody-listed.example',
+    subject: 'Your itinerary',
+    text: 'Booking reference: 8KP2QW. Flight departs 14 October from Manchester.',
+  }), true)
+  // The named agents are still named, so the booking gets a sensible airline.
+  assert.equal(airlineOf({ from: 'noreply@kiwi.com' }), 'Kiwi.com')
+  assert.equal(airlineOf({ from: 'no-reply@gotogate.com' }), 'Gotogate')
+  assert.equal(airlineOf({ from: 'bookings@trip.com' }), 'Trip.com')
+})
+
 test('ordinary mail in a personal mailbox is left alone', () => {
   assert.equal(looksLikeTicket({
     from: 'someone@gmail.com', subject: 'Re: shabbos', text: 'See you at 8.',
