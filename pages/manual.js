@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
 import AppStyles from '../components/AppStyles'
@@ -64,6 +65,15 @@ function Screen({ s }) {
 }
 
 export default function Manual() {
+  // Marks the page for the print rules in app.css. body and #__next are sized
+  // and clipped for the app frame, and printing inherits that: the first
+  // attempt printed exactly one page — the part of the manual on screen — and
+  // dropped the other twenty-eight screens without a word.
+  useEffect(() => {
+    document.body.classList.add('kc-manual')
+    return () => document.body.classList.remove('kc-manual')
+  }, [])
+
   const frame = screensOf('frame')
   const staff = screensOf('staff')
   const pages = screensOf('public')

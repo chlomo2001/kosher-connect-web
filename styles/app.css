@@ -3909,9 +3909,13 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 .kc-man-toc a:hover { border-bottom-color: var(--text); }
 
 @media print {
-  /* A fixed-height scroll container prints ONE page — the viewport — and
-     silently drops the rest. Printing is the whole point of this page, so the
-     shell gives its height back to the paper. */
+  /* THE WHOLE DOCUMENT, not the part on screen. Three things clip it, and all
+     three have to go: html/body are height:100% for the app frame, body is
+     overflow:hidden, and #__next is a fixed-height flex row. Any one of them
+     left in place ends the printout at the fold — which is what shipped, and
+     what "only the visible screen prints" looked like from the outside. */
+  html, body.kc-manual { height: auto; overflow: visible; }
+  body.kc-manual #__next { display: block; height: auto; overflow: visible; }
   .kc-man-shell { height: auto; overflow: visible; }
   /* No buttons, no theme switch, no contents list full of dead links — and a
      screen must not be split across a page break between its name and its

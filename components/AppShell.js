@@ -30,6 +30,8 @@ const ICONS = {
   tasks: <I><polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></I>,
   settings: <I><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></I>,
   signout: <I><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></I>,
+  // An open book — the manual. Same 24x24 line grid as every other nav icon.
+  manual: <I><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></I>,
   // An open envelope: mail that arrived on its own, waiting to be dealt with.
   mail: <I><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" /><polyline points="22 7 12 13 2 7" /></I>,
   // A shield with a tick: confirming imported data is vouching for it.
@@ -169,6 +171,17 @@ export default function AppShell({ initialTab = 'dashboard' }) {
               <span className="nav-icon">{icon}</span> {label}
             </a>
           ))}
+
+          {/* The manual, in the menu because the owner asked for it there
+              (18 Aug) — it was reachable only from inside the ❓ panel and from
+              the palette, both of which you have to know about first. Its own
+              group: it is not a destination in the app and not a converter, it
+              is the book about all of them. New tab, because it is read
+              ALONGSIDE the work rather than instead of it. */}
+          <div className="nav-group-label">Help</div>
+          <a className="nav-link" href="/manual" target="_blank" rel="noopener">
+            <span className="nav-icon">{ICONS.manual}</span> The manual
+          </a>
         </div>
 
         {/* The footer is now only who you are and how to leave. */}

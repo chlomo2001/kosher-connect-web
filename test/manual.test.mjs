@@ -235,6 +235,31 @@ test('every entry says something true even while it is a draft', () => {
 })
 
 // ── The printed copy ──────────────────────────────────────────────────────
+test('the manual prints as a whole document, not as one page', () => {
+  // Three things clip a printout of this page and all three have to be undone:
+  // html/body are height:100% for the app frame, body is overflow:hidden, and
+  // #__next is a fixed-height flex row. Miss any one and the print stops at the
+  // fold — which is exactly what shipped on 18 Aug, and what "only the visible
+  // screen prints" looked like from the outside.
+  const css = read('styles/app.css')
+  const block = css.slice(css.indexOf('/* ── /manual'))
+  const print = block.slice(block.indexOf('@media print'))
+  assert.match(print, /html, body\.kc-manual \{ height: auto; overflow: visible; \}/)
+  assert.match(print, /body\.kc-manual #__next \{ display: block; height: auto; overflow: visible; \}/)
+  assert.match(print, /\.kc-man-shell \{ height: auto; overflow: visible; \}/)
+  // …and the class those rules hang on has to actually be put on the body.
+  assert.match(read('pages/manual.js'), /classList\.add\('kc-manual'\)/,
+    'nothing adds the kc-manual class, so the print rules never apply')
+})
+
+test('the manual is reachable from the menu, not only from inside the help panel', () => {
+  const shell = read('components/AppShell.js')
+  assert.match(shell, /href="\/manual"/, 'the sidebar has no link to the manual')
+  assert.match(read('public/main.js'), /window\.open\('\/manual'/, 'the command palette has no way to the manual')
+  assert.match(read('public/main.js'), /href="\/manual"/, 'the help panel has no link to the manual')
+})
+
+
 test('docs/MANUAL.md is up to date', () => {
   assert.equal(read('docs/MANUAL.md'), manualMarkdown(),
     'docs/MANUAL.md has fallen behind lib/manual.mjs — run: node scripts/build-manual.mjs')
