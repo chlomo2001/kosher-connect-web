@@ -10146,32 +10146,24 @@ function setupTopbarButtons() {
     b.addEventListener('click', openPalette);
     btnNew.parentElement.insertBefore(b, btnNew);
   }
-  // The AI assistant gets its own visible button — a palette-only entry meant
-  // knowing Ctrl+K was the price of admission.
-  if (btnNew && !document.getElementById('btnAssistant')) {
-    const a = document.createElement('button');
-    a.id = 'btnAssistant';
-    a.className = 'btn btn-outline';
-    a.style.cssText = 'font-size:var(--fs-small);padding:8px 12px;margin-right:8px;';
-    a.title = 'Ask Kosher Connect — questions or actions, in plain words';
-    a.setAttribute('aria-label', 'Ask Kosher Connect');
-    a.innerHTML = '🤖<span class="kc-btn-label"> Ask</span>';
-    a.addEventListener('click', () => openAssistantModal());
-    btnNew.parentElement.insertBefore(a, document.getElementById('btnPalette'));
-  }
-  // "How do I…" — the curated walk-throughs. Its own button beside Ask,
-  // because someone who does not know how to do the job also does not know
-  // that the robot button is where you would ask.
+  // ONE help door (owner, 18 Aug 2026). The assistant used to have a button of
+  // its own beside this one, and two help buttons in a topbar that already
+  // carries five is a choice a person has to make before they can ask for
+  // help. The capability is not gone — it is a row inside the panel, plus
+  // Ctrl+K — and the nesting is the right way round: the curated guides answer
+  // "how do I do this job", which is the question the model must not answer,
+  // because the person asking it cannot tell a confident wrong answer from a
+  // right one.
   if (btnNew && !document.getElementById('btnHowTo')) {
     const h = document.createElement('button');
     h.id = 'btnHowTo';
     h.className = 'btn btn-outline';
     h.style.cssText = 'font-size:var(--fs-small);padding:8px 12px;margin-right:8px;';
-    h.title = 'How do I…? — step-by-step for any job in the shop';
-    h.setAttribute('aria-label', 'How do I');
-    h.innerHTML = '❓<span class="kc-btn-label"> How do I…</span>';
+    h.title = 'Help — step-by-step for any job, and questions about the shop';
+    h.setAttribute('aria-label', 'Help');
+    h.innerHTML = '❓<span class="kc-btn-label"> Help</span>';
     h.addEventListener('click', () => openHowToModal());
-    btnNew.parentElement.insertBefore(h, document.getElementById('btnAssistant'));
+    btnNew.parentElement.insertBefore(h, document.getElementById('btnPalette'));
   }
 }
 
@@ -17056,18 +17048,27 @@ const filterView = (tab, apply, reRender) => { apply(); goToTab(tab); if (reRend
 // counter reading a step that was corrected somewhere else.
 function openHowToModal(prefill = '') {
   showDynamicModal(`
-    <div class="modal-title">❓ How do I…?</div>
+    <div class="modal-title">❓ Help</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
       Every job in the shop, step by step. Ask in your own words — "someone brought a phone back",
       "the writing is too small".</div>
     <input class="form-input" id="howToSearch" placeholder="What do you want to do?" autocomplete="off"
       oninput="renderHowTo()" onkeydown="if(event.key==='Enter')renderHowTo()">
+    <!-- The other two kinds of help, ABOVE the list. Below it they sat under
+         twenty guides and were only ever seen by someone who had already
+         scrolled past the answer they came for. Different questions, and the
+         labels say which is which rather than leaving it to an emoji: these
+         steps are "how do I do this job", the assistant is "what do the
+         numbers say". Whatever has been typed is carried across, so a question
+         the guides missed does not have to be typed twice. -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 4px;">
+      <button class="btn btn-outline btn-sm" style="white-space:normal;text-align:left;"
+        onclick="closeDynamicModal();openAssistantModal(document.getElementById('howToSearch')?.value || '')">
+        🤖 Ask about the shop's numbers</button>
+      <a class="btn btn-outline btn-sm" href="/manual" target="_blank" rel="noopener">📖 The full manual</a>
+    </div>
     <div id="howToOut" style="margin-top:12px;"></div>
     <div class="modal-actions">
-      <!-- The guides answer the job in hand; the manual is the screen-by-screen
-           reference behind them, and the thing you can print for someone's
-           first Sunday. New tab on purpose: it is read ALONGSIDE the work. -->
-      <a class="btn btn-outline" href="/manual" target="_blank" rel="noopener">📖 The full manual</a>
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
     </div>
   `);
@@ -17086,7 +17087,7 @@ function renderHowTo() {
   const all = howToGuides();
   if (!all.length) {
     out.innerHTML = `<div class="empty-state"><div class="emoji">❓</div><p>The guides did not load.</p>
-      <small>Reload the page — and the 🤖 Ask button still works meanwhile.</small></div>`;
+      <small>Reload the page — and Ctrl+K → “Ask” still reaches the assistant meanwhile.</small></div>`;
     return;
   }
   const q = (document.getElementById('howToSearch')?.value || '').trim();
@@ -17103,7 +17104,7 @@ function renderHowTo() {
     // which is good at questions about DATA, and say which is which.
     out.innerHTML = `<div class="customer-dropdown-empty" style="padding:0 0 10px;">
         Nothing in the guides matches “${escHtml(q)}”.</div>
-      <button class="btn btn-outline" style="white-space:normal;text-align:left;"
+      <button class="btn btn-primary" style="white-space:normal;text-align:left;"
         onclick="closeDynamicModal();openAssistantModal('${escJs(q)}')">
         🤖 Ask the assistant instead</button>
       <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;">
@@ -17394,7 +17395,10 @@ const PALETTE_COMMANDS = [
   { icon: '📥', label: 'Import ELID accounts', sub: 'admin', admin: true, run: () => openElidImportModal() },
   { icon: '👥', label: 'Find duplicate customers', sub: 'admin', admin: true, run: () => openDupScanModal() },
   { icon: '🧠', label: 'AI plan my day (tasks)', sub: 'tasks', run: () => openTaskTriageModal() },
-  { icon: '🤖', label: 'Ask / do anything (AI assistant)', sub: 'AI', run: () => openAssistantModal() },
+  // The assistant's own door since 18 Aug, when its topbar button folded into
+  // the ❓ Help panel. Searchable by the words someone would actually type.
+  { icon: '🤖', label: 'Ask / do anything (AI assistant)', sub: 'AI',
+    keys: ['ask', 'assistant', 'ai', 'question', 'who owes', 'how much', 'robot'], run: () => openAssistantModal() },
   // ── Navigate ──
   // #49 — palette navigate entries read the same label map, so "Go to SIM
   // Plans" matches the sidebar and page title exactly (no more "Go to sim").
