@@ -2320,7 +2320,7 @@ function renderRentalsTab() {
           <button class="btn btn-outline btn-sm" style="color:var(--success);border-color:var(--success);" onclick="returnSelectedRentals()">📥 Mark returned</button>
           <button class="btn btn-outline btn-sm" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedRentals()">🗑 Delete selected</button>
           <button class="btn btn-outline btn-sm" id="rentalBulkSameCust" style="display:none;" onclick="selectSameCustomerRentals()"></button>
-          <button class="btn btn-outline btn-sm" onclick="clearRentalSel()">Clear selection</button>
+          <button class="btn btn-outline btn-sm" onclick="clearRentalSel()">Deselect all</button>
         </div>
         <div class="table-wrap kc-stack-sm">
           <table>
@@ -10804,7 +10804,7 @@ function renderSimsTab() {
     <div id="simBulkBar" style="display:none;margin:0 0 10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary);align-items:center;gap:10px;flex-wrap:wrap;">
       <strong id="simBulkCount" style="font-size:var(--fs-body);"></strong>
       <button class="btn btn-outline btn-sm" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedSims()">🗑 Delete selected</button>
-      <button class="btn btn-outline btn-sm" onclick="clearSimSel()">Clear selection</button>
+      <button class="btn btn-outline btn-sm" onclick="clearSimSel()">Deselect all</button>
     </div>
 
     <div class="table-wrap kc-stack-sm">
@@ -11937,7 +11937,7 @@ function tmQueueHtml() {
       <div class="tm-bulk" id="tmBulkBar" style="display:${tmSelected.size ? 'flex' : 'none'};">
         <strong id="tmBulkCount" style="font-size:var(--fs-body);">${tmSelected.size} selected</strong>
         <button class="btn btn-outline btn-sm" onclick="tmDismissSelected()">✕ Dismiss selected</button>
-        <button class="btn btn-outline btn-sm" onclick="tmSelected.clear();renderBookingsTab()">Clear selection</button>
+        <button class="btn btn-outline btn-sm" onclick="tmSelected.clear();renderBookingsTab()">Deselect all</button>
       </div>
       <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-small);color:var(--muted);padding:2px 0 6px;">
         <input type="checkbox" style="width:18px;height:18px;accent-color:var(--accent);"
@@ -12550,7 +12550,7 @@ function renderBookingsTab() {
     <div id="bkBulkBar" style="display:${bkSelected.size ? 'flex' : 'none'};margin:0 0 10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary);align-items:center;gap:10px;flex-wrap:wrap;">
       <strong id="bkBulkCount" style="font-size:var(--fs-body);">${bkSelected.size} booking${bkSelected.size === 1 ? '' : 's'} selected</strong>
       <button class="btn btn-outline btn-sm" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedBookings()">🗑 Delete selected</button>
-      <button class="btn btn-outline btn-sm" onclick="bkSelected.clear(); renderBookingsTab()">Clear selection</button>
+      <button class="btn btn-outline btn-sm" onclick="bkSelected.clear(); renderBookingsTab()">Deselect all</button>
     </div>
     <div class="table-card">
       <table>
@@ -18489,8 +18489,8 @@ function paintCarrierMail() {
       </div>
       <div class="cm-bulk" id="cmBulkBar" style="display:${cmSelected.size ? 'flex' : 'none'};">
         <strong id="cmBulkCount" style="font-size:var(--fs-body);">${cmSelected.size} selected</strong>
-        <button class="btn btn-outline btn-sm" onclick="cmDismissSelected()">✕ Clear selected</button>
-        <button class="btn btn-outline btn-sm" onclick="cmSelected.clear();paintCarrierMail()">Clear selection</button>
+        <button class="btn btn-outline btn-sm" onclick="cmDismissSelected()">✕ Dismiss selected</button>
+        <button class="btn btn-outline btn-sm" onclick="cmSelected.clear();paintCarrierMail()">Deselect all</button>
       </div>
       ${cmData.messages.length ? `<label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-small);color:var(--muted);padding:2px 0 6px;">
         <input type="checkbox" style="width:18px;height:18px;accent-color:var(--accent);"
@@ -18714,15 +18714,15 @@ async function cmDismissSelected() {
   const ids = [...cmSelected].filter(id => (cmData.messages || []).some(m => String(m.id) === id));
   if (!ids.length) return;
   if (!(await kcConfirm({
-    title: `Clear ${ids.length} message${ids.length === 1 ? '' : 's'}?`,
+    title: `Dismiss ${ids.length} message${ids.length === 1 ? '' : 's'}?`,
     body: 'They leave the queue unfiled. Nothing is deleted — every message stays under "Everything".',
-    okLabel: `Clear ${ids.length}`,
+    okLabel: `Dismiss ${ids.length}`,
   }))) return;
   try {
     const res = await window.api.settleCarrierMail({ ids, op: 'resolve' });
     if (!res || !res.success) throw new Error(res?.error || 'failed');
-    toast(`${res.resolved || ids.length} cleared.`, 'success');
-  } catch { toast('Couldn’t clear those — try again.', 'error'); return; }
+    toast(`${res.resolved || ids.length} dismissed.`, 'success');
+  } catch { toast('Couldn’t dismiss those — try again.', 'error'); return; }
   cmSelected.clear();
   renderCarrierMailTab();
 }
@@ -19794,7 +19794,7 @@ async function renderVirtualTab() {
     <div id="vnBulkBar" style="display:${vnSelected.size ? 'flex' : 'none'};margin:0 0 10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary);align-items:center;gap:10px;flex-wrap:wrap;">
       <strong id="vnBulkCount" style="font-size:var(--fs-body);">${vnSelected.size} number${vnSelected.size === 1 ? '' : 's'} selected</strong>
       <button class="btn btn-outline btn-sm" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedVNs()">🗑 Delete selected</button>
-      <button class="btn btn-outline btn-sm" onclick="vnSelected.clear(); renderVirtualTab()">Clear selection</button>
+      <button class="btn btn-outline btn-sm" onclick="vnSelected.clear(); renderVirtualTab()">Deselect all</button>
     </div>
     <div class="table-card">
       <table>
