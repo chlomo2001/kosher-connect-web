@@ -1172,7 +1172,8 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
      the gap and the date ends up almost touching the subject. Sizing the track
      to the date is the same answer as everywhere else tonight — and it follows
      Simple Mode for free, which 120px never could. */
-  display: grid; grid-template-columns: max-content minmax(0, 1fr) auto; gap: 14px;
+  /* tick · when it arrived · the message · what you can do with it */
+  display: grid; grid-template-columns: auto max-content minmax(0, 1fr) auto; gap: 14px;
   padding: 12px 0; border-top: 1px solid var(--border); align-items: start;
 }
 .cm-row:first-child { border-top: 0; }
@@ -1189,7 +1190,9 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .cm-actions { display: flex; gap: 8px; align-items: center; }
 
 @media (max-width: 560px) {
-  .cm-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .cm-row { grid-template-columns: auto minmax(0, 1fr); gap: 6px 10px; }
+  /* Under 560px the tick keeps its column and everything else stacks beside it. */
+  .cm-when, .cm-body, .cm-actions { grid-column: 2; }
   .cm-actions { justify-content: flex-start; }
 }
 
@@ -1216,7 +1219,8 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 }
 .tm-list { display: flex; flex-direction: column; }
 .tm-row {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px;
+  /* tick · the ticket · what you can do with it */
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px;
   padding: 12px 0; border-top: 1px solid var(--border); align-items: start;
 }
 .tm-row:first-child { border-top: 0; }
@@ -1235,6 +1239,23 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .tm-why { font-size: var(--fs-micro); color: var(--muted); }
 .tm-gap { color: var(--danger-ink); font-size: var(--fs-small); }
 .tm-missing { font-size: var(--fs-micro); color: var(--danger-ink); margin-top: 4px; }
+/* "That reference is already booked." Green, because it is good news — the work
+   is done — rather than a warning about something that went wrong. */
+.tm-booked {
+  font-size: var(--fs-small); color: var(--success-ink); margin-top: 4px;
+}
+.tm-booked a { color: inherit; font-weight: 600; }
+
+/* Ticking off a queue. The checkbox is a column of its own so the rows line up
+   down the left edge and a run of them can be swept with the eye — the case
+   this exists for is thirty airline circulars that are all junk. */
+.tm-pick-col { display: flex; align-items: flex-start; padding-top: 2px; }
+.tm-pick-col input { width: 18px; height: 18px; accent-color: var(--accent); }
+.tm-bulk, .cm-bulk {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 0 0 10px; padding: 8px 12px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--bg-secondary);
+}
 .tm-actions { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
 .tm-cust .btn { max-width: 100%; white-space: normal; text-align: start; }
 /* Said on the form itself, because a form that filled itself in has to admit
@@ -1253,7 +1274,9 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 }
 
 @media (max-width: 560px) {
-  .tm-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .tm-row { grid-template-columns: auto minmax(0, 1fr); gap: 8px 10px; }
+  /* On a phone the actions drop under the ticket, past the tick column. */
+  .tm-actions { grid-column: 1 / -1; }
   .tm-actions { flex-direction: row; flex-wrap: wrap; }
   .tm-when { margin-left: 0; }
 }

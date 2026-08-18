@@ -8,6 +8,7 @@
 //   POST { id, customerId }              → it's for this customer (no booking yet)
 //   POST { id, op:'booked', bookingId }  → the booking has been made from it
 //   POST { id, op:'dismiss', reason }    → not ours / already entered / junk
+//   POST { ids:[…], op:'dismiss', reason } → the same, for a morning of circulars
 //
 // The booking itself is NOT made here. It goes through /api/bookings like every
 // other booking, so the wallet charge, the idempotency token, the passenger
@@ -130,9 +131,35 @@ async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { id, op, customerId, bookingId, reason } = req.body || {}
-    if (!id) return res.status(400).json({ success: false, error: 'A ticket id is required.' })
+    const { id, ids, op, customerId, bookingId, reason } = req.body || {}
     const now = new Date().toISOString()
+
+    // ── dismiss MANY ──────────────────────────────────────────────────────
+    // A morning of airline circulars is one decision made thirty times, and a
+    // queue that takes thirty presses to clear is a queue nobody clears. One
+    // statement, so half of them cannot be dismissed while the other half fail.
+    //
+    // Only dismiss takes a list. Confirming a booking charges a customer and
+    // answers a document gate; that is a decision per ticket, and offering it
+    // in bulk would be a way to make thirty of them without reading one.
+    if (op === 'dismiss' && Array.isArray(ids)) {
+      const clean = [...new Set(ids.map((v) => String(v).trim()))].filter((v) => /^\d{1,18}$/.test(v))
+      if (!clean.length) return res.status(400).json({ success: false, error: 'No ticket ids to dismiss.' })
+      // A ceiling, not a limit anyone will meet: the pending queue is capped at
+      // 40 on the read side, and an unbounded IN list is a way to ask the
+      // database for something silly.
+      if (clean.length > 200) return res.status(400).json({ success: false, error: 'Too many at once.' })
+      const rows = await db.update('ticket_mail', `id=in.(${clean.map(enc).join(',')})&resolved_at=is.null`, {
+        resolved_at: now,
+        dismissed_reason: String(reason || '').slice(0, 200) || 'Not needed',
+      })
+      // Tasks are closed one by one because each ticket raised its own; a
+      // failure here must not undo the dismissals, which have already happened.
+      for (const r of rows) { try { await closeTicketTask(r.id) } catch { /* the queue is clear either way */ } }
+      return res.json({ success: true, dismissed: rows.length })
+    }
+
+    if (!id) return res.status(400).json({ success: false, error: 'A ticket id is required.' })
 
     if (op === 'dismiss') {
       const rows = await db.update('ticket_mail', `id=eq.${enc(id)}`, {

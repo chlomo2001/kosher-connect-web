@@ -11854,6 +11854,70 @@ async function tmRefresh() {
   else toast(`${after - before} new ticket${after - before === 1 ? '' : 's'}.`, 'success');
 }
 
+// ── Ticking off a queue ──────────────────────────────────────────────────
+// Thirty airline circulars arrive, twenty-eight of them are nothing to do with
+// a journey, and dismissing them one at a time is why a queue stops being read
+// at all. Owner, 18 Aug: "a checkbox list should be applied … to tick a lot and
+// dismiss multiple at once."
+//
+// Only DISMISS is offered in bulk, deliberately. Confirming a booking is a
+// decision per ticket — money moves, a customer is charged, a gate is answered
+// — and a bulk confirm would be a way to do thirty of those without reading
+// one. Throwing away junk is the only action that is genuinely the same thirty
+// times over.
+let tmSelected = new Set();
+
+function tmToggleSel(id, on) {
+  if (on) tmSelected.add(String(id)); else tmSelected.delete(String(id));
+  tmPaintBulk();
+}
+function tmSelectAll(on) {
+  (tmData?.tickets || []).forEach(t => on ? tmSelected.add(String(t.id)) : tmSelected.delete(String(t.id)));
+  if (currentTab === 'bookings') renderBookingsTab();
+}
+function tmPaintBulk() {
+  const bar = document.getElementById('tmBulkBar');
+  if (!bar) return;
+  bar.style.display = tmSelected.size ? 'flex' : 'none';
+  const n = document.getElementById('tmBulkCount');
+  if (n) n.textContent = `${tmSelected.size} selected`;
+}
+async function tmDismissSelected() {
+  const ids = [...tmSelected].filter(id => (tmData?.tickets || []).some(t => String(t.id) === id));
+  if (!ids.length) return;
+  if (!(await kcConfirm({
+    title: `Dismiss ${ids.length} ticket email${ids.length === 1 ? '' : 's'}?`,
+    body: 'They leave the queue and no booking is made. Nothing is deleted — a dismissed email is still on the record.',
+    okLabel: `Dismiss ${ids.length}`,
+  }))) return;
+  try {
+    const res = await window.api.settleTicketMail({ ids, op: 'dismiss', reason: 'Dismissed in bulk at the counter' });
+    if (!res || !res.success) throw new Error(res?.error || 'failed');
+    toast(`${res.dismissed || ids.length} dismissed.`, 'success');
+  } catch { toast('Couldn’t dismiss those — try again.', 'error'); return; }
+  tmSelected.clear();
+  await tmEnsure(true);
+  if (currentTab === 'bookings') renderBookingsTab();
+}
+
+// Mirrors bookingForReference/refKey in lib/ticketMail.mjs — main.js is a
+// classic script and cannot import. test/ticketMailMirror.test.mjs holds the
+// two copies to the same answers.
+function refKey(ref) {
+  return String(ref || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+function bookingForReference(reference, list) {
+  const key = refKey(reference);
+  if (key.length < 5) return null;
+  for (const b of (list || [])) {
+    if (!b || b.status === 'Cancelled') continue;
+    const refs = [b.bookingReference, b.booking_reference,
+      ...((b.legs || []).map(l => l && (l.bookingReference || l.booking_reference)))];
+    if (refs.some(r => r && refKey(r) === key)) return b;
+  }
+  return null;
+}
+
 function tmQueueHtml() {
   if (!tmData || !tmData.tickets || !tmData.tickets.length) return '';
   return `
@@ -11870,6 +11934,16 @@ function tmQueueHtml() {
         <button class="btn btn-outline btn-sm" id="tmRefresh" onclick="tmRefresh()"
           title="Check for tickets that have just arrived">↻ Check now</button>
       </div>
+      <div class="tm-bulk" id="tmBulkBar" style="display:${tmSelected.size ? 'flex' : 'none'};">
+        <strong id="tmBulkCount" style="font-size:var(--fs-body);">${tmSelected.size} selected</strong>
+        <button class="btn btn-outline btn-sm" onclick="tmDismissSelected()">✕ Dismiss selected</button>
+        <button class="btn btn-outline btn-sm" onclick="tmSelected.clear();renderBookingsTab()">Clear selection</button>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-small);color:var(--muted);padding:2px 0 6px;">
+        <input type="checkbox" style="width:18px;height:18px;accent-color:var(--accent);"
+          ${tmData.tickets.length && tmData.tickets.every(t => tmSelected.has(String(t.id))) ? 'checked' : ''}
+          onclick="tmSelectAll(this.checked)"> Select all ${tmData.tickets.length}
+      </label>
       <div class="tm-list">${tmData.tickets.map(tmCardHtml).join('')}</div>
     </div>`;
 }
@@ -11892,8 +11966,19 @@ function tmCardHtml(t) {
              title="${escHtml(c.why || '')}">${escName(c.name)}</button>`).join('')}`
       : '<span class="tm-why">No customer matched — pick one when you book it.</span>';
 
+  // Already on the books? Then this email is a copy — the airline resending it,
+  // or the customer forwarding what the shop booked last week. Offering to
+  // "confirm booking details" here opens a NEW booking form, and pressing it
+  // charges the same journey twice.
+  const already = bookingForReference(t.reference, bookings);
+
   return `
     <div class="tm-row">
+      <div class="tm-pick-col">
+        <input type="checkbox" aria-label="Select this ticket email"
+          ${tmSelected.has(String(t.id)) ? 'checked' : ''}
+          onclick="tmToggleSel('${escJs(String(t.id))}', this.checked)">
+      </div>
       <div class="tm-main">
         <div class="tm-head">
           <strong>${escHtml(t.airline || 'Airline')}</strong>
@@ -11913,6 +11998,11 @@ function tmCardHtml(t) {
           : '<span class="tm-gap">no passenger name in the mail</span>'}</div>
         ${t.returnDate ? `<div class="tm-pax">↩ Returns ${escHtml(fmtDate(t.returnDate))} — carried onto the booking.</div>` : ''}
         <div class="tm-cust">${who}</div>
+        ${already ? `<div class="tm-booked">✓ <strong>${escHtml(t.reference)}</strong> is already booked —
+            <a href="#" onclick="event.preventDefault();tmOpenBooking('${escJs(String(already.id))}')">${escName(already.customerName || 'this booking')}${
+              already.route ? ' · ' + escHtml(already.route) : ''}${
+              already.travelDate ? ' · ' + escHtml(fmtDate(already.travelDate)) : ''}</a>.
+            Nothing to book: say it is this one, or add it as another flight on it.</div>` : ''}
         ${t.missing.length ? `<div class="tm-missing">The red parts didn’t parse — fill them in on the form.</div>` : ''}
       </div>
       <div class="tm-actions">
@@ -11923,6 +12013,17 @@ function tmCardHtml(t) {
           ? `<button class="btn btn-outline btn-sm" onclick="tmBook(${t.id})">Confirm booking details</button>
              <button class="btn btn-outline btn-sm" onclick="tmShowMail(${t.id})">Read the email</button>
              <button class="btn btn-primary btn-sm" onclick="tmDismiss(${t.id})">Dealt with</button>`
+          : already
+          // The reference is live on a booking already. The two honest answers
+          // are "this email IS that booking" and "this is another flight on
+          // it" — neither of which is a new booking, so that button is gone
+          // rather than merely demoted.
+          ? `<button class="btn btn-primary btn-sm" onclick="tmIsThisBooking(${t.id}, '${escJs(String(already.id))}')"
+               title="File this email on the booking it belongs to">✓ It's this booking</button>
+             <button class="btn btn-outline btn-sm" onclick="tmAttachTo(${t.id}, '${escJs(String(already.id))}')"
+               title="Another flight on the same booking">➕ Add as another flight</button>
+             <button class="btn btn-outline btn-sm" onclick="tmShowMail(${t.id})">Read the email</button>
+             <button class="btn btn-outline btn-sm" onclick="tmDismiss(${t.id})">Dismiss</button>`
           : `<button class="btn btn-primary btn-sm" onclick="tmBook(${t.id})">✈️ Confirm booking details</button>
              ${t.passengers.length > 1 ? `<button class="btn btn-outline btn-sm" onclick="tmSplit(${t.id})" title="Each passenger pays their own">👥 Split across payers</button>` : ''}
              <button class="btn btn-outline btn-sm" onclick="tmAttach(${t.id})" title="Another leg of a journey already booked">➕ Add to a booking</button>
@@ -11937,6 +12038,13 @@ function tmCardHtml(t) {
 function tmBook(id) {
   const t = (tmData?.tickets || []).find(x => String(x.id) === String(id));
   if (!t) return;
+  // Belt to the card's braces: this is also reachable from the split flow and
+  // from a stale card rendered before the booking was made.
+  const already = bookingForReference(t.reference, bookings);
+  if (already) {
+    toast(`${t.reference} is already booked — file this email on it instead of booking it again.`, 'error');
+    return;
+  }
   if (t.kind === 'cancellation') {
     toast('That email is a cancellation — check what it refers to before booking anything.', 'info');
   }
@@ -12255,6 +12363,25 @@ async function tmAttachTo(id, bookingId) {
     await tmEnsure(true);
     if (currentTab === 'bookings') renderBookingsTab();
   } catch (e) { toast('Couldn’t add that flight — try again.', 'error'); }
+}
+
+// "It's this booking" — the email is the confirmation for something already on
+// the books, so record the join and let it leave the queue. No money moves and
+// no booking is created; this is filing, not booking.
+async function tmIsThisBooking(id, bookingId) {
+  try {
+    const res = await window.api.settleTicketMail({ id, op: 'booked', bookingId });
+    if (!res || !res.success) throw new Error(res?.error || 'failed');
+    toast('✓ Filed on the booking it belongs to.', 'success');
+    await tmEnsure(true);
+    if (currentTab === 'bookings') renderBookingsTab();
+  } catch { toast('Couldn’t file that — try again.', 'error'); }
+}
+
+// The booking the reference is already on, opened for a look before deciding.
+function tmOpenBooking(bookingId) {
+  const b = bookings.find(x => String(x.id) === String(bookingId));
+  if (b) openEditBookingModal(b.id); else toast('That booking is no longer in the list.', 'error');
 }
 
 // Called from saveNewBooking: the email became this booking.
@@ -18339,6 +18466,16 @@ function paintCarrierMail() {
             title="Check for mail that has just arrived">↻ Check now</button>
         </div>
       </div>
+      <div class="cm-bulk" id="cmBulkBar" style="display:${cmSelected.size ? 'flex' : 'none'};">
+        <strong id="cmBulkCount" style="font-size:var(--fs-body);">${cmSelected.size} selected</strong>
+        <button class="btn btn-outline btn-sm" onclick="cmDismissSelected()">✕ Clear selected</button>
+        <button class="btn btn-outline btn-sm" onclick="cmSelected.clear();paintCarrierMail()">Clear selection</button>
+      </div>
+      ${cmData.messages.length ? `<label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-small);color:var(--muted);padding:2px 0 6px;">
+        <input type="checkbox" style="width:18px;height:18px;accent-color:var(--accent);"
+          ${cmData.messages.every(m => cmSelected.has(String(m.id))) ? 'checked' : ''}
+          onclick="cmSelectAll(this.checked)"> Select all ${cmData.messages.length}
+      </label>` : ''}
       <div class="cm-list">${rows}</div>
     </div>`;
 }
@@ -18358,6 +18495,11 @@ function cmRowHtml(m) {
 
   return `
     <div class="cm-row">
+      <div class="tm-pick-col">
+        <input type="checkbox" aria-label="Select this message"
+          ${cmSelected.has(String(m.id)) ? 'checked' : ''}
+          onclick="cmToggleSel('${escJs(String(m.id))}', this.checked)">
+      </div>
       <div class="cm-when">${escHtml(when)}${m.carrier ? `<div class="cm-carrier">${escHtml(m.carrier)}</div>` : ''}</div>
       <div class="cm-body">
         <div class="cm-subject">${escHtml(m.subject || '(no subject)')}</div>
@@ -18422,6 +18564,40 @@ async function cmPairAfterSimSaved(simLegacyId) {
     const res = await window.api.settleCarrierMail({ id: messageId, simLegacyId });
     if (res && res.success) toast('✓ Message filed on the new SIM');
   } catch { /* the SIM is saved; the message simply stays in the queue */ }
+}
+
+// Same tick-and-clear as the ticket queue, and for the same morning: a run of
+// identical carrier circulars that all need the same nothing done to them.
+// Pairing stays one at a time — which SIM a message belongs to is a different
+// answer on every row, and that is the work this screen exists for.
+let cmSelected = new Set();
+
+function cmToggleSel(id, on) {
+  if (on) cmSelected.add(String(id)); else cmSelected.delete(String(id));
+  const bar = document.getElementById('cmBulkBar');
+  if (bar) bar.style.display = cmSelected.size ? 'flex' : 'none';
+  const n = document.getElementById('cmBulkCount');
+  if (n) n.textContent = `${cmSelected.size} selected`;
+}
+function cmSelectAll(on) {
+  (cmData.messages || []).forEach(m => on ? cmSelected.add(String(m.id)) : cmSelected.delete(String(m.id)));
+  paintCarrierMail();
+}
+async function cmDismissSelected() {
+  const ids = [...cmSelected].filter(id => (cmData.messages || []).some(m => String(m.id) === id));
+  if (!ids.length) return;
+  if (!(await kcConfirm({
+    title: `Clear ${ids.length} message${ids.length === 1 ? '' : 's'}?`,
+    body: 'They leave the queue unfiled. Nothing is deleted — every message stays under "Everything".',
+    okLabel: `Clear ${ids.length}`,
+  }))) return;
+  try {
+    const res = await window.api.settleCarrierMail({ ids, op: 'resolve' });
+    if (!res || !res.success) throw new Error(res?.error || 'failed');
+    toast(`${res.resolved || ids.length} cleared.`, 'success');
+  } catch { toast('Couldn’t clear those — try again.', 'error'); return; }
+  cmSelected.clear();
+  renderCarrierMailTab();
 }
 
 async function cmResolve(id) {

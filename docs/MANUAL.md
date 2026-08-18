@@ -275,6 +275,8 @@ Flights booked for customers: the ticket and what it cost, who is travelling, wh
 - **Filter and sort** — Upcoming travel is the working list — and a customer already abroad stays on it until they land back, because they are still away.
 - **The list** — Customer, route, airline and reference, the travel date with a mark for a return leg, price, fee, status, and where the check-in has got to.
 - **✉️ Tickets from email** — Airline confirmations that have arrived, read and waiting to be confirmed into bookings. ↻ Check now re-reads them on the spot, for the customer standing at the counter who has just forwarded theirs. The timestamp is when the email arrived, in the shop's own time.
+- **Tick the ones that are nothing** — Every email in the queue has a tick box, with select-all above them. Ticking several offers to dismiss them together — for the morning when an airline sends thirty circulars and twenty-eight are nothing to do with a journey. Only dismissing works in bulk: confirming a booking charges somebody, so it stays one at a time.
+- **Already booked** — When the reference on an email is already live on a booking, the card says so and does not offer to book it again. The two answers it offers instead are that this email IS that booking, or that it is another flight on it.
 - **🛫 Online check-in** — Records who is doing the check-in and when it has been done, so a flight nobody has checked in for is visible before it is too late to matter.
 - **👥 Passengers** — Who is actually flying, with the details the airline needs. Passport details are the customer's private data — the app holds what it must and shows it nowhere it is not needed.
 - **⏰ Remind me** — A reminder for you about this booking, on your own task list.
@@ -295,6 +297,7 @@ Flights booked for customers: the ticket and what it cost, who is travelling, wh
 
 - **The booking will not save because of the passport** — Read the reason on the panel. Either the passport genuinely does not last the trip — a new one is needed before flying — or the app has the wrong expiry and the customer's record needs correcting first.
 - **A booking says a document needs verifying** — It is asking a person to look, because it cannot see the document itself. Check it, and record what you saw.
+- **The same confirmation has arrived twice** — The second card will say the reference is already booked and will not offer to book it again. File it on the booking it belongs to, or add it as another flight — never make a second booking, or the journey is charged twice.
 - **The upcoming list is missing someone who is away** — It should not be. Anyone still travelling belongs on it until the day they land back — if they are missing, the return date is probably missing too.
 - **The airline field has passenger names in it** — That came from an old import. Correct it on the booking; the airline field is what the check-in and the reference are read against.
 
@@ -517,6 +520,7 @@ Post arriving from the networks — bills, warnings, confirmations — matched t
 
 - **Needs a human** — The queue: messages the app could not confidently file. This is the whole job of the screen.
 - **↻ Check now** — Re-reads the mailbox without leaving the screen — for when somebody is standing there waiting for a message they know has been sent.
+- **Tick the ones that are nothing** — Each message has a tick box and there is a select-all above the list, so a run of identical circulars can be cleared in one press. Pairing a message to a SIM stays one at a time — that answer is different on every row.
 - **Filed on a SIM** — What has been matched, so the letter about a plan is on the plan when someone asks about it.
 - **Messages received** — Everything that has ever arrived, matched or not.
 - **Which SIM is this?** — The pairing question on an unmatched message, with the number it mentions. Answer it and the message files itself and stays filed.

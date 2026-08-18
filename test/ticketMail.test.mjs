@@ -12,7 +12,7 @@ import assert from 'node:assert/strict'
 import {
   looksLikeTicket, airlineOf, ticketKind, routeIn, routeLabel, referenceIn,
   datesIn, timesIn, priceIn, passengersIn, parseTicketMail, suggestCustomer,
-  ticketTaskTitle,
+  ticketTaskTitle, bookingForReference, refKey,
 } from '../lib/ticketMail.mjs'
 
 const TODAY = '2026-08-18'
@@ -296,4 +296,47 @@ test('the task title reads like something a person can act on', () => {
   const p = parseTicketMail({ ...WIZZ, today: TODAY })
   // "Sept", not "Sep" — that is what en-GB renders, and the app is British.
   assert.equal(ticketTaskTitle(p), 'Confirm ticket: Shmuel Bleier — LTN → TLV, 12 Sept, £428.60')
+})
+
+// ── a reference already on the books ─────────────────────────────────────────
+// The same confirmation arrives more than once: the airline resends it, the
+// customer forwards what the shop booked last week, a change notice repeats the
+// original PNR. Every copy used to offer "Confirm booking details", which opens
+// a NEW booking — press it and the journey is on the books twice, charged twice.
+test('a live booking is found by its reference, however the airline printed it', () => {
+  const bookings = [{ id: 7, bookingReference: 'BNKYRW', customerName: 'A', status: 'Booked' }]
+  for (const printed of ['BNKYRW', 'bnkyrw', 'bnk-yrw', ' BNK YRW ', 'Bnk/Yrw']) {
+    assert.equal(bookingForReference(printed, bookings)?.id, 7, `"${printed}" did not match`)
+  }
+})
+
+test('a leg of a journey counts — the second airline is not a second booking', () => {
+  // A self-transfer trip is several confirmations, one per airline, all on one
+  // booking. The later ones must not each offer to become a booking of their own.
+  const bookings = [{ id: 9, bookingReference: 'AAAAAA', status: 'Booked',
+    legs: [{ bookingReference: 'ZZ9ZZ9' }, { booking_reference: 'QQ7QQ7' }] }]
+  assert.equal(bookingForReference('ZZ9ZZ9', bookings)?.id, 9)
+  assert.equal(bookingForReference('qq7qq7', bookings)?.id, 9)
+})
+
+test('a cancelled booking does not hold its reference', () => {
+  // The reference is spent: a rebooking can legitimately reuse it, and treating
+  // it as taken would leave the counter unable to enter the replacement.
+  const bookings = [{ id: 3, bookingReference: 'XU2WWH', status: 'Cancelled' }]
+  assert.equal(bookingForReference('XU2WWH', bookings), null)
+})
+
+test('a short or empty reference matches nothing', () => {
+  // A mis-parsed "BA" or "OK" would otherwise match half the register, and the
+  // cost of a false match is a real booking hidden behind "already booked".
+  const bookings = [{ id: 1, bookingReference: 'BA', status: 'Booked' }, { id: 2, bookingReference: '', status: 'Booked' }]
+  for (const ref of ['BA', 'OK', '', null, undefined, '   ', '--']) {
+    assert.equal(bookingForReference(ref, bookings), null, `"${ref}" should not match`)
+  }
+})
+
+test('no bookings, or rubbish in the list, is a miss and not a crash', () => {
+  assert.equal(bookingForReference('BNKYRW', []), null)
+  assert.equal(bookingForReference('BNKYRW', undefined), null)
+  assert.equal(bookingForReference('BNKYRW', [null, {}, { legs: null }]), null)
 })

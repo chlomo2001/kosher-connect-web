@@ -138,9 +138,23 @@ async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { id, simId, op } = req.body || {}
-    if (!id) return res.status(400).json({ success: false, error: 'A message id is required.' })
+    const { id, ids, simId, op } = req.body || {}
     const now = new Date().toISOString()
+
+    // Clearing a run of them at once — the same reasoning as the ticket queue:
+    // a pile of identical carrier circulars is one decision made twenty times,
+    // and a queue that costs twenty presses to clear stops being cleared. One
+    // statement, so they cannot half-succeed. PAIRING still goes one at a time:
+    // which SIM a message belongs to is a different answer every row.
+    if (op === 'resolve' && Array.isArray(ids)) {
+      const clean = [...new Set(ids.map((v) => String(v).trim()))].filter((v) => /^\d{1,18}$/.test(v))
+      if (!clean.length) return res.status(400).json({ success: false, error: 'No message ids to clear.' })
+      if (clean.length > 200) return res.status(400).json({ success: false, error: 'Too many at once.' })
+      const rows = await db.update('sim_mail', `id=in.(${clean.map(enc).join(',')})&resolved_at=is.null`, { resolved_at: now })
+      return res.json({ success: true, resolved: rows.length })
+    }
+
+    if (!id) return res.status(400).json({ success: false, error: 'A message id is required.' })
 
     if (op === 'resolve') {
       const rows = await db.update('sim_mail', `id=eq.${enc(id)}`, { resolved_at: now })
