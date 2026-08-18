@@ -84,6 +84,13 @@ run "staff app · Simple Mode reaches every word" \
 run "staff app · every control says what it is" \
   bash -eo pipefail -c 'node ops/harness/names.mjs | tail -1'
 
+# names.mjs asks whether a control HAS a label. This asks whether you can read
+# it: a placeholder or a selected option cut off by its own box. Both sizes,
+# because every one of the first seven was clean at standard and broken at
+# largest — pixel widths against text that grows 30%.
+run "staff app · no control hides its own label" \
+  bash -eo pipefail -c 'for f in standard largest; do node ops/harness/clipped.mjs --fs $f | tail -1; done'
+
 run "staff app · modals open + geometry, 390px both themes" \
   bash -eo pipefail -c 'for t in light dark; do node ops/harness/modals.mjs --width 390 --theme $t | tail -1; done'
 

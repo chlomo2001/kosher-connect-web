@@ -2208,13 +2208,13 @@ function renderRentalsTab() {
       <button class="btn btn-outline" onclick="openPoolsModal()">📶 Pools</button>
       <button class="btn ${rentalView === 'calendar' ? 'btn-primary' : 'btn-outline'}"
         onclick="rentalView = rentalView === 'calendar' ? 'list' : 'calendar'; renderRentalsTab();">📅 Availability</button>
-      <input class="search-box" style="width:280px;" type="text" id="rentalScan"
+      <input class="search-box" type="text" id="rentalScan"
         inputmode="numeric" autocomplete="off"
         placeholder="📷 Scan IMEI — out or back"
         title="Scan the handset: if it's out it comes back, if it's free it goes out"
         aria-label="Scan a handset IMEI to check it out or return it"
         onkeydown="if(event.key==='Enter'){event.preventDefault();kcRentalScanEnter()}">
-      <input class="search-box" style="width:280px;" type="text" id="rentalSearch"
+      <input class="search-box" type="text" id="rentalSearch"
         placeholder="Search rentals + inventory…"
         value="${rentalSearchTerm}"
         oninput="rentalSearchTerm=this.value; renderRentalRows(); renderPhoneRows(); renderAvailabilityCalendar();">
@@ -6368,8 +6368,7 @@ function renderCustomersTab() {
     <div class="section-header">
       <div class="section-title">Customer List</div>
       <div style="display:flex;gap:8px;align-items:center;">
-        <select class="form-input" style="width:180px;padding:6px 10px;font-size:var(--fs-body);min-height:0;"
-          onchange="customerFilter=this.value; renderTableRows()">
+        <select class="form-input kc-fs-sel" onchange="customerFilter=this.value; renderTableRows()">
           <option value="all" ${customerFilter==='all'?'selected':''}>Filter: everyone</option>
           <option value="rental" ${customerFilter==='rental'?'selected':''}>📱 Active rental</option>
           <option value="flight" ${customerFilter==='flight'?'selected':''}>✈️ Upcoming flight</option>
@@ -6380,8 +6379,7 @@ function renderCustomersTab() {
           <option value="passport" ${customerFilter==='passport'?'selected':''}>🛂 Passport on file</option>
           <option value="unreachable" ${customerFilter==='unreachable'?'selected':''}>⚠️ No way to reach them</option>
         </select>
-        <select class="form-input" style="width:170px;padding:6px 10px;font-size:var(--fs-body);min-height:0;"
-          onchange="customerSort=this.value; renderTableRows()">
+        <select class="form-input kc-fs-sel" onchange="customerSort=this.value; renderTableRows()">
           <option value="surname" ${customerSort==='surname'?'selected':''}>Sort: Surname A–Z</option>
           <option value="surname_desc" ${customerSort==='surname_desc'?'selected':''}>Surname Z–A</option>
           <option value="name" ${customerSort==='name'?'selected':''}>Name A–Z</option>
@@ -8192,7 +8190,11 @@ function providerDatalist(id = 'kcProviderList') {
 const KC_PICKERS = {};
 
 function customerPicker(valueId, {
-  selected = '', special = null, placeholder = 'Type a name or number…',
+  // "Type a name or number…" needed 22 characters of room, and the picker is
+  // deliberately narrow in some rows (a Kol Torah line is 170px because the
+  // line is) — so at the largest text size it was cut to "Type a name or n…".
+  // Fewer words, same instruction, fits everywhere it is used.
+  selected = '', special = null, placeholder = 'Name or number…',
   onPick = '', style = '', label = '',
 } = {}) {
   KC_PICKERS[valueId] = { special, onPick };
@@ -10701,11 +10703,11 @@ function renderSimsTab() {
     </div>
 
     <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:center;">
-      <input class="search-box" style="width:260px;" type="text" id="simSearch"
+      <input class="search-box" type="text" id="simSearch"
         placeholder="Search customer, number, provider…"
         value="${escHtml(simSearchTerm)}"
         oninput="simSearchTerm=this.value; renderSimRows()">
-      <select class="form-input" style="width:160px;" onchange="simFilterPay=this.value; renderSimRows()">
+      <select class="form-input kc-fs-sel" onchange="simFilterPay=this.value; renderSimRows()">
         <option value="all" ${simFilterPay==='all'?'selected':''}>Who pays: all</option>
         <option value="through-me" ${simFilterPay==='through-me'?'selected':''}>🔄 I pay / through me</option>
         <option value="direct" ${simFilterPay==='direct'?'selected':''}>👤 Customer pays direct</option>

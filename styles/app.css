@@ -387,7 +387,13 @@
   border-radius: var(--radius);
   padding: 8px 16px 8px 38px;
   font-family: inherit; font-size: var(--fs-ui); font-weight: 400;
-  color: var(--text); width: 280px; outline: none;
+  /* ch, not px: a search box has to hold its own placeholder, and the
+     placeholder is the only thing on the screen saying what is searchable.
+     At the largest text size a 280px box hid 36 characters of "Search
+     customer, number, provider…" — Simple Mode exists for the people least
+     able to guess the rest. 33ch is the longest placeholder; the 54px is the
+     magnifier's own padding, which box-sizing counts inside the width. */
+  color: var(--text); width: min(calc(33ch + 54px), 100%); outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   user-select: text;
 }
