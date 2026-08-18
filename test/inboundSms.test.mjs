@@ -58,7 +58,7 @@ test('no match, and an ambiguous match, both return null rather than a guess', (
 test('the log row keeps the customer on the OTHER-party column, either direction', () => {
   const row = inboundLogRow({
     from: '+447911123456', to: '+441615311386', body: 'Yes that is fine, thanks',
-    messageSid: 'SM123', customerId: '1',
+    messageSid: 'SM123', customerId: '6e19b0a3-6f24-4b7e-9c1d-2a8f5b7c4d3e',
   })
   assert.equal(row.kind, 'sms_in')
   assert.equal(row.to_email, '+447911123456')   // the customer, as on outbound rows
@@ -66,7 +66,18 @@ test('the log row keeps the customer on the OTHER-party column, either direction
   assert.equal(row.subject, 'Yes that is fine, thanks')
   assert.equal(row.status, 'received')
   assert.equal(row.provider, 'twilio')
-  assert.equal(row.customer_id, '1')
+  assert.equal(row.customer_id, '6e19b0a3-6f24-4b7e-9c1d-2a8f5b7c4d3e')
+})
+
+test('a wrong-shaped customer id is dropped, never allowed to sink the insert', () => {
+  // The first real reply (18 Aug) was lost exactly this way: a legacy_id went
+  // into the uuid column, Postgres 400ed, and the message died with it.
+  const row = inboundLogRow({
+    from: '+447911123456', to: '+441615311386', body: 'hello',
+    messageSid: 'SM124', customerId: '1785069385818',
+  })
+  assert.equal(row.customer_id, null)   // filed unmatched, but FILED
+  assert.equal(row.status, 'received')  // the message itself is untouched
 })
 
 test('an opt-out is logged as one, so nobody wonders why the texts stopped', () => {

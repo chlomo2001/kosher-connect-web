@@ -43,10 +43,14 @@ async function findCustomer(from) {
   try {
     const rows = await db.select(
       'customers',
-      `select=legacy_id,first_name,last_name,phone_number,legacy_extras&phone_number=like.*${enc(tail)}*&limit=25`,
+      `select=id,legacy_id,first_name,last_name,phone_number,legacy_extras&phone_number=like.*${enc(tail)}*&limit=25`,
     )
     const shaped = rows.map(r => ({
-      id: String(r.legacy_id ?? ''),
+      // email_log.customer_id is the customers row's UUID — the same id
+      // lib/sms.js files for outbound. legacy_id is the app-facing id and is
+      // NOT a uuid; filing it here 400s the insert and loses the message
+      // (which is exactly what happened to the first real reply, 18 Aug).
+      id: String(r.id ?? ''),
       firstName: r.first_name || '',
       lastName: r.last_name || '',
       phone: r.phone_number || '',
