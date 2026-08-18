@@ -15607,9 +15607,10 @@ async function renderKolTorahTab() {
           })}</div>
           <button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);" onclick="ktSaveShul('${s.id}')">💾 Save</button>
         </div>` : ''}
-        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
           <select class="form-input" id="ktMoveTitle_${s.id}" aria-label="Title to move for ${escHtml(s.name)}" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);max-width:min(330px, 100%);">${titleOptions}</select>
-          <input class="form-input" id="ktMoveQty_${s.id}" type="number" min="1" step="1" value="1" aria-label="Quantity" style="width:64px;min-height:0;padding:6px 9px;font-size:var(--fs-small);">
+          <label class="kt-fld">How many
+            <input class="form-input" id="ktMoveQty_${s.id}" type="number" min="1" step="1" value="1" style="width:74px;min-height:0;padding:6px 9px;font-size:var(--fs-small);"></label>
           <button class="btn btn-outline" style="font-size:var(--fs-micro);padding:5px 9px;" onclick="ktMove('${s.id}','delivery')">📦 Deliver</button>
           <button class="btn btn-outline" style="font-size:var(--fs-micro);padding:5px 9px;" onclick="ktMove('${s.id}','sold')">💿 Sold</button>
           <button class="btn btn-outline" style="font-size:var(--fs-micro);padding:5px 9px;" onclick="ktMove('${s.id}','return')">↩ Return</button>
@@ -15621,9 +15622,9 @@ async function renderKolTorahTab() {
              when "which box was the money we got?" is being asked. */''}
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);">
           <span style="font-size:var(--fs-small);color:var(--muted);padding-bottom:7px;">Settle:</span>
-          <label class="kt-settle-fld">Sold
+          <label class="kt-fld">Sold
             <input class="form-input" id="ktSettleSold_${s.id}" type="number" min="0" step="0.01" placeholder="£" style="width:84px;min-height:0;padding:6px 9px;font-size:var(--fs-small);"></label>
-          <label class="kt-settle-fld">Collected
+          <label class="kt-fld">Collected
             <input class="form-input" id="ktSettleRecv_${s.id}" type="number" min="0" step="0.01" placeholder="£" style="width:84px;min-height:0;padding:6px 9px;font-size:var(--fs-small);"></label>
           <select class="form-input" id="ktSettleMethod_${s.id}" aria-label="Settlement method for ${escHtml(s.name)}" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);width:110px;">
             <option value="cash">💵 Cash</option><option value="bank_transfer">🏦 Transfer</option><option value="card">💳 Card</option><option value="other">Other</option>
@@ -15664,8 +15665,8 @@ async function renderKolTorahTab() {
           a phone meant composing a job by scrolling sideways through cells.
           Same panel pattern as "Add a shul": the controls wrap instead. Ids
           unchanged — ktAddJob() reads the same fields. */}
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;padding:10px 12px;border:1px dashed var(--border);border-radius:8px;">
-      <span style="font-size:var(--fs-small);font-weight:700;color:var(--accent);">➕ New job</span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px;padding:10px 12px;border:1px dashed var(--border);border-radius:8px;">
+      <span style="font-size:var(--fs-small);font-weight:700;color:var(--accent);padding-bottom:7px;">➕ New job</span>
       <div style="min-width:150px;max-width:180px;">${customerPicker('ktJobCust', {
         special: { value: 'walkin', label: '🚶 Walk-in' }, label: 'Customer for this job',
         style: 'min-height:0;padding:6px 9px;font-size:var(--fs-small);',
@@ -15673,9 +15674,16 @@ async function renderKolTorahTab() {
       <input class="form-input" id="ktJobName" placeholder="Name if walk-in" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:140px;max-width:180px;">
       <select class="form-input" id="ktJobKind" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:132px;">
         ${Object.entries(KT_JOB_KINDS).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select>
-      <input class="form-input" id="ktJobQty" type="number" min="1" step="1" value="1" aria-label="Quantity" style="width:64px;min-height:0;padding:6px 9px;font-size:var(--fs-small);">
+      ${/* The two number boxes were a bare "1" and a bare "£" sitting in a row
+             of eight controls — the same nameless-box problem the Settle row
+             had. A wrapping label names them on screen AND to a screen reader.
+             The details box keeps its placeholder: that one is an EXAMPLE, not
+             a label, which is what a placeholder is actually for. */''}
+      <label class="kt-fld">How many
+        <input class="form-input" id="ktJobQty" type="number" min="1" step="1" value="1" style="width:74px;min-height:0;padding:6px 9px;font-size:var(--fs-small);"></label>
       <input class="form-input" id="ktJobDetails" placeholder="e.g. 3 CDs of R' Shloime onto one SD" style="flex:1;min-width:180px;min-height:0;padding:6px 9px;font-size:var(--fs-small);">
-      <input class="form-input" id="ktJobPrice" type="number" min="0" step="0.01" placeholder="£" style="width:80px;min-height:0;padding:6px 9px;font-size:var(--fs-small);">
+      <label class="kt-fld">Price
+        <input class="form-input" id="ktJobPrice" type="number" min="0" step="0.01" placeholder="£" style="width:80px;min-height:0;padding:6px 9px;font-size:var(--fs-small);"></label>
       <button class="btn btn-primary btn-sm" onclick="ktAddJob()">+ Add job</button>
     </div>
     <div class="table-wrap kc-stack-sm"><table>

@@ -1124,9 +1124,10 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   .cm-actions { justify-content: flex-start; }
 }
 
-/* A settle box says what it is above itself, rather than inside itself where
-   the answer vanishes as soon as anyone types. */
-.kt-settle-fld {
+/* A Kol Torah number box says what it is above itself, rather than inside
+   itself where the answer vanishes as soon as anyone types — and where, at the
+   largest text size, it did not fit in the first place. */
+.kt-fld {
   display: flex; flex-direction: column; gap: 2px;
   font-size: var(--fs-micro); color: var(--muted);
 }
