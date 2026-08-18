@@ -21,6 +21,7 @@
 import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode, selectAllPaged } from '../../lib/db.js'
 import { buildSimIndex, mailboxKey } from '../../lib/simMailMatch.mjs'
+import { carrierMailKind, kindLabel } from '../../lib/carrierMail.mjs'
 
 const enc = encodeURIComponent
 
@@ -169,6 +170,11 @@ async function handler(req, res) {
         confidence: m.confidence,
         numbers: m.numbers || [],
         resolvedAt: m.resolved_at,
+        // Worked out on READ, not stored: it costs nothing, it needs no
+        // migration, and it labels the mail that arrived before any of this
+        // existed — which is the queue the owner is actually looking at.
+        kind: carrierMailKind({ subject: m.subject, snippet: m.snippet }),
+        kindLabel: kindLabel(carrierMailKind({ subject: m.subject, snippet: m.snippet })),
         sim, candidates, candidatesTotal,
       }
     })

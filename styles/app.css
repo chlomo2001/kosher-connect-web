@@ -1179,6 +1179,18 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .cm-row:first-child { border-top: 0; }
 .cm-when { font-size: var(--fs-small); color: var(--muted); white-space: nowrap; }
 .cm-carrier { font-size: var(--fs-micro); color: var(--accent); margin-top: 2px; }
+/* What the message MEANS, said in a word before the pairing detail. Ports and
+   payment problems are work; the renewals are the wallpaper this queue is
+   mostly made of, so only the ones that matter carry colour. */
+.cm-kind { font-weight: 600; }
+/* A sentence, not a label: .rv-label is uppercase small-caps, which is right for
+   "WHICH SIM IS THIS?" and shouts when it carries a whole sentence about what a
+   port did. */
+.cm-port-note { font-size: var(--fs-small); color: var(--muted); }
+.cm-kind-port_in_complete, .cm-kind-port_requested { color: var(--success-ink); }
+.cm-kind-pac_issued, .cm-kind-payment_failed { color: var(--danger-ink); }
+.cm-kind-expiry_warning { color: var(--warning-ink, var(--gold)); }
+.cm-kind-renewed, .cm-kind-renewal_reminder, .cm-kind-other { color: var(--muted); }
 .cm-subject { font-weight: 500; word-break: break-word; }
 .cm-meta { font-size: var(--fs-small); color: var(--muted); margin-top: 3px; word-break: break-word; }
 .cm-pick { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }

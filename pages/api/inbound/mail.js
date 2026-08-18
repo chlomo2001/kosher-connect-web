@@ -33,6 +33,7 @@ import { db, tablesMode, selectAllPaged } from '../../../lib/db.js'
 import { normaliseInbound, carrierOf } from '../../../lib/inboundMail.mjs'
 import { buildSimIndex, matchSimForMail } from '../../../lib/simMailMatch.mjs'
 import { looksLikeTicket, parseTicketMail, suggestCustomer, ticketTaskTitle } from '../../../lib/ticketMail.mjs'
+import { carrierMailKind, carrierMailTask, ACTIONABLE } from '../../../lib/carrierMail.mjs'
 
 // Bodies are parsed mail, not attachments — but a forwarded message with an
 // inline image can still be chunky, and a 413 would make Forward Email retry
@@ -73,6 +74,9 @@ async function simIndex() {
     simNumber: r.legacy_extras?.simNumber || '',
   })))
   index.customerBySim = new Map(rows.map((r) => [String(r.id), r.customer_id]))
+  // The customer's NAME as well, so a task raised from a port confirmation reads
+  // "check Mordche Grinfeld's number is live" rather than naming a row id.
+  index.nameBySim = new Map(rows.map((r) => [String(r.id), r.legacy_extras?.customerName || '']))
   cache = { at: Date.now(), index }
   return index
 }
@@ -246,6 +250,11 @@ export default async function handler(req, res) {
       text: mail.text,
     }, index)
 
+    // WHAT THE MESSAGE MEANS, not only whose it is. A completed port, a PAC
+    // code and a failed payment each mean somebody has something to do; the
+    // renewals are the ones that can simply be filed.
+    const kind = carrierMailKind({ subject: mail.subject, snippet: mail.snippet, text: mail.text })
+
     const inserted = await db.insertIgnoreDup('sim_mail', [{
       message_id: mail.messageId,
       ...(mail.receivedAt ? { received_at: mail.receivedAt } : {}),
@@ -267,6 +276,36 @@ export default async function handler(req, res) {
       customer_id: match.simId ? index.customerBySim.get(String(match.simId)) || null : null,
     }], 'message_id')
 
+    // A port completing is the end of a job the shop did: the number has moved,
+    // the SIM record probably still holds the old one, and nobody knows the
+    // line is live until a customer finds out it is not. Raise it as work.
+    //
+    // Only on a message that was actually stored — a redelivery must not raise
+    // the task twice — and never fatally: the message is filed either way, and
+    // a task that could not be written is better than a 500 that has Forward
+    // Email redeliver a message already on the books.
+    if (inserted.length && ACTIONABLE.has(kind)) {
+      try {
+        const title = carrierMailTask(kind, {
+          customerName: match.simId ? index.nameBySim.get(String(match.simId)) || '' : '',
+          number: (match.numbers && match.numbers[0]) ? `0${match.numbers[0]}` : '',
+          carrier: carrierOf(mail.from) || '',
+        })
+        if (title) {
+          await db.insert('tasks', [{
+            title,
+            customer_id: match.simId ? index.customerBySim.get(String(match.simId)) || null : null,
+            source: 'auto',
+            priority: kind === 'payment_failed' ? 'high' : 'medium',
+            reference: `SIMMAIL-${inserted[0].id}`,
+            raw_text: `From ${mail.from || 'the carrier'} — ${mail.subject || '(no subject)'}`,
+          }])
+        }
+      } catch (e) {
+        console.error('[inbound/mail] carrier task not raised', kind, e)
+      }
+    }
+
     // 200 on a duplicate too: a retry is not an error, and a non-2xx would have
     // Forward Email redeliver it indefinitely.
     return res.json({
@@ -275,6 +314,7 @@ export default async function handler(req, res) {
       stored: inserted.length > 0,
       duplicate: inserted.length === 0,
       confidence: match.confidence,
+      kind,
       paired: !!match.simId,
     })
   } catch (e) {

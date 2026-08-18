@@ -68,7 +68,7 @@ The menu, the top bar and the buttons that are there whatever tab you are on —
 - Virtual Numbers — Numbers rented to customers that ring through to somewhere else: who has which, on which platform, and what it bills.
 - Tasks — The shop's own to-do list, including the jobs the app files by itself when something it noticed needs a person.
 - Confirm Data — Records that came in from an import and are not yet trusted: read each one against what you know, and confirm it into the books or fix it first.
-- Carrier Mail — Post arriving from the networks — bills, warnings, confirmations — matched to the SIM plan and the customer it belongs to.
+- Carrier Mail — Post arriving from the networks — renewals, ports, warnings, payment problems — matched to the SIM plan it belongs to, and labelled with what it means.
 - Settings — Everything the shop can change without anyone writing code: prices, people, what helpers can see, the public pages, and the safety gates on messaging.
 
 ### Dashboard
@@ -514,11 +514,13 @@ Records that came in from an import and are not yet trusted: read each one again
 
 ### Carrier Mail
 
-Post arriving from the networks — bills, warnings, confirmations — matched to the SIM plan and the customer it belongs to.
+Post arriving from the networks — renewals, ports, warnings, payment problems — matched to the SIM plan it belongs to, and labelled with what it means.
 
 **On the screen**
 
 - **Needs a human** — The queue: messages the app could not confidently file. This is the whole job of the screen.
+- **What the message means** — Every row says what it IS before it says whose it is — renewing soon, renewed, about to expire, port completed, PAC code, payment problem. The ports and the payment problems are the ones that carry colour, because they are the ones that mean work; the renewals are the wallpaper.
+- **Port completed** — A finished port is not post, it is the end of a job: the customer's number has moved onto our SIM, so the plan usually still shows the number it was set up with. Where the carrier names the new number, one press puts it on the plan. Where it does not — Lebara's confirmation names no number, it tells the customer to dial a code — the row says so and opens the plan to be corrected.
 - **↻ Check now** — Re-reads the mailbox without leaving the screen — for when somebody is standing there waiting for a message they know has been sent.
 - **Tick the ones that are nothing** — Each message has a tick box and there is a select-all above the list, so a run of identical circulars can be cleared in one press. Pairing a message to a SIM stays one at a time — that answer is different on every row.
 - **Filed on a SIM** — What has been matched, so the letter about a plan is on the plan when someone asks about it.
@@ -532,6 +534,8 @@ Post arriving from the networks — bills, warnings, confirmations — matched t
 
 - Matching is what makes the post useful. An unfiled warning about a plan is a letter in a drawer.
 - Post arriving about a plan the shop does not have on record usually means the plan is real and the record is missing — that is worth following up, not dismissing.
+- A completed port, a PAC code and a payment problem each raise a task by themselves, because each one means somebody has something to do. A PAC code is the one piece of carrier post that is bad news: the customer is moving to another network.
+- The number on a plan is what every reminder, every carrier lookup and every piece of post keys on. Changing it after a port is the difference between the next reminder reaching the customer and reaching a dead line.
 - Dismiss means "this belongs to nobody", not "not now". Anything that might matter should stay in the queue.
 
 **When it goes wrong**

@@ -18534,6 +18534,62 @@ function cmPickFilter(key, value) {
   if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
 }
 
+// A completed port, on a message already filed on a SIM.
+//
+// The number MOVED. That is what a port is — the customer's existing number is
+// now on our SIM — so the number on the record is usually the temporary one it
+// was set up with, and nobody finds out until a reminder goes to a dead line.
+// Where the carrier named the new number and it differs from the record, one
+// press sets it. Where it did not (Lebara's port confirmation names no number
+// at all, it tells the customer to dial *#100#), the row says so and opens the
+// plan to be corrected by hand.
+function cmPortHtml(m) {
+  const onFile = String(m.sim.number || '').replace(/\D/g, '').slice(-10);
+  const named = (m.numbers || []).find(n => n && n !== onFile);
+  return `
+    <div class="cm-pick">
+      ${named
+        ? `<span class="cm-port-note">The number moved — the record still says ${escHtml(fmtPhone(m.sim.number) || '—')}.</span>
+           <button class="btn btn-primary btn-sm" onclick="cmPortSetNumber('${escJs(String(m.sim.id))}', '0${escJs(named)}')">
+             ↔ Set this plan's number to ${escHtml(fmtPhone('0' + named))}</button>`
+        : `<span class="cm-port-note">Port completed. This carrier does not name the number —
+             check the plan holds the right one.</span>`}
+      <button class="btn btn-outline btn-sm" onclick="cmOpenSim('${escJs(String(m.sim.legacyId || m.sim.id))}')">
+        Open the plan</button>
+    </div>`;
+}
+
+// One press, and it says what it is about to do first: the number on a plan is
+// what every reminder, every carrier lookup and every piece of post keys on.
+async function cmPortSetNumber(simId, number) {
+  if (!(await kcConfirm({
+    title: 'Change the number on this plan?',
+    body: `The plan will read <strong>${escHtml(fmtPhone(number))}</strong>. Do this only if the port has
+      completed onto this SIM — reminders and carrier post follow the number.`,
+    okLabel: 'Set the number',
+  }))) return;
+  // Through the app's own save path (saveSims), not a route of its own: the
+  // plan list is written whole, the save is reported and blocked in exactly the
+  // same way as an edit made on the SIM screen, and the number ends up on the
+  // record by the same road either way.
+  const plan = sims.find(x => String(x.id) === String(simId));
+  if (!plan) { toast('That plan is no longer in the list — open it and set the number there.', 'error'); return; }
+  const was = plan.simNumber;
+  plan.simNumber = number;
+  const res = await saveSims(sims);
+  if (res && res.success === false) {
+    plan.simNumber = was;
+    toast('Couldn’t change the number — open the plan and set it there.', 'error');
+    return;
+  }
+  toast('Number updated on the plan.', 'success');
+  renderCarrierMailTab();
+}
+
+function cmOpenSim(simId) {
+  openOnTab('sim', () => openManageSimModal(simId));
+}
+
 function cmRowHtml(m) {
   const when = fmtWhen(m.receivedAt);
   const badge = {
@@ -18558,12 +18614,14 @@ function cmRowHtml(m) {
       <div class="cm-body">
         <div class="cm-subject">${escHtml(m.subject || '(no subject)')}</div>
         <div class="cm-meta">
+          ${m.kindLabel ? `<span class="cm-kind cm-kind-${escHtml(m.kind)}">${escHtml(m.kindLabel)}</span> · ` : ''}
           <span style="color:${badge[1]}">${escHtml(badge[0])}</span>
           ${m.recipient ? ` · sent to ${escHtml(m.recipient)}` : ''}
           ${numbers ? ` · ${numbers}` : ''}
         </div>
         ${m.sim ? `<div class="cm-meta">Filed on ${escHtml(fmtPhone(m.sim.number))} ·
             ${escHtml(m.sim.provider || '')} · ${escName(m.sim.customerName || '')}</div>` : ''}
+        ${m.kind === 'port_in_complete' && m.sim ? cmPortHtml(m) : ''}
         ${!settled && m.candidates.length ? cmPickHtml(m) : ''}
         ${!settled && !m.candidates.length ? `
           <div class="cm-pick">

@@ -1,1580 +1,1637 @@
 {
-  "/api/customers": [
+ "/api/customers": [
+  {
+   "id": "c1",
+   "firstName": "Menachem",
+   "lastName": "Adler",
+   "phone": "+447911123456",
+   "email": "m.adler@example.com",
+   "passportOnFile": true,
+   "services": [],
+   "dataSource": "import",
+   "verifiedAt": null
+  },
+  {
+   "id": "c2",
+   "firstName": "Yossi",
+   "lastName": "Taitelbaum",
+   "phone": "+447700900123",
+   "email": "yossi@example.com",
+   "services": [],
+   "dataSource": "import",
+   "verifiedAt": null
+  },
+  {
+   "id": "c3",
+   "firstName": "Chaim",
+   "lastName": "Kopilowitz",
+   "phone": "+447871385566",
+   "email": "chaim@example.com",
+   "accountEmail": "kosherconnect+chaim@gmail.com",
+   "services": [],
+   "dataSource": "app",
+   "verifiedAt": null
+  },
+  {
+   "id": "c4",
+   "firstName": "Rivka",
+   "lastName": "Gluck",
+   "phone": "+972544123456",
+   "email": "",
+   "services": [],
+   "dataSource": "app",
+   "verifiedAt": null
+  },
+  {
+   "id": "c5",
+   "firstName": "Menachem",
+   "lastName": "Adler",
+   "phone": "",
+   "email": "",
+   "notes": "Imported from ELID 2026-08-06",
+   "services": [],
+   "dataSource": "app",
+   "verifiedAt": null
+  },
+  {
+   "id": "c6",
+   "firstName": "Yoisef",
+   "lastName": "Teitelboim",
+   "phone": "+447700900123",
+   "email": "",
+   "services": [],
+   "dataSource": "app",
+   "verifiedAt": null
+  }
+ ],
+ "/api/rentals": [
+  {
+   "id": "r1",
+   "customerId": "c1",
+   "phoneNumber": "+15185550101",
+   "country": "USA",
+   "fromDate": "2026-07-20",
+   "toDate": "2026-08-05",
+   "status": "active",
+   "price": 90,
+   "amountPaid": 45,
+   "customerName": "Menachem Adler",
+   "customerPhone": "+447911123456",
+   "phoneId": "p1",
+   "totalDays": 16,
+   "chargeableDays": 16,
+   "rentalPrice": 90,
+   "basePrice": 90
+  },
+  {
+   "id": "r2",
+   "customerId": "c2",
+   "phoneNumber": "+972544000111",
+   "country": "Israel",
+   "fromDate": "2026-07-01",
+   "toDate": "2026-07-25",
+   "status": "overdue",
+   "price": 60,
+   "amountPaid": 60,
+   "customerName": "Yossi Taitelbaum",
+   "customerPhone": "+447700900123",
+   "phoneId": "p3",
+   "totalDays": 16,
+   "chargeableDays": 16,
+   "rentalPrice": 60,
+   "basePrice": 60
+  },
+  {
+   "id": "r3",
+   "customerId": "c3",
+   "phoneNumber": "+15185550102",
+   "country": "USA",
+   "fromDate": "2026-08-10",
+   "toDate": "2026-08-20",
+   "status": "booked",
+   "price": 55,
+   "amountPaid": 0,
+   "customerName": "Chaim Kopilowitz",
+   "customerPhone": "+447871385566",
+   "phoneId": "p2",
+   "totalDays": 16,
+   "chargeableDays": 16,
+   "rentalPrice": 55,
+   "basePrice": 55
+  }
+ ],
+ "/api/phones": [
+  {
+   "id": "p1",
+   "number": "+15185550101",
+   "country": "USA",
+   "status": "rented",
+   "imei": "356938035643809",
+   "pool": "US"
+  },
+  {
+   "id": "p2",
+   "number": "+15185550102",
+   "country": "USA",
+   "status": "available",
+   "imei": "356938035643810",
+   "pool": "US"
+  },
+  {
+   "id": "p3",
+   "number": "+972544000111",
+   "country": "Israel",
+   "status": "rented",
+   "imei": "356938035643811",
+   "pool": "IL"
+  },
+  {
+   "id": "p4",
+   "number": "+447400111222",
+   "country": "UK",
+   "status": "maintenance",
+   "maintenanceReason": "Screen cracked",
+   "imei": "356938035643812",
+   "pool": "UK"
+  }
+ ],
+ "/api/sims": [
+  {
+   "id": "s1",
+   "customerId": "c1",
+   "simNumber": "+447400555001",
+   "provider": "Lebara",
+   "status": "active",
+   "expiryDate": "2026-08-14",
+   "customerName": "Menachem Adler",
+   "dataSource": "import",
+   "verifiedAt": null,
+   "renewalDate": "2026-08-19"
+  },
+  {
+   "id": "s2",
+   "customerId": "c2",
+   "simNumber": "+447400555002",
+   "provider": "1pMobile",
+   "status": "active",
+   "expiryDate": "2026-09-01",
+   "customerName": "Yossi Taitelbaum",
+   "renewalDate": "2026-08-07"
+  }
+ ],
+ "/api/bookings": [
+  {
+   "id": "b1",
+   "customerId": "c1",
+   "route": "MAN → TLV",
+   "airline": "Wizz",
+   "bookingRef": "BNKYRW",
+   "travelDate": "2026-08-18",
+   "status": "confirmed",
+   "price": 285,
+   "amountPaid": 285,
+   "customerName": "Menachem Adler",
+   "returnDate": "2026-08-26",
+   "legs": [
     {
-      "id": "c1",
-      "firstName": "Menachem",
-      "lastName": "Adler",
-      "phone": "+447911123456",
-      "email": "m.adler@example.com",
-      "passportOnFile": true,
-      "services": [],
-      "dataSource": "import",
-      "verifiedAt": null
+     "id": "l1",
+     "position": 1,
+     "direction": "out",
+     "airline": "Aer Lingus",
+     "bookingReference": "AL9K2M",
+     "origin": "MAN",
+     "destination": "DUB",
+     "flightDate": "2026-08-20",
+     "departureTime": "07:10",
+     "arrivalTime": "08:05",
+     "price": null,
+     "notes": ""
     },
     {
-      "id": "c2",
-      "firstName": "Yossi",
-      "lastName": "Taitelbaum",
-      "phone": "+447700900123",
-      "email": "yossi@example.com",
-      "services": [],
-      "dataSource": "import",
-      "verifiedAt": null
+     "id": "l2",
+     "position": 2,
+     "direction": "out",
+     "airline": "Virgin Atlantic",
+     "bookingReference": "VS4TQ1",
+     "origin": "DUB",
+     "destination": "JFK",
+     "flightDate": "2026-08-20",
+     "departureTime": "10:40",
+     "arrivalTime": "13:25",
+     "price": null,
+     "notes": ""
     },
     {
-      "id": "c3",
-      "firstName": "Chaim",
-      "lastName": "Kopilowitz",
-      "phone": "+447871385566",
-      "email": "chaim@example.com",
-      "accountEmail": "kosherconnect+chaim@gmail.com",
-      "services": [],
-      "dataSource": "app",
-      "verifiedAt": null
+     "id": "l3",
+     "position": 3,
+     "direction": "return",
+     "airline": "Virgin Atlantic",
+     "bookingReference": "VS4TQ1",
+     "origin": "JFK",
+     "destination": "LHR",
+     "flightDate": "2026-08-26",
+     "departureTime": "19:00",
+     "arrivalTime": "07:15",
+     "price": null,
+     "notes": ""
     },
     {
-      "id": "c4",
-      "firstName": "Rivka",
-      "lastName": "Gluck",
-      "phone": "+972544123456",
-      "email": "",
-      "services": [],
-      "dataSource": "app",
-      "verifiedAt": null
-    },
-    {
-      "id": "c5",
-      "firstName": "Menachem",
-      "lastName": "Adler",
-      "phone": "",
-      "email": "",
-      "notes": "Imported from ELID 2026-08-06",
-      "services": [],
-      "dataSource": "app",
-      "verifiedAt": null
-    },
-    {
-      "id": "c6",
-      "firstName": "Yoisef",
-      "lastName": "Teitelboim",
-      "phone": "+447700900123",
-      "email": "",
-      "services": [],
-      "dataSource": "app",
-      "verifiedAt": null
+     "id": "l4",
+     "position": 4,
+     "direction": "return",
+     "airline": "Aer Lingus",
+     "bookingReference": "AL7P3X",
+     "origin": "LHR",
+     "destination": "MAN",
+     "flightDate": "2026-08-27",
+     "departureTime": "09:30",
+     "arrivalTime": "10:20",
+     "price": null,
+     "notes": ""
     }
-  ],
-  "/api/rentals": [
+   ]
+  }
+ ],
+ "/api/virtual-numbers": [
+  {
+   "id": "v1",
+   "customerId": "c1",
+   "number": "+17325550123",
+   "provider": "Twilio",
+   "status": "Active",
+   "billing": "monthly",
+   "price": 8,
+   "customerName": "Menachem Adler"
+  }
+ ],
+ "/api/repairs": [
+  {
+   "id": "rp1",
+   "customerId": "c2",
+   "device": "Nokia 105",
+   "status": "Open",
+   "price": 25,
+   "customerName": "Yossi Taitelbaum",
+   "total": 25,
+   "services": [
     {
-      "id": "r1",
-      "customerId": "c1",
-      "phoneNumber": "+15185550101",
-      "country": "USA",
-      "fromDate": "2026-07-20",
-      "toDate": "2026-08-05",
-      "status": "active",
-      "price": 90,
-      "amountPaid": 45,
-      "customerName": "Menachem Adler",
-      "customerPhone": "+447911123456",
-      "phoneId": "p1",
-      "totalDays": 16,
-      "chargeableDays": 16,
-      "rentalPrice": 90,
-      "basePrice": 90
-    },
-    {
-      "id": "r2",
-      "customerId": "c2",
-      "phoneNumber": "+972544000111",
-      "country": "Israel",
-      "fromDate": "2026-07-01",
-      "toDate": "2026-07-25",
-      "status": "overdue",
-      "price": 60,
-      "amountPaid": 60,
-      "customerName": "Yossi Taitelbaum",
-      "customerPhone": "+447700900123",
-      "phoneId": "p3",
-      "totalDays": 16,
-      "chargeableDays": 16,
-      "rentalPrice": 60,
-      "basePrice": 60
-    },
-    {
-      "id": "r3",
-      "customerId": "c3",
-      "phoneNumber": "+15185550102",
-      "country": "USA",
-      "fromDate": "2026-08-10",
-      "toDate": "2026-08-20",
-      "status": "booked",
-      "price": 55,
-      "amountPaid": 0,
-      "customerName": "Chaim Kopilowitz",
-      "customerPhone": "+447871385566",
-      "phoneId": "p2",
-      "totalDays": 16,
-      "chargeableDays": 16,
-      "rentalPrice": 55,
-      "basePrice": 55
+     "name": "Won't charge",
+     "price": 25
     }
-  ],
-  "/api/phones": [
+   ],
+   "openedAt": "2026-07-28T10:00:00Z"
+  },
+  {
+   "id": "rp2",
+   "customerId": "c3",
+   "device": "Alcatel 1",
+   "status": "In Progress",
+   "price": 40,
+   "customerName": "Chaim Kopilowitz",
+   "total": 40,
+   "services": [
     {
-      "id": "p1",
-      "number": "+15185550101",
-      "country": "USA",
-      "status": "rented",
-      "imei": "356938035643809",
-      "pool": "US"
-    },
-    {
-      "id": "p2",
-      "number": "+15185550102",
-      "country": "USA",
-      "status": "available",
-      "imei": "356938035643810",
-      "pool": "US"
-    },
-    {
-      "id": "p3",
-      "number": "+972544000111",
-      "country": "Israel",
-      "status": "rented",
-      "imei": "356938035643811",
-      "pool": "IL"
-    },
-    {
-      "id": "p4",
-      "number": "+447400111222",
-      "country": "UK",
-      "status": "maintenance",
-      "maintenanceReason": "Screen cracked",
-      "imei": "356938035643812",
-      "pool": "UK"
+     "name": "Screen",
+     "price": 40
     }
-  ],
-  "/api/sims": [
+   ],
+   "openedAt": "2026-07-28T10:00:00Z"
+  },
+  {
+   "id": "rp3",
+   "customerId": "c1",
+   "device": "Nokia 210",
+   "status": "Ready",
+   "price": 30,
+   "customerName": "Menachem Adler",
+   "total": 30,
+   "services": [
     {
+     "name": "Battery",
+     "price": 30
+    }
+   ],
+   "openedAt": "2026-07-28T10:00:00Z"
+  }
+ ],
+ "/api/service-orders": [],
+ "/api/settings": {
+  "success": true,
+  "rentalRates": [
+   {
+    "countryCode": "USA",
+    "displayName": "USA",
+    "ratePerDay": 5,
+    "minCharge": 18,
+    "cap": 90,
+    "capPeriodDays": 30,
+    "afterCapPerDay": 2,
+    "vnWeekly": 8,
+    "vnPer30Days": 25,
+    "active": true
+   },
+   {
+    "countryCode": "IL",
+    "displayName": "Israel",
+    "ratePerDay": 4,
+    "minCharge": 18,
+    "cap": 60,
+    "capPeriodDays": 30,
+    "afterCapPerDay": 2,
+    "vnWeekly": 8,
+    "vnPer30Days": 25,
+    "active": true
+   },
+   {
+    "countryCode": "UK",
+    "displayName": "UK",
+    "ratePerDay": 3,
+    "minCharge": 15,
+    "cap": 45,
+    "capPeriodDays": 30,
+    "afterCapPerDay": 2,
+    "vnWeekly": null,
+    "vnPer30Days": null,
+    "active": true
+   }
+  ],
+  "damageRates": [
+   {
+    "countryCode": "USA",
+    "phoneDamageLoss": 80,
+    "chargerMissing": 12,
+    "simMissing": 10
+   }
+  ],
+  "settings": [
+   {
+    "key": "late_fee_per_day",
+    "numValue": 3,
+    "textValue": null,
+    "description": "Late fee per day",
+    "editable": true,
+    "custom": false,
+    "unit": "£"
+   },
+   {
+    "key": "dd_fee",
+    "numValue": 1.5,
+    "textValue": null,
+    "description": "Direct debit fee",
+    "editable": true,
+    "custom": false,
+    "unit": "£"
+   },
+   {
+    "key": "ivr_platforms",
+    "numValue": null,
+    "textValue": "Twilio,Voip.ms",
+    "description": "VN platforms",
+    "editable": true,
+    "custom": false,
+    "unit": ""
+   },
+   {
+    "key": "repair_stages",
+    "textValue": "Waiting for part,Quote sent"
+   },
+   {
+    "key": "monthly_target",
+    "textValue": "4000"
+   }
+  ]
+ },
+ "/api/auth/me": {
+  "success": true,
+  "authEnabled": false
+ },
+ "/api/ledger": {
+  "success": true,
+  "recent": [
+   {
+    "id": "l1",
+    "customerId": "c1",
+    "customerName": "Menachem Adler",
+    "amount": 45,
+    "method": "cash",
+    "description": "Rental part payment",
+    "type": "payment",
+    "at": "2026-08-01T09:12:00Z",
+    "reference": null
+   },
+   {
+    "id": "l2",
+    "customerId": "c3",
+    "customerName": "Chaim Kopilowitz",
+    "amount": 20,
+    "method": "card",
+    "description": "Wallet top-up",
+    "type": "top_up",
+    "at": "2026-08-01T08:40:00Z",
+    "reference": null
+   },
+   {
+    "id": "l3",
+    "customerId": "c2",
+    "customerName": "Yossi Taitelbaum",
+    "amount": -60,
+    "description": "Israel rental",
+    "type": "rental",
+    "at": "2026-07-31T16:05:00Z",
+    "method": "",
+    "reference": null
+   }
+  ],
+  "arrears": [
+   {
+    "customerId": "c1",
+    "customerName": "Menachem Adler",
+    "balance": -45
+   }
+  ],
+  "credits": [
+   {
+    "customerId": "c3",
+    "customerName": "Chaim Kopilowitz",
+    "balance": 20
+   }
+  ],
+  "creditsTotal": 20,
+  "arrearsTotal": 45,
+  "todayIn": 65,
+  "todayOut": -60,
+  "known": true,
+  "balance": -45,
+  "entries": [
+   {
+    "id": "le1",
+    "type": "rental",
+    "amount": -120,
+    "method": "",
+    "reference": "R-1001",
+    "description": "Nokia 105 rental — 2 weeks",
+    "at": "2026-07-20T10:00:00Z"
+   },
+   {
+    "id": "le2",
+    "type": "payment",
+    "amount": 45,
+    "method": "cash",
+    "reference": null,
+    "description": "Part payment at the counter",
+    "at": "2026-07-24T15:30:00Z"
+   },
+   {
+    "id": "le3",
+    "type": "stock_sale",
+    "amount": -12,
+    "method": "card",
+    "reference": "POS-88",
+    "description": "Charger + SIM tray tool",
+    "at": "2026-08-01T11:05:00Z"
+   },
+   {
+    "id": "le4",
+    "type": "payment",
+    "amount": 42,
+    "method": "card",
+    "reference": null,
+    "description": "Balance payment",
+    "at": "2026-08-02T09:40:00Z"
+   }
+  ],
+  "lastWeekIn": 48,
+  "monthIn": 1240
+ },
+ "/api/ledger?report=1": {
+  "success": true,
+  "from": "2026-08-01",
+  "byType": {
+   "rental": 3250,
+   "sim_charge": 1250,
+   "booking": 937.5,
+   "repair": 437.5,
+   "stock_sale": 250,
+   "virtual_number": 125,
+   "online_service": 60,
+   "kol_torah": 40
+  },
+  "charged": 6350,
+  "received": 4900,
+  "refunded": 120,
+  "paidOut": 120,
+  "refundsOwed": 0
+ },
+ "/api/tasks": [
+  {
+   "id": "t1",
+   "title": "Chase Wizz refund for BNKYRW",
+   "status": "open",
+   "priority": "High",
+   "dueDate": "2026-08-01",
+   "customerId": "c1",
+   "customerName": "Menachem Adler"
+  },
+  {
+   "id": "t2",
+   "title": "Order more USB-C cables",
+   "status": "open",
+   "priority": "Normal",
+   "dueDate": "2026-08-04"
+  },
+  {
+   "id": "t3",
+   "title": "Confirm ticket: Menachem Adler — LTN → TLV, 12 Sept, £428.60",
+   "status": "open",
+   "priority": "Normal",
+   "dueDate": null,
+   "customerId": "c1",
+   "customerName": "Menachem Adler",
+   "source": "auto",
+   "reference": "TICKET-71"
+  }
+ ],
+ "/api/supplier-returns": {
+  "success": true,
+  "suppliers": [
+   {
+    "id": "sup1",
+    "name": "TechTrade Wholesale",
+    "contact": "0161 000 0000",
+    "notes": "",
+    "active": true
+   },
+   {
+    "id": "sup2",
+    "name": "Nordic Handsets Ltd",
+    "contact": "rep: Avi",
+    "notes": "",
+    "active": true
+   }
+  ],
+  "returns": [
+   {
+    "id": "sr1",
+    "supplierId": "sup1",
+    "supplierName": "TechTrade Wholesale",
+    "items": "6× Nokia 105, screens dead",
+    "imeis": "356789100000001\n356789100000002",
+    "claimedValue": 210,
+    "status": "awaiting_send",
+    "sentAt": null,
+    "resolvedAt": null,
+    "notes": "bag under the counter",
+    "createdAt": "2026-08-01T10:00:00Z"
+   },
+   {
+    "id": "sr2",
+    "supplierId": "sup2",
+    "supplierName": "Nordic Handsets Ltd",
+    "items": "2× Alcatel 1, no charge",
+    "imeis": "",
+    "claimedValue": 56,
+    "status": "sent",
+    "sentAt": "2026-07-28",
+    "resolvedAt": null,
+    "notes": "RMA-4471",
+    "createdAt": "2026-07-27T09:00:00Z"
+   },
+   {
+    "id": "sr3",
+    "supplierId": "sup1",
+    "supplierName": "TechTrade Wholesale",
+    "items": "1× charger batch (wrong plug)",
+    "imeis": "",
+    "claimedValue": 30,
+    "status": "credited",
+    "sentAt": "2026-07-10",
+    "resolvedAt": "2026-07-18",
+    "notes": "",
+    "createdAt": "2026-07-09T15:00:00Z"
+   }
+  ]
+ },
+ "/api/goods-in": {
+  "success": true,
+  "deliveries": [
+   {
+    "id": "gi1",
+    "supplierId": "sup1",
+    "supplierName": "TechTrade Wholesale",
+    "deliveryDate": "2026-08-02",
+    "invoiceRef": "INV-8841",
+    "invoiceTotal": 640,
+    "paid": false,
+    "paidAt": null,
+    "notes": "",
+    "createdAt": "2026-08-02T11:00:00Z",
+    "lines": [
+     {
+      "id": "gil1",
+      "itemId": null,
+      "description": "Nokia 110 4G",
+      "qty": 10,
+      "unitCost": 34
+     },
+     {
+      "id": "gil2",
+      "itemId": null,
+      "description": "USB-C chargers",
+      "qty": 20,
+      "unitCost": 15
+     }
+    ]
+   },
+   {
+    "id": "gi2",
+    "supplierId": "sup2",
+    "supplierName": "Nordic Handsets Ltd",
+    "deliveryDate": "2026-07-25",
+    "invoiceRef": "NH-2210",
+    "invoiceTotal": 380,
+    "paid": true,
+    "paidAt": "2026-07-30",
+    "notes": "",
+    "createdAt": "2026-07-25T09:30:00Z",
+    "lines": [
+     {
+      "id": "gil3",
+      "itemId": null,
+      "description": "Alcatel 1 handsets",
+      "qty": 8,
+      "unitCost": 47.5
+     }
+    ]
+   }
+  ],
+  "balances": {
+   "sup1": 430,
+   "sup2": 0
+  }
+ },
+ "/api/shop": {
+  "success": true,
+  "items": [
+   {
+    "id": "sh1",
+    "code": "CBL-C1",
+    "barcode": "5060001000011",
+    "category": "accessory",
+    "company": "Anker",
+    "model": "USB-C cable 1m",
+    "description": "Braided, 1 metre",
+    "netPrice": 2.4,
+    "sellingPrice": 5,
+    "profit": 2.6,
+    "quantity": 2,
+    "lowStockAt": 5,
+    "active": true
+   },
+   {
+    "id": "sh2",
+    "code": "CHG-CAR",
+    "barcode": "5060001000028",
+    "category": "accessory",
+    "company": "Belkin",
+    "model": "Car charger 20W",
+    "description": "Dual port",
+    "netPrice": 6.5,
+    "sellingPrice": 12,
+    "profit": 5.5,
+    "quantity": 14,
+    "lowStockAt": 4,
+    "active": true
+   },
+   {
+    "id": "sh3",
+    "code": "PHN-A1",
+    "barcode": "5060001000035",
+    "category": "phone",
+    "company": "Alcatel",
+    "model": "1 (kosher)",
+    "description": "Filtered, no browser",
+    "netPrice": 28,
+    "sellingPrice": 45,
+    "profit": 17,
+    "quantity": 6,
+    "lowStockAt": 2,
+    "active": true
+   },
+   {
+    "id": "sh4",
+    "code": "SIM-UK",
+    "barcode": "",
+    "category": "sim",
+    "company": "Lebara",
+    "model": "UK SIM",
+    "description": "Pay monthly starter",
+    "netPrice": 0,
+    "sellingPrice": 10,
+    "profit": 10,
+    "quantity": 0,
+    "lowStockAt": 3,
+    "active": true
+   }
+  ],
+  "sales": [
+   {
+    "id": "sl1",
+    "customerName": "Chaim Kopilowitz",
+    "item": "Anker USB-C cable 1m",
+    "qty": 2,
+    "total": 10,
+    "imei": "",
+    "notes": "",
+    "createdAt": "2026-08-01T14:05:00.000Z"
+   },
+   {
+    "id": "sl2",
+    "customerName": "",
+    "item": "Belkin Car charger 20W",
+    "qty": 1,
+    "total": 12,
+    "imei": "",
+    "notes": "walk-in",
+    "createdAt": "2026-08-01T16:40:00.000Z"
+   }
+  ]
+ },
+ "/api/services": [
+  {
+   "id": "sv1",
+   "category": "sim",
+   "name": "SIM swap",
+   "price": 10,
+   "kcPrice": 8,
+   "repeat": false
+  },
+  {
+   "id": "sv2",
+   "category": "sim",
+   "name": "Top-up",
+   "price": 20,
+   "kcPrice": 20,
+   "repeat": true
+  }
+ ],
+ "/api/kol-torah": {
+  "success": true,
+  "titles": [
+   {
+    "id": "kt1",
+    "code": "KT-001",
+    "name": "Shiur — Parshas Devarim",
+    "speaker": "R. Cohen",
+    "price": 8,
+    "active": true,
+    "notes": ""
+   }
+  ],
+  "shuls": [
+   {
+    "id": "sh1",
+    "name": "Beis Medrash",
+    "contact": "",
+    "active": true,
+    "notes": "",
+    "customerId": null,
+    "customerName": ""
+   }
+  ],
+  "stock": [
+   {
+    "shulId": "sh1",
+    "titleId": "kt1",
+    "qty": 12
+   }
+  ],
+  "jobs": [
+   {
+    "id": "j1",
+    "kind": "cd_to_mp3",
+    "status": "open",
+    "customerId": "c1",
+    "customerName": "Menachem Adler",
+    "qty": 3,
+    "price": 15
+   }
+  ],
+  "settlements": []
+ },
+ "/api/team": {
+  "success": true,
+  "members": [
+   {
+    "id": "st1",
+    "name": "Shloime",
+    "email": "owner@example.com",
+    "role": "owner",
+    "allowedTabs": null
+   },
+   {
+    "id": "st2",
+    "name": "Counter helper",
+    "email": "helper@example.com",
+    "role": "helper",
+    "allowedTabs": [
+     "customers",
+     "rentals",
+     "shop"
+    ]
+   }
+  ]
+ },
+ "/api/automations": {
+  "success": true,
+  "rules": []
+ },
+ "/api/business-accounts": {
+  "success": true,
+  "accounts": [],
+  "credVault": true
+ },
+ "/api/custom-charges": {
+  "success": true,
+  "charges": []
+ },
+ "/api/elid/summary": {
+  "success": true,
+  "account": "kosher-connect-rental",
+  "balance": 88.5
+ },
+ "/api/email-aliases": {
+  "success": true,
+  "aliases": []
+ },
+ "/api/phone-guide": {
+  "success": true,
+  "phones": []
+ },
+ "/api/repairs/menu": {
+  "success": true,
+  "items": []
+ },
+ "/api/cashup": {
+  "success": true,
+  "date": "2026-08-03",
+  "methods": {
+   "cash": 87,
+   "card": 45
+  },
+  "totalIn": 132,
+  "totalOut": 12,
+  "openingFloat": 50,
+  "expectedCash": 137,
+  "count": null
+ },
+ "/api/bank": {
+  "success": true,
+  "accounts": [
+   {
+    "ref": "Revolut main",
+    "count": 4,
+    "open": 2,
+    "latest": "2026-07-31"
+   },
+   {
+    "ref": "Revolut savings",
+    "count": 1,
+    "open": 1,
+    "latest": "2026-07-28"
+   },
+   {
+    "ref": "Stripe",
+    "count": 1,
+    "open": 1,
+    "latest": "2026-08-03"
+   }
+  ],
+  "counts": {
+   "unmatched": 3,
+   "proposed": 1,
+   "confirmed": 1,
+   "ignored": 1
+  },
+  "proposeCapped": 0,
+  "customers": [
+   {
+    "customerId": "101",
+    "customerUuid": "u1",
+    "name": "Moshe Kopilowitz"
+   },
+   {
+    "customerId": "102",
+    "customerUuid": "u2",
+    "name": "Rivka Gross"
+   },
+   {
+    "customerId": "103",
+    "customerUuid": "u3",
+    "name": "Yankel Wolf"
+   },
+   {
+    "customerId": "104",
+    "customerUuid": "u4",
+    "name": "Sarah Paneth"
+   }
+  ],
+  "transactions": [
+   {
+    "id": "st1",
+    "accountRef": "Stripe",
+    "provider": "stripe",
+    "bookedAt": "2026-08-03",
+    "amount": 394.35,
+    "currency": "GBP",
+    "description": "Payment link · lyrosenbaum@gmail.com",
+    "counterparty": "Sarah Paneth",
+    "state": "unmatched",
+    "note": "",
+    "matchedLedgerId": null,
+    "matchedAt": null,
+    "match": {
+     "ambiguous": true,
+     "proposals": [
+      {
+       "customerId": "104",
+       "customerUuid": "u4",
+       "name": "Sarah Paneth",
+       "confidence": "weak",
+       "reasons": [
+        "counterparty resembles Sarah Paneth"
+       ]
+      },
+      {
+       "customerId": "101",
+       "customerUuid": "u1",
+       "name": "Naftoly Padwa",
+       "confidence": "weak",
+       "reasons": [
+        "3 days from the expected date"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "b1",
+    "accountRef": "Revolut main",
+    "provider": "csv",
+    "bookedAt": "2026-07-31",
+    "amount": 285,
+    "currency": "GBP",
+    "description": "Incoming transfer · BNKYRW",
+    "counterparty": "KOPILOWITZ M",
+    "state": "unmatched",
+    "note": "",
+    "matchedLedgerId": null,
+    "matchedAt": null,
+    "match": {
+     "ambiguous": false,
+     "proposals": [
+      {
+       "customerId": "101",
+       "customerUuid": "u1",
+       "name": "Moshe Kopilowitz",
+       "confidence": "strong",
+       "reasons": [
+        "reference BNKYRW appears in the bank description",
+        "amount 285.00 matches exactly",
+        "counterparty resembles Moshe Kopilowitz"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "b2",
+    "accountRef": "Revolut savings",
+    "provider": "csv",
+    "bookedAt": "2026-07-28",
+    "amount": 45,
+    "currency": "GBP",
+    "description": "Faster payment",
+    "counterparty": "GROSS R",
+    "state": "unmatched",
+    "note": "",
+    "matchedLedgerId": null,
+    "matchedAt": null,
+    "match": {
+     "ambiguous": true,
+     "proposals": [
+      {
+       "customerId": "102",
+       "customerUuid": "u2",
+       "name": "Rivka Gross",
+       "confidence": "possible",
+       "reasons": [
+        "amount 45.00 matches exactly",
+        "counterparty resembles Rivka Gross"
+       ]
+      },
+      {
+       "customerId": "103",
+       "customerUuid": "u3",
+       "name": "Yankel Wolf",
+       "confidence": "possible",
+       "reasons": [
+        "amount 45.00 matches exactly"
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "id": "b3",
+    "accountRef": "Revolut main",
+    "provider": "csv",
+    "bookedAt": "2026-07-30",
+    "amount": -42.35,
+    "currency": "GBP",
+    "description": "Amazon · order 123",
+    "counterparty": "",
+    "state": "proposed",
+    "note": "",
+    "matchedLedgerId": null,
+    "matchedAt": null,
+    "match": {
+     "ambiguous": false,
+     "proposals": []
+    }
+   },
+   {
+    "id": "b4",
+    "accountRef": "Revolut main",
+    "provider": "csv",
+    "bookedAt": "2026-07-29",
+    "amount": 120,
+    "currency": "GBP",
+    "description": "Standing order",
+    "counterparty": "LEIFER Y",
+    "state": "confirmed",
+    "note": "",
+    "matchedLedgerId": "led-1",
+    "matchedAt": "2026-07-30T10:00:00Z",
+    "match": null
+   },
+   {
+    "id": "b5",
+    "accountRef": "Revolut main",
+    "provider": "csv",
+    "bookedAt": "2026-07-27",
+    "amount": -18.5,
+    "currency": "GBP",
+    "description": "Bank fee",
+    "counterparty": "",
+    "state": "ignored",
+    "note": "Not customer money",
+    "matchedLedgerId": null,
+    "matchedAt": null,
+    "match": null
+   }
+  ]
+ },
+ "/api/message-log": {
+  "success": true,
+  "entries": [
+   {
+    "id": "1",
+    "at": "2026-08-10T18:22:00Z",
+    "channel": "email",
+    "kind": "payment",
+    "to": "someone@example.com",
+    "actualTo": "owner-test@example.com",
+    "subject": "Payment received — £40.00",
+    "status": "redirected",
+    "error": null,
+    "customerName": "Moishe Berger"
+   },
+   {
+    "id": "2",
+    "at": "2026-08-09T15:02:00Z",
+    "channel": "sms",
+    "kind": "sms",
+    "to": "+447700900123",
+    "actualTo": null,
+    "subject": "Your rental phone is due back this Thursday.",
+    "status": "held",
+    "error": null,
+    "customerName": "Toibe Klein"
+   },
+   {
+    "id": "3",
+    "at": "2026-08-08T11:40:00Z",
+    "channel": "email",
+    "kind": "sale",
+    "to": "bad@nowhere.example",
+    "actualTo": "bad@nowhere.example",
+    "subject": "Your Kosher Connect receipt — £12.50",
+    "status": "failed",
+    "error": "[resend] domain is not verified",
+    "customerName": null
+   },
+   {
+    "id": "4",
+    "at": "2026-08-07T10:00:00Z",
+    "channel": "email",
+    "kind": "magic-link",
+    "to": "cust@example.com",
+    "actualTo": "cust@example.com",
+    "subject": "Your sign-in link",
+    "status": "sent",
+    "error": null,
+    "customerName": "Pesha Eger"
+   }
+  ]
+ },
+ "/api/customers/duplicates": {
+  "success": true,
+  "mode": "all",
+  "seeds": 6,
+  "count": 2,
+  "dismissed": 3,
+  "pairs": [
+   {
+    "key": "c1|c5",
+    "score": 9,
+    "a": {
+     "id": "c1",
+     "name": "Menachem Adler",
+     "elid": [],
+     "imported": false,
+     "phone": "+447911123456",
+     "email": "m.adler@example.com",
+     "counts": {
+      "sims": 2,
+      "rentals": 1,
+      "money": 7
+     }
+    },
+    "b": {
+     "id": "c5",
+     "name": "Menachem Adler",
+     "elid": [
+      "adler.m"
+     ],
+     "imported": true,
+     "phone": "",
+     "email": "",
+     "counts": {}
+    }
+   },
+   {
+    "key": "c2|c6",
+    "score": 6,
+    "a": {
+     "id": "c2",
+     "name": "Yossi Taitelbaum",
+     "elid": [],
+     "imported": false,
+     "phone": "+447700900123",
+     "email": "yossi@example.com",
+     "counts": {
+      "bookings": 2,
+      "repairs": 1
+     }
+    },
+    "b": {
+     "id": "c6",
+     "name": "Yoisef Teitelboim",
+     "elid": [],
+     "imported": false,
+     "phone": "+447700900123",
+     "email": "",
+     "counts": {
+      "sims": 1,
+      "vns": 1,
+      "money": 3
+     }
+    }
+   }
+  ]
+ },
+ "/api/ai-usage": {
+  "success": true,
+  "enabled": true,
+  "pricedOn": "2026-08-16",
+  "fxRate": 0.79,
+  "estimated": true,
+  "thisMonth": {
+   "calls": 74,
+   "tokens": 812450,
+   "usd": 1.94,
+   "gbp": 1.53,
+   "features": [
+    {
+     "feature": "AI reader",
+     "calls": 31,
+     "tokens": 561200,
+     "usd": 1.12,
+     "gbp": 0.88
+    },
+    {
+     "feature": "assistant planner",
+     "calls": 28,
+     "tokens": 180300,
+     "usd": 0.55,
+     "gbp": 0.43
+    },
+    {
+     "feature": "reply drafter",
+     "calls": 12,
+     "tokens": 58900,
+     "usd": 0.19,
+     "gbp": 0.15
+    },
+    {
+     "feature": "task prioritiser",
+     "calls": 3,
+     "tokens": 12050,
+     "usd": 0.08,
+     "gbp": 0.07
+    }
+   ]
+  },
+  "lastMonth": {
+   "calls": 51,
+   "tokens": 505900,
+   "usd": 1.21,
+   "gbp": 0.96,
+   "features": []
+  },
+  "since": "2026-07-01",
+  "capped": false
+ },
+ "/api/elid/balances": {
+  "success": true,
+  "total": 3,
+  "offset": 0,
+  "nextOffset": null,
+  "accounts": [
+   {
+    "username": "moishe-bodner",
+    "internal": false,
+    "balance": 4.2,
+    "error": null
+   },
+   {
+    "username": "kosher-connect-rental",
+    "internal": true,
+    "balance": 88.5,
+    "error": null
+   },
+   {
+    "username": "chaim-lemberger",
+    "internal": false,
+    "balance": null,
+    "error": "ELID balance read failed"
+   }
+  ]
+ },
+ "/api/review": {
+  "success": true,
+  "total": 1865,
+  "remaining": 1861,
+  "done": 4,
+  "progress": {
+   "customers": {
+    "imported": 604,
+    "remaining": 602
+   },
+   "sims": {
+    "imported": 796,
+    "remaining": 795
+   },
+   "bookings": {
+    "imported": 391,
+    "remaining": 391
+   },
+   "virtual_numbers": {
+    "imported": 74,
+    "remaining": 73
+   }
+  },
+  "bundles": [
+   {
+    "id": "seed-uuid-1",
+    "legacyId": "c1",
+    "name": "Menachem Adler",
+    "phone": "",
+    "email": "m.adler@example.com",
+    "address": "123 Baker Street, London",
+    "notes": "prefers the £20 US plan",
+    "sims": [
+     {
       "id": "s1",
-      "customerId": "c1",
-      "simNumber": "+447400555001",
+      "number": "+447396843022",
       "provider": "Lebara",
       "status": "active",
-      "expiryDate": "2026-08-14",
-      "customerName": "Menachem Adler",
-      "dataSource": "import",
-      "verifiedAt": null,
-      "renewalDate": "2026-08-19"
-    },
-    {
+      "renewal": "2026-09-02"
+     },
+     {
       "id": "s2",
-      "customerId": "c2",
-      "simNumber": "+447400555002",
-      "provider": "1pMobile",
+      "number": "+447423287185",
+      "provider": "Lebara",
       "status": "active",
-      "expiryDate": "2026-09-01",
-      "customerName": "Yossi Taitelbaum",
-      "renewalDate": "2026-08-07"
-    }
-  ],
-  "/api/bookings": [
-    {
+      "renewal": ""
+     }
+    ],
+    "bookings": [
+     {
       "id": "b1",
-      "customerId": "c1",
+      "ref": "KC-2291",
       "route": "MAN → TLV",
-      "airline": "Wizz",
-      "bookingRef": "BNKYRW",
-      "travelDate": "2026-08-18",
-      "status": "confirmed",
-      "price": 285,
-      "amountPaid": 285,
-      "customerName": "Menachem Adler",
-      "returnDate": "2026-08-26",
-      "legs": [
-        {
-          "id": "l1",
-          "position": 1,
-          "direction": "out",
-          "airline": "Aer Lingus",
-          "bookingReference": "AL9K2M",
-          "origin": "MAN",
-          "destination": "DUB",
-          "flightDate": "2026-08-20",
-          "departureTime": "07:10",
-          "arrivalTime": "08:05",
-          "price": null,
-          "notes": ""
-        },
-        {
-          "id": "l2",
-          "position": 2,
-          "direction": "out",
-          "airline": "Virgin Atlantic",
-          "bookingReference": "VS4TQ1",
-          "origin": "DUB",
-          "destination": "JFK",
-          "flightDate": "2026-08-20",
-          "departureTime": "10:40",
-          "arrivalTime": "13:25",
-          "price": null,
-          "notes": ""
-        },
-        {
-          "id": "l3",
-          "position": 3,
-          "direction": "return",
-          "airline": "Virgin Atlantic",
-          "bookingReference": "VS4TQ1",
-          "origin": "JFK",
-          "destination": "LHR",
-          "flightDate": "2026-08-26",
-          "departureTime": "19:00",
-          "arrivalTime": "07:15",
-          "price": null,
-          "notes": ""
-        },
-        {
-          "id": "l4",
-          "position": 4,
-          "direction": "return",
-          "airline": "Aer Lingus",
-          "bookingReference": "AL7P3X",
-          "origin": "LHR",
-          "destination": "MAN",
-          "flightDate": "2026-08-27",
-          "departureTime": "09:30",
-          "arrivalTime": "10:20",
-          "price": null,
-          "notes": ""
-        }
-      ]
-    }
-  ],
-  "/api/virtual-numbers": [
-    {
+      "date": "2026-09-14"
+     }
+    ],
+    "virtualNumbers": [
+     {
       "id": "v1",
-      "customerId": "c1",
-      "number": "+17325550123",
-      "provider": "Twilio",
-      "status": "Active",
-      "billing": "monthly",
-      "price": 8,
+      "number": "+441615311386",
+      "platform": "ELID"
+     }
+    ],
+    "contact": {
+     "kind": "none",
+     "simId": null,
+     "label": "No contact number on record"
+    }
+   }
+  ]
+ },
+ "/api/sim-mail": {
+  "success": true,
+  "counts": {
+   "pending": 2,
+   "paired": 118,
+   "total": 120
+  },
+  "messages": [
+   {
+    "id": 44,
+    "receivedAt": "2026-08-18T14:07:00Z",
+    "from": "Care@lebara.com",
+    "carrier": "Lebara",
+    "subject": "PortIn",
+    "snippet": "Dear customer, your existing mobile number has been successfully moved to the Lebara network.",
+    "recipient": "gitt.bilig@gmail.com",
+    "confidence": "address",
+    "numbers": [],
+    "resolvedAt": null,
+    "sim": {
+     "id": "s1",
+     "legacyId": "1",
+     "number": "+447349967598",
+     "provider": "Lebara",
+     "customerName": "Menachem Adler"
+    },
+    "candidates": [],
+    "candidatesTotal": 0,
+    "kind": "port_in_complete",
+    "kindLabel": "Port completed"
+   },
+   {
+    "id": 43,
+    "receivedAt": "2026-08-18T13:30:00Z",
+    "from": "team@smarty.co.uk",
+    "carrier": "Smarty",
+    "subject": "Your port is successful",
+    "snippet": "Great news your port request for your number 07700 900461 has now successfully completed!",
+    "recipient": "gitt.bilig+erenster@gmail.com",
+    "confidence": "number",
+    "numbers": [
+     "7700900461"
+    ],
+    "resolvedAt": null,
+    "sim": {
+     "id": "s2",
+     "legacyId": "2",
+     "number": "+447423287185",
+     "provider": "Smarty",
+     "customerName": "Rivka Gluck"
+    },
+    "candidates": [],
+    "candidatesTotal": 0,
+    "kind": "port_in_complete",
+    "kindLabel": "Port completed"
+   },
+   {
+    "id": 42,
+    "receivedAt": "2026-08-16T17:08:00Z",
+    "from": "billing@lebara.co.uk",
+    "carrier": "Lebara",
+    "subject": "Your plan renews on 2 September",
+    "snippet": "",
+    "recipient": "shevabruches111@gmail.com",
+    "confidence": "ambiguous",
+    "numbers": [],
+    "resolvedAt": null,
+    "sim": null,
+    "candidates": [
+     {
+      "id": "s1",
+      "number": "+447349967598",
+      "provider": "Lebara",
       "customerName": "Menachem Adler"
-    }
-  ],
-  "/api/repairs": [
-    {
-      "id": "rp1",
-      "customerId": "c2",
-      "device": "Nokia 105",
-      "status": "Open",
-      "price": 25,
-      "customerName": "Yossi Taitelbaum",
-      "total": 25,
-      "services": [
-        {
-          "name": "Won't charge",
-          "price": 25
-        }
-      ],
-      "openedAt": "2026-07-28T10:00:00Z"
+     },
+     {
+      "id": "s2",
+      "number": "+447423287185",
+      "provider": "Lebara",
+      "customerName": "Rivka Gluck"
+     }
+    ],
+    "kind": "renewal_reminder",
+    "kindLabel": "Renewing soon",
+    "candidatesTotal": 2
+   },
+   {
+    "id": 41,
+    "receivedAt": "2026-08-16T15:25:00Z",
+    "from": "noreply@lebara.com",
+    "carrier": "Lebara",
+    "subject": "Welcome to Lebara — 07349 967598",
+    "snippet": "",
+    "recipient": "",
+    "confidence": "unknown",
+    "numbers": [
+     "7349967598"
+    ],
+    "resolvedAt": null,
+    "sim": null,
+    "candidates": [],
+    "kind": "other",
+    "kindLabel": "",
+    "candidatesTotal": 0
+   },
+   {
+    "id": 40,
+    "receivedAt": "2026-08-16T11:34:00Z",
+    "from": "billing@lebara.co.uk",
+    "carrier": "Lebara",
+    "subject": "Payment received",
+    "snippet": "",
+    "recipient": "gitt.bilig+moshe@gmail.com",
+    "confidence": "address",
+    "numbers": [
+     "7807065243"
+    ],
+    "resolvedAt": "2026-08-16T11:34:10Z",
+    "sim": {
+     "id": "s3",
+     "number": "+447807065243",
+     "provider": "Lebara",
+     "customerName": "Yossi Taitelbaum"
     },
-    {
-      "id": "rp2",
-      "customerId": "c3",
-      "device": "Alcatel 1",
-      "status": "In Progress",
-      "price": 40,
-      "customerName": "Chaim Kopilowitz",
-      "total": 40,
-      "services": [
-        {
-          "name": "Screen",
-          "price": 40
-        }
-      ],
-      "openedAt": "2026-07-28T10:00:00Z"
-    },
-    {
-      "id": "rp3",
-      "customerId": "c1",
-      "device": "Nokia 210",
-      "status": "Ready",
-      "price": 30,
-      "customerName": "Menachem Adler",
-      "total": 30,
-      "services": [
-        {
-          "name": "Battery",
-          "price": 30
-        }
-      ],
-      "openedAt": "2026-07-28T10:00:00Z"
-    }
-  ],
-  "/api/service-orders": [],
-  "/api/settings": {
-    "success": true,
-    "rentalRates": [
-      {
-        "countryCode": "USA",
-        "displayName": "USA",
-        "ratePerDay": 5,
-        "minCharge": 18,
-        "cap": 90,
-        "capPeriodDays": 30,
-        "afterCapPerDay": 2,
-        "vnWeekly": 8,
-        "vnPer30Days": 25,
-        "active": true
-      },
-      {
-        "countryCode": "IL",
-        "displayName": "Israel",
-        "ratePerDay": 4,
-        "minCharge": 18,
-        "cap": 60,
-        "capPeriodDays": 30,
-        "afterCapPerDay": 2,
-        "vnWeekly": 8,
-        "vnPer30Days": 25,
-        "active": true
-      },
-      {
-        "countryCode": "UK",
-        "displayName": "UK",
-        "ratePerDay": 3,
-        "minCharge": 15,
-        "cap": 45,
-        "capPeriodDays": 30,
-        "afterCapPerDay": 2,
-        "vnWeekly": null,
-        "vnPer30Days": null,
-        "active": true
-      }
+    "candidates": [],
+    "kind": "renewed",
+    "kindLabel": "Renewed",
+    "candidatesTotal": 0
+   }
+  ]
+ },
+ "/api/sim-mail?simLegacyId": {
+  "success": true,
+  "messages": [
+   {
+    "id": 40,
+    "receivedAt": "2026-08-16T11:34:00Z",
+    "from": "billing@lebara.co.uk",
+    "carrier": "Lebara",
+    "subject": "Payment received",
+    "confidence": "address"
+   },
+   {
+    "id": 33,
+    "receivedAt": "2026-08-02T09:12:00Z",
+    "from": "noreply@lebara.com",
+    "carrier": "Lebara",
+    "subject": "Your plan renews on 2 September",
+    "confidence": "address"
+   }
+  ]
+ },
+ "/api/ticket-mail": {
+  "success": true,
+  "counts": {
+   "pending": 3,
+   "booked": 11,
+   "total": 14
+  },
+  "tickets": [
+   {
+    "id": 71,
+    "receivedAt": "2026-08-18T09:12:00Z",
+    "from": "noreply@wizzair.com",
+    "subject": "Your booking is confirmed — XU2WWH",
+    "airline": "Wizz Air",
+    "kind": "confirmation",
+    "reference": "XU2WWH",
+    "passengers": [
+     "Menachem Adler",
+     "Rivka Adler"
     ],
-    "damageRates": [
-      {
-        "countryCode": "USA",
-        "phoneDamageLoss": 80,
-        "chargerMissing": 12,
-        "simMissing": 10
-      }
+    "origin": "LTN",
+    "destination": "TLV",
+    "route": "LTN → TLV",
+    "travelDate": "2026-09-12",
+    "returnDate": "2026-09-26",
+    "departureTime": "08:25",
+    "arrivalTime": "15:05",
+    "price": 428.6,
+    "currency": "GBP",
+    "confidence": "full",
+    "missing": [],
+    "customerId": "c1",
+    "customerName": "Menachem Adler",
+    "customerConfidence": "sure",
+    "candidates": [
+     {
+      "id": "c1",
+      "name": "Menachem Adler",
+      "why": "flew as Menachem Adler before"
+     }
     ],
-    "settings": [
-      {
-        "key": "late_fee_per_day",
-        "numValue": 3,
-        "textValue": null,
-        "description": "Late fee per day",
-        "editable": true,
-        "custom": false,
-        "unit": "£"
-      },
-      {
-        "key": "dd_fee",
-        "numValue": 1.5,
-        "textValue": null,
-        "description": "Direct debit fee",
-        "editable": true,
-        "custom": false,
-        "unit": "£"
-      },
-      {
-        "key": "ivr_platforms",
-        "numValue": null,
-        "textValue": "Twilio,Voip.ms",
-        "description": "VN platforms",
-        "editable": true,
-        "custom": false,
-        "unit": ""
-      },
-      {
-        "key": "repair_stages",
-        "textValue": "Waiting for part,Quote sent"
-      },
-      {
-        "key": "monthly_target",
-        "textValue": "4000"
-      }
-    ]
-  },
-  "/api/auth/me": {
-    "success": true,
-    "authEnabled": false
-  },
-  "/api/ledger": {
-    "success": true,
-    "recent": [
-      {
-        "id": "l1",
-        "customerId": "c1",
-        "customerName": "Menachem Adler",
-        "amount": 45,
-        "method": "cash",
-        "description": "Rental part payment",
-        "type": "payment",
-        "at": "2026-08-01T09:12:00Z",
-        "reference": null
-      },
-      {
-        "id": "l2",
-        "customerId": "c3",
-        "customerName": "Chaim Kopilowitz",
-        "amount": 20,
-        "method": "card",
-        "description": "Wallet top-up",
-        "type": "top_up",
-        "at": "2026-08-01T08:40:00Z",
-        "reference": null
-      },
-      {
-        "id": "l3",
-        "customerId": "c2",
-        "customerName": "Yossi Taitelbaum",
-        "amount": -60,
-        "description": "Israel rental",
-        "type": "rental",
-        "at": "2026-07-31T16:05:00Z",
-        "method": "",
-        "reference": null
-      }
+    "body": "Confirmation number: XU2WWH\nLondon Luton (LTN) 08:25 → Tel Aviv (TLV) 15:05\nTotal price: GBP 428.60",
+    "bookingId": null,
+    "resolvedAt": null,
+    "dismissedReason": ""
+   },
+   {
+    "id": 70,
+    "receivedAt": "2026-08-17T19:40:00Z",
+    "from": "noreply@ryanair.com",
+    "subject": "Ryanair booking confirmation",
+    "airline": "Ryanair",
+    "kind": "confirmation",
+    "reference": "QK4T2M",
+    "passengers": [
+     "Yossi Taitelbaum"
     ],
-    "arrears": [
-      {
-        "customerId": "c1",
-        "customerName": "Menachem Adler",
-        "balance": -45
-      }
+    "origin": "MAN",
+    "destination": "KRK",
+    "route": "MAN → KRK",
+    "travelDate": "2026-10-03",
+    "returnDate": "",
+    "departureTime": "06:40",
+    "arrivalTime": "",
+    "price": null,
+    "currency": "",
+    "confidence": "partial",
+    "missing": [
+     "price"
     ],
-    "credits": [
-      {
-        "customerId": "c3",
-        "customerName": "Chaim Kopilowitz",
-        "balance": 20
-      }
+    "customerId": "",
+    "customerName": "",
+    "customerConfidence": "many",
+    "candidates": [
+     {
+      "id": "c2",
+      "name": "Yossi Taitelbaum",
+      "why": "name matches the customer"
+     },
+     {
+      "id": "c3",
+      "name": "Chaim Kopilowitz",
+      "why": "name matches the customer"
+     }
     ],
-    "creditsTotal": 20,
-    "arrearsTotal": 45,
-    "todayIn": 65,
-    "todayOut": -60,
-    "known": true,
-    "balance": -45,
-    "entries": [
-      {
-        "id": "le1",
-        "type": "rental",
-        "amount": -120,
-        "method": "",
-        "reference": "R-1001",
-        "description": "Nokia 105 rental — 2 weeks",
-        "at": "2026-07-20T10:00:00Z"
-      },
-      {
-        "id": "le2",
-        "type": "payment",
-        "amount": 45,
-        "method": "cash",
-        "reference": null,
-        "description": "Part payment at the counter",
-        "at": "2026-07-24T15:30:00Z"
-      },
-      {
-        "id": "le3",
-        "type": "stock_sale",
-        "amount": -12,
-        "method": "card",
-        "reference": "POS-88",
-        "description": "Charger + SIM tray tool",
-        "at": "2026-08-01T11:05:00Z"
-      },
-      {
-        "id": "le4",
-        "type": "payment",
-        "amount": 42,
-        "method": "card",
-        "reference": null,
-        "description": "Balance payment",
-        "at": "2026-08-02T09:40:00Z"
-      }
+    "body": "Reservation number: QK4T2M\nFlight FR 1234 from Manchester to Krakow",
+    "bookingId": null,
+    "resolvedAt": null,
+    "dismissedReason": ""
+   },
+   {
+    "id": 69,
+    "receivedAt": "2026-08-16T11:02:00Z",
+    "from": "noreply@wizzair.com",
+    "subject": "Your flight has been cancelled — IJEVNV",
+    "airline": "Wizz Air",
+    "kind": "cancellation",
+    "reference": "IJEVNV",
+    "passengers": [],
+    "origin": "LTN",
+    "destination": "TLV",
+    "route": "LTN → TLV",
+    "travelDate": "2026-09-12",
+    "returnDate": "",
+    "departureTime": "",
+    "arrivalTime": "",
+    "price": 170,
+    "currency": "EUR",
+    "confidence": "partial",
+    "missing": [
+     "passenger"
     ],
-    "lastWeekIn": 48,
-    "monthIn": 1240
-  },
-  "/api/ledger?report=1": {
-    "success": true,
-    "from": "2026-08-01",
-    "byType": {
-      "rental": 3250,
-      "sim_charge": 1250,
-      "booking": 937.5,
-      "repair": 437.5,
-      "stock_sale": 250,
-      "virtual_number": 125,
-      "online_service": 60,
-      "kol_torah": 40
-    },
-    "charged": 6350,
-    "received": 4900,
-    "refunded": 120,
-    "paidOut": 120,
-    "refundsOwed": 0
-  },
-  "/api/tasks": [
-    {
-      "id": "t1",
-      "title": "Chase Wizz refund for BNKYRW",
-      "status": "open",
-      "priority": "High",
-      "dueDate": "2026-08-01",
-      "customerId": "c1",
-      "customerName": "Menachem Adler"
-    },
-    {
-      "id": "t2",
-      "title": "Order more USB-C cables",
-      "status": "open",
-      "priority": "Normal",
-      "dueDate": "2026-08-04"
-    },
-    {
-      "id": "t3",
-      "title": "Confirm ticket: Menachem Adler — LTN → TLV, 12 Sept, £428.60",
-      "status": "open",
-      "priority": "Normal",
-      "dueDate": null,
-      "customerId": "c1",
-      "customerName": "Menachem Adler",
-      "source": "auto",
-      "reference": "TICKET-71"
-    }
-  ],
-  "/api/supplier-returns": {
-    "success": true,
-    "suppliers": [
-      {
-        "id": "sup1",
-        "name": "TechTrade Wholesale",
-        "contact": "0161 000 0000",
-        "notes": "",
-        "active": true
-      },
-      {
-        "id": "sup2",
-        "name": "Nordic Handsets Ltd",
-        "contact": "rep: Avi",
-        "notes": "",
-        "active": true
-      }
-    ],
-    "returns": [
-      {
-        "id": "sr1",
-        "supplierId": "sup1",
-        "supplierName": "TechTrade Wholesale",
-        "items": "6× Nokia 105, screens dead",
-        "imeis": "356789100000001\n356789100000002",
-        "claimedValue": 210,
-        "status": "awaiting_send",
-        "sentAt": null,
-        "resolvedAt": null,
-        "notes": "bag under the counter",
-        "createdAt": "2026-08-01T10:00:00Z"
-      },
-      {
-        "id": "sr2",
-        "supplierId": "sup2",
-        "supplierName": "Nordic Handsets Ltd",
-        "items": "2× Alcatel 1, no charge",
-        "imeis": "",
-        "claimedValue": 56,
-        "status": "sent",
-        "sentAt": "2026-07-28",
-        "resolvedAt": null,
-        "notes": "RMA-4471",
-        "createdAt": "2026-07-27T09:00:00Z"
-      },
-      {
-        "id": "sr3",
-        "supplierId": "sup1",
-        "supplierName": "TechTrade Wholesale",
-        "items": "1× charger batch (wrong plug)",
-        "imeis": "",
-        "claimedValue": 30,
-        "status": "credited",
-        "sentAt": "2026-07-10",
-        "resolvedAt": "2026-07-18",
-        "notes": "",
-        "createdAt": "2026-07-09T15:00:00Z"
-      }
-    ]
-  },
-  "/api/goods-in": {
-    "success": true,
-    "deliveries": [
-      {
-        "id": "gi1",
-        "supplierId": "sup1",
-        "supplierName": "TechTrade Wholesale",
-        "deliveryDate": "2026-08-02",
-        "invoiceRef": "INV-8841",
-        "invoiceTotal": 640,
-        "paid": false,
-        "paidAt": null,
-        "notes": "",
-        "createdAt": "2026-08-02T11:00:00Z",
-        "lines": [
-          {
-            "id": "gil1",
-            "itemId": null,
-            "description": "Nokia 110 4G",
-            "qty": 10,
-            "unitCost": 34
-          },
-          {
-            "id": "gil2",
-            "itemId": null,
-            "description": "USB-C chargers",
-            "qty": 20,
-            "unitCost": 15
-          }
-        ]
-      },
-      {
-        "id": "gi2",
-        "supplierId": "sup2",
-        "supplierName": "Nordic Handsets Ltd",
-        "deliveryDate": "2026-07-25",
-        "invoiceRef": "NH-2210",
-        "invoiceTotal": 380,
-        "paid": true,
-        "paidAt": "2026-07-30",
-        "notes": "",
-        "createdAt": "2026-07-25T09:30:00Z",
-        "lines": [
-          {
-            "id": "gil3",
-            "itemId": null,
-            "description": "Alcatel 1 handsets",
-            "qty": 8,
-            "unitCost": 47.5
-          }
-        ]
-      }
-    ],
-    "balances": {
-      "sup1": 430,
-      "sup2": 0
-    }
-  },
-  "/api/shop": {
-    "success": true,
-    "items": [
-      {
-        "id": "sh1",
-        "code": "CBL-C1",
-        "barcode": "5060001000011",
-        "category": "accessory",
-        "company": "Anker",
-        "model": "USB-C cable 1m",
-        "description": "Braided, 1 metre",
-        "netPrice": 2.4,
-        "sellingPrice": 5,
-        "profit": 2.6,
-        "quantity": 2,
-        "lowStockAt": 5,
-        "active": true
-      },
-      {
-        "id": "sh2",
-        "code": "CHG-CAR",
-        "barcode": "5060001000028",
-        "category": "accessory",
-        "company": "Belkin",
-        "model": "Car charger 20W",
-        "description": "Dual port",
-        "netPrice": 6.5,
-        "sellingPrice": 12,
-        "profit": 5.5,
-        "quantity": 14,
-        "lowStockAt": 4,
-        "active": true
-      },
-      {
-        "id": "sh3",
-        "code": "PHN-A1",
-        "barcode": "5060001000035",
-        "category": "phone",
-        "company": "Alcatel",
-        "model": "1 (kosher)",
-        "description": "Filtered, no browser",
-        "netPrice": 28,
-        "sellingPrice": 45,
-        "profit": 17,
-        "quantity": 6,
-        "lowStockAt": 2,
-        "active": true
-      },
-      {
-        "id": "sh4",
-        "code": "SIM-UK",
-        "barcode": "",
-        "category": "sim",
-        "company": "Lebara",
-        "model": "UK SIM",
-        "description": "Pay monthly starter",
-        "netPrice": 0,
-        "sellingPrice": 10,
-        "profit": 10,
-        "quantity": 0,
-        "lowStockAt": 3,
-        "active": true
-      }
-    ],
-    "sales": [
-      {
-        "id": "sl1",
-        "customerName": "Chaim Kopilowitz",
-        "item": "Anker USB-C cable 1m",
-        "qty": 2,
-        "total": 10,
-        "imei": "",
-        "notes": "",
-        "createdAt": "2026-08-01T14:05:00.000Z"
-      },
-      {
-        "id": "sl2",
-        "customerName": "",
-        "item": "Belkin Car charger 20W",
-        "qty": 1,
-        "total": 12,
-        "imei": "",
-        "notes": "walk-in",
-        "createdAt": "2026-08-01T16:40:00.000Z"
-      }
-    ]
-  },
-  "/api/services": [
-    {
-      "id": "sv1",
-      "category": "sim",
-      "name": "SIM swap",
-      "price": 10,
-      "kcPrice": 8,
-      "repeat": false
-    },
-    {
-      "id": "sv2",
-      "category": "sim",
-      "name": "Top-up",
-      "price": 20,
-      "kcPrice": 20,
-      "repeat": true
-    }
-  ],
-  "/api/kol-torah": {
-    "success": true,
-    "titles": [
-      {
-        "id": "kt1",
-        "code": "KT-001",
-        "name": "Shiur — Parshas Devarim",
-        "speaker": "R. Cohen",
-        "price": 8,
-        "active": true,
-        "notes": ""
-      }
-    ],
-    "shuls": [
-      {
-        "id": "sh1",
-        "name": "Beis Medrash",
-        "contact": "",
-        "active": true,
-        "notes": "",
-        "customerId": null,
-        "customerName": ""
-      }
-    ],
-    "stock": [
-      {
-        "shulId": "sh1",
-        "titleId": "kt1",
-        "qty": 12
-      }
-    ],
-    "jobs": [
-      {
-        "id": "j1",
-        "kind": "cd_to_mp3",
-        "status": "open",
-        "customerId": "c1",
-        "customerName": "Menachem Adler",
-        "qty": 3,
-        "price": 15
-      }
-    ],
-    "settlements": []
-  },
-  "/api/team": {
-    "success": true,
-    "members": [
-      {
-        "id": "st1",
-        "name": "Shloime",
-        "email": "owner@example.com",
-        "role": "owner",
-        "allowedTabs": null
-      },
-      {
-        "id": "st2",
-        "name": "Counter helper",
-        "email": "helper@example.com",
-        "role": "helper",
-        "allowedTabs": [
-          "customers",
-          "rentals",
-          "shop"
-        ]
-      }
-    ]
-  },
-  "/api/automations": {
-    "success": true,
-    "rules": []
-  },
-  "/api/business-accounts": {
-    "success": true,
-    "accounts": [],
-    "credVault": true
-  },
-  "/api/custom-charges": {
-    "success": true,
-    "charges": []
-  },
-  "/api/elid/summary": {
-    "success": true,
-    "account": "kosher-connect-rental",
-    "balance": 88.5
-  },
-  "/api/email-aliases": {
-    "success": true,
-    "aliases": []
-  },
-  "/api/phone-guide": {
-    "success": true,
-    "phones": []
-  },
-  "/api/repairs/menu": {
-    "success": true,
-    "items": []
-  },
-  "/api/cashup": {
-    "success": true,
-    "date": "2026-08-03",
-    "methods": {
-      "cash": 87,
-      "card": 45
-    },
-    "totalIn": 132,
-    "totalOut": 12,
-    "openingFloat": 50,
-    "expectedCash": 137,
-    "count": null
-  },
-  "/api/bank": {
-    "success": true,
-    "accounts": [
-      {
-        "ref": "Revolut main",
-        "count": 4,
-        "open": 2,
-        "latest": "2026-07-31"
-      },
-      {
-        "ref": "Revolut savings",
-        "count": 1,
-        "open": 1,
-        "latest": "2026-07-28"
-      },
-      {
-        "ref": "Stripe",
-        "count": 1,
-        "open": 1,
-        "latest": "2026-08-03"
-      }
-    ],
-    "counts": {
-      "unmatched": 3,
-      "proposed": 1,
-      "confirmed": 1,
-      "ignored": 1
-    },
-    "proposeCapped": 0,
-    "customers": [
-      {
-        "customerId": "101",
-        "customerUuid": "u1",
-        "name": "Moshe Kopilowitz"
-      },
-      {
-        "customerId": "102",
-        "customerUuid": "u2",
-        "name": "Rivka Gross"
-      },
-      {
-        "customerId": "103",
-        "customerUuid": "u3",
-        "name": "Yankel Wolf"
-      },
-      {
-        "customerId": "104",
-        "customerUuid": "u4",
-        "name": "Sarah Paneth"
-      }
-    ],
-    "transactions": [
-      {
-        "id": "st1",
-        "accountRef": "Stripe",
-        "provider": "stripe",
-        "bookedAt": "2026-08-03",
-        "amount": 394.35,
-        "currency": "GBP",
-        "description": "Payment link · lyrosenbaum@gmail.com",
-        "counterparty": "Sarah Paneth",
-        "state": "unmatched",
-        "note": "",
-        "matchedLedgerId": null,
-        "matchedAt": null,
-        "match": {
-          "ambiguous": true,
-          "proposals": [
-            {
-              "customerId": "104",
-              "customerUuid": "u4",
-              "name": "Sarah Paneth",
-              "confidence": "weak",
-              "reasons": [
-                "counterparty resembles Sarah Paneth"
-              ]
-            },
-            {
-              "customerId": "101",
-              "customerUuid": "u1",
-              "name": "Naftoly Padwa",
-              "confidence": "weak",
-              "reasons": [
-                "3 days from the expected date"
-              ]
-            }
-          ]
-        }
-      },
-      {
-        "id": "b1",
-        "accountRef": "Revolut main",
-        "provider": "csv",
-        "bookedAt": "2026-07-31",
-        "amount": 285,
-        "currency": "GBP",
-        "description": "Incoming transfer · BNKYRW",
-        "counterparty": "KOPILOWITZ M",
-        "state": "unmatched",
-        "note": "",
-        "matchedLedgerId": null,
-        "matchedAt": null,
-        "match": {
-          "ambiguous": false,
-          "proposals": [
-            {
-              "customerId": "101",
-              "customerUuid": "u1",
-              "name": "Moshe Kopilowitz",
-              "confidence": "strong",
-              "reasons": [
-                "reference BNKYRW appears in the bank description",
-                "amount 285.00 matches exactly",
-                "counterparty resembles Moshe Kopilowitz"
-              ]
-            }
-          ]
-        }
-      },
-      {
-        "id": "b2",
-        "accountRef": "Revolut savings",
-        "provider": "csv",
-        "bookedAt": "2026-07-28",
-        "amount": 45,
-        "currency": "GBP",
-        "description": "Faster payment",
-        "counterparty": "GROSS R",
-        "state": "unmatched",
-        "note": "",
-        "matchedLedgerId": null,
-        "matchedAt": null,
-        "match": {
-          "ambiguous": true,
-          "proposals": [
-            {
-              "customerId": "102",
-              "customerUuid": "u2",
-              "name": "Rivka Gross",
-              "confidence": "possible",
-              "reasons": [
-                "amount 45.00 matches exactly",
-                "counterparty resembles Rivka Gross"
-              ]
-            },
-            {
-              "customerId": "103",
-              "customerUuid": "u3",
-              "name": "Yankel Wolf",
-              "confidence": "possible",
-              "reasons": [
-                "amount 45.00 matches exactly"
-              ]
-            }
-          ]
-        }
-      },
-      {
-        "id": "b3",
-        "accountRef": "Revolut main",
-        "provider": "csv",
-        "bookedAt": "2026-07-30",
-        "amount": -42.35,
-        "currency": "GBP",
-        "description": "Amazon · order 123",
-        "counterparty": "",
-        "state": "proposed",
-        "note": "",
-        "matchedLedgerId": null,
-        "matchedAt": null,
-        "match": {
-          "ambiguous": false,
-          "proposals": []
-        }
-      },
-      {
-        "id": "b4",
-        "accountRef": "Revolut main",
-        "provider": "csv",
-        "bookedAt": "2026-07-29",
-        "amount": 120,
-        "currency": "GBP",
-        "description": "Standing order",
-        "counterparty": "LEIFER Y",
-        "state": "confirmed",
-        "note": "",
-        "matchedLedgerId": "led-1",
-        "matchedAt": "2026-07-30T10:00:00Z",
-        "match": null
-      },
-      {
-        "id": "b5",
-        "accountRef": "Revolut main",
-        "provider": "csv",
-        "bookedAt": "2026-07-27",
-        "amount": -18.5,
-        "currency": "GBP",
-        "description": "Bank fee",
-        "counterparty": "",
-        "state": "ignored",
-        "note": "Not customer money",
-        "matchedLedgerId": null,
-        "matchedAt": null,
-        "match": null
-      }
-    ]
-  },
-  "/api/message-log": {
-    "success": true,
-    "entries": [
-      {
-        "id": "1",
-        "at": "2026-08-10T18:22:00Z",
-        "channel": "email",
-        "kind": "payment",
-        "to": "someone@example.com",
-        "actualTo": "owner-test@example.com",
-        "subject": "Payment received — £40.00",
-        "status": "redirected",
-        "error": null,
-        "customerName": "Moishe Berger"
-      },
-      {
-        "id": "2",
-        "at": "2026-08-09T15:02:00Z",
-        "channel": "sms",
-        "kind": "sms",
-        "to": "+447700900123",
-        "actualTo": null,
-        "subject": "Your rental phone is due back this Thursday.",
-        "status": "held",
-        "error": null,
-        "customerName": "Toibe Klein"
-      },
-      {
-        "id": "3",
-        "at": "2026-08-08T11:40:00Z",
-        "channel": "email",
-        "kind": "sale",
-        "to": "bad@nowhere.example",
-        "actualTo": "bad@nowhere.example",
-        "subject": "Your Kosher Connect receipt — £12.50",
-        "status": "failed",
-        "error": "[resend] domain is not verified",
-        "customerName": null
-      },
-      {
-        "id": "4",
-        "at": "2026-08-07T10:00:00Z",
-        "channel": "email",
-        "kind": "magic-link",
-        "to": "cust@example.com",
-        "actualTo": "cust@example.com",
-        "subject": "Your sign-in link",
-        "status": "sent",
-        "error": null,
-        "customerName": "Pesha Eger"
-      }
-    ]
-  },
-  "/api/customers/duplicates": {
-    "success": true,
-    "mode": "all",
-    "seeds": 6,
-    "count": 2,
-    "dismissed": 3,
-    "pairs": [
-      {
-        "key": "c1|c5",
-        "score": 9,
-        "a": {
-          "id": "c1",
-          "name": "Menachem Adler",
-          "elid": [],
-          "imported": false,
-          "phone": "+447911123456",
-          "email": "m.adler@example.com",
-          "counts": {
-            "sims": 2,
-            "rentals": 1,
-            "money": 7
-          }
-        },
-        "b": {
-          "id": "c5",
-          "name": "Menachem Adler",
-          "elid": [
-            "adler.m"
-          ],
-          "imported": true,
-          "phone": "",
-          "email": "",
-          "counts": {}
-        }
-      },
-      {
-        "key": "c2|c6",
-        "score": 6,
-        "a": {
-          "id": "c2",
-          "name": "Yossi Taitelbaum",
-          "elid": [],
-          "imported": false,
-          "phone": "+447700900123",
-          "email": "yossi@example.com",
-          "counts": {
-            "bookings": 2,
-            "repairs": 1
-          }
-        },
-        "b": {
-          "id": "c6",
-          "name": "Yoisef Teitelboim",
-          "elid": [],
-          "imported": false,
-          "phone": "+447700900123",
-          "email": "",
-          "counts": {
-            "sims": 1,
-            "vns": 1,
-            "money": 3
-          }
-        }
-      }
-    ]
-  },
-  "/api/ai-usage": {
-    "success": true,
-    "enabled": true,
-    "pricedOn": "2026-08-16",
-    "fxRate": 0.79,
-    "estimated": true,
-    "thisMonth": {
-      "calls": 74,
-      "tokens": 812450,
-      "usd": 1.94,
-      "gbp": 1.53,
-      "features": [
-        {
-          "feature": "AI reader",
-          "calls": 31,
-          "tokens": 561200,
-          "usd": 1.12,
-          "gbp": 0.88
-        },
-        {
-          "feature": "assistant planner",
-          "calls": 28,
-          "tokens": 180300,
-          "usd": 0.55,
-          "gbp": 0.43
-        },
-        {
-          "feature": "reply drafter",
-          "calls": 12,
-          "tokens": 58900,
-          "usd": 0.19,
-          "gbp": 0.15
-        },
-        {
-          "feature": "task prioritiser",
-          "calls": 3,
-          "tokens": 12050,
-          "usd": 0.08,
-          "gbp": 0.07
-        }
-      ]
-    },
-    "lastMonth": {
-      "calls": 51,
-      "tokens": 505900,
-      "usd": 1.21,
-      "gbp": 0.96,
-      "features": []
-    },
-    "since": "2026-07-01",
-    "capped": false
-  },
-  "/api/elid/balances": {
-    "success": true,
-    "total": 3,
-    "offset": 0,
-    "nextOffset": null,
-    "accounts": [
-      {
-        "username": "moishe-bodner",
-        "internal": false,
-        "balance": 4.2,
-        "error": null
-      },
-      {
-        "username": "kosher-connect-rental",
-        "internal": true,
-        "balance": 88.5,
-        "error": null
-      },
-      {
-        "username": "chaim-lemberger",
-        "internal": false,
-        "balance": null,
-        "error": "ELID balance read failed"
-      }
-    ]
-  },
-  "/api/review": {
-    "success": true,
-    "total": 1865,
-    "remaining": 1861,
-    "done": 4,
-    "progress": {
-      "customers": {
-        "imported": 604,
-        "remaining": 602
-      },
-      "sims": {
-        "imported": 796,
-        "remaining": 795
-      },
-      "bookings": {
-        "imported": 391,
-        "remaining": 391
-      },
-      "virtual_numbers": {
-        "imported": 74,
-        "remaining": 73
-      }
-    },
-    "bundles": [
-      {
-        "id": "seed-uuid-1",
-        "legacyId": "c1",
-        "name": "Menachem Adler",
-        "phone": "",
-        "email": "m.adler@example.com",
-        "address": "123 Baker Street, London",
-        "notes": "prefers the £20 US plan",
-        "sims": [
-          {
-            "id": "s1",
-            "number": "+447396843022",
-            "provider": "Lebara",
-            "status": "active",
-            "renewal": "2026-09-02"
-          },
-          {
-            "id": "s2",
-            "number": "+447423287185",
-            "provider": "Lebara",
-            "status": "active",
-            "renewal": ""
-          }
-        ],
-        "bookings": [
-          {
-            "id": "b1",
-            "ref": "KC-2291",
-            "route": "MAN → TLV",
-            "date": "2026-09-14"
-          }
-        ],
-        "virtualNumbers": [
-          {
-            "id": "v1",
-            "number": "+441615311386",
-            "platform": "ELID"
-          }
-        ],
-        "contact": {
-          "kind": "none",
-          "simId": null,
-          "label": "No contact number on record"
-        }
-      }
-    ]
-  },
-  "/api/sim-mail": {
-    "success": true,
-    "counts": {
-      "pending": 2,
-      "paired": 118,
-      "total": 120
-    },
-    "messages": [
-      {
-        "id": 42,
-        "receivedAt": "2026-08-16T17:08:00Z",
-        "from": "billing@lebara.co.uk",
-        "carrier": "Lebara",
-        "subject": "Your plan renews on 2 September",
-        "snippet": "",
-        "recipient": "shevabruches111@gmail.com",
-        "confidence": "ambiguous",
-        "numbers": [],
-        "resolvedAt": null,
-        "sim": null,
-        "candidates": [
-          {
-            "id": "s1",
-            "number": "+447349967598",
-            "provider": "Lebara",
-            "customerName": "Menachem Adler"
-          },
-          {
-            "id": "s2",
-            "number": "+447423287185",
-            "provider": "Lebara",
-            "customerName": "Rivka Gluck"
-          }
-        ]
-      },
-      {
-        "id": 41,
-        "receivedAt": "2026-08-16T15:25:00Z",
-        "from": "noreply@lebara.com",
-        "carrier": "Lebara",
-        "subject": "Welcome to Lebara — 07349 967598",
-        "snippet": "",
-        "recipient": "",
-        "confidence": "unknown",
-        "numbers": [
-          "7349967598"
-        ],
-        "resolvedAt": null,
-        "sim": null,
-        "candidates": []
-      },
-      {
-        "id": 40,
-        "receivedAt": "2026-08-16T11:34:00Z",
-        "from": "billing@lebara.co.uk",
-        "carrier": "Lebara",
-        "subject": "Payment received",
-        "snippet": "",
-        "recipient": "gitt.bilig+moshe@gmail.com",
-        "confidence": "address",
-        "numbers": [
-          "7807065243"
-        ],
-        "resolvedAt": "2026-08-16T11:34:10Z",
-        "sim": {
-          "id": "s3",
-          "number": "+447807065243",
-          "provider": "Lebara",
-          "customerName": "Yossi Taitelbaum"
-        },
-        "candidates": []
-      }
-    ]
-  },
-  "/api/sim-mail?simLegacyId": {
-    "success": true,
-    "messages": [
-      {
-        "id": 40,
-        "receivedAt": "2026-08-16T11:34:00Z",
-        "from": "billing@lebara.co.uk",
-        "carrier": "Lebara",
-        "subject": "Payment received",
-        "confidence": "address"
-      },
-      {
-        "id": 33,
-        "receivedAt": "2026-08-02T09:12:00Z",
-        "from": "noreply@lebara.com",
-        "carrier": "Lebara",
-        "subject": "Your plan renews on 2 September",
-        "confidence": "address"
-      }
-    ]
-  },
-  "/api/ticket-mail": {
-    "success": true,
-    "counts": {
-      "pending": 3,
-      "booked": 11,
-      "total": 14
-    },
-    "tickets": [
-      {
-        "id": 71,
-        "receivedAt": "2026-08-18T09:12:00Z",
-        "from": "noreply@wizzair.com",
-        "subject": "Your booking is confirmed — XU2WWH",
-        "airline": "Wizz Air",
-        "kind": "confirmation",
-        "reference": "XU2WWH",
-        "passengers": [
-          "Menachem Adler",
-          "Rivka Adler"
-        ],
-        "origin": "LTN",
-        "destination": "TLV",
-        "route": "LTN → TLV",
-        "travelDate": "2026-09-12",
-        "returnDate": "2026-09-26",
-        "departureTime": "08:25",
-        "arrivalTime": "15:05",
-        "price": 428.6,
-        "currency": "GBP",
-        "confidence": "full",
-        "missing": [],
-        "customerId": "c1",
-        "customerName": "Menachem Adler",
-        "customerConfidence": "sure",
-        "candidates": [
-          {
-            "id": "c1",
-            "name": "Menachem Adler",
-            "why": "flew as Menachem Adler before"
-          }
-        ],
-        "body": "Confirmation number: XU2WWH\nLondon Luton (LTN) 08:25 → Tel Aviv (TLV) 15:05\nTotal price: GBP 428.60",
-        "bookingId": null,
-        "resolvedAt": null,
-        "dismissedReason": ""
-      },
-      {
-        "id": 70,
-        "receivedAt": "2026-08-17T19:40:00Z",
-        "from": "noreply@ryanair.com",
-        "subject": "Ryanair booking confirmation",
-        "airline": "Ryanair",
-        "kind": "confirmation",
-        "reference": "QK4T2M",
-        "passengers": [
-          "Yossi Taitelbaum"
-        ],
-        "origin": "MAN",
-        "destination": "KRK",
-        "route": "MAN → KRK",
-        "travelDate": "2026-10-03",
-        "returnDate": "",
-        "departureTime": "06:40",
-        "arrivalTime": "",
-        "price": null,
-        "currency": "",
-        "confidence": "partial",
-        "missing": [
-          "price"
-        ],
-        "customerId": "",
-        "customerName": "",
-        "customerConfidence": "many",
-        "candidates": [
-          {
-            "id": "c2",
-            "name": "Yossi Taitelbaum",
-            "why": "name matches the customer"
-          },
-          {
-            "id": "c3",
-            "name": "Chaim Kopilowitz",
-            "why": "name matches the customer"
-          }
-        ],
-        "body": "Reservation number: QK4T2M\nFlight FR 1234 from Manchester to Krakow",
-        "bookingId": null,
-        "resolvedAt": null,
-        "dismissedReason": ""
-      },
-      {
-        "id": 69,
-        "receivedAt": "2026-08-16T11:02:00Z",
-        "from": "noreply@wizzair.com",
-        "subject": "Your flight has been cancelled — IJEVNV",
-        "airline": "Wizz Air",
-        "kind": "cancellation",
-        "reference": "IJEVNV",
-        "passengers": [],
-        "origin": "LTN",
-        "destination": "TLV",
-        "route": "LTN → TLV",
-        "travelDate": "2026-09-12",
-        "returnDate": "",
-        "departureTime": "",
-        "arrivalTime": "",
-        "price": 170,
-        "currency": "EUR",
-        "confidence": "partial",
-        "missing": [
-          "passenger"
-        ],
-        "customerId": "",
-        "customerName": "",
-        "customerConfidence": "none",
-        "candidates": [],
-        "body": "We are sorry to inform you that flight W6 5623 has been cancelled.",
-        "bookingId": null,
-        "resolvedAt": null,
-        "dismissedReason": ""
-      }
-    ]
-  }
+    "customerId": "",
+    "customerName": "",
+    "customerConfidence": "none",
+    "candidates": [],
+    "body": "We are sorry to inform you that flight W6 5623 has been cancelled.",
+    "bookingId": null,
+    "resolvedAt": null,
+    "dismissedReason": ""
+   }
+  ]
+ }
 }
