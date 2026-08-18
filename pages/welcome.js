@@ -82,10 +82,10 @@ const T = {
         eyebrow: 'Travel phones',
         title: 'A kosher phone, sorted before you travel',
         accent: 'Shabbos & Yom Tov', sub: 'never charged — priced by the day, not the trip',
-        body: 'Off to the USA, Canada, Europe or Eretz Yisroel? Rent a kosher phone, set up with you in the shop before you go — so there’s nothing to arrange at a foreign airport. You pay by the day (minimum £20–£25 by destination), Shabbos and Yom Tov are never charged, and every rental includes local calls and calls back to the UK.',
+        body: 'Off to the USA, Canada, Europe or Eretz Yisroel? Rent a kosher phone, set up with you in the shop before you go — so there’s nothing to arrange at a foreign airport. You pay by the day{minClause}, Shabbos and Yom Tov are never charged, and every rental includes local calls and calls back to the UK.',
         note: 'We can book your flights as well — one trip, one place.',
         chips: ['Set up before you travel', 'Priced by the day', 'Shabbos never charged'],
-        price: '£3 a day · minimum £20–£25 · capped £45–£50 a month · Shabbos & Yom Tov never charged', cta: 'Plan your trip',
+        price: '{dayClause}{minSpec}{capSpec}Shabbos & Yom Tov never charged', cta: 'Plan your trip',
         prefill: 'I’m planning a trip and would like a travel phone. Where I’m going and when: ',
       },
       {
@@ -207,10 +207,10 @@ const T = {
         eyebrow: 'טלפון לחו״ל',
         title: 'טסים? הטלפון הכשר כבר מחכה לכם מוכן',
         accent: 'שבת ויום טוב', sub: 'בחינם — התשלום לפי יום, לא לפי נסיעה',
-        body: 'טסים לארה״ב, קנדה, אירופה או לארץ? שוכרים אצלנו טלפון כשר, ומגדירים אותו איתכם בחנות עוד לפני הטיסה — בלי להסתבך בשדה תעופה. משלמים לפי יום (מינימום ‎£20–£25‎ לפי היעד), שבת ויום טוב — בחינם תמיד, וכל השכרה כוללת שיחות מקומיות ושיחות חזרה לאנגליה.',
+        body: 'טסים לארה״ב, קנדה, אירופה או לארץ? שוכרים אצלנו טלפון כשר, ומגדירים אותו איתכם בחנות עוד לפני הטיסה — בלי להסתבך בשדה תעופה. משלמים לפי יום{minClause}, שבת ויום טוב — בחינם תמיד, וכל השכרה כוללת שיחות מקומיות ושיחות חזרה לאנגליה.',
         note: 'ואפשר להזמין אצלנו גם את הטיסות — נסיעה אחת, הכול במקום אחד.',
         chips: ['מוכן לפני הטיסה', 'תמחור לפי יום', 'שבת ויו״ט בחינם'],
-        price: '‎£3‎ ליום · מינימום ‎£20–£25‎ · תקרה חודשית ‎£45–£50‎ · שבת ויום טוב בחינם, תמיד', cta: 'דברו איתנו לפני הטיסה',
+        price: '{dayClause}{minSpec}{capSpec}שבת ויום טוב בחינם, תמיד', cta: 'דברו איתנו לפני הטיסה',
         prefill: 'אני מתכנן/ת נסיעה ואשמח לשכור טלפון לחו״ל. לאן ומתי: ',
       },
       {
@@ -349,6 +349,25 @@ const LD_JSON = JSON.stringify({
   sameAs: [`https://maps.google.com/?cid=${MAPS_CID}`, 'https://share.google/f9Ccv6oC7kaRvod0w'],
 })
 
+// Fill the price placeholders in a band from the LIVE rental rates. With no
+// rates loaded every placeholder becomes '', so the sentence still reads: "You
+// pay by the day, Shabbos and Yom Tov are never charged." No price beats a
+// stale one — all three numbers typed into this page had drifted by 19 Aug.
+const money = (n) => `£${Number(n) % 1 === 0 ? Number(n).toFixed(0) : Number(n).toFixed(2)}`
+const range = (r) => (r.from === r.to ? money(r.from) : `${money(r.from)}–${money(r.to)}`)
+
+export function withPrices(band, rental, lang) {
+  const he = lang === 'he'
+  const fill = {
+    minClause: rental ? (he ? ` (מינימום ‎${range(rental.min)}‎ לפי היעד)` : ` (minimum ${range(rental.min)} by destination)`) : '',
+    dayClause: rental ? (he ? `‎${range(rental.day)}‎ ליום · ` : `${range(rental.day)} a day · `) : '',
+    minSpec: rental ? (he ? `מינימום ‎${range(rental.min)}‎ · ` : `minimum ${range(rental.min)} · `) : '',
+    capSpec: rental ? (he ? `תקרה חודשית ‎${range(rental.cap)}‎ · ` : `capped ${range(rental.cap)} a month · `) : '',
+  }
+  const swap = (text) => String(text || '').replace(/\{(minClause|dayClause|minSpec|capSpec)\}/g, (_, k) => fill[k])
+  return { ...band, body: swap(band.body), price: swap(band.price) }
+}
+
 export default function Welcome() {
   const [lang, setLang] = useState('en')
   const [hours, setHours] = useState('Sunday–Thursday, 2:00–6:30pm')
@@ -374,12 +393,17 @@ export default function Welcome() {
   const [errCode, setErrCode] = useState('')
   const [paid, setPaid] = useState(false) // Stripe Checkout success lands on /welcome?paid=1
   const [showTop, setShowTop] = useState(false)
+  // Rental prices come from the rental_rates rows the till bills from
+  // (/api/public/info). Null until they arrive, and null is rendered as NO
+  // price clause at all — a page that has not loaded its prices yet must show
+  // nothing rather than a number somebody typed in once.
+  const [rental, setRental] = useState(null)
   useEffect(() => {
     try { const saved = localStorage.getItem('kcLang'); if (saved && T[saved]) setLang(saved) } catch {}
     try { if (new URLSearchParams(window.location.search).get('paid') === '1') setPaid(true) } catch {}
     fetch('/api/public/info')
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (d?.openingHours) setHours(d.openingHours) })
+      .then((d) => { if (d?.openingHours) setHours(d.openingHours); if (d?.rental) setRental(d.rental) })
       .catch(() => {})
   }, [])
   useEffect(() => {
@@ -577,7 +601,9 @@ export default function Welcome() {
           </div>
         </section>
 
-        {t.bands.map((b, i) => (
+        {t.bands.map((rawBand, i) => {
+          const b = withPrices(rawBand, rental, lang)
+          return (
           <section className={`sk-band ${i % 2 ? 'sk-band-tint' : ''}`} id={BAND_IDS[i]} key={`${lang}-b${i}`}>
             <div className="sk-wrap sk-band-inner sk-reveal">
               <span className="sk-eyebrow">{b.eyebrow}</span>
@@ -596,7 +622,8 @@ export default function Welcome() {
                 onClick={() => { if (b.prefill) seedMessage(b.prefill) }}>{b.cta}</a>
             </div>
           </section>
-        ))}
+          )
+        })}
 
         <section className="sk-also" id="services">
           <div className="sk-wrap">
