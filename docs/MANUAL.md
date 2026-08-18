@@ -10,7 +10,7 @@ do I…?** on any screen — and the numbers (rates, free days, caps) live in
 BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
-**12 of 28 screens written out in full; 16 still short entries.**
+**16 of 28 screens written out in full; 12 still short entries.**
 
 ---
 
@@ -27,10 +27,10 @@ list.
 - Shop — Stock and the counter: what is on the shelf, what it cost and sells for, and the full-screen till for selling it.
 - Kol Torah — The audio side of the business: conversion jobs brought in by customers, CDs left with shuls on consignment, and the money each shul owes back.
 - Virtual Numbers — Numbers rented to customers that ring through to somewhere else: who has which, on which platform, and what it bills.
-- Tasks — The shop's own to-do list, including the jobs the app files itself when something needs a person.
-- Confirm Data — Imported records the app is not willing to trust on its own — read them, correct them, confirm them into the books.
-- Carrier Mail — Letters and emails that arrive from the networks, matched to the customer and SIM they belong to.
-- Settings — Everything the shop can change without a code change: prices, the free-day calendar, what helpers may see, the public phone guide.
+- Tasks — The shop's own to-do list, including the jobs the app files by itself when something it noticed needs a person.
+- Confirm Data — Records that came in from an import and are not yet trusted: read each one against what you know, and confirm it into the books or fix it first.
+- Carrier Mail — Post arriving from the networks — bills, warnings, confirmations — matched to the SIM plan and the customer it belongs to.
+- Settings — Everything the shop can change without anyone writing code: prices, people, what helpers can see, the public pages, and the safety gates on messaging.
 
 ### Dashboard
 
@@ -417,33 +417,114 @@ Numbers rented to customers that ring through to somewhere else: who has which, 
 
 ### Tasks
 
-The shop's own to-do list, including the jobs the app files itself when something needs a person.
+The shop's own to-do list, including the jobs the app files by itself when something it noticed needs a person.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **🔥 Now · 📋 Next · 💤 Snoozed · 💡 Suggestions** — Four lanes. Now is what today needs, Next is everything else, Snoozed is deliberately parked, and Suggestions are jobs the app thinks are worth doing and is waiting for you to agree to.
+- **✓ Accept** — Turns a suggestion into a real task. Until you accept it, it is the app's opinion and nothing more.
+- **Filter** — What you wrote yourself, what the app filed, tasks attached to a customer, and anything overdue.
+- **Sort: Smart** — The default. It puts what is due and what is urgent at the top instead of making you read the whole list to find them.
+- **The buttons on a task** — A task about a person carries the action with it: add them as a customer, confirm a booking's details, record a payment, or message them. The work happens from the task, not after hunting for the screen.
+- **Snooze · ⏰ Wake now** — Puts a task out of sight until a date, and brings it back early when the reason disappears. Snoozed tasks are off the dashboard on purpose.
+
+**Rules that bite here**
+
+- A snoozed task is parked, not done. It is deliberately invisible on the dashboard, so snoozing something you will not act on is a way of losing it.
+- The app files tasks for things it noticed and cannot decide alone. Deleting one does not fix what it noticed — it will usually be filed again.
+- A suggestion is not a task until someone accepts it. Nothing acts on a suggestion by itself.
+
+**When it goes wrong**
+
+- **The same task keeps coming back** — The condition behind it is still true. Fix the thing it is pointing at — the customer with no number, the booking with no reference — and it stops.
+- **A task is about a customer who no longer exists** — It was filed before the records were merged or tidied. Close it; nothing is lost, because the record it referred to is gone.
+- **Nothing is in Now but the shop is clearly busy** — Check Snoozed. Work parked with a date is out of every other view until it wakes.
 
 ---
 
 ### Confirm Data
 
-Imported records the app is not willing to trust on its own — read them, correct them, confirm them into the books.
+Records that came in from an import and are not yet trusted: read each one against what you know, and confirm it into the books or fix it first.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **The three counts** — How many records were imported, how many have been confirmed, and how many are still waiting on a person.
+- **A card per record** — One customer at a time, with everything else that came in for them beside it — so the decision is made on the whole person, not on a single row.
+- **✓ Yes — confirm** — Accepts the record as it stands. Where other imported rows are attached to the same person, it accepts those too, which is what makes the queue finishable.
+- **✏️ Fix first** — Opens the record to correct it before it is trusted. Confirming something you know is wrong is worse than leaving it in the queue.
+- **Skip for now** — Leaves it for someone who knows. Skipping is a legitimate answer — guessing is not.
+- **Load next batch** — Brings the next set through. The queue is worked in batches so it can be put down and picked up.
+
+**Rules that bite here**
+
+- Confirming means "I know this is right", not "I have read it". An import can carry a name in the wrong field or two people merged into one, and confirmation is the moment that becomes the shop's truth.
+- The counts come from what the server actually saved, not from what the screen assumed it saved. What it says is what happened.
+- This tab is only useful while it is being worked. A long queue is a book nobody quite trusts.
+
+**When it goes wrong**
+
+- **You do not recognise the person** — Skip it. Someone who knows them will confirm it; a wrong confirmation is invisible afterwards, which is precisely what makes it expensive.
+- **The details are nearly right** — Fix first, then confirm. The point of the queue is to catch exactly that.
+- **The tab is not in the sidebar** — It is a tab like any other and can be turned off for helpers in Settings. It once shipped hidden from everybody, which is why the tab lists are now held together by a test.
 
 ---
 
 ### Carrier Mail
 
-Letters and emails that arrive from the networks, matched to the customer and SIM they belong to.
+Post arriving from the networks — bills, warnings, confirmations — matched to the SIM plan and the customer it belongs to.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **Needs a human** — The queue: messages the app could not confidently file. This is the whole job of the screen.
+- **Filed on a SIM** — What has been matched, so the letter about a plan is on the plan when someone asks about it.
+- **Messages received** — Everything that has ever arrived, matched or not.
+- **Which SIM is this?** — The pairing question on an unmatched message, with the number it mentions. Answer it and the message files itself and stays filed.
+- **Add as a new SIM plan** — For post about a plan the shop has never recorded. It opens the usual new-plan form with the number and network already filled, and files the message on the plan once it is saved.
+- **Dismiss** — For post that belongs to nobody — a circular, a wrong number. It leaves the queue without pretending to be filed.
+
+**Rules that bite here**
+
+- Matching is what makes the post useful. An unfiled warning about a plan is a letter in a drawer.
+- Post arriving about a plan the shop does not have on record usually means the plan is real and the record is missing — that is worth following up, not dismissing.
+- Dismiss means "this belongs to nobody", not "not now". Anything that might matter should stay in the queue.
+
+**When it goes wrong**
+
+- **A message names a number nobody recognises** — Search the number in the SIM list first. If there is genuinely no plan, adding it from here creates the plan and files the message in one go.
+- **The queue is growing** — It grows when plans have no mailbox recorded, so nothing can be matched automatically. Fixing the plan fixes every future letter about it.
 
 ---
 
 ### Settings
 
-Everything the shop can change without a code change: prices, the free-day calendar, what helpers may see, the public phone guide.
+Everything the shop can change without anyone writing code: prices, people, what helpers can see, the public pages, and the safety gates on messaging.
 
-> Not written out in full yet — the sentence above is all this entry promises.
+**On the screen**
+
+- **Shop** — The public-facing details — the shop's own information, the wording on receipts, and the phone guide customers read before choosing a handset. There is a link to view the public page as they see it.
+- **People & access** — 👥 Team is who works here, with a password reset. 🔓 What helpers can see ticks the screens a helper may open — the owner always sees everything.
+- **Prices & charges** — Rental rates per country with their minimum, cap and cap period; what a lost or broken phone, charger or SIM costs; the fees and rules; the service price menu behind Online & Print; extra charges; repair stages; void reasons; and the month's target that the dashboard measures against.
+- **Communications** — Email and SMS, each with its safety gate, the addresses post arrives at, a test send, and the log of everything that has gone out.
+- **Travel** — 🛂 Travel requirements: what each destination demands and how long a document must stay valid. This is what the booking screen checks against.
+- **Connectivity** — The providers behind virtual numbers and the phone lines.
+- **Workbench** — The tools for moving a customer from one handset to another, and the converters behind them.
+- **Automation** — The jobs the nightly sweep runs for you, and what each one is allowed to do.
+- **Business** — The accounts and subscriptions the shop pays for, the telecom upstream, and what the AI features have cost this month.
+
+**Rules that bite here**
+
+- This screen is where the numbers live. Every rate, cap, fee and damage charge the rest of the app applies is read from here — which is why nothing else in this manual quotes one.
+- Messaging has three modes and they mean exactly what they say: hold builds the message and sends nothing, test sends everything to the shop's own address or number whatever you type, and live reaches real customers. It stays on hold until the owner deliberately changes it.
+- What helpers can see is an access list, and it fails closed: if it is empty or broken, helpers are stopped from making changes rather than quietly promoted to full access.
+- Secrets — keys, tokens, passwords for other services — are never kept in this app or in the code. They live with the host, and nobody should ever be asked to paste one into a message.
+- A price changed here changes what the shop charges from that moment. It does not rewrite what was already agreed on an existing rental or ticket.
+
+**When it goes wrong**
+
+- **A helper cannot see a screen they need** — Tick it under What helpers can see and save. If the tick box is not there at all, the screen is genuinely not grantable and that is a fault worth reporting.
+- **Messages are not reaching customers** — Check which mode messaging is in before assuming anything is broken. On hold, everything is built and logged and nothing is sent — that is it working as intended.
+- **A price change did not apply to an existing rental** — It is not meant to. What was agreed at the counter stays agreed; the new price applies to what is booked next.
+- **Something is asking for a key or a password** — Do not paste it into a message or into the app. Keys belong with the host, entered once by the owner.
 
 
 ---
