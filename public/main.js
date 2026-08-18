@@ -15606,16 +15606,23 @@ async function renderKolTorahTab() {
           <button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);" onclick="ktSaveShul('${s.id}')">💾 Save</button>
         </div>` : ''}
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-          <select class="form-input" id="ktMoveTitle_${s.id}" aria-label="Title to move for ${escHtml(s.name)}" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);max-width:230px;">${titleOptions}</select>
+          <select class="form-input" id="ktMoveTitle_${s.id}" aria-label="Title to move for ${escHtml(s.name)}" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);max-width:min(330px, 100%);">${titleOptions}</select>
           <input class="form-input" id="ktMoveQty_${s.id}" type="number" min="1" step="1" value="1" aria-label="Quantity" style="width:64px;min-height:0;padding:6px 9px;font-size:var(--fs-small);">
           <button class="btn btn-outline" style="font-size:var(--fs-micro);padding:5px 9px;" onclick="ktMove('${s.id}','delivery')">📦 Deliver</button>
           <button class="btn btn-outline" style="font-size:var(--fs-micro);padding:5px 9px;" onclick="ktMove('${s.id}','sold')">💿 Sold</button>
           <button class="btn btn-outline" style="font-size:var(--fs-micro);padding:5px 9px;" onclick="ktMove('${s.id}','return')">↩ Return</button>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);">
-          <span style="font-size:var(--fs-small);color:var(--muted);">Settle:</span>
-          <input class="form-input" id="ktSettleSold_${s.id}" type="number" min="0" step="0.01" placeholder="£ sold" style="width:88px;min-height:0;padding:6px 9px;font-size:var(--fs-small);">
-          <input class="form-input" id="ktSettleRecv_${s.id}" type="number" min="0" step="0.01" placeholder="£ collected" style="width:98px;min-height:0;padding:6px 9px;font-size:var(--fs-small);">
+        ${/* Labels above the boxes, not placeholders inside them. "£ collected"
+             did not fit its own 98px box and rendered as "£ collectec" — and a
+             placeholder is a poor label anyway: it is the field's only name for
+             a screen reader, and it disappears the moment anyone types, exactly
+             when "which box was the money we got?" is being asked. */''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);">
+          <span style="font-size:var(--fs-small);color:var(--muted);padding-bottom:7px;">Settle:</span>
+          <label class="kt-settle-fld">Sold
+            <input class="form-input" id="ktSettleSold_${s.id}" type="number" min="0" step="0.01" placeholder="£" style="width:84px;min-height:0;padding:6px 9px;font-size:var(--fs-small);"></label>
+          <label class="kt-settle-fld">Collected
+            <input class="form-input" id="ktSettleRecv_${s.id}" type="number" min="0" step="0.01" placeholder="£" style="width:84px;min-height:0;padding:6px 9px;font-size:var(--fs-small);"></label>
           <select class="form-input" id="ktSettleMethod_${s.id}" aria-label="Settlement method for ${escHtml(s.name)}" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);width:110px;">
             <option value="cash">💵 Cash</option><option value="bank_transfer">🏦 Transfer</option><option value="card">💳 Card</option><option value="other">Other</option>
           </select>
