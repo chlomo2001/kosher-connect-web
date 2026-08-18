@@ -77,6 +77,12 @@ export default function Manual() {
       </Head>
       <AppStyles />
 
+      {/* The page is its own scroll container, like .tool-shell and
+          .welcome-shell: body and #__next are overflow:hidden for the app
+          frame, so a long standalone page is UNSCROLLABLE without this — every
+          screen below the first one unreachable. /welcome shipped that bug
+          once; this page shipped it again on 18 Aug. */}
+      <div className="kc-man-shell">
       <div style={{ maxWidth: 820, margin: '0 auto', padding: '24px 18px 60px' }}>
         <div className="kc-man-chrome" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
           {/* A plain link, like every other page here: leaving the manual is a
@@ -115,6 +121,7 @@ export default function Manual() {
 
         <h2 style={{ margin: '26px 0 12px' }}>Pages with their own address</h2>
         {pages.map((s) => <Screen key={s.id} s={s} />)}
+      </div>
       </div>
 
     </>

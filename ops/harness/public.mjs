@@ -287,10 +287,51 @@ if (import.meta.url === `file://${process.argv[1]}`) {
               stray.push(el.tagName.toLowerCase() + (el.className ? '.' + String(el.className).toString().trim().split(/\s+/)[0] : ''))
             }
           })
+          // CAN A PERSON REACH THE BOTTOM OF THIS PAGE?
+          // body and #__next are overflow:hidden for the app frame, so a
+          // standalone page that forgets to be its own scroll container is
+          // clipped at the first viewport — with no scrollbar to hint at it,
+          // and a full-page screenshot that quietly comes back one viewport
+          // tall. /welcome shipped that bug, and /manual shipped it again on
+          // 18 Aug 2026 with four rounds of harness runs calling it clean.
+          const lowest = () => {
+            let max = 0
+            root.querySelectorAll('*').forEach((el) => {
+              if (el.closest('[aria-hidden="true"]')) return
+              const b = el.getBoundingClientRect()
+              if (b.width && b.height) max = Math.max(max, b.bottom)
+            })
+            return max
+          }
+          let reachable = lowest() <= window.innerHeight + 2
+          if (!reachable) {
+            // Try to get there the way a person would: scroll the document and
+            // every scroller on the page to its end, then look again. Positions
+            // are put back, so a screenshot after this is of the page at rest.
+            // scroll-behavior:smooth ANIMATES a scrollTop assignment, so the
+            // position read back a line later is the one it started from —
+            // which reported every smooth-scrolling page here as unscrollable.
+            // Turn the behaviour off for the measurement and put it back.
+            const jump = (el) => {
+              const prev = el.style.scrollBehavior
+              el.style.scrollBehavior = 'auto'
+              const was = el.scrollTop
+              el.scrollTop = 1e7
+              return () => { el.scrollTop = was; el.style.scrollBehavior = prev }
+            }
+            const undo = [jump(de)]
+            root.querySelectorAll('*').forEach((el) => {
+              const o = getComputedStyle(el).overflowY
+              if ((o === 'auto' || o === 'scroll') && el.scrollHeight > el.clientHeight + 2) undo.push(jump(el))
+            })
+            reachable = lowest() <= window.innerHeight + 2
+            undo.forEach((fn) => fn())
+          }
           return {
             painted: (root.textContent || '').trim().length > 60,
             overflow: de.scrollWidth - de.clientWidth,
             rtl,
+            reachable,
             stray: [...new Set(stray)].slice(0, 3),
           }
         })
@@ -338,7 +379,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
           contrastAll.push(...found)
         }
         const wantsRtl = lang === 'he' && BILINGUAL.has(page)
-        const ok = r.painted && !errs.length && (!wantsRtl || r.rtl)
+        const ok = r.painted && !errs.length && (!wantsRtl || r.rtl) && r.reachable
         if (!ok) bad++
         if (only) {
           // Theme is in the filename: without it a dark run silently overwrote
@@ -349,6 +390,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
           r.painted ? '' : 'DID NOT RENDER',
           r.overflow ? `content ${r.overflow}px wider than the viewport — see the font caveat` : '',
           wantsRtl && !r.rtl ? 'NO dir=rtl anywhere' : '',
+          r.reachable ? '' : 'BOTTOM OF THE PAGE UNREACHABLE — nothing scrolls',
           r.stray.length ? `outside viewport: ${r.stray.join(' ')}` : '',
           errs.length ? `err: ${errs[0].slice(0, 70)}` : '',
         ].filter(Boolean).join('  ')

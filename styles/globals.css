@@ -1098,7 +1098,12 @@ html { scroll-behavior: smooth; }
    The signed-OUT view keeps the login card; once signed in the portal is a
    proper account page: top bar, greeting, and a responsive card grid. */
 /* body/#__next are flex containers (login centering) — stretch to full width. */
-.pd-shell { flex: 1 1 auto; width: 100%; min-height: 100vh; background: var(--bg); color: var(--text); }
+/* Its own scroll container, like .welcome-shell and .tool-shell: body and
+   #__next are overflow:hidden for the app frame, so min-height alone left every
+   portal below the first viewport unreachable — no scrollbar, no hint, and a
+   customer unable to read past their balance. Caught by the harness on 18 Aug
+   2026, before the portal was ever switched on. */
+.pd-shell { flex: 1 1 auto; width: 100%; height: 100vh; overflow-y: auto; background: var(--bg); color: var(--text); }
 .pd-top {
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;

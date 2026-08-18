@@ -3899,11 +3899,20 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 
    The print block is the point of the page existing at all — a manual nobody
    can hand to someone on their first Sunday is not doing its job. */
+/* The scroll container. body/#__next are overflow:hidden for the app frame, so
+   a standalone page has to carry its own — the same arrangement as .tool-shell
+   and .welcome-shell, and the same bug both of those exist to avoid. */
+.kc-man-shell { height: 100vh; width: 100%; overflow-y: auto; }
+
 .kc-man-screen { padding: 16px 0; border-top: 1px solid var(--border-subtle); }
 .kc-man-toc a { color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border); }
 .kc-man-toc a:hover { border-bottom-color: var(--text); }
 
 @media print {
+  /* A fixed-height scroll container prints ONE page — the viewport — and
+     silently drops the rest. Printing is the whole point of this page, so the
+     shell gives its height back to the paper. */
+  .kc-man-shell { height: auto; overflow: visible; }
   /* No buttons, no theme switch, no contents list full of dead links — and a
      screen must not be split across a page break between its name and its
      first line, which is where a reader loses the thread. */
