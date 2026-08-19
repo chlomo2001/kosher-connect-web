@@ -19053,8 +19053,12 @@ function paletteSearch(q) {
     if ((b.route || '').toLowerCase().includes(needle) ||
         (b.passenger || '').toLowerCase().includes(needle) ||
         (b.bookingReference || '').toLowerCase().includes(needle)) {
+      // Opens the booking, not the tab. Searching a reference and landing on
+      // the whole list is the app forgetting what you just typed — the SIM
+      // result three loops down has always opened its own record.
       out.push({ icon: '✈️', label: `${b.route} — ${b.customerName || b.passenger || ''}`,
-        sub: `flies ${fmtDate(b.travelDate)}`, run: () => goToTab('bookings') });
+        sub: `flies ${fmtDate(b.travelDate)}`,
+        kind: 'booking', id: b.id, run: () => openOnTab('bookings', () => openEditBookingModal(b.id)) });
     }
   }
   // #50 — SIMs, virtual numbers, repairs and services were unsearchable.
@@ -19081,6 +19085,9 @@ function paletteSearch(q) {
     if (out.length >= 12) break;
     if ((r.customerName || '').toLowerCase().includes(needle) ||
         (r.device || '').toLowerCase().includes(needle)) {
+      // Left going to the tab, deliberately. A repair has no record of its own
+      // to open and the repairs list has no search term to set — the only
+      // honest options were the tab or inventing state that does not exist.
       out.push({ icon: '🔧', label: `Repair — ${r.customerName || ''}`, sub: `${r.device || ''} · ${r.status || ''}`,
         run: () => goToTab('repairs') });
     }
@@ -21331,12 +21338,16 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   overdue.forEach(r => attention.push(['📱',
     `<strong>${escName(r.customerName || '?')}</strong> — rental overdue since ${fmtDate(r.toDate)}`,
     () => goToTab('rentals', { rentalSearch: r.customerName || '' })]));
+  // Every one of these lines counted something, so it opens the list already
+  // narrowed to what it counted. Landing on the plain tab makes you do the
+  // filtering a second time, by hand, having just been told the answer —
+  // owner #15 raised it about the SIM line, and the same was true of these two.
   readyRepairs.forEach(r => attention.push(['🔧',
     `<strong>${escName(r.customerName || '?')}</strong> — repair ready to collect (${fmtGbp((r.total || 0))})`,
-    () => goToTab('repairs')]));
+    () => filterView('repairs', () => { kcView('repairs').filter = 'ready'; })]));
   travel7.forEach(b => attention.push(['✈️',
     `<strong>${escName(b.customerName || '?')}</strong> — flies ${fmtDate(b.travelDate)} (${escHtml(b.route)})`,
-    () => goToTab('bookings')]));
+    () => filterView('bookings', () => { kcView('bookings').filter = 'upcoming'; })]));
   // Straight to the plan that is renewing, not to the list of every plan.
   // The line names one SIM, so landing on the tab and leaving you to find it
   // again is the app forgetting what you just clicked.
@@ -21353,7 +21364,9 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
     () => openOnTab('sim', () => openManageSimModal(s.id))]));
   if (renewals7.length > 3) coming.push(['💳',
     `<strong>${renewals7.length - 3} more SIM plans</strong> renew in the next 7 days`,
-    () => goToTab('sim')]);
+    // 'week' is the SIM list's own "renewing in the next 7 days" — the same
+    // set this line counted, so it opens on it rather than on all 797 plans.
+    () => filterView('sim', () => { simFilterStatus = 'week'; }, renderSimRows)]);
   if (renewalsLate.length) attention.push(['⏰',
     `<strong>${renewalsLate.length} active SIM${renewalsLate.length === 1 ? '' : 's'}</strong> past the renewal date on record`,
     () => filterView('sim', () => { simFilterStatus = 'late'; }, renderSimRows)]);

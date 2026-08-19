@@ -1202,7 +1202,12 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 /* The type-to-find box sits in the same row as the chips it filters, and stays
    narrow: it is looking for one name in a dozen, not composing a message. */
 .cm-pick-filter { width: min(220px, 100%); padding: 5px 10px; font-size: var(--fs-small); }
-.cm-actions { display: flex; gap: 8px; align-items: center; }
+/* wrap, because these buttons grow with the text-size control and the row has
+   a fixed width. At 320px on the largest ramp the third one (📝 Task) painted
+   33px outside the card — the buttons had nowhere to go and went sideways.
+   Wrapping puts them on the next line instead, which costs a little height on
+   the smallest phone and nothing at all anywhere else. */
+.cm-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
 @media (max-width: 560px) {
   .cm-row { grid-template-columns: auto minmax(0, 1fr); gap: 6px 10px; }
