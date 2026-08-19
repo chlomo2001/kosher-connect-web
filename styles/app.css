@@ -1446,6 +1446,13 @@ body.kc-two-cards #customerCard2 .modal:focus-within {
 }
 .kc-next-text { min-width: 0; overflow-wrap: anywhere; }
 .kc-next-go { margin-left: auto; flex: none; }
+/* On a phone the sentence takes the whole width, so the button wraps to its own
+   line — and `margin-left:auto` then shoved it against the right edge, leaving a
+   dead gap across the row and a small target floating in it. Once it has a line
+   of its own it may as well have all of it. */
+@media (max-width: 560px) {
+  .kc-next-go { margin-left: 0; width: 100%; }
+}
 /* Overdue is the one that should raise a pulse. Colour AND the word 'overdue'
    in the sentence itself, so the urgency does not live in the border alone. */
 .kc-next-urgent { border-left-color: var(--danger); }
