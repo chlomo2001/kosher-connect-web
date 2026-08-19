@@ -31,16 +31,20 @@ where the owner said it was wrong.
 | 11 | Stripe timestamps | Stripe events carry their own `created`; our ledger stamps server time. Say which you want shown if they should agree. |
 | 18 | "Default payment method" | The card the app would use for an off-session charge. It does not make anything charge by itself. |
 
-## Waiting on a decision from you
+## Decided by the owner, 19 August 02:45 — now the work list
 
-| # | ask | what is blocked |
+| # | ask | the owner's answer |
 |---|---|---|
-| 1 | Edit or delete the history log | An append-only log is evidence; an editable one is notes. Which? |
-| 12 | Auto-renew as "needs attention" | Agreed it reads wrong; moving it changes what the dashboard nags about. |
-| 4 | A folder per customer for documents | The folder view is a UI job; whether the customer sees it in the portal is a privacy decision. |
-| 20 | Forward important carrier mail to the customer | A live customer send — HOLD-gated, needs your go-live word, and needs a rule for "important" plus certainty about the pairing. |
-| 22 | Open an extra card when one is gripped aside | Raised in chat; not yet specified enough to build. |
-| — | C1 (money wording / refuse-to-be-confident) | Held by your own brief; you chose to keep it held on 19 Aug. |
+| 1 | Edit or delete the history log | **Correct it, never erase it.** An entry can be corrected; the original stays visible, struck through, with who changed it and when. The log stays evidence. |
+| 4 | A folder per customer for documents | **Folder view, staff only.** No change to what a customer sees in the portal — that half stays a separate privacy decision, not taken. |
+| 20 | Forward important carrier mail to the customer | **Build it HOLD-gated, with an approval queue.** The app prepares each forward and shows exactly what would go and to whom; nothing sends until the owner flips the gate. |
+| 22 | Open a second card while one is gripped aside | **Yes — both cards fully editable.** Owner overrode the read-only recommendation, so the build has to make it unmistakable which card a save belongs to. That is the whole risk of this item. |
+| C1 | Money wording / refuse-to-be-confident | **All of it, wording included.** The decision→wording split, `gaps[]`/`reliable`, the refusal wired to screens with a manager-only Confirm-rate exit, and every money sentence rewritten across the three audiences (staff, customer, Kol Torah consignor). |
+
+Item 12 (auto-renew as "needs attention") needed no decision in the end — it
+shipped in `604d53f`: upcoming renewals moved to *Coming up*, and only a renewal
+PAST its date still counts as attention, because that one did not happen by
+itself.
 
 ## ⚠ Still needs you, outside the app
 
