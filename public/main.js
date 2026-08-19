@@ -7554,6 +7554,56 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         </div>
       </div>`;
 
+  // ── The record: every unit this person has, linked, past included ────────
+  //
+  // Page only. The card keeps its compact badge row on purpose — its job is to
+  // let somebody not leave the list they are working through, and two cards sit
+  // side by side only because they are small.
+  const recordUnits = KC_RECORD.serviceUnits({
+    sim: sims.filter(x => x.customerId === c.id),
+    rental: rentals.filter(x => x.customerId === c.id),
+    vn: virtualNumbers.filter(x => x.customerId === c.id),
+    booking: (bookings || []).filter(x => x.customerId === c.id),
+    repair: repairs.filter(x => x.customerId === c.id),
+    service: (serviceOrders || []).filter(x => x.customerId === c.id),
+  }, localISO());
+  const recordGroups = KC_RECORD.groupUnits(recordUnits);
+  const recordSum = KC_RECORD.recordSummary(recordUnits);
+
+  const unitRow = (u) => {
+    const opens = KC_UNIT_OPENS_ITSELF.has(u.kind);
+    const when = u.when ? fmtDate(u.when) : '';
+    return `
+      <button class="kc-unit kc-unit-${escHtml(u.kind)}${u.ended ? ' kc-unit-ended' : ''}"
+        onclick="kcOpenUnit('${escJs(u.kind)}', '${escJs(String(u.id))}')"
+        title="${escHtml(opens ? `Open this ${u.label.toLowerCase()}` : `Go to ${u.label.toLowerCase()}s`)}">
+        <span class="kc-unit-icon" aria-hidden="true">${u.icon}</span>
+        <span class="kc-unit-main">
+          <span class="kc-unit-title">${escHtml(u.title)}</span>
+          ${u.detail ? `<span class="kc-unit-detail" dir="ltr">${escHtml(u.detail)}</span>` : ''}
+        </span>
+        <span class="kc-unit-side">
+          ${when ? `<span class="kc-unit-when">${escHtml(when)}</span>` : ''}
+          <span class="kc-unit-label">${escHtml(u.label)}</span>
+        </span>
+      </button>`;
+  };
+
+  const recordHtml = `
+      <div class="section-divider">What they have with us</div>
+      <div class="kc-record-headline">${escHtml(KC_RECORD.recordHeadline(recordSum))}</div>
+      ${recordGroups.running.length
+        ? `<div class="kc-units">${recordGroups.running.map(unitRow).join('')}</div>`
+        : `<div style="color:var(--muted);font-size:var(--fs-body);padding:4px 0 10px;">${
+            recordSum.state === 'none'
+              ? 'Nothing on the books yet — add something from “New Service” below.'
+              : 'Nothing running just now.'}</div>`}
+      ${recordGroups.finished.length ? `
+        <details class="kc-units-past">
+          <summary>Finished — ${recordGroups.finished.length} ${recordGroups.finished.length === 1 ? 'item' : 'items'}</summary>
+          <div class="kc-units">${recordGroups.finished.map(unitRow).join('')}</div>
+        </details>` : ''}`;
+
   const overviewHtml = `
       <div id="nbaStrip-${c.id}"></div>
       ${tripHtml}
@@ -7562,8 +7612,9 @@ function buildCustomerPanelHtml(c, mode = 'card') {
       ${notesHtml}
       ${tasksHtml}
 
+      ${isPage ? recordHtml : `
       <div class="section-divider">Active Services</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">${servicesHTML}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">${servicesHTML}</div>`}
 
       <div class="section-divider">💰 Wallet</div>
       <div id="walletSection-${c.id}" style="margin-bottom:18px;">
@@ -7876,6 +7927,135 @@ function kcCustomerPageCat(cat) {
 // Staff share files with a customer (visible in their portal) and review any
 // files the customer uploaded back (which arrive as "pending"). Loaded lazily
 // like the wallet section; degrades quietly if storage isn't configured.
+/**
+ * Open one thing from a customer's record.
+ *
+ * Four kinds have a modal of their own and go straight to it. Repairs and
+ * one-off jobs do not, so they open their tab instead — said plainly on the row
+ * rather than dressed as the same action, because a control that looks like it
+ * opens a record and instead dumps you on a list is a worse promise than a row
+ * that never offered one.
+ */
+function kcOpenUnit(kind, id) {
+  const go = {
+    sim: () => openManageSimModal(id),
+    rental: () => openManageRentalModal(id),
+    vn: () => openVNBillingModal(id),
+    booking: () => openEditBookingModal(id),
+    repair: () => filterView('repairs', () => { kcView('repairs').filter = 'all'; }),
+    service: () => goToTab('services'),
+  }[kind];
+  if (go) go();
+}
+
+/** Does this kind open the thing itself, or only the screen it lives on? */
+const KC_UNIT_OPENS_ITSELF = new Set(['sim', 'rental', 'vn', 'booking']);
+
+// ── KC_RECORD mirror start ──
+// Mirrors lib/customerRecord.mjs. Held to it by test/customerRecordMirror.test.mjs.
+// Owner, 20 Aug: the card and the full page were the same body, and "Active
+// Services" was a row of badges of which only the SIM could be pressed. This is
+// the decision half of the record — what a person has, whether it is still
+// running, and what order it deserves to be read in. No HTML here.
+const KC_RECORD = (() => {
+  const KINDS = {
+    sim: {
+      label: 'SIM plan', icon: '💳', open: 'sim', one: 'SIM plan', many: 'SIM plans',
+      ended: (s) => String(s.status || '').toLowerCase() === 'cancelled',
+      when: (s) => s.renewalDate || s.expiryDate || '',
+      title: (s) => `${s.provider || 'SIM plan'}`,
+      detail: (s) => s.simNumber || '',
+    },
+    rental: {
+      label: 'Phone rental', icon: '📱', open: 'rental', one: 'phone rental', many: 'phone rentals',
+      ended: (r) => ['returned', 'void', 'cancelled', 'lost'].includes(String(r.status || '').toLowerCase()),
+      when: (r) => r.toDate || '',
+      title: (r) => `Rental${r.country ? ` · ${r.country}` : ''}`,
+      detail: (r) => r.phoneNumber || '',
+    },
+    vn: {
+      label: 'Virtual number', icon: '🔢', open: 'vn', one: 'virtual number', many: 'virtual numbers',
+      ended: (v) => String(v.status || '').toLowerCase() !== 'active',
+      when: () => '',
+      title: () => 'Virtual number',
+      detail: (v) => v.number || '',
+    },
+    booking: {
+      label: 'Flight', icon: '✈️', open: 'booking', one: 'flight', many: 'flights',
+      // Flown counts as over. Nothing else in the app treated a past travel
+      // date as finished, which is why flown flights sat under "Active".
+      ended: (b, today) => String(b.status || '').toLowerCase().startsWith('cancel')
+        || (!!b.travelDate && String(b.travelDate) < today),
+      when: (b) => b.travelDate || '',
+      title: (b) => b.route || 'Flight',
+      detail: (b) => b.bookingRef || b.airline || '',
+    },
+    repair: {
+      label: 'Repair', icon: '🔧', open: 'repair', one: 'repair', many: 'repairs',
+      ended: (r) => ['collected', 'cancelled'].includes(String(r.status || '').toLowerCase()),
+      when: (r) => r.openedAt || '',
+      title: (r) => r.device || 'Repair',
+      detail: (r) => r.status || '',
+    },
+    service: {
+      label: 'Print / online job', icon: '🖨️', open: 'service', one: 'print job', many: 'print jobs',
+      ended: () => true,
+      when: (o) => o.createdAt || '',
+      title: (o) => o.serviceName || 'Service',
+      detail: () => '',
+    },
+  };
+  function serviceUnits(lists = {}, today = '') {
+    const day = today || new Date().toISOString().slice(0, 10);
+    const out = [];
+    for (const [kind, spec] of Object.entries(KINDS)) {
+      for (const row of lists[kind] || []) {
+        if (!row) continue;
+        out.push({
+          kind, id: row.id, icon: spec.icon, label: spec.label, open: spec.open,
+          title: String(spec.title(row) || spec.label),
+          detail: String(spec.detail(row) || ''),
+          status: String(row.status || ''),
+          when: String(spec.when(row) || ''),
+          ended: !!spec.ended(row, day),
+        });
+      }
+    }
+    return out;
+  }
+  function groupUnits(units = []) {
+    const running = units.filter(u => !u.ended);
+    const finished = units.filter(u => u.ended);
+    running.sort((a, b) => {
+      if (!a.when && !b.when) return a.title.localeCompare(b.title);
+      if (!a.when) return 1;
+      if (!b.when) return -1;
+      return a.when.localeCompare(b.when);
+    });
+    finished.sort((a, b) => String(b.when || '').localeCompare(String(a.when || '')));
+    return { running, finished };
+  }
+  function recordSummary(units = []) {
+    const { running, finished } = groupUnits(units);
+    const byKind = new Map();
+    for (const u of running) byKind.set(u.kind, (byKind.get(u.kind) || 0) + 1);
+    return {
+      running: running.length, finished: finished.length, total: units.length,
+      state: units.length === 0 ? 'none' : running.length === 0 ? 'lapsed' : 'active',
+      kinds: [...byKind.entries()].map(([kind, n]) => ({ kind, n, label: KINDS[kind].label })),
+    };
+  }
+  function recordHeadline(summary) {
+    if (!summary || summary.state === 'none') return 'Nothing on the books yet';
+    if (summary.state === 'lapsed') {
+      return `Nothing running — ${summary.finished} finished ${summary.finished === 1 ? 'item' : 'items'} on record`;
+    }
+    return summary.kinds.map(k => `${k.n} ${k.n === 1 ? KINDS[k.kind].one : KINDS[k.kind].many}`).join(' · ');
+  }
+  return { KINDS, serviceUnits, groupUnits, recordSummary, recordHeadline };
+})();
+// ── KC_RECORD mirror end ──
+
 // ── KC_DOCFOLDERS mirror start ──
 // Mirrors lib/docFolders.mjs. Held to it by test/docFoldersMirror.test.mjs.
 // Owner item 4: a folder per kind of document, STAFF SIDE ONLY. The portal half

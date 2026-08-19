@@ -159,6 +159,14 @@ run "money · one vocabulary on screen, and an unknown balance refused" \
   bash -eo pipefail -c 'node ops/harness/money.mjs | tail -1
            node ops/harness/money.mjs --width 390 --theme dark | tail -1'
 
+# The customer record (owner, 20 Aug). Two halves that only fail as a pair: on
+# the page every service opens something and the finished ones are folded; on
+# the card it is still the compact badge row, because two cards fit side by
+# side only while the card stays small.
+run "customer record · every service opens, and the card stayed a card" \
+  bash -eo pipefail -c 'node ops/harness/record.mjs | tail -1
+           node ops/harness/record.mjs --width 390 --theme dark | tail -1'
+
 run "dialogs · eight grips, snap, and plain on a phone" \
   bash -eo pipefail -c 'node ops/harness/window.mjs | tail -3'
 
