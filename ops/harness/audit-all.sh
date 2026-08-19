@@ -96,6 +96,14 @@ run "staff app · every control says what it is" \
 run "staff app · no control hides its own label" \
   bash -eo pipefail -c 'for w in 1280 390; do for f in standard largest; do node ops/harness/clipped.mjs --width $w --fs $f | tail -1; done; done'
 
+# The gap every other check here leaves. They all measure the PAGE; this
+# measures the BOX. A settings heading ran 7px past its own card at 320 in
+# Simple Mode and eight sweeps had passed over it, because the page did not
+# scroll and the control was readable — it just looked broken (owner, 19 Aug).
+run "staff app · nothing painted outside its card" \
+  bash -eo pipefail -c 'for w in 320 390 1280; do node ops/harness/cardfit.mjs --width $w --fs largest | tail -1; done
+           node ops/harness/cardfit.mjs --width 390 --fs standard | tail -1'
+
 run "staff app · modals open + geometry, 390px both themes" \
   bash -eo pipefail -c 'for t in light dark; do node ops/harness/modals.mjs --width 390 --theme $t | tail -1; done'
 

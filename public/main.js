@@ -21429,11 +21429,10 @@ function settingsCard(key, title, subtitle, bodyHtml) {
   const open = !!settingsOpenState()[key];
   return `
     <div class="table-card settings-card" style="margin-bottom:12px;">
-      <div onclick="toggleSettingsCard('${key}')"
-        style="display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;user-select:none;">
-        <span id="scChev_${key}" style="font-size:var(--fs-micro);color:var(--muted);transition:transform 0.15s;display:inline-block;${open ? 'transform:rotate(90deg);' : ''}">▶</span>
-        <strong style="font-size:var(--fs-ui);">${title}</strong>
-        ${subtitle ? `<span style="color:var(--muted);font-size:var(--fs-small);font-weight:400;">${subtitle}</span>` : ''}
+      <div class="sc-head" onclick="toggleSettingsCard('${key}')">
+        <span id="scChev_${key}" class="sc-chev-i" style="${open ? 'transform:rotate(90deg);' : ''}">▶</span>
+        <strong class="sc-title">${title}</strong>
+        ${subtitle ? `<span class="sc-sub">${subtitle}</span>` : ''}
       </div>
       <div id="scBody_${key}" style="${open ? '' : 'display:none;'}">${bodyHtml}</div>
     </div>`;

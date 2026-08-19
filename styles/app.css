@@ -1324,6 +1324,15 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 /* The text being answered, quoted above the box you type into. Their words
    have to look like theirs — an unquoted paste reads as something the shop
    wrote, which is a bad way to start a reply. */
+/* A settings card's own heading. It was three inline styles on one nowrap flex
+   row, and at 320px in Simple Mode the subtitle ran 7px past the card — a card
+   overflowing at extra-large text (owner, 19 Aug, item 14). Wrapping is the
+   whole fix: the subtitle takes its own line when the title has used the row. */
+.sc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 13px 16px; cursor: pointer; user-select: none; }
+.sc-chev-i { font-size: var(--fs-micro); color: var(--muted); transition: transform 0.15s; display: inline-block; flex: none; }
+.sc-title { font-size: var(--fs-ui); min-width: 0; overflow-wrap: anywhere; }
+.sc-sub { color: var(--muted); font-size: var(--fs-small); font-weight: 400; min-width: 0; overflow-wrap: anywhere; }
+
 .sms-quote {
   margin: 0 0 14px; padding: 8px 12px;
   border-left: 3px solid var(--primary); border-radius: 0 8px 8px 0;
