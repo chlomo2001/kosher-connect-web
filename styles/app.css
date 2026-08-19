@@ -1290,6 +1290,12 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;
   padding: 10px 12px; font-size: var(--fs-small); line-height: 1.5; margin: 0;
 }
+/* A link inside a read message wears its own words, not its URL (see
+   lib/mailBody.mjs). Underlined rather than only coloured, so it is still
+   obviously a link to someone who cannot tell the two colours apart. */
+.tm-link { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
+.tm-link:hover { color: var(--primary-deep); }
+.tm-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 3px; }
 
 @media (max-width: 560px) {
   .tm-row { grid-template-columns: auto minmax(0, 1fr); gap: 8px 10px; }
