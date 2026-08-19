@@ -35,6 +35,35 @@ Correctness (human-reviewed, NOT loop-autofixed — touches money/inventory):
       widened 3→6 digits — 3 digits hits even-odds collision at ~37 rows in one
       millisecond, which a bulk import passes instantly.
 
+## STANDING RESEARCH TASK — eposnow.com (owner, 20 Aug 2026)
+
+Owner: "epos now .com has so much more than us.. put it in the overnight loop
+to steal ideas and structure and system."
+
+**Run this at the start of a cycle whenever the backlog is thin.** Read
+eposnow.com's product, pricing and help pages, and mine them for three things
+in this order:
+
+1. **Structure** — how they cut the product into areas, what they call things,
+   what lives on one screen vs many. This shop's app grew screen by screen; a
+   mature till product has had that argument already and it is worth reading
+   their answer even where we disagree.
+2. **System** — the workflows that join screens up: end-of-day, stock counts,
+   staff permissions, multi-site, offline behaviour, reporting cadence.
+3. **Ideas** — individual features worth having.
+
+**Rules for the loop:**
+- Ideas land in this file with a source URL and a one-line "why it fits KC" —
+  they do NOT get built the same night. What suits a 400-till chain often does
+  not suit a shop where one person knows every customer's name.
+- Anything touching money, auth, consent or customer comms is 🔒 by default.
+- Do not copy their words. The wording on our screens is the shop's own voice
+  and it is a deliberate thing — read their structure, write our sentences.
+- Say plainly where they are simply better. That is the point of looking.
+
+Archive findings in `docs/IDEAS-EPOSNOW-<date>.md`, same shape as
+`docs/IDEAS-2026-07-17.md`.
+
 ## From competitive research 2026-07-17 (big-tech / premium idea-hunt)
 Scouted live product/help pages (Linear, Stripe, Square, Loyverse, Booqable,
 RepairShopr/RepairDesk, Airalo/Holafly, Superhuman, Goodshuffle). Full sourced
