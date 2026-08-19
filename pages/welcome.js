@@ -1047,12 +1047,16 @@ const SKY_CSS = `
      optical gaps were ~7.6px above and ~10.1px below — the sentence was held
      LESS tightly to itself than to the headline it is not part of.
      Proximity is the strongest grouping cue there is, so it now says what is
-     true: 16px of air above the pair, none inside it. */
+     true — but the first attempt at that overshot: 16px above and NOTHING
+     inside jammed the two lines together, and the owner said so straight away
+     ("the close spacing is actually what made it akward"). Grouping needs the
+     inner gap SMALLER than the outer one, not absent. 20px above, 8px inside:
+     the pair reads as one phrase and each line still has air. */
   .sk-accent{font-family:var(--sk-fdisp);font-weight:800;font-size:clamp(21px,3vw,28px);
-    color:var(--sk-sky);letter-spacing:-.02em;margin-top:16px;line-height:1.15}
+    color:var(--sk-sky);letter-spacing:-.02em;margin-top:20px;line-height:1.15}
   :root[data-theme="dark"] .sk-accent{color:var(--sk-sky-bright)}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-accent{color:var(--sk-sky-bright)}}
-  .sk-subline{color:var(--sk-gold-ink);font-size:17px;font-weight:600;margin-top:0;
+  .sk-subline{color:var(--sk-gold-ink);font-size:17px;font-weight:600;margin-top:8px;
     font-style:italic;line-height:1.35}
   .sk-band-body{color:var(--sk-muted);margin:18px 0 0;font-size:16.5px;max-width:60ch}
   .sk-band-note{color:var(--sk-muted);margin:10px 0 0;font-size:15px;font-weight:600;max-width:60ch}
