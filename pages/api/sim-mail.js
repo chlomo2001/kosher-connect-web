@@ -20,7 +20,7 @@
 
 import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode, selectAllPaged } from '../../lib/db.js'
-import { buildSimIndex, mailboxKey } from '../../lib/simMailMatch.mjs'
+import { buildSimIndex, mailboxKey, addressTag } from '../../lib/simMailMatch.mjs'
 import { carrierMailKind, kindLabel } from '../../lib/carrierMail.mjs'
 
 const enc = encodeURIComponent
@@ -181,6 +181,8 @@ async function handler(req, res) {
         subject: m.subject || '',
         snippet: m.snippet || '',
         recipient: m.recipient || '',
+        // Only ever a search term for the person deciding — never a match.
+        recipientTag: addressTag(m.recipient),
         confidence: m.confidence,
         numbers: m.numbers || [],
         resolvedAt: m.resolved_at,

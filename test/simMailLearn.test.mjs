@@ -14,7 +14,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { buildSimIndex, matchSimForMail, mailboxKey } from '../lib/simMailMatch.mjs'
+import { buildSimIndex, matchSimForMail, mailboxKey, addressTag } from '../lib/simMailMatch.mjs'
 
 const API = readFileSync(new URL('../pages/api/sim-mail.js', import.meta.url), 'utf8')
 const MAIN = readFileSync(new URL('../public/main.js', import.meta.url), 'utf8')
@@ -189,4 +189,47 @@ test('the SIM card shows the taught addresses, and only those are removable', ()
   assert.ok(fn, 'paintSimAddresses is missing')
   assert.match(fn[0], /chip\(primary, false\)/, 'the primary address must not be removable here')
   assert.match(fn[0], /alt\.map\(a => chip\(a, true\)\)/, 'taught addresses must be removable')
+})
+
+// ---------- the tag is a hint, and only a hint ----------
+
+test('the tag is lifted out of the address, header form and all', () => {
+  assert.equal(addressTag('gitt.bilig+sidner@gmail.com'), 'sidner')
+  assert.equal(addressTag('Gitt Bilig <gitt.bilig+z.e.fried@gmail.com>'), 'z.e.fried')
+  // No tag, no address, no argument — all the same empty answer, so the caller
+  // has one case to handle rather than three.
+  assert.equal(addressTag('gitt.bilig@gmail.com'), '')
+  assert.equal(addressTag('rubbish'), '')
+  assert.equal(addressTag(null), '')
+  assert.equal(addressTag(undefined), '')
+})
+
+test('the tag is never used to file anything', () => {
+  // It is right often enough to be worth typing into a search box and wrong
+  // often enough to be dangerous: on the real queue +v7@ and +2@ name nobody,
+  // and +rapaport1@ names eight different customers. So the matcher must not
+  // see it at all — a SIM is found by a registered address or not at all.
+  const idx = buildSimIndex([{ id: 'sim-1', email: 'someone.else@gmail.com', simNumber: '' }])
+  const hit = matchSimForMail({ to: 'gitt.bilig+sidner@gmail.com' }, idx)
+  assert.equal(hit.simId, null, 'a tag must never file a message on its own')
+
+  const api = API.slice(API.indexOf("if (op === 'learn')"))
+  assert.ok(!/addressTag/.test(api.slice(0, api.indexOf("\n    }\n"))),
+    'the teach op must not consult the tag — a person decides')
+})
+
+test('the picker prefills the tag but lets the first keystroke replace it', () => {
+  const fn = MAIN.match(/function cmLearn\(id\) \{[\s\S]*?\n\}/)
+  assert.ok(fn, 'cmLearn is missing')
+  assert.match(fn[0], /cmLearnFilter = String\(m\.recipientTag \|\| ''\)/,
+    'the tag should be offered as the search term')
+  assert.match(fn[0], /box\.select\(\)/,
+    'the prefill is a guess — typing must replace it, not append to it')
+})
+
+test('a tag that matches nobody says so, rather than looking broken', () => {
+  const fn = MAIN.match(/function cmLearnPaint\(term\) \{[\s\S]*?\n\}/)
+  assert.ok(fn, 'cmLearnPaint is missing')
+  assert.match(fn[0], /only the tag from the address/,
+    'a prefilled search that finds nothing must explain why')
 })

@@ -19828,7 +19828,11 @@ function cmLearn(id) {
   const m = (cmData?.messages || []).find(x => String(x.id) === String(id));
   if (!m || !m.recipient) { toast('That message has no address to learn.', 'warning'); return; }
   cmLearnFor = m;
-  cmLearnFilter = '';
+  // The address's own +tag is usually the customer's name — the ten messages
+  // that could not be filed arrived at +sidner@, +tchinagel@, +z.e.fried@. It
+  // is put in the search box, not acted on: +v7@ names nobody and +rapaport1@
+  // names eight different people, so this saves typing and decides nothing.
+  cmLearnFilter = String(m.recipientTag || '');
   showDynamicModal(`
     <div class="modal-title">🔗 Which line gets mail at this address?</div>
     <p style="font-size:var(--fs-small);color:var(--muted);margin:0 0 12px;">
@@ -19837,15 +19841,18 @@ function cmLearn(id) {
       it cannot be shared with a second line.
     </p>
     <input class="form-input" id="cmLearnSearch" placeholder="Name, number or carrier…"
+      value="${escHtml(cmLearnFilter)}"
       aria-label="Search your lines" autocomplete="off" oninput="cmLearnPaint(this.value)">
     <div id="cmLearnList" style="margin-top:10px;max-height:46vh;overflow:auto;"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
     </div>
   `);
-  cmLearnPaint('');
+  cmLearnPaint(cmLearnFilter);
   const box = document.getElementById('cmLearnSearch');
-  if (box) box.focus();
+  // Selected, not just focused: the prefill is a guess, and the first keystroke
+  // should replace it rather than typing onto the end of it.
+  if (box) { box.focus(); box.select(); }
 }
 
 // Typing is required before anything is listed. 797 lines is not a list to
@@ -19877,7 +19884,8 @@ function cmLearnPaint(term) {
         ? ` <span style="color:var(--muted);">(${escHtml(x.status)})</span>` : ''}
     </button>`).join('')
     : `<div style="color:var(--muted);font-size:var(--fs-small);padding:8px 0;">
-        Nothing matches “${escHtml(q)}”.</div>`;
+        Nothing matches “${escHtml(q)}”${cmLearnFor && q === String(cmLearnFor.recipientTag || '').toLowerCase()
+          ? ' — that is only the tag from the address, so try the customer’s name.' : '.'}</div>`;
 }
 
 async function cmLearnPick(simLegacyId) {
