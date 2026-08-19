@@ -1321,6 +1321,16 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
    only showing 1 at a time"). They are a queue of separate decisions, so each
    keeps its own border and its own buttons — a single scrolling wall of fields
    would be quicker to build and impossible to judge. */
+/* The text being answered, quoted above the box you type into. Their words
+   have to look like theirs — an unquoted paste reads as something the shop
+   wrote, which is a bad way to start a reply. */
+.sms-quote {
+  margin: 0 0 14px; padding: 8px 12px;
+  border-left: 3px solid var(--primary); border-radius: 0 8px 8px 0;
+  background: var(--bg-secondary); color: var(--text);
+  font-size: var(--fs-body); white-space: pre-wrap; word-break: break-word;
+}
+
 .rv-batch { display: grid; gap: 14px; }
 .rv-batch-foot {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;

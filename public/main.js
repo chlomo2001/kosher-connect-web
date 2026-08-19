@@ -21300,6 +21300,7 @@ async function loadMessageLog() {
   wrap.innerHTML = '<span style="color:var(--muted);">Loading…</span>';
   const res = await kcFetch('/api/message-log?limit=150').then(r => r.json()).catch(() => null);
   if (!res || !res.success) { wrap.innerHTML = `<span style="color:var(--danger-ink);">${escHtml(res?.error || 'Could not load the log.')}</span>`; return; }
+  msgLogEntries = res.entries;
   if (!res.entries.length) { wrap.innerHTML = '<span style="color:var(--muted);">Nothing yet — no email or SMS has been built.</span>'; return; }
   const rows = res.entries.map(e => {
     const [label, cls, meaning] = MSG_STATUS_LABEL[e.status] || [e.status.toUpperCase(), '', ''];
@@ -21309,10 +21310,23 @@ async function loadMessageLog() {
     const when = new Date(e.at);
     return `<tr>
       <td style="white-space:nowrap;font-size:var(--fs-small);color:var(--muted);">${when.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} ${when.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</td>
-      <td>${e.channel === 'sms' ? '💬 SMS' : '📧 Email'}${e.kind && e.kind !== 'sms' ? `<div style="font-size:var(--fs-micro);color:var(--muted);">${escHtml(e.kind)}</div>` : ''}</td>
+      <td>${e.channel === 'sms' ? '💬 SMS' : '📧 Email'}${
+        // 'sms_in' is a column value, not a phrase. Printed raw it sat under
+        // the channel looking like a fault code; the direction is the thing a
+        // reader actually wants from it.
+        e.kind === 'sms_in'
+          ? '<div style="font-size:var(--fs-micro);color:var(--muted);">from a customer</div>'
+          : e.kind && e.kind !== 'sms' ? `<div style="font-size:var(--fs-micro);color:var(--muted);">${escHtml(e.kind)}</div>` : ''}</td>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${e.customerName ? `<strong>${escHtml(e.customerName)}</strong><div style="font-size:var(--fs-micro);color:var(--muted);" dir="ltr">${escHtml(e.to)}</div>` : `<span dir="ltr">${escHtml(e.to)}</span>`}</td>
       <td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;font-size:var(--fs-small);" title="${escHtml(e.subject)}">${escHtml(e.subject || '—')}</td>
-      <td>${badge}${e.actualTo && e.actualTo !== e.to ? `<div style="font-size:var(--fs-micro);color:var(--muted);" dir="ltr">→ ${escHtml(e.actualTo)}</div>` : ''}${e.error ? `<div style="font-size:var(--fs-micro);color:var(--danger-ink);max-width:220px;">${escHtml(e.error.slice(0, 120))}</div>` : ''}</td>
+      <td>${badge}${e.actualTo && e.actualTo !== e.to ? `<div style="font-size:var(--fs-micro);color:var(--muted);" dir="ltr">→ ${escHtml(e.actualTo)}</div>` : ''}${e.error ? `<div style="font-size:var(--fs-micro);color:var(--danger-ink);max-width:220px;">${escHtml(e.error.slice(0, 120))}</div>` : ''}${
+        // Inbound only, and never to someone who texted STOP. Answering a
+        // person who has just asked to be left alone is the one message this
+        // shop must not send, so the control is not there to be pressed.
+        e.kind === 'sms_in' && e.status !== 'opt_out'
+          ? `<button class="btn btn-outline btn-sm" style="margin-top:6px;"
+               onclick="msgLogReply('${escHtml(String(e.id))}')">↩ Reply</button>`
+          : ''}</td>
     </tr>`;
   }).join('');
   wrap.innerHTML = `
@@ -21321,6 +21335,87 @@ async function loadMessageLog() {
       <tbody>${rows}</tbody></table>
     </div>
     <div style="font-size:var(--fs-micro);color:var(--muted);padding-top:6px;">Latest ${res.entries.length} entries. HELD = the safety gate stopped it; TEST = it went to your test inbox/number, not the customer.</div>`;
+}
+
+/**
+ * Answer one text that came in.
+ *
+ * Owner, 19 Aug, item 21: "the reply in SMS in settings isnt doing anything".
+ * It was not a broken button — there was no reply control at all. Inbound texts
+ * have landed and shown in the log since 18 Aug, and the only way to answer one
+ * was to pick up a handset.
+ *
+ * The number is NOT sent from here. The browser names the log row and the
+ * server reads the number off it, which is the same rule the draft modal
+ * follows and the reason this endpoint cannot be used to text an arbitrary
+ * number from a console.
+ */
+let msgLogEntries = [];
+function msgLogReply(id) {
+  const e = msgLogEntries.find(x => String(x.id) === String(id));
+  if (!e) { toast('Reload the log and try again.', 'warning'); return; }
+  const who = e.customerName ? escName(e.customerName) : `<span dir="ltr">${escHtml(e.to)}</span>`;
+  showDynamicModal(`
+    <div class="modal-title">↩ Reply to ${who}</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:4px;">They wrote</div>
+    <blockquote class="sms-quote">${escHtml(e.subject || '(no text)')}</blockquote>
+    <label class="form-label" for="smsReplyText">Your reply</label>
+    <textarea class="form-input" id="smsReplyText" rows="4" maxlength="640"
+      style="font-family:inherit;" oninput="smsReplyCount()"
+      placeholder="Type the answer you would give at the counter."></textarea>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;">
+      <button class="btn btn-primary" id="smsReplySend" onclick="sendSmsReply('${escHtml(String(e.id))}')">📤 Send reply</button>
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+      <span id="smsReplyCount" style="font-size:var(--fs-micro);color:var(--muted);margin-left:auto;">0 / 640</span>
+    </div>
+    <p style="font-size:var(--fs-micro);color:var(--muted);margin-top:8px;">
+      The safety gate still decides what happens: on HOLD the reply is written to this log and
+      nothing leaves the building. It goes to the number that texted us, read from the log entry —
+      not from anything typed here.</p>
+  `);
+  setTimeout(() => document.getElementById('smsReplyText')?.focus(), 30);
+}
+
+// One text is 160 characters; past that a carrier bills for two. Staff should
+// be able to see the edge coming rather than find it on an invoice.
+function smsReplyCount() {
+  const t = document.getElementById('smsReplyText');
+  const out = document.getElementById('smsReplyCount');
+  if (!t || !out) return;
+  const n = t.value.length;
+  const parts = n <= 160 ? 1 : Math.ceil(n / 153);
+  out.textContent = `${n} / 640${parts > 1 ? ` · ${parts} texts` : ''}`;
+  out.style.color = parts > 1 ? 'var(--warning)' : 'var(--muted)';
+}
+
+async function sendSmsReply(id) {
+  const box = document.getElementById('smsReplyText');
+  const text = (box?.value || '').trim();
+  if (!text) { toast('Nothing to send.', 'warning'); box?.focus(); return; }
+  const btn = document.getElementById('smsReplySend');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+  try {
+    const r = await kcFetch('/api/sms', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ replyTo: id, text }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.success) {
+      toast(j.error || 'Could not send that reply.', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '📤 Send reply'; }
+      return;
+    }
+    closeDynamicModal();
+    // Say which of the three things actually happened, rather than "Sent" over
+    // a message the gate held.
+    if (j.held) toast('Reply written to the log — SMS is on HOLD, so nothing was sent.', 'info');
+    else if (j.redirected) toast(`Test mode — the reply went to ${j.sentTo}, not to them.`, 'info');
+    else toast('Reply sent.', 'success');
+    loadMessageLog();
+  } catch {
+    toast('Could not reach the server.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '📤 Send reply'; }
+  }
 }
 
 // ── Collapsible settings cards ───────────────────────────────────────────

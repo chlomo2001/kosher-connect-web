@@ -1100,6 +1100,30 @@
   "success": true,
   "entries": [
    {
+    "id": "5",
+    "at": "2026-08-18T21:14:00Z",
+    "channel": "sms",
+    "kind": "sms_in",
+    "to": "+447700900321",
+    "actualTo": "+441615311386",
+    "subject": "is my phone ready to collect?",
+    "status": "received",
+    "error": null,
+    "customerName": "Yossi Taitelbaum"
+   },
+   {
+    "id": "6",
+    "at": "2026-08-18T20:02:00Z",
+    "channel": "sms",
+    "kind": "sms_in",
+    "to": "+447700900654",
+    "actualTo": "+441615311386",
+    "subject": "STOP",
+    "status": "opt_out",
+    "error": null,
+    "customerName": null
+   },
+   {
     "id": "1",
     "at": "2026-08-10T18:22:00Z",
     "channel": "email",

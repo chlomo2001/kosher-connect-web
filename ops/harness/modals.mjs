@@ -93,6 +93,14 @@ export const MODALS = [
      // kind of ghost that makes a sweep report defects the app does not have.
      s.remove()`],
   ['business-summary', 'dashboard', `openBusinessSummary()`],
+  // Answering a text a customer sent in (owner item 21). The log has to be
+  // loaded first — the composer quotes the message it is replying to, and the
+  // seed carries one answerable text and one from somebody who texted STOP so
+  // the Reply control can be checked for being ABSENT as well as present.
+  ['sms-reply',     'settings',  `(async () => {
+     await loadMessageLog();
+     msgLogReply('5');
+   })()`],
   // The reconciliation screen — not a modal either, it replaces the content
   // column like the Customer-360 page. Worth the eyes now that Stripe charges
   // triage through it beside bank rows.

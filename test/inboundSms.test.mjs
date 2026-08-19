@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  isStopKeyword, isStartKeyword, matchCustomerByPhone, inboundLogRow, inboundSummary,
+  isStopKeyword, isStartKeyword, matchCustomerByPhone, inboundLogRow, inboundSummary, replyTarget,
 } from '../lib/inboundSms.mjs'
 
 test('the stop words carriers and the law recognise', () => {
@@ -99,4 +99,59 @@ test('the one-line summary names the person when we know them', () => {
   assert.equal(inboundSummary({ from: '+447911123456', body: 'on my way' }), '+447911123456: on my way')
   assert.match(inboundSummary({ from: '+44', body: 'STOP', customerName: 'Yossi' }), /asked to stop/)
   assert.match(inboundSummary({ from: '+44', body: 'y'.repeat(200) }), /…$/)
+})
+
+// ── replying to one of these (owner item 21, 19 Aug) ─────────────────────
+// "the reply in SMS in settings isnt doing anything" — there was no reply
+// control at all. These hold the decision the reply endpoint makes, which is
+// the half that must not quietly change: WHO a reply may go to.
+test('a reply goes to the number that texted us, taken from the row', () => {
+  const t = replyTarget({
+    provider: 'twilio', kind: 'sms_in', status: 'received',
+    to_email: '+447700900123', subject: 'is my phone ready?',
+    customer_id: '11111111-2222-3333-4444-555555555555',
+  })
+  assert.equal(t.error, undefined)
+  assert.equal(t.phone, '+447700900123')
+  assert.equal(t.customerId, '11111111-2222-3333-4444-555555555555')
+  assert.equal(t.original, 'is my phone ready?')
+})
+
+test('somebody who texted STOP is never replied to', () => {
+  const t = replyTarget({
+    provider: 'twilio', kind: 'sms_in', status: 'opt_out',
+    to_email: '+447700900123', subject: 'STOP',
+  })
+  assert.match(t.error, /STOP/)
+  assert.equal(t.phone, undefined)
+})
+
+test('only an inbound TEXT can be replied to — not our own sends, not email', () => {
+  const outbound = replyTarget({ provider: 'twilio', kind: 'sms', status: 'sent', to_email: '+447700900123' })
+  assert.match(outbound.error, /came in/)
+  const email = replyTarget({ provider: 'resend', kind: 'receipt', status: 'sent', to_email: 'a@b.com' })
+  assert.match(email.error, /came in/)
+  const missing = replyTarget(null)
+  assert.match(missing.error, /no longer in the log/)
+})
+
+test('a row with no number to answer says so instead of sending nowhere', () => {
+  const t = replyTarget({ provider: 'twilio', kind: 'sms_in', status: 'received', to_email: '' })
+  assert.match(t.error, /no number/)
+})
+
+test('an unmatched inbound text can still be answered — the person is unknown, the number is not', () => {
+  const t = replyTarget({
+    provider: 'twilio', kind: 'sms_in', status: 'received',
+    to_email: '+447700900999', subject: 'hello', customer_id: null,
+  })
+  assert.equal(t.phone, '+447700900999')
+  assert.equal(t.customerId, null)
+  // A legacy id must never reach the uuid column — the fault that lost the
+  // very first real reply, and it would be the same fault on the way out.
+  const legacy = replyTarget({
+    provider: 'twilio', kind: 'sms_in', status: 'received',
+    to_email: '+447700900999', customer_id: '1785069385818',
+  })
+  assert.equal(legacy.customerId, null)
 })
