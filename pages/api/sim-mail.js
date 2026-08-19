@@ -110,6 +110,57 @@ function rankCandidates(list, m) {
     || String(a.customerName || '').localeCompare(String(b.customerName || '')))
 }
 
+/**
+ * Give one SIM another address to receive carrier mail at.
+ *
+ * Shared by the two doors into the same fact: 'learn', where a message in the
+ * queue teaches the address it arrived at, and 'addAddress', where somebody
+ * types it on the SIM's own card because they already know it. The rule must
+ * not differ by which door it came through — one mailbox belongs to one line,
+ * and that has to be as true when it is typed as when it is taught.
+ *
+ * Returns { ok, list, already } or { status, error }.
+ */
+async function claimAddress(target, address) {
+  const key = mailboxKey(address)
+  if (!key) return { status: 400, error: 'That is not an email address.' }
+
+  // Its own primary is already indexed, so recording it again would put the
+  // same mailbox on the line twice and show it twice on the card.
+  if (mailboxKey(target.email) === key) {
+    return { status: 400, error: 'That is already this line’s main address.' }
+  }
+
+  const dir = await simDirectory()
+  // Checked against the SAME index the matcher uses, not a string compare, so
+  // the refusal means what the matcher would actually do: a.b+x@gmail.com and
+  // ab+x@gmail.com are one address to Gmail and must be one address here.
+  const claimed = (dir.index.byAddress.get(key) || []).filter((sid) => String(sid) !== String(target.id))
+  if (claimed.length) {
+    const other = dir.byId.get(String(claimed[0]))
+    return {
+      status: 409,
+      error: other
+        ? `${other.customerName || 'Another SIM'} already receives mail at that address. Two lines cannot both claim it.`
+        : 'Another SIM already receives mail at that address. Two lines cannot both claim it.',
+    }
+  }
+
+  const rows = await db.select('sims', `select=alt_emails&id=eq.${enc(String(target.id))}&limit=1`)
+  const have = Array.isArray(rows[0]?.alt_emails) ? rows[0].alt_emails : []
+  if (have.some((a) => mailboxKey(a) === key)) return { ok: true, list: have, already: true }
+
+  // The RAW address is stored, not the routing key: the key is a comparison
+  // form and storing it would put a made-up address on the record.
+  const list = [...have, String(address).trim()]
+  await db.update('sims', `id=eq.${enc(String(target.id))}`, { alt_emails: list })
+  // The directory is cached for a minute and its index does not know about the
+  // address just added. Left alone, the very next message to it would come
+  // back unmatched — the one thing this was built to stop.
+  cache = { at: 0, sims: null }
+  return { ok: true, list }
+}
+
 async function handler(req, res) {
   if (!tablesMode) return res.status(503).json({ success: false, error: 'Storage unavailable.' })
 
@@ -255,6 +306,25 @@ async function handler(req, res) {
       return res.json({ success: true, forgotten: address, remaining: left })
     }
 
+    // Recording an address somebody already knows, from the SIM's own card.
+    //
+    // Teaching from the queue only works once mail has ALREADY gone missing:
+    // a message has to arrive at an unclaimed address, fail to pair, and be
+    // found by a person before the line can be told about it. When the shop
+    // sets up a second carrier account it knows the address that day — this is
+    // the door for that, so the first message pairs itself instead of the
+    // second.
+    if (op === 'addAddress') {
+      const { simLegacyId: addFor, address } = req.body || {}
+      if (!addFor) return res.status(400).json({ success: false, error: 'Which SIM?' })
+      const dir = await simDirectory()
+      const target = dir.byLegacyId.get(String(addFor))
+      if (!target) return res.status(404).json({ success: false, error: 'No such SIM.' })
+      const claim = await claimAddress(target, address)
+      if (claim.error) return res.status(claim.status).json({ success: false, error: claim.error })
+      return res.json({ success: true, added: !claim.already, address: String(address).trim(), addresses: claim.list })
+    }
+
     if (!id) return res.status(400).json({ success: false, error: 'A message id is required.' })
 
     if (op === 'resolve') {
@@ -300,42 +370,16 @@ async function handler(req, res) {
       const msg = msgs[0]
       if (!msg) return res.status(404).json({ success: false, error: 'No such message.' })
       const address = String(msg.recipient || '').trim()
-      const key = mailboxKey(address)
-      if (!key) {
+      if (!mailboxKey(address)) {
         return res.status(400).json({ success: false, error: 'That message has no address to learn.' })
       }
-      const dir = await simDirectory()
-      const target = simId ? dir.byId.get(String(simId)) : dir.byLegacyId.get(String(learnFor))
+      const dir0 = await simDirectory()
+      const target = simId ? dir0.byId.get(String(simId)) : dir0.byLegacyId.get(String(learnFor))
       if (!target) return res.status(400).json({ success: false, error: 'That SIM no longer exists.' })
 
-      // Refuse to teach an address another SIM already claims. Two lines
-      // claiming one address is precisely the ambiguity the matcher exists to
-      // refuse, and creating it deliberately would be worse than the gap it
-      // fills — the queue would stop asking and start guessing.
-      //
-      // Checked against the SAME index the matcher uses, not against a string
-      // compare, so the refusal means what the matcher would actually do:
-      // `a.b+x@gmail.com` and `ab+x@gmail.com` are one address to Gmail and
-      // must be one address here.
-      const claimed = (dir.index.byAddress.get(key) || []).filter((sid) => String(sid) !== String(target.id))
-      if (claimed.length) {
-        const other = dir.byId.get(String(claimed[0]))
-        return res.status(409).json({
-          success: false,
-          error: other
-            ? `${other.customerName || 'Another SIM'} already receives mail at that address. Two lines cannot both claim it.`
-            : 'Another SIM already receives mail at that address. Two lines cannot both claim it.',
-        })
-      }
+      const claim = await claimAddress(target, address)
+      if (claim.error) return res.status(claim.status).json({ success: false, error: claim.error })
 
-      // The RAW address is stored, not the routing key: the key is a
-      // comparison form and storing it would put a made-up address on the
-      // record. Indexing normalises it again on the way back in.
-      const rows = await db.select('sims', `select=alt_emails&id=eq.${enc(String(target.id))}&limit=1`)
-      const have = Array.isArray(rows[0]?.alt_emails) ? rows[0].alt_emails : []
-      if (!have.some((a) => mailboxKey(a) === key)) {
-        await db.update('sims', `id=eq.${enc(String(target.id))}`, { alt_emails: [...have, address] })
-      }
       const paired = await db.update('sim_mail', `id=eq.${enc(id)}`, {
         sim_id: target.id,
         customer_id: target.customerId || null,
@@ -343,11 +387,6 @@ async function handler(req, res) {
         confidence: 'address',
       })
       if (!paired.length) return res.status(404).json({ success: false, error: 'No such message.' })
-      // The directory is cached for a minute and its index no longer knows
-      // about the address just taught. Left alone, the very next message to
-      // that address would come back unmatched — the one thing this was built
-      // to stop.
-      cache = { at: 0, sims: null }
       return res.json({ success: true, learned: address, sim: target })
     }
 

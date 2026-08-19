@@ -6632,7 +6632,12 @@ function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm cha
 //   resolves to a string  → they typed one (may be '' via the skip button)
 //   resolves to null      → they backed out; the caller must not proceed
 let kcPromptResolve = null;
-function kcPrompt({ title = '', body = '', label = '', placeholder = '', okLabel = 'Save', skipLabel = null }) {
+// `type`/`inputmode` default to tel because every caller until now asked for a
+// phone number — a keypad is right for those and wrong for an address, and a
+// prompt that shows the wrong keyboard on a phone is a prompt people mistype
+// into. Defaulted rather than switched, so the existing callers are untouched.
+function kcPrompt({ title = '', body = '', label = '', placeholder = '', okLabel = 'Save', skipLabel = null,
+  type = 'tel', inputmode = 'tel', autocomplete = 'off' }) {
   return new Promise(resolve => {
     kcPromptResolve = resolve;
     kcSaveReturnFocus('kcPrompt');
@@ -6651,8 +6656,8 @@ function kcPrompt({ title = '', body = '', label = '', placeholder = '', okLabel
         <div style="font-size:var(--fs-ui);line-height:1.65;margin:4px 0 14px;color:var(--text);">${body}</div>
         <div class="form-group">
           <label class="form-label" for="kcPromptInput">${escHtml(label)}</label>
-          <input class="form-input" id="kcPromptInput" type="tel" inputmode="tel" dir="ltr"
-            placeholder="${escHtml(placeholder)}" autocomplete="off"
+          <input class="form-input" id="kcPromptInput" type="${escHtml(type)}" inputmode="${escHtml(inputmode)}" dir="ltr"
+            placeholder="${escHtml(placeholder)}" autocomplete="${escHtml(autocomplete)}"
             onkeydown="if(event.key==='Enter'){event.preventDefault();kcPromptDone(document.getElementById('kcPromptInput').value)}">
         </div>
         <div class="modal-actions">
@@ -12358,7 +12363,49 @@ function paintSimAddresses(simLegacyId, addresses) {
       <span style="font-size:var(--fs-micro);color:var(--muted);font-weight:600;">Receives mail at</span>
       ${primary ? chip(primary, false) : ''}
       ${alt.map(a => chip(a, true)).join('')}
+      ${/* The other door onto the same list. Teaching from the carrier-mail
+           queue only works once mail has ALREADY gone missing — a message has
+           to arrive at an unclaimed address, fail to pair, and be found by a
+           person. When the shop opens a second carrier account it knows the
+           address that day, so this is how the FIRST message pairs itself
+           rather than the second. */''}
+      <button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:2px 10px;"
+        onclick="simAddAddress('${escJs(String(simLegacyId))}')"
+        title="Record another address this line receives carrier mail at">+ address</button>
     </div>`;
+}
+
+/**
+ * Record another address this line receives carrier mail at.
+ *
+ * Deliberately not a free-text field on the SIM form. The SIM form saves
+ * through saveAllSims, whose round-trip writes the whole app object into
+ * legacy_extras — putting the list there would give one fact two homes, and
+ * the column is the one the matcher reads. So it is edited here, next to the
+ * list it belongs to and beside the ✕ that removes one.
+ */
+async function simAddAddress(simLegacyId) {
+  const address = (await kcPrompt({
+    title: 'Another address for this line',
+    body: 'Carrier mail sent here will be filed on this line from now on. ' +
+      'One address belongs to one line only — if another line already claims it, this will say so.',
+    label: 'Email address',
+    placeholder: 'name+tag@gmail.com',
+    okLabel: 'Add the address',
+    type: 'email', inputmode: 'email',
+  }) || '').trim();
+  if (!address) return;
+  try {
+    const res = await window.api.settleCarrierMail({ op: 'addAddress', simLegacyId, address });
+    if (!res || !res.success) throw new Error(res?.error || 'failed');
+    toast(res.added ? `Mail to ${address} now files on this line.` : 'That address was already on this line.',
+      res.added ? 'success' : 'info');
+    loadSimMailInto(simLegacyId);
+  } catch (e) {
+    // The 409 — another line already claims it — is the message that matters
+    // most here, so it is shown rather than swallowed into "try again".
+    toast(String(e.message || 'Could not add that address.'), 'error');
+  }
 }
 
 async function simForgetAddress(simLegacyId, address) {
