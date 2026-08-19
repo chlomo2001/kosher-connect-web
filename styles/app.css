@@ -1338,6 +1338,24 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 /* The text being answered, quoted above the box you type into. Their words
    have to look like theirs — an unquoted paste reads as something the shop
    wrote, which is a bad way to start a reply. */
+/* ── Two customer cards at once (owner item 22) ───────────────────────────
+   The owner chose both cards fully editable over a read-only second one, so
+   the screen has to answer "which one am I in?" without being asked. Only when
+   two are actually open: with one card the question does not arise, and a
+   permanent glow around every dialog is noise. */
+body.kc-two-cards #customerCard .modal,
+body.kc-two-cards #customerCard2 .modal { transition: box-shadow .15s, opacity .15s; }
+body.kc-two-cards #customerCard .modal:not(:focus-within),
+body.kc-two-cards #customerCard2 .modal:not(:focus-within) { opacity: .92; }
+body.kc-two-cards #customerCard .modal:focus-within,
+body.kc-two-cards #customerCard2 .modal:focus-within {
+  box-shadow: var(--shadow-2), 0 0 0 2px var(--accent);
+}
+/* The second card's overlay must not dim the first: they are a pair, and a
+   scrim between them would say one is behind the other. */
+#customerCard2 { background: transparent; pointer-events: none; }
+#customerCard2 .modal { pointer-events: auto; }
+
 /* Document folders on a customer card (owner item 4). Closed by default: the
    point is to make a long list scannable, and opening all of them again would
    put it straight back. */

@@ -7417,7 +7417,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
     : timeline.map(e => timelineRow(e, false)).join('');
 
   const headerHtml = `
-      ${isPage ? '' : `<button type="button" class="modal-x" aria-label="Close" title="Close (Esc)" onclick="dismissCustomerCard()">✕</button>`}
+      ${isPage ? '' : `<button type="button" class="modal-x" aria-label="Close" title="Close (Esc)" onclick="dismissCustomerCard(kcCardSlotOf('${escJs(String(c.id))}'))">✕</button>`}
       <div class="detail-header">
         <div class="avatar">${initials}</div>
         <div class="detail-headline">
@@ -7545,6 +7545,103 @@ function buildCustomerPanelHtml(c, mode = 'card') {
     </div>`;
 }
 
+/**
+ * Two customer cards, side by side (owner item 22, 19 August 2026).
+ *
+ * The owner asked: "being able to open a additional card when moving one to a
+ * side with gripping, is a good idea?" It is — comparing one record against
+ * another is exactly what window mode made possible, and a dialog already
+ * stops being modal once it is gripped aside.
+ *
+ * They chose both cards FULLY EDITABLE over a read-only second one, so the
+ * question this code has to answer is: can a save land on the card you were not
+ * looking at? It cannot, and not because of anything here — every action button
+ * is generated with its own customer's id baked into the handler, so a button on
+ * card B writes to B whichever card has focus. `selectedId` never chooses a
+ * write target; it only decides row highlighting, which card to repaint, and
+ * what the ⌘K verbs act on. Those are the three things that had to change.
+ *
+ * TWO slots, not N. The use case is one record against another; a third card is
+ * a screen nobody can read.
+ */
+const KC_CARD_SLOTS = { primary: 'customerCard', secondary: 'customerCard2' };
+const kcCardCustomer = { primary: null, secondary: null };
+
+/** Is this customer already on screen in a card? */
+function kcCardSlotOf(id) {
+  if (kcCardCustomer.primary != null && String(kcCardCustomer.primary) === String(id)) return 'primary';
+  if (kcCardCustomer.secondary != null && String(kcCardCustomer.secondary) === String(id)) return 'secondary';
+  return null;
+}
+function kcCardShowing(id) { return kcCardSlotOf(id) != null; }
+
+/** Repaint every card currently showing this customer. */
+function kcRepaintCards(id) {
+  if (kcCardShowing(id)) renderDetailPanel(id);
+}
+
+/**
+ * Which slot should show this customer?
+ *
+ * A second card only appears once the first has been GRIPPED ASIDE — which is
+ * the owner's own condition, and a good one: until you have moved a card out of
+ * the way you have not asked for room beside it, and a card that split in two
+ * on an ordinary click would be a surprise every time.
+ */
+function kcSlotFor(id) {
+  const already = kcCardSlotOf(id);
+  if (already) return already;
+  const primary = document.getElementById(KC_CARD_SLOTS.primary);
+  const grippedAside = primary && !primary.classList.contains('hidden') &&
+    primary.querySelector('.modal.kc-win');
+  if (grippedAside && kcCardCustomer.primary != null) return 'secondary';
+  return 'primary';
+}
+
+/**
+ * Whose card has the keyboard in it?
+ *
+ * With two open, every "do this to the customer I am looking at" verb has to
+ * mean the card being worked in. Focus is the only honest answer to that — the
+ * one that was opened last is not, because you may have gone back to the first.
+ */
+/**
+ * Put the second card in the room the first one left.
+ *
+ * Whichever side of the screen the gripped-aside card is NOT on. If it is
+ * somehow filling the width, the second goes underneath it rather than on top —
+ * overlapping is the one outcome that makes a second card useless.
+ */
+function kcPlaceSecondCard(overlay) {
+  const dlg = overlay.querySelector('.modal');
+  const first = document.querySelector('#customerCard .modal');
+  if (!dlg || !kcWinEnabled()) return;
+  const W = window.innerWidth, H = window.innerHeight, pad = KC_WIN_PAD;
+  const r = first ? first.getBoundingClientRect() : null;
+  kcWinPin(dlg);
+  if (!r || !r.width) { kcWinPlace(dlg, Math.round(W / 2), pad, W / 2 - pad * 2, H - pad * 2); return; }
+  const roomRight = W - r.right, roomLeft = r.left;
+  if (Math.max(roomRight, roomLeft) < KC_WIN_MIN_W + pad * 2) {
+    // No room either side — sit under it, sharing the height.
+    kcWinPlace(dlg, r.left, Math.round(H / 2), r.width, H / 2 - pad);
+    return;
+  }
+  if (roomRight >= roomLeft) kcWinPlace(dlg, Math.round(r.right + pad), r.top, roomRight - pad * 2, r.height);
+  else kcWinPlace(dlg, pad, r.top, roomLeft - pad * 2, r.height);
+}
+
+function kcFocusedCardCustomer() {
+  const active = document.activeElement;
+  for (const [slot, overlayId] of Object.entries(KC_CARD_SLOTS)) {
+    const el = document.getElementById(overlayId);
+    if (!el || el.classList.contains('hidden')) continue;
+    if (active && (el === active || el.contains(active))) return kcCardCustomer[slot];
+  }
+  // Nothing focused inside a card: the second one is the one most recently
+  // asked for, so it is the better guess than the first.
+  return kcCardCustomer.secondary != null ? kcCardCustomer.secondary : kcCardCustomer.primary;
+}
+
 function renderDetailPanel(id) {
   const c = customers.find(x => x.id === id);
   if (!c) return;
@@ -7559,18 +7656,23 @@ function renderDetailPanel(id) {
   // page scrolling. Its own overlay sits BELOW the action modals (New Rental,
   // Edit, …) so those stack on top of it. z-index 90 < the 100 of #dynamicModal
   // and #customerModal.
-  let overlay = document.getElementById('customerCard');
+  const slot = kcSlotFor(id);
+  const overlayId = KC_CARD_SLOTS[slot];
+  let overlay = document.getElementById(overlayId);
   let wasOpen = false;
   if (!overlay) {
     overlay = document.createElement('div');
-    overlay.id = 'customerCard';
+    overlay.id = overlayId;
     overlay.className = 'modal-overlay';
-    overlay.style.zIndex = '90';
-    kcBackdropClose(overlay, dismissCustomerCard);
+    // The second card sits one above the first so a click lands on the one you
+    // pressed, and both stay below the action modals (100).
+    overlay.style.zIndex = slot === 'secondary' ? '91' : '90';
+    kcBackdropClose(overlay, () => dismissCustomerCard(slot));
     document.body.appendChild(overlay);
   } else {
     wasOpen = !overlay.classList.contains('hidden');
   }
+  kcCardCustomer[slot] = c.id;
   // Named by the customer, so a screen reader announces WHOSE card opened.
   const cardName = `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Customer';
   // How big the card was BEFORE this repaint threw the dialog away.
@@ -7583,13 +7685,20 @@ function renderDetailPanel(id) {
   // repaint path — every save handler re-enters it — so doing this
   // unconditionally would overwrite the return-focus record mid-edit and yank
   // focus back to the card on every save.
-  if (!wasOpen) kcSaveReturnFocus('customerCard');
+  if (!wasOpen) kcSaveReturnFocus(overlayId);
   overlay.classList.remove('hidden');
   // The customer card is the surface staff have open longest, and it was the
   // one that missed out when dialogs became windows (owner, 17 Aug: "why
   // doesnt the windows thing work" — they were trying it on this).
   kcWindowise(overlay);
   kcWinRestore(overlay, winWas);
+  // A second card opens BESIDE the first, in whatever room the first left. It
+  // is opened to be compared against something, so landing on top of the thing
+  // it is being compared with would defeat the whole request.
+  if (slot === 'secondary' && !wasOpen) kcPlaceSecondCard(overlay);
+  // Two cards on screen: say which one has the keyboard. With one card the
+  // question does not arise, so the marker only appears when it does.
+  document.body.classList.toggle('kc-two-cards', kcCardCustomer.secondary != null);
   if (!wasOpen) {
     const card = overlay.firstElementChild;
     if (card) { card.setAttribute('tabindex', '-1'); card.focus({ preventScroll: true }); }
@@ -7961,7 +8070,7 @@ async function settleHouseAccount(custId) {
         ? `House account settled — ${fmtGbp(amount)} charged ✔${invoiceNote ? ' · Stripe invoice ready' : ''}`
         : 'Charge is processing — the wallet updates when the card issuer answers.', d.status === 'succeeded' ? 'success' : 'warning');
       closeDynamicModal();
-      if (selectedId === custId) renderDetailPanel(custId);
+      kcRepaintCards(custId);
     } else {
       toast(d.error || 'Charge failed — the card may need re-authorising in person.', 'error');
     }
@@ -9161,10 +9270,14 @@ function kcOpenCustomerLink(id) {
 function openCustomerById(id) {
   closeDynamicModal();
   goToTab('customers');
-  selectedId = id;
   setTimeout(() => {
     renderDetailPanel(id);
-    document.querySelectorAll('tr[data-id]').forEach((r) => r.classList.toggle('selected', r.dataset.id === id));
+    // selectedId tracks the PRIMARY card only. Pointing it at a second card's
+    // customer would move the table's highlight to a row whose card is the one
+    // you opened beside the first, not the one you are working through.
+    selectedId = kcCardCustomer.primary;
+    // Both open customers are highlighted, so the table says what is on screen.
+    document.querySelectorAll('tr[data-id]').forEach((r) => r.classList.toggle('selected', kcCardShowing(r.dataset.id)));
   }, 60);
 }
 
@@ -9374,18 +9487,31 @@ async function deleteCustomerDoc(custId, id) {
   });
 }
 
-function closeCustomerCard() {
-  const overlay = document.getElementById('customerCard');
+function closeCustomerCard(slot = 'primary') {
+  const overlayId = KC_CARD_SLOTS[slot] || KC_CARD_SLOTS.primary;
+  const overlay = document.getElementById(overlayId);
   if (overlay) overlay.classList.add('hidden');
+  kcCardCustomer[slot in KC_CARD_SLOTS ? slot : 'primary'] = null;
   // Hand focus back to whatever opened the card — usually the table row.
-  kcRestoreReturnFocus('customerCard');
+  kcRestoreReturnFocus(overlayId);
 }
 
-// Always closes, whatever the selection state (✕ button + backdrop click).
-function dismissCustomerCard() {
-  selectedId = null;
-  closeCustomerCard();
-  document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
+/**
+ * Always closes, whatever the selection state (✕ button + backdrop click).
+ *
+ * With no slot named — Escape, or an old call site — it closes the SECOND card
+ * first if one is open. That is the one you just opened and the one on top, so
+ * it is the one Escape should take away; closing the card underneath and
+ * leaving the newer one floating would be the wrong way round.
+ */
+function dismissCustomerCard(slot) {
+  if (!slot) slot = kcCardCustomer.secondary != null ? 'secondary' : 'primary';
+  if (slot === 'primary') selectedId = null;
+  closeCustomerCard(slot);
+  document.body.classList.toggle('kc-two-cards', kcCardCustomer.secondary != null);
+  if (kcCardCustomer.primary == null && kcCardCustomer.secondary == null) {
+    document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -9674,7 +9800,7 @@ async function correctCommEntry(customerId, index) {
     return;
   }
   toast('Correction recorded.', 'success');
-  if (selectedId === customerId) renderDetailPanel(customerId);
+  kcRepaintCards(customerId);
 }
 function logComm(c, { type, text, icon }) {
   if (!c.commLog) c.commLog = [];
@@ -9696,7 +9822,7 @@ async function recordComm(customerId, entry) {
   if (!saved) toast('Could not save that to the timeline — check the connection and try again.', 'error');
   const idx = customers.findIndex(x => x.id === customerId);
   if (idx !== -1) customers[idx] = c;
-  if (selectedId === customerId) renderDetailPanel(customerId);
+  kcRepaintCards(customerId);
   return saved;
 }
 function openLogCommModal(customerId) {
@@ -18538,10 +18664,16 @@ function paletteRun(i) {
 function paletteContextVerbs() {
   // "Looking at a customer" = the card overlay OR the full-page profile —
   // the palette's verbs act on whichever is up.
+  // With two cards open (owner item 22) "the customer you are looking at" is
+  // the card that has focus, not whichever was opened last. Falling back to
+  // selectedId keeps the single-card and full-page cases exactly as they were.
+  const focused = kcFocusedCardCustomer();
   const card = document.getElementById('customerCard');
-  const cardOpen = !!card && !card.classList.contains('hidden');
-  if ((!cardOpen && !customerPageId) || !selectedId) return null;
-  const c = customers.find((x) => x.id === selectedId);
+  const card2 = document.getElementById('customerCard2');
+  const cardOpen = [card, card2].some((el) => !!el && !el.classList.contains('hidden'));
+  const target = focused != null ? focused : selectedId;
+  if ((!cardOpen && !customerPageId) || !target) return null;
+  const c = customers.find((x) => String(x.id) === String(target));
   if (!c) return null;
   const id = c.id;
   return {
@@ -18747,7 +18879,8 @@ document.addEventListener('keydown', e => {
     if (open('stackedModal')) { closeStackedModal(); return; }
     if (open('dynamicModal')) { closeDynamicModal(); return; }
     if (open('customerModal')) { closeModal(); return; }
-    if (open('customerCard')) { dismissCustomerCard(); return; }
+    if (open('customerCard2')) { dismissCustomerCard('secondary'); return; }
+    if (open('customerCard')) { dismissCustomerCard('primary'); return; }
   }
 });
 

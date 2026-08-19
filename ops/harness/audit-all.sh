@@ -145,6 +145,12 @@ run "every screen names its next action, and every action lands" \
   bash -eo pipefail -c 'for w in 390 1280; do node ops/harness/nextaction.mjs --width $w | tail -1; done
            node ops/harness/nextaction.mjs --width 390 --theme dark --fs largest | tail -1'
 
+# Two customer cards at once (owner item 22). The owner chose both cards fully
+# editable, so this checks the thing that choice creates: each card's buttons
+# carry its OWN customer's id, and the two do not overlap.
+run "two customer cards · beside each other, each writing to its own customer" \
+  bash -eo pipefail -c 'node ops/harness/twocards.mjs | tail -2'
+
 run "dialogs · eight grips, snap, and plain on a phone" \
   bash -eo pipefail -c 'node ops/harness/window.mjs | tail -3'
 
