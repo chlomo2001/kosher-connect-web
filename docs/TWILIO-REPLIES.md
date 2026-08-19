@@ -92,15 +92,30 @@ not need to re-implement the block, and should not try to.
 
 `START` puts them back on, also handled by Twilio.
 
+## Answering from inside the app
+
+This section used to say there was no way to reply from inside the app and that
+building one before a single reply had arrived would be guessing. Both replies
+have since arrived and the guessing is over: as of 19 Aug the message log shows
+inbound texts with a reply box on each one (`msgLogReply` / `sendSmsReply` in
+`public/main.js`, `POST /api/sms { replyTo, text }`).
+
+The one rule worth knowing: **the recipient is resolved on the server from the
+stored log row, never taken from the browser.** The page says *which message* is
+being answered; it does not get to say *who* the answer goes to. A reply screen
+that accepts a destination from the client is one crafted request away from
+sending a customer's conversation to a stranger.
+
+`lib/inboundSms.mjs` `replyTarget()` refuses three cases outright: a message
+from someone who has opted out, a row that is not inbound, and a row with no
+number on it.
+
 ## What is still missing, honestly
 
-Replies land in the message log and in the Vercel log. There is **no screen
-that says "3 replies are waiting for an answer"** yet, and no way to reply from
-inside the app — answering means picking up a phone or using the drafts.
-
-That is the right next piece of work once the number exists and there is real
-traffic to shape it around. Building an inbox before a single reply has arrived
-would be guessing at what the shop needs from it.
+There is still **no screen that says "3 replies are waiting for an answer"** —
+the replies are visible in the message log, but nothing counts the unanswered
+ones or puts them in front of anybody. With three inbound texts to date that has
+not bitten yet; it will when the number gets used properly.
 
 ## Related
 
