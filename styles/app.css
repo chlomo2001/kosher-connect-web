@@ -1886,20 +1886,15 @@ body.kc-win-dragging .kc-wgrip::after { opacity: 0.55; }
    takes a line of its own rather than shrinking to eight visible digits. */
 .phone-row .form-input { flex: 1 1 14ch; width: auto; min-width: 0; }
 
+/* Look shared with every other dropdown (see the block by .task-mini). What is
+   its own is the WIDTH: enough for the widest option — a flag, "+972" and the
+   chevron — and no more. In ch units so Simple Mode grows it with the text. */
 .country-select {
   flex: 0 0 auto;
-  background: var(--surface);
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
   padding: 8px 6px;
-  font-family: inherit; font-size: var(--fs-body); font-weight: 400;
-  color: var(--text); outline: none; cursor: pointer;
-  /* Enough for the widest option — a flag, "+972" and the chevron — and no
-     more. In ch units so Simple Mode grows it with the text inside it. */
+  font-size: var(--fs-body);
   width: 9.5ch; min-width: 82px; flex-shrink: 0;
 }
-
-.country-select:focus { border-color: var(--accent); }
 
 
 /* An optional field offered rather than presented: reads as an action, sits
@@ -3470,13 +3465,40 @@ td.cal-active.cal-shabbat { background: var(--accent); }
 .task-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 7px 0 0 25px; }
 .task-actions .btn { max-width: 100%; white-space: normal; text-align: start; }
 
-.task-mini {
-  font-size: var(--fs-micro); padding: 3px 8px; border-radius: var(--radius);
-  border: 1px solid var(--border); background: var(--surface);
-  color: var(--text); cursor: pointer; font-family: inherit;
+/* ── One dropdown, everywhere ─────────────────────────────────────────────
+   Owner, 19 Aug, item 10: "the odd styled dropdown — one style thruout the app,
+   and where are these editable?"
+
+   There were three looks. .form-input (the 68 selects on forms and filter bars),
+   .country-select (the dialling-code box), and .task-mini (priority and
+   postpone on a task) — and .task-mini was the odd one in three separate ways:
+   a different border token, a different corner radius, and NO focus style at
+   all beyond a hover. Someone driving the task list by keyboard could not see
+   where they were.
+
+   So the LOOK is stated once here and the variants change only what genuinely
+   differs: how big the box is, and how wide. */
+select.form-input, .country-select, .task-mini {
+  background: var(--surface);
+  border: 1px solid var(--border-input);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: inherit; font-weight: 400;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+select.form-input:hover, .country-select:hover, .task-mini:hover { border-color: var(--accent); }
+/* The ring the rest of the app uses. .country-select moved the border colour
+   and stopped there; .task-mini did nothing at all. */
+select.form-input:focus, .country-select:focus, .task-mini:focus,
+select.form-input:focus-visible, .country-select:focus-visible, .task-mini:focus-visible {
+  border-color: var(--accent); box-shadow: var(--ring);
 }
 
-.task-mini:hover { border-color: var(--accent); }
+/* …and the one thing a task dropdown really is: smaller. It sits inside a row
+   of a list, not on a form. */
+.task-mini { font-size: var(--fs-micro); padding: 3px 8px; }
 
 .task-suggest {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 10px;
