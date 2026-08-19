@@ -392,7 +392,13 @@ button, summary { user-select: none; }
 .btn-primary { background: var(--accent); color: var(--on-accent); }
 .btn-primary:hover { background: var(--primary-deep); }
 .btn-primary:active { background: var(--primary-press); }
-.btn-primary:disabled { opacity: 0.55; cursor: default; }
+/* Every variant, not only the blue one. .btn-primary had a disabled look and
+   .btn-outline had none at all, so a disabled outline button was
+   indistinguishable from a live one — which is the "looks pressable and isn't"
+   problem the disabled state exists to solve, made worse. */
+.btn:disabled { opacity: 0.55; cursor: default; }
+.btn:disabled:hover { border-color: var(--border-input); color: var(--ink-secondary); background: var(--surface); }
+.btn-primary:disabled:hover { background: var(--accent); color: var(--on-accent); }
 .btn-outline { background: var(--surface); border: 1px solid var(--border-input); color: var(--ink-secondary); }
 .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
 /* ─── CONTENT ─── */

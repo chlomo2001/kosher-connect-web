@@ -16909,8 +16909,17 @@ function renderPosView() {
           </div>
           <div id="posTender"></div>
           <div class="pos-total-row"><span>TOTAL</span><strong id="posTotal">£0.00</strong></div>
-          <button class="btn btn-primary pos-charge" onclick="saveSale()" title="Ctrl+Enter from the scan box">💷 Charge<span class="kc-chord">Ctrl ⏎</span></button>
-          <button class="btn btn-outline" onclick="posParkSale()" style="width:100%;margin-top:8px;"
+          ${/* Both start disabled and stay so until something is in the basket
+                 (owner, 20 Aug). They used to sit lit on an empty till, and the
+                 only answer to pressing one was an error toast — which on a
+                 busy counter reads as "something went wrong", not as "you have
+                 not scanned anything yet". The guards inside saveSale and
+                 posParkSale STAY: Ctrl+Enter reaches saveSale without touching
+                 this button at all, so disabling it is the appearance and the
+                 guard is the rule. */''}
+          <button class="btn btn-primary pos-charge" id="posChargeBtn" onclick="saveSale()" disabled
+            title="Scan or tap something first — then Ctrl+Enter from the scan box">💷 Charge<span class="kc-chord">Ctrl ⏎</span></button>
+          <button class="btn btn-outline" id="posParkBtn" onclick="posParkSale()" style="width:100%;margin-top:8px;" disabled
             title="Hold this sale to serve someone else, then resume it later">⏸ Park sale</button>
         </div>
       </div>
@@ -17135,9 +17144,33 @@ function posImei(itemId, v) {
   if (line) line.imei = v.trim();
 }
 
+/**
+ * Charge and Park follow the basket.
+ *
+ * One place, because three things change them: the basket being painted, a
+ * card charge finishing, and a parked sale being resumed. Left to each of
+ * those to set the flag themselves, they would disagree — and the way they
+ * would disagree is a live Charge button on an empty till, which is the thing
+ * being fixed.
+ */
+function posSyncActionButtons() {
+  const has = posBasket.length > 0;
+  const charge = document.getElementById('posChargeBtn');
+  const park = document.getElementById('posParkBtn');
+  if (charge) {
+    charge.disabled = !has;
+    charge.title = has ? 'Ctrl+Enter from the scan box' : 'Scan or tap something first';
+  }
+  if (park) {
+    park.disabled = !has;
+    park.title = has ? 'Hold this sale to serve someone else, then resume it later' : 'Nothing to park yet';
+  }
+}
+
 function posRenderBasket() {
   const el = document.getElementById('posBasket');
   if (!el) return;
+  posSyncActionButtons();
   let total = 0;
   el.innerHTML = posBasket.length === 0
     ? '<div style="color:var(--muted);font-size:var(--fs-body);padding:10px 2px;">Scan a barcode or tap an item to start.</div>'
@@ -17511,8 +17544,12 @@ async function saveSale() {
   const chargeIdle = chargeBtn ? chargeBtn.textContent : '';
   const setCharging = (on, label) => {
     if (!chargeBtn) return;
-    chargeBtn.disabled = on;
     chargeBtn.textContent = on ? label : chargeIdle;
+    // Coming OUT of a charge, the basket decides — not this function. A sale
+    // that succeeded has just emptied it, so blindly re-enabling here would
+    // light the button back up on an empty till.
+    if (on) chargeBtn.disabled = true;
+    else posSyncActionButtons();
   };
   try {
     if (paidNow && posMethod === 'card' && cashDue > 0 && kcTillAvailable()) {
