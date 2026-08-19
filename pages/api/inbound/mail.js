@@ -260,13 +260,27 @@ export default async function handler(req, res) {
     // renewals are the ones that can simply be filed.
     const kind = carrierMailKind({ subject: mail.subject, snippet: mail.snippet, text: mail.text })
 
-    // An advert is not news about a plan. Filing it would put a row in the
-    // carrier queue for a person to read and dismiss, which is how a queue
-    // teaches people to skim it (owner, 19 Aug). Dropped, but said out loud so
-    // a wrong classification is findable in the log rather than silent.
-    if (NEVER_FILE.has(kind)) {
-      console.log(`[inbound/mail] dropped an advert: ${String(mail.subject || '').slice(0, 80)}`)
-      return res.json({ ok: true, queue: 'ignored', stored: false, reason: 'marketing' })
+    // An advert is not news about a plan, so it must not sit in the working
+    // queue for a person to read and dismiss — that is how a queue teaches
+    // people to skim it (owner, 19 Aug).
+    //
+    // But it is FILED AND MARKED DONE, not thrown away. It used to be dropped
+    // outright, which broke the rule this file states at the top of itself:
+    // anything uncertain is stored, not guessed at and not dropped. The
+    // asymmetry is the argument. A missed advert costs one dismissal. A
+    // MISCLASSIFIED message — a completed port, a failed payment — was gone,
+    // with a line in a Vercel log as the only trace, and nobody would ever
+    // know to look for it. On the shop's real mail this classifier already
+    // misses at least one advert ("The Pixel 11 ships today!") and the obvious
+    // signal for catching it, a utm_campaign link, appears in Smarty's genuine
+    // port-completion email — so tightening it further is exactly the kind of
+    // change that would start eating real messages.
+    //
+    // Resolved on arrival keeps it out of 'pending' and out of everybody's
+    // way, and leaves it readable under "Everything" if the call was wrong.
+    const filedResolved = NEVER_FILE.has(kind)
+    if (filedResolved) {
+      console.log(`[inbound/mail] filed an advert as already dealt with: ${String(mail.subject || '').slice(0, 80)}`)
     }
 
     const inserted = await db.insertIgnoreDup('sim_mail', [{
@@ -288,6 +302,9 @@ export default async function handler(req, res) {
       numbers: match.numbers,
       sim_id: match.simId,
       customer_id: match.simId ? index.customerBySim.get(String(match.simId)) || null : null,
+      // Marked done on arrival, so it never appears in the working queue —
+      // present under "Everything" if the classification was wrong.
+      ...(filedResolved ? { resolved_at: new Date().toISOString() } : {}),
     }], 'message_id')
 
     // A port completing is the end of a job the shop did: the number has moved,
@@ -330,6 +347,9 @@ export default async function handler(req, res) {
       confidence: match.confidence,
       kind,
       paired: !!match.simId,
+      // Said plainly, because "stored: true" on an advert would otherwise read
+      // as it having landed in somebody's queue.
+      resolvedOnArrival: filedResolved,
     })
   } catch (e) {
     console.error('[inbound/mail]', e)
