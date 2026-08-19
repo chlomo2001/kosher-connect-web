@@ -4272,3 +4272,42 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
   .kc-unit { flex-wrap: wrap; }
   .kc-unit-side { flex-direction: row; gap: 8px; align-items: baseline; width: 100%; padding-left: 26px; }
 }
+
+/* ── The identity block on a customer's record page ──────────────────────
+   The card runs every contact fact together on one line because a card has
+   one line to spend. On a record that same line is a paragraph nobody reads:
+   the question is "what is their email", and the answer should be findable
+   without parsing the sentence around it. Labelled rows, each still the
+   action — the number rings, the address is written out.                  */
+
+.kc-id {
+  display: grid; grid-template-columns: max-content 1fr;
+  gap: 4px 16px; align-items: baseline;
+  margin: 2px 0 18px; font-size: var(--fs-body);
+}
+
+.kc-id-fact { display: contents; }
+
+.kc-id-label {
+  font-size: var(--fs-micro); color: var(--muted); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap;
+}
+
+.kc-id-value { min-width: 0; overflow-wrap: anywhere; }
+
+.kc-id-value a { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--muted); }
+.kc-id-value a:hover { border-bottom-color: var(--accent); color: var(--accent); }
+
+/* Absence is a fact too. A blank where a phone number should be reads as a
+   rendering fault; "no number on record" reads as the thing to fix — and 143
+   customers are in exactly that state. */
+.kc-id-missing { color: var(--muted); font-style: italic; }
+
+.kc-id-hint { font-size: var(--fs-micro); color: var(--muted); }
+
+/* On a phone the label sits above its value rather than squeezing it. */
+@media (max-width: 520px) {
+  .kc-id { grid-template-columns: 1fr; gap: 0; }
+  .kc-id-fact { display: block; margin-bottom: 8px; }
+  .kc-id-label { display: block; margin-bottom: 1px; }
+}

@@ -7296,15 +7296,27 @@ function customerLifecycle(c) {
 }
 
 // #82 — Next best action, generalized past flights. The single most pressing
-// thing to do for this customer right now, or null. Ordered by urgency; the
-// wallet balance is passed in once it has loaded so the arrears case is exact.
-function customerNextBestAction(c, balance) {
+// thing to do for this customer right now, or null. Ordered by urgency.
+//
+// It no longer takes the balance: money was moved out of here entirely (see
+// below), so there is nothing left for it to decide. Left out of the signature
+// rather than accepted and ignored — a parameter nothing reads is a promise
+// the next reader has to disprove.
+function customerNextBestAction(c) {
   const cid = c.id;
   const today = localISO();
-  if (typeof balance === 'number' && balance < -0.005) {
-    return { icon: '💰', text: `Owes ${fmtGbp(Math.abs(balance))}`,
-      btn: `<button class="btn btn-primary btn-sm" onclick="openWalletModal('${cid}', ${balance})">Take payment</button>` };
-  }
+  // Money is deliberately NOT here any more.
+  //
+  // The arrears case used to lead this strip, which meant a customer who owed
+  // money saw the balance three times on one screen — the headline stat, this
+  // strip with a Take payment button, and the Wallet section below with a
+  // second button doing the same thing four hundred pixels further down. Two
+  // controls of the same shape for one job is how somebody presses the wrong
+  // one. The Wallet section owns money now, and its button says "Take payment"
+  // when they owe, so nothing was lost but the repetition.
+  //
+  // This strip is for everything money cannot say: a repair sitting on the
+  // shelf, a trip with no phone cover, a passport about to expire.
   const ready = repairs.find(r => r.customerId === cid && r.status === 'Ready');
   if (ready) {
     return { icon: '🔧', text: `Repair ready — ${escHtml(ready.device || 'device')} waiting for collection`,
@@ -7526,7 +7538,9 @@ function buildCustomerPanelHtml(c, mode = 'card') {
                 to break; everything that is not an address is now wrapped in a
                 .kc-fact that holds together, so the line breaks BETWEEN facts
                 and never inside one. */''}
-          <div class="detail-meta">${unconfirmedChip(c) ? unconfirmedChip(c) + ' · ' : ''}${contactChip(c)}${contactChip(c) ? ' ' : ''}${c.phone ? `<a class="kc-fact" href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${c.altPhone ? ` <a class="kc-fact" href="tel:${escHtml(String(c.altPhone).replace(/\s/g, ''))}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional number">${escHtml(fmtPhone(c.altPhone))}</a>` : ''}${waLink(c, '') ?` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">✉️ ${escHtml(c.email)}</a>` : `<span class="kc-fact">✉️ ${escHtml(c.email || 'no contact email')}</span>`}${c.altEmail ? ` · <a href="mailto:${escHtml(c.altEmail)}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional email">${escHtml(c.altEmail)}</a>` : ''}${c.accountEmail ?` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr}${since ? ` · <span class="kc-fact">Since ${since}</span>` : ''}</div>
+          <div class="detail-meta">${isPage
+            ? `${unconfirmedChip(c) || ''}${contactChip(c) || ''}`
+            : `${unconfirmedChip(c) ? unconfirmedChip(c) + ' · ' : ''}${contactChip(c)}${contactChip(c) ? ' ' : ''}${c.phone ? `<a class="kc-fact" href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${c.altPhone ? ` <a class="kc-fact" href="tel:${escHtml(String(c.altPhone).replace(/\s/g, ''))}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional number">${escHtml(fmtPhone(c.altPhone))}</a>` : ''}${waLink(c, '') ?` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">✉️ ${escHtml(c.email)}</a>` : `<span class="kc-fact">✉️ ${escHtml(c.email || 'no contact email')}</span>`}${c.altEmail ? ` · <a href="mailto:${escHtml(c.altEmail)}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional email">${escHtml(c.altEmail)}</a>` : ''}${c.accountEmail ?` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr}${since ? ` · <span class="kc-fact">Since ${since}</span>` : ''}`}</div>
         </div>
         <!-- Three menus, not nine icons. Grouping them by what they DO was the
              first fix; the row was still nine identical squares to read, and
@@ -7538,7 +7552,9 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         </div>
       </div>`;
 
-  const statsHtml = `
+  // The card counts what it cannot list: three numbers, because a compact card
+  // has no room to show the rentals and the virtual numbers themselves.
+  const cardStatsHtml = `
       <div class="detail-stats">
         <div class="detail-stat">
           <div class="detail-stat-label" id="cardBalanceLabel">Wallet balance</div>
@@ -7552,6 +7568,66 @@ function buildCustomerPanelHtml(c, mode = 'card') {
           <div class="detail-stat-label">Virtual Numbers</div>
           <div class="detail-stat-value" style="color:var(--vn);">${activeVNs}</div>
         </div>
+      </div>`;
+
+  // The page lists them a few inches below, so counting them again says
+  // nothing. A record wants the three facts a list cannot show: what they owe,
+  // what they have been worth, and when the shop last did anything for them —
+  // the last of which is how you tell a live customer from a dormant one.
+  const lastEvent = timeline
+    .map(e => e.date).filter(Boolean).sort().slice(-1)[0] || '';
+  const pageStatsHtml = `
+      <div class="detail-stats">
+        <div class="detail-stat">
+          <div class="detail-stat-label" id="cardBalanceLabel">Wallet balance</div>
+          <div class="detail-stat-value" id="cardBalanceStat" style="color:var(--muted);">…</div>
+        </div>
+        <div class="detail-stat">
+          <div class="detail-stat-label">Lifetime</div>
+          <div class="detail-stat-value" style="color:var(--accent);">${lifetimeSpend > 0 ? fmtGbp(lifetimeSpend) : '—'}</div>
+        </div>
+        <div class="detail-stat">
+          <div class="detail-stat-label">Last activity</div>
+          <div class="detail-stat-value" style="font-size:var(--fs-lead);">${lastEvent ? escHtml(fmtDate(lastEvent)) : '—'}</div>
+        </div>
+      </div>`;
+  const statsHtml = isPage ? pageStatsHtml : cardStatsHtml;
+
+  // ── Who they are, said as facts rather than as one long line ─────────────
+  //
+  // Page only. The card runs the whole of this together — chip, number, second
+  // number, WhatsApp, email, second email, account email, address, since —
+  // because a card has one line to spend and running them together is the only
+  // way to fit. On a record that same line is a paragraph nobody reads: the
+  // question is "what is their email", and the answer should be findable
+  // without parsing the sentence around it.
+  //
+  // Each fact is labelled and each is still the action: the number rings, the
+  // address is written out, the account email is marked as OURS rather than
+  // theirs — that one has been mistaken for a contact address before.
+  const factRow = (label, value, hint = '') => value
+    ? `<div class="kc-id-fact">
+         <span class="kc-id-label">${escHtml(label)}</span>
+         <span class="kc-id-value">${value}${hint ? ` <span class="kc-id-hint">${escHtml(hint)}</span>` : ''}</span>
+       </div>`
+    : '';
+  const telLink = (n, title) => `<a href="tel:${escHtml(String(n).replace(/\s/g, ''))}" dir="ltr" title="${escHtml(title)}">${escHtml(fmtPhone(n))}</a>`;
+  const identityHtml = `
+      <div class="kc-id">
+        ${factRow('Phone', c.phone
+          ? telLink(c.phone, 'Call this number')
+            + (waLink(c, '') ? ` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp">💬</a>` : '')
+          : `<span class="kc-id-missing">no number on record</span>`)}
+        ${factRow('Also', c.altPhone ? telLink(c.altPhone, 'Additional number') : '')}
+        ${factRow('Email', c.email && !isOwnAccountEmail(c.email)
+          ? `<a href="mailto:${escHtml(c.email)}" dir="ltr">${escHtml(c.email)}</a>`
+          : `<span class="kc-id-missing">no contact email</span>`)}
+        ${factRow('Also', c.altEmail ? `<a href="mailto:${escHtml(c.altEmail)}" dir="ltr">${escHtml(c.altEmail)}</a>` : '')}
+        ${factRow('Carrier login', c.accountEmail
+          ? `<span dir="ltr" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : '',
+          'ours, not theirs — never write to it')}
+        ${factRow('Address', c.address ? escHtml(c.address) : '')}
+        ${factRow('Customer since', since ? escHtml(since) : '')}
       </div>`;
 
   // ── The record: every unit this person has, linked, past included ────────
@@ -7694,7 +7770,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:6px 0;">No activity ${cat === 'all' ? 'yet' : 'in this category yet'}.</div>`
         : shown.map(e => timelineRow(e, true)).join('')}`;
   } else {
-    bodyHtml = overviewHtml + newServiceHtml;
+    bodyHtml = identityHtml + overviewHtml + newServiceHtml;
   }
   return `
     <div class="detail-panel kc-cpage" id="detailPanel">
@@ -9889,12 +9965,16 @@ async function loadWalletSection(customerId) {
              news; the fill and the button-sized padding go, so the only filled
              thing in the row is the thing you can press. */''}
       <span class="wallet-balance" style="color:${balColor};">Balance: ${balLabel}</span>
+      ${/* Directive when they owe. This button absorbed the "Take payment"
+             control that used to sit in the next-action strip above, so the
+             wording has to carry what that one carried: a customer in arrears
+             is a thing to DO, not a state to note. */''}
       <button class="btn btn-primary" style="font-size:var(--fs-small);padding:6px 14px;"
-        onclick="openWalletModal('${escHtml(customerId)}', ${Number(bal) || 0})">💰 Record payment / credit</button>
+        onclick="openWalletModal('${escHtml(customerId)}', ${Number(bal) || 0})">💰 ${bal < -0.005 ? 'Take payment' : 'Record payment / credit'}</button>
       ${data.entries.length > 8 ? `<span style="color:var(--muted);font-size:var(--fs-micro);">showing 8 of ${data.entries.length}</span>` : ''}
     </div>
     <div class="history-list">${entriesHtml}</div>`;
-  renderNextBestAction(customerId, bal);
+  renderNextBestAction(customerId);
 }
 
 // Email a receipt for one ledger entry from the customer card. Sales send the
@@ -10001,12 +10081,12 @@ async function submitRefund(customerId, idx) {
 }
 
 // #82 — paint the "next best action" strip once the true balance is known.
-function renderNextBestAction(customerId, balance) {
+function renderNextBestAction(customerId) {
   const strip = document.getElementById(`nbaStrip-${customerId}`);
   if (!strip) return;
   const c = customers.find(x => x.id === customerId);
   if (!c) { strip.innerHTML = ''; return; }
-  const nba = customerNextBestAction(c, balance);
+  const nba = customerNextBestAction(c);
   if (!nba) { strip.innerHTML = ''; return; }
   strip.innerHTML = `
     <div class="nba-strip">

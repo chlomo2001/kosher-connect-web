@@ -136,6 +136,51 @@ for (const k of new Set(kindsUsed)) {
   say(known.includes(k), `a record row opens "${k}", which is not a kind the record knows`)
 }
 
+// ── the identity block: facts with labels, not one run-on line ────────────
+const identity = await p.evaluate(() => {
+  const facts = [...document.querySelectorAll('.kc-id .kc-id-fact')]
+  return {
+    count: facts.length,
+    labels: facts.map((f) => (f.querySelector('.kc-id-label') || {}).textContent?.trim() || ''),
+    // Every fact must actually say something; an empty value row is furniture.
+    empty: facts.filter((f) => !(f.querySelector('.kc-id-value') || {}).textContent?.trim()).length,
+    // The contact details must still be reachable in one press, not just readable.
+    actionable: document.querySelectorAll('.kc-id-value a[href^="tel:"], .kc-id-value a[href^="mailto:"]').length,
+  }
+})
+say(identity.count > 0, 'the record page has no identity block')
+say(identity.labels.every((l) => l), 'an identity fact has no label — that is the run-on line again')
+say(identity.empty === 0, `${identity.empty} identity row(s) are labelled but empty`)
+say(identity.actionable > 0, 'no contact detail on the record can be pressed to ring or write')
+
+// ── money is said once, and offered once ──────────────────────────────────
+//
+// It used to appear three times on one screen: the headline stat, a "Take
+// payment" button in the next-action strip, and a second button doing the same
+// job in the Wallet section below. Two controls of the same shape for one job
+// is how somebody presses the wrong one.
+const money = await p.evaluate(() => {
+  const visible = (el) => el.offsetParent !== null
+  const walletButtons = [...document.querySelectorAll('[onclick*="openWalletModal"]')].filter(visible)
+  return {
+    buttons: walletButtons.length,
+    labels: walletButtons.map((b) => b.textContent.replace(/\s+/g, ' ').trim()),
+    // Read from the Wallet section's own statement, which is rendered from the
+    // ledger response. The headline stat's label is filled by the same async
+    // call and is empty until it lands — keying the check on that made it skip
+    // itself silently, which is how a guard passes a change it was written for.
+    balanceSays: (document.querySelector('.wallet-balance') || {}).textContent?.trim() || '',
+  }
+})
+say(money.buttons <= 1,
+  `${money.buttons} controls on screen open the wallet — money should be offered once (${money.labels.join(' / ')})`)
+say(money.buttons === 1, 'the record offers no way to record money at all')
+// When they owe, the one button should say so rather than being neutral.
+if (money.buttons === 1 && /\bowes\b/i.test(money.balanceSays)) {
+  say(/take payment/i.test(money.labels[0]),
+    `the customer owes money and the only money control says "${money.labels[0]}" — it should ask for the payment`)
+}
+
 // ── 2. the card must still be the card ────────────────────────────────────
 await p.evaluate(async () => { await goToTab('customers') })
 await p.waitForTimeout(300)
@@ -144,10 +189,13 @@ await p.waitForTimeout(500)
 
 const card = await p.evaluate(() => ({
   units: document.querySelectorAll('#customerCard .kc-unit, .detail-panel .kc-unit').length,
+  identity: document.querySelectorAll('.detail-panel .kc-id').length,
   badges: document.querySelectorAll('.detail-panel .badge').length,
   onPage: !!document.querySelector('.kc-cpage'),
 }))
 say(!card.onPage, 'renderDetailPanel opened the full page instead of the card')
+say(card.identity === 0,
+  'the compact card grew the labelled identity block — it has one line to spend, which is why it runs the facts together')
 say(card.units === 0,
   'the compact card has grown the full record — it exists so somebody does not leave the list, and two cards fit only because it is small')
 say(card.badges > 0, 'the card lost its service badges altogether')
