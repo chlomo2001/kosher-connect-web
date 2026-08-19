@@ -1338,6 +1338,22 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 /* The text being answered, quoted above the box you type into. Their words
    have to look like theirs — an unquoted paste reads as something the shop
    wrote, which is a bad way to start a reply. */
+/* ── Figures nobody has checked ───────────────────────────────────────────
+   Port item C1c. A rate that has been confirmed is quiet; one that has not is
+   the row you are meant to act on, so the unchecked ones carry the weight and
+   the confirmed ones fade back. */
+.chk-list { display: grid; gap: 8px; }
+.chk-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  padding: 9px 12px; border: 1px solid var(--border); border-left: 3px solid var(--warning);
+  border-radius: 8px; background: var(--surface);
+}
+.chk-row.chk-done { border-left-color: var(--success); opacity: .72; }
+.chk-what { flex: 1; min-width: 0; }
+.chk-table { font-size: var(--fs-micro); color: var(--muted); margin-left: 8px; }
+.chk-figs { font-size: var(--fs-small); color: var(--text); }
+.chk-src { font-size: var(--fs-micro); color: var(--success); overflow-wrap: anywhere; }
+
 /* ── The next action on a screen ──────────────────────────────────────────
    Port item B2. One row above the content column: what does the person
    standing here do next? It is not a card — it sits between the page title and

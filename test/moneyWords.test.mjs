@@ -9,7 +9,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   moneyState, moneySentence, moneySay, moneyResult, rate, chaseOrder, gbp,
-  MONEY_STATES, AUDIENCES, CHASE_AFTER_DAYS,
+  MONEY_STATES, AUDIENCES, CHASE_AFTER_DAYS, rateFromRow, mayQuotePublicly, RATE_TABLES,
 } from '../lib/moneyWords.mjs'
 
 // ── the sign convention ───────────────────────────────────────────────────
@@ -175,4 +175,44 @@ test('absence is checked before conversion — the bug this module exists to pre
   assert.equal(rate(0, { what: 'a free day' }).amount, 0)
   assert.equal(rate('0').amount, 0)
   assert.equal(moneyResult({ amount: 0, inputs: [rate(0, { confirmed: true })] }).reliable, true)
+})
+
+// ── rates as they come out of the database ────────────────────────────────
+test('confirmed_at is what makes a rate checked — updated_at is not', () => {
+  // They answer different questions. updated_at says when a number last MOVED;
+  // confirmed_at says whether anybody has looked at what it says now. The
+  // welcome page quoted £3/day against a list saying £2 for an unknown length
+  // of time, and updated_at could not have told anyone.
+  const checked = { rate_per_day: 2, confirmed_at: '2026-08-19T02:00:00Z', updated_at: '2026-08-19T02:00:00Z' }
+  const moved = { rate_per_day: 2, confirmed_at: null, updated_at: '2026-08-19T02:00:00Z' }
+  assert.equal(rateFromRow(checked, 'rate_per_day', 'the daily rate').confirmed, true)
+  assert.equal(rateFromRow(moved, 'rate_per_day', 'the daily rate').confirmed, false)
+  assert.equal(moneyResult({ amount: 2, inputs: [rateFromRow(moved, 'rate_per_day', 'the daily rate')] }).reliable, false)
+  assert.equal(moneyResult({ amount: 2, inputs: [rateFromRow(checked, 'rate_per_day', 'the daily rate')] }).reliable, true)
+})
+
+test('a missing row is a missing rate, not a free one', () => {
+  const r = rateFromRow(null, 'rate_per_day', 'the daily rate for Israel')
+  assert.equal(r.amount, null)
+  assert.match(moneyResult({ amount: 0, inputs: [r] }).gaps[0], /do not have the daily rate for Israel/)
+})
+
+test('only a reliable figure may be quoted outside the shop', () => {
+  assert.equal(mayQuotePublicly(moneyResult({ amount: 2, inputs: [rate(2, { confirmed: true })] })), true)
+  assert.equal(mayQuotePublicly(moneyResult({ amount: 2, inputs: [rate(2, { confirmed: false })] })), false)
+  assert.equal(mayQuotePublicly(moneyResult({ amount: 2, inputs: [rate(null)] })), false)
+  assert.equal(mayQuotePublicly(null), false)
+  assert.equal(mayQuotePublicly(undefined), false)
+  assert.equal(mayQuotePublicly({}), false)
+})
+
+test('every rate table names a key and its figures', () => {
+  // The confirm endpoint chooses its table from this map rather than taking a
+  // string from the request, so the map is also the whitelist.
+  for (const [table, meta] of Object.entries(RATE_TABLES)) {
+    assert.ok(meta.key, `${table} has no key column`)
+    assert.ok(meta.label, `${table} has no human label`)
+    assert.ok(meta.fields.length, `${table} names no figures`)
+  }
+  assert.equal(RATE_TABLES.rental_rates.key, 'country_code')
 })

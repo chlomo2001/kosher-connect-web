@@ -21234,6 +21234,20 @@ async function renderSettingsTab() {
         <div id="msgLogWrap" style="font-size:var(--fs-small);color:var(--muted);padding:6px 0;">Not loaded yet — press “Load the log”.</div>
       </div>`);
 
+  // ── Figures nobody has checked ─────────────────────────────────────────
+  // Port item C1c. The brief is emphatic that a refusal needs an exit built at
+  // the same time: their clarity scan found a confirm-rate column with no
+  // caller anywhere in the app, so the panel headed "figures nobody has
+  // checked" was a list with nothing to press and every figure stayed
+  // provisional for ever. This is the thing to press.
+  const unconfirmedHtml = (currentStaff && currentStaff.role !== 'owner') ? '' :
+    settingsCard('unchecked', '🔎 Figures nobody has checked',
+      'prices the public page will not quote', `
+      <div id="uncheckedBody" style="padding:12px 14px 14px;font-size:var(--fs-body);color:var(--muted);">
+        <button class="btn btn-outline btn-sm" onclick="loadUncheckedRates()">↻ Show me</button>
+        <span style="font-size:var(--fs-micro);">Every rate, and whether anybody has confirmed it against something.</span>
+      </div>`);
+
   // Shop details — public-facing facts the owner should be able to change
   // without a code change (they show on the welcome page within minutes).
   const openingHours = cfg.settings.find(s => s.key === 'opening_hours')?.textValue || 'Sunday–Thursday, 2:00–6:30pm';
@@ -21372,6 +21386,7 @@ async function renderSettingsTab() {
     ${team?.success ? sectionHead('People &amp; access', 'who works here and what they can see') + teamHtml : ''}
 
     ${sectionHead('Prices &amp; charges', 'what you charge and any automatic extras')}
+    ${unconfirmedHtml}
     ${pricingCards}
 
     ${sectionHead('Communications', 'channels, safety gates &amp; addresses')}
@@ -21761,6 +21776,75 @@ async function kcTaskFromHereSave(customerId, notes, customerUuid) {
     toast('Could not add that task.', 'error');
     if (btn) { btn.disabled = false; btn.textContent = '📝 Add the task'; }
   }
+}
+
+/**
+ * Every rate, and whether anybody has ever confirmed it.
+ *
+ * Port item C1c, 19 August 2026. `updated_at` says when a number last moved;
+ * it says nothing about whether a person has looked at what it says NOW. That
+ * difference is why the welcome page spent an unknown length of time quoting
+ * £3/day when the list said £2 — and why the public page no longer quotes a
+ * figure nobody has confirmed.
+ */
+async function loadUncheckedRates() {
+  const wrap = document.getElementById('uncheckedBody');
+  if (!wrap) return;
+  wrap.innerHTML = '<span style="color:var(--muted);">Loading…</span>';
+  const res = await kcFetch('/api/rates/unconfirmed').then(r => r.json()).catch(() => null);
+  if (!res || !res.success) {
+    wrap.innerHTML = `<span style="color:var(--danger-ink);">${escHtml(res?.error || 'Could not read the rates.')}</span>`;
+    return;
+  }
+  window.__kcRates = res.rows;
+  const money = (n) => '£' + (Number(n) || 0).toFixed(2);
+  const row = (r, i) => `
+    <div class="chk-row${r.confirmed ? ' chk-done' : ''}">
+      <div class="chk-what">
+        <strong>${escHtml(r.name)}</strong>
+        <span class="chk-table">${escHtml(r.tableLabel)}</span>
+        <div class="chk-figs">${r.figures.map(f => `${escHtml(f.field.replace(/_/g, ' '))} ${money(f.value)}`).join(' · ') || '—'}</div>
+        ${r.confirmed ? `<div class="chk-src">✓ ${escHtml(r.confirmedBy || 'someone')} — ${escHtml(r.source || '')}</div>` : ''}
+      </div>
+      ${r.confirmed ? '' : `<button class="btn btn-outline btn-sm" onclick="confirmRate(${i})">Confirm this</button>`}
+    </div>`;
+  wrap.innerHTML = `
+    <div style="margin-bottom:10px;">
+      ${res.unchecked
+        ? `<strong style="color:var(--danger-ink);">${res.unchecked} of ${res.total}</strong> have never been checked by anybody.
+           The public welcome page will not quote a rental price until the rental rates are confirmed —
+           it drops the sentence rather than showing a figure nobody stands behind.`
+        : `<strong style="color:var(--success);">All ${res.total} confirmed.</strong> Editing any of them clears its tick again, which is the point.`}
+    </div>
+    <div class="chk-list">${res.rows.map(row).join('')}</div>`;
+}
+
+/**
+ * Confirming asks WHERE, and will not take an empty answer.
+ *
+ * A tick on its own records that somebody clicked. "Checked against the Lebara
+ * price list" records something a person can go back to, which is the whole
+ * difference between evidence and a click.
+ */
+async function confirmRate(i) {
+  const r = (window.__kcRates || [])[i];
+  if (!r) return;
+  const source = await kcPrompt({
+    title: `Confirm ${r.name}`,
+    body: `Where did you check this? It is recorded against the price with your name and today's date, ` +
+      `and it is what somebody reads in six months when they want to know whether the figure can be trusted.` +
+      `<br><br>Editing the price later clears this again — a tick must never come to mean "somebody looked at an earlier number".`,
+    placeholder: 'against the Lebara price list',
+    okLabel: '✓ Confirm it',
+  });
+  if (source == null) return;
+  const res = await kcFetch('/api/rates/confirm', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ table: r.table, id: r.id, source }),
+  }).then(x => x.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not record that.', 'error'); return; }
+  toast(`Confirmed — ${r.name}.`, 'success');
+  loadUncheckedRates();
 }
 
 // ── Collapsible settings cards ───────────────────────────────────────────

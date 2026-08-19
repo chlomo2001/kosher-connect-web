@@ -1788,5 +1788,96 @@
     "bookable": true
    }
   ]
+ },
+ "/api/rates/unconfirmed": {
+  "success": true,
+  "total": 4,
+  "unchecked": 3,
+  "rows": [
+   {
+    "table": "rental_rates",
+    "tableLabel": "Rental rates",
+    "id": "IL",
+    "name": "Israel",
+    "confirmed": false,
+    "confirmedAt": null,
+    "confirmedBy": null,
+    "source": null,
+    "figures": [
+     {
+      "field": "rate_per_day",
+      "value": 2
+     },
+     {
+      "field": "min_charge",
+      "value": 15
+     },
+     {
+      "field": "cap",
+      "value": 30
+     }
+    ]
+   },
+   {
+    "table": "rental_rates",
+    "tableLabel": "Rental rates",
+    "id": "US",
+    "name": "USA",
+    "confirmed": false,
+    "confirmedAt": null,
+    "confirmedBy": null,
+    "source": null,
+    "figures": [
+     {
+      "field": "rate_per_day",
+      "value": 3
+     },
+     {
+      "field": "min_charge",
+      "value": 20
+     },
+     {
+      "field": "cap",
+      "value": 45
+     }
+    ]
+   },
+   {
+    "table": "damage_rates",
+    "tableLabel": "Damage / loss charges",
+    "id": "IL",
+    "name": "IL",
+    "confirmed": false,
+    "confirmedAt": null,
+    "confirmedBy": null,
+    "source": null,
+    "figures": [
+     {
+      "field": "phone_damage_loss",
+      "value": 60
+     },
+     {
+      "field": "charger_missing",
+      "value": 10
+     }
+    ]
+   },
+   {
+    "table": "service_prices",
+    "tableLabel": "Service price menu",
+    "id": "7",
+    "name": "Passport photo",
+    "confirmed": true,
+    "confirmedAt": "2026-08-18T10:00:00Z",
+    "confirmedBy": "E. Rothbart",
+    "source": "against the printer price list, 18 Aug",
+    "figures": [
+     {
+      "field": "price",
+      "value": 8
+     }
+    ]
+   }
+  ]
  }
 }
