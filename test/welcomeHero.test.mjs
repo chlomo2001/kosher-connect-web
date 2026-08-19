@@ -1,0 +1,54 @@
+// The accent and the subline are ONE sentence, and the spacing has to say so.
+//
+// "Shabbos & Yom Tov / never charged — priced by the day, not the trip" is a
+// single claim broken over two lines with different styling. An earlier pass
+// bound them together by SIZE, closing the ratio from 2.3× to ~1.6×. The
+// spacing still said the opposite (owner, 20 Aug: "isnt the spacing here
+// somewhat off?"): 4px above the accent, 5px below it — three lines evenly
+// spaced, so nothing grouped. Allowing for line-height the optical gaps were
+// ~7.6px above and ~10.1px below, meaning the sentence was held LESS tightly
+// to itself than to the headline it is not part of.
+//
+// Proximity is the strongest grouping cue there is. This holds it to saying
+// the true thing.
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+
+const SRC = readFileSync(new URL('../pages/welcome.js', import.meta.url), 'utf8')
+
+const marginTopOf = (selector) => {
+  const rule = SRC.match(new RegExp(`\\${selector}\\{([^}]*)\\}`))
+  assert.ok(rule, `${selector} is missing from the page's CSS`)
+  // `0` is valid CSS without a unit, and reading it as "absent" would have this
+  // test fail on the very value it is checking for.
+  const m = rule[1].match(/margin-top:\s*(-?[\d.]+)(px)?/)
+  assert.ok(m, `${selector} sets no margin-top`)
+  return Number(m[1])
+}
+
+test('the sentence is held to itself more tightly than to the headline', () => {
+  const above = marginTopOf('.sk-accent')    // headline → the pair
+  const inside = marginTopOf('.sk-subline')  // within the pair
+  assert.ok(above > inside,
+    `the gap above the accent (${above}px) must exceed the gap inside the sentence (${inside}px) — ` +
+    'otherwise the headline and the accent read as the pair, and the line that says what about it is orphaned')
+  // Not merely bigger: bigger by enough to be seen. Line-height adds a few
+  // px of its own on both sides, so a 1–2px difference disappears optically —
+  // which is exactly how the original 4px/5px looked evenly spaced.
+  assert.ok(above - inside >= 8,
+    `${above - inside}px of difference is too small to read as grouping once line-height is added`)
+})
+
+test('the accent still does not compete with the headline it sits under', () => {
+  // The earlier fix, held so a spacing change cannot undo it: the accent is
+  // smaller than the h2, and close enough to the subline in size that the two
+  // read as one sentence rather than as a headline and a caption.
+  const h2 = SRC.match(/\.sk-band-inner h2\{[^}]*font-size:clamp\([^,]+,[^,]+,\s*([\d.]+)px\)/)
+  const accent = SRC.match(/\.sk-accent\{[^}]*font-size:clamp\([^,]+,[^,]+,\s*([\d.]+)px\)/)
+  const sub = SRC.match(/\.sk-subline\{[^}]*font-size:\s*([\d.]+)px/)
+  assert.ok(h2 && accent && sub, 'the three sizes should all be findable')
+  assert.ok(Number(accent[1]) < Number(h2[1]), 'the accent must not be as loud as the headline')
+  assert.ok(Number(accent[1]) / Number(sub[1]) < 2,
+    'at more than 2× the eye takes the accent as a finished headline and never reaches the subline')
+})

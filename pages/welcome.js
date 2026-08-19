@@ -1040,13 +1040,19 @@ const SKY_CSS = `
      ("Shabbos & Yom Tov / never charged — priced by the day"). At 34px against
      14.5px the eye took the accent as a finished headline and never travelled
      to the line that says what about it — so the claim read as a fragment.
-     Closing the ratio from 2.3× to ~1.6×, and tightening the gap, binds them
-     back into one phrase. The accent also stops competing with the h2 above. */
+     Closing the ratio from 2.3× to ~1.6× bound them together by SIZE. The
+     spacing still said the opposite (owner, 20 Aug: "isnt the spacing here
+     somewhat off?"): the gap was 4px above the accent and 5px below it, so the
+     three lines sat evenly and nothing grouped. Allowing for line-height the
+     optical gaps were ~7.6px above and ~10.1px below — the sentence was held
+     LESS tightly to itself than to the headline it is not part of.
+     Proximity is the strongest grouping cue there is, so it now says what is
+     true: 16px of air above the pair, none inside it. */
   .sk-accent{font-family:var(--sk-fdisp);font-weight:800;font-size:clamp(21px,3vw,28px);
-    color:var(--sk-sky);letter-spacing:-.02em;margin-top:4px;line-height:1.15}
+    color:var(--sk-sky);letter-spacing:-.02em;margin-top:16px;line-height:1.15}
   :root[data-theme="dark"] .sk-accent{color:var(--sk-sky-bright)}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-accent{color:var(--sk-sky-bright)}}
-  .sk-subline{color:var(--sk-gold-ink);font-size:17px;font-weight:600;margin-top:5px;
+  .sk-subline{color:var(--sk-gold-ink);font-size:17px;font-weight:600;margin-top:0;
     font-style:italic;line-height:1.35}
   .sk-band-body{color:var(--sk-muted);margin:18px 0 0;font-size:16.5px;max-width:60ch}
   .sk-band-note{color:var(--sk-muted);margin:10px 0 0;font-size:15px;font-weight:600;max-width:60ch}
