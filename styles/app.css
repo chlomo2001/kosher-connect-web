@@ -1773,7 +1773,13 @@ body.kc-win-dragging .kc-wgrip::after { opacity: 0.55; }
    float and broke the top of the card outright. */
 .kc-win-menu { position: fixed; pointer-events: auto; z-index: 5; }
 .kc-win-btn {
-  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  /* The same box as .modal-x beside it, and that is the whole point: these two
+     sit 4px apart and light up on hover, so a 30 next to a 34 reads as one of
+     them being slightly wrong without it being obvious which (owner, 20 Aug:
+     "i dont think the sizes feels exactly the same, also when hovering the
+     shaddow feels a tiny different size" — the hover background IS the box).
+     kcWinSync MEASURES this rather than carrying its own copy of the number. */
+  width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
   background: var(--surface); border: none; border-radius: var(--radius-lg);
   color: var(--muted); cursor: pointer;
   /* 0.55, not 0.4: at 0.4 the old ⛶ font glyph read as a broken smudge in the

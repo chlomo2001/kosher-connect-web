@@ -88,6 +88,13 @@ const align = (sel) => p.evaluate((s) => {
   return {
     gap: Math.round(a.left - c.right),                              // ✕ ← button
     centre: Math.round((c.top + c.bottom) / 2 - (a.top + a.bottom) / 2),
+    // Owner, 20 Aug: "i dont think the sizes feels exactly the same, also when
+    // hovering the shaddow feels a tiny different size". They were 30 and 34 —
+    // the size was declared in the stylesheet AND hardcoded again in
+    // kcWinSync, and the two drifted. The hover background IS the box, so a
+    // 4px difference shows up the moment either one lights up.
+    sizeW: Math.round(c.width - a.width),
+    sizeH: Math.round(c.height - a.height),
     expandLine: Math.round((g.top + g.bottom) / 2 - d.bottom),      // south grip vs edge
     gripped: dlg.classList.contains('kc-win'),
   }
@@ -103,10 +110,18 @@ for (const [what, sel] of [['a form dialog', '#dynamicModal'], ['the customer ca
   }
   const a = await align(sel)
   say(a && !a.gripped, `${what}: this must be measured before any grip`)
-  say(a && Math.abs(a.centre) <= 2,
+  // Was <= 2, which is exactly the error that hardcoding the button's size in
+  // kcWinSync produces while the stylesheet says something else — the tolerance
+  // swallowed the bug it existed to catch. Both measure 0 now that the size is
+  // read from the button, so 1 leaves room for sub-pixel rounding and nothing
+  // else.
+  say(a && Math.abs(a.centre) <= 1,
     `${what}: the window button sits ${a && a.centre}px off the ✕'s centre before it is gripped`)
   say(a && a.gap >= 0 && a.gap <= 8,
     `${what}: the window button sits ${a && a.gap}px from the ✕ before it is gripped`)
+  say(a && a.sizeW === 0 && a.sizeH === 0,
+    `${what}: the window button is ${a && a.sizeW}px wider and ${a && a.sizeH}px taller than the ✕ beside it — ` +
+    'two controls of the same shape, 4px apart, that light up on hover have to be the same box')
   say(a && Math.abs(a.expandLine) <= 2,
     `${what}: the expand line sits ${a && a.expandLine}px off the dialog's bottom edge before it is gripped`)
 }

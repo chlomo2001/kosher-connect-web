@@ -620,13 +620,29 @@ function setupNav() {
   const burger = document.getElementById('navBurger');
   const scrim = document.getElementById('navScrim');
   const isPhone = () => window.matchMedia('(max-width: 820px)').matches;
+  // The burger stays in the top bar in every state, and that is deliberate
+  // (owner, 20 Aug: "why is this button not on the sidebar?"). It cannot live
+  // on the sidebar on a phone — the sidebar is off-canvas there, so the control
+  // that opens it would be off-screen with it. Putting it on the sidebar only
+  // while expanded would move it depending on the state, and a control that
+  // changes address is one the hand has to look for. Here it is the same pixel
+  // whichever of the three states the menu is in.
+  //
+  // What it lacked was saying so. It carried an aria-label a screen reader
+  // could read and nothing a pointer could, so what it does — and that ⌘B does
+  // it too — was invisible to everybody else.
+  const burgerHint = (label) => {
+    burger?.setAttribute('aria-label', label);
+    burger?.setAttribute('title', `${label} (${navigator.platform.startsWith('Mac') ? '⌘B' : 'Ctrl B'})`);
+  };
   const setNavOpen = (open) => {
     document.body.classList.toggle('nav-open', open);
     burger?.setAttribute('aria-expanded', String(open));
+    burgerHint(open ? 'Close menu' : 'Open menu');
   };
   const setCollapsed = (on) => {
     document.body.classList.toggle('nav-collapsed', on);
-    burger?.setAttribute('aria-label', on ? 'Expand menu' : 'Collapse menu');
+    burgerHint(on ? 'Expand menu' : 'Collapse menu');
     // Rail rows show icons only — surface each label as a native tooltip.
     document.querySelectorAll('.sidebar .nav-item, .sidebar .nav-link, .sidebar .sb-row').forEach(el => {
       if (on) el.title = el.textContent.trim();
@@ -642,6 +658,10 @@ function setupNav() {
     if (!isPhone() && localStorage.getItem('kcNavCollapsed') === '1') setCollapsed(true);
   } catch { /* private mode */ }
   burger?.addEventListener('click', window.kcToggleNav);
+  // Say the right thing before anybody presses it, not only after.
+  burgerHint(isPhone()
+    ? 'Open menu'
+    : document.body.classList.contains('nav-collapsed') ? 'Expand menu' : 'Collapse menu');
 
   // ── Drag the sidebar's right edge ────────────────────────────────────────
   // The floor is where the longest label ("Contacts converter") still fits on
@@ -6199,20 +6219,29 @@ function kcWinSync(overlay) {
   // belong in the document flow. Up here it cannot disturb any layout, and it
   // cannot scroll away with the form either.
   const menu = layer.querySelector('.kc-win-menu');
-  const MENU_W = 30, MENU_H = 30;
+  // Measured, not declared. This used to be `const MENU_W = 30, MENU_H = 30`
+  // while the stylesheet said 34 for the ✕ next to it — one number in two
+  // places, and the two drifted: the window button rendered 30 and the close
+  // button 34, so the pair looked subtly unequal and their hover backgrounds
+  // differed by 4px. Reading the button means the CSS can change the size and
+  // the placement follows without anybody remembering this line exists.
+  const menuBtn = menu && menu.querySelector('.kc-win-btn');
+  const mb = menuBtn ? menuBtn.getBoundingClientRect() : null;
   // Beside the ✕ — wherever the ✕ actually IS. Guessing the dialog's top-right
   // corner put it 56px above the close button on the customer card, because
   // that dialog scrolls its own content and .modal-x is sticky inside the
   // padding rather than pinned to the frame. Measuring beats assuming.
+  const closeBtn = dlg.querySelector('.modal-x');
+  const cr = closeBtn ? closeBtn.getBoundingClientRect() : null;
+  // Before it is laid out the button measures 0. Fall back to the ✕ beside it,
+  // which is the size it is meant to match anyway, and only then to a number.
+  const MENU_W = (mb && mb.width) || (cr && cr.width) || 34;
+  const MENU_H = (mb && mb.height) || (cr && cr.height) || 34;
   let menuLeft = Math.round(r.right - 46 - MENU_W);
   let menuTop = Math.round(r.top + 8);
-  const closeBtn = dlg.querySelector('.modal-x');
-  if (closeBtn) {
-    const cr = closeBtn.getBoundingClientRect();
-    if (cr.width) {
-      menuLeft = Math.round(cr.left - 4 - MENU_W);
-      menuTop = Math.round(cr.top + (cr.height - MENU_H) / 2);
-    }
+  if (cr && cr.width) {
+    menuLeft = Math.round(cr.left - 4 - MENU_W);
+    menuTop = Math.round(cr.top + (cr.height - MENU_H) / 2);
   }
   if (menu) {
     menu.style.left = `${menuLeft}px`;
