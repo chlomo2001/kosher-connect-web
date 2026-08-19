@@ -55,14 +55,80 @@ await open()
 // ── the chrome is there ───────────────────────────────────────────────────
 say(await p.evaluate(() => document.querySelectorAll('#dynamicModal .kc-wgrip').length) === 8,
   'a dialog should carry eight grips — four edges and four corners')
-say(await p.evaluate(() => document.querySelectorAll('#dynamicModal .kc-win-opt').length) === 4,
-  'the snap bar should offer left, fill, right and restore')
+// Two, not four. Left and right went on 18 Aug — owner: "i cant scroll in
+// background, so whats the idea of pushing to right or left?" — leaving the
+// two that mean something.
+say(await p.evaluate(() => document.querySelectorAll('#dynamicModal .kc-win-opt').length) === 2,
+  'the window menu should offer fill-the-screen and normal-size')
+
+// ── the chrome is right ON OPENING, before anything is gripped ────────────
+//
+// Owner, 19 Aug, with a before/after: "the before and after i meant to show
+// the place where the icon for min and max is placed in proportion to the x.
+// first its not equall, after its a modal it is."
+//
+// kcWindowise measures the dialog the instant the overlay is unhidden — which
+// is the instant `kc-modal-enter` starts, and that animation is
+// `scale(0.97) translateY(4px)`. So the first measurement read a box 3% too
+// small and 4px too low: the window button sat 11px from the ✕ instead of 4,
+// and 15px below its centre, and the south grip — the "expand line" — was 8px
+// off the dialog's bottom edge. One grip re-ran the sync and it all snapped
+// true, which is why it only ever looked wrong until you touched it.
+//
+// Everything here is measured on a dialog nobody has touched.
+const align = (sel) => p.evaluate((s) => {
+  const ov = document.querySelector(s)
+  const dlg = ov.querySelector('.modal')
+  const x = dlg.querySelector('.modal-x')
+  const btn = ov.querySelector('.kc-win-btn')
+  const sg = ov.querySelector('.kc-wgrip-s')
+  if (!dlg || !x || !btn || !sg) return null
+  const a = x.getBoundingClientRect(), c = btn.getBoundingClientRect()
+  const d = dlg.getBoundingClientRect(), g = sg.getBoundingClientRect()
+  return {
+    gap: Math.round(a.left - c.right),                              // ✕ ← button
+    centre: Math.round((c.top + c.bottom) / 2 - (a.top + a.bottom) / 2),
+    expandLine: Math.round((g.top + g.bottom) / 2 - d.bottom),      // south grip vs edge
+    gripped: dlg.classList.contains('kc-win'),
+  }
+}, sel)
+
+for (const [what, sel] of [['a form dialog', '#dynamicModal'], ['the customer card', '#customerCard']]) {
+  if (sel === '#customerCard') {
+    await p.evaluate(() => { try { closeDynamicModal() } catch {} })
+    await p.evaluate(async () => { await goToTab('customers') })
+    await p.waitForTimeout(300)
+    await p.evaluate(() => openCustomerById(customers[0].id))
+    await p.waitForTimeout(700)
+  }
+  const a = await align(sel)
+  say(a && !a.gripped, `${what}: this must be measured before any grip`)
+  say(a && Math.abs(a.centre) <= 2,
+    `${what}: the window button sits ${a && a.centre}px off the ✕'s centre before it is gripped`)
+  say(a && a.gap >= 0 && a.gap <= 8,
+    `${what}: the window button sits ${a && a.gap}px from the ✕ before it is gripped`)
+  say(a && Math.abs(a.expandLine) <= 2,
+    `${what}: the expand line sits ${a && a.expandLine}px off the dialog's bottom edge before it is gripped`)
+}
+
+// …and it stays right when the form is scrolled. `.modal-x` is `position:
+// sticky` inside the dialog's own scroll container, so it MOVES; a button
+// placed once and never again came 27px adrift down the customer card.
+await p.evaluate(() => { document.querySelector('#customerCard .modal').scrollTop = 400 })
+await p.waitForTimeout(250)
+const scrolled = await align('#customerCard')
+say(scrolled && Math.abs(scrolled.centre) <= 2 && scrolled.gap >= 0 && scrolled.gap <= 8,
+  `scrolling the card left the window button ${scrolled && scrolled.centre}px off the ✕ ` +
+  `and ${scrolled && scrolled.gap}px from it`)
+await p.evaluate(() => { document.querySelector('#customerCard .modal').scrollTop = 0 })
+await p.evaluate(() => { try { dismissCustomerCard() } catch {} })
+await p.evaluate(async () => { await goToTab('rentals') })
+await p.waitForTimeout(250)
+await open()
 
 // ── snapping ──────────────────────────────────────────────────────────────
 const home = await rect()
 for (const [how, check] of [
-  ['left',  (r) => r.x < 20 && r.w > 500 && r.w < 700],
-  ['right', (r) => r.x > 600 && r.w > 500 && r.w < 700],
   ['max',   (r) => r.x < 20 && r.w > 1200 && r.h > 850],
 ]) {
   await p.evaluate((h) => kcWinSnap(document.querySelector('.kc-win-opt'), h), how)
@@ -145,7 +211,7 @@ const card = await p.evaluate(() => ({
   grips: document.querySelectorAll('#customerCard .kc-wgrip').length,
   snap: document.querySelectorAll('#customerCard .kc-win-opt').length,
 }))
-say(card.grips === 8 && card.snap === 4,
+say(card.grips === 8 && card.snap === 2,
   `the customer card should carry the window chrome too — got ${card.grips} grips, ${card.snap} snap buttons`)
 
 // Its caps live in an INLINE style (max-width:94vw, max-height:90vh), and
@@ -184,8 +250,8 @@ await p.waitForTimeout(220)
 say(await p.evaluate(() => {
   const pop = document.querySelector('#dynamicModal .kc-win-pop')
   return !!pop && getComputedStyle(pop).display !== 'none' &&
-    pop.querySelectorAll('.kc-win-opt').length === 4
-}), 'hovering the button should open all four options')
+    pop.querySelectorAll('.kc-win-opt').length === 2
+}), 'hovering the button should open both options')
 
 // ── the chrome does not sit in the dialog's flow ──────────────────────────
 // It did, floated next to the ✕, and the customer card's heading wrapped
@@ -284,7 +350,10 @@ say(afterRepaint && Math.abs(afterRepaint.w - grown.w) < 3 && Math.abs(afterRepa
 // Snapped to half a 1280px screen the card is ~618px wide while the viewport
 // still says 1280, so every media query inside it was answering the wrong
 // question — the Contact menu sat on top of the phone number.
-await p.evaluate(() => kcWinSnap(document.querySelector('#customerCard .kc-win-opt'), 'left'))
+await p.evaluate(() => {
+  const d = document.querySelector('#customerCard .modal')
+  kcWinPin(d); kcWinPlace(d, 12, 12, window.innerWidth / 2 - 24, window.innerHeight - 24)
+})
 await p.waitForTimeout(300)
 say(await p.evaluate(() => {
   const head = document.querySelector('#customerCard .detail-headline')

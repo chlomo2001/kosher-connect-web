@@ -5874,8 +5874,12 @@ function kcWinSync(overlay) {
   const dlg = overlay.querySelector('.modal');
   if (!layer) return;
   if (!dlg) { layer.hidden = true; return; }
-  layer.hidden = false;
   const r = dlg.getBoundingClientRect();
+  // A dialog that is hidden, or not yet laid out, measures 0x0. Painting the
+  // chrome from that lands a stray window button in the top-left corner of the
+  // SCREEN, nowhere near a dialog. Show none until there is a box to pin to.
+  if (!r.width || !r.height) { layer.hidden = true; return; }
+  layer.hidden = false;
   const T = 8;                               // how wide a grab band is
   const box = {
     n:  [r.left + 14, r.top - T / 2, r.width - 28, T],
@@ -6039,7 +6043,53 @@ function kcWindowise(overlay) {
       kcWinGrab(e, dlg, 'move');
     });
   }
+  kcWinWatch(overlay);
   kcWinSync(overlay);
+}
+
+/**
+ * Keep the chrome glued to the dialog as it settles, and as it is used.
+ *
+ * kcWindowise runs the instant the overlay is unhidden -- which is the instant
+ * `kc-modal-enter` STARTS. That animation is `scale(0.97) translateY(4px)`, so
+ * the very first measurement reads a box 3% too small and 4px too low, and the
+ * window button was glued to it: on the new-rental dialog it sat 11px from the
+ * close button instead of 4, and 15px below its centre. Gripping the dialog
+ * re-ran the sync and it snapped into line, which is exactly what the owner
+ * described on 19 Aug -- "first its not equall, after its a modal it is" -- and
+ * the same stale rect put the bottom expand line 8px off the dialog's edge.
+ *
+ * One measurement could never have been enough anyway: `.modal-x` is
+ * `position: sticky` inside the dialog's own scroll container, so it MOVES
+ * while the form scrolls. Four hundred pixels down the customer card the
+ * button was 27px adrift of the close it is supposed to sit beside.
+ */
+function kcWinWatch(overlay) {
+  const dlg = overlay.querySelector('.modal');
+  if (!dlg) return;
+  if (!overlay._kcSync) {
+    let queued = false;
+    overlay._kcSync = () => {
+      if (queued) return;                     // one sync per frame, not one per event
+      queued = true;
+      requestAnimationFrame(() => { queued = false; kcWinSync(overlay); });
+    };
+    // animationend bubbles, so the enter animation is caught here whichever
+    // element carries it. `scroll` does NOT bubble -- it is taken on the way
+    // down instead, which is why this listener captures.
+    overlay.addEventListener('animationend', overlay._kcSync);
+    overlay.addEventListener('transitionend', overlay._kcSync);
+    overlay.addEventListener('scroll', overlay._kcSync, true);
+  }
+  // The dialog is thrown away and rebuilt on every repaint, so the observer is
+  // re-pointed rather than stacked. It watches the close button too: a float in
+  // a scroll container settles after the box around it does, and asynchronous
+  // content -- or Simple Mode changing the type size -- moves both.
+  const ro = overlay._kcRo || (overlay._kcRo = new ResizeObserver(overlay._kcSync));
+  ro.disconnect();
+  ro.observe(dlg);
+  const closeBtn = dlg.querySelector('.modal-x');
+  if (closeBtn) ro.observe(closeBtn);
 }
 
 /**
@@ -12578,15 +12628,102 @@ async function tmDismiss(id) {
 
 // The mail itself, for the times the parser missed something and someone needs
 // to read what the airline actually wrote.
+// ── KC_MAILBODY mirror start ──
+// Mirrors lib/mailBody.mjs. Held to it by test/mailBodyMirror.test.mjs — the
+// same arrangement as the pricing mirror. Change one, change both.
+const KC_MAILBODY = (() => {
+  const BRACKETED = /\(\s*(https?:\/\/[^\s()]+)\s*\)/g;
+  const BARE = /(?<![("<])\bhttps?:\/\/[^\s<>()]+/g;
+  function linkHost(url) {
+    const m = String(url || '').match(/^https?:\/\/([^/?#]+)/i);
+    return m ? m[1].replace(/^www\./i, '') : '';
+  }
+  function labelBefore(text) {
+    const tail = String(text).split(/\n|\)\s*/).pop() || '';
+    const label = tail.trim();
+    if (!label || label.length > 60) return '';
+    return label;
+  }
+  function segments(body) {
+    const src = String(body == null ? '' : body);
+    if (!src.trim()) return [];
+    const out = [];
+    const pushText = (t) => {
+      if (!t) return;
+      const last = out[out.length - 1];
+      if (last && last.type === 'text') last.text += t;
+      else out.push({ type: 'text', text: t });
+    };
+    let at = 0;
+    BRACKETED.lastIndex = 0;
+    for (let m = BRACKETED.exec(src); m; m = BRACKETED.exec(src)) {
+      const before = src.slice(at, m.index);
+      const label = labelBefore(before);
+      const cutAt = label ? before.lastIndexOf(label) : before.length;
+      pushText(before.slice(0, cutAt));
+      out.push({ type: 'link', text: label || linkHost(m[1]), href: m[1] });
+      at = m.index + m[0].length;
+    }
+    pushText(src.slice(at));
+    const spread = [];
+    for (const seg of out) {
+      if (seg.type !== 'text') { spread.push(seg); continue; }
+      let cut = 0;
+      BARE.lastIndex = 0;
+      for (let m = BARE.exec(seg.text); m; m = BARE.exec(seg.text)) {
+        const lead = seg.text.slice(cut, m.index);
+        if (lead) spread.push({ type: 'text', text: lead });
+        spread.push({ type: 'link', text: linkHost(m[0]), href: m[0] });
+        cut = m.index + m[0].length;
+      }
+      const tail = seg.text.slice(cut);
+      if (tail) spread.push({ type: 'text', text: tail });
+    }
+    return spread.map((seg, i) => {
+      if (seg.type !== 'text') return seg;
+      let t = seg.text
+        .replace(/[ \t]+/g, ' ')
+        .replace(/ +([,.;:!?])/g, '$1')
+        .replace(/\n{3,}/g, '\n\n')
+        .replace(/[ \t]+\n/g, '\n');
+      if (i === 0) t = t.replace(/^\s+/, '');
+      if (i === spread.length - 1) t = t.replace(/\s+$/, '');
+      return { type: 'text', text: t };
+    }).filter(seg => seg.type !== 'text' || seg.text !== '');
+  }
+  const text = (body) => segments(body).map(s => s.text).join('');
+  return { segments, text, linkHost };
+})();
+// ── KC_MAILBODY mirror end ──
+
+/**
+ * The message as HTML: prose as prose, every link on its own words.
+ *
+ * The link opens in a new tab and carries the destination in its title, so a
+ * hover still answers "where does this actually go" — which matters when the
+ * mail claims to be from an airline and might not be.
+ */
+function tmMailHtml(body) {
+  const segs = KC_MAILBODY.segments(body);
+  if (!segs.length) return '<span class="muted">(the message had no readable text)</span>';
+  return segs.map(s => s.type === 'link'
+    ? `<a class="tm-link" href="${escHtml(s.href)}" target="_blank" rel="noopener noreferrer"
+         title="${escHtml(s.href)}">${escHtml(s.text)}</a>`
+    : escHtml(s.text)).join('');
+}
+
 function tmShowMail(id) {
   const t = (tmData?.tickets || []).find(x => String(x.id) === String(id));
   if (!t) return;
+  // Wider than the default 460: an itinerary is a table of times and places,
+  // and squeezing one into a phone-width column is how it became unreadable in
+  // the first place. Capped by max-width:95vw like every other dialog.
   showStackedModal(`
     <div class="modal-title">✉️ ${escHtml(t.subject || '(no subject)')}</div>
     <div style="font-size:var(--fs-micro);color:var(--muted);margin-bottom:8px;">
       From ${escHtml(t.from || 'unknown')}${t.receivedAt ? ' · ' + escHtml(fmtDate(t.receivedAt)) : ''}</div>
-    <pre class="tm-body" data-kc-scroller>${escHtml(t.body || '(the message had no readable text)')}</pre>
-  `);
+    <pre class="tm-body" data-kc-scroller>${tmMailHtml(t.body)}</pre>
+  `, { width: 680 });
 }
 
 function renderBookingsTab() {
