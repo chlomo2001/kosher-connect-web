@@ -1,12 +1,59 @@
-# Owner's list, 19 August 2026 (00:10) — triaged
+# Owner's list, 19 August 2026 — status
 
-Twenty-one items from the owner's draft, captured verbatim in intent and sorted
-into what can be done unattended, what needs a screenshot, and what needs a
-decision. Several arrived with screenshots that this session cannot see; those
-are marked **[needs the screenshot]** and are not guesses.
+Twenty-two items (twenty-one from the draft, plus #22 raised in chat). Updated
+as each shipped; the triage that follows is the original reading, corrected
+where the owner said it was wrong.
 
-Nothing here has been built yet. Loop-safe UX items are filed in
-`ops/loops/kc-improve/BACKLOG.md` so the 03:00 UX loop can pick them up.
+## Done and on main
+
+| # | item | commit |
+|---|---|---|
+| 3 | Promotion emails never reach the queue | `604d53f` |
+| 5 | Manual updated with every change | already enforced by the gate |
+| 7 | Only rearranges after a grip | `80cc75b` + `c5bc3d2` |
+| 8 | Expand line sits too low | `c5bc3d2` — same root cause as 7 |
+| 9 | "Why both?" — the ✕ beside a Close button | `175f23e` |
+| 10 | One dropdown style, and where the choices are edited | `1fb0b55` |
+| 13 | All Abish friends are the same person | `ddc0586` |
+| 14 | Card overflows at extra-large text | `8cd2ff2` |
+| 15 | Overdue link drops the filter | `175f23e` |
+| 16 | Confirm Data shows one at a time | `daf129b` |
+| 17 | Common questions on the welcome page | `92d034d` |
+| 19 | "Open" and "login details" too near | `bf3752a` |
+| 21 | The reply in SMS in settings isn't doing anything | `c5a0ea0` |
+| 2 / 6 | Save or suggest as a task, wherever text lands | `1249160` |
+
+## Answered — no work needed unless you want it changed
+
+| # | question | short answer |
+|---|---|---|
+| 11 | Stripe timestamps | Stripe events carry their own `created`; our ledger stamps server time. Say which you want shown if they should agree. |
+| 18 | "Default payment method" | The card the app would use for an off-session charge. It does not make anything charge by itself. |
+
+## Waiting on a decision from you
+
+| # | ask | what is blocked |
+|---|---|---|
+| 1 | Edit or delete the history log | An append-only log is evidence; an editable one is notes. Which? |
+| 12 | Auto-renew as "needs attention" | Agreed it reads wrong; moving it changes what the dashboard nags about. |
+| 4 | A folder per customer for documents | The folder view is a UI job; whether the customer sees it in the portal is a privacy decision. |
+| 20 | Forward important carrier mail to the customer | A live customer send — HOLD-gated, needs your go-live word, and needs a rule for "important" plus certainty about the pairing. |
+| 22 | Open an extra card when one is gripped aside | Raised in chat; not yet specified enough to build. |
+| — | C1 (money wording / refuse-to-be-confident) | Held by your own brief; you chose to keep it held on 19 Aug. |
+| — | B2 (next action on every screen) | Unblocked by you on 19 Aug — in progress. |
+
+## ⚠ Still needs you, outside the app
+
+**Google sign-in on the portal is broken in production.** Supabase → Authentication
+→ URL Configuration: set Site URL to `https://app.kosher-connect.com` and add
+`https://app.kosher-connect.com/portal` to the redirect allow-list. Staff sign-in
+works, which confirms `/auth/google` was allow-listed once and the portal
+callback never was. Until this is done no customer can sign in with Google.
+
+**Two saved Gmail drafts hold live secret keys** — a Stripe live key pair and a
+Resend API key. Worth deleting the drafts and rotating the keys.
+
+---
 
 ## Answers to the questions asked (no work needed)
 
