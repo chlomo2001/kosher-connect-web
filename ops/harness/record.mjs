@@ -87,6 +87,42 @@ say(page.past, 'nothing finished is shown — a record that only shows the prese
 say(!page.pastOpenByDefault, 'finished items are unfolded by default, which buries the running ones')
 say(!page.overflows, `${page.overflows} record row(s) run past the right edge at ${width}px`)
 
+// ── the number leads on anything that has one ─────────────────────────────
+//
+// 838 numbers across 502 customers, 837 of them carrying exactly one thing:
+// the number is not a folder to group under, it is the name of the thing. The
+// row used to lead with the network ("Lebara") and put the number underneath
+// in small grey text, which is backwards in a shop where every question opens
+// "what's going on with 07…".
+const leads = await p.evaluate(() => {
+  const units = [...document.querySelectorAll('.kc-unit')]
+  return units.map((u) => {
+    const kind = [...u.classList].map((c) => c.replace('kc-unit-', ''))
+      .find((c) => ['sim', 'rental', 'vn', 'booking', 'repair', 'service'].includes(c))
+    return {
+      kind,
+      title: (u.querySelector('.kc-unit-title') || {}).textContent?.trim() || '',
+      sub: (u.querySelector('.kc-unit-detail') || {}).textContent?.trim() || '',
+      label: (u.querySelector('.kc-unit-label') || {}).textContent?.trim() || '',
+    }
+  })
+})
+const NUMBERED = new Set(['sim', 'rental', 'vn'])
+for (const row of leads) {
+  const digits = row.title.replace(/\D/g, '')
+  if (NUMBERED.has(row.kind)) {
+    say(digits.length >= 6,
+      `a ${row.kind} row leads with "${row.title}" instead of its number`)
+  } else {
+    // And nothing invents one — a booking reference in the number position
+    // would make the column meaningless.
+    say(digits.length < 6 || /[A-Za-z]/.test(row.title),
+      `a ${row.kind} row leads with something that looks like a number: "${row.title}"`)
+  }
+  say(!(row.sub && row.sub === row.label),
+    `a ${row.kind} row says "${row.sub}" twice — once under the title and once beside it`)
+}
+
 // Every pressable row must name an action the app actually has.
 const handlers = await p.evaluate(() =>
   [...document.querySelectorAll('.kc-unit')].map((u) => u.getAttribute('onclick') || ''))

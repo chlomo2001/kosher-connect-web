@@ -7570,17 +7570,30 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   const recordGroups = KC_RECORD.groupUnits(recordUnits);
   const recordSum = KC_RECORD.recordSummary(recordUnits);
 
+  // The NUMBER leads on anything that has one.
+  //
+  // 838 distinct numbers across 502 customers, and 837 of them carry exactly
+  // one thing — so a number is not a group to file things under, it is the
+  // name of the thing. The row used to read "Lebara" in bold with the number
+  // as small grey text underneath, which is backwards for a shop where every
+  // question starts "what's going on with 07…". A flight has no number and
+  // keeps its route as the name; nothing invents one.
   const unitRow = (u) => {
     const opens = KC_UNIT_OPENS_ITSELF.has(u.kind);
     const when = u.when ? fmtDate(u.when) : '';
+    const lead = u.number ? fmtPhone(u.number) : u.name;
+    // A virtual number's name IS its kind, so printing both would say
+    // "Virtual number" twice on one row — once under the number, once beside it.
+    const named = u.number && u.name !== u.label ? u.name : '';
+    const under = [named, u.detail].filter(Boolean).join(' · ');
     return `
       <button class="kc-unit kc-unit-${escHtml(u.kind)}${u.ended ? ' kc-unit-ended' : ''}"
         onclick="kcOpenUnit('${escJs(u.kind)}', '${escJs(String(u.id))}')"
         title="${escHtml(opens ? `Open this ${u.label.toLowerCase()}` : `Go to ${u.label.toLowerCase()}s`)}">
         <span class="kc-unit-icon" aria-hidden="true">${u.icon}</span>
         <span class="kc-unit-main">
-          <span class="kc-unit-title">${escHtml(u.title)}</span>
-          ${u.detail ? `<span class="kc-unit-detail" dir="ltr">${escHtml(u.detail)}</span>` : ''}
+          <span class="kc-unit-title"${u.number ? ' dir="ltr"' : ''}>${escHtml(lead)}</span>
+          ${under ? `<span class="kc-unit-detail">${escHtml(under)}</span>` : ''}
         </span>
         <span class="kc-unit-side">
           ${when ? `<span class="kc-unit-when">${escHtml(when)}</span>` : ''}
@@ -7963,22 +7976,25 @@ const KC_RECORD = (() => {
       label: 'SIM plan', icon: '💳', open: 'sim', one: 'SIM plan', many: 'SIM plans',
       ended: (s) => String(s.status || '').toLowerCase() === 'cancelled',
       when: (s) => s.renewalDate || s.expiryDate || '',
-      title: (s) => `${s.provider || 'SIM plan'}`,
-      detail: (s) => s.simNumber || '',
+      number: (s) => s.simNumber || '',
+      name: (s) => s.provider || 'SIM plan',
+      detail: () => '',
     },
     rental: {
       label: 'Phone rental', icon: '📱', open: 'rental', one: 'phone rental', many: 'phone rentals',
       ended: (r) => ['returned', 'void', 'cancelled', 'lost'].includes(String(r.status || '').toLowerCase()),
       when: (r) => r.toDate || '',
-      title: (r) => `Rental${r.country ? ` · ${r.country}` : ''}`,
-      detail: (r) => r.phoneNumber || '',
+      number: (r) => r.phoneNumber || '',
+      name: (r) => `Rental${r.country ? ` · ${r.country}` : ''}`,
+      detail: () => '',
     },
     vn: {
       label: 'Virtual number', icon: '🔢', open: 'vn', one: 'virtual number', many: 'virtual numbers',
       ended: (v) => String(v.status || '').toLowerCase() !== 'active',
       when: () => '',
-      title: () => 'Virtual number',
-      detail: (v) => v.number || '',
+      number: (v) => v.number || '',
+      name: () => 'Virtual number',
+      detail: () => '',
     },
     booking: {
       label: 'Flight', icon: '✈️', open: 'booking', one: 'flight', many: 'flights',
@@ -7987,21 +8003,26 @@ const KC_RECORD = (() => {
       ended: (b, today) => String(b.status || '').toLowerCase().startsWith('cancel')
         || (!!b.travelDate && String(b.travelDate) < today),
       when: (b) => b.travelDate || '',
-      title: (b) => b.route || 'Flight',
+      // A booking reference is not a phone number and must never land in the
+      // number field, or the column stops meaning anything.
+      number: () => '',
+      name: (b) => b.route || 'Flight',
       detail: (b) => b.bookingRef || b.airline || '',
     },
     repair: {
       label: 'Repair', icon: '🔧', open: 'repair', one: 'repair', many: 'repairs',
       ended: (r) => ['collected', 'cancelled'].includes(String(r.status || '').toLowerCase()),
       when: (r) => r.openedAt || '',
-      title: (r) => r.device || 'Repair',
+      number: () => '',
+      name: (r) => r.device || 'Repair',
       detail: (r) => r.status || '',
     },
     service: {
       label: 'Print / online job', icon: '🖨️', open: 'service', one: 'print job', many: 'print jobs',
       ended: () => true,
       when: (o) => o.createdAt || '',
-      title: (o) => o.serviceName || 'Service',
+      number: () => '',
+      name: (o) => o.serviceName || 'Service',
       detail: () => '',
     },
   };
@@ -8013,7 +8034,8 @@ const KC_RECORD = (() => {
         if (!row) continue;
         out.push({
           kind, id: row.id, icon: spec.icon, label: spec.label, open: spec.open,
-          title: String(spec.title(row) || spec.label),
+          number: String(spec.number(row) || ''),
+          name: String(spec.name(row) || spec.label),
           detail: String(spec.detail(row) || ''),
           status: String(row.status || ''),
           when: String(spec.when(row) || ''),
@@ -8027,7 +8049,7 @@ const KC_RECORD = (() => {
     const running = units.filter(u => !u.ended);
     const finished = units.filter(u => u.ended);
     running.sort((a, b) => {
-      if (!a.when && !b.when) return a.title.localeCompare(b.title);
+      if (!a.when && !b.when) return a.name.localeCompare(b.name);
       if (!a.when) return 1;
       if (!b.when) return -1;
       return a.when.localeCompare(b.when);
