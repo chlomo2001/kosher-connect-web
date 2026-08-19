@@ -81,7 +81,7 @@ const T = {
       {
         eyebrow: 'Travel phones',
         title: 'A kosher phone, sorted before you travel',
-        accent: 'Shabbos & Yom Tov', sub: 'never charged — priced by the day, not the trip',
+        accent: 'Shabbos & Yom Tov never\u00A0charged', sub: 'priced by the day, not the trip',
         body: 'Off to the USA, Canada, Europe or Eretz Yisroel? Rent a kosher phone, set up with you in the shop before you go — so there’s nothing to arrange at a foreign airport. You pay by the day{minClause}, Shabbos and Yom Tov are never charged, and every rental includes local calls and calls back to the UK.',
         note: 'We can book your flights as well — one trip, one place.',
         chips: ['Set up before you travel', 'Priced by the day', 'Shabbos never charged'],
@@ -206,7 +206,7 @@ const T = {
       {
         eyebrow: 'טלפון לחו״ל',
         title: 'טסים? הטלפון הכשר כבר מחכה לכם מוכן',
-        accent: 'שבת ויום טוב', sub: 'בחינם — התשלום לפי יום, לא לפי נסיעה',
+        accent: 'שבת ויום טוב בחינם', sub: 'התשלום לפי יום, לא לפי נסיעה',
         body: 'טסים לארה״ב, קנדה, אירופה או לארץ? שוכרים אצלנו טלפון כשר, ומגדירים אותו איתכם בחנות עוד לפני הטיסה — בלי להסתבך בשדה תעופה. משלמים לפי יום{minClause}, שבת ויום טוב — בחינם תמיד, וכל השכרה כוללת שיחות מקומיות ושיחות חזרה לאנגליה.',
         note: 'ואפשר להזמין אצלנו גם את הטיסות — נסיעה אחת, הכול במקום אחד.',
         chips: ['מוכן לפני הטיסה', 'תמחור לפי יום', 'שבת ויו״ט בחינם'],

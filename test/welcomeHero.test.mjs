@@ -9,8 +9,14 @@
 // ~7.6px above and ~10.1px below, meaning the sentence was held LESS tightly
 // to itself than to the headline it is not part of.
 //
-// Proximity is the strongest grouping cue there is. This holds it to saying
-// the true thing.
+// Proximity is the strongest grouping cue there is, so the spacing has to say
+// the true thing — but the root cause was neither size nor spacing. The line
+// broke MID-CLAUSE: "Shabbos & Yom Tov" alone says nothing, so the eye had to
+// travel on to find out what about it. The owner spotted it after two attempts
+// had worked around it: put the whole claim on the first line and the second
+// claim on the second. The other two bands were always shaped that way — a
+// complete claim ("Pay less", "Same day") over a supporting line — which is
+// why only this one ever looked wrong.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -51,4 +57,41 @@ test('the accent still does not compete with the headline it sits under', () => 
   assert.ok(Number(accent[1]) < Number(h2[1]), 'the accent must not be as loud as the headline')
   assert.ok(Number(accent[1]) / Number(sub[1]) < 2,
     'at more than 2× the eye takes the accent as a finished headline and never reaches the subline')
+})
+
+test('every accent is a claim that stands on its own', () => {
+  // The shape of the other two bands, made the rule. An accent that needs the
+  // next line to mean anything is the fragment this band had.
+  const accents = [...SRC.matchAll(/accent:\s*'([^']+)'/g)].map((m) => m[1])
+  assert.ok(accents.length >= 6, `only ${accents.length} accents found — both languages should be here`)
+  // A trailing conjunction or a dangling preposition is the tell.
+  for (const a of accents) {
+    assert.ok(!/\b(and|or|with|for|from|the|a|an|to)$/i.test(a.trim()),
+      `"${a}" ends mid-thought — it needs the next line to mean anything`)
+  }
+  // The one that was broken, named so it cannot quietly revert.
+  const travel = accents.find((a) => /Shabbos/.test(a))
+  assert.ok(travel, 'the travel band lost its accent')
+  // The source carries the escape sequence \u00A0 as text; JS turns it into a
+  // real non-breaking space at runtime, so match either form.
+  assert.match(travel, /never(\\u00A0|\u00A0|\s)charged/,
+    '"Shabbos & Yom Tov" on its own is a fragment — the claim has to finish on that line')
+})
+
+test('the long accent breaks at the phrase, not mid-claim', () => {
+  // At 320px this one wraps. Without the non-breaking space it breaks as
+  // "…Yom Tov never / charged", which puts a fragment back on the first line —
+  // the very thing this change fixed.
+  const travel = SRC.match(/accent:\s*'(Shabbos[^']+)'/)
+  assert.ok(travel, 'the travel accent is missing')
+  assert.match(travel[1], /never\\u00A0charged|never\u00A0charged/,
+    'glue "never charged" together so the wrap lands after "Yom Tov"')
+})
+
+test('the Hebrew says the same thing in the same shape', () => {
+  // The Hebrew had the identical fault: שבת ויום טוב on one line with בחינם —
+  // the word that carries the claim — stranded on the next.
+  assert.match(SRC, /accent:\s*'שבת ויום טוב בחינם'/,
+    'the Hebrew accent must carry the whole claim too')
+  assert.ok(!/accent:\s*'שבת ויום טוב',/.test(SRC), 'the Hebrew fragment is back')
 })
