@@ -26,6 +26,8 @@ function section(s) {
     return out.join('\n')
   }
   if (s.parts.length) out.push('**On the screen**', '', bullets(s.parts), '')
+  if (s.example) out.push(`**${s.example.title}**`, '',
+    s.example.steps.map((t, i) => `${i + 1}. ${t}`).join('\n'), '')
   if (s.dialogs.length) out.push('**Boxes that open on top of it**', '', bullets(s.dialogs), '')
   if (s.rules.length) out.push('**Rules that bite here**', '', s.rules.map(r => `- ${r}`).join('\n'), '')
   if (s.wrong.length) out.push('**When it goes wrong**', '', bullets(s.wrong), '')

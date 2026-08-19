@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
 import Head from 'next/head'
+import fs from 'node:fs'
+import path from 'node:path'
 import ThemeToggle from '../components/ThemeToggle'
 import AppStyles from '../components/AppStyles'
 import { requireStaffCookie } from '../lib/pageAuth'
@@ -31,14 +33,25 @@ const Heading = ({ children }) => (
     letterSpacing: '.04em', color: 'var(--muted)', margin: '0 0 6px' }}>{children}</div>
 )
 
-function Screen({ s }) {
+function Screen({ s, shots }) {
+  const screenShot = shots[`screen-${s.id}`]
   return (
     <section id={s.id} className="kc-man-screen">
       <h3 style={{ margin: '0 0 4px', fontSize: 'var(--fs-title)' }}>
         {s.name}
         {s.path && <code style={{ marginLeft: 8, fontSize: 'var(--fs-small)', color: 'var(--muted)' }}>{s.path}</code>}
       </h3>
-      <p style={{ margin: '0 0 12px' }}>{s.what}</p>
+      <p style={{ margin: '0 0 14px', fontSize: 'var(--fs-body)' }}>{s.what}</p>
+
+      {/* The picture before the prose. It is the app itself, shot against the
+          seed by the same harness that audits geometry, so it cannot drift
+          into describing a version of the screen that no longer exists. */}
+      {screenShot && (
+        <figure className="kc-man-shot">
+          <img src={screenShot} alt={`The ${s.name} screen`} loading="lazy" />
+          <figcaption>{s.name} — the screen as it opens, with example data.</figcaption>
+        </figure>
+      )}
 
       {s.status === 'draft' ? (
         <p className="kc-man-draft" style={{ margin: 0, padding: '8px 12px', borderRadius: 8,
@@ -48,23 +61,66 @@ function Screen({ s }) {
       ) : (
         <>
           {s.parts.length > 0 && <><Heading>On the screen</Heading><Rows rows={s.parts} /></>}
-          {s.dialogs.length > 0 && <><Heading>Boxes that open on top of it</Heading><Rows rows={s.dialogs} /></>}
-          {s.rules.length > 0 && (
+
+          {s.example && (
+            <div className="kc-man-example">
+              <Heading>{s.example.title}</Heading>
+              <ol>{s.example.steps.map((st, i) => <li key={i}>{st}</li>)}</ol>
+            </div>
+          )}
+
+          {/* Each box gets its own photograph. These are where the decisions
+              are actually made, so they are the pictures the manual most
+              needed and the ones it never had. */}
+          {s.dialogs.length > 0 && (
             <>
-              <Heading>Rules that bite here</Heading>
-              <ul style={{ margin: '0 0 14px', paddingLeft: 18, display: 'grid', gap: 6 }}>
-                {s.rules.map((r) => <li key={r}>{r}</li>)}
-              </ul>
+              <Heading>Boxes that open on top of it</Heading>
+              {s.dialogs.map(([id, text]) => {
+                const img = shots[`dialog-${id}`]
+                return img ? (
+                  <div className="kc-man-dialog" key={id}>
+                    {/* The thumbnail is small enough that the box's own words
+                        are not readable in it, which for a dialog is most of
+                        the point — so it opens full size in a new tab. */}
+                    <a href={img} target="_blank" rel="noreferrer" title="Open this box full size">
+                      <img src={img} alt={`The ${id} box`} loading="lazy" />
+                    </a>
+                    <div style={{ fontSize: 'var(--fs-small)' }}>
+                      {text}
+                      <div style={{ marginTop: 6, fontSize: 'var(--fs-micro)', color: 'var(--muted)' }}>
+                        <a href={img} target="_blank" rel="noreferrer">See it full size ↗</a>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <ul key={id} style={{ margin: '0 0 10px', paddingLeft: 18 }}><li>{text}</li></ul>
+                )
+              })}
             </>
           )}
-          {s.wrong.length > 0 && <><Heading>When it goes wrong</Heading><Rows rows={s.wrong} /></>}
+
+          {s.rules.length > 0 && (
+            <div className="kc-man-note is-rule">
+              <Heading>Rules that bite here</Heading>
+              <ul>{s.rules.map((r) => <li key={r}>{r}</li>)}</ul>
+            </div>
+          )}
+
+          {s.wrong.length > 0 && (
+            <div className="kc-man-note is-wrong">
+              <Heading>When it goes wrong</Heading>
+              <ul>{s.wrong.map(([label, text]) => (
+                <li key={label}><strong>{label}</strong> — {text}</li>
+              ))}</ul>
+            </div>
+          )}
         </>
       )}
     </section>
   )
 }
 
-export default function Manual() {
+export default function Manual({ shots }) {
   // Marks the page for the print rules in app.css. body and #__next are sized
   // and clipped for the app frame, and printing inherits that: the first
   // attempt printed exactly one page — the part of the manual on screen — and
@@ -116,7 +172,7 @@ export default function Manual() {
         <nav className="kc-man-toc" style={{ margin: '0 0 26px', padding: '12px 14px', borderRadius: 10,
           border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
           <Heading>Contents</Heading>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px' }}>
+          <div className="kc-man-toc-grid">
             {SCREENS.map((s) => <a key={s.id} href={`#${s.id}`}>{s.name}</a>)}
           </div>
         </nav>
@@ -124,13 +180,13 @@ export default function Manual() {
         {/* The chrome first: it is what someone is looking at before they have
             chosen a screen, and it is where the three help buttons are explained. */}
         <h2 style={{ margin: '0 0 12px' }}>The frame around every screen</h2>
-        {frame.map((s) => <Screen key={s.id} s={s} />)}
+        {frame.map((s) => <Screen key={s.id} s={s} shots={shots} />)}
 
         <h2 style={{ margin: '26px 0 12px' }}>The staff app</h2>
-        {staff.map((s) => <Screen key={s.id} s={s} />)}
+        {staff.map((s) => <Screen key={s.id} s={s} shots={shots} />)}
 
         <h2 style={{ margin: '26px 0 12px' }}>Pages with their own address</h2>
-        {pages.map((s) => <Screen key={s.id} s={s} />)}
+        {pages.map((s) => <Screen key={s.id} s={s} shots={shots} />)}
       </div>
       </div>
 
@@ -141,5 +197,16 @@ export default function Manual() {
 export async function getServerSideProps({ req }) {
   const gate = await requireStaffCookie(req)
   if (gate) return gate
-  return { props: {} }
+  // Which pictures actually exist, read at request time rather than assumed.
+  // A screen whose shot has not been taken yet simply reads as it always did,
+  // instead of showing a broken image — the manual degrades to the old page
+  // rather than to a worse one.
+  let shots = {}
+  try {
+    const dir = path.join(process.cwd(), 'public/manual')
+    for (const f of fs.readdirSync(dir)) {
+      if (f.endsWith('.png')) shots[f.slice(0, -4)] = `/manual/${f}`
+    }
+  } catch { shots = {} }
+  return { props: { shots } }
 }

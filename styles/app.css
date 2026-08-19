@@ -4201,9 +4201,64 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
    and .welcome-shell, and the same bug both of those exist to avoid. */
 .kc-man-shell { height: 100vh; width: 100%; overflow-y: auto; }
 
-.kc-man-screen { padding: 16px 0; border-top: 1px solid var(--border-subtle); }
+.kc-man-screen { padding: 30px 0 8px; border-top: 1px solid var(--border-subtle); }
 .kc-man-toc a { color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border); }
 .kc-man-toc a:hover { border-bottom-color: var(--text); }
+
+/* Pictures of the real app, built by scripts/build-manual-shots.mjs.
+   The manual was four stacked bullet lists per screen; nobody could match "the
+   four figures" to anything without already looking at the screen, by which
+   point the sentence was no use. The picture comes first now and the words
+   explain it, which is the order a person actually reads in. */
+.kc-man-shot { margin: 0 0 16px; }
+.kc-man-shot img {
+  display: block; width: 100%; height: auto;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--bg-secondary);
+}
+.kc-man-shot figcaption {
+  margin-top: 6px; font-size: var(--fs-micro); color: var(--muted);
+}
+/* A dialog sits beside its description on a wide screen and above it on a
+   narrow one — the box is the thing being described, so it leads. */
+.kc-man-dialog {
+  display: grid; grid-template-columns: 330px 1fr; gap: 16px;
+  align-items: start; margin: 0 0 14px;
+  padding: 12px; border: 1px solid var(--border-subtle); border-radius: 10px;
+  background: var(--bg-secondary);
+}
+.kc-man-dialog img {
+  display: block; width: 100%; height: auto;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+}
+@media (max-width: 760px) { .kc-man-dialog { grid-template-columns: 1fr; } }
+.kc-man-dialog a:has(img) { display: block; }
+.kc-man-dialog a img:hover { border-color: var(--primary, var(--text)); }
+
+/* Rules and failures read as notes in the margin, not as more of the same
+   list. Four identical bullet lists is why the page was a wall. */
+.kc-man-note {
+  margin: 0 0 14px; padding: 10px 14px; border-radius: 8px;
+  border-left: 3px solid var(--border);
+  background: var(--bg-secondary); font-size: var(--fs-small);
+}
+.kc-man-note.is-rule { border-left-color: var(--warning, #b07d10); }
+.kc-man-note.is-wrong { border-left-color: var(--muted); }
+.kc-man-note ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 5px; }
+.kc-man-note p { margin: 0; }
+
+/* A worked example: one real situation, start to finish. */
+.kc-man-example {
+  margin: 0 0 16px; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--bg);
+}
+.kc-man-example ol { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; font-size: var(--fs-small); }
+
+/* Contents as a grid of names rather than a wrapped paragraph of links —
+   29 screens in a flowing line is a paragraph, not a menu. */
+.kc-man-toc-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 14px;
+}
 
 @media print {
   /* THE WHOLE DOCUMENT, not the part on screen. Three things clip it, and all
@@ -4220,6 +4275,9 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
   .kc-man-chrome, .kc-man-toc { display: none; }
   .kc-man-screen { break-inside: avoid; page-break-inside: avoid; }
   .kc-man-screen a { text-decoration: none; color: inherit; }
+  /* A screenshot split down the middle by a page break is worse than none. */
+  .kc-man-shot, .kc-man-dialog, .kc-man-example { break-inside: avoid; page-break-inside: avoid; }
+  .kc-man-shot img, .kc-man-dialog img { max-height: 92mm; object-fit: contain; object-position: left top; }
 }
 
 /* ── The customer record: what one person has with the shop ──────────────

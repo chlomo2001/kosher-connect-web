@@ -137,6 +137,13 @@ Everyone on the books: how to reach them, what they owe, and everything they hav
 - **⚙️ Manage** — Set yourself a reminder about them, edit their details, and — for the owner — look up what their line is doing with the carrier.
 - **Documents** — Files shared with the customer, which they see in their own portal, and anything they have sent back. What they upload waits for you to approve or reject it, so nothing lands on the record unread. From four documents up they group into folders by what they are — passports and ID, tickets, receipts, forms, photos — so finding one is a glance rather than a read. The folders are worked out from the filename and are on this screen only; the customer's own portal is unchanged.
 
+**Worked example — somebody rings and you have their number, not their name**
+
+1. Type the last few digits into the search box at the top. It searches numbers as well as names, and it finds an older spelling of the same person when the record carries one.
+2. Open the record. What they have running is at the top — SIMs, rentals, flights, repairs — each one a row you can open, not a badge you cannot.
+3. The balance is said in words as well as figures: owes, holds credit, settled, or not checked yet. The last is a permission or a slow load, not a fault.
+4. Do the job from here — take the payment, start the rental. Anything begun on the record is already attached to them, so nothing is recorded against nobody.
+
 **Boxes that open on top of it**
 
 - **customer-new** — Adding someone: name, number, address, and how they should be billed.
@@ -182,6 +189,14 @@ Every phone the shop hires out: what is out with whom, what is due back, and wha
 - **⚙️ Manage phones** — Add a handset, retire one, correct a number or an IMEI.
 - **📶 Pools** — Groups of handsets that are interchangeable, so a booking can be promised a phone without naming which one until it is handed over.
 - **📅 Availability** — The calendar view — which phones are committed on which days. Use it before promising a phone for a date.
+
+**Worked example — a phone goes out on Sunday and comes back on Thursday**
+
+1. New rental. Pick the customer, the country and the dates they are away. The price comes from Settings; it is never typed in here.
+2. Tick what actually leaves the shop with them — handset, SIM, charger. What you tick is what the return screen will ask for back, and on a USA phone an unticked SIM changes the rate.
+3. They pay now or it goes on their account. Either way it lands on their wallet, not in a note.
+4. Thursday: find the row, ⚙ Manage, turn on Returned. Do it on the day — late days are counted from the day you mark it, not the day they walked in.
+5. Every item you ticked has to be decided, back or lost. The rental does not close while something is unaccounted for, which is the whole point of ticking them.
 
 **Boxes that open on top of it**
 
@@ -252,6 +267,15 @@ The money side of the shop: what came in today, who owes, who is in credit, and 
 - **In arrears** — Everyone who owes, largest first. Take the payment straight from the row, or press the name to open them.
 - **In credit** — Everyone the shop is holding money for, so a prepayment is never quietly forgotten when they come in.
 - **Recent activity** — The last payments and charges in order, each showing the customer, what it was for and how they paid.
+
+**Worked example — £280 lands in the bank from someone you cannot place**
+
+1. Open Wallet, then 🏦 Bank & card reconciliation. The row reads “horowits · hershlhorowits@gmail.com · +£280.00”.
+2. Read the suggestions under it. Each states its own case — “amount 280.00 matches exactly”, “counterparty resembles…” — and carries its own confidence. Two that score alike get a warning to compare the reasons before you press anything.
+3. None is right, so press “Choose customer…” and type the name you believe it is.
+4. Nobody matches. The box offers to add that person as a new customer and match the payment together, showing the amount and what the bank called them before it does anything.
+5. Press it. The customer is created first and the payment posts after — so if creating them fails, no money has moved.
+6. The row turns to “✓ On the ledger”. If you got it wrong, Undo posts an equal-and-opposite correction and reopens the row. It never deletes: the ledger is where the accounts come from.
 
 **Boxes that open on top of it**
 
