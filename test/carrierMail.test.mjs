@@ -112,3 +112,59 @@ test('an unclassifiable message is still filed, never dropped', () => {
   const kind = carrierMailKind({ subject: 'A message about your account', snippet: '', text: '' })
   assert.ok(!NEVER_FILE.has(kind), 'the fallback kind must be filed — dropping the unknown loses real post')
 })
+
+test('Lebara’s real payment-failure wording is recognised', () => {
+  // Found on 20 August by classifying the 54 messages actually sitting filed
+  // in production: this one came out as 'other'. The pattern required
+  // "process YOUR payment" and Lebara writes "process THE payment" — one
+  // article, and the most consequential kind in the set was missed on the
+  // shop's biggest carrier.
+  //
+  // payment_failed is both ACTIONABLE and forwardable, so the miss cost twice:
+  // no task raised for staff, and no forward offered to the customer whose
+  // line is about to stop.
+  assert.equal(carrierMailKind({
+    subject: 'Your Payment method needs an Update',
+    snippet: "Looks like we couldn't process the payment for your SIM Only plan this time around. " +
+      "Don't worry though, we'll try it again at 10:00 PM tonight",
+  }), 'payment_failed')
+
+  // The subject on its own, since the snippet is sometimes only boilerplate.
+  assert.equal(carrierMailKind({ subject: 'Your Payment method needs an Update', snippet: '' }), 'payment_failed')
+  // And the SNIPPET on its own, under a subject that gives nothing away. Both
+  // halves were added together, so without this the subject pattern hides
+  // whether the article fix is still there at all.
+  assert.equal(carrierMailKind({
+    subject: 'A message about your account',
+    snippet: "Looks like we couldn't process the payment for your SIM Only plan",
+  }), 'payment_failed')
+  // And the wordings that already worked must keep working.
+  assert.equal(carrierMailKind({ subject: 'Payment failed', snippet: 'Your payment has failed' }), 'payment_failed')
+  assert.equal(carrierMailKind({ subject: '', snippet: 'we were unable to take payment' }), 'payment_failed')
+})
+
+test('a SUCCESSFUL payment is never read as a failed one', () => {
+  // The whole risk in widening the pattern. Both of these are in the live
+  // queue in bulk — 15 renewals and 24 reminders — and calling either a
+  // payment problem would raise dozens of false tasks and offer dozens of
+  // alarming forwards.
+  assert.equal(carrierMailKind({
+    subject: 'Your Lebara mobile plan has been successfully renewed',
+    snippet: 'We have successfully processed your payment for your Lebara SIM Only Plan',
+  }), 'renewed')
+  assert.equal(carrierMailKind({
+    subject: 'Your Lebara Mobile UK Auto Renew reminder',
+    snippet: "we'll take your payment of £10.00 using your saved payment method tomorrow at 7:00",
+  }), 'renewal_reminder')
+  // payment_failed is tested BEFORE renewed and renewal_reminder, so ordering
+  // saves nothing here — the pattern itself has to require the failure words.
+  // Stated under a neutral subject so nothing else can carry the answer.
+  for (const snippet of [
+    "we'll take your payment of £10.00 tomorrow",
+    'We have successfully processed your payment',
+    'collect your payment on the 1st',
+  ]) {
+    assert.notEqual(carrierMailKind({ subject: 'About your plan', snippet }), 'payment_failed',
+      `"${snippet}" is not a payment problem`)
+  }
+})
