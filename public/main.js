@@ -2129,6 +2129,46 @@ function phonesFreeCard(free, total) {
   };
 }
 
+// ── KC_MONEY mirror start ──
+// Mirrors the compact half of lib/moneyWords.mjs (port item C1b). Held to it by
+// test/moneyWordsMirror.test.mjs. Before this the app carried FOUR words for
+// one fact across five screens — "owes", "owed", "owing" and "£45.00 owed" —
+// which is exactly the drift the module exists to stop.
+//
+// The sign convention travels with it: NEGATIVE means the customer owes the
+// shop, POSITIVE means the shop holds their money.
+const KC_MONEY = (() => {
+  const EPSILON = 0.005;
+  const CHASE_AFTER_DAYS = 30;
+  const gbp = (n) => '£' + (Math.abs(Number(n) || 0)).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  function moneyState({ balance, oldestDebtDays = null, reliable = true, refundDue = 0 } = {}) {
+    if (!reliable) return 'unreliable';
+    const bal = Number(balance);
+    if (!Number.isFinite(bal)) return 'unreliable';
+    if (Number(refundDue) > EPSILON) return 'refund_due';
+    if (bal > EPSILON) return 'in_credit';
+    if (bal < -EPSILON) {
+      const days = Number(oldestDebtDays);
+      return Number.isFinite(days) && days >= CHASE_AFTER_DAYS ? 'owes_overdue' : 'owes';
+    }
+    return 'settled';
+  }
+  function moneyLabel(state, ctx = {}) {
+    switch (state) {
+      case 'unreliable':   return 'not checked yet';
+      case 'refund_due':   return `${gbp(ctx.refundDue)} to refund`;
+      case 'in_credit':    return `${gbp(ctx.balance)} in credit`;
+      case 'owes':         return `owes ${gbp(ctx.balance)}`;
+      case 'owes_overdue': return `owes ${gbp(ctx.balance)} — worth a call`;
+      case 'settled':      return 'settled';
+      default:             return 'not checked yet';
+    }
+  }
+  const moneySayShort = (ctx = {}) => { const state = moneyState(ctx); return { state, text: moneyLabel(state, ctx) }; };
+  return { gbp, moneyState, moneyLabel, moneySayShort };
+})();
+// ── KC_MONEY mirror end ──
+
 // Inline style for a stat value, or '' to leave it the default navy ink.
 function statBandStyle(name, value) {
   const ink = STAT_BAND_INK[statBand(name, value)];
@@ -8022,7 +8062,7 @@ async function openHouseSettleModal(custId) {
   showDynamicModal(`
     <div class="modal-title">💳 Settle month — ${escName(c.firstName)} ${escName(c.lastName || '')}</div>
     <div style="font-size:var(--fs-body);margin-bottom:12px;">
-      Wallet balance: <strong style="color:${bal < 0 ? 'var(--danger-ink)' : 'var(--success)'};">${bal < 0 ? 'owes ' + fmtGbp(owed) : fmtGbp(bal) + ' in credit'}</strong>
+      Wallet balance: <strong style="color:${bal < 0 ? 'var(--danger-ink)' : 'var(--success)'};">${escHtml(KC_MONEY.moneySayShort({ balance: bal }).text)}</strong>
       ${clampNote ? `<br><span style="color:var(--gold);">${escHtml(clampNote)}</span>` : ''}
     </div>
     ${monthRows.length ? `
@@ -8151,7 +8191,7 @@ function printHouseStatement() {
         <thead><tr><th>Date</th><th>Description</th><th class="amt">Amount</th></tr></thead>
         <tbody>${rows || '<tr><td colspan="3" class="muted">No activity this month.</td></tr>'}</tbody>
       </table>
-      <div class="total">Balance: ${s.bal < 0 ? 'owed £' + Math.abs(s.bal).toFixed(2) : '£' + s.bal.toFixed(2) + ' in credit'}</div>
+      <div class="total">Balance: ${escHtml(KC_MONEY.moneySayShort({ balance: s.bal }).text)}</div>
       <div class="muted foot">Thank you — Kosher Connect</div>
       <script>window.print()</` + `script></body></html>`);
   w.document.close();
@@ -8550,7 +8590,7 @@ async function elidLoadLine(customerId, u) {
     const balTxt = a.balance == null ? '—' : `${owes ? '−' : ''}${fmtGbp(Math.abs(a.balance))}`;
     const balColor = a.balance == null ? 'var(--muted)' : owes ? 'var(--danger-ink)' : 'var(--success)';
     const status = a.blocked ? '<span style="color:var(--danger-ink);">Blocked</span>' : a.active ? '<span style="color:var(--success);">Active</span>' : 'Inactive';
-    cell.innerHTML = `<span style="font-size:var(--fs-title);font-weight:700;color:${balColor};">${balTxt}</span> <span style="font-size:var(--fs-micro);color:var(--muted);">${a.balance == null ? '' : owes ? 'owing' : 'in credit'}</span> · ${status} · ${escHtml(a.account || '—')} · tariff ${escHtml(String(a.tariffId || '—'))} <span style="color:var(--muted);">· ELID #${escHtml(String(a.userid || '—'))}</span>`;
+    cell.innerHTML = `<span style="font-size:var(--fs-title);font-weight:700;color:${balColor};">${balTxt}</span> <span style="font-size:var(--fs-micro);color:var(--muted);">${a.balance == null ? '' : escHtml(KC_MONEY.moneyLabel(KC_MONEY.moneyState({ balance: a.balance }), { balance: a.balance }))}</span> · ${status} · ${escHtml(a.account || '—')} · tariff ${escHtml(String(a.tariffId || '—'))} <span style="color:var(--muted);">· ELID #${escHtml(String(a.userid || '—'))}</span>`;
   } catch { cell.innerHTML = `<span style="color:var(--danger-ink);">Could not reach ELID.</span>`; }
 }
 async function elidAddLine(customerId) {
@@ -9580,7 +9620,7 @@ async function loadWalletSection(customerId) {
   }
   const bal = data.balance || 0;
   const balColor = bal < 0 ? 'var(--danger-ink)' : 'var(--success)';
-  const balLabel = bal < 0 ? `owes ${fmtGbp(Math.abs(bal))}` : `${fmtGbp(bal)} in credit`;
+  const balLabel = KC_MONEY.moneySayShort({ balance: bal }).text;
   // #7/#16/#70 — the card headline used to show a rental-only "Total Debt"
   // that contradicted this true ledger balance. Fill the headline stat from
   // the ledger (all services), so the two figures can't disagree.
@@ -18334,7 +18374,7 @@ async function assistantCustomerInfo(name) {
   else { try { const r = await kcFetch('/api/ledger'); const j = await r.json().catch(() => ({})); if (j && j.success) { const hit = [...(j.arrears || []), ...(j.credits || [])].find((b) => String(b.customerId) === String(c.id)); if (hit) bal = Number(hit.balance); } } catch {} }
   const owes = bal != null && bal < 0;
   const balHtml = bal == null ? '<span style="color:var(--muted);">settled / no balance on file</span>'
-    : `<span style="color:${owes ? 'var(--danger-ink)' : 'var(--success)'};font-weight:700;">${owes ? fmtGbp(Math.abs(bal)) + ' owed' : (bal > 0 ? fmtGbp(bal) + ' in credit' : 'settled')}</span>`;
+    : `<span style="color:${owes ? 'var(--danger-ink)' : 'var(--success)'};font-weight:700;">${escHtml(KC_MONEY.moneySayShort({ balance: bal }).text)}</span>`;
   return `<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:var(--fs-body);">
     <div style="font-weight:600;margin-bottom:4px;">${escHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}</div>
     <div style="margin-bottom:8px;">${balHtml}</div>

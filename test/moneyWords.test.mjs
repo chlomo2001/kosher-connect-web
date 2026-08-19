@@ -9,7 +9,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   moneyState, moneySentence, moneySay, moneyResult, rate, chaseOrder, gbp,
-  MONEY_STATES, AUDIENCES, CHASE_AFTER_DAYS, rateFromRow, mayQuotePublicly, RATE_TABLES,
+  MONEY_STATES, AUDIENCES, CHASE_AFTER_DAYS, rateFromRow, mayQuotePublicly, RATE_TABLES, moneyLabel, moneySayShort,
 } from '../lib/moneyWords.mjs'
 
 // ── the sign convention ───────────────────────────────────────────────────
@@ -215,4 +215,48 @@ test('every rate table names a key and its figures', () => {
     assert.ok(meta.fields.length, `${table} names no figures`)
   }
   assert.equal(RATE_TABLES.rental_rates.key, 'country_code')
+})
+
+// ── the compact form ──────────────────────────────────────────────────────
+test('one vocabulary at two lengths — the compact form uses the same words', () => {
+  // Before this the app had FOUR words for one fact across five screens:
+  // "owes", "owed", "owing" and "£45.00 owed". A sentence does not fit in a
+  // table cell, so every list had written its own short version.
+  assert.equal(moneyLabel('owes', { balance: -45 }), 'owes £45.00')
+  assert.equal(moneyLabel('in_credit', { balance: 20 }), '£20.00 in credit')
+  assert.equal(moneyLabel('settled'), 'settled')
+  assert.equal(moneyLabel('owes_overdue', { balance: -45 }), 'owes £45.00 — worth a call')
+  assert.equal(moneyLabel('refund_due', { refundDue: 12 }), '£12.00 to refund')
+  assert.equal(moneyLabel('unreliable'), 'not checked yet')
+})
+
+test('the compact form never claims more than the sentence does', () => {
+  // Both come from the same state, so they can disagree in length but never in
+  // meaning — the failure that matters is a cell saying "settled" beside a card
+  // saying they owe £45.
+  for (const ctx of [{ balance: -45, oldestDebtDays: 40 }, { balance: -5 }, { balance: 12 },
+                     { balance: 0 }, { balance: -45, reliable: false }, { refundDue: 9, balance: 0 }]) {
+    const long = moneySay(ctx, 'staff')
+    const short = moneySayShort(ctx)
+    assert.equal(short.state, long.state, `the two forms disagree for ${JSON.stringify(ctx)}`)
+    // A settled account must never read as owing in either form, and vice versa.
+    if (short.state === 'settled') {
+      // "owes" is the CLAIM. The settled sentence legitimately reads "nothing
+      // owed either way" — a substring test on /owe/ fails that, and failing a
+      // correct sentence is how a test teaches you to weaken it.
+      assert.doesNotMatch(short.text, /\bowes?\b/i)
+      assert.doesNotMatch(long.text, /\bowes\b/i)
+      assert.match(long.text, /nothing owed|settled/i)
+    }
+    if (short.state.startsWith('owes')) assert.match(short.text, /owes/)
+  }
+})
+
+test('lower case, because a label lands mid-row', () => {
+  for (const state of MONEY_STATES) {
+    const t = moneyLabel(state, { balance: -45, refundDue: 45 })
+    assert.ok(t.length, `${state} has no label`)
+    if (/^[A-Za-z]/.test(t)) assert.match(t, /^[a-z]/, `${state} label starts with a capital: "${t}"`)
+  }
+  assert.equal(moneyLabel('nonsense'), 'not checked yet')
 })
