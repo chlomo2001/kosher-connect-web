@@ -12,6 +12,7 @@ const PRIORITY_TO_DB = { High: 'high', Normal: 'medium', Low: 'low' }
 const PRIORITY_TO_APP = { high: 'High', medium: 'Normal', low: 'Low' }
 
 const EMBED = 'customers(legacy_id,first_name,last_name)'
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function toApp(row) {
   return {
@@ -53,8 +54,15 @@ async function handler(req, res) {
       if (!b.title || !String(b.title).trim()) {
         return res.status(400).json({ success: false, error: 'Title is required.' })
       }
+      // customerId is the APP-facing id (customers.legacy_id) and is resolved
+      // to the uuid the column actually holds. Some callers only ever have the
+      // uuid — carrier mail carries sims.customer_id, never a legacy id — and
+      // handing that to the lookup above matches nothing, so the task saved
+      // itself silently unlinked. Take either, and say which is which.
       let customerUuid = null
-      if (b.customerId) {
+      if (UUID.test(String(b.customerUuid || ''))) {
+        customerUuid = String(b.customerUuid)
+      } else if (b.customerId) {
         const rows = await db.select(
           'customers',
           `select=id&legacy_id=eq.${encodeURIComponent(String(b.customerId))}`

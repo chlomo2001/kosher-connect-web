@@ -101,6 +101,13 @@ export const MODALS = [
      await loadMessageLog();
      msgLogReply('5');
    })()`],
+  // "Make this a task", the one affordance wherever something arrives (owner
+  // items 2 and 6). Opened from the message log because that is one of the
+  // three places it hangs; the box itself is the same on all three.
+  ['task-from-here', 'settings', `(async () => {
+     await loadMessageLog();
+     msgLogTask('5');
+   })()`],
   // The reconciliation screen — not a modal either, it replaces the content
   // column like the Customer-360 page. Worth the eyes now that Stripe charges
   // triage through it beside bank rows.

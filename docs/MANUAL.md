@@ -572,6 +572,7 @@ Everything the shop can change without anyone writing code: prices, people, what
 **Boxes that open on top of it**
 
 - **sms-reply** — Reply to a text a customer sent in: their message quoted above, a box for the answer, and a count that warns before the reply becomes two texts. It goes to the number that texted, read from the log entry — the reply cannot be pointed at any other number. The safety gate still decides what happens to it.
+- **task-from-here** — Turn what you are reading into a task. The box opens with the words already in it and the cursor in them, so a message can become a job to do without retyping. The same box appears on a carrier email and on an airline email — anywhere something arrives.
 
 **Rules that bite here**
 

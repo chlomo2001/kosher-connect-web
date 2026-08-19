@@ -12739,6 +12739,18 @@ function tmMailHtml(body) {
     : escHtml(s.text)).join('');
 }
 
+/** An airline email that needs a person rather than a parser. */
+function tmMailTask(id) {
+  const t = (tmData?.tickets || []).find(x => String(x.id) === String(id));
+  if (!t) return;
+  kcTaskFromHere({
+    title: t.subject || 'Deal with an airline email',
+    notes: `From ${t.from || 'unknown'}${t.receivedAt ? ` · ${fmtDate(t.receivedAt)}` : ''}` +
+      `\n${KC_MAILBODY.text(t.body).slice(0, 300)}`,
+    source: 'an airline email',
+  });
+}
+
 function tmShowMail(id) {
   const t = (tmData?.tickets || []).find(x => String(x.id) === String(id));
   if (!t) return;
@@ -12750,6 +12762,9 @@ function tmShowMail(id) {
     <div style="font-size:var(--fs-micro);color:var(--muted);margin-bottom:8px;">
       From ${escHtml(t.from || 'unknown')}${t.receivedAt ? ' · ' + escHtml(fmtDate(t.receivedAt)) : ''}</div>
     <pre class="tm-body" data-kc-scroller>${tmMailHtml(t.body)}</pre>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+      <button class="btn btn-outline btn-sm" onclick="tmMailTask(${Number(t.id)})">📝 Make this a task</button>
+    </div>
   `, { width: 680 });
 }
 
@@ -18988,8 +19003,31 @@ function cmRowHtml(m) {
       <div class="cm-actions">
         ${settled ? '<span style="color:var(--muted);font-size:var(--fs-micro);">done</span>'
           : `<button class="btn btn-outline btn-sm" onclick="cmResolve(${m.id})" title="Nothing to do about this one">Dismiss</button>`}
+        <button class="btn btn-outline btn-sm" onclick="cmMakeTask(${m.id})"
+          title="Put this on the task list">📝 Task</button>
       </div>
     </div>`;
+}
+
+/**
+ * A carrier email that needs a person.
+ *
+ * The classifier already raises tasks for the kinds it recognises, which is
+ * most of the useful ones and none of the rest — so a message it could not
+ * place was a dead end. This is the manual door beside the automatic one.
+ */
+function cmMakeTask(id) {
+  const m = (cmData?.messages || []).find(x => String(x.id) === String(id));
+  if (!m) { toast('Reload the list and try again.', 'warning'); return; }
+  kcTaskFromHere({
+    title: m.subject || 'Deal with a carrier email',
+    notes: [m.carrier ? `From ${m.carrier}` : '', m.subject || '',
+      (m.numbers || []).length ? `Numbers: ${(m.numbers || []).map(n => '0' + n).join(', ')}` : '']
+      .filter(Boolean).join(' — '),
+    customerUuid: m.sim?.customerId || null,
+    customerName: m.sim?.customerName || '',
+    source: 'carrier mail',
+  });
 }
 
 async function cmPair(id, simId) {
@@ -21326,6 +21364,12 @@ async function loadMessageLog() {
         e.kind === 'sms_in' && e.status !== 'opt_out'
           ? `<button class="btn btn-outline btn-sm" style="margin-top:6px;"
                onclick="msgLogReply('${escHtml(String(e.id))}')">↩ Reply</button>`
+          : ''}${
+        // Answering is not the only thing a text can need. Somebody who texted
+        // STOP still gets this one — taking them off a list IS work.
+        e.kind === 'sms_in'
+          ? `<button class="btn btn-outline btn-sm" style="margin-top:6px;"
+               onclick="msgLogTask('${escHtml(String(e.id))}')">📝 Task</button>`
           : ''}</td>
     </tr>`;
   }).join('');
@@ -21388,6 +21432,21 @@ function smsReplyCount() {
   out.style.color = parts > 1 ? 'var(--warning)' : 'var(--muted)';
 }
 
+/** A text that needs doing rather than answering. */
+function msgLogTask(id) {
+  const e = msgLogEntries.find(x => String(x.id) === String(id));
+  if (!e) { toast('Reload the log and try again.', 'warning'); return; }
+  const who = e.customerName || e.to;
+  kcTaskFromHere({
+    // A task named after the message is a notification. Named after the reply
+    // it needs, it is work — so it opens as a verb, with their words below it.
+    title: `Reply to ${who}`,
+    notes: e.subject || '',
+    customerName: e.customerName || '',
+    source: 'a text that came in',
+  });
+}
+
 async function sendSmsReply(id) {
   const box = document.getElementById('smsReplyText');
   const text = (box?.value || '').trim();
@@ -21415,6 +21474,81 @@ async function sendSmsReply(id) {
   } catch {
     toast('Could not reach the server.', 'error');
     if (btn) { btn.disabled = false; btn.textContent = '📤 Send reply'; }
+  }
+}
+
+/**
+ * Turn whatever is in front of you into a task.
+ *
+ * Owner, 19 Aug, items 2 and 6: "why not save/suggest as a task?" and "where
+ * else does text land besides settings > text — carrier mail? why not
+ * taskable?" The same idea twice. Carrier mail already raised tasks by itself
+ * for the kinds it recognises, but only for those; anything it did not
+ * classify, and every text a customer sent in, was a dead end — you read it,
+ * and then you remembered it or you did not.
+ *
+ * One affordance, wherever something arrives. It PRE-FILLS rather than saves:
+ * a task titled with a raw message subject is a notification, and the value of
+ * a task is that it says what to do. The box opens with the words there and the
+ * cursor in it, so editing them costs nothing and skipping the edit is still
+ * better than nothing.
+ */
+function kcTaskFromHere({ title = '', notes = '', customerId = null, customerUuid = null, customerName = '', source = '' } = {}) {
+  const suggested = String(title || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  showStackedModal(`
+    <div class="modal-title">📝 Make this a task</div>
+    ${source ? `<div style="font-size:var(--fs-micro);color:var(--muted);margin-bottom:8px;">from ${escHtml(source)}${customerName ? ` · ${escName(customerName)}` : ''}</div>` : ''}
+    <label class="form-label" for="tfhTitle">What needs doing</label>
+    <input class="form-input" id="tfhTitle" value="${escHtml(suggested)}" maxlength="160"
+      placeholder="Ring them back about the port">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+      <label style="display:flex;flex-direction:column;gap:3px;font-size:var(--fs-micro);color:var(--muted);">
+        Due <input class="form-input" id="tfhDue" type="date" style="min-height:0;padding:7px 10px;">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:3px;font-size:var(--fs-micro);color:var(--muted);">
+        Priority
+        <select class="form-input" id="tfhPri" style="min-height:0;padding:7px 10px;width:auto;">
+          <option value="Normal" selected>Normal</option>
+          <option value="High">High</option>
+          <option value="Low">Low</option>
+        </select>
+      </label>
+    </div>
+    ${notes ? `<div style="font-size:var(--fs-micro);color:var(--muted);margin-top:10px;">Kept with the task</div>
+      <blockquote class="sms-quote" style="margin-top:4px;">${escHtml(String(notes).slice(0, 400))}</blockquote>` : ''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+      <button class="btn btn-primary" id="tfhSave"
+        onclick="kcTaskFromHereSave('${escJs(String(customerId || ''))}', '${escJs(String(notes || '').slice(0, 400))}', '${escJs(String(customerUuid || ''))}')">📝 Add the task</button>
+      <button class="btn btn-outline" onclick="closeStackedModal()">Cancel</button>
+    </div>
+  `);
+  setTimeout(() => { const i = document.getElementById('tfhTitle'); if (i) { i.focus(); i.select(); } }, 30);
+}
+
+async function kcTaskFromHereSave(customerId, notes, customerUuid) {
+  const title = (document.getElementById('tfhTitle')?.value || '').trim();
+  if (!title) { toast('Give the task a name.', 'warning'); document.getElementById('tfhTitle')?.focus(); return; }
+  const btn = document.getElementById('tfhSave');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const r = await window.api.addTask({
+      title,
+      dueDate: document.getElementById('tfhDue')?.value || null,
+      priority: document.getElementById('tfhPri')?.value || 'Normal',
+      notes: notes || '',
+      // Two id spaces, named apart. Carrier mail only ever holds the uuid; the
+      // rest of the app holds the app-facing id. Sending a uuid as customerId
+      // matched nothing and saved the task quietly unlinked.
+      customerId: customerId || null,
+      customerUuid: customerUuid || null,
+    });
+    if (!r || (!r.success && !r.task)) throw new Error('failed');
+    closeStackedModal();
+    toast('Task added.', 'success');
+    if (currentTab === 'tasks') renderTasksTab();
+  } catch {
+    toast('Could not add that task.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '📝 Add the task'; }
   }
 }
 
