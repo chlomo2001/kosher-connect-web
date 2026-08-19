@@ -2141,8 +2141,13 @@ const KC_MONEY = (() => {
   const EPSILON = 0.005;
   const CHASE_AFTER_DAYS = 30;
   const gbp = (n) => '£' + (Math.abs(Number(n) || 0)).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  // Number(null) is 0, and so is Number('') and Number([]). Absence is checked
+  // BEFORE conversion — a balance nobody has recorded is not a settled account.
+  const absent = (v) => v === null || v === undefined || v === '' ||
+    (typeof v !== 'number' && typeof v !== 'string');
   function moneyState({ balance, oldestDebtDays = null, reliable = true, refundDue = 0 } = {}) {
     if (!reliable) return 'unreliable';
+    if (absent(balance)) return 'unreliable';
     const bal = Number(balance);
     if (!Number.isFinite(bal)) return 'unreliable';
     if (Number(refundDue) > EPSILON) return 'refund_due';
@@ -7112,9 +7117,6 @@ function renderTableRows() {
       ? (ledgerBal < 0 ? -ledgerBal : 0)
       : rentals.filter(r => r.customerId === c.id).reduce((sum, r) => sum + rentalDebt(r), 0);
     const customerCredit = ledgerBal !== null && ledgerBal > 0 ? ledgerBal : 0;
-    const customerPaid = rentals
-      .filter(r => r.customerId === c.id)
-      .reduce((sum, r) => sum + (r.amountPaid || 0), 0);
 
     return `
     <tr class="${selected}" data-id="${c.id}">
@@ -7133,11 +7135,21 @@ function renderTableRows() {
       </td>
       <td class="kc-phone">${c.phone ? escHtml(fmtPhone(c.phone)) : '—'}</td>
       <td>${services || '<span style="color:var(--muted);font-size:var(--fs-small);">None</span>'}</td>
+      ${/* The Balance column, said in the one vocabulary (C1). It used to make
+           up its own — "£45.00 debt", "£20.00 credit", "Settled" — three
+           spellings the rest of the app does not use, on the busiest list in
+           the shop.
+
+           The last branch was worse than a wording problem. When the
+           authoritative ledger is not there (still loading, or the wallet is
+           not permitted for this person) it printed fmtGbp(customerPaid) —
+           the total the customer has EVER PAID — in a column headed Balance.
+           A number that large, in that column, reads as money owed. There is
+           no balance to show in that case, so it now says so. */''}
       <td class="kc-money" style="color: ${customerDebt > 0 ? 'var(--danger-ink)' : (customerCredit > 0 ? 'var(--accent)' : 'var(--success)')}; font-weight: 700;">${
-        customerDebt > 0 ? `${fmtGbp(customerDebt)} debt`
-        : customerCredit > 0 ? `${fmtGbp(customerCredit)} credit`
-        : ledgerBal !== null ? 'Settled'
-        : `${fmtGbp(customerPaid)}`}</td>
+        escHtml(KC_MONEY.moneySayShort(
+          ledgerBal !== null ? { balance: ledgerBal } : { balance: null, reliable: false },
+        ).text)}</td>
       <td>
         <div class="row-actions">
           <button class="action-btn" data-action="details" data-id="${c.id}">Details</button>

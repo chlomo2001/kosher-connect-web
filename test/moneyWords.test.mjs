@@ -7,6 +7,7 @@
 // convention, and the order of operations in moneyResult.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {
   moneyState, moneySentence, moneySay, moneyResult, rate, chaseOrder, gbp,
   MONEY_STATES, AUDIENCES, CHASE_AFTER_DAYS, rateFromRow, mayQuotePublicly, RATE_TABLES, moneyLabel, moneySayShort,
@@ -259,4 +260,40 @@ test('lower case, because a label lands mid-row', () => {
     if (/^[A-Za-z]/.test(t)) assert.match(t, /^[a-z]/, `${state} label starts with a capital: "${t}"`)
   }
   assert.equal(moneyLabel('nonsense'), 'not checked yet')
+})
+
+test('a balance nobody has recorded is not a settled account', () => {
+  // The same bug as rate(null) returning 0, in the function three lines above
+  // it: Number(null) is 0, Number('') is 0, Number([]) is 0. Leaning on
+  // Number.isFinite alone told staff that a customer whose balance the app
+  // does not have owes nothing — a claim, made confidently, about money, from
+  // the module written to refuse exactly that.
+  for (const missing of [null, undefined, '', [], {}, false, NaN]) {
+    assert.equal(moneyState({ balance: missing }), 'unreliable',
+      `${JSON.stringify(missing)} is a missing balance, not a settled one`)
+    assert.equal(moneySayShort({ balance: missing }).text, 'not checked yet')
+  }
+  // …and a real zero still settles, or the fix has eaten the ordinary case.
+  assert.equal(moneyState({ balance: 0 }), 'settled')
+  assert.equal(moneyState({ balance: '0' }), 'settled')
+  assert.equal(moneyState({ balance: -0 }), 'settled')
+  // Numbers arriving as strings, which is how they come back out of JSON.
+  assert.equal(moneyState({ balance: '-45' }), 'owes')
+  assert.equal(moneyState({ balance: '20' }), 'in_credit')
+})
+
+test('the missing-balance rule is the same in the browser mirror', () => {
+  // The mirror is what the five money screens actually call. A fix in the lib
+  // that never reached it would leave every real screen still saying "settled".
+  const src = readFileSync(new URL('../public/main.js', import.meta.url), 'utf8')
+  const region = src.slice(src.indexOf('── KC_MONEY mirror start ──'),
+    src.indexOf('── KC_MONEY mirror end ──'))
+  assert.ok(region.includes('absent(balance)'),
+    'the mirror must refuse a missing balance too, or the screens keep the bug')
+  const KC_MONEY = new Function(`${region.slice(region.indexOf('const KC_MONEY'))}\nreturn KC_MONEY`)()
+  for (const missing of [null, undefined, '', [], {}, false]) {
+    assert.equal(KC_MONEY.moneySayShort({ balance: missing }).text, 'not checked yet')
+  }
+  assert.equal(KC_MONEY.moneySayShort({ balance: 0 }).text, 'settled')
+  assert.equal(KC_MONEY.moneySayShort({ balance: -45 }).text, 'owes £45.00')
 })

@@ -151,6 +151,14 @@ run "every screen names its next action, and every action lands" \
 run "two customer cards · beside each other, each writing to its own customer" \
   bash -eo pipefail -c 'node ops/harness/twocards.mjs | tail -2'
 
+# Money wording (C1). The unit tests prove the vocabulary is right and the
+# mirror test proves the browser copy agrees; neither proves the SCREENS call
+# either of them. This reads what a person reads — and its first run found the
+# customers list saying "£45.00 debt" in a vocabulary of its own.
+run "money · one vocabulary on screen, and an unknown balance refused" \
+  bash -eo pipefail -c 'node ops/harness/money.mjs | tail -1
+           node ops/harness/money.mjs --width 390 --theme dark | tail -1'
+
 run "dialogs · eight grips, snap, and plain on a phone" \
   bash -eo pipefail -c 'node ops/harness/window.mjs | tail -3'
 
