@@ -1257,7 +1257,15 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .tm-cust { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .tm-who { font-weight: 600; color: var(--text); }
 .tm-why { font-size: var(--fs-micro); color: var(--muted); }
-.tm-gap { color: var(--danger-ink); font-size: var(--fs-small); }
+/* `.tm-flight span` above is (0,1,1) and this was (0,1,0), so every gap INSIDE
+   the flight line — route?, date?, price? — quietly lost its red and rendered
+   muted like the rest of the row. The three that matter most were the three
+   not marked, while "no passenger name in the mail" sits outside that
+   container and was red, which is why the card said "the red parts" over a row
+   whose parts were grey (owner, 20 Aug: "red parts? what?!").
+   Named explicitly rather than reordered: reordering fixes it until the next
+   person adds a rule between them. */
+.tm-gap, .tm-flight .tm-gap { color: var(--danger-ink); font-size: var(--fs-small); }
 .tm-missing { font-size: var(--fs-micro); color: var(--danger-ink); margin-top: 4px; }
 /* A neutral note on a ticket card — a check-in reminder is information, not a
    fault, so it does not wear the red of a missing field. */

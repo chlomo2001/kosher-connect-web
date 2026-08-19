@@ -13286,7 +13286,13 @@ function tmCardHtml(t) {
               already.route ? ' · ' + escHtml(already.route) : ''}${
               already.travelDate ? ' · ' + escHtml(fmtDate(already.travelDate)) : ''}</a>.
             Nothing to book: say it is this one, or add it as another flight on it.</div>` : ''}
-        ${t.missing.length ? `<div class="tm-missing">The red parts didn’t parse — fill them in on the form.</div>` : ''}
+        ${/* Only where the gaps are actually on screen. A message that is not a
+               booking shows its subject instead of route?/date?/price?, so this
+               line pointed at red parts that were deliberately never rendered —
+               on a Jet2 advert the only red thing on the card was the sentence
+               claiming there were red things (owner, 20 Aug). */''}
+        ${t.bookable !== false && t.missing.length
+          ? `<div class="tm-missing">The red parts didn’t parse — fill them in on the form.</div>` : ''}
       </div>
       <div class="tm-actions">
         ${t.kind === 'cancellation'
