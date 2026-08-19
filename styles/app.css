@@ -4322,3 +4322,16 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
   .kc-id-fact { display: block; margin-bottom: 8px; }
   .kc-id-label { display: block; margin-bottom: 1px; }
 }
+
+/* ── A date with its Hebrew date underneath ──────────────────────────────
+   Counter screens only (owner, 20 Aug): rentals, flights, SIM renewals and
+   repairs — the dates said out loud to somebody standing at the counter. The
+   English stays the line you read; the Hebrew sits under it, smaller and in
+   the same gold the dashboard already uses, so it reads as the second answer
+   to the same question rather than as a competing one. */
+.kc-dh { display: inline-flex; flex-direction: column; gap: 1px; }
+
+.kc-dh-heb {
+  font-size: var(--fs-micro); color: var(--gold); line-height: 1.3;
+  white-space: nowrap;
+}

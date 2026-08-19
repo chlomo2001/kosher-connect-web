@@ -1092,6 +1092,32 @@ function kcPaintNextAction(tab) {
 // ─────────────────────────────────────────────
 //  DATE FORMAT HELPER
 // ─────────────────────────────────────────────
+/**
+ * A date with its Hebrew date underneath — for the counter screens only.
+ *
+ * Owner, 20 August: Hebrew dates beside the English ones on "the counter
+ * screens — rentals, flights, SIM renewals and repairs", the dates actually
+ * said out loud to somebody standing there. Deliberately NOT fmtDate itself:
+ * that one has 78 call sites including the SMS drafts sent to customers, and
+ * adding a second date to all of them is a different decision nobody made.
+ *
+ * Noon, not midnight, when reading the date: a bare YYYY-MM-DD parses as UTC
+ * and would slip a day west of Greenwich. The Hebrew day really begins at
+ * nightfall, which this does not model — the app has shown civil-day-aligned
+ * Hebrew dates on the dashboard since it was built, and one shop-wide answer
+ * that everybody already reads beats two that disagree after dark.
+ *
+ * Returns HTML, so callers must not escape it again.
+ */
+function fmtDateHeb(iso) {
+  const en = fmtDate(iso);
+  if (!iso || en === '\u2014') return escHtml(en);
+  const d = new Date(String(iso).slice(0, 10) + 'T12:00:00');
+  const heb = Number.isNaN(d.getTime()) ? '' : hebrewDateString(d);
+  if (!heb) return escHtml(en);
+  return `<span class="kc-dh">${escHtml(en)}<span class="kc-dh-heb" dir="rtl">${escHtml(heb)}</span></span>`;
+}
+
 function fmtDate(iso) {
   if (!iso) return '—';
   // Accept a plain date (YYYY-MM-DD) or a full ISO timestamp
@@ -3126,7 +3152,10 @@ function renderRentalRows() {
         <div class="customer-email" style="font-size:var(--fs-micro);">${r.vn ? '🔢 +'+escHtml(r.vnPrefix || '') : ''}</div>
       </td>
       <td class="kc-phone">${rentalDeviceChip(r, { stacked: true })}</td>
-      <td class="kc-date" data-label="From → To" style="font-size:var(--fs-micro);">${fmtDate(r.fromDate)}<br>${fmtDate(r.toDate)}${r.pickupDate && r.pickupDate !== r.fromDate ? `<br><span style="color:var(--muted);" title="Physically taken — the charge runs from here">↳ took ${fmtDate(r.pickupDate)}</span>` : ''}</td>
+      ${/* Hebrew under the RETURN date only. The cell already stacks two dates, so
+       putting it under both makes four lines in a table row — and the date
+       anybody says out loud about a rental is the one it is due back. */''}
+      <td class="kc-date" data-label="From → To" style="font-size:var(--fs-micro);">${fmtDate(r.fromDate)}<br>${fmtDateHeb(r.toDate)}${r.pickupDate && r.pickupDate !== r.fromDate ? `<br><span style="color:var(--muted);" title="Physically taken — the charge runs from here">↳ took ${fmtDate(r.pickupDate)}</span>` : ''}</td>
       <td style="text-align:center;">${r.chargeableDays}d</td>
       ${/* Nine columns could not fit a 1280px screen whatever the buttons did
             (docs/DESIGN.md §Row actions). The owner's call, 17 Aug: Price goes.
@@ -12055,7 +12084,7 @@ function renderSimRows() {
       <td class="kc-drop-sm" data-label="Mailbox" style="font-size:var(--fs-micro);color:var(--muted);white-space:nowrap;"
         title="${s.email ? escHtml(s.email) : 'No carrier account on file — this SIM can only ever be matched by its number'}">${
         simMailboxBase(s.email) ? escHtml(simMailboxBase(s.email).replace('@gmail.com', '')) : '—'}</td>
-      <td class="kc-date" data-label="Renews" style="font-size:var(--fs-small);${renewalClass}">${fmtDate(s.renewalDate)}${renewalLabel}</td>
+      <td class="kc-date" data-label="Renews" style="font-size:var(--fs-small);${renewalClass}">${fmtDateHeb(s.renewalDate)}${renewalLabel}</td>
       <td data-label="Payment" style="font-size:var(--fs-small);">${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}</td>
       <td>${statusBadge}</td>
       <td>
@@ -13853,7 +13882,7 @@ function renderBookingsTab() {
             extraRef ? `<span class="bk-legs" title="${escHtml(refs.join(' · '))}"> +${extraRef} ref${extraRef === 1 ? '' : 's'}</span>` : ''}${
             legs.length > 1 ? `<span class="bk-legs"> · ${legs.length} flights</span>` : ''}</div>`;
         })()}</td>
-        <td class="kc-date">${b.travelDate ? fmtDate(b.travelDate) : '—'}${
+        <td class="kc-date">${b.travelDate ? fmtDateHeb(b.travelDate) : '—'}${
           b.returnDate ? `<span title="Returns ${escHtml(fmtDate(b.returnDate))}"> ↩</span>` : ''}
             <div class="customer-email">${b.returnDate
               ? `back ${escHtml(fmtDate(b.returnDate))}`
@@ -15091,7 +15120,9 @@ async function renderRepairsTab() {
         <td>${escHtml(r.device || '—')}${r.kcPurchase ? ' <span class="badge" style="background:rgba(0, 96, 168,0.1);color:var(--accent);font-size:var(--fs-micro);">KC phone</span>' : ''}</td>
         <td style="font-size:var(--fs-small);">${r.services.map(s => escHtml(s.name)).join('<br>') || '—'}</td>
         <td><strong>${fmtGbp((r.total || 0))}</strong></td>
-        <td class="kc-date">${r.openedAt ? fmtDate(r.openedAt) : '—'}</td>
+        ${/* The only date a repair row carries is the day it came in, and that
+               IS the one said at the counter — "you brought it in on…". */''}
+        <td class="kc-date">${r.openedAt ? fmtDateHeb(r.openedAt) : '—'}</td>
         <td>${repairStatusBadge(r.status)}</td>
         <td style="white-space:nowrap;">
           ${r.status === 'Ready' ? `<button class="action-btn" onclick="openRepairSmsModal('${escHtml(r.id)}')" title="Ready-to-collect message">💬</button>` : ''}
