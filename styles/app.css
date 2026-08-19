@@ -1338,6 +1338,16 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 /* The text being answered, quoted above the box you type into. Their words
    have to look like theirs — an unquoted paste reads as something the shop
    wrote, which is a bad way to start a reply. */
+/* A corrected timeline entry (owner item 1). What it used to say is smaller and
+   struck through rather than gone — the correction is the news, the original is
+   the evidence, and both are on the row. */
+.tl-was { font-size: var(--fs-micro); color: var(--muted); overflow-wrap: anywhere; }
+.tl-was s { opacity: .85; }
+.tl-fix { flex: none; opacity: 0; transition: opacity .15s; }
+.history-item:hover .tl-fix, .tl-fix:focus-visible { opacity: 1; }
+/* On a touch screen there is no hover to reveal it, so it is simply there. */
+@media (pointer: coarse) { .tl-fix { opacity: 1; } }
+
 /* ── Figures nobody has checked ───────────────────────────────────────────
    Port item C1c. A rate that has been confirmed is quiet; one that has not is
    the row you are meant to act on, so the unchecked ones carry the weight and

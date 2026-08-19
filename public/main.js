@@ -7157,10 +7157,21 @@ function buildCustomerTimeline(c) {
       amount: Number(o.total || 0) });
   }
   // #60 — logged calls/notes and auto-logged sent emails share the timeline.
-  for (const m of (c.commLog || [])) {
-    ev.push({ date: m.at, icon: m.icon || '💬', cat: 'Contact',
-      title: m.text || m.type || 'Note', sub: m.by ? 'by ' + m.by : '' });
-  }
+  (c.commLog || []).forEach((m, i) => {
+    const v = KC_COMMLOG.entryView(m);
+    ev.push({
+      date: m.at, icon: m.icon || '💬', cat: 'Contact',
+      title: v.current || m.type || 'Note',
+      sub: m.by ? 'by ' + m.by : '',
+      // What it used to say, and who changed it. Carried on the event so the
+      // renderer does not have to know where a timeline row came from.
+      wasText: v.original,
+      correctedBy: v.correctedBy,
+      correctedAt: v.correctedAt,
+      commIndex: i,
+      customerId: c.id,
+    });
+  });
   ev.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
   return ev;
 }
@@ -7390,10 +7401,16 @@ function buildCustomerPanelHtml(c, mode = 'card') {
           <span style="width:20px;flex-shrink:0;text-align:center;">${e.icon}</span>
           <div style="flex:1;min-width:0;">
             <div style="font-size:var(--fs-body);color:var(--text);">${escHtml(e.title)}</div>
+            ${/* Owner item 1: a corrected entry shows what it used to say, struck
+                 through, and who changed it. Erasing would have been less code
+                 and would have cost the log its whole reason for existing. */''}
+            ${e.wasText ? `<div class="tl-was">was: <s>${escHtml(e.wasText)}</s> · corrected by ${escHtml(e.correctedBy || 'staff')}${e.correctedAt ? ' on ' + fmtDate(e.correctedAt) : ''}</div>` : ''}
             <div style="font-size:var(--fs-micro);color:var(--muted);">${escHtml(e.cat)}${e.sub ? ' · ' + escHtml(e.sub) : ''}</div>
           </div>
           ${withDate && e.date ? `<span style="font-size:var(--fs-micro);color:var(--muted);white-space:nowrap;">${fmtDate(e.date)}</span>` : ''}
           ${e.amount ? `<span style="font-size:var(--fs-small);color:var(--muted);white-space:nowrap;">${fmtGbp(Number(e.amount))}</span>` : ''}
+          ${e.commIndex != null ? `<button class="action-btn tl-fix" title="Correct this entry"
+              onclick="event.stopPropagation();correctCommEntry('${escJs(String(e.customerId))}',${e.commIndex})">✎</button>` : ''}
         </div>`;
   const timelineHtml = timeline.length === 0
     ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:6px 0;">No activity yet.</div>`
@@ -9502,6 +9519,92 @@ function renderNextBestAction(customerId, balance) {
 // manual "log a call/note" button and auto events (a sent receipt) land on the
 // same customer timeline.
 const COMM_ICONS = { call_in: '📞', call_out: '📲', message: '💬', note: '📝', email: '✉️' };
+
+// ── KC_COMMLOG mirror start ──
+// Mirrors lib/commLog.mjs. Held to it by test/commLogMirror.test.mjs.
+// Owner item 1: correct a timeline entry, never erase it. `text` is the
+// original and is never overwritten; corrections are appended.
+const KC_COMMLOG = (() => {
+  const MAX_CORRECTION = 500;
+  function currentText(entry) {
+    if (!entry) return '';
+    const list = Array.isArray(entry.corrections) ? entry.corrections : [];
+    const last = list.length ? list[list.length - 1] : null;
+    return String((last && last.text) || entry.text || '');
+  }
+  function correctEntry(entry, { text, by, at } = {}) {
+    if (!entry || typeof entry !== 'object') throw new Error('correctEntry: no entry');
+    const corrected = String(text == null ? '' : text).trim().slice(0, MAX_CORRECTION);
+    if (!corrected) throw new Error('correctEntry: a correction must say something');
+    if (corrected === currentText(entry)) throw new Error('correctEntry: that is what it already says');
+    const corrections = Array.isArray(entry.corrections) ? entry.corrections.slice() : [];
+    corrections.push({ at: at || new Date().toISOString(), by: String(by || 'staff'), text: corrected });
+    return { ...entry, corrections };
+  }
+  function entryView(entry) {
+    const list = Array.isArray(entry && entry.corrections) ? entry.corrections : [];
+    const current = currentText(entry);
+    const original = String((entry && entry.text) || '');
+    const last = list.length ? list[list.length - 1] : null;
+    return {
+      current,
+      original: list.length && original !== current ? original : null,
+      corrected: list.length > 0,
+      correctedBy: last ? String(last.by || 'staff') : null,
+      correctedAt: last ? last.at : null,
+      history: list.length ? [{ at: entry.at, by: entry.by || 'staff', text: original }, ...list] : [],
+    };
+  }
+  const isCorrected = (entry) => !!(entry && Array.isArray(entry.corrections) && entry.corrections.length);
+  return { MAX_CORRECTION, correctEntry, currentText, entryView, isCorrected };
+})();
+// ── KC_COMMLOG mirror end ──
+
+/**
+ * Correct one timeline entry.
+ *
+ * Owner item 1, 19 Aug: "correct it, never erase it." The original stays on the
+ * record, struck through, with the name of whoever changed it — so a note typed
+ * against the wrong customer can be put right without the log ceasing to be
+ * evidence of what actually happened.
+ */
+async function correctCommEntry(customerId, index) {
+  const c = customers.find(x => String(x.id) === String(customerId));
+  const entry = c && (c.commLog || [])[index];
+  if (!entry) { toast('That entry is no longer there.', 'warning'); return; }
+  const view = KC_COMMLOG.entryView(entry);
+  const text = await kcPrompt({
+    title: '✎ Correct this entry',
+    body: `It currently reads:<br><strong>${escHtml(view.current)}</strong><br><br>` +
+      `What it originally said stays on the record, struck through, with your name against the change. ` +
+      `Nothing is erased — that is what keeps this log worth reading later.`,
+    label: 'What it should say',
+    placeholder: view.current,
+    okLabel: '✎ Record the correction',
+  });
+  if (text == null) return;
+  let corrected;
+  try {
+    corrected = KC_COMMLOG.correctEntry(entry, {
+      text,
+      by: (currentStaff && (currentStaff.full_name || currentStaff.email)) || 'staff',
+    });
+  } catch (e) {
+    // The lib refuses an empty correction, and one that changes nothing, rather
+    // than saving something that reads like a change and is not.
+    toast(/already says/.test(e.message) ? 'That is what it already says.' : 'A correction has to say something.', 'warning');
+    return;
+  }
+  c.commLog[index] = corrected;
+  const saved = await window.api.updateCustomer(c).then(() => true).catch(() => false);
+  if (!saved) {
+    c.commLog[index] = entry;   // put it back; nothing on screen may claim a save that failed
+    toast('Could not save that correction — check the connection and try again.', 'error');
+    return;
+  }
+  toast('Correction recorded.', 'success');
+  if (selectedId === customerId) renderDetailPanel(customerId);
+}
 function logComm(c, { type, text, icon }) {
   if (!c.commLog) c.commLog = [];
   c.commLog.push({
