@@ -1317,6 +1317,16 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 .rv-attached ul { margin: 6px 0 0; padding-left: 18px; }
 .rv-attached li { padding: 3px 0; font-size: var(--fs-small); }
 .rv-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+/* Twelve records on one screen instead of one (owner, 19 Aug: "confirm data is
+   only showing 1 at a time"). They are a queue of separate decisions, so each
+   keeps its own border and its own buttons — a single scrolling wall of fields
+   would be quicker to build and impossible to judge. */
+.rv-batch { display: grid; gap: 14px; }
+.rv-batch-foot {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
+  margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);
+}
+.rv-batch-foot .rv-hint { margin: 0; }
 .rv-hint { color: var(--muted); font-size: var(--fs-small); margin-top: 10px; }
 
 /* The unconfirmed marker. Deliberately quiet — it is a note about provenance,

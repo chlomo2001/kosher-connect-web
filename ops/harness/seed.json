@@ -1372,6 +1372,45 @@
      "simId": null,
      "label": "No contact number on record"
     }
+   },
+   {
+    "id": "seed-rv-2",
+    "legacyId": "c2",
+    "name": "Yossi Taitelbaum",
+    "phone": "+447700900123",
+    "email": "yossi@example.com",
+    "address": "",
+    "notes": "",
+    "sims": [],
+    "bookings": [],
+    "virtualNumbers": [],
+    "contact": {
+     "kind": "ours",
+     "label": "SIM with us"
+    }
+   },
+   {
+    "id": "seed-rv-3",
+    "legacyId": "c6",
+    "name": "",
+    "phone": "",
+    "email": "",
+    "address": "42 Leicester Road, Salford",
+    "notes": "ELID import — name column was blank",
+    "sims": [
+     {
+      "number": "+447423287185",
+      "provider": "Lycamobile",
+      "status": "active",
+      "renewal": "2026-09-14"
+     }
+    ],
+    "bookings": [],
+    "virtualNumbers": [],
+    "contact": {
+     "kind": null,
+     "label": "No contact number on record"
+    }
    }
   ]
  },

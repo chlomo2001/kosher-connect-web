@@ -19352,7 +19352,33 @@ function paintConfirm() {
     return;
   }
 
-  const b = confirmQueue[0];
+  content.innerHTML = `
+    <div class="stats-row">${confirmStatsHtml()}</div>
+    <div class="card">
+      <div class="card-head">
+        <h2 class="card-title">Does this look right?</h2>
+        <span class="badge" style="background:rgba(148,163,184,0.15);color:var(--muted);">${pct}% confirmed</span>
+      </div>
+      <p class="rv-hint">Confirming records who checked it and when. It changes nothing else —
+        nothing is blocked anywhere in the app while data is unconfirmed.</p>
+      <div class="rv-batch">${confirmQueue.map(confirmCardHtml).join('')}</div>
+      ${confirmQueue.length > 1 ? `<div class="rv-batch-foot">
+        <button class="btn btn-primary" id="rvConfirmAll" onclick="confirmAllShown()">
+          ✓ Confirm all ${confirmQueue.length} shown</button>
+        <span class="rv-hint">Only what is on this screen, and only if you know all ${confirmQueue.length} are right.</span>
+      </div>` : ''}
+    </div>`;
+}
+
+/**
+ * One imported record, with everything that came in attached to it.
+ *
+ * The screen used to render confirmQueue[0] and nothing else: twelve records
+ * were fetched and one was shown, so checking the book meant a decision, a
+ * repaint, a decision, a repaint (owner, 19 Aug: "confirm data is only showing
+ * 1 at a time"). The batch was always there — it just was not on the screen.
+ */
+function confirmCardHtml(b) {
   const line = (label, value) => `
     <div class="rv-line"><span class="rv-label">${escHtml(label)}</span>
       <span class="rv-value">${value || '<span style="color:var(--muted)">—</span>'}</span></div>`;
@@ -19362,35 +19388,27 @@ function paintConfirm() {
     ...b.bookings.map(k => `<li><strong>Booking</strong> ${escHtml(k.ref || '—')}${k.passenger ? ` · ${escName(k.passenger)}` : ''}${k.route ? ` · ${escHtml(k.route)}` : ''}${k.date ? ` · ${escHtml(fmtDate(k.date))}` : ''}</li>`),
     ...b.virtualNumbers.map(v => `<li><strong>Virtual number</strong> ${escHtml(fmtPhone(v.number) || '—')}${v.platform ? ` · ${escHtml(v.platform)}` : ''}</li>`),
   ].join('');
+  const id = escHtml(String(b.id));
 
-  content.innerHTML = `
-    <div class="stats-row">${confirmStatsHtml()}</div>
-    <div class="card">
-      <div class="card-head">
-        <h2 class="card-title">Does this look right?</h2>
-        <span class="badge" style="background:rgba(148,163,184,0.15);color:var(--muted);">${pct}% confirmed</span>
-      </div>
-      <div class="rv-card">
-        <div class="rv-name">${escName(b.name || '(no name)')}</div>
-        ${line('Phone', b.phone
-          ? `${escHtml(fmtPhone(b.phone))}${b.contact && b.contact.kind === 'ours'
-              ? ' <span class="kc-contact-ours">📶 also a SIM with us</span>'
-              : b.contact && b.contact.kind === 'outside'
-                ? ' <span class="kc-contact-outside">outside line</span>' : ''}`
-          : `<span class="kc-contact-flag">${escHtml((b.contact && b.contact.label) || 'No contact number on record')}</span>${b.sims.length
-              ? ` <span style="color:var(--muted)">— the ${b.sims.length} SIM${b.sims.length === 1 ? '' : 's'} below are lines we sell them, not necessarily a phone they answer</span>` : ''}`)}
-        ${line('Email', escHtml(b.email))}
-        ${line('Address', escHtml(b.address))}
-        ${line('Notes', escHtml(b.notes))}
-        ${attached ? `<div class="rv-attached"><div class="rv-label">Also imported for them</div><ul>${attached}</ul></div>` : ''}
-      </div>
+  return `
+    <div class="rv-card" id="rvCard_${id}">
+      <div class="rv-name">${b.name ? escName(b.name) : '<span style="color:var(--muted)">(no name)</span>'}</div>
+      ${line('Phone', b.phone
+        ? `${escHtml(fmtPhone(b.phone))}${b.contact && b.contact.kind === 'ours'
+            ? ' <span class="kc-contact-ours">📶 also a SIM with us</span>'
+            : b.contact && b.contact.kind === 'outside'
+              ? ' <span class="kc-contact-outside">outside line</span>' : ''}`
+        : `<span class="kc-contact-flag">${escHtml((b.contact && b.contact.label) || 'No contact number on record')}</span>${b.sims.length
+            ? ` <span style="color:var(--muted)">— the ${b.sims.length} SIM${b.sims.length === 1 ? '' : 's'} below are lines we sell them, not necessarily a phone they answer</span>` : ''}`)}
+      ${line('Email', escHtml(b.email))}
+      ${line('Address', escHtml(b.address))}
+      ${line('Notes', escHtml(b.notes))}
+      ${attached ? `<div class="rv-attached"><div class="rv-label">Also imported for them</div><ul>${attached}</ul></div>` : ''}
       <div class="rv-actions">
-        <button class="btn btn-primary" id="rvConfirm" onclick="confirmBundle()">✓ Yes — confirm${attached ? ' all' : ''}</button>
-        <button class="btn btn-outline" onclick="openEditModal('${escHtml(String(b.legacyId))}')">✏️ Fix first</button>
-        <button class="btn btn-outline" onclick="skipConfirmBundle()">Skip for now</button>
+        <button class="btn btn-primary btn-sm" id="rvConfirm_${id}" onclick="confirmBundle('${id}')">✓ Yes — confirm${attached ? ' all' : ''}</button>
+        <button class="btn btn-outline btn-sm" onclick="openEditModal('${escHtml(String(b.legacyId))}')">✏️ Fix first</button>
+        <button class="btn btn-outline btn-sm" onclick="skipConfirmBundle('${id}')">Skip for now</button>
       </div>
-      <p class="rv-hint">Confirming records who checked it and when. It changes nothing else —
-        nothing is blocked anywhere in the app while data is unconfirmed.</p>
     </div>`;
 }
 
@@ -19402,17 +19420,21 @@ function confirmStatsHtml() {
     <div class="stat-card"><div class="stat-label">Still to check</div><div class="stat-value">${remaining}</div></div>`;
 }
 
-function skipConfirmBundle() {
-  confirmQueue.shift();
+// Skipping the third card must not confirm the first. Every action carries the
+// id of the record it belongs to now that twelve of them share a screen.
+function skipConfirmBundle(id) {
+  const i = id == null ? 0 : confirmQueue.findIndex(b => String(b.id) === String(id));
+  if (i < 0) return;
+  confirmQueue.splice(i, 1);
   if (confirmQueue.length) paintConfirm(); else renderConfirmTab();
 }
 
-async function confirmBundle() {
-  if (confirmBusy) return;
-  const b = confirmQueue[0];
-  if (!b) return;
-  confirmBusy = true;
-  const btn = document.getElementById('rvConfirm');
+async function confirmBundle(id, opts = {}) {
+  if (confirmBusy && !opts.inBatch) return false;
+  const b = id == null ? confirmQueue[0] : confirmQueue.find(x => String(x.id) === String(id));
+  if (!b) return false;
+  if (!opts.inBatch) confirmBusy = true;
+  const btn = document.getElementById(`rvConfirm_${b.id}`);
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
     const res = await window.api.confirmReviewed(b.id);
@@ -19421,13 +19443,64 @@ async function confirmBundle() {
     // about how many rows the card happened to show.
     confirmStats.done += res.confirmed;
     confirmStats.remaining = Math.max(0, confirmStats.remaining - res.confirmed);
-    toast(`✓ Confirmed ${escName(b.name)}${res.attached ? ` and ${res.attached} attached record${res.attached === 1 ? '' : 's'}` : ''}`);
-    confirmQueue.shift();
-    if (confirmQueue.length) paintConfirm(); else renderConfirmTab();
+    if (!opts.quiet) {
+      toast(`✓ Confirmed ${escName(b.name)}${res.attached ? ` and ${res.attached} attached record${res.attached === 1 ? '' : 's'}` : ''}`);
+    }
+    const i = confirmQueue.findIndex(x => String(x.id) === String(b.id));
+    if (i >= 0) confirmQueue.splice(i, 1);
+    if (!opts.inBatch) { if (confirmQueue.length) paintConfirm(); else renderConfirmTab(); }
+    return true;
   } catch (e) {
-    toast('Couldn’t save that confirmation — try again.', 'error');
+    if (!opts.quiet) toast('Couldn’t save that confirmation — try again.', 'error');
     if (btn) { btn.disabled = false; btn.textContent = '✓ Yes — confirm'; }
+    return false;
+  } finally { if (!opts.inBatch) confirmBusy = false; }
+}
+
+/**
+ * Confirm every record on this screen.
+ *
+ * Deliberately "all shown" and not "all remaining": confirming means "I know
+ * this is right", not "I have read it" (the manual says so, and it is the whole
+ * value of the column). A button attesting to four hundred records nobody has
+ * looked at would empty that word out. What is on the screen has at least been
+ * in front of the person pressing it.
+ *
+ * It stops at the first failure rather than pressing on — a half-finished batch
+ * that says it finished is worse than one that says where it stopped.
+ */
+async function confirmAllShown() {
+  if (confirmBusy) return;
+  const batch = [...confirmQueue];
+  if (!batch.length) return;
+  if (!(await kcConfirm({
+    title: `Confirm all ${batch.length} records on this screen?`,
+    body: `This records that <strong>you know these ${batch.length} records are right</strong> — not merely that ` +
+      `you have read them — with your name and the time against each one.<br><br>` +
+      `If any one of them needs a second look, close this and use <strong>Fix first</strong> or ` +
+      `<strong>Skip for now</strong> on that record instead. Nothing else changes: no price, no status, ` +
+      `no message, and records not on this screen are not touched.`,
+    okLabel: `Confirm ${batch.length}`,
+  }))) return;
+
+  confirmBusy = true;
+  const btn = document.getElementById('rvConfirmAll');
+  let ok = 0;
+  try {
+    for (const b of batch) {
+      if (btn) btn.textContent = `Saving ${ok + 1} of ${batch.length}…`;
+      // eslint-disable-next-line no-await-in-loop — one at a time on purpose:
+      // the server records a separate attestation per record, and firing twelve
+      // at once turns one failure into an unknown number of them.
+      if (!(await confirmBundle(b.id, { inBatch: true, quiet: true }))) break;
+      ok++;
+    }
   } finally { confirmBusy = false; }
+
+  if (ok === batch.length) toast(`✓ Confirmed ${ok} record${ok === 1 ? '' : 's'}.`, 'success');
+  else if (ok) toast(`Confirmed ${ok} of ${batch.length}, then hit a problem — the rest are still here.`, 'error');
+  else toast('Couldn’t save that — nothing was confirmed.', 'error');
+  if (confirmQueue.length) paintConfirm(); else renderConfirmTab();
 }
 
 async function renderTasksTab() {
