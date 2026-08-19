@@ -884,6 +884,9 @@ const KC_NEXT = (() => {
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many || one + 's'}`;
   const SCREEN_ACTIONS = {
     dashboard(f) {
+      // A person waiting on an answer comes before the shop's own business —
+      // and only counts while no reply has actually SENT.
+      if (f.smsWaiting) return { text: `${plural(f.smsWaiting, 'text')} waiting for an answer`, label: 'Read them', do: 'messages.waiting', count: f.smsWaiting, tone: 'urgent' };
       if (f.overdueRentals) return { text: `${plural(f.overdueRentals, 'phone')} overdue back`, label: 'Chase them', do: 'rentals.overdue', count: f.overdueRentals, tone: 'urgent' };
       if (f.readyRepairs) return { text: `${plural(f.readyRepairs, 'repair')} ready to collect`, label: 'Tell them', do: 'repairs.ready', count: f.readyRepairs };
       if (f.lateRenewals) return { text: `${plural(f.lateRenewals, 'SIM plan')} past the renewal date`, label: 'Check them', do: 'sim.late', count: f.lateRenewals };
@@ -966,6 +969,10 @@ const KC_NEXT_DO = {
   'bookings.tickets':      () => { goToTab('bookings'); setTimeout(() => focusPanel('tmPanel'), 120); },
   'review.batch':          () => { goToTab('review'); setTimeout(() => focusPanel('rvBatch'), 120); },
   'mail.pending':          () => filterView('mail', () => { cmFilter = 'pending'; }),
+  // The log lives on Settings and does not load itself, so going there without
+  // loading it would land on "press Load the log" — a button that promised to
+  // show you something and then asked you to press another button.
+  'messages.waiting':      () => { goToTab('settings'); setTimeout(() => { loadMessageLog(); focusPanel('msgLogWrap'); }, 160); },
 };
 
 /**
@@ -1024,6 +1031,10 @@ function kcNextFacts() {
     lowStock: (shopItems || []).filter(i => i.active && i.quantity <= i.lowStockAt).length,
     openReturns: (supplierReturns || []).filter(r => SUPPLIER_RETURN_OPEN.includes(r.status)).length,
     unconfirmed: (confirmStats && confirmStats.remaining) || 0,
+    // Loaded on the dashboard for anyone whose permissions reach the message
+    // log; 0 for everybody else, so the row never offers a screen the person
+    // cannot open.
+    smsWaiting: msgWaiting.count || 0,
   };
 }
 
@@ -19449,6 +19460,12 @@ async function snoozeTask(id, choice) {
 //              says so plainly and links to the customer search.
 let cmFilter = 'pending';
 let cmData = { counts: { pending: 0, paired: 0, total: 0 }, messages: [] };
+
+// Inbound texts nobody has answered. Kept here rather than read off the message
+// log, because the log only loads when somebody opens Settings and presses a
+// button — which is precisely how three replies could sit unread with the app
+// looking perfectly calm.
+let msgWaiting = { count: 0, since: null };
 let cmBusy = false;
 
 async function renderCarrierMailTab() {
@@ -20797,7 +20814,7 @@ async function renderDashboardTab() {
   dashPaint(dashCache.money, dashCache.tasks, dashCache.money === null, dashCache.shop, dashCache.returns);
 
   const today = localISO();
-  const [ledgerSummary, tasksData, shopData, retData, series] = await Promise.all([
+  const [ledgerSummary, tasksData, shopData, retData, series, waiting] = await Promise.all([
     kcFetch('/api/ledger?since=' + today).then(r => r.ok ? r.json() : null).catch(() => null),
     window.api.getTasks().catch(() => []),
     kcFetch('/api/shop').then(r => r.ok ? r.json() : null).catch(() => null),
@@ -20805,7 +20822,14 @@ async function renderDashboardTab() {
     // 30 days of shape for the trend line. Its own request, and a failure is
     // just no line — the figures above it do not wait on it.
     kcFetch('/api/ledger?series=30').then(r => r.ok ? r.json() : null).catch(() => null),
+    // A 403 here is not a fault: a helper who cannot open Settings cannot open
+    // the message log either, so they get 0 and no row rather than a count
+    // pointing at a screen they are not allowed to see.
+    kcFetch('/api/message-log?countOnly=1').then(r => r.ok ? r.json() : null).catch(() => null),
   ]);
+  msgWaiting = waiting?.success
+    ? { count: waiting.waiting || 0, since: waiting.waitingSince || null }
+    : msgWaiting;
   dashCache = {
     money: ledgerSummary?.success ? ledgerSummary : dashCache.money,
     series: series?.success ? series.days : dashCache.series,
@@ -22251,6 +22275,11 @@ async function loadMessageLog() {
   const res = await kcFetch('/api/message-log?limit=150').then(r => r.json()).catch(() => null);
   if (!res || !res.success) { wrap.innerHTML = `<span style="color:var(--danger-ink);">${escHtml(res?.error || 'Could not load the log.')}</span>`; return; }
   msgLogEntries = res.entries;
+  // The dashboard row is driven off this number too, so refreshing the log
+  // refreshes the row — otherwise answering the last one leaves the dashboard
+  // still claiming somebody is waiting until the next reload.
+  msgWaiting = { count: res.waiting || 0, since: res.waitingSince || null };
+  if (currentTab === 'dashboard') kcPaintNextAction('dashboard');
   if (!res.entries.length) { wrap.innerHTML = '<span style="color:var(--muted);">Nothing yet — no email or SMS has been built.</span>'; return; }
   const rows = res.entries.map(e => {
     const [label, cls, meaning] = MSG_STATUS_LABEL[e.status] || [e.status.toUpperCase(), '', ''];
@@ -22266,6 +22295,9 @@ async function loadMessageLog() {
         // reader actually wants from it.
         e.kind === 'sms_in'
           ? '<div style="font-size:var(--fs-micro);color:var(--muted);">from a customer</div>'
+            + (e.awaitingAnswer
+              ? '<div style="font-size:var(--fs-micro);color:var(--danger-ink);font-weight:600;">waiting for an answer</div>'
+              : '')
           : e.kind && e.kind !== 'sms' ? `<div style="font-size:var(--fs-micro);color:var(--muted);">${escHtml(e.kind)}</div>` : ''}</td>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${e.customerName ? `<strong>${escHtml(e.customerName)}</strong><div style="font-size:var(--fs-micro);color:var(--muted);" dir="ltr">${escHtml(e.to)}</div>` : `<span dir="ltr">${escHtml(e.to)}</span>`}</td>
       <td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;font-size:var(--fs-small);" title="${escHtml(e.subject)}">${escHtml(e.subject || '—')}</td>
@@ -22379,8 +22411,13 @@ async function sendSmsReply(id) {
     closeDynamicModal();
     // Say which of the three things actually happened, rather than "Sent" over
     // a message the gate held.
-    if (j.held) toast('Reply written to the log — SMS is on HOLD, so nothing was sent.', 'info');
-    else if (j.redirected) toast(`Test mode — the reply went to ${j.sentTo}, not to them.`, 'info');
+    // Whether the customer has actually been answered is the same question the
+    // waiting count asks, so the words here have to agree with it. A held or
+    // redirected reply leaves the message in the queue, and saying only what
+    // happened to OUR message would make the count look broken when it comes
+    // back — it has not come back, it never went away.
+    if (j.held) toast('Reply written to the log — SMS is on HOLD, so nothing was sent. They are still waiting.', 'info');
+    else if (j.redirected) toast(`Test mode — the reply went to ${j.sentTo}, not to them. They are still waiting.`, 'info');
     else toast('Reply sent.', 'success');
     loadMessageLog();
   } catch {

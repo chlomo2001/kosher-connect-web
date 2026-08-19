@@ -72,12 +72,14 @@ async function handler(req, res) {
   if (!text) return res.status(400).json({ success: false, error: 'Nothing to send.' })
 
   try {
-    let to, customerId
+    let to, customerId, repliesTo = null
     if (replying) {
       const src = await inboundToReplyTo(b.replyTo)
       if (src.error) return res.status(400).json({ success: false, error: src.error })
       to = src.phone
       customerId = src.customerId
+      // The id the lookup verified, not the one the browser sent.
+      repliesTo = src.id
     } else {
       const who = await customerPhone(b.customerId)
       if (!who) return res.status(400).json({ success: false, error: 'Customer not found.' })
@@ -88,7 +90,7 @@ async function handler(req, res) {
       customerId = who.id
     }
 
-    const r = await sendSms({ to, body: text, customerId })
+    const r = await sendSms({ to, body: text, customerId, repliesTo })
     if (r.held) {
       return res.json({ success: true, held: true, note: 'SMS is on HOLD — the message was built but not sent. Set SMS_LIVE=true when you’re ready to text real customers.' })
     }
