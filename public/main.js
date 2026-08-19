@@ -8904,6 +8904,15 @@ async function openDupScanModal() {
 function renderDupScan(j) {
   const pairs = j.pairs || [];   // the server already drops dismissed pairs
 
+  // A phone or mailbox dozens of records share is the shop's own number or a
+  // hall phone, and the scan stops treating it as a signal. Saying so beats
+  // letting it look like the scan simply missed those people.
+  const shared = j.shared || [];
+  const sharedNote = shared.length
+    ? `<br>${shared.map(s => `${s.count} records share one ${s.kind}`).join(', ')} — ` +
+      'too many to be one person, so that detail is not being counted as a match.'
+    : '';
+
   // What each side actually holds — the whole basis for the judgement.
   const evidence = (x) => {
     const c = x.counts || {};
@@ -8917,21 +8926,35 @@ function renderDupScan(j) {
     ].filter(Boolean);
     return bits.length ? bits.join(' · ') : 'nothing on this record';
   };
-  // Why this pair is in front of you. The scan knows; it was keeping it to
-  // itself, so every pair arrived looking equally suspicious and the reader
-  // had to re-derive the match by eye. Digits only for the phone — one side is
-  // often stored 07… and the other +447….
-  const digits = (s) => String(s || '').replace(/\D/g, '').replace(/^44/, '0');
-  const bareName = (s) => String(s || '').toLowerCase()
-    .replace(/\([^)]*\)/g, '').replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim();
-  const why = (a, b) => {
-    const bits = [];
-    if (a.phone && b.phone && digits(a.phone) === digits(b.phone)) bits.push('same phone number');
-    bits.push(bareName(a.name) === bareName(b.name) ? 'same name' : 'names spelled alike');
+  // Why this pair is in front of you. The SERVER decides this now: it matches
+  // on three signals (name, the person behind an email, the phone line) and
+  // sends the reasons with the pair. The browser used to re-derive them from
+  // name and phone by eye, which meant it could not see the email signal at
+  // all — and the email signal is the one that answers "all Abish friends same
+  // person - different lines". Two sentences for one judgement is how they
+  // drift; this reads the one the scan actually used.
+  const why = (p) => {
+    const bits = [...(p.reasons || [])];
+    const a = p.a, b = p.b;
+    // Two things the scan cannot know, because they are about the RECORDS
+    // rather than the person.
     if (a.imported !== b.imported) bits.push('one side is an ELID import');
     const empty = [a, b].filter(x => !Object.values(x.counts || {}).some(n => n > 0)).length;
     if (empty === 1) bits.push('one side holds nothing');
     return bits.join(' · ');
+  };
+
+  // How much the scan is claiming. Said out loud, because "possible duplicate"
+  // over a pair matched only on a shared family phone invites a merge that
+  // destroys a real second customer.
+  const BAND = {
+    high: ['Strong match', 'dup-band-high', 'two independent signals agree'],
+    medium: ['Worth a look', 'dup-band-med', 'one contact detail — families share a phone and a mailbox'],
+    low: ['Same name only', 'dup-band-low', 'names alone; in this community that is common'],
+  };
+  const band = (p) => {
+    const [label, cls, title] = BAND[p.confidence] || BAND.low;
+    return `<span class="dup-band ${cls}" title="${escHtml(title)}">${escHtml(label)}</span>`;
   };
 
   const side = (x, other) => `
@@ -8941,6 +8964,7 @@ function renderDupScan(j) {
       <div class="dup-meta">
         ${x.phone ? escHtml(fmtPhone(x.phone)) : 'no phone'}${x.imported ? ' · <span class="dup-elid">ELID import</span>' : ''}
       </div>
+      ${x.email ? `<div class="dup-meta">${escHtml(x.email)}</div>` : ''}
       <div class="dup-evidence">${escHtml(evidence(x))}</div>
       <button class="btn btn-outline btn-sm dup-keep"
         onclick="mergeDupPair('${escHtml(other.id)}','${escHtml(x.id)}')">✓ Keep this one</button>
@@ -8955,7 +8979,8 @@ function renderDupScan(j) {
     <div class="dup-pair" id="dupPair_${escHtml([p.a.id, p.b.id].sort().join('_'))}">
       <div class="dup-pair-head">
         <span class="dup-pair-n">${i + 1} of ${pairs.length}</span>
-        <span class="dup-pair-why">${escHtml(why(p.a, p.b))}</span>
+        ${band(p)}
+        <span class="dup-pair-why">${escHtml(why(p))}</span>
       </div>
       <div class="dup-sides">
         ${side(p.a, p.b)}
@@ -8975,6 +9000,8 @@ function renderDupScan(j) {
       <span id="dupCount">${pairs.length} pair${pairs.length === 1 ? '' : 's'}</span> to judge${j.dismissed ? ` · ${j.dismissed} already marked "not the same"` : ''}.
       Merging moves every SIM, rental, flight, repair and money line onto the record you keep, then removes the other —
       amounts never change. Same name is not proof: brothers share names, so check what each side holds first.
+      ${j.truncated ? `<br>Showing the strongest ${pairs.length}; ${j.truncated} weaker pair${j.truncated === 1 ? '' : 's'} not listed.` : ''}
+      ${sharedNote}
     </div>
     <div class="dup-list">${rows}</div>
   `);

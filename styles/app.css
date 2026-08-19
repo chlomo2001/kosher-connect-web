@@ -3807,6 +3807,17 @@ td { border-top-color: color-mix(in srgb, var(--border) 55%, transparent); }
 /* Why the scan flagged them. It knew all along; without it every pair arrives
    looking equally suspicious and the reader re-derives the match by eye. */
 .dup-pair-why { font-size: var(--fs-micro); color: var(--muted); }
+/* How much the scan is claiming, on the pair itself. "Strong match" is the top
+   band on purpose — a label reading "certain" teaches the reader to stop
+   checking, and the thing being decided here deletes a customer record. Both a
+   colour and a word, so it survives being colour-blind or printed. */
+.dup-band {
+  font-size: var(--fs-micro); font-weight: 600; letter-spacing: .01em;
+  padding: 1px 7px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap;
+}
+.dup-band-high { background: color-mix(in srgb, var(--danger) 12%, var(--surface)); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+.dup-band-med { background: color-mix(in srgb, var(--warning) 15%, var(--surface)); color: var(--warning-ink, var(--text)); border-color: color-mix(in srgb, var(--warning) 40%, transparent); }
+.dup-band-low { background: var(--bg-secondary); color: var(--muted); border-color: var(--border); }
 
 .dup-sides { display: flex; gap: 8px; flex-wrap: wrap; align-items: stretch; }
 .dup-side { flex: 1; min-width: 200px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--surface); }

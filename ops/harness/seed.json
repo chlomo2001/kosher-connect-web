@@ -1182,7 +1182,11 @@
      "phone": "",
      "email": "",
      "counts": {}
-    }
+    },
+    "confidence": "low",
+    "reasons": [
+     "name matches"
+    ]
    },
    {
     "key": "c2|c6",
@@ -1211,9 +1215,16 @@
       "vns": 1,
       "money": 3
      }
-    }
+    },
+    "confidence": "high",
+    "reasons": [
+     "name matches",
+     "same phone number"
+    ]
    }
-  ]
+  ],
+  "truncated": 0,
+  "shared": []
  },
  "/api/ai-usage": {
   "success": true,

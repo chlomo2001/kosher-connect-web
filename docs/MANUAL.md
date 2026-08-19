@@ -118,7 +118,7 @@ Everyone on the books: how to reach them, what they owe, and everything they hav
 - **Filter** — Narrows the list to one kind of customer: an active rental, a flight coming up, a SIM plan, a virtual number, an open repair, money owed, a passport on file, or nobody-can-ring-them — no number of theirs and no SIM of ours either.
 - **Sort** — Surname or first name, either direction; most owed first when chasing money; recently added after an import; most services first to find the shop's busiest customers.
 - **Export CSV** — The list as it is filtered and sorted, as a file — for a mail merge, or for anything the app does not do itself.
-- **👥 Duplicates** — Owner only. Reviews the whole book for records that look like the same person entered twice, with the evidence beside each pair.
+- **👥 Duplicates** — Owner only. Reviews the whole book for records that look like the same person entered twice — matching on the name, the phone line and the person behind an email address — with the evidence and a strength beside each pair.
 - **+ New customer** — Adds someone. A name and a number is enough to start; everything else can follow.
 - **Details** — Opens their card beside the list — the whole history without leaving the list you were working through.
 - **⤢ Open as a full page** — The same customer on their own address, which survives a refresh and can be sent to someone else. It has an Overview and an Activity timeline.
@@ -137,11 +137,11 @@ Everyone on the books: how to reach them, what they owe, and everything they hav
 - **remind** — A reminder for YOU about this customer. It becomes a task on your own list, and nothing reaches them.
 - **draft-reminder** — Writes a chasing message for you to read, correct and send yourself. It is a draft, not a send.
 - **log-comm** — Records a call, a text or a conversation on their history, so the next person picking up the phone knows what was already said.
-- **dup-scan** — The duplicate review: likely pairs, the evidence on each side, and two answers — merge into the record you are keeping, or not the same person.
+- **dup-scan** — The duplicate review: likely pairs strongest first, how strongly each is matched and why, the evidence on each side, and two answers — merge into the record you are keeping, or not the same person.
 
 **Rules that bite here**
 
-- Two records with the same name are as often two brothers as one man typed twice. The duplicate review puts the evidence on the screen — the SIMs, rentals, bookings and money on each side — and "not the same" is remembered, so the pair never asks again.
+- Two records with the same name are as often two brothers as one man typed twice. The duplicate review puts the evidence on the screen — the SIMs, rentals, bookings and money on each side — and says how much it is claiming: a strong match means two signals agree, worth a look means one contact detail, and same name only means just that. A phone or mailbox dozens of records share is the shop's own, so it stops counting as a match and the review says so. "Not the same" is remembered, so the pair never asks again.
 - Nothing on this screen sends anything to a customer. Drafting a reminder writes it; sending it is a separate, deliberate act.
 - A passport on file is shown as a yes on the list and nowhere as a number. Passport details are the customer's private data and the app treats them that way in every list, export and report.
 - The balance is the one from the ledger, counting charges as well as payments. For a moment after the screen opens you may see the rental-only figure while the real one arrives.

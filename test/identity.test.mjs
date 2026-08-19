@@ -1,7 +1,7 @@
 // The identity keys and the duplicate finder (port item A2).
 import test from 'node:test'
 import assert from 'node:assert'
-import { personKey, nameKey, findDuplicates, phoneKey } from '../lib/identity.mjs'
+import { personKey, nameKey, findDuplicates, phoneKey, sharedContacts, duplicateConfidence } from '../lib/identity.mjs'
 
 // ── personKey — same human, tag and Gmail noise gone ─────────────────────
 test('personKey drops the +tag that mailboxKey must keep', () => {
@@ -96,4 +96,68 @@ test('three customers on one phone pair up pairwise, high first in the ordering'
 
 test('a short or empty phone never becomes a bucket', () => {
   assert.deepEqual(findDuplicates([C('1', { phone: '123' }), C('2', { phone: '123' })]), [])
+})
+
+test('a number the whole street shares stops being a duplicate signal', () => {
+  // Twelve people on the shop's own landline. Left in, that one bucket is 66
+  // pairs, every one of them wrong, filling a screen meant for judgement.
+  const crowd = Array.from({ length: 12 }, (_, i) => ({
+    id: `c${i}`, firstName: `First${i}`, lastName: `Last${i}`, phone: '0161 531 1386',
+  }))
+  assert.equal(findDuplicates(crowd).length, 0)
+  const shared = sharedContacts(crowd)
+  assert.equal(shared.length, 1)
+  assert.equal(shared[0].kind, 'phone')
+  assert.equal(shared[0].count, 12)
+  // …and the scan must still work under the cap: eight on one phone is a big
+  // family, and those pairs are exactly the ones worth looking at.
+  const family = crowd.slice(0, 8)
+  assert.equal(findDuplicates(family).length, 28)     // 8 choose 2
+  assert.deepEqual(sharedContacts(family), [])
+})
+
+test('a common NAME is never capped — it is the low-confidence signal itself', () => {
+  // Twelve real people can share a name in this community. That is precisely
+  // the case the scan exists for, so the cap must not reach it.
+  const many = Array.from({ length: 12 }, (_, i) => ({
+    id: `n${i}`, firstName: 'Moshe', lastName: 'Katz', phone: `07700 9000${String(i).padStart(2, '0')}`,
+  }))
+  assert.equal(findDuplicates(many).length, 66)       // 12 choose 2
+  assert.ok(findDuplicates(many).every(p => p.confidence === 'low'))
+  assert.deepEqual(sharedContacts(many), [])
+})
+
+test('the cap is adjustable, and reporting agrees with dropping', () => {
+  // One name AND one phone, six times over — so the pairs survive the cap on
+  // the name signal alone and only their CONFIDENCE moves when it bites.
+  const six = Array.from({ length: 6 }, (_, i) => ({ id: `s${i}`, firstName: 'Yoel', lastName: 'Brief', phone: '07700 900123' }))
+  const tight = findDuplicates(six, { maxBucket: 4 })
+  const loose = findDuplicates(six, { maxBucket: 10 })
+  assert.equal(tight.length, 15)                                  // 6 choose 2, on the name
+  assert.equal(loose.length, 15)
+  assert.ok(tight.every(p => p.confidence === 'low'), 'past the cap the phone stops counting')
+  assert.ok(loose.every(p => p.confidence === 'high'), 'under it, name plus phone is two signals')
+  assert.equal(sharedContacts(six, { maxBucket: 4 }).length, 1)
+  assert.equal(sharedContacts(six, { maxBucket: 10 }).length, 0)
+})
+
+test('the confidence rule is one rule — the scan and the finder cannot drift', () => {
+  assert.equal(duplicateConfidence(['name']), 'low')
+  assert.equal(duplicateConfidence(['phone']), 'medium')
+  assert.equal(duplicateConfidence(['email']), 'medium')
+  assert.equal(duplicateConfidence(['name', 'phone']), 'high')
+  assert.equal(duplicateConfidence(['email', 'phone']), 'high')
+  assert.equal(duplicateConfidence(new Set(['name', 'email', 'phone'])), 'high')
+  // Nothing agreeing is not a strong verdict by accident.
+  assert.equal(duplicateConfidence([]), 'low')
+  assert.equal(duplicateConfidence(), 'low')
+  assert.equal(duplicateConfidence([null, undefined]), 'low')
+  // And findDuplicates must answer through it, not beside it.
+  const pair = findDuplicates([
+    { id: '1', firstName: 'Abish', lastName: 'Weiss', email: 'abish+s1@gmail.com', phone: '07700 900111' },
+    { id: '2', firstName: 'Abish', lastName: 'Weiss', email: 'abish+s2@gmail.com', phone: '07700 900222' },
+  ])
+  assert.equal(pair.length, 1)
+  assert.equal(pair[0].confidence, duplicateConfidence(['name', 'email']))
+  assert.equal(pair[0].confidence, 'high')
 })
