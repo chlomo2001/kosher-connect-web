@@ -1442,11 +1442,15 @@ body.kc-two-cards #customerCard2 .modal:focus-within {
    in the sentence itself, so the urgency does not live in the border alone. */
 .kc-next-urgent { border-left-color: var(--danger); }
 /* Nothing outstanding is a RESULT. Quiet, but present — a screen that simply
-   omitted the row would leave you wondering whether it had checked. */
+   omitted the row would leave you wondering whether it had checked.
+   Self-contained on purpose: it used to carry .kc-next as well and inherited
+   the border, the surface and the accent stripe with it, which made "nothing
+   waiting" shout as loudly as an overdue phone. */
 .kc-next-clear {
   display: flex; align-items: center; gap: 8px;
   max-width: 1220px; margin: 0 auto; padding: 8px 16px 0;
   font-size: var(--fs-small); color: var(--muted);
+  background: none; border: 0;
 }
 .kc-next-tick { color: var(--success); font-weight: 700; }
 body.pos-mode #kcNextAction { display: none; }

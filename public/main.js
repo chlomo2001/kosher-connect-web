@@ -1043,7 +1043,12 @@ function kcPaintNextAction(tab) {
     return;
   }
   if (row.clear) {
-    slot.innerHTML = `<div class="kc-next kc-next-clear"><span class="kc-next-tick" aria-hidden="true">✓</span>${escHtml(row.text)}</div>`;
+    // Not `kc-next kc-next-clear`: that inherited the bordered card and the
+    // accent stripe, so "nothing waiting on you here" was drawn exactly as
+    // loudly as "2 phones overdue back". An empty queue is a result, and a
+    // result should be quiet — otherwise the row it shares a shape with stops
+    // meaning anything.
+    slot.innerHTML = `<div class="kc-next-clear"><span class="kc-next-tick" aria-hidden="true">✓</span>${escHtml(row.text)}</div>`;
     return;
   }
   slot.innerHTML = `
