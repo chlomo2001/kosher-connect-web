@@ -109,3 +109,54 @@ test('every year length is one of the six legal ones', () => {
     assert.ok(legal.includes(len), `year ${y} has illegal length ${len}`)
   }
 })
+
+test('the pure calendar agrees with the browser’s Hebrew calendar, day for day', () => {
+  // Two implementations live in this codebase and both reach a reader. The
+  // screens render Hebrew dates through Intl('he-IL-u-ca-hebrew'); this module
+  // is the one destined for the server side, where receipts and emails are
+  // built and Intl is not what draws them. If they ever disagree, a customer's
+  // receipt and the shop's own screen say different days — in a community that
+  // would notice immediately.
+  //
+  // The tests above prove this module is RIGHT against known anchors. This
+  // proves the two agree, which is a different property and the one that
+  // breaks quietly.
+  const F = new Intl.DateTimeFormat('en-u-ca-hebrew', {
+    day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
+  })
+  // Sixteen years spans five leap years and every one of the six legal year
+  // lengths, so a molad change cannot slip through on a lucky range.
+  const from = Date.UTC(2020, 0, 1), to = Date.UTC(2035, 11, 31)
+  // Intl and this module spell the transliterations differently — Heshvan vs
+  // Cheshvan, Tishri vs Tishrei. Spelling is not the claim; IDENTITY is. So
+  // the mapping between the two names is built as we go and required to stay
+  // one-to-one, which is exactly what catches Adar / Adar I / Adar II drift.
+  const intlToMine = new Map(), mineToIntl = new Map()
+  let days = 0
+  for (let t = from; t <= to; t += 86400000) {
+    const d = new Date(t)
+    const gy = d.getUTCFullYear(), gm = d.getUTCMonth() + 1, gd = d.getUTCDate()
+    const mine = hebrewFromGregorian(gy, gm, gd)
+    const parts = F.formatToParts(d)
+    const on = `${gy}-${String(gm).padStart(2, '0')}-${String(gd).padStart(2, '0')}`
+    assert.equal(mine.year, Number(parts.find((p) => p.type === 'year').value), `year differs on ${on}`)
+    assert.equal(mine.day, Number(parts.find((p) => p.type === 'day').value), `day differs on ${on}`)
+
+    const intlName = parts.find((p) => p.type === 'month').value
+    const myName = hebrewMonthName(mine.year, mine.month, 'en')
+    if (intlToMine.has(intlName)) {
+      assert.equal(intlToMine.get(intlName), myName, `${intlName} became a different month on ${on}`)
+    } else intlToMine.set(intlName, myName)
+    if (mineToIntl.has(myName)) {
+      assert.equal(mineToIntl.get(myName), intlName, `${myName} became a different month on ${on}`)
+    } else mineToIntl.set(myName, intlName)
+    days++
+  }
+  assert.ok(days > 5800, `only ${days} days compared`)
+  // Twelve months plus both Adars — if a leap month were being folded away,
+  // the map would be short.
+  assert.equal(intlToMine.size, 14, `${intlToMine.size} distinct months seen, expected 14`)
+  assert.equal(intlToMine.get('Adar I'), 'Adar I')
+  assert.equal(intlToMine.get('Adar II'), 'Adar II')
+  assert.equal(intlToMine.get('Adar'), 'Adar')
+})

@@ -139,18 +139,36 @@ column in Wallet; grouped sidebar sub-labels; בעזהשי״ת header phrase/pla
 
 ## From the owner's list, 19 Aug (docs/OWNER-LIST-2026-08-19.md)
 Twenty-one items sent overnight; full triage in the doc. Loop-safe UX ones:
-- [ ] **P1 · S** — **Extra-large text overflows the card** (owner #14). Follows
-      the 18 Aug text-size work — the card is sized for the standard ramp.
-- [ ] **P2 · S** — **One dropdown style throughout** (owner #10): some selects
-      are native, some custom. One sweep.
-- [ ] **P2 · S** — **"Open" and "login details" sit too near** (owner #19) —
-      spacing/proportion on that row.
-- [ ] **P2 · S** — **Overdue link drops the filter** (owner #15): the dashboard
-      overdue line opens the plain SIMs tab. Open it with the overdue filter on
-      (saved views already exist).
-- [ ] **P2 · S** — **Marketing never reaches the carrier queue** (owner #3):
-      `carrierMailKind` already classifies it; the ticket queue drops it, the
-      carrier queue still files it.
+- [x] **DONE 20 Aug** — **Extra-large text overflows the card** (owner #14).
+      At 320px on the largest ramp the carrier-mail row's 📝 Task button painted
+      33px outside its card; `.cm-actions` was a flex row with no wrap. Clean at
+      320/390/1280 on both ramps.
+- [x] **DONE 19 Aug** — **One dropdown style throughout** (owner #10). Was
+      already fixed when re-checked on 20 Aug: `select.form-input`,
+      `.country-select` and `.task-mini` share one look block, and measuring the
+      three in the browser gives identical radius, border, background and font.
+      `.task-mini` had also had no focus ring at all. `test/dropdownStyle.test.mjs`
+      now holds it, since the drift happened once by each variant quietly
+      growing its own look and nothing would have caught it.
+- [x] **DONE 19 Aug** — **"Open" and "login details" sit too near** (owner #19).
+      The two now sit in a flex row with a 12px gap and their own weights — a
+      place to go and a name to sign in with, not one run-on string. No guard
+      added: it is one inline-styled row, and a test asserting a gap value would
+      break on any honest restyle.
+- [x] **DONE 20 Aug** — **Overdue link drops the filter** (owner #15). The SIM
+      roll-up now opens the `week` filter it counted; the repair-ready and
+      flight lines had the same defect and were fixed with it, and a palette hit
+      naming one booking opens that booking instead of the whole tab. The
+      palette's repair hit still opens the tab — a repair has no record of its
+      own and the list has no search term, so the alternative was inventing
+      state. `test/attentionLinks.test.mjs` holds all of it.
+- [x] **DONE 20 Aug** — **Marketing in the carrier queue** (owner #3). It was
+      being DROPPED outright — no row, a Vercel log line the only trace — which
+      broke the endpoint's own stated rule that nothing uncertain is discarded.
+      Adverts are now filed with `resolved_at` set: out of the working queue,
+      recoverable under "Everything" if the call was wrong. The classifier was
+      deliberately NOT widened — the obvious signal (a utm_campaign link) also
+      appears in Smarty's genuine port-completion mail.
 - [ ] **P3 · S** — Owner items #7, #8, #9, #16 arrived with screenshots this
       session cannot see — **ask before guessing**.
 Needs an owner decision first (do NOT loop-autofix): #20 forwarding carrier mail
