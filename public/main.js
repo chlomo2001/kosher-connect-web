@@ -2109,6 +2109,26 @@ function statBandNote(name, value, fallback) {
   return (NOTES[name] || (() => fallback))();
 }
 
+/**
+ * The Available-phones card, which has two very different zeroes.
+ *
+ * "None left to rent" is a sentence about phones that are OUT. A shop that has
+ * not put a single handset on the books yet gets the same red 0 and the same
+ * words, and both are wrong: nothing has been rented, and nothing is missing —
+ * they simply have not added any. On day one that is the first thing a new
+ * owner sees, and it reads like a fault in the software.
+ *
+ * Told apart by the only thing that can tell them apart: whether any phones
+ * exist at all.
+ */
+function phonesFreeCard(free, total) {
+  if (!total) return { note: 'No phones on the books yet', style: '' };
+  return {
+    note: statBandNote('phonesFree', free, 'Ready to rent'),
+    style: statBandStyle('phonesFree', free),
+  };
+}
+
 // Inline style for a stat value, or '' to leave it the default navy ink.
 function statBandStyle(name, value) {
   const ink = STAT_BAND_INK[statBand(name, value)];
@@ -2575,8 +2595,8 @@ function renderRentalsTab() {
         onclick="openManagePhonesModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openManagePhonesModal()}"
         title="Open Manage phones — see which handsets are free">
         <div class="stat-label">Available Phones</div>
-        <div class="stat-value" style="${statBandStyle('phonesFree', availablePhones)}">${availablePhones}</div>
-        <div class="stat-sub">${escHtml(statBandNote('phonesFree', availablePhones, 'Ready to rent'))}</div>
+        <div class="stat-value" style="${phonesFreeCard(availablePhones, phones.length).style}">${availablePhones}</div>
+        <div class="stat-sub">${escHtml(phonesFreeCard(availablePhones, phones.length).note)}</div>
       </div>
       <div class="stat-card" role="button" tabindex="0" style="cursor:pointer;"
         onclick="rentalsStatFilter('status','due_today')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();rentalsStatFilter('status','due_today')}"
