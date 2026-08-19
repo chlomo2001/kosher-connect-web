@@ -839,7 +839,218 @@ function renderTab(tab) {
     }
   }
   kcContentEnter();
-  meta.render();
+  // The row lives ABOVE #mainContent, in its own element, because every render
+  // function here owns mainContent.innerHTML outright — anything injected into
+  // it would be thrown away by the next repaint, and most of these renders are
+  // async. Painted twice on purpose: once from what is already loaded so the
+  // row is there immediately, once after the render settles with whatever it
+  // fetched.
+  kcPaintNextAction(tab);
+  Promise.resolve(meta.render()).then(() => kcPaintNextAction(tab)).catch(() => {});
+}
+
+// ══ THE NEXT ACTION ON EVERY SCREEN ══════════════════════════════════════
+//
+// Port item B2. One row at the top of each screen: standing here, what does
+// this person do next? Where the honest answer is "read the page and work it
+// out", the screen says it instead — phrased as a verb, computed from that
+// screen's own data. Where nothing is outstanding it says so and LOSES the
+// button, because an empty queue is a result, not a blank space. In a shop
+// where most screens are quiet most of the time, that is the common case.
+//
+// The decision lives in lib/nextAction.mjs and is mirrored below. This half
+// owns only two things: the numbers, and what each action actually does.
+
+// ── KC_NEXT mirror start ──
+// Mirrors lib/nextAction.mjs. test/nextActionMirror.test.mjs holds the two
+// together, including the check that every action a screen can name exists in
+// KC_NEXT_DO below — so a row promising something nothing can perform fails a
+// test rather than reaching a counter.
+const KC_NEXT = (() => {
+  const NOTHING = 'Nothing waiting on you here.';
+  function nextAction(spec = {}) {
+    if (spec.clear) return { clear: true, text: spec.text || NOTHING };
+    const text = String(spec.text || '').trim();
+    if (!text) throw new Error('nextAction: a row that is not clear must say what to do');
+    const label = String(spec.label || '').trim();
+    if (!label) throw new Error(`nextAction: "${text}" names no button`);
+    if (!spec.do) throw new Error(`nextAction: "${text}" offers no way to do it — give it a do-key, or mark it clear`);
+    return {
+      clear: false, text, label, do: String(spec.do),
+      count: Number.isFinite(spec.count) ? spec.count : null,
+      tone: spec.tone === 'urgent' ? 'urgent' : 'normal',
+    };
+  }
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many || one + 's'}`;
+  const SCREEN_ACTIONS = {
+    dashboard(f) {
+      if (f.overdueRentals) return { text: `${plural(f.overdueRentals, 'phone')} overdue back`, label: 'Chase them', do: 'rentals.overdue', count: f.overdueRentals, tone: 'urgent' };
+      if (f.readyRepairs) return { text: `${plural(f.readyRepairs, 'repair')} ready to collect`, label: 'Tell them', do: 'repairs.ready', count: f.readyRepairs };
+      if (f.lateRenewals) return { text: `${plural(f.lateRenewals, 'SIM plan')} past the renewal date`, label: 'Check them', do: 'sim.late', count: f.lateRenewals };
+      if (f.dueTasks) return { text: `${plural(f.dueTasks, 'task')} due today or overdue`, label: 'Open tasks', do: 'tasks.due', count: f.dueTasks };
+      if (f.mailPending) return { text: `${plural(f.mailPending, 'carrier email')} nobody has dealt with`, label: 'Open the mail', do: 'mail.pending', count: f.mailPending };
+      return { clear: true };
+    },
+    customers(f) {
+      if (f.unreachable) return { text: `${plural(f.unreachable, 'customer')} with no way to reach them`, label: 'Show them', do: 'customers.unreachable', count: f.unreachable };
+      return { clear: true };
+    },
+    rentals(f) {
+      if (f.overdueRentals) return { text: `${plural(f.overdueRentals, 'phone')} overdue back`, label: 'Show them', do: 'rentals.overdue', count: f.overdueRentals, tone: 'urgent' };
+      if (f.dueTodayRentals) return { text: `${plural(f.dueTodayRentals, 'rental')} due back today`, label: 'Show them', do: 'rentals.dueToday', count: f.dueTodayRentals };
+      return { clear: true };
+    },
+    sim(f) {
+      if (f.lateRenewals) return { text: `${plural(f.lateRenewals, 'SIM plan')} past the renewal date`, label: 'Show them', do: 'sim.late', count: f.lateRenewals, tone: 'urgent' };
+      return { clear: true };
+    },
+    bookings(f) {
+      if (f.needCheckIn) return { text: `${plural(f.needCheckIn, 'passenger')} flying soon and not checked in`, label: 'Show them', do: 'bookings.upcoming', count: f.needCheckIn, tone: 'urgent' };
+      if (f.unparsedTickets) return { text: `${plural(f.unparsedTickets, 'airline email')} waiting to be read`, label: 'Read them', do: 'bookings.tickets', count: f.unparsedTickets };
+      return { clear: true };
+    },
+    wallet(f) {
+      if (f.arrears) return { text: `${plural(f.arrears, 'customer')} in arrears`, label: 'Show them', do: 'wallet.arrears', count: f.arrears };
+      return { clear: true };
+    },
+    repairs(f) {
+      if (f.readyRepairs) return { text: `${plural(f.readyRepairs, 'repair')} ready to collect`, label: 'Tell them', do: 'repairs.ready', count: f.readyRepairs };
+      return { clear: true };
+    },
+    shop(f) {
+      if (f.lowStock) return { text: `${plural(f.lowStock, 'item')} low on stock`, label: 'Show them', do: 'shop.low', count: f.lowStock };
+      if (f.openReturns) return { text: `${plural(f.openReturns, 'supplier return')} still open`, label: 'Show them', do: 'shop.returns', count: f.openReturns };
+      return { clear: true };
+    },
+    tasks(f) {
+      if (f.dueTasks) return { text: `${plural(f.dueTasks, 'task')} due today or overdue`, label: 'Start at the top', do: 'tasks.due', count: f.dueTasks, tone: f.highTasks ? 'urgent' : 'normal' };
+      return { clear: true };
+    },
+    review(f) {
+      if (f.unconfirmed) return { text: `${plural(f.unconfirmed, 'imported record')} nobody has checked`, label: 'Work the batch', do: 'review.batch', count: f.unconfirmed };
+      return { clear: true };
+    },
+    mail(f) {
+      if (f.mailPending) return { text: `${plural(f.mailPending, 'carrier email')} nobody has dealt with`, label: 'Show them', do: 'mail.pending', count: f.mailPending };
+      return { clear: true };
+    },
+    services: () => ({ clear: true }),
+    koltorah: () => ({ clear: true }),
+    virtual: () => ({ clear: true }),
+    settings: () => ({ clear: true }),
+  };
+  function screenNextAction(screen, facts = {}) {
+    const decide = SCREEN_ACTIONS[screen];
+    if (!decide) return nextAction({ clear: true });
+    return nextAction(decide(facts) || { clear: true });
+  }
+  return { NOTHING, nextAction, screenNextAction, SCREENS: Object.keys(SCREEN_ACTIONS) };
+})();
+// ── KC_NEXT mirror end ──
+
+// What each named action DOES. Every one of these already existed — they are
+// the same views the command palette offers and the dashboard's metric cards
+// open, so the row lands on a list that is already filtered to exactly the
+// number it just quoted, rather than on a tab with the filtering left to do.
+const KC_NEXT_DO = {
+  'rentals.overdue':       () => filterView('rentals', () => { kcView('rentals').dims = { balance: 'all', status: 'overdue' }; }, renderRentalRows),
+  'rentals.dueToday':      () => filterView('rentals', () => { kcView('rentals').dims = { balance: 'all', status: 'due_today' }; }, renderRentalRows),
+  'sim.late':              () => filterView('sim', () => { simFilterStatus = 'late'; }, renderSimRows),
+  'customers.unreachable': () => filterView('customers', () => { customerFilter = 'unreachable'; }, renderTableRows),
+  'wallet.arrears':        () => filterView('customers', () => { customerFilter = 'arrears'; }, renderTableRows),
+  'repairs.ready':         () => filterView('repairs', () => { kcView('repairs').filter = 'ready'; }),
+  'shop.low':              () => filterView('shop', () => { kcView('shop').filter = 'low'; }),
+  'shop.returns':          () => { goToTab('shop'); setTimeout(() => focusPanel('shopReturns'), 120); },
+  'tasks.due':             () => filterView('tasks', () => { kcView('tasks').filter = 'overdue'; }),
+  'bookings.upcoming':     () => filterView('bookings', () => { kcView('bookings').filter = 'upcoming'; }),
+  'bookings.tickets':      () => { goToTab('bookings'); setTimeout(() => focusPanel('tmPanel'), 120); },
+  'review.batch':          () => { goToTab('review'); setTimeout(() => focusPanel('rvBatch'), 120); },
+  'mail.pending':          () => filterView('mail', () => { cmFilter = 'pending'; }),
+};
+
+/**
+ * Go to a panel, and mean it.
+ *
+ * Scrolling something into view without moving keyboard focus into it is the
+ * same dead end for anyone not using a mouse: the page moved, the caret did
+ * not, and the next Tab carries on from wherever it already was. Focus lands
+ * on the first thing inside that can take it, or on the panel itself with
+ * tabindex="-1" when it holds nothing focusable.
+ */
+function focusPanel(id) {
+  const el = document.getElementById(id);
+  if (!el) return false;
+  const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'start' });
+  const target = el.querySelector('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+  if (target) { target.focus({ preventScroll: true }); return true; }
+  if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
+  el.focus({ preventScroll: true });
+  return true;
+}
+
+function kcNextDo(key) {
+  const run = KC_NEXT_DO[key];
+  if (!run) { toast('That view has moved — tell us if you see this.', 'warning'); return; }
+  run();
+}
+
+/**
+ * The counts, taken from the SAME expressions the dashboard uses for its own
+ * headline numbers — so the row and the number above it can never disagree.
+ */
+function kcNextFacts() {
+  const today = localISO();
+  const soon = localISO(new Date(Date.now() + 2 * 86400000));
+  const activeRentals = (rentals || []).filter(r => r.status !== 'returned');
+  const tks = tasksList || [];
+  return {
+    overdueRentals: activeRentals.filter(r => r.toDate && r.toDate < today).length,
+    dueTodayRentals: activeRentals.filter(r => r.toDate === today).length,
+    readyRepairs: (repairs || []).filter(r => r.status === 'Ready').length,
+    lateRenewals: (sims || []).filter(s => s.status === 'active' && s.renewalDate && s.renewalDate < today).length,
+    dueTasks: tks.filter(t => !t.done && t.dueDate && t.dueDate <= today).length,
+    highTasks: tks.filter(t => !t.done && t.priority === 'High').length,
+    mailPending: (cmData && cmData.counts && cmData.counts.pending) || 0,
+    unreachable: (customers || []).filter(c =>
+      !kcTail10(c.phone) && !kcTail10(c.altPhone) && customerSimsOf(c).length === 0).length,
+    // Ours to do, flying within two days, and not done yet. A booking the
+    // CUSTOMER checks in for is not work for this counter, and saying it was
+    // would make the row cry wolf on every screen it appears on.
+    needCheckIn: (bookings || []).filter(b => b.status !== 'Cancelled' && b.checkinBy === 'us' &&
+      b.travelDate && b.travelDate >= today && b.travelDate <= soon && !b.checkinDone).length,
+    unparsedTickets: ((typeof tmData !== 'undefined' && tmData && tmData.tickets) || []).length,
+    arrears: (customers || []).filter(c => customerOwed(c) > 0).length,
+    lowStock: (shopItems || []).filter(i => i.active && i.quantity <= i.lowStockAt).length,
+    openReturns: (supplierReturns || []).filter(r => SUPPLIER_RETURN_OPEN.includes(r.status)).length,
+    unconfirmed: (confirmStats && confirmStats.remaining) || 0,
+  };
+}
+
+/** Paint the row for the screen currently showing. */
+function kcPaintNextAction(tab) {
+  const slot = document.getElementById('kcNextAction');
+  if (!slot) return;
+  let row;
+  try {
+    row = KC_NEXT.screenNextAction(tab, kcNextFacts());
+  } catch (e) {
+    // A broken row must never take a screen with it. lib/nextAction.mjs throws
+    // on "names an action, offers no way to do it" so the tests catch it; here
+    // the cost of one slipping through is a missing row and a console line.
+    console.error('[next-action]', e.message);
+    slot.innerHTML = '';
+    return;
+  }
+  if (row.clear) {
+    slot.innerHTML = `<div class="kc-next kc-next-clear"><span class="kc-next-tick" aria-hidden="true">✓</span>${escHtml(row.text)}</div>`;
+    return;
+  }
+  slot.innerHTML = `
+    <div class="kc-next${row.tone === 'urgent' ? ' kc-next-urgent' : ''}">
+      <span class="kc-next-text">${escHtml(row.text)}</span>
+      <button class="btn btn-primary btn-sm kc-next-go" onclick="kcNextDo('${escJs(row.do)}')">${escHtml(row.label)}</button>
+    </div>`;
 }
 
 // ─────────────────────────────────────────────
@@ -12132,7 +12343,7 @@ function bookingForReference(reference, list) {
 function tmQueueHtml() {
   if (!tmData || !tmData.tickets || !tmData.tickets.length) return '';
   return `
-    <div class="card" style="margin-bottom:12px;">
+    <div class="card" id="tmPanel" style="margin-bottom:12px;">
       <div class="card-head">
         <h2 class="card-title">✉️ Tickets from email
           <span class="tm-count">${tmData.tickets.length}</span></h2>
@@ -15461,7 +15672,7 @@ async function renderShopTab() {
           ${poRowsHtml()}
         </div>
 
-        <div class="table-card" style="padding:8px 18px 14px;margin-bottom:14px;">
+        <div class="table-card" id="shopReturns" style="padding:8px 18px 14px;margin-bottom:14px;">
           <div class="section-divider" style="margin-top:12px;">Returns to supplier${openReturns.length
             ? ` <span style="color:var(--danger-ink);font-weight:600;">· ${openReturns.length} open${openClaim ? ' · ' + fmtGbp(openClaim) + ' claimed' : ''}</span>` : ''}</div>
           <div>${returnRows}</div>
@@ -19399,7 +19610,7 @@ function paintConfirm() {
       </div>
       <p class="rv-hint">Confirming records who checked it and when. It changes nothing else —
         nothing is blocked anywhere in the app while data is unconfirmed.</p>
-      <div class="rv-batch">${confirmQueue.map(confirmCardHtml).join('')}</div>
+      <div class="rv-batch" id="rvBatch">${confirmQueue.map(confirmCardHtml).join('')}</div>
       ${confirmQueue.length > 1 ? `<div class="rv-batch-foot">
         <button class="btn btn-primary" id="rvConfirmAll" onclick="confirmAllShown()">
           ✓ Confirm all ${confirmQueue.length} shown</button>

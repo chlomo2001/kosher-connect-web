@@ -234,6 +234,11 @@ export default function AppShell({ initialTab = 'dashboard' }) {
           </div>
         </div>
 
+        {/* The next action for whichever screen is showing (public/main.js,
+            kcPaintNextAction). It sits OUTSIDE #mainContent deliberately:
+            every tab's render owns mainContent.innerHTML outright, so a row
+            injected into it would be destroyed by the next repaint. */}
+        <div id="kcNextAction" />
         <div className="content" id="mainContent" role="main" />
       </div>
 

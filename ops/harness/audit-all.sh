@@ -139,6 +139,12 @@ run "help timer · floating window, both themes" \
 run "loading · no flash, and the ghost reaches the fold" \
   bash -eo pipefail -c 'node ops/harness/loading.mjs | tail -3'
 
+# The next action on every screen (B2). Not geometry: it presses every action
+# and checks it lands on the right tab with the keyboard moved with it.
+run "every screen names its next action, and every action lands" \
+  bash -eo pipefail -c 'for w in 390 1280; do node ops/harness/nextaction.mjs --width $w | tail -1; done
+           node ops/harness/nextaction.mjs --width 390 --theme dark --fs largest | tail -1'
+
 run "dialogs · eight grips, snap, and plain on a phone" \
   bash -eo pipefail -c 'node ops/harness/window.mjs | tail -3'
 

@@ -1324,6 +1324,41 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 /* The text being answered, quoted above the box you type into. Their words
    have to look like theirs — an unquoted paste reads as something the shop
    wrote, which is a bad way to start a reply. */
+/* ── The next action on a screen ──────────────────────────────────────────
+   Port item B2. One row above the content column: what does the person
+   standing here do next? It is not a card — it sits between the page title and
+   the screen's own content, closer to a sentence than to a panel, because a
+   second card competing with the screen's real cards is how a summary row
+   becomes furniture nobody reads. */
+/* Inset to match .content (22px 24px) so the row lines up with the column it
+   introduces rather than running the full width of the frame. Top padding only
+   above, because the row carries its own bottom margin. */
+#kcNextAction { padding: 22px 24px 0; }
+/* The screen below already opens with 22px of its own. */
+#kcNextAction:not(:empty) + .content { padding-top: 8px; }
+#kcNextAction:empty { display: none; }
+.kc-next {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
+  max-width: 1220px; margin: 0 auto 14px; padding: 10px 16px;
+  border: 1px solid var(--border); border-left: 3px solid var(--accent);
+  border-radius: 10px; background: var(--surface);
+  font-size: var(--fs-body); color: var(--text);
+}
+.kc-next-text { min-width: 0; overflow-wrap: anywhere; }
+.kc-next-go { margin-left: auto; flex: none; }
+/* Overdue is the one that should raise a pulse. Colour AND the word 'overdue'
+   in the sentence itself, so the urgency does not live in the border alone. */
+.kc-next-urgent { border-left-color: var(--danger); }
+/* Nothing outstanding is a RESULT. Quiet, but present — a screen that simply
+   omitted the row would leave you wondering whether it had checked. */
+.kc-next-clear {
+  display: flex; align-items: center; gap: 8px;
+  max-width: 1220px; margin: 0 auto; padding: 8px 16px 0;
+  font-size: var(--fs-small); color: var(--muted);
+}
+.kc-next-tick { color: var(--success); font-weight: 700; }
+body.pos-mode #kcNextAction { display: none; }
+
 /* A settings card's own heading. It was three inline styles on one nowrap flex
    row, and at 320px in Simple Mode the subtitle ran 7px past the card — a card
    overflowing at extra-large text (owner, 19 Aug, item 14). Wrapping is the
