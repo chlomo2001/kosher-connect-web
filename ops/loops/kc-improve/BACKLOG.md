@@ -1776,3 +1776,40 @@ like `repair_stages` / `void_reasons`:
 - 'phone' stays load-bearing and non-removable (IMEI capture + phone_sale
   ledger); the editor must not let it be deleted or renamed away.
 - emoji per custom category is a nice-to-have; a plain label is enough to ship.
+
+## UX/UI night — 19 Aug 2026 (03:00–04:00)
+
+The loop was refocused by the owner onto UX & UI, several items a night. The
+July review's section B was the obvious ground and is nearly exhausted — B1–B8
+and B10 are all shipped, and B9 (one-click take payment from the Customers list)
+is money surface and out of this loop's scope. So the night's items came from
+DISCOVERY: rendering real screens in the harness in states nobody had looked at
+— the day-one empty seed, dark mode, and 390px.
+
+| # | Shipped | What it was | Found by |
+|---|---|---|---|
+| 1 | `f3f0c78` | "Nothing waiting on you here" carried `kc-next kc-next-clear` and inherited the bordered card + accent stripe, so an empty queue shouted as loudly as an overdue phone — on most screens, most of the time | day-one empty seed at 390px |
+| 2 | `6137c46` | Day one said "AVAILABLE PHONES · 0 · none left to rent" in alarm red. Nothing was rented and nothing was missing — the shop had not added a handset yet, and this is the first screen a new owner sees | same |
+| 3 | `3fea997` | The wallet balance was a `.badge` inflated by inline styles to 7px 16px — **more padding than the real button beside it** — filled, rounded, and not clickable | customer card in DARK at 1280 |
+| 4 | `4430327` | On a phone the next-action button wraps to its own line and `margin-left:auto` shoved it against the right edge, leaving a dead gap with a small target floating in it | tasks in dark at 390px |
+
+### Found, NOT fixed — out of this loop's scope
+
+- **The till's Charge button is fully lit on an empty basket.** `saveSale()`
+  refuses with `toast('The basket is empty.', 'error')`, so the most prominent
+  control on the shop's highest-traffic screen can only produce an error when
+  the basket is empty. The fix is to disable Charge and Park while the basket is
+  empty. NOT done here: it is the charge path, the loop excludes money surface,
+  and a wrong disabled-state on that button stops the shop trading. Raised as an
+  issue for the owner.
+
+### Checked and genuinely clean (so nobody re-checks them)
+
+- Hebrew welcome page: every section has content at heights within 150px of the
+  English, compared section by section rather than eyeballed. The pale bands in
+  the full-page shot are light backgrounds, not blanks.
+- Nothing non-interactive is dressed as a control anywhere in `#mainContent`
+  across all fifteen tabs (swept for filled + rounded + button-sized padding +
+  no handler + sharing a row with a real control).
+- Loading states, focus visibility, contrast in both themes, dark-rule pairing,
+  and touch targets at 390 — all already green.
