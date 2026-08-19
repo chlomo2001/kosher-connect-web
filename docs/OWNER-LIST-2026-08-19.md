@@ -1,7 +1,7 @@
 # Owner's list, 19 August 2026 — status
 
-Twenty-two items (twenty-one from the draft, plus #22 raised in chat). Updated
-as each shipped; the triage that follows is the original reading, corrected
+Twenty-two items (twenty-one from the draft, plus #22 raised in chat), plus the
+ported B2. Fifteen shipped. Updated as each shipped; the triage that follows is the original reading, corrected
 where the owner said it was wrong.
 
 ## Done and on main
@@ -22,6 +22,7 @@ where the owner said it was wrong.
 | 19 | "Open" and "login details" too near | `bf3752a` |
 | 21 | The reply in SMS in settings isn't doing anything | `c5a0ea0` |
 | 2 / 6 | Save or suggest as a task, wherever text lands | `1249160` |
+| B2 | Next action on every screen + tap-count table | `c02a31f` |
 
 ## Answered — no work needed unless you want it changed
 
@@ -40,7 +41,6 @@ where the owner said it was wrong.
 | 20 | Forward important carrier mail to the customer | A live customer send — HOLD-gated, needs your go-live word, and needs a rule for "important" plus certainty about the pairing. |
 | 22 | Open an extra card when one is gripped aside | Raised in chat; not yet specified enough to build. |
 | — | C1 (money wording / refuse-to-be-confident) | Held by your own brief; you chose to keep it held on 19 Aug. |
-| — | B2 (next action on every screen) | Unblocked by you on 19 Aug — in progress. |
 
 ## ⚠ Still needs you, outside the app
 
