@@ -12362,7 +12362,7 @@ function tmQueueHtml() {
         <button class="btn btn-outline btn-sm" onclick="tmSelected.clear();renderBookingsTab()">Deselect all</button>
       </div>
       <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-small);color:var(--muted);padding:2px 0 6px;">
-        <input type="checkbox" style="width:18px;height:18px;accent-color:var(--accent);"
+        <input type="checkbox" class="tm-check"
           ${tmData.tickets.length && tmData.tickets.every(t => tmSelected.has(String(t.id))) ? 'checked' : ''}
           onclick="tmSelectAll(this.checked)"> Select all ${tmData.tickets.length}
       </label>
@@ -19050,7 +19050,7 @@ function paintCarrierMail() {
         <button class="btn btn-outline btn-sm" onclick="cmSelected.clear();paintCarrierMail()">Deselect all</button>
       </div>
       ${cmData.messages.length ? `<label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-small);color:var(--muted);padding:2px 0 6px;">
-        <input type="checkbox" style="width:18px;height:18px;accent-color:var(--accent);"
+        <input type="checkbox" class="tm-check"
           ${cmData.messages.every(m => cmSelected.has(String(m.id))) ? 'checked' : ''}
           onclick="cmSelectAll(this.checked)"> Select all ${cmData.messages.length}
       </label>` : ''}

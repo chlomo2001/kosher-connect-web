@@ -1269,6 +1269,20 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
    this exists for is thirty airline circulars that are all junk. */
 .tm-pick-col { display: flex; align-items: flex-start; padding-top: 2px; }
 .tm-pick-col input { width: 18px; height: 18px; accent-color: var(--accent); }
+/* …but never below the touch floor on a thumb. globals.css already sets every
+   checkbox to 24px under (pointer: coarse) — and lost, because `.tm-pick-col
+   input` and `input[type="checkbox"]` carry the SAME specificity and this sheet
+   loads second. A tie decided by file order is not a decision anybody made, so
+   the floor is restated here where it can win.
+
+   The Select-all box beside it had the same 18px in an INLINE style, which no
+   stylesheet can outrank at all — the size had to leave the markup before any
+   rule could reach it. Both found by the touch-target sweep on the tickets and
+   carrier-mail lists; both predate tonight's work. */
+.tm-check { width: 18px; height: 18px; accent-color: var(--accent); }
+@media (pointer: coarse) {
+  .tm-pick-col input, .tm-check { width: 24px; height: 24px; }
+}
 .tm-bulk, .cm-bulk {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   margin: 0 0 10px; padding: 8px 12px;
