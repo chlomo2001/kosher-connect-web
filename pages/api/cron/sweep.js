@@ -679,10 +679,13 @@ async function handler(req, res) {
     // result certain enough to carry a sim_id is written back. An ambiguous
     // message stays ambiguous.
     let repaired = 0
-    const simRows = await selectAllPaged('sims', 'id,customer_id,legacy_extras', 'order=id.asc')
+    const simRows = await selectAllPaged('sims', 'id,customer_id,legacy_extras,alt_emails', 'order=id.asc')
     const simIndex = buildSimIndex(simRows.map((r) => ({
       id: r.id,
       email: r.legacy_extras?.email || '',
+      // Same list the queue matches against, or the nightly pass would reach a
+      // different answer from the screen and re-open settled questions.
+      altEmails: Array.isArray(r.alt_emails) ? r.alt_emails : [],
       simNumber: r.legacy_extras?.simNumber || '',
     })))
     const customerBySim = new Map(simRows.map((r) => [String(r.id), r.customer_id]))

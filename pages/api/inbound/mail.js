@@ -67,10 +67,15 @@ const INDEX_TTL_MS = 60_000
 
 async function simIndex() {
   if (cache.index && Date.now() - cache.at < INDEX_TTL_MS) return cache.index
-  const rows = await selectAllPaged('sims', 'id,customer_id,legacy_extras', 'order=id.asc')
+  const rows = await selectAllPaged('sims', 'id,customer_id,legacy_extras,alt_emails', 'order=id.asc')
   const index = buildSimIndex(rows.map((r) => ({
     id: r.id,
     email: r.legacy_extras?.email || '',
+    // The list of other addresses this line receives mail at (19 Aug). This is
+    // the index that decides AT ARRIVAL, so a message reaching an address the
+    // SIM claims is filed straight away rather than joining the queue and
+    // waiting for somebody to answer a question the record already answers.
+    altEmails: Array.isArray(r.alt_emails) ? r.alt_emails : [],
     simNumber: r.legacy_extras?.simNumber || '',
   })))
   index.customerBySim = new Map(rows.map((r) => [String(r.id), r.customer_id]))

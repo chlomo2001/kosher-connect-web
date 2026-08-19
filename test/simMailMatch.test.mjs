@@ -236,3 +236,52 @@ test('a shared mailbox with the number in the body beats the pool', () => {
   assert.equal(out.simId, 'target')
   assert.equal(out.confidence, 'address+number')
 })
+
+// ── a line with more than one address (owner, 19 Aug) ────────────────────
+test('a SIM can claim several addresses, and any of them pairs to it', () => {
+  // The shop gives a SIM a tagged address per carrier account, so mail for one
+  // phone arrives at gitt.bilig+a12@ from one carrier and gitt.bilig+sidner@
+  // from another. Until this, a SIM could claim only the first, and ten
+  // messages sat unpairable in the queue with nothing to match.
+  const index = buildSimIndex([
+    { id: 'sim-1', simNumber: '07553853941', email: 'gitt.bilig+a12@gmail.com',
+      altEmails: ['gitt.bilig+sidner@gmail.com'] },
+    { id: 'sim-2', simNumber: '07845665867', email: 'gitt.bilig+a2@gmail.com' },
+  ])
+  for (const to of ['gitt.bilig+a12@gmail.com', 'gitt.bilig+sidner@gmail.com']) {
+    const m = matchSimForMail({ to }, index)
+    assert.equal(m.simId, 'sim-1', `${to} did not reach the SIM that claims it`)
+    assert.equal(m.confidence, 'address')
+  }
+  // …and it does not become a candidate for a line that never claimed it.
+  assert.equal(matchSimForMail({ to: 'gitt.bilig+a2@gmail.com' }, index).simId, 'sim-2')
+})
+
+test('the extra addresses obey the same Gmail dot rule as the primary', () => {
+  const index = buildSimIndex([
+    { id: 'sim-1', email: 'a@b.com', altEmails: ['ha.sho.m.rim.mcr+gtf@gmail.com'] },
+  ])
+  assert.equal(matchSimForMail({ to: 'hashomrimmcr+gtf@gmail.com' }, index).simId, 'sim-1')
+})
+
+test('two SIMs claiming the same extra address is still ambiguous', () => {
+  // Adding an address must not become a way to make the matcher guess.
+  const index = buildSimIndex([
+    { id: 'sim-1', email: 'one@x.com', altEmails: ['shared+tag@gmail.com'] },
+    { id: 'sim-2', email: 'two@x.com', altEmails: ['shared+tag@gmail.com'] },
+  ])
+  const m = matchSimForMail({ to: 'shared+tag@gmail.com' }, index)
+  assert.equal(m.simId, null)
+  assert.equal(m.confidence, 'ambiguous')
+})
+
+test('a SIM with no extra addresses behaves exactly as before', () => {
+  const before = buildSimIndex([{ id: 's', email: 'a@b.com', simNumber: '07700900123' }])
+  const after = buildSimIndex([{ id: 's', email: 'a@b.com', simNumber: '07700900123', altEmails: [] }])
+  assert.deepEqual([...after.byAddress.entries()], [...before.byAddress.entries()])
+  // Rubbish in the field must not throw or index nonsense.
+  for (const bad of [null, undefined, 'not-an-array', 0, {}]) {
+    const idx = buildSimIndex([{ id: 's', email: 'a@b.com', altEmails: bad }])
+    assert.equal(idx.byAddress.size, 1)
+  }
+})

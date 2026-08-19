@@ -24,6 +24,7 @@ import { buildSimIndex, mailboxKey } from '../../lib/simMailMatch.mjs'
 import { carrierMailKind, kindLabel } from '../../lib/carrierMail.mjs'
 
 const enc = encodeURIComponent
+const simLegacyIdOf = (b) => (b && b.simLegacyId) || null
 
 let cache = { at: 0, sims: null }
 const TTL_MS = 60_000
@@ -32,7 +33,7 @@ const TTL_MS = 60_000
 async function simDirectory() {
   if (cache.sims && Date.now() - cache.at < TTL_MS) return cache.sims
   const rows = await selectAllPaged(
-    'sims', 'id,legacy_id,customer_id,provider,status,legacy_extras', 'order=id.asc'
+    'sims', 'id,legacy_id,customer_id,provider,status,legacy_extras,alt_emails', 'order=id.asc'
   )
   // renewalDate and status come along for the ranking below — a renewal notice
   // is about a plan that is renewing, which is a strong hint at WHICH plan.
@@ -51,6 +52,11 @@ async function simDirectory() {
       customerId: r.customer_id,
       customerName: r.legacy_extras?.customerName || '',
       renewalDate: r.legacy_extras?.renewalDate || '',
+      // The addresses this line receives carrier mail at: the one typed on the
+      // SIM form, plus any taught since. Carried here so the SIM card can show
+      // them without a second read.
+      email: r.legacy_extras?.email || '',
+      altEmails: Array.isArray(r.alt_emails) ? r.alt_emails : [],
     }
     byId.set(String(r.id), entry)
     if (entry.legacyId) byLegacyId.set(entry.legacyId, entry)
@@ -58,6 +64,10 @@ async function simDirectory() {
   const index = buildSimIndex(rows.map((r) => ({
     id: r.id,
     email: r.legacy_extras?.email || '',
+    // A line can receive its mail at several addresses (19 Aug). Every one of
+    // them must index to this SIM, or the queue keeps asking about mail it
+    // already knows the answer to.
+    altEmails: Array.isArray(r.alt_emails) ? r.alt_emails : [],
     simNumber: r.legacy_extras?.simNumber || '',
   })))
   const sims = { byId, byLegacyId, index }
@@ -118,6 +128,10 @@ async function handler(req, res) {
       )
       return res.json({
         success: true,
+        // Shown beside the mail, because they explain it: this list is the
+        // reason a message landed here rather than in the queue, and it is
+        // where a wrongly taught address gets taken off again.
+        addresses: { primary: sim.email || '', alt: sim.altEmails || [] },
         messages: rows.map((m) => ({
           id: m.id, receivedAt: m.received_at, from: m.from_address || '',
           carrier: m.carrier || '', subject: m.subject || '', confidence: m.confidence,
@@ -210,6 +224,35 @@ async function handler(req, res) {
       return res.json({ success: true, resolved: rows.length })
     }
 
+    // Take a taught address off a line again.
+    //
+    // Teaching is a judgement made in a hurry at a queue, and a wrong one is
+    // worse than the gap it filled: every future message to that address would
+    // file itself silently on the wrong customer, with nobody prompted to look.
+    // So it comes off the same way it went on. The PRIMARY address is not
+    // removable here — that is a field on the SIM form and belongs to it.
+    if (op === 'forgetAddress') {
+      const { simLegacyId: forgetFor, address } = req.body || {}
+      const key = mailboxKey(address)
+      if (!forgetFor || !key) return res.status(400).json({ success: false, error: 'Which address, on which SIM?' })
+      const dir = await simDirectory()
+      const target = dir.byLegacyId.get(String(forgetFor))
+      if (!target) return res.status(404).json({ success: false, error: 'No such SIM.' })
+      const rows = await db.select('sims', `select=alt_emails&id=eq.${enc(String(target.id))}&limit=1`)
+      const have = Array.isArray(rows[0]?.alt_emails) ? rows[0].alt_emails : []
+      const left = have.filter((a) => mailboxKey(a) !== key)
+      if (left.length === have.length) {
+        return res.status(404).json({ success: false, error: 'That address is not on this SIM.' })
+      }
+      await db.update('sims', `id=eq.${enc(String(target.id))}`, { alt_emails: left })
+      // Messages already filed by it STAY filed. They were matched on an
+      // address this shop believed at the time, and un-filing them would
+      // rewrite history to match a decision made afterwards — "undo match" is
+      // the tool for a specific message, and it is per-message on purpose.
+      cache = { at: 0, sims: null }
+      return res.json({ success: true, forgotten: address, remaining: left })
+    }
+
     if (!id) return res.status(400).json({ success: false, error: 'A message id is required.' })
 
     if (op === 'resolve') {
@@ -239,6 +282,71 @@ async function handler(req, res) {
         return res.status(404).json({ success: false, error: 'That message is not filed on a SIM.' })
       }
       return res.json({ success: true, unpaired: true })
+    }
+
+    // "This line also gets its mail here" — file the message AND teach the SIM
+    // the address, so the queue never asks about it again.
+    //
+    // The whole reason ten messages were unpairable: mail arriving at an
+    // address no SIM claimed. Filing one by hand fixes one message; recording
+    // the address fixes every future one, which is the difference between a
+    // queue you work and a queue you finish.
+    if (op === 'learn') {
+      const learnFor = simId || simLegacyIdOf(req.body)
+      if (!learnFor) return res.status(400).json({ success: false, error: 'Pick a SIM.' })
+      const msgs = await db.select('sim_mail', `select=id,recipient&id=eq.${enc(id)}&limit=1`)
+      const msg = msgs[0]
+      if (!msg) return res.status(404).json({ success: false, error: 'No such message.' })
+      const address = String(msg.recipient || '').trim()
+      const key = mailboxKey(address)
+      if (!key) {
+        return res.status(400).json({ success: false, error: 'That message has no address to learn.' })
+      }
+      const dir = await simDirectory()
+      const target = simId ? dir.byId.get(String(simId)) : dir.byLegacyId.get(String(learnFor))
+      if (!target) return res.status(400).json({ success: false, error: 'That SIM no longer exists.' })
+
+      // Refuse to teach an address another SIM already claims. Two lines
+      // claiming one address is precisely the ambiguity the matcher exists to
+      // refuse, and creating it deliberately would be worse than the gap it
+      // fills — the queue would stop asking and start guessing.
+      //
+      // Checked against the SAME index the matcher uses, not against a string
+      // compare, so the refusal means what the matcher would actually do:
+      // `a.b+x@gmail.com` and `ab+x@gmail.com` are one address to Gmail and
+      // must be one address here.
+      const claimed = (dir.index.byAddress.get(key) || []).filter((sid) => String(sid) !== String(target.id))
+      if (claimed.length) {
+        const other = dir.byId.get(String(claimed[0]))
+        return res.status(409).json({
+          success: false,
+          error: other
+            ? `${other.customerName || 'Another SIM'} already receives mail at that address. Two lines cannot both claim it.`
+            : 'Another SIM already receives mail at that address. Two lines cannot both claim it.',
+        })
+      }
+
+      // The RAW address is stored, not the routing key: the key is a
+      // comparison form and storing it would put a made-up address on the
+      // record. Indexing normalises it again on the way back in.
+      const rows = await db.select('sims', `select=alt_emails&id=eq.${enc(String(target.id))}&limit=1`)
+      const have = Array.isArray(rows[0]?.alt_emails) ? rows[0].alt_emails : []
+      if (!have.some((a) => mailboxKey(a) === key)) {
+        await db.update('sims', `id=eq.${enc(String(target.id))}`, { alt_emails: [...have, address] })
+      }
+      const paired = await db.update('sim_mail', `id=eq.${enc(id)}`, {
+        sim_id: target.id,
+        customer_id: target.customerId || null,
+        resolved_at: now,
+        confidence: 'address',
+      })
+      if (!paired.length) return res.status(404).json({ success: false, error: 'No such message.' })
+      // The directory is cached for a minute and its index no longer knows
+      // about the address just taught. Left alone, the very next message to
+      // that address would come back unmatched — the one thing this was built
+      // to stop.
+      cache = { at: 0, sims: null }
+      return res.json({ success: true, learned: address, sim: target })
     }
 
     const { simLegacyId } = req.body || {}

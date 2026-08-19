@@ -11989,6 +11989,62 @@ async function saveSimForm(editId) {
   });
 }
 
+/**
+ * The addresses this line receives carrier mail at.
+ *
+ * Shown on the card because it EXPLAINS the card: the mail listed underneath is
+ * here because it arrived at one of these, and a message that should have been
+ * filed here and was not is usually an address missing from this list.
+ *
+ * The primary is read-only — it is a field on the SIM form and is edited there.
+ * The taught ones are removable, because teaching is a judgement made in a hurry
+ * at a queue and a wrong one silently files a stranger's mail on this line.
+ */
+function paintSimAddresses(simLegacyId, addresses) {
+  const box = document.getElementById('simMailAddresses');
+  if (!box) return;
+  const primary = (addresses && addresses.primary) || '';
+  const alt = (addresses && Array.isArray(addresses.alt)) ? addresses.alt : [];
+  if (!primary && !alt.length) {
+    box.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-small);padding:2px 0 8px;">
+      No address on record — carrier mail for this line can only be matched by its number.</div>`;
+    return;
+  }
+  const chip = (addr, removable) => `
+    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--bg);
+      border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:var(--fs-micro);">
+      <span style="direction:ltr;">${escHtml(addr)}</span>
+      ${removable ? `<button class="action-btn danger" style="padding:0 4px;line-height:1;"
+        title="Stop filing mail sent here on this line"
+        aria-label="Remove ${escHtml(addr)} from this line"
+        onclick="simForgetAddress('${escJs(String(simLegacyId))}', '${escJs(addr)}')">✕</button>` : ''}
+    </span>`;
+  box.innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:2px 0 10px;">
+      <span style="font-size:var(--fs-micro);color:var(--muted);font-weight:600;">Receives mail at</span>
+      ${primary ? chip(primary, false) : ''}
+      ${alt.map(a => chip(a, true)).join('')}
+    </div>`;
+}
+
+async function simForgetAddress(simLegacyId, address) {
+  if (!(await kcConfirm({
+    title: 'Stop filing mail sent here?',
+    body: `Carrier mail to <strong>${escHtml(address)}</strong> will stop being filed on this line, ` +
+      `and will go back to the queue for someone to place by hand.<br><br>` +
+      `Mail already filed by it stays where it is — use “Undo match” on a message to move that.`,
+    okLabel: 'Remove the address',
+  }))) return;
+  try {
+    const res = await window.api.settleCarrierMail({ op: 'forgetAddress', simLegacyId, address });
+    if (!res || !res.success) throw new Error(res?.error || 'failed');
+    toast('Address removed.', 'success');
+    loadSimMailInto(simLegacyId);
+  } catch (e) {
+    toast(String(e.message || 'Could not remove that.'), 'error');
+  }
+}
+
 // Carrier mail filed on ONE SIM, loaded after the card paints. It is a
 // secondary read: the card is about the plan and its charges, and waiting on
 // the mail query to show either would be the wrong trade.
@@ -12001,6 +12057,7 @@ async function loadSimMailInto(simLegacyId) {
     box.innerHTML = '<div style="color:var(--muted);font-size:var(--fs-small);padding:6px 0;">Couldn’t load carrier mail.</div>';
     return;
   }
+  paintSimAddresses(simLegacyId, data.addresses);
   box.innerHTML = data.messages.length === 0
     ? '<div style="color:var(--muted);font-size:var(--fs-small);padding:6px 0;">No carrier mail filed on this SIM yet.</div>'
     : data.messages.map(m => `
@@ -12052,6 +12109,7 @@ function openManageSimModal(id) {
     <div class="history-list" id="simHistoryList">${historyHtml}</div>
 
     <div class="section-divider">Carrier Mail</div>
+    <div id="simMailAddresses"></div>
     <div class="history-list" id="simMailList">
       <div style="color:var(--muted);font-size:var(--fs-small);padding:6px 0;">Loading…</div>
     </div>
@@ -19599,6 +19657,17 @@ function cmRowHtml(m) {
             ${m.numbers.length ? `<button class="btn btn-primary btn-sm"
                 onclick="cmAddSim(${m.id}, '${escHtml('0' + m.numbers[0])}', '${escHtml(m.carrier || '')}')">
                 ➕ Add as a new SIM</button>` : ''}
+            ${/* The other half of "nothing matched": not a line we have never
+                 heard of, but one we know under a DIFFERENT address. The shop
+                 gives a SIM a tagged address per carrier account, so the same
+                 phone writes from gitt.bilig+a12@ at one carrier and
+                 gitt.bilig+sidner@ at another — and until an address is taught,
+                 every message from the second one lands here for ever. Adding
+                 it as a new SIM would be wrong: it would be the same phone
+                 twice. */''}
+            ${m.recipient ? `<button class="btn btn-outline btn-sm" onclick="cmLearn(${m.id})"
+                title="Tell the app which existing line receives mail at this address">
+                🔗 A line I already have gets mail here</button>` : ''}
             <span style="color:var(--muted);font-size:var(--fs-small);">
               No SIM on record carries ${numbers ? 'that number' : 'this address'}${m.numbers.length
                 ? ' — adding it files this message on the new plan.' : '.'}</span>
@@ -19737,6 +19806,104 @@ async function cmUnpair(id) {
     renderCarrierMailTab();
   } catch (e) {
     toast(String(e.message || 'Could not undo that.'), 'error');
+  } finally { cmBusy = false; }
+}
+
+/**
+ * "This line already gets mail here" — teach the SIM the address.
+ *
+ * The queue's other unmatched action, ADD AS A NEW SIM, answers the case where
+ * the shop has never seen this line. This answers the commoner one: the line is
+ * on the books, and the carrier writes to it at an address the SIM does not
+ * claim. Ten messages sat unpairable on exactly that.
+ *
+ * Teaching rather than filing is the whole point. Filing this one message by
+ * hand fixes one message; recording the address means the next one files
+ * itself, which is the difference between a queue you work and one you finish.
+ */
+let cmLearnFor = null;
+let cmLearnFilter = '';
+
+function cmLearn(id) {
+  const m = (cmData?.messages || []).find(x => String(x.id) === String(id));
+  if (!m || !m.recipient) { toast('That message has no address to learn.', 'warning'); return; }
+  cmLearnFor = m;
+  cmLearnFilter = '';
+  showDynamicModal(`
+    <div class="modal-title">🔗 Which line gets mail at this address?</div>
+    <p style="font-size:var(--fs-small);color:var(--muted);margin:0 0 12px;">
+      Carrier mail sent to <strong>${escHtml(m.recipient)}</strong> will be filed on the line you
+      pick — this message and every one after it. Pick the line the address really belongs to;
+      it cannot be shared with a second line.
+    </p>
+    <input class="form-input" id="cmLearnSearch" placeholder="Name, number or carrier…"
+      aria-label="Search your lines" autocomplete="off" oninput="cmLearnPaint(this.value)">
+    <div id="cmLearnList" style="margin-top:10px;max-height:46vh;overflow:auto;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+    </div>
+  `);
+  cmLearnPaint('');
+  const box = document.getElementById('cmLearnSearch');
+  if (box) box.focus();
+}
+
+// Typing is required before anything is listed. 797 lines is not a list to
+// scroll, and offering the first twenty of them in database order invites
+// picking whichever one happens to be on top — on a screen where the wrong pick
+// files one customer's carrier mail onto another's line.
+function cmLearnPaint(term) {
+  cmLearnFilter = String(term || '');
+  const box = document.getElementById('cmLearnList');
+  if (!box) return;
+  const q = cmLearnFilter.trim().toLowerCase();
+  const digits = q.replace(/\D/g, '');
+  if (!q) {
+    box.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-small);padding:8px 0;">
+      Start typing to find the line.</div>`;
+    return;
+  }
+  const hits = sims.filter(x =>
+    (x.customerName || '').toLowerCase().includes(q)
+    || (x.provider || '').toLowerCase().includes(q)
+    || (digits && String(x.simNumber || '').replace(/\D/g, '').includes(digits))
+  ).slice(0, 20);
+  box.innerHTML = hits.length ? hits.map(x => `
+    <button class="btn btn-outline btn-sm" style="display:block;width:100%;text-align:left;margin-bottom:6px;"
+      onclick="cmLearnPick('${escJs(String(x.id))}')">
+      <strong>${escName(capName(x.customerName || 'Unnamed'))}</strong> ·
+      ${escHtml(fmtPhone(x.simNumber) || 'no number')} ·
+      ${escHtml(x.provider || 'plan')}${x.status && x.status !== 'active'
+        ? ` <span style="color:var(--muted);">(${escHtml(x.status)})</span>` : ''}
+    </button>`).join('')
+    : `<div style="color:var(--muted);font-size:var(--fs-small);padding:8px 0;">
+        Nothing matches “${escHtml(q)}”.</div>`;
+}
+
+async function cmLearnPick(simLegacyId) {
+  const m = cmLearnFor;
+  const sim = sims.find(x => String(x.id) === String(simLegacyId));
+  if (!m || !sim) return;
+  if (!(await kcConfirm({
+    title: 'File this address on that line?',
+    body: `Carrier mail to <strong>${escHtml(m.recipient)}</strong> will be filed on ` +
+      `<strong>${escName(capName(sim.customerName || 'that line'))}</strong>` +
+      `${sim.simNumber ? ` (${escHtml(fmtPhone(sim.simNumber))})` : ''} from now on.<br><br>` +
+      `You can take the address off again from the line's own card if this turns out wrong.`,
+    okLabel: '🔗 Yes, it is theirs',
+  }))) return;
+  if (cmBusy) return; cmBusy = true;
+  try {
+    const res = await window.api.settleCarrierMail({ id: m.id, op: 'learn', simLegacyId });
+    if (!res || !res.success) throw new Error(res?.error || 'failed');
+    closeDynamicModal();
+    toast(`✓ Filed, and mail to ${res.learned} now goes to that line.`, 'success');
+    cmLearnFor = null;
+    await renderCarrierMailTab();
+  } catch (e) {
+    // The 409 — another line already claims the address — is the message that
+    // matters most here, so it is shown rather than swallowed into "try again".
+    toast(String(e.message || 'Could not do that.'), 'error');
   } finally { cmBusy = false; }
 }
 

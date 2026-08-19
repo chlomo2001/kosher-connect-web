@@ -209,6 +209,7 @@ The UK SIM-only plans the shop manages for customers: whose number is on which n
 - **The list** — Customer, network, number, plan, mailbox, renewal date, how it is paid and whether it is running.
 - **⚙ Manage** — Everything about one plan: the details, its service history, the letters and emails that have come in from the carrier about it, and adding a charge for it.
 - **Mailbox** — The address the carrier writes to for this plan, which is what lets post about it find its way to the right customer.
+- **Receives mail at** — On ⚙ Manage, above the carrier post: every address whose post is filed on this plan. The first is the login email from the plan's own details and is changed there. Any after it were added from Carrier Mail, when a message arrived at an address this plan had not claimed — a plan can be written to at more than one address, because it has a separate account at each network. Removing one stops future post to it being filed here; post already filed stays where it is.
 
 **Boxes that open on top of it**
 
@@ -225,7 +226,7 @@ The UK SIM-only plans the shop manages for customers: whose number is on which n
 **When it goes wrong**
 
 - **A plan renewed and nobody was charged** — The renewal date passed without a charge being added. Open ⚙ Manage, add the charge, and move the renewal date on — the dashboard is counting it as overdue until you do.
-- **Post has come from the network and it is not clear whose it is** — Carrier Mail matches letters to a plan and its customer. A plan with the mailbox missing is the usual reason it could not.
+- **Post has come from the network and it is not clear whose it is** — Carrier Mail matches letters to a plan and its customer. A plan with the mailbox missing is the usual reason it could not. The other reason is that the network wrote to a second address this plan has not claimed — Carrier Mail can be told, once, that this plan receives there too.
 - **A customer says they cancelled** — Set the plan's status rather than deleting it. The history of what was charged has to survive the plan ending.
 
 ---
@@ -541,6 +542,7 @@ Post arriving from the networks — renewals, ports, warnings, payment problems 
 - **Which SIM is this?** — The pairing question on an unmatched message. A shared address can carry hundreds of SIMs, so it offers the likeliest few first — the number named in the message, plans that are live, and plans renewing around the date the message arrived — and says how many there are altogether. Answer it and the message files itself and stays filed.
 - **Type a name or number** — Appears when there are more SIMs on the address than fit. Type any part of a name or a number and the list narrows to it; “+ N more” shows the rest.
 - **Add as a new SIM plan** — For post about a plan the shop has never recorded. It opens the usual new-plan form with the number and network already filled, and files the message on the plan once it is saved.
+- **🔗 A line I already have gets mail here** — The other half of an unmatched message: the plan IS on the books, but the network writes to a mailbox the plan does not claim. The shop gives a plan its own tagged address per network account, so the same phone can be written to at two different addresses and only one of them is recorded. Search for the plan, confirm it, and the message files itself — and so does every later message to that address, which is the point. Nothing is listed until you type: there are hundreds of plans, and a list you scroll invites picking whichever is on top. One address belongs to one plan only; if another plan already claims it, this refuses and says which.
 - **Dismiss** — For post that belongs to nobody — a circular, a wrong number. It leaves the queue without pretending to be filed.
 
 **Boxes that open on top of it**
@@ -554,11 +556,13 @@ Post arriving from the networks — renewals, ports, warnings, payment problems 
 - A completed port, a PAC code and a payment problem each raise a task by themselves, because each one means somebody has something to do. A PAC code is the one piece of carrier post that is bad news: the customer is moving to another network.
 - The number on a plan is what every reminder, every carrier lookup and every piece of post keys on. Changing it after a port is the difference between the next reminder reaching the customer and reaching a dead line.
 - Dismiss means "this belongs to nobody", not "not now". Anything that might matter should stay in the queue.
+- One mailbox belongs to one plan. Teaching the app that an address belongs to a plan is how post files itself in future, so an address given to the wrong plan quietly sends a stranger's post there — it is taken off again from the plan's own card.
 
 **When it goes wrong**
 
 - **A message names a number nobody recognises** — Search the number in the SIM list first. If there is genuinely no plan, adding it from here creates the plan and files the message in one go.
 - **The queue is growing** — It grows when plans have no mailbox recorded, so nothing can be matched automatically. Fixing the plan fixes every future letter about it.
+- **The same address keeps coming back unmatched** — The plan is on the books under a different address. Use “a line I already have gets mail here” once and the address is recorded against the plan — the queue stops asking.
 
 ---
 
