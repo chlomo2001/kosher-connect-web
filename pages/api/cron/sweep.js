@@ -686,9 +686,13 @@ async function handler(req, res) {
       simNumber: r.legacy_extras?.simNumber || '',
     })))
     const customerBySim = new Map(simRows.map((r) => [String(r.id), r.customer_id]))
+    // `unpaired_at=is.null` — a message a PERSON has unfiled is left alone. It
+    // is in exactly the state this pass hunts for, so without that filter the
+    // sweep would re-file it on the SIM the human just rejected, and the undo
+    // would quietly undo itself overnight.
     const stuck = await selectAllPaged(
       'sim_mail', 'id,recipient,route,subject,snippet',
-      'resolved_at=is.null&sim_id=is.null&order=id.asc'
+      'resolved_at=is.null&sim_id=is.null&unpaired_at=is.null&order=id.asc'
     )
     for (const m of stuck) {
       const envelope = (m.route && m.route.length ? m.route : [m.recipient]).filter(Boolean).join(',')

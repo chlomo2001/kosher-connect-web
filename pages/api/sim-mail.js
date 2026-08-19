@@ -218,6 +218,29 @@ async function handler(req, res) {
       return res.json({ success: true, resolved: true })
     }
 
+    // Undo a match (owner, 19 Aug: "any way to undo a non needs a human
+    // match?"). Sends the message back to the queue for a person to decide.
+    //
+    // `unpaired_at` is what makes it hold. Clearing sim_id alone would leave
+    // the row in exactly the state the nightly sweep hunts for — resolved_at
+    // null AND sim_id null — so the next run would re-file it on the same wrong
+    // SIM and the undo would quietly undo itself. The sweep skips these.
+    if (op === 'unpair') {
+      const rows = await db.update('sim_mail', `id=eq.${enc(id)}&sim_id=not.is.null`, {
+        sim_id: null,
+        customer_id: null,
+        resolved_at: null,
+        unpaired_at: now,
+        unpaired_by: req.staff?.fullName || req.staff?.email || 'staff',
+        // The old verdict must not survive as an explanation of the new state.
+        confidence: 'unpaired',
+      })
+      if (!rows.length) {
+        return res.status(404).json({ success: false, error: 'That message is not filed on a SIM.' })
+      }
+      return res.json({ success: true, unpaired: true })
+    }
+
     const { simLegacyId } = req.body || {}
     if (!simId && !simLegacyId) {
       return res.status(400).json({ success: false, error: 'Pick a SIM, or resolve it.' })

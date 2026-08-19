@@ -19605,6 +19605,13 @@ function cmRowHtml(m) {
           </div>` : ''}
       </div>
       <div class="cm-actions">
+        ${/* Owner, 19 Aug: "any way to undo a non needs a human match?" There
+             was not — the endpoint only paired or dismissed. It matters most
+             for the matches nobody chose: 33 of the first 36 filed messages
+             were matched automatically, so a wrong one sat on the wrong
+             customer's line with nobody prompted to look. */''}
+        ${m.sim ? `<button class="btn btn-outline btn-sm" onclick="cmUnpair(${m.id})"
+             title="Put this back in the queue — it will not be matched automatically again">↩ Undo match</button>` : ''}
         ${settled ? '<span style="color:var(--muted);font-size:var(--fs-micro);">done</span>'
           : `<button class="btn btn-outline btn-sm" onclick="cmResolve(${m.id})" title="Nothing to do about this one">Dismiss</button>`}
         <button class="btn btn-outline btn-sm" onclick="cmMakeTask(${m.id})"
@@ -19702,6 +19709,35 @@ async function approveForward(i) {
   else if (res.redirected) toast(`Test mode — it went to ${res.sentTo}, not to them.`, 'info');
   else toast(`Sent to ${res.sentTo}.`, 'success');
   openForwardQueue();
+}
+
+/**
+ * Undo a match, and mean it.
+ *
+ * The message goes back to the queue for a person to decide — and is marked so
+ * the nightly sweep leaves it alone. Without that mark it would land in exactly
+ * the state the sweep hunts for and be re-filed on the same SIM overnight,
+ * which is an undo that undoes itself.
+ */
+async function cmUnpair(id) {
+  const m = (cmData?.messages || []).find(x => String(x.id) === String(id));
+  const who = m && m.sim ? `${m.sim.customerName || ''} ${fmtPhone(m.sim.number || '')}`.trim() : 'that SIM';
+  if (!(await kcConfirm({
+    title: 'Undo this match?',
+    body: `This message is filed on <strong>${escName(who)}</strong>.<br><br>` +
+      `It goes back to the queue for someone to file by hand, and the nightly sweep will not ` +
+      `match it again by itself — you have said the automatic answer was wrong, and it should not argue.`,
+    okLabel: '↩ Undo the match',
+  }))) return;
+  if (cmBusy) return; cmBusy = true;
+  try {
+    const res = await window.api.settleCarrierMail({ id, op: 'unpair' });
+    if (!res || !res.success) throw new Error(res?.error || 'failed');
+    toast('Back in the queue — it will not be re-matched automatically.', 'success');
+    renderCarrierMailTab();
+  } catch (e) {
+    toast(String(e.message || 'Could not undo that.'), 'error');
+  } finally { cmBusy = false; }
 }
 
 async function cmPair(id, simId) {
