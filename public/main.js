@@ -11156,16 +11156,48 @@ async function bankConfirm(txnId, customerId, name) {
     amount: Math.abs(t.amount),
     okLabel: 'Confirm match',
   }))) return;
+  await bankPostMatch(txnId, customerId, name);
+}
+
+// The POST half of confirming, without the dialog. bankConfirm asks first;
+// the create-a-customer path has already asked its own question and must not
+// ask a second time for the same click.
+async function bankPostMatch(txnId, customerId, name) {
   const res = await kcFetch('/api/bank', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ op: 'confirm', txnId, customerId, clientRef: kcRef() }),
   }).then(r => r.json()).catch(() => null);
-  if (!res || !res.success) { toast(res?.error || 'Could not confirm it.', 'error'); return; }
+  if (!res || !res.success) { toast(res?.error || 'Could not confirm it.', 'error'); return false; }
   toast('Matched — payment is on the ledger.', 'success');
   bankPatchRow(txnId, { matchState: 'confirmed', matchedCustomerId: customerId, matchedName: name });
   bankPaint();
   bankRefreshQuiet();
+  return true;
 }
+
+// ── KC_BANKNEW mirror start ── (lib/bankNewCustomer.mjs)
+const KC_BANKNEW_EMAIL_RE = /[^\s<>()[\]:;,"]+@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+/i;
+function splitPersonName(input) {
+  const parts = String(input == null ? '' : input).trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return { firstName: '', lastName: '' };
+  return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
+}
+function emailFromTransaction(txn) {
+  for (const field of [txn && txn.description, txn && txn.counterparty]) {
+    const s = String(field == null ? '' : field).trim();
+    if (!s) continue;
+    const m = s.match(KC_BANKNEW_EMAIL_RE);
+    if (m && m[0] === s) return s.toLowerCase();
+  }
+  return '';
+}
+function newCustomerDraft(typedName, txn) {
+  const { firstName, lastName } = splitPersonName(typedName);
+  if (!firstName) return null;
+  const email = emailFromTransaction(txn);
+  return { firstName, lastName, email, fullName: lastName ? `${firstName} ${lastName}` : firstName };
+}
+// ── KC_BANKNEW mirror end ──
 
 function bankPick(txnId) {
   const t = (bankData?.transactions || []).find(x => x.id === txnId);
@@ -11196,7 +11228,57 @@ function bankPickList(txnId) {
     <div class="feed-item dash-link" onclick="closeDynamicModal();bankConfirm('${escHtml(txnId)}','${escHtml(String(c.customerId))}','${escHtml(c.name).replace(/'/g, '&#39;')}')">
       <span class="feed-label">${escHtml(c.name)}</span><span class="feed-go">›</span>
     </div>`).join('')
-    : `<div style="color:var(--muted);font-size:var(--fs-body);padding:10px 0;">No customer matches “${escHtml(q)}”.</div>`;
+    : !q
+      ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:10px 0;">Type a name to search.</div>`
+      : `<div style="padding:10px 0;">
+          <div style="color:var(--muted);font-size:var(--fs-body);">No customer matches “${escHtml(q)}”.</div>
+          <button class="btn btn-primary btn-sm" style="margin-top:10px;white-space:normal;text-align:left;line-height:1.35;"
+            onclick="bankPickCreate('${escHtml(txnId)}')">
+            ➕ Add “${escHtml(document.getElementById('bankPickSearch')?.value.trim() || q)}” as a new customer
+          </button>
+          <div style="font-size:var(--fs-small);color:var(--muted);margin-top:6px;">
+            …and match this payment to them. You can fill in their phone and address later.</div>
+        </div>`;
+}
+
+// Add the sender as a new customer and post the payment to them, in one go.
+//
+// Reached only from the "no customer matches" state, so the operator has
+// already looked. It asks once and does both, because splitting it in two
+// means leaving the screen, adding the person, and hunting for this row again
+// — the friction that had payments sitting unmatched.
+async function bankPickCreate(txnId) {
+  const t = (bankData?.transactions || []).find(x => x.id === txnId);
+  const typed = document.getElementById('bankPickSearch')?.value || '';
+  const draft = newCustomerDraft(typed, t);
+  if (!t || !draft) { toast('Type the sender\u2019s name first.', 'error'); return; }
+  if (!(await kcConfirm({
+    title: 'Add them and match this payment?',
+    body: `<strong>${escHtml(draft.fullName)}</strong> is not in the book yet.`
+      + `<br>They will be added as a new customer${draft.email ? ` with the email <strong>${escHtml(draft.email)}</strong>` : ' (no phone or email — you can fill those in later)'},`
+      + ` and this payment posts to their wallet.`
+      + `<br><span style="color:var(--muted);">${escHtml(t.counterparty || t.description || 'Bank credit')} · ${fmtDate(t.bookedAt)} · ${escHtml(t.accountRef)}</span>`,
+    amount: Math.abs(t.amount),
+    okLabel: 'Add and match',
+  }))) return;
+  const res = await window.api.addCustomer({
+    firstName: draft.firstName, lastName: draft.lastName, email: draft.email,
+    notes: `Added from a bank row on ${fmtDate(new Date().toISOString())} — sender “${t.counterparty || t.description || ''}”.`,
+  }).catch(() => null);
+  if (!res || !res.success || !res.customer) {
+    toast(res?.error || 'Could not add the customer — nothing was posted.', 'error');
+    return;
+  }
+  customers.push(res.customer);
+  sortCustomersAZ();
+  // Keep the picker's own list in step, so a second row from the same sender
+  // finds them by search instead of offering to create a duplicate.
+  if (bankData) {
+    if (!Array.isArray(bankData.customers)) bankData.customers = [];
+    bankData.customers.push({ customerId: res.customer.id, name: draft.fullName });
+  }
+  closeDynamicModal();
+  await bankPostMatch(txnId, res.customer.id, draft.fullName);
 }
 
 async function bankIgnore(txnId) {

@@ -115,6 +115,16 @@ export const MODALS = [
   // column like the Customer-360 page. Worth the eyes now that Stripe charges
   // triage through it beside bank rows.
   ['bank-recon',    'wallet',    `renderBankRecon()`, '#mainContent'],
+  // Choosing the sender by hand. Driven into its no-match state on purpose:
+  // that is where it offers to add the person, and an empty result list is
+  // the one view of this box worth checking for contrast and fit.
+  ['bank-pick',    'wallet',    `(async () => {
+     await renderBankRecon();
+     const t = (bankData.transactions || []).find(x => x.amount > 0) || (bankData.transactions || [])[0];
+     bankPick(t.id);
+     document.getElementById('bankPickSearch').value = 'Hershl H';
+     bankPickList(t.id);
+   })()`],
   // Not modals, but the same eyes-on treatment: the Customer-360 page
   // (/customers/<id>) renders in the content column — .kc-cpage is in the
   // geometry selector below so both sub-tabs get measured and screenshotted.
