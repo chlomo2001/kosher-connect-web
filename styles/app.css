@@ -1338,6 +1338,14 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 /* The text being answered, quoted above the box you type into. Their words
    have to look like theirs — an unquoted paste reads as something the shop
    wrote, which is a bad way to start a reply. */
+/* The wallet balance on a customer card. A statement of fact that sits beside
+   a button, so it must not look like one: weight and colour carry it, and the
+   fill and padding that made it read as pressable are gone. */
+.wallet-balance {
+  font-size: var(--fs-ui); font-weight: 600; white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
 /* The forward-to-customers queue (owner item 20). A row that will NOT be sent
    is deliberately still shown, and still readable — the queue is where the rule
    gets understood, and a message silently missing teaches nobody anything. */

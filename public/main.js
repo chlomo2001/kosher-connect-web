@@ -9616,8 +9616,14 @@ async function loadWalletSection(customerId) {
 
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
-      <span class="badge" style="font-size:var(--fs-ui);padding:7px 16px;white-space:nowrap;background:${bal < 0 ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)'};color:${balColor};">
-        Balance: ${balLabel}</span>
+      ${/* A statement, not a control. This was a .badge inflated by inline
+             styles to font-size:var(--fs-ui) and padding:7px 16px — MORE
+             padding than the real button beside it — with a filled background
+             and no click. Two things the same shape in one row, one of them
+             pressable. The balance keeps the colour, which is what carries the
+             news; the fill and the button-sized padding go, so the only filled
+             thing in the row is the thing you can press. */''}
+      <span class="wallet-balance" style="color:${balColor};">Balance: ${balLabel}</span>
       <button class="btn btn-primary" style="font-size:var(--fs-small);padding:6px 14px;"
         onclick="openWalletModal('${escHtml(customerId)}', ${Number(bal) || 0})">💰 Record payment / credit</button>
       ${data.entries.length > 8 ? `<span style="color:var(--muted);font-size:var(--fs-micro);">showing 8 of ${data.entries.length}</span>` : ''}
