@@ -1338,6 +1338,23 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 /* The text being answered, quoted above the box you type into. Their words
    have to look like theirs — an unquoted paste reads as something the shop
    wrote, which is a bad way to start a reply. */
+/* Document folders on a customer card (owner item 4). Closed by default: the
+   point is to make a long list scannable, and opening all of them again would
+   put it straight back. */
+.doc-folder { border-bottom: 1px solid var(--border); }
+.doc-folder-head {
+  display: flex; align-items: center; gap: 8px; padding: 7px 0;
+  cursor: pointer; user-select: none; font-size: var(--fs-body);
+}
+.doc-folder-head:hover { color: var(--accent); }
+.doc-folder-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.doc-chev { font-size: var(--fs-micro); color: var(--muted); transition: transform .15s; display: inline-block; flex: none; }
+.doc-count {
+  margin-left: auto; font-size: var(--fs-micro); color: var(--muted);
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: 999px; padding: 0 8px; min-width: 22px; text-align: center;
+}
+
 /* A corrected timeline entry (owner item 1). What it used to say is smaller and
    struck through rather than gone — the correction is the news, the original is
    the evidence, and both are on the row. */

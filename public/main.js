@@ -7671,6 +7671,53 @@ function kcCustomerPageCat(cat) {
 // Staff share files with a customer (visible in their portal) and review any
 // files the customer uploaded back (which arrive as "pending"). Loaded lazily
 // like the wallet section; degrades quietly if storage isn't configured.
+// ── KC_DOCFOLDERS mirror start ──
+// Mirrors lib/docFolders.mjs. Held to it by test/docFoldersMirror.test.mjs.
+// Owner item 4: a folder per kind of document, STAFF SIDE ONLY. The portal half
+// of that item was deliberately not taken, and nothing here reaches the portal.
+const KC_DOCFOLDERS = (() => {
+  const FOLDERS = [
+    ['passport', '🛂 Passports & ID', /passport|\bid\b|identity|driving|licen[cs]e|birth ?cert/i],
+    ['travel', '✈️ Tickets & itineraries', /ticket|boarding|itiner|e-?ticket|flight|booking ?ref|pnr/i],
+    ['money', '🧾 Receipts & invoices', /receipt|invoice|\bbill\b|statement|payment|refund/i],
+    ['forms', '📄 Forms & agreements', /contract|agreement|\bform\b|terms|mandate|direct ?debit|\bdd\b|authoris/i],
+    ['photos', '📷 Photos & scans', /\.(jpe?g|png|heic|heif|webp|tiff?)$/i],
+    ['other', '📁 Everything else', null],
+  ];
+  const LABELS = Object.fromEntries(FOLDERS.map(([key, label]) => [key, label]));
+  function documentFolder(doc) {
+    const name = String((doc && doc.filename) || '');
+    for (const [key, , pattern] of FOLDERS) if (pattern && pattern.test(name)) return key;
+    return 'other';
+  }
+  const folderLabel = (key) => LABELS[key] || LABELS.other;
+  function groupDocuments(docs = []) {
+    const bucket = new Map();
+    for (const doc of docs) {
+      if (!doc) continue;
+      const key = documentFolder(doc);
+      if (!bucket.has(key)) bucket.set(key, []);
+      bucket.get(key).push(doc);
+    }
+    return FOLDERS.filter(([key]) => bucket.has(key))
+      .map(([key, label]) => ({ key, label, docs: bucket.get(key), count: bucket.get(key).length }));
+  }
+  return { FOLDERS, documentFolder, folderLabel, groupDocuments };
+})();
+// ── KC_DOCFOLDERS mirror end ──
+
+// Which folders are open, per customer, so opening one does not close on the
+// next repaint. In memory only: it is a reading position, not a preference.
+const kcDocFolderOpen = {};
+function toggleDocFolder(custId, key) {
+  const k = `${custId}|${key}`;
+  kcDocFolderOpen[k] = !kcDocFolderOpen[k];
+  const body = document.getElementById(`docFolder-${custId}-${key}`);
+  const chev = document.getElementById(`docChev-${custId}-${key}`);
+  if (body) body.style.display = kcDocFolderOpen[k] ? '' : 'none';
+  if (chev) chev.style.transform = kcDocFolderOpen[k] ? 'rotate(90deg)' : '';
+}
+
 async function loadDocsSection(custId) {
   const el = document.getElementById(`docsSection-${custId}`);
   if (!el) return;
@@ -7705,8 +7752,32 @@ function renderDocsSection(custId, docs) {
           <button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="reviewCustomerDoc('${custId}','${d.id}','reject')">Reject</button>
         </div>`).join('')}
     </div>` : '';
-  const listHtml = others.length ? others.map(row).join('')
-    : (pending.length ? '' : `<div style="color:var(--muted);font-size:var(--fs-body);padding:4px 0;">No documents yet.</div>`);
+  // Owner item 4: a folder per kind, rather than one flat list of filenames.
+  // A customer with fourteen files was fourteen lines to read; the folders mean
+  // "where is their passport" is one glance. Below four documents the folders
+  // would be more furniture than help, so the flat list stays.
+  const FOLDER_FROM = 4;
+  const listHtml = !others.length
+    ? (pending.length ? '' : `<div style="color:var(--muted);font-size:var(--fs-body);padding:4px 0;">No documents yet.</div>`)
+    : others.length < FOLDER_FROM
+      ? others.map(row).join('')
+      : KC_DOCFOLDERS.groupDocuments(others).map(g => {
+          const open = !!kcDocFolderOpen[`${custId}|${g.key}`];
+          return `
+            <div class="doc-folder">
+              <div class="doc-folder-head" onclick="toggleDocFolder('${escJs(String(custId))}','${escJs(g.key)}')"
+                role="button" tabindex="0"
+                onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDocFolder('${escJs(String(custId))}','${escJs(g.key)}')}">
+                <span id="docChev-${escHtml(String(custId))}-${escHtml(g.key)}" class="doc-chev"
+                  style="${open ? 'transform:rotate(90deg);' : ''}">▶</span>
+                <strong>${escHtml(g.label)}</strong>
+                <span class="doc-count">${g.count}</span>
+              </div>
+              <div id="docFolder-${escHtml(String(custId))}-${escHtml(g.key)}" style="${open ? '' : 'display:none;'}">
+                ${g.docs.map(row).join('')}
+              </div>
+            </div>`;
+        }).join('');
   el.innerHTML = pendingHtml + listHtml + `
     <div style="margin-top:10px;" id="docStage-${custId}">
       <input type="file" id="docUpload-${custId}" accept="image/*,application/pdf" style="display:none;" onchange="stageCustomerDoc('${custId}', this)">
