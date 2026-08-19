@@ -6355,7 +6355,15 @@ window.addEventListener('resize', () => {
   });
 });
 
-function showDynamicModal(html) {
+/**
+ * The standard dialog. `width` matches showStackedModal's option.
+ *
+ * It used to hardcode 560px while its sibling took a width, so a caller asking
+ * for a wider dialog got 560 and no error — the forward-to-customers queue was
+ * written asking for 720 and rendered at 560, which is the kind of thing that
+ * is only ever noticed by measuring. Silent no-ops are worse than errors.
+ */
+function showDynamicModal(html, { width = 560 } = {}) {
   let overlay = document.getElementById('dynamicModal');
   let wasOpen = false;
   if (!overlay) {
@@ -6367,7 +6375,7 @@ function showDynamicModal(html) {
   } else {
     wasOpen = !overlay.classList.contains('hidden');
   }
-  overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:560px;"><button type="button" class="modal-x" aria-label="Close" title="Close (Esc)" onclick="closeDynamicModal()">✕</button>${html}</div>`;
+  overlay.innerHTML = `<div class="modal" role="dialog" aria-modal="true" style="width:${Number(width) || 560}px;"><button type="button" class="modal-x" aria-label="Close" title="Close (Esc)" onclick="closeDynamicModal()">✕</button>${html}</div>`;
   // Name the dialog from the title the payload already renders. Without this
   // all 49 call sites announce as an unnamed dialog — and because focus jumps
   // straight into the first field, the visible title is never read aloud.
@@ -19347,6 +19355,13 @@ function paintCarrierMail() {
         <h2 class="card-title">Carrier mail</h2>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           ${chip('pending', 'Needs a human')}${chip('paired', 'Filed')}${chip('all', 'Everything')}
+          ${/* Owner item 20. Owner-only, because approving one puts a message in
+                front of a customer. Opens a queue rather than sitting inline:
+                deciding "should this person get this" is its own job, and doing
+                it in the margin of the filing screen is how it gets skimmed. */''}
+          ${currentStaff && currentStaff.role === 'owner'
+            ? `<button class="btn btn-outline btn-sm" onclick="openForwardQueue()"
+                 title="Carrier mail worth sending on to the customer">📤 Forward to customers</button>` : ''}
           <button class="btn btn-outline btn-sm" onclick="renderCarrierMailTab()"
             title="Check for mail that has just arrived">↻ Check now</button>
         </div>
@@ -19546,6 +19561,76 @@ function cmMakeTask(id) {
     customerName: m.sim?.customerName || '',
     source: 'carrier mail',
   });
+}
+
+/**
+ * The approval queue for forwarding carrier mail (owner item 20).
+ *
+ * The owner chose HOLD-gated with an approval queue over going live for a
+ * narrow set, so this screen's whole job is to make a forward VISIBLE before it
+ * is possible: what would go, to whom, and why it qualifies — and, just as
+ * importantly, what will NOT go and what is stopping it. A message silently
+ * absent from a queue teaches nobody anything about the rule.
+ */
+async function openForwardQueue() {
+  showDynamicModal(`
+    <div class="modal-title">📤 Forward to customers</div>
+    <div id="fwdBody" style="font-size:var(--fs-body);color:var(--muted);">Reading the queue…</div>
+  `, { width: 720 });
+  const res = await kcFetch('/api/mail-forward').then(r => r.json()).catch(() => null);
+  const body = document.getElementById('fwdBody');
+  if (!body) return;
+  if (!res || !res.success) {
+    body.innerHTML = `<span style="color:var(--danger-ink);">${escHtml(res?.error || 'Could not read the queue.')}</span>`;
+    return;
+  }
+  window.__kcFwd = res.plans;
+  const row = (p, i) => `
+    <div class="fwd-row${p.ready ? '' : ' fwd-blocked'}" id="fwdRow-${escHtml(String(p.id))}">
+      <div class="fwd-what">
+        <strong>${escHtml(p.subject)}</strong>
+        <div class="fwd-meta">${escHtml(p.carrier || 'unknown carrier')}${p.receivedAt ? ' · ' + escHtml(fmtDate(p.receivedAt)) : ''}</div>
+        ${p.ready
+          ? `<div class="fwd-to">→ ${escHtml(p.to.name || p.to.email)} <span class="fwd-addr" dir="ltr">${escHtml(p.to.email)}</span></div>
+             <div class="fwd-why">${escHtml(p.reason)}</div>`
+          : `<div class="fwd-block">Not going anywhere — ${escHtml(p.blockedBy || 'it does not qualify')}</div>`}
+      </div>
+      ${p.ready ? `<button class="btn btn-primary btn-sm" onclick="approveForward(${i})">📤 Send it</button>` : ''}
+    </div>`;
+  body.innerHTML = `
+    <div style="margin-bottom:10px;">
+      <strong>${res.ready}</strong> ready to send${res.blocked ? `, ${res.blocked} that will not go` : ''}.
+      Each one goes to the customer the message is already filed against — nothing here guesses whose a message is.
+      ${res.gate === 'not-configured'
+        ? '<br><span style="color:var(--danger-ink);">Email is not configured, so nothing can be sent yet.</span>'
+        : '<br>The safety gate still decides what happens: on HOLD the message is built and logged and nothing leaves the building.'}
+    </div>
+    <div class="fwd-list">${res.plans.length ? res.plans.map(row).join('')
+      : '<div style="color:var(--muted);">Nothing filed is waiting to be forwarded.</div>'}</div>`;
+}
+
+async function approveForward(i) {
+  const p = (window.__kcFwd || [])[i];
+  if (!p || !p.ready) return;
+  if (!(await kcConfirm({
+    title: `Send this to ${p.to.name || p.to.email}?`,
+    body: `They will get the carrier's own message, quoted, with one line saying why they have it.<br><br>` +
+      `<strong>${escHtml(p.subject)}</strong><br>` +
+      `<span style="color:var(--muted);">to ${escHtml(p.to.email)}</span><br><br>` +
+      `Nothing here is rewritten — a paraphrase of a carrier's message would be a new claim made in the shop's name.`,
+    okLabel: '📤 Send it',
+  }))) return;
+  const res = await kcFetch('/api/mail-forward', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: p.id }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Could not send that.', 'error'); return; }
+  // Say which of the three things actually happened rather than "Sent" over a
+  // message the gate held.
+  if (res.held) toast('Approved and logged — email is on HOLD, so nothing was sent.', 'info');
+  else if (res.redirected) toast(`Test mode — it went to ${res.sentTo}, not to them.`, 'info');
+  else toast(`Sent to ${res.sentTo}.`, 'success');
+  openForwardQueue();
 }
 
 async function cmPair(id, simId) {

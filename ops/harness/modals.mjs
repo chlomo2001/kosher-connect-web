@@ -104,6 +104,9 @@ export const MODALS = [
   // "Make this a task", the one affordance wherever something arrives (owner
   // items 2 and 6). Opened from the message log because that is one of the
   // three places it hangs; the box itself is the same on all three.
+  // The forward-to-customers approval queue (owner item 20). Owner-only, so
+  // the harness runs it as the owner the seed already signs in as.
+  ['forward-queue', 'mail', `openForwardQueue()`],
   ['task-from-here', 'settings', `(async () => {
      await loadMessageLog();
      msgLogTask('5');

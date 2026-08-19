@@ -1879,5 +1879,73 @@
     ]
    }
   ]
+ },
+ "/api/mail-forward": {
+  "success": true,
+  "gate": "configured",
+  "ready": 2,
+  "blocked": 2,
+  "plans": [
+   {
+    "id": 1,
+    "kind": "renewed",
+    "subject": "Your Lebara plan has renewed — £10.00",
+    "eligible": true,
+    "reason": "It is their money and their plan; the carrier receipt is the news.",
+    "ready": true,
+    "blockedBy": null,
+    "to": {
+     "email": "m.adler@example.com",
+     "name": "Menachem Adler",
+     "customerId": "c1"
+    },
+    "carrier": "Lebara",
+    "receivedAt": "2026-08-18T09:00:00Z",
+    "snippet": "Your plan renewed."
+   },
+   {
+    "id": 2,
+    "kind": "payment_failed",
+    "subject": "We could not take your payment",
+    "eligible": true,
+    "reason": "Their line is about to stop. The sooner they know, the cheaper it is to fix.",
+    "ready": true,
+    "blockedBy": null,
+    "to": {
+     "email": "yossi@example.com",
+     "name": "Yossi Taitelbaum",
+     "customerId": "c2"
+    },
+    "carrier": "Smarty",
+    "receivedAt": "2026-08-18T11:00:00Z",
+    "snippet": "Payment failed."
+   },
+   {
+    "id": 3,
+    "kind": "renewed",
+    "subject": "Two lines renewed",
+    "eligible": true,
+    "reason": "It is their money and their plan; the carrier receipt is the news.",
+    "ready": false,
+    "blockedBy": "This message covers 2 numbers — it cannot go to one customer.",
+    "to": null,
+    "carrier": "Lebara",
+    "receivedAt": "2026-08-18T12:00:00Z",
+    "snippet": ""
+   },
+   {
+    "id": 4,
+    "kind": "marketing",
+    "subject": "Refer a friend and get £5",
+    "eligible": false,
+    "reason": "",
+    "ready": false,
+    "blockedBy": "Not a kind worth forwarding.",
+    "to": null,
+    "carrier": "Lebara",
+    "receivedAt": "2026-08-18T13:00:00Z",
+    "snippet": ""
+   }
+  ]
  }
 }

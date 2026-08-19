@@ -1338,6 +1338,23 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
 /* The text being answered, quoted above the box you type into. Their words
    have to look like theirs — an unquoted paste reads as something the shop
    wrote, which is a bad way to start a reply. */
+/* The forward-to-customers queue (owner item 20). A row that will NOT be sent
+   is deliberately still shown, and still readable — the queue is where the rule
+   gets understood, and a message silently missing teaches nobody anything. */
+.fwd-list { display: grid; gap: 8px; max-height: 60vh; overflow: auto; }
+.fwd-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  padding: 10px 12px; border: 1px solid var(--border);
+  border-left: 3px solid var(--success); border-radius: 8px; background: var(--surface);
+}
+.fwd-row.fwd-blocked { border-left-color: var(--border); opacity: .8; }
+.fwd-what { flex: 1; min-width: 0; }
+.fwd-meta { font-size: var(--fs-micro); color: var(--muted); }
+.fwd-to { font-size: var(--fs-small); color: var(--text); overflow-wrap: anywhere; }
+.fwd-addr { color: var(--muted); }
+.fwd-why { font-size: var(--fs-micro); color: var(--success); overflow-wrap: anywhere; }
+.fwd-block { font-size: var(--fs-micro); color: var(--muted); overflow-wrap: anywhere; }
+
 /* ── Two customer cards at once (owner item 22) ───────────────────────────
    The owner chose both cards fully editable over a read-only second one, so
    the screen has to answer "which one am I in?" without being asked. Only when

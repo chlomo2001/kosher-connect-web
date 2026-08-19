@@ -530,6 +530,7 @@ Post arriving from the networks — renewals, ports, warnings, payment problems 
 **On the screen**
 
 - **Needs a human** — The queue: messages the app could not confidently file. This is the whole job of the screen.
+- **📤 Forward to customers** — Owner only. Carrier mail worth sending on to the person whose line it is — a renewal receipt, a payment that failed, a completed port, something about to expire. It opens a queue showing what would go, to whom, and why, and it shows what will NOT go and what is stopping it, so the rule can be understood rather than guessed at. Nothing here decides whose a message is: it only ever goes to the customer the message is already filed against, and a message covering more than one number goes to nobody at all. The safety gate still decides what happens to an approved message.
 - **What the message means** — Every row says what it IS before it says whose it is — renewing soon, renewed, about to expire, port completed, PAC code, payment problem. The ports and the payment problems are the ones that carry colour, because they are the ones that mean work; the renewals are the wallpaper.
 - **Port completed** — A finished port is not post, it is the end of a job: the customer's number has moved onto our SIM, so the plan usually still shows the number it was set up with. Where the carrier names the new number, one press puts it on the plan. Where it does not — Lebara's confirmation names no number, it tells the customer to dial a code — the row says so and opens the plan to be corrected.
 - **↻ Check now** — Re-reads the mailbox without leaving the screen — for when somebody is standing there waiting for a message they know has been sent.
@@ -540,6 +541,10 @@ Post arriving from the networks — renewals, ports, warnings, payment problems 
 - **Type a name or number** — Appears when there are more SIMs on the address than fit. Type any part of a name or a number and the list narrows to it; “+ N more” shows the rest.
 - **Add as a new SIM plan** — For post about a plan the shop has never recorded. It opens the usual new-plan form with the number and network already filled, and files the message on the plan once it is saved.
 - **Dismiss** — For post that belongs to nobody — a circular, a wrong number. It leaves the queue without pretending to be filed.
+
+**Boxes that open on top of it**
+
+- **forward-queue** — The approval queue for forwarding carrier mail to customers: every filed message, whether it can go, to whom, and why — including the ones that cannot and what is stopping them.
 
 **Rules that bite here**
 
