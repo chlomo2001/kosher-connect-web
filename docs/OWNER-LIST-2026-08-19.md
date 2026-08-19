@@ -46,6 +46,26 @@ shipped in `604d53f`: upcoming renewals moved to *Coming up*, and only a renewal
 PAST its date still counts as attention, because that one did not happen by
 itself.
 
+**All five are now shipped**, C1 last. Its check harness
+(`ops/harness/money.mjs`) reads the money screens the way a person does rather
+than trusting the unit tests, and found two things worth your knowing:
+
+- **A balance the app did not have was being shown as "settled".** `Number(null)`
+  is 0, so a customer whose balance had not loaded read as an account that is
+  clear. It now reads *not checked yet*. This was the same mistake as a missing
+  rate coming out as free, which had been found and fixed in the same file a day
+  earlier — the comment warning about it was three lines below the function that
+  still had it.
+- **The customers list said "£45.00 debt" and "£20.00 credit"** — its own
+  wording, on the screen most used. It now says *owes …* and *… in credit* like
+  everywhere else. And where the wallet figures have not arrived, that column
+  used to print the total the customer had ever paid; a large number under a
+  heading of "Balance" reads as money owed, so it now says nothing rather than
+  the wrong thing.
+
+Carrier mail also learned a second address per line ("do the list of
+addresses"), which is what the ten unpairable messages were waiting on.
+
 ## ⚠ Still needs you, outside the app
 
 **Google sign-in on the portal is broken in production.** Supabase → Authentication
