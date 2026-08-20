@@ -12,7 +12,7 @@ import test from 'node:test'
 import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { rentalPayBy, rentalPayState } from '../lib/rentalReceipt.mjs'
+import { rentalPayBy, rentalPayState, calendarWeeks } from '../lib/rentalReceipt.mjs'
 
 const ROOT = path.join(import.meta.dirname, '..')
 const API = readFileSync(path.join(ROOT, 'pages/api/email.js'), 'utf8')
@@ -200,6 +200,7 @@ test('the Settings preview renders the real rental email', () => {
 // sentence claiming the due date was the return date when the floor had won,
 // and a promise of "or online now:" followed by nothing when Stripe is off.
 import { esc, brandShell } from '../lib/email.js'
+import { hebrewFromGregorian, hebrewNumeral, hebrewMonthName } from '../lib/hebrewDate.mjs'
 
 function liftBuildRental() {
   const grab = (start) => {
@@ -208,9 +209,13 @@ function liftBuildRental() {
     const rest = API.slice(i)
     return rest.slice(0, rest.indexOf('\n}\n') + 3)
   }
+  // NOTE: grab() runs to the first line-start '}', so grabbing factRow also
+  // swallows DOW and hebrewDayNumeral that follow it. That is fine — they are
+  // needed anyway — but do not add them again or the Function body redeclares.
   const code = [
     grab('const fmtDay = (iso)'), grab('const fmtShortDay = (iso)'),
-    grab('const factRow = (label'), grab('function buildRental('),
+    grab('const factRow = (label'), grab('function hebrewMonthCaption('),
+    grab('function rentalCalendar('), grab('function buildRental('),
   ].join('\n')
   const money = (v) => Math.round((Number(v) || 0) * 100) / 100
   const gbp = (v) => `£${money(v).toFixed(2)}`
@@ -218,9 +223,13 @@ function liftBuildRental() {
   const fill = (t, v) => String(t).replace(/\{(\w+)\}/g, (m, k) => (v[k] === undefined ? m : v[k]))
   const shell = (title, rows, fn, cl) => brandShell({ title, bodyRows: rows, footNote: fn, closing: cl })
   const greeting = (c, w) => `<tr><td colspan="2">${fill(c.email_greeting, { first: esc((w.name || '').split(' ')[0]), name: esc(w.name) })}</td></tr>`
-  return new Function('esc', 'brandShell', 'rentalPayState', 'money', 'gbp', 'METHOD_LABEL',
-    'fill', 'shell', 'greeting', `${code}; return buildRental;`)(
-    esc, brandShell, rentalPayState, money, gbp, METHOD_LABEL, fill, shell, greeting)
+  return new Function('esc', 'brandShell', 'rentalPayState', 'calendarWeeks',
+    'hebrewFromGregorian', 'hebrewNumeral', 'hebrewMonthName',
+    'money', 'gbp', 'METHOD_LABEL', 'fill', 'shell', 'greeting',
+    `${code}; return buildRental;`)(
+    esc, brandShell, rentalPayState, calendarWeeks,
+    hebrewFromGregorian, hebrewNumeral, hebrewMonthName,
+    money, gbp, METHOD_LABEL, fill, shell, greeting)
 }
 
 const build = liftBuildRental()
@@ -295,4 +304,98 @@ test('a customer’s name cannot inject markup into their own receipt', () => {
   const out = build(COPY, { name: 'Mo <script>alert(1)</script> Luftig' }, { ...BASE, paidAmount: 0 }, {})
   assert.doesNotMatch(out.html, /<script>/)
   assert.match(out.html, /&lt;script&gt;/)
+})
+
+// ── the calendar that explains the price ───────────────────────────────────
+//
+// Owner, 20 Aug: "maybe a calender showing the chargable days? with hebrew? …
+// i mean the hebrew date in small". "Chargeable days 6" over a seven-day
+// window is a number the customer cannot check. The shaded cells are the same
+// fact, shown — and the free days ARE Hebrew-calendar days, so the Hebrew date
+// under each one is what makes it explain itself.
+
+const week = (from, to, freeIsos = []) => {
+  const out = []
+  let cur = Date.parse(`${from}T00:00:00Z`)
+  const end = Date.parse(`${to}T00:00:00Z`)
+  while (cur <= end) {
+    const iso = new Date(cur).toISOString().slice(0, 10)
+    out.push({ iso, free: freeIsos.includes(iso), reason: freeIsos.includes(iso) ? 'Shabbos' : '' })
+    cur += 86400000
+  }
+  return out
+}
+
+test('the window lands on the right weekday columns', () => {
+  // 20 Aug 2026 is a Thursday; 22 Aug is Shabbos.
+  const weeks = calendarWeeks(week('2026-08-20', '2026-08-26', ['2026-08-22']))
+  assert.equal(weeks.length, 2)
+  assert.deepEqual(weeks[0].map((c) => (c ? c.day : null)), [null, null, null, null, 20, 21, 22])
+  assert.deepEqual(weeks[1].map((c) => (c ? c.day : null)), [23, 24, 25, 26, null, null, null])
+  assert.equal(weeks[0][6].free, true, 'Shabbos is the free one')
+  assert.equal(weeks[1][0].free, false)
+})
+
+test('a window that starts on a Sunday does not emit an empty first week', () => {
+  const weeks = calendarWeeks(week('2026-08-23', '2026-08-25'))
+  assert.equal(weeks.length, 1)
+  assert.equal(weeks[0][0].day, 23)
+})
+
+test('a window too long to draw returns nothing, so the caller can use prose', () => {
+  assert.deepEqual(calendarWeeks(week('2026-08-20', '2026-09-30')), [])
+  assert.deepEqual(calendarWeeks([]), [])
+  assert.deepEqual(calendarWeeks(null), [])
+  // Junk days are dropped rather than drawn as blank cells.
+  assert.deepEqual(calendarWeeks([{ iso: 'soon' }, { iso: '' }]), [])
+})
+
+test('the calendar is built from the counter’s own day list, not re-derived', () => {
+  // The server has no Yom Tov table; a second answer to "was that day free" is
+  // exactly the thing worth not having.
+  assert.match(SRC, /function rentalDayList\(fromDate, toDate\)/)
+  assert.match(SRC, /dayList: rentalDayList\(from, to\)/)
+  const fn = SRC.slice(SRC.indexOf('function rentalDayList(fromDate, toDate)'))
+  const fbody = fn.slice(0, fn.indexOf('\n}\n'))
+  assert.match(fbody, /freeDayReason\(cur\)/, 'the same reason function the price walk uses')
+  assert.match(fbody, /cur\.setDate\(cur\.getDate\(\) \+ 1\)/, 'the same step')
+})
+
+test('the email draws the days, with the Hebrew date small under each', () => {
+  const days = week('2026-08-20', '2026-08-26', ['2026-08-22'])
+  const out = build(COPY, WHO, { ...BASE, paidAmount: 0, dayList: days }, { payBy: '2026-08-27' })
+  const t = text(out.html)
+  // 20 Aug 2026 is 7 Elul 5786 — the owner's own reference point is 18 Aug
+  // 2026 = ה׳ אלול תשפ״ו, so the 20th is ז׳.
+  assert.match(t, /20 ז׳/)
+  assert.match(t, /22 ט׳/)
+  assert.match(t, /אלול תשפ״ו/, 'the Hebrew month is named once, above the grid')
+  assert.match(t, /Sun Mon Tue Wed Thu Fri Shabbos/)
+  assert.match(t, /Shaded days are not charged — Shabbos\./)
+  // The Hebrew is SMALL and it is right-to-left.
+  assert.match(out.html, /font-size:10px[^"]*"\s*dir="rtl"/)
+})
+
+test('a hire too long to draw still says why the count is lower', () => {
+  const days = week('2026-08-20', '2026-09-30', ['2026-08-22', '2026-08-29'])
+  const out = build(COPY, WHO, { ...BASE, to: '2026-09-30', paidAmount: 0, dayList: days }, { payBy: '2026-09-30' })
+  const t = text(out.html)
+  assert.doesNotMatch(t, /Sun Mon Tue/, 'no thirteen-row table in somebody’s inbox')
+  assert.match(t, /2 days in this hire are not charged — Shabbos\./,
+    'the explanation must survive even when the picture cannot')
+})
+
+test('no free days and no day list are different, and neither invents a claim', () => {
+  const none = build(COPY, WHO, { ...BASE, paidAmount: 0, dayList: week('2026-08-23', '2026-08-25') }, {})
+  assert.match(text(none.html), /Every day in this hire is chargeable\./)
+  const absent = build(COPY, WHO, { ...BASE, paidAmount: 0 }, {})
+  assert.doesNotMatch(text(absent.html), /chargeable\.|not charged/)
+})
+
+test('the greeting is not echoed back at the reader', () => {
+  // The settings greeting already says "here are your details for your
+  // records"; opening the next sentence the same way read as a stutter.
+  const out = build(COPY, WHO, { ...BASE, paidAmount: 0 }, {})
+  assert.doesNotMatch(text(out.html), /Here is your phone rental in full/)
+  assert.match(text(out.html), /Keep this email safe/)
 })

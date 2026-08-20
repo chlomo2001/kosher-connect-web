@@ -14,7 +14,8 @@
 import { withStaff, tabAllowedFor } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 import { emailEnabled, sendEmail, esc, brandShell } from '../../lib/email.js'
-import { rentalPayBy, rentalPayState } from '../../lib/rentalReceipt.mjs'
+import { rentalPayBy, rentalPayState, calendarWeeks } from '../../lib/rentalReceipt.mjs'
+import { hebrewFromGregorian, hebrewNumeral, hebrewMonthName } from '../../lib/hebrewDate.mjs'
 import { stripeEnabled, webhookConfigured } from '../../lib/stripe.js'
 import { mintPayLink } from '../../lib/payLink.js'
 import { londonDate } from '../../lib/localDay.mjs'
@@ -160,6 +161,73 @@ const factRow = (label, value) => `<tr>
   <td style="padding:7px 0;border-bottom:1px solid #eef1f4;text-align:right;font-weight:600">${value}</td>
 </tr>`
 
+// The rental window as a calendar, with the Hebrew date small under each day.
+//
+// It exists to explain the price. "Chargeable days 6" over a seven-day window
+// is a number the customer cannot check; shaded Shabbos and Yom Tov cells are
+// the same fact, shown. The Hebrew date is what makes it self-explanatory to
+// this readership — the free days ARE Hebrew-calendar days.
+//
+// Table-based with inline styles, like the rest of the shell: it is the only
+// layout language every mail client still respects. Nothing here is clickable
+// and nothing depends on CSS a client might strip.
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Shabbos']
+
+function hebrewDayNumeral(iso) {
+  const [y, m, d] = String(iso).split('-').map(Number)
+  return hebrewNumeral(hebrewFromGregorian(y, m, d).day)
+}
+
+// Which Hebrew month(s) the window falls in, named once above the grid rather
+// than repeated in thirty cells.
+function hebrewMonthCaption(days) {
+  const seen = new Map()
+  for (const d of days) {
+    const [y, m, dd] = String(d.iso).split('-').map(Number)
+    const h = hebrewFromGregorian(y, m, dd)
+    const key = `${h.year}-${h.month}`
+    if (!seen.has(key)) seen.set(key, `${hebrewMonthName(h.year, h.month, 'he')} ${hebrewNumeral(h.year % 1000)}`)
+  }
+  return [...seen.values()].join(' · ')
+}
+
+function rentalCalendar(days) {
+  const weeks = calendarWeeks(days)
+  // A long hire would be thirteen rows of table in somebody's inbox. The FACT
+  // still has to be told — it is the reason the count is lower than the number
+  // of nights — so a window too long to draw says it in a sentence instead of
+  // silently dropping the explanation, which is what an early version did.
+  if (!weeks.length) {
+    const free = (days || []).filter((d) => d && d.free)
+    if (!free.length) return ''
+    const why = [...new Set(free.map((d) => d.reason).filter(Boolean))].join(' and ')
+    return `<tr><td colspan="2" style="padding:12px 0 0;font-size:12px;color:#64748b">
+      ${free.length} day${free.length === 1 ? '' : 's'} in this hire ${free.length === 1 ? 'is' : 'are'} not charged${why ? ` — ${esc(why)}` : ''}.</td></tr>`
+  }
+  const head = DOW.map((n) => `<th style="padding:4px 0;font-size:11px;font-weight:600;color:#94a3b8;text-align:center;width:14.28%">${esc(n)}</th>`).join('')
+  const body = weeks.map((w) => `<tr>${w.map((c) => {
+    if (!c) return '<td style="padding:2px"></td>'
+    const bg = c.free ? 'background:#f4efe7;border:1px solid #e4d6c2;' : 'background:#ffffff;border:1px solid #eef1f4;'
+    const ink = c.free ? '#8a6a3f' : '#1f2430'
+    return `<td style="padding:2px" align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${bg}border-radius:6px">
+        <tr><td align="center" style="padding:5px 0 1px;font-size:14px;font-weight:600;color:${ink};line-height:1.1">${c.day}</td></tr>
+        <tr><td align="center" style="padding:0 0 5px;font-size:10px;color:${c.free ? '#a98b62' : '#94a3b8'};line-height:1.1" dir="rtl">${esc(hebrewDayNumeral(c.iso))}</td></tr>
+      </table></td>`
+  }).join('')}</tr>`).join('')
+  const named = days.filter((d) => d.free)
+  const legend = named.length
+    ? `Shaded days are not charged — ${esc([...new Set(named.map((d) => d.reason).filter(Boolean))].join(', '))}.`
+    : 'Every day in this hire is chargeable.'
+  return `<tr><td colspan="2" style="padding:16px 0 0">
+    <div style="font-size:11px;color:#94a3b8;padding-bottom:6px" dir="rtl">${esc(hebrewMonthCaption(days))}</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed">
+      <tr>${head}</tr>${body}
+    </table>
+    <div style="font-size:12px;color:#64748b;padding-top:8px">${legend}</div>
+  </td></tr>`
+}
+
 function buildRental(copy, who, b, extras = {}) {
   const total = money(b.total)
   const { state, owed } = rentalPayState(total, b.paidAmount)
@@ -172,9 +240,15 @@ function buildRental(copy, who, b, extras = {}) {
   // The prose. The customer is about to go abroad with the shop's phone and
   // this email is what they will scroll back to at the airport, so it says
   // what they have and what happens next in sentences rather than in a table.
+  // NOT a second "here is…". The greeting above already says "here are your
+  // details for your records" (it is the owner's wording, in Settings, shared
+  // with every receipt), so opening this line the same way read as a stutter:
+  // "…here are your details for your records. Here is your phone rental in
+  // full." Owner, 20 Aug: "wording a bit awkward". This sentence earns its
+  // place by saying what to DO with the email, not by announcing itself again.
   const said = reservation
-    ? `Your phone is reserved and waiting for you. Please collect it before you travel.`
-    : `Here is your phone rental in full. Keep this email — it has the number you are travelling with and the day the phone is due back.`
+    ? `Your phone is reserved and waiting for you — please collect it before you travel.`
+    : `Keep this email safe: it has the number you are travelling with and the day the phone is due back.`
 
   const rows = [
     factRow('Name', esc(who.name || '')),
@@ -248,6 +322,7 @@ function buildRental(copy, who, b, extras = {}) {
       ${greeting(copy, who)}
       <tr><td colspan="2" style="padding:0 0 14px;color:#334155">${esc(said)}</td></tr>
       ${rows}
+      ${rentalCalendar(Array.isArray(b.dayList) ? b.dayList : [])}
       ${moneyBlock}
     `, null, copy.email_closing),
   }
@@ -346,6 +421,9 @@ async function handler(req, res) {
         ? buildRental(copy, sample, {
             number: '+1 518 555 0101', from: '2026-08-20', to: '2026-08-27',
             days: 6, total: 35, method: 'cash', paidAmount: 10,
+            dayList: ['20', '21', '22', '23', '24', '25', '26', '27'].map((d) => ({
+              iso: `2026-08-${d}`, free: d === '22', reason: d === '22' ? 'Shabbos' : '',
+            })),
           }, { payBy: '2026-08-27', payUrl: 'https://checkout.stripe.com/preview' })
         : buildSale(copy, sample, {
             lines: [

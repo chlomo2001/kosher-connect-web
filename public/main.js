@@ -2061,6 +2061,28 @@ function freeDaysIn(fromDate, toDate) {
   return out;
 }
 
+// EVERY day in [from, to], each flagged free or not — the receipt's calendar.
+//
+// Same walk as freeDaysIn and calcRentalPrice on purpose (same parseLocalDate,
+// same setDate step, same inclusive end), so the calendar a customer reads
+// cannot disagree with the number they were charged for. The receipt is built
+// from THIS, not from a second derivation on the server: the server has no
+// Yom Tov table, and a second answer to "was that day free" is exactly the
+// thing worth not having.
+function rentalDayList(fromDate, toDate) {
+  const out = [];
+  if (!fromDate || !toDate) return out;
+  const cur = parseLocalDate(fromDate);
+  const end = parseLocalDate(toDate);
+  if (!(cur <= end)) return out;
+  while (cur <= end) {
+    const reason = freeDayReason(cur);
+    out.push({ iso: localISO(cur), free: !!reason, reason });
+    cur.setDate(cur.getDate() + 1);
+  }
+  return out;
+}
+
 // ── Pricing configuration ────────────────────────────────────────────────
 // Rates come from the database (Settings tab edits them); the hardcoded
 // values below are only the offline fallback and MUST mirror the seed.
@@ -4799,6 +4821,9 @@ async function saveNewRental(addAnother = false) {
       number: phone.number || '',
       from, to,
       days: chargeableDays,
+      // The window day by day, so the email can show WHY six days cost what
+      // seven days' hire cost — the free ones are Shabbos and Yom Tov.
+      dayList: rentalDayList(from, to),
       total: totalPrice,
       method: paidNow ? payMethod : null,
       paidAmount: paidNow ? payAmt : 0,
