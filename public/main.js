@@ -4463,16 +4463,24 @@ async function kcDoneEmail(btn) {
   const d = kcDone;
   if (!d) return;
   if (btn) { btn.disabled = true; btn.innerHTML = 'Sending…'; }
+  // A caller that has more to say than "name, qty, total" passes `receipt` —
+  // its own shape for its own kind. A rental has a number, a start, an end and
+  // a return, and squeezing those into a POS line description is how the old
+  // rental receipt came to say nothing about owing anything. Everything that
+  // does not pass one keeps the sale shape exactly as before.
+  const body = d.receipt
+    ? { ...d.receipt, customerId: d.customerId }
+    : {
+        kind: 'sale',
+        customerId: d.customerId,
+        lines: d.lines,
+        total: d.total,
+        method: d.method || null,
+        paidNow: d.paidNow,
+      };
   const res = await kcFetch('/api/email', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      kind: 'sale',
-      customerId: d.customerId,
-      lines: d.lines,
-      total: d.total,
-      method: d.method || null,
-      paidNow: d.paidNow,
-    }),
+    body: JSON.stringify(body),
   }).then(r => r.json()).catch(() => null);
 
   const restore = () => { if (btn) { btn.disabled = false; btn.innerHTML = '✉️ Email receipt'; } };
@@ -4783,6 +4791,19 @@ async function saveNewRental(addAnother = false) {
     method: paidNow ? payMethod : null,
     paidNow,
     lines: [{ name: `Phone rental ${fmtPhone(phone.number)} · ${fmtDate(from)} → ${fmtDate(to)}`, qty: 1, total: totalPrice }],
+    // The rental's own receipt shape. The dates go as ISO days, not as the
+    // formatted strings on screen — the email formats them itself, and the
+    // pay-by date is worked out from `to` on the server where the rule lives.
+    receipt: {
+      kind: 'rental',
+      number: phone.number || '',
+      from, to,
+      days: chargeableDays,
+      total: totalPrice,
+      method: paidNow ? payMethod : null,
+      paidAmount: paidNow ? payAmt : 0,
+      reservation: isReservation,
+    },
     smsText: buildRentalSms(rental),
     again: {
       label: '📱 Another phone', sub: `for ${customer.firstName}`,
@@ -22256,6 +22277,7 @@ async function renderSettingsTab() {
   // a non-technical owner reads what it means, not the raw database key.
   const FEE_META = {
     late_fee_per_day:          { group: '📱 Rentals', label: 'Late return fee', help: 'Charged for each day a phone is returned past its due date (Shabbos & Yom Tov not counted).', unit: '£ / day' },
+    rental_pay_days:           { group: '📱 Rentals', label: 'Days to pay a rental', help: 'The least time a receipt gives to settle. The due date itself is the day the phone comes back \u2014 or this many days, whichever is later.', unit: 'days' },
     multi_phone_discount_pct:  { group: '📱 Rentals', label: 'Multi-phone discount', help: 'The discount when a customer rents several phones at once.', unit: '% off' },
     multi_phone_discount_from: { group: '📱 Rentals', label: 'Multi-phone discount starts at', help: 'Which phone the discount kicks in on — 3 means the 3rd phone and up. Change to 4 to start at the 4th.', unit: 'th phone' },
     multi_sim_discount_from:   { group: '💳 SIM plans', label: 'Multi-SIM discount starts at', help: 'Which plan the discount kicks in on — 3 means 3 or more plans.', unit: 'th plan' },

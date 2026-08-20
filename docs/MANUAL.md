@@ -190,6 +190,7 @@ Every phone the shop hires out: what is out with whom, what is due back, and wha
 - **⚙️ Manage phones** — Add a handset, retire one, correct a number or an IMEI.
 - **📶 Pools** — Groups of handsets that are interchangeable, so a booking can be promised a phone without naming which one until it is handed over.
 - **📅 Availability** — The calendar view — which phones are committed on which days. Use it before promising a phone for a date.
+- **✉️ Email receipt** — On the confirmation after a rental is saved. The customer gets their full name, the number they are renting, the dates from and to each on its own line, and what it came to. If they paid, it says how. If they did not, it says what is still owed and the day it is owed by — with a button to pay it online where card payments are switched on. Everything on it is what the shop already recorded; nothing is typed again.
 
 **Worked example — a phone goes out on Sunday and comes back on Thursday**
 
@@ -204,13 +205,14 @@ Every phone the shop hires out: what is out with whom, what is due back, and wha
 - **rental-new** — The hire itself: who, which dates, which handset, and what you handed over — phone, SIM, charger.
 - **rental-manage** — The live hire. Returning, extending, damage, missing items, and what is owed.
 - **pool-new** — Creates a pool of interchangeable handsets.
-- **done-panel** — The confirmation after a rental is saved — what was agreed and what to hand over, so it can be read back to the customer.
+- **done-panel** — The confirmation after a rental is saved — what was agreed and what to hand over, so it can be read back to the customer. ✉️ Email receipt sends the customer the rental in full.
 
 **Rules that bite here**
 
 - The price comes from the phone type and the dates, not from what was charged last time. Shabbos and Yom Tov are not chargeable days, there is a minimum charge and a cap, and every rate lives in BUSINESS_RULES.md and Settings — never typed in by hand at the counter.
 - A phone shown as free is free for the dates in the form. Change the dates and the list changes with them.
 - What you tick as given — SIM, charger — is what the return screen expects back, and an unticked SIM changes the rate on a USA phone.
+- A rental left on account is owed by the day the phone comes back, or by the number of days set in Settings, whichever is later — so a two-day hire is never asked for money the day after tomorrow. The receipt says that date out loud rather than leaving the customer to guess.
 
 **When it goes wrong**
 

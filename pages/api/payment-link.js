@@ -8,8 +8,8 @@
 // capture money that never reaches the wallet (same reasoning as charge-card).
 import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
-import { stripeEnabled, webhookConfigured, getOrCreateCustomer, createCheckoutLink, createOpenCheckoutLink, updateCustomerEmail } from '../../lib/stripe.js'
-import { isOwnAccountEmail } from '../../lib/ownEmails.mjs'
+import { stripeEnabled, webhookConfigured } from '../../lib/stripe.js'
+import { mintPayLink } from '../../lib/payLink.js'
 
 async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
@@ -37,38 +37,18 @@ async function handler(req, res) {
   const base = `https://${req.headers.host}`
   const name = `${c.first_name || ''} ${c.last_name || ''}`.trim()
   try {
-    // Never hand Stripe one of OUR carrier-login Gmail aliases as the
-    // customer's email — Checkout shows it locked on the pay page and the
-    // receipt goes to the shop's inbox instead of the customer.
-    const rawEmail = (c.email_raw || c.email_normalized || '').trim()
-    const contactEmail = rawEmail && !isOwnAccountEmail(rawEmail) ? rawEmail : ''
-
-    // Ensure a Stripe customer so the saved card (setup_future_usage) attaches to
-    // the right person; persist the id so we don't remint it next time.
-    const stripeCustomerId = await getOrCreateCustomer({
-      existingId: c.stripe_customer_id, email: contactEmail || undefined, name, appCustomerId: c.id,
-    })
-    if (stripeCustomerId && stripeCustomerId !== c.stripe_customer_id) {
-      await db.update('customers', `id=eq.${c.id}`, { stripe_customer_id: stripeCustomerId })
-    }
-    // Heal customers minted before the guard: point Stripe's stored email at
-    // the real contact address, or clear it so Checkout asks the customer.
-    // Best-effort — a failure here shouldn't block the link.
-    if (stripeCustomerId) {
-      try { await updateCustomerEmail(stripeCustomerId, contactEmail) } catch { /* non-fatal */ }
-    }
-
-    const linkArgs = {
-      currency: 'gbp',
-      appCustomerId: c.id, customerId: stripeCustomerId,
+    // The minting — Stripe customer, email healing, the session itself — is
+    // shared with the rental receipt's pay button (lib/payLink.js), so the two
+    // cannot drift on which Stripe customer a payment lands against.
+    const session = await mintPayLink(c, {
+      amount: amt,
+      description: (typeof description === 'string' && description.trim())
+        ? description.trim().slice(0, 200)
+        : `Payment — ${name || 'Kosher Connect'}`,
       reference: `STRIPE-LINK-${c.id}-${ref}`,
-      description: (typeof description === 'string' && description.trim()) ? description.trim().slice(0, 200) : `Payment — ${name || 'Kosher Connect'}`,
-      successUrl: `${base}/welcome?paid=1`,
-      cancelUrl: `${base}/welcome`,
-    }
-    const session = openAmount
-      ? await createOpenCheckoutLink({ ...linkArgs, suggestedPence: Math.round(amt * 100) })
-      : await createCheckoutLink({ ...linkArgs, amountPence: Math.round(amt * 100) })
+      base,
+      openAmount: !!openAmount,
+    })
     if (!session.url) return res.status(502).json({ success: false, error: 'Stripe did not return a link.' })
     return res.json({ success: true, url: session.url, amount: amt, openAmount: !!openAmount })
   } catch (e) {

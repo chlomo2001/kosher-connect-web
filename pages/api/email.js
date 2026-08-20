@@ -2,6 +2,8 @@
 //
 //   POST { kind:'sale',    customerId, lines:[{name,qty,total}], total, method, paidNow }
 //   POST { kind:'payment', customerId, amount, method, note, balance }
+//   POST { kind:'rental',  customerId, number, from, to, days, total, method,
+//                          paidAmount, reservation }
 //
 // The recipient is ALWAYS resolved server-side from the customer on file —
 // the client never supplies a destination address, so a receipt can only
@@ -12,6 +14,10 @@
 import { withStaff, tabAllowedFor } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 import { emailEnabled, sendEmail, esc, brandShell } from '../../lib/email.js'
+import { rentalPayBy, rentalPayState } from '../../lib/rentalReceipt.mjs'
+import { stripeEnabled, webhookConfigured } from '../../lib/stripe.js'
+import { mintPayLink } from '../../lib/payLink.js'
+import { londonDate } from '../../lib/localDay.mjs'
 
 const money = (v) => (Math.round((Number(v) || 0) * 100) / 100)
 const gbp = (v) => `£${money(v).toFixed(2)}`
@@ -33,6 +39,7 @@ const shell = (title, bodyRows, footNote, closing) => brandShell({ title, bodyRo
 const COPY_FALLBACK = {
   email_receipt_subject: 'Your Kosher Connect receipt — {total}',
   email_payment_subject: 'Payment received — {amount}',
+  email_rental_subject: 'Your Kosher Connect phone rental — {from} to {to}',
   email_greeting: 'Dear {first}, thank you for coming in — here are your details for your records.',
   email_closing: 'Thank you for choosing Kosher Connect. If anything on this receipt looks wrong, call us on 0161 531 1386 and we’ll put it right.',
 }
@@ -48,6 +55,18 @@ export async function emailCopy() {
   } catch { /* fallbacks stand */ }
   return out
 }
+// How many days' grace a rental receipt gives at minimum. The due date itself
+// is the RETURN date (lib/rentalReceipt.mjs) — this is only the floor, so a
+// two-day rental does not demand payment the day after tomorrow.
+async function rentalPayFloor() {
+  try {
+    const rows = await db.select('settings', 'select=num_value&key=eq.rental_pay_days')
+    const v = Number(rows?.[0]?.num_value)
+    if (Number.isFinite(v) && v >= 0) return v
+  } catch { /* fall through */ }
+  return 7
+}
+
 // Placeholders are filled AFTER escaping the values, and the template itself is
 // escaped where it lands in HTML — so neither a customer's name nor the owner's
 // wording can inject markup into a receipt.
@@ -110,6 +129,119 @@ function buildSale(copy, who, b) {
   }
 }
 
+// ── The rental receipt ──────────────────────────────────────────────────────
+//
+// A rental is not a shop sale. `kind: 'sale'` takes POS lines — name, qty,
+// total — and a rental is a service with a number, a start, an end and a
+// return; cramming those into one line's description is how the old receipt
+// came to say "Phone rental 07… · 20 Aug 2026 → 26 Aug 2026 £20" and nothing
+// else. Owner, 20 Aug: full name, longer language, the number they rented, the
+// dates each on its own line, how they paid or by when they must, and a link.
+//
+// `extras` carries what the handler worked out and a builder may not: the
+// pay-by date (policy, from settings) and the pay link (Stripe, and optional).
+
+const fmtDay = (iso) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso || ''))) return ''
+  const [y, m, d] = String(iso).split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-GB',
+    { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+}
+
+const fmtShortDay = (iso) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso || ''))) return ''
+  const [y, m, d] = String(iso).split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-GB',
+    { day: 'numeric', month: 'short', timeZone: 'UTC' })
+}
+
+const factRow = (label, value) => `<tr>
+  <td style="padding:7px 0;border-bottom:1px solid #eef1f4;color:#64748b;white-space:nowrap">${esc(label)}</td>
+  <td style="padding:7px 0;border-bottom:1px solid #eef1f4;text-align:right;font-weight:600">${value}</td>
+</tr>`
+
+function buildRental(copy, who, b, extras = {}) {
+  const total = money(b.total)
+  const { state, owed } = rentalPayState(total, b.paidAmount)
+  const method = b.method ? (METHOD_LABEL[b.method] || b.method) : null
+  const number = String(b.number || '').trim()
+  const reservation = !!b.reservation
+  const payBy = extras.payBy || null
+  const payUrl = extras.payUrl || null
+
+  // The prose. The customer is about to go abroad with the shop's phone and
+  // this email is what they will scroll back to at the airport, so it says
+  // what they have and what happens next in sentences rather than in a table.
+  const said = reservation
+    ? `Your phone is reserved and waiting for you. Please collect it before you travel.`
+    : `Here is your phone rental in full. Keep this email — it has the number you are travelling with and the day the phone is due back.`
+
+  const rows = [
+    factRow('Name', esc(who.name || '')),
+    number ? factRow('Number you are renting', `<span dir="ltr">${esc(number)}</span>`) : '',
+    factRow('From', esc(fmtDay(b.from))),
+    factRow('To', esc(fmtDay(b.to))),
+    b.days ? factRow('Chargeable days', esc(String(b.days))) : '',
+    `<tr><td style="padding:12px 0 0;font-weight:700">Total</td>
+        <td style="padding:12px 0 0;text-align:right;font-weight:700">${gbp(total)}</td></tr>`,
+  ].join('')
+
+  // The money paragraph — the half that did not exist. On account, the old
+  // receipt said nothing at all: no balance, no date, no way to pay.
+  let moneyBlock
+  if (state === 'paid') {
+    moneyBlock = `<tr><td colspan="2" style="padding:10px 0 0;color:#334155">
+      Paid in full${method ? ` by ${esc(method)}` : ''} — thank you. There is nothing further to pay.</td></tr>`
+  } else {
+    const took = state === 'part'
+      ? `We took ${gbp(money(b.paidAmount))}${method ? ` by ${esc(method)}` : ''}, so `
+      : ''
+    // "That is the day the phone is due back" is only TRUE when the due date
+    // IS the return date. It is not always: a short rental gets the floor
+    // instead (rental_pay_days), so a phone back on the 26th can be payable by
+    // the 27th — and a receipt that explains a date by naming a different day
+    // is a receipt the customer stops believing. Rendered once and read, which
+    // is how this was caught; no regex over the template would have seen it.
+    const dueIsReturn = payBy && b.to && String(payBy) === String(b.to)
+    // Where they can pay. Three things have to agree with reality here, and
+    // rendering the five states side by side is what caught all three:
+    //   • a reservation's phone has not been collected yet, so "when you bring
+    //     it in" is the wrong end of the story;
+    //   • the counter sentence must not promise "or online now:" and then be
+    //     followed by nothing when Stripe is off — a dangling colon;
+    //   • see dueIsReturn above.
+    const counter = reservation
+      ? 'You can settle it when you collect the phone'
+      : dueIsReturn
+        ? 'That is the day the phone is due back, so you can settle it at the counter when you bring it in'
+        : 'You can settle it at the counter'
+    const how = payUrl ? `${counter} — or online now:` : `${counter}.`
+    moneyBlock = `<tr><td colspan="2" style="padding:10px 0 0;color:#334155">${took}<strong>${gbp(owed)}</strong> is still to pay${payBy ? `, by <strong>${esc(fmtDay(payBy))}</strong>` : ''}. ${how}</td></tr>`
+    if (payUrl) {
+      moneyBlock += `<tr><td colspan="2" style="padding:14px 0 4px">
+        <a href="${esc(payUrl)}" style="display:inline-block;background:#0a2540;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:11px 22px;border-radius:8px">Pay ${gbp(owed)} online</a>
+      </td></tr>`
+    }
+  }
+
+  return {
+    // SHORT dates in the subject, long ones in the body. "Thu, 20 August 2026
+    // to Wed, 26 August 2026" is 45 characters of subject line that every
+    // phone truncates before it reaches the word "rental".
+    subject: fill(copy.email_rental_subject, {
+      from: esc(fmtShortDay(b.from)), to: esc(fmtShortDay(b.to)),
+      name: esc(who.name || ''), first: esc((who.name || '').split(' ')[0]),
+      total: gbp(total),
+    }),
+    html: shell(reservation ? 'Your phone is reserved' : 'Your phone rental', `
+      ${greeting(copy, who)}
+      <tr><td colspan="2" style="padding:0 0 14px;color:#334155">${esc(said)}</td></tr>
+      ${rows}
+      ${moneyBlock}
+    `, null, copy.email_closing),
+  }
+}
+
 function buildPayment(copy, who, b) {
   const amount = money(b.amount)
   if (!(amount > 0)) return { error: 'Payment amount must be greater than £0.' }
@@ -126,6 +258,47 @@ function buildPayment(copy, who, b) {
       ${b.note ? `<tr><td style="padding:6px 0;color:#64748b">Note</td><td style="padding:6px 0;text-align:right;color:#64748b">${esc(b.note)}</td></tr>` : ''}
       ${b.balance != null ? `<tr><td style="padding:10px 0 0;color:#334155">${money(b.balance) < 0 ? 'Balance still owing' : 'Balance / credit'}</td><td style="padding:10px 0 0;text-align:right;color:#334155">${gbp(Math.abs(money(b.balance)))}${money(b.balance) < 0 ? '' : ' in credit'}</td></tr>` : ''}
     `, null, copy.email_closing),
+  }
+}
+
+// The two things buildRental cannot work out for itself: when the money is due
+// (policy, from settings) and the pay button (Stripe, and optional).
+//
+// THE LINK IS BEST-EFFORT AND THE RECEIPT IS NOT. If Stripe is off, or the
+// webhook is not configured, or minting throws, the receipt still goes — it
+// just says "settle it at the counter" instead of carrying a button. Failing
+// the whole send because a payment button could not be made would withhold the
+// dates and the number, which are the parts the customer actually needs.
+//
+// No link is minted when there is nothing to pay: an idle Checkout session for
+// £0 is noise in the Stripe dashboard and a button that insults the customer
+// who has just paid.
+async function rentalExtras(req, who, b) {
+  const payBy = rentalPayBy(b.to, londonDate(), await rentalPayFloor())
+  const { state, owed } = rentalPayState(b.total, b.paidAmount)
+  if (state === 'paid' || !(owed > 0)) return { payBy: null }
+  // Same refusal as payment-link.js: without the webhook a paid link captures
+  // money that never reaches the wallet.
+  if (!stripeEnabled || !webhookConfigured) return { payBy }
+  try {
+    const rows = await db.select('customers',
+      `select=id,stripe_customer_id,email_raw,email_normalized,first_name,last_name&id=eq.${who.id}`)
+    const c = rows[0]
+    if (!c) return { payBy }
+    // Keyed on the rental's own dates and the customer, so re-sending the same
+    // receipt reuses one Checkout session instead of minting a new one each
+    // time — Stripe's idempotency key is this reference.
+    const ref = `RENTAL-PAY-${c.id}-${String(b.from || '')}-${String(b.to || '')}`.replace(/[^\w-]/g, '')
+    const session = await mintPayLink(c, {
+      amount: owed,
+      description: `Phone rental ${b.number || ''} ${b.from || ''} to ${b.to || ''}`.trim(),
+      reference: ref,
+      base: `https://${req.headers.host}`,
+    })
+    return { payBy, payUrl: session?.url || null }
+  } catch (e) {
+    console.warn('[api/email] rental pay link not minted:', String(e?.message || e).slice(0, 200))
+    return { payBy }
   }
 }
 
@@ -158,6 +331,11 @@ async function handler(req, res) {
       const sample = { name: 'Menachem Adler', first: 'Menachem' }
       const built = b.kind === 'payment'
         ? buildPayment(copy, sample, { amount: 45, method: 'card', note: 'Rental balance', balance: -20 })
+        : b.kind === 'rental'
+        ? buildRental(copy, sample, {
+            number: '+1 518 555 0101', from: '2026-08-20', to: '2026-08-27',
+            days: 6, total: 35, method: 'cash', paidAmount: 10,
+          }, { payBy: '2026-08-27', payUrl: 'https://checkout.stripe.com/preview' })
         : buildSale(copy, sample, {
             lines: [
               { name: 'Phone rental +1 518 555 0101 · 20 Aug 2026 → 27 Aug 2026', qty: 1, total: 35 },
@@ -183,6 +361,7 @@ async function handler(req, res) {
 
     const built = b.kind === 'payment'
       ? buildPayment(copy, who, b)
+      : b.kind === 'rental' ? buildRental(copy, who, b, await rentalExtras(req, who, b))
       : b.kind === 'sale' ? buildSale(copy, who, b) : null
     if (!built) return res.status(400).json({ success: false, error: built === null && b.kind ? 'Unknown receipt kind.' : 'Unknown receipt kind.' })
     if (built.error) return res.status(400).json({ success: false, error: built.error })
