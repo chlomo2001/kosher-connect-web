@@ -12389,7 +12389,18 @@ async function saveSimForm(editId) {
     });
   }
 
-  saveSims(sims);
+  // AWAIT it. This used to be `saveSims(sims);` — fire and forget — so the
+  // setup fee was billed and the "SIM plan added" card shown whether or not
+  // the plan saved. On 20 Aug that put a real £20 on a customer for a SIM the
+  // database had no record of, with a red failure toast sitting behind the
+  // success card. Nothing below may run on a failed save: not the charge, not
+  // the card, not the receipt offer.
+  const simSaved = await saveSims(sims);
+  if (!simSaved || simSaved.success === false) {
+    // reportSave has already said what went wrong; this says what it means.
+    toast('The SIM plan was NOT saved, so nothing was charged. Check the details and try again.', 'error');
+    return;
+  }
   // Bill the setup fee to the wallet ledger (same append-only path as every
   // other charge). Idempotent via SIM-<simId>-<historyId>; a soft failure only
   // warns — the SIM record and its history blob are already saved.

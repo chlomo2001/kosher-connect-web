@@ -236,7 +236,7 @@ The UK SIM-only plans the shop manages for customers: whose number is on which n
 
 **Boxes that open on top of it**
 
-- **sim-add** — A new plan or the same details afterwards: customer, network, number, the SIM's long number, the login email, the plan itself and the next renewal date.
+- **sim-add** — A new plan or the same details afterwards: customer, network, number, the SIM's long number, the login email, the plan itself and the next renewal date. A new plan is only counted once the shop's records have taken it: if the save fails, the screen says so and nothing is charged.
 - **sim-manage** — One plan in full — its details, everything that has been done to it, the carrier post filed against it, and the box for adding a charge.
 
 **Rules that bite here**
@@ -248,6 +248,7 @@ The UK SIM-only plans the shop manages for customers: whose number is on which n
 
 **When it goes wrong**
 
+- **You set up a plan and it is not in the list** — It was not saved. The screen now says so and charges nothing when that happens — but a plan added before 20 August 2026 could show a receipt and save nothing, so a plan from that period may be missing while its setup fee is on the customer's wallet. Check the wallet before adding it again, or the fee lands twice.
 - **A plan renewed and nobody was charged** — The renewal date passed without a charge being added. Open ⚙ Manage, add the charge, and move the renewal date on — the dashboard is counting it as overdue until you do.
 - **Post has come from the network and it is not clear whose it is** — Carrier Mail matches letters to a plan and its customer. A plan with the mailbox missing is the usual reason it could not. The other reason is that the network wrote to a second address this plan has not claimed — Carrier Mail can be told, once, that this plan receives there too.
 - **A customer says they cancelled** — Set the plan's status rather than deleting it. The history of what was charged has to survive the plan ending.
