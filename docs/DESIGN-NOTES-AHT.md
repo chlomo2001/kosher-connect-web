@@ -112,7 +112,11 @@ anything React/Tailwind. The *ideas* travel; the stack does not.
 ## For the loops
 
 - **03:00 UX/UI loop** grounds on `BACKLOG.md`; the Tier-1 loop-safe items are
-  filed there under "From AHT portal reference (2026-08-18)".
+  filed there under "From the AHT / Yordex portal reference (2026-08-18)".
+  (Written 18 Aug as though already true; `BACKLOG.md` did not exist until
+  19 Aug, when the items were actually filed. Recorded rather than quietly
+  corrected — a document asserting a filing that had not happened is the same
+  failure `docs/claims-audit.md` exists to catch, and it caught this one.)
 - **Hebrew-date converter** is the one item worth starting ahead of a placement
   decision, because the converter is pure, testable, and useful regardless of
   where it lands. Build + test the lib first; hold the *where* for the owner.
