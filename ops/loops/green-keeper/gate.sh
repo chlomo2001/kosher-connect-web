@@ -12,6 +12,15 @@ set -uo pipefail
 cd "$(dirname "$0")/../../.." || exit 3
 fail() { echo "GATE: FAIL — $1"; exit 1; }
 
+# CI's first step is `npm ci`, which fails outright if package.json and
+# package-lock.json disagree — and it installs ONLY what the lockfile declares.
+# This container ships extra packages (playwright-core arrived that way), so a
+# test importing one of them passed here and threw in CI. That cost 17 hours of
+# red builds from 19 Aug before anyone read the failure mail. --dry-run does
+# the resolution without touching node_modules, in under a second.
+echo "GATE: package-lock agrees with package.json (what CI installs)…"
+npm ci --dry-run >/dev/null 2>&1 || fail "npm ci would fail — package.json and package-lock.json disagree"
+
 echo "GATE: money/customer/rental tests (default TZ)…"
 npm test --silent               || fail "npm test (default TZ)"
 

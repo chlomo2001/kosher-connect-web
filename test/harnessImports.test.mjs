@@ -5,11 +5,17 @@
 // — which other harnesses and the unit tests import. A `require('playwright-core')`
 // at module scope makes reading that list require a browser.
 //
-// That broke CI for 17 hours from 19 Aug 2026. playwright-core is not in
-// package.json (it ships with the dev container), so `npm ci` does not install
-// it; test/manualShots.test.mjs imports MODALS, the require threw, and the
-// whole file failed to load — reported as one failure with its ten tests
+// That broke CI for 17 hours from 19 Aug 2026. playwright-core was not in
+// package.json (it shipped with the dev container), so `npm ci` did not
+// install it; test/manualShots.test.mjs imports MODALS, the require threw, and
+// the whole file failed to load — reported as one failure with its ten tests
 // simply missing. Locally it passed, because the container has the browser.
+//
+// playwright-core is now a declared devDependency, so that exact failure
+// cannot recur. This check is kept for the reason underneath it, which the
+// dependency does not fix: importing a module to read a list of strings should
+// not construct a browser driver. It also keeps the harnesses honest if the
+// dependency is ever dropped again.
 //
 // The rule: load the browser where it is used, not where the module is read.
 import test from 'node:test'
