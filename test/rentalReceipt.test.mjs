@@ -12,7 +12,7 @@ import test from 'node:test'
 import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { rentalPayBy, rentalPayState, calendarWeeks } from '../lib/rentalReceipt.mjs'
+import { rentalPayBy, rentalPayState, calendarWeeks, freeDayLegend } from '../lib/rentalReceipt.mjs'
 
 const ROOT = path.join(import.meta.dirname, '..')
 const API = readFileSync(path.join(ROOT, 'pages/api/email.js'), 'utf8')
@@ -236,11 +236,11 @@ function liftBuildRental() {
   const fill = (t, v) => String(t).replace(/\{(\w+)\}/g, (m, k) => (v[k] === undefined ? m : v[k]))
   const shell = (title, rows, fn, cl) => brandShell({ title, bodyRows: rows, footNote: fn, closing: cl })
   const greeting = (c, w) => `<tr><td colspan="2">${fill(c.email_greeting, { first: esc((w.name || '').split(' ')[0]), name: esc(w.name) })}</td></tr>`
-  return new Function('esc', 'brandShell', 'rentalPayState', 'calendarWeeks',
+  return new Function('esc', 'brandShell', 'rentalPayState', 'calendarWeeks', 'freeDayLegend',
     'hebrewFromGregorian', 'hebrewNumeral', 'hebrewMonthName',
     'money', 'gbp', 'METHOD_LABEL', 'fill', 'shell', 'greeting',
     `${code}; return buildRental;`)(
-    esc, brandShell, rentalPayState, calendarWeeks,
+    esc, brandShell, rentalPayState, calendarWeeks, freeDayLegend,
     hebrewFromGregorian, hebrewNumeral, hebrewMonthName,
     money, gbp, METHOD_LABEL, fill, shell, greeting)
 }
@@ -411,4 +411,53 @@ test('the greeting is not echoed back at the reader', () => {
   const out = build(COPY, WHO, { ...BASE, paidAmount: 0 }, {})
   assert.doesNotMatch(text(out.html), /Here is your phone rental in full/)
   assert.match(text(out.html), /Keep this email safe/)
+})
+
+// ── how the free days are NAMED ────────────────────────────────────────────
+//
+// Caught by rendering a Tishrei hire for the owner. A yom tov on a Shabbos
+// carries both names in one reason string, so listing every distinct string
+// printed "Shabbos" three times inside three different combinations:
+//
+//   "Rosh Hashanah — 2nd day, Shabbos, Yom Kippur, Shabbos · Succos — 1st day,
+//    Succos — 2nd day, Shabbos · Shemini Atzeres, Simchas Torah."
+//
+// and the long-hire sentence joined the same list with " and ", which was worse.
+const reasons = (...rs) => rs.map((r) => ({ iso: '2026-01-01', free: true, reason: r }))
+
+test('one reason reads as itself; two or three are joined properly', () => {
+  assert.equal(freeDayLegend(reasons('Shabbos')), 'Shabbos')
+  assert.equal(freeDayLegend(reasons('Shabbos', 'Yom Kippur')), 'Shabbos and Yom Kippur')
+  assert.equal(freeDayLegend(reasons('Shabbos', 'Yom Kippur', 'Simchas Torah')),
+    'Shabbos, Yom Kippur and Simchas Torah')
+})
+
+test('a yom tov on Shabbos is two atoms, not a third combined name', () => {
+  assert.equal(freeDayLegend(reasons('Shabbos', 'Shabbos · Succos — 1st day')),
+    'Shabbos and Succos — 1st day')
+})
+
+test('a hire across Tishrei stops naming them and says how the shop says it', () => {
+  const t = freeDayLegend(reasons(
+    'Shabbos', 'Rosh Hashanah — 1st day', 'Rosh Hashanah — 2nd day', 'Yom Kippur',
+    'Shabbos · Succos — 1st day', 'Succos — 2nd day', 'Shemini Atzeres', 'Simchas Torah'))
+  assert.equal(t, 'Shabbos and Yom Tov')
+  assert.ok(t.length < 30, 'nobody wants nine festivals listed on a receipt')
+})
+
+test('yom tov with no Shabbos, and nothing at all', () => {
+  assert.equal(freeDayLegend(reasons('Pesach — 1st day', 'Pesach — 2nd day', 'Pesach — 7th day', 'Pesach — 8th day')),
+    'Yom Tov')
+  assert.equal(freeDayLegend([]), '')
+  assert.equal(freeDayLegend(null), '')
+  assert.equal(freeDayLegend([{ free: false, reason: 'Shabbos' }]), '',
+    'a chargeable day contributes no reason')
+})
+
+test('both places that name the free days use the one function', () => {
+  const cal = API.slice(API.indexOf('function rentalCalendar(days)'))
+  const cbody = cal.slice(0, cal.indexOf('\n}\n'))
+  assert.equal((cbody.match(/freeDayLegend\(days\)/g) || []).length, 2,
+    'the grid legend and the too-long-to-draw sentence must not word it differently')
+  assert.doesNotMatch(cbody, /new Set\([^)]*reason/, 'no second copy of the wording rule')
 })

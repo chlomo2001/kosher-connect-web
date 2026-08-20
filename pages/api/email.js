@@ -14,7 +14,7 @@
 import { withStaff, tabAllowedFor } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 import { emailEnabled, sendEmail, esc, brandShell } from '../../lib/email.js'
-import { rentalPayBy, rentalPayState, calendarWeeks } from '../../lib/rentalReceipt.mjs'
+import { rentalPayBy, rentalPayState, calendarWeeks, freeDayLegend } from '../../lib/rentalReceipt.mjs'
 import { hebrewFromGregorian, hebrewNumeral, hebrewMonthName } from '../../lib/hebrewDate.mjs'
 import { stripeEnabled, webhookConfigured } from '../../lib/stripe.js'
 import { mintPayLink } from '../../lib/payLink.js'
@@ -201,7 +201,7 @@ function rentalCalendar(days) {
   if (!weeks.length) {
     const free = (days || []).filter((d) => d && d.free)
     if (!free.length) return ''
-    const why = [...new Set(free.map((d) => d.reason).filter(Boolean))].join(' and ')
+    const why = freeDayLegend(days)
     return `<tr><td colspan="2" style="padding:12px 0 0;font-size:12px;color:#64748b">
       ${free.length} day${free.length === 1 ? '' : 's'} in this hire ${free.length === 1 ? 'is' : 'are'} not charged${why ? ` — ${esc(why)}` : ''}.</td></tr>`
   }
@@ -216,9 +216,9 @@ function rentalCalendar(days) {
         <tr><td align="center" style="padding:0 0 5px;font-size:10px;color:${c.free ? '#a98b62' : '#94a3b8'};line-height:1.1" dir="rtl">${esc(hebrewDayNumeral(c.iso))}</td></tr>
       </table></td>`
   }).join('')}</tr>`).join('')
-  const named = days.filter((d) => d.free)
-  const legend = named.length
-    ? `Shaded days are not charged — ${esc([...new Set(named.map((d) => d.reason).filter(Boolean))].join(', '))}.`
+  const why = freeDayLegend(days)
+  const legend = why
+    ? `Shaded days are not charged — ${esc(why)}.`
     : 'Every day in this hire is chargeable.'
   return `<tr><td colspan="2" style="padding:16px 0 0">
     <div style="font-size:11px;color:#94a3b8;padding-bottom:6px" dir="rtl">${esc(hebrewMonthCaption(days))}</div>
