@@ -33,7 +33,7 @@ import { db, tablesMode, selectAllPaged } from '../../../lib/db.js'
 import { normaliseInbound, carrierOf } from '../../../lib/inboundMail.mjs'
 import { buildSimIndex, matchSimForMail } from '../../../lib/simMailMatch.mjs'
 import { looksLikeTicket, parseTicketMail, suggestCustomer, ticketTaskTitle } from '../../../lib/ticketMail.mjs'
-import { carrierMailKind, carrierMailTask, ACTIONABLE, NEVER_FILE } from '../../../lib/carrierMail.mjs'
+import { carrierMailKind, carrierMailTask, ACTIONABLE, HIGH_PRIORITY_KINDS, NEVER_FILE } from '../../../lib/carrierMail.mjs'
 
 // Bodies are parsed mail, not attachments — but a forwarded message with an
 // inline image can still be chunky, and a 413 would make Forward Email retry
@@ -327,7 +327,9 @@ export default async function handler(req, res) {
             title,
             customer_id: match.simId ? index.customerBySim.get(String(match.simId)) || null : null,
             source: 'auto',
-            priority: kind === 'payment_failed' ? 'high' : 'medium',
+            // Money kinds are high: a failed payment stops the line now, and a
+            // removed payment method stops it silently on renewal day.
+            priority: HIGH_PRIORITY_KINDS.has(kind) ? 'high' : 'medium',
             reference: `SIMMAIL-${inserted[0].id}`,
             raw_text: `From ${mail.from || 'the carrier'} — ${mail.subject || '(no subject)'}`,
           }])
