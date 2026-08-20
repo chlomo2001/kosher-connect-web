@@ -78,12 +78,12 @@ test('the receipt link is absolute — a mail client has no base URL', () => {
     'https://app.kosher-connect.com/help/phone-rental')
 })
 
-test('the rental receipt carries the link, whatever else failed', () => {
-  const extras = API.slice(API.indexOf('async function rentalExtras(req, who, b)'))
+test('every receipt carries its guide link, whatever else failed', () => {
+  const extras = API.slice(API.indexOf('async function receiptExtras(kind, req, who, b)'))
   const body = extras.slice(0, extras.indexOf('\n}\n'))
-  assert.match(body, /const guide = guideUrl\('rental', `https:\/\/\$\{req\.headers\.host\}`\)/)
-  // Every exit from rentalExtras must carry it — the guide has nothing to do
-  // with Stripe, so a missing webhook or a mint that threw must not cost it.
+  assert.match(body, /const guide = guideUrl\(KIND_SERVICE\[kind\] \|\| '', base\)/)
+  // Every exit must carry it — the guide has nothing to do with Stripe, so a
+  // missing webhook or a mint that threw must not cost it.
   const returns = body.match(/return \{[^}]*\}/g) || []
   assert.ok(returns.length >= 4, `only ${returns.length} return sites found — has the shape changed?`)
   for (const r of returns) {
@@ -92,10 +92,10 @@ test('the rental receipt carries the link, whatever else failed', () => {
 })
 
 test('a link, not an attachment', () => {
-  const builder = API.slice(API.indexOf('function buildRental(copy, who, b, extras'))
-  const body = builder.slice(0, builder.indexOf('\n}\n'))
-  assert.match(body, /extras\.guideUrl \?/, 'no link, no sentence offering one')
-  assert.match(body, /How to use your rented phone/)
+  // guideRow is shared: no url, no sentence offering one — on every kind.
+  const g = API.slice(API.indexOf('function guideRow(url, lead, label, blurb)'))
+  assert.match(g.slice(0, 300), /if \(!url\) return ''/, 'no link, no sentence offering one')
+  assert.match(API, /How to use your rented phone/)
   // Checked against the send itself, not against the word: an earlier version
   // of this assertion matched the comment explaining why there is no
   // attachment, which is a test that fails on its own documentation.

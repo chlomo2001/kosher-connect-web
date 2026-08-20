@@ -12584,6 +12584,14 @@ async function saveSimForm(editId) {
     method: null,
     paidNow: false,
     lines: [{ name: `SIM plan${simNo ? ' ' + fmtPhone(simNo) : ''}${planLabel ? ' · ' + planLabel : ''}`, qty: 1, total: setupFee || 0 }],
+    // A SIM plan is not a shop line. The customer needs the number, the network,
+    // the plan and the day it renews — none of which fit in a POS description.
+    receipt: {
+      kind: 'sim', ref: String(newSimId || ''),
+      number: simNo ? fmtPhone(simNo) : '', provider: providerLabel || '',
+      plan: planLabel || '', renewalDate: renewal || '',
+      total: setupFee || 0, paidAmount: 0, method: null,
+    },
     smsText: `Hi${sc?.firstName ? ' ' + sc.firstName : ''}, your SIM plan${simNo ? ' on ' + fmtPhone(simNo) : ''} is set up${renewal ? ` — renews ${fmtDate(renewal)}` : ''}. Kosher Connect, 0161 531 1386.`,
     again: { label: '💳 Another SIM', sub: sc?.firstName ? `for ${sc.firstName}` : 'new plan', run: () => openAddSimModal(customerId) },
   });
@@ -14814,6 +14822,18 @@ async function saveNewBooking() {
     method: null,
     paidNow: !!res.paidNow,
     lines: [{ name: `Flight ${b.route || ''}${b.travelDate ? ' · ' + fmtDate(b.travelDate) : ''}`, qty: 1, total: Number.isFinite(res.charged) ? res.charged : b.price }],
+    // Names and dates are the two things worth checking on the day it is booked
+    // — an airline charges to change a name and some will not change one at all
+    // — so the email lays them out rather than burying them in a line item.
+    receipt: {
+      kind: 'booking', ref: String(b.id || ''),
+      passenger: b.passenger || '', route: b.route || '', airline: b.airline || '',
+      travelDate: b.travelDate || '', returnDate: b.returnDate || '',
+      bookingRef: b.bookingRef || '',
+      total: Number.isFinite(res.charged) ? res.charged : b.price,
+      paidAmount: res.paidNow ? (Number.isFinite(res.charged) ? res.charged : b.price) : 0,
+      method: null,
+    },
     smsText: `Hi${bc?.firstName ? ' ' + bc.firstName : ''}, your flight is booked: ${b.route || ''}${b.travelDate ? ', ' + fmtDate(b.travelDate) : ''}${b.bookingRef ? '. Ref ' + b.bookingRef : ''}. Kosher Connect, 0161 531 1386.`,
     again: { label: '✈️ Another booking', sub: bc?.firstName ? `for ${bc.firstName}` : 'new flight', run: () => openNewBookingModal(b.customerId) },
   });
@@ -15504,6 +15524,15 @@ async function saveNewRepair() {
     method: null,
     paidNow: false,
     lines: [{ name: `Repair — ${rDevice}`, qty: 1, total: res.repair.total }],
+    // Booked in, not finished: the figure is an ESTIMATE and the email says so,
+    // because "Total £45" on a job nobody has started yet is a promise the shop
+    // has not made.
+    receipt: {
+      kind: 'repair', ref: String(res.repair.id || ''), ready: false,
+      device: rDevice || '',
+      services: (res.repair.services || []).map(x => x.name || x).join(', '),
+      total: res.repair.total || 0, paidAmount: 0, method: null,
+    },
     smsText: `Hi${rc?.firstName ? ' ' + rc.firstName : ''}, we've booked in ${rDevice} for repair. Estimate ${fmtGbp(res.repair.total)}, payable on collection. We'll message you when it's ready. Kosher Connect, 0161 531 1386.`,
     again: { label: '🔧 Another repair', sub: rc?.firstName ? `for ${rc.firstName}` : 'new ticket', run: () => openNewRepairModal(customerId) },
   });

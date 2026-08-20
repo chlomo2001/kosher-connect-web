@@ -81,6 +81,10 @@ test('a free rental owes nothing and is not chased', () => {
 
 const builder = API.slice(API.indexOf('function buildRental(copy, who, b, extras'))
 const body = builder.slice(0, builder.indexOf('\n}\n'))
+// The money paragraph is shared with every other receipt kind now, so the
+// assertions about HOW money is worded read it there.
+const mr = API.slice(API.indexOf('function moneyRows({'))
+const money = mr.slice(0, mr.indexOf('\n}\n'))
 
 test('every fact the owner asked for has its own line', () => {
   assert.match(body, /factRow\('Name'/)
@@ -96,22 +100,33 @@ test('the full name, not the first name', () => {
   assert.match(body, /factRow\('Name', esc\(who\.name \|\| ''\)\)/)
 })
 
-test('a rental left on account says the amount, the date and how to pay', () => {
-  const owing = body.slice(body.indexOf('} else {'))
-  assert.match(owing, /is still to pay/)
-  assert.match(owing, /gbp\(owed\)/)
-  assert.match(owing, /payBy \? `, by/, 'the due date belongs in the sentence, not a footnote')
-  assert.match(owing, /Pay \$\{gbp\(owed\)\} online/)
-  // And the paid case must not chase them.
-  const paid = body.slice(body.indexOf("if (state === 'paid')"), body.indexOf('} else {'))
-  assert.match(paid, /Nothing further to pay on this rental/,
-    'scoped to the rental — this total is not the customer’s balance')
+test('anything owed says the amount, the date and how to pay', () => {
+  assert.match(money, /is still to pay/)
+  assert.match(money, /gbp\(owed\)/)
+  assert.match(money, /payBy \? `, by/, 'the due date belongs in the sentence, not a footnote')
+  assert.match(money, /Pay \$\{gbp\(owed\)\} online/)
+  // The settled case must not chase them, and must not claim their whole
+  // account is clear — the total here is one job's price, not their balance.
+  const paid = money.slice(money.indexOf("if (state === 'paid')"), money.indexOf('const took'))
+  assert.match(paid, /Nothing further to pay on \$\{esc\(what\)\}/)
   assert.doesNotMatch(paid, /still to pay/)
 })
 
 test('how they paid is said, and a part payment says how much', () => {
-  assert.match(body, /Paid in full\$\{method \? ` by \$\{esc\(method\)\}`/)
-  assert.match(body, /state === 'part'[\s\S]{0,120}?We took \$\{gbp\(money\(b\.paidAmount\)\)\}/)
+  assert.match(money, /Paid in full\$\{how \? ` by \$\{esc\(how\)\}`/)
+  assert.match(money, /state === 'part'[\s\S]{0,120}?We took \$\{gbp\(money\(paidAmount\)\)\}/)
+})
+
+// The owner's question, 21 Aug: "why when its partly paid there's no link to
+// settle rest if he preffers?" It always could — the demo I showed him had the
+// link left out to illustrate Stripe being off. Pinned so it stays true.
+test('a part payment is offered the button for the remainder', () => {
+  assert.doesNotMatch(money, /state === 'part'[\s\S]{0,400}?return/,
+    'the part case must fall through to the same button as the unpaid case')
+  const ex = API.slice(API.indexOf('async function receiptExtras('))
+  const exb = ex.slice(0, ex.indexOf('\n}\n'))
+  assert.match(exb, /if \(state === 'paid' \|\| !\(owed > 0\)\) return/,
+    'only PAID and nothing-owed skip the link — part-paid is neither')
 })
 
 // The dates are the thing the customer scrolls back to at the airport. "Thu 20
@@ -128,7 +143,7 @@ test('the dates are spelled out, in UTC so none of them slips a day', () => {
 
 // ── the pay link ───────────────────────────────────────────────────────────
 
-const extras = API.slice(API.indexOf('async function rentalExtras(req, who, b)'))
+const extras = API.slice(API.indexOf('async function receiptExtras(kind, req, who, b)'))
 const ebody = extras.slice(0, extras.indexOf('\n}\n'))
 
 test('the receipt still goes when the link cannot be made', () => {
@@ -157,13 +172,19 @@ test('nothing to pay means no link at all', () => {
 })
 
 test('re-sending the same receipt reuses one Checkout session', () => {
-  assert.match(ebody, /RENTAL-PAY-\$\{c\.id\}-\$\{String\(b\.from \|\| ''\)\}-\$\{String\(b\.to \|\| ''\)\}/,
-    'the reference is Stripe’s idempotency key — it must be stable per rental')
+  assert.match(ebody, /const stem = b\.ref \|\|/,
+    'a caller that can identify its job passes a ref, and that is what makes the key stable')
+  assert.match(ebody, /kind === 'rental' \? `\$\{b\.from \|\| ''\}-\$\{b\.to \|\| ''\}`/,
+    'a rental identifies itself by its dates')
+  assert.match(ebody, /PAY-\$\{kind\.toUpperCase\(\)\}-\$\{c\.id\}-\$\{stem\}/,
+    'the reference is Stripe’s idempotency key — stable per job, and distinct per kind')
   assert.match(ebody, /replace\(\/\[\^\\w-\]\/g, ''\)/, 'and safe to put in a key')
 })
 
 test('the due date is worked out on the server, from the setting', () => {
-  assert.match(ebody, /rentalPayBy\(b\.to, londonDate\(\), await rentalPayFloor\(\)\)/)
+  assert.match(ebody, /kind === 'rental'\s*\n?\s*\? rentalPayBy\(b\.to, londonDate\(\), await rentalPayFloor\(\)\)/,
+    'only a rental has a return date to hang a deadline on')
+  assert.match(ebody, /: null/, 'every other kind is owed now and names no day it cannot justify')
   const floor = API.slice(API.indexOf('async function rentalPayFloor()'))
   assert.match(floor.slice(0, 500), /key=eq\.rental_pay_days/)
   assert.match(floor.slice(0, 500), /return 7/, 'a missing setting must not mean no deadline')
@@ -200,9 +221,17 @@ test('the dates go as ISO days, not as what is on screen', () => {
   assert.doesNotMatch(near, /fmtDate\(from\)/)
 })
 
-test('the Settings preview renders the real rental email', () => {
-  assert.match(API, /b\.kind === 'rental'[\s\S]{0,400}?buildRental\(copy, sample,/,
-    'the preview must call the same builder the send does')
+test('the Settings preview renders the real email, for every kind', () => {
+  const pv = API.slice(API.indexOf('const SAMPLES = {'))
+  const pbody = pv.slice(0, pv.indexOf('\n      }\n'))
+  for (const kind of ['payment', 'rental', 'sim', 'booking', 'repair', 'sale']) {
+    assert.match(pbody, new RegExp(`${kind}: \\(\\) =>`), `no preview sample for ${kind}`)
+  }
+  // The preview must call the same builders the send does, or the shop approves
+  // copy it does not send.
+  for (const fn of ['buildPayment', 'buildRental', 'buildSim', 'buildBooking', 'buildRepair', 'buildSale']) {
+    assert.match(pbody, new RegExp(`${fn}\\(copy, sample,`), `${fn} is not previewed`)
+  }
 })
 
 // ── the email as it actually renders ───────────────────────────────────────
@@ -228,7 +257,8 @@ function liftBuildRental() {
   const code = [
     grab('const fmtDay = (iso)'), grab('const fmtShortDay = (iso)'),
     grab('const factRow = (label'), grab('function hebrewMonthCaption('),
-    grab('function rentalCalendar('), grab('function buildRental('),
+    grab('function rentalCalendar('), grab('function moneyRows('),
+    grab('function guideRow('), grab('function buildRental('),
   ].join('\n')
   const money = (v) => Math.round((Number(v) || 0) * 100) / 100
   const gbp = (v) => `£${money(v).toFixed(2)}`
