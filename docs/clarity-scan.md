@@ -106,6 +106,19 @@ removed. The `pools` and `master_accounts` tables serve nothing — they are the
 clearest "noise" the spine exposes, because they describe a memory the shop
 does not actually keep.
 
+## The one that was a live bug, not a rename — FIXED
+
+> **Closed.** This was written as unfixed and called the most valuable thing the
+> scan found. It was fixed in `604d53f` ("Fix the defects the audits found"),
+> the same commit that settled two of the claims-audit held items — and this
+> section went on saying "I have deliberately not made it" for two days after.
+> Verified 21 Aug at `public/main.js:10443`: the filter is now
+> `r.status === 'active' || r.status === 'booked'`, with a comment naming the
+> enum. A scan that reports finished work as outstanding sends the reader
+> chasing it, which is the same fault this file criticises elsewhere.
+>
+> What it said, kept because the reasoning is the point:
+
 ## The one that is a live bug, not a rename
 
 `public/main.js:9355` — `customerContextForAi` builds the account facts handed
@@ -145,9 +158,20 @@ calendar does not, and a customer is looking at a shaded day they were charged
 for. Nothing would fail; the number and the picture would simply stop meaning
 the same thing.
 
-**Not fixed, deliberately** — B1 changes no behaviour, and this is pricing.
-Removing the parameter is a Tier 1 rename in the money path and wants the
-owner's go-ahead. What HAS been done is behaviour-neutral: `test/freeDayAgreement.test.mjs`
+**Fixed 21 Aug on the owner's go-ahead ("do all").** The parameter is gone from
+`isShabbatOrHoliday`, and from `countChargeableDays` — the late-fee counter,
+which took a country from two call sites and binned it. `calcRentalPrice` keeps
+its own `country`, which it genuinely needs for `rateFor`. Behaviour is
+unchanged by construction: the argument was never read, so removing it cannot
+alter a price. **And the rule was never in doubt** — BUSINESS_RULES.md:59, decided 12 Jul
+2026: *"the full 2-day Yom Tov calendar applies to all rentals, including
+Israel phones — guests renting for Eretz Yisroel keep both days of Yom Tov, so
+there is no separate 1-day Israel calendar in pricing."* The parameter was not
+an unfinished feature. It was a signature contradicting a decision the shop had
+already taken and written down, sitting in the money path where somebody would
+eventually believe it.
+
+What was already in place before the fix: What HAS been done is behaviour-neutral: `test/freeDayAgreement.test.mjs`
 walks every day of 2025–2027 against every country the form offers and asserts
 the two answers are the same, plus pins the parameter as unused. Both mutations
 were checked — teaching the pricer to honour `country`, and stopping the reader

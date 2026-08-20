@@ -1,17 +1,18 @@
 // The two answers to "was that day free" must be the same answer.
 //
-// The rental price is counted with `isShabbatOrHoliday(day, country)`
+// The rental price is counted with `isShabbatOrHoliday(day)`
 // (public/main.js, inside calcRentalPrice). The words a customer reads — the
 // named free days on screen, and since 20 Aug the shaded cells in the emailed
 // receipt's calendar — come from `freeDayReason(day)`. Two functions, one
 // question, and only one of them decides what anybody is charged.
 //
-// They agree today. This test is here because of HOW they agree: by accident of
-// both reading the same map, not by construction. `isShabbatOrHoliday` declares
-// a `country` parameter and never uses it — an unused parameter on a pricing
-// predicate is an invitation. The day somebody makes Israeli rentals keep one
-// day of yom tov instead of two, the price changes and the receipt's calendar
-// does not, and a customer is looking at a shaded day they were charged for.
+// They agree because both read the same map. They used not to SAY so: the
+// pricer took a `country` and threw it away, which reads as though country is
+// already handled and invites somebody to make Israeli hires keep one day of
+// yom tov instead of two by filling it in — at which point the price moves, the
+// receipt's calendar does not, and a customer is looking at a shaded day they
+// were charged for. The parameter is gone as of 21 Aug; this test is what stops
+// the divergence coming back by another route.
 //
 // A receipt that draws its own working has to be right about the working. So
 // the invariant is pinned: for every day in a three-year span, and for every
@@ -64,8 +65,9 @@ function lift() {
 
 const { isShabbatOrHoliday, freeDayReason } = lift()
 
-// Every country the rental form offers. The pricer takes one; the reader does
-// not. If that ever starts to matter, this is where it shows up.
+// Every country the rental form offers. NEITHER function takes one any more —
+// the list is kept so the assertion still reads as "for every destination", and
+// so a country parameter reappearing has somewhere obvious to fail.
 const COUNTRIES = ['USA', 'UK', 'Israel', 'Europe', 'Canada', undefined, null, '']
 
 const eachDay = function* (fromISO, toISO) {
@@ -104,16 +106,19 @@ test('free to the pricer means named to the reader, every day for three years', 
   assert.ok(free > 150, `only ${free} free days in three years — the table is not being read`)
 })
 
-// The country argument is DECLARED and unused. That is the hazard this file
-// exists for, so it is stated out loud rather than left to be noticed.
-test('the pricer ignores its country argument — deliberately pinned', () => {
+test('free days do not depend on the destination — and the signature says so', () => {
+  // Extra arguments are ignored in JS, so passing one must change nothing…
   const answers = COUNTRIES.map((c) => isShabbatOrHoliday('2026-04-02', c))
-  assert.equal(new Set(answers).size, 1,
-    'the day country starts to matter, the receipt calendar must learn about it too')
+  assert.equal(new Set(answers).size, 1)
+  // …and the declaration must not offer one, which is the part that stops
+  // somebody filling it in and moving the price away from the receipt.
   const src = SRC.match(/function isShabbatOrHoliday\([\s\S]*?\n\}/)[0]
-  assert.match(src, /function isShabbatOrHoliday\(date, country\)/)
-  assert.ok(!/\bcountry\b/.test(src.slice(src.indexOf('{'))),
-    'if country is now used, this test and the receipt calendar both need revisiting')
+  assert.match(src, /function isShabbatOrHoliday\(date\)/,
+    'a country parameter here is an invitation — the rule is diaspora yom tov for every hire')
+  assert.ok(!/\bcountry\b/.test(src),
+    'if free days really do become per-country, the receipt calendar must learn about it in the same change')
+  // Same for the late-fee counter, which passed a country in and binned it.
+  assert.match(SRC, /function countChargeableDays\(fromDate, toDate\)/)
 })
 
 // Shabbos that is also yom tov is one free day with two names — the pricer

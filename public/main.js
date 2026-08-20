@@ -2022,7 +2022,28 @@ function parseLocalDate(v) {
   return new Date(v);
 }
 
-function isShabbatOrHoliday(date, country) {
+// FREE DAYS DO NOT DEPEND ON WHERE THE PHONE IS GOING.
+//
+// This took a `country` and never read it, which mattered more than an unused
+// parameter usually does: the emailed rental receipt now DRAWS the free days
+// for the customer (pages/api/email.js rentalCalendar), and the words it draws
+// come from freeDayReason() while the money comes from here. The two agreed
+// only because both read this same map — and a parameter that looks like it
+// already handles country is an invitation to make Israeli hires keep one day
+// of yom tov instead of two by filling it in. Do that and the price moves, the
+// receipt's calendar does not, and somebody is looking at a shaded day they
+// were charged for.
+//
+// So the signature now says what the rule already was. BUSINESS_RULES.md:59,
+// decided 12 Jul 2026: the full 2-day Yom Tov calendar applies to ALL rentals,
+// Israel phones included, because guests renting for Eretz Yisroel keep both
+// days — there is no separate 1-day Israel calendar in pricing. The parameter
+// was not an unfinished feature; it was a signature contradicting a decision
+// the shop had already taken. test/freeDayAgreement.test.mjs holds this and
+// freeDayReason to the same answer for every day of 2025-2027; the day the
+// rule really does become per-country, that test fails and the receipt's
+// calendar gets told at the same time.
+function isShabbatOrHoliday(date) {
   const d = date instanceof Date ? date : parseLocalDate(date);
   if (d.getDay() === 6) return true;
   return DIASPORA_HOLIDAYS.has(localISO(d));
@@ -2324,7 +2345,7 @@ function calcRentalPrice(fromDate, toDate, country = 'USA', ukPlan = 'standard',
     const w = Math.floor(totalDays / windowLen);
     while (periods.length <= w) periods.push(0);
     totalDays++;
-    if (!isShabbatOrHoliday(cur, country)) { chargeableDays++; periods[w]++; }
+    if (!isShabbatOrHoliday(cur)) { chargeableDays++; periods[w]++; }
     cur.setDate(cur.getDate() + 1);
   }
   const price = priceFromPeriods(periods, rate);
@@ -2429,12 +2450,14 @@ function poolPhoneSuggestions(phones, rentals, from, to, todayISO) {
     .sort((a, b) => b.score - a.score || a.overlap - b.overlap);
 }
 
-function countChargeableDays(fromDate, toDate, country = 'USA') {
+// Late-fee days. Country dropped for the same reason as above — it was passed
+// in from two call sites and thrown away here.
+function countChargeableDays(fromDate, toDate) {
   let days = 0;
   const cur = parseLocalDate(fromDate);
   const end = parseLocalDate(toDate);
   while (cur <= end) {
-    if (!isShabbatOrHoliday(cur, country)) days++;
+    if (!isShabbatOrHoliday(cur)) days++;
     cur.setDate(cur.getDate() + 1);
   }
   return days;
@@ -2447,7 +2470,7 @@ function calcLateFeeDays(rental) {
   if (rental.status === 'returned' || rental.toDate >= today) return 0;
   const lateDayStart = parseLocalDate(rental.toDate);
   lateDayStart.setDate(lateDayStart.getDate() + 1);
-  const days = countChargeableDays(localISO(lateDayStart), today, rental.country || 'USA');
+  const days = countChargeableDays(localISO(lateDayStart), today);
   return days * settingNum('late_fee_per_day', 1);
 }
 
@@ -2549,7 +2572,7 @@ function mgComputeLateFee() {
   const country = document.getElementById('mgCountry')?.value || 'USA';
   const lateDayStart = parseLocalDate(to);
   lateDayStart.setDate(lateDayStart.getDate() + 1);
-  return countChargeableDays(localISO(lateDayStart), today, country) * settingNum('late_fee_per_day', 1);
+  return countChargeableDays(localISO(lateDayStart), today) * settingNum('late_fee_per_day', 1);
 }
 
 // The charger is ONE item to the business (the T&C prices "Charger: £10" —
