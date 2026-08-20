@@ -175,9 +175,21 @@ export default function Manual({ shots = {} }) {
         <nav className="kc-man-toc" style={{ margin: '0 0 26px', padding: '12px 14px', borderRadius: 10,
           border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
           <Heading>Contents</Heading>
-          <div className="kc-man-toc-grid">
-            {SCREENS.map((s) => <a key={s.id} href={`#${s.id}`}>{s.name}</a>)}
-          </div>
+          {/* Grouped the way the page below is grouped. Twenty-nine names in
+              one grid is a list you read start to finish to find anything;
+              the same names under the three headings they already sit under
+              is a list you can aim at. The headings are the h2s further down,
+              word for word, so the contents and the page agree. */}
+          {[['The frame around every screen', frame],
+            ['The staff app', staff],
+            ['Pages with their own address', pages]].map(([label, group]) => (
+            <div key={label} className="kc-man-toc-group">
+              <div className="kc-man-toc-label">{label}</div>
+              <div className="kc-man-toc-grid">
+                {group.map((s) => <a key={s.id} href={`#${s.id}`}>{s.name}</a>)}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* The chrome first: it is what someone is looking at before they have

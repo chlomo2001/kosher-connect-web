@@ -4259,6 +4259,11 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 .kc-man-toc-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 14px;
 }
+.kc-man-toc-group + .kc-man-toc-group { margin-top: 12px; }
+.kc-man-toc-label {
+  font-size: var(--fs-micro); font-weight: 700; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--muted); margin: 0 0 4px;
+}
 
 @media print {
   /* THE WHOLE DOCUMENT, not the part on screen. Three things clip it, and all
