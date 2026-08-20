@@ -19,12 +19,18 @@ listed at the end, because "we checked and it is true" is the point of an audit.
 
 Five surfaces were swept (money screens, the manual, guides + toasts, public
 pages, comms templates) and each accusation went to a defence pass that re-read
-the code and could acquit it. **The defence pass completed for three surfaces
-and failed for two — public pages and comms templates — when the run hit a
-monthly spend limit.** Findings on those two surfaces were therefore
-hand-checked instead, and the two most consequential were confirmed directly
-against the code (`kt_jobs` transitions; `lib/email.js` sending with no
-Reply-To). Nothing below is reported as verified that was not.
+the code and could acquit it. On 18 August **the defence pass completed for
+three surfaces and failed for two** — public pages and comms templates — when
+the run hit a monthly spend limit; findings there were hand-checked instead.
+
+**Completed 19 August.** The two unswept surfaces were defended properly, by
+re-opening each held item at its line. The result is in the held list below and
+it matters: **two of the six were already fixed**, by the commit that landed
+alongside this audit (`604d53f`, "Fix the defects the audits found"). A held
+list that names work already done sends the reader chasing it, so each item now
+carries its status and the line that settles it.
+
+Nothing here is reported as verified that was not.
 
 ## Fixed in this commit (copy only)
 
@@ -58,9 +64,11 @@ itself as "Text receipt sent"; it now says it went to the test number.
    charge. The honest copy is "re-ring now, on this screen (don't refresh)";
    the real fix is to consult the `card_receipts` row before charging. **Money
    surface — held.**
-3. **"Logged to the customer timeline"** fires even when the save failed —
-   `recordComm` swallows the error (`public/main.js:9137`). One-line fix, but
-   it changes behaviour on an error path.
+3. ~~**"Logged to the customer timeline"** fires even when the save failed —
+   `recordComm` swallows the error.~~ **FIXED — nothing to do.** Confirmed
+   19 Aug at `public/main.js:10260-10274`: `recordComm` now awaits the save,
+   returns whether it succeeded, and toasts "Could not save that to the
+   timeline" on failure. Its own comment records what it used to do.
 4. **The KC-<id> bank reference** is shown to customers on the portal and in
    the terms, but the bank matcher only knows booking references
    (`lib/bankCandidates.mjs`), so quoting it does not actually match the
@@ -69,8 +77,33 @@ itself as "Text receipt sent"; it now says it went to the test number.
    submission; a second one while a task is still open is dropped rather than
    appended (`pages/api/public/repair.js:59`). The public message form already
    handles this correctly — copy that branch across.
-6. **The receipt "✉️ Receipt sent" chip** sets `emailed = true` on the TEST
-   branch too, so it claims a receipt reached a customer who got nothing.
+6. ~~**The receipt "✉️ Receipt sent" chip** sets `emailed = true` on the TEST
+   branch too.~~ **FIXED — nothing to do.** Confirmed 19 Aug at
+   `public/main.js:17475-17485`: the three outcomes are now distinct — held
+   sets nothing, TEST sets `emailed = 'test'` with the comment "the customer
+   got nothing — say so on the chip", and only a real send sets `true`. The
+   chip reads "✉️ Sent to the test inbox" for the middle case
+   (`public/main.js:17336`).
+
+### Still standing, re-confirmed 19 August
+
+- **#2 (card approval across a refresh)** stands. `kcTillApproved` is still an
+  in-memory object (`public/main.js:17505`), so a reload loses the approval;
+  `card_receipts` is written at approval time (`public/main.js:17602`) but
+  never consulted before charging, which was the proposed real fix.
+- **#4 (the KC-<id> bank reference)** stands. `lib/bankCandidates.mjs:25` reads
+  `booking_reference` and nothing else, so a customer quoting the reference the
+  portal gave them still does not match their payment.
+- **#5 (a repeat repair enquiry)** stands, and is the sharpest of the six.
+  `pages/api/public/repair.js:59` wraps the insert in `if (!open.length)` and
+  returns `{ success: true }` regardless (line 78), so a second enquiry while a
+  task is open is discarded while the customer is told "Got it — we'll be in
+  touch." The sibling endpoint already does this correctly — `message.js:78-84`
+  appends a repeat send to the still-open task — so the fix is to copy that
+  branch across, not to invent anything.
+- **#1 (the live `email_closing` setting)** cannot be checked from a checkout:
+  it is a value in the Settings table, not in code, and it is the owner's copy
+  to word.
 
 ## Overstated or false — the full list
 
