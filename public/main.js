@@ -7602,8 +7602,8 @@ function buildCustomerPanelHtml(c, mode = 'card') {
                 .kc-fact that holds together, so the line breaks BETWEEN facts
                 and never inside one. */''}
           <div class="detail-meta">${isPage
-            ? `${unconfirmedChip(c) || ''}${contactChip(c) || ''}`
-            : `${unconfirmedChip(c) ? unconfirmedChip(c) + ' · ' : ''}${contactChip(c)}${contactChip(c) ? ' ' : ''}${c.phone ? `<a class="kc-fact" href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${c.altPhone ? ` <a class="kc-fact" href="tel:${escHtml(String(c.altPhone).replace(/\s/g, ''))}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional number">${escHtml(fmtPhone(c.altPhone))}</a>` : ''}${waLink(c, '') ?` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">✉️ ${escHtml(c.email)}</a>` : `<span class="kc-fact">✉️ ${escHtml(c.email || 'no contact email')}</span>`}${c.altEmail ? ` · <a href="mailto:${escHtml(c.altEmail)}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional email">${escHtml(c.altEmail)}</a>` : ''}${c.accountEmail ?` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr}${since ? ` · <span class="kc-fact">Since ${since}</span>` : ''}`}</div>
+            ? `${unconfirmedChip(c, { actionable: true }) || ''}${contactChip(c) || ''}`
+            : `${unconfirmedChip(c) ? unconfirmedChip(c, { actionable: true }) + ' · ' : ''}${contactChip(c)}${contactChip(c) ? ' ' : ''}${c.phone ? `<a class="kc-fact" href="tel:${escHtml(c.phone.replace(/\s/g, ''))}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Call">${escHtml(fmtPhone(c.phone))}</a>` : '—'}${c.altPhone ? ` <a class="kc-fact" href="tel:${escHtml(String(c.altPhone).replace(/\s/g, ''))}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional number">${escHtml(fmtPhone(c.altPhone))}</a>` : ''}${waLink(c, '') ?` <a href="${escHtml(waLink(c, `Hi ${c.firstName || 'there'},`))}" target="_blank" rel="noopener" title="Message on WhatsApp" aria-label="Message on WhatsApp" style="text-decoration:none;">💬</a>` : ''} · ${c.email && !isOwnAccountEmail(c.email) ? `<a href="mailto:${escHtml(c.email)}" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted);" title="Email">✉️ ${escHtml(c.email)}</a>` : `<span class="kc-fact">✉️ ${escHtml(c.email || 'no contact email')}</span>`}${c.altEmail ? ` · <a href="mailto:${escHtml(c.altEmail)}" style="color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);" title="Additional email">${escHtml(c.altEmail)}</a>` : ''}${c.accountEmail ?` · <span title="Account/login email (Lebara etc.) — not the customer’s real contact address" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : ''} ${addr}${since ? ` · <span class="kc-fact">Since ${since}</span>` : ''}`}</div>
         </div>
         <!-- Three menus, not nine icons. Grouping them by what they DO was the
              first fix; the row was still nine identical squares to read, and
@@ -20785,10 +20785,73 @@ function contactChip(c) {
 // vouched for yet — shown wherever the record shows, and doing nothing else:
 // nothing is blocked and no flow changes. Confirming happens in one place, the
 // Confirm Data tab.
-function unconfirmedChip(rec) {
-  return rec && rec.dataSource === 'import' && !rec.verifiedAt
-    ? ' <span class="kc-unconfirmed" title="Imported from a spreadsheet — nobody has confirmed this against reality yet. Manage \u2192 Confirm Data.">unconfirmed</span>'
-    : '';
+// `actionable` turns the marker into the confirm button itself. The chip used
+// to say "Manage → Confirm Data" and leave the reader to go and find the
+// person again in a queue of hundreds — while the record they were being asked
+// about was open in front of them. On the customer card the answer is one tap
+// now. Everywhere else (list rows, the SIM table) it stays a plain label:
+// a button in a dense row is noise, and those rows are not where you have
+// enough of the person on screen to answer honestly.
+function unconfirmedChip(rec, { actionable = false } = {}) {
+  if (!(rec && rec.dataSource === 'import' && !rec.verifiedAt)) return '';
+  if (!actionable) {
+    return ' <span class="kc-unconfirmed" title="Imported from a spreadsheet — nobody has confirmed this against reality yet. Manage \u2192 Confirm Data.">unconfirmed</span>';
+  }
+  // escHtml does not touch single quotes (main.js:12830), and this id sits
+  // inside a single-quoted JS string inside an attribute — so the apostrophe
+  // is escaped explicitly, the same way bankPickList does it.
+  const safeId = escHtml(String(rec.id)).replace(/'/g, '&#39;');
+  return ` <button type="button" class="kc-unconfirmed kc-unconfirmed-btn" onclick="confirmFromCard('${safeId}')"
+    title="Imported from a spreadsheet and never checked. Press to confirm this record — and anything imported with it.">unconfirmed — confirm?</button>`;
+}
+
+// Confirm the open record without leaving it.
+//
+// Same endpoint the Confirm Data tab uses, so it confirms the person AND the
+// SIMs, bookings and virtual numbers that came in with them — exactly what
+// that screen does. It asks first, because confirming is a person vouching for
+// data and it reaches records not on screen.
+async function confirmFromCard(customerId) {
+  const c = customers.find(x => String(x.id) === String(customerId));
+  if (!c) return;
+  const attached = [
+    sims.filter(x => String(x.customerId) === String(customerId) && x.dataSource === 'import' && !x.verifiedAt).length,
+    bookings.filter(x => String(x.customerId) === String(customerId) && x.dataSource === 'import' && !x.verifiedAt).length,
+    (typeof virtualNumbers !== 'undefined' ? virtualNumbers : [])
+      .filter(x => String(x.customerId) === String(customerId) && x.dataSource === 'import' && !x.verifiedAt).length,
+  ].reduce((a, b) => a + b, 0);
+  const name = `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'this customer';
+  if (!(await kcConfirm({
+    title: 'Confirm this record?',
+    body: `You are vouching that what the app holds for <strong>${escHtml(name)}</strong> matches reality.`
+      + (attached ? `<br>${attached} imported record${attached === 1 ? '' : 's'} attached to them ${attached === 1 ? 'is' : 'are'} confirmed too — the same as the Confirm Data screen does.` : '')
+      + `<br><span style="color:var(--muted);">If something is wrong, fix it first. Confirming something you know is wrong is worse than leaving it.</span>`,
+    okLabel: '✓ Yes — confirm',
+  }))) return;
+
+  const res = await window.api.confirmReviewed(customerId).catch(() => null);
+  if (!res || !res.success) {
+    toast(res?.error || 'Could not confirm that — nothing was changed.', 'error');
+    return;
+  }
+  // Clear the markers locally so the card and every list agree without a
+  // reload, and keep the Confirm Data counts in step — the queue is worked
+  // from those numbers and a stale one sends someone looking for a record
+  // that is no longer waiting.
+  const stamp = new Date().toISOString();
+  c.verifiedAt = stamp;
+  for (const list of [sims, bookings, (typeof virtualNumbers !== 'undefined' ? virtualNumbers : [])]) {
+    for (const r of list) {
+      if (String(r.customerId) === String(customerId) && r.dataSource === 'import' && !r.verifiedAt) r.verifiedAt = stamp;
+    }
+  }
+  if (confirmStats) {
+    confirmStats.done += res.confirmed;
+    confirmStats.remaining = Math.max(0, confirmStats.remaining - res.confirmed);
+  }
+  toast(`✓ Confirmed ${escName(name)}${res.attached ? ` and ${res.attached} attached record${res.attached === 1 ? '' : 's'}` : ''}`, 'success');
+  kcRepaintCards(customerId);
+  renderTableRows();
 }
 
 // ---------- Confirm imported data ----------

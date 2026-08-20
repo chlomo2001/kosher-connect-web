@@ -1518,6 +1518,28 @@ body.pos-mode #kcNextAction { display: none; }
   padding: 1px 7px; white-space: nowrap; vertical-align: middle;
 }
 
+/* On the customer card the same marker IS the confirm control, so it has to
+   look pressable while staying as quiet as the label it replaces — the point
+   of the dashed, muted treatment is that 1,865 of these must not shout. It
+   earns a pointer, a hover and a real focus ring; the button reset in this
+   sheet strips the native ones. */
+.kc-unconfirmed-btn {
+  cursor: pointer; font-family: inherit; background: none;
+  /* 24px minimum, because this one is pressed. The plain label next to it can
+     be 17px tall — nobody aims at a label. The harness cannot catch this: it
+     sweeps the seed, and no seeded customer is unconfirmed, so the button
+     never renders during an audit. Measured by hand at 390px instead. */
+  min-height: 24px; padding-top: 3px; padding-bottom: 3px;
+  transition: color .12s ease, border-color .12s ease, background-color .12s ease;
+}
+.kc-unconfirmed-btn:hover {
+  color: var(--text); border-color: var(--text);
+  border-style: solid; background: var(--bg-secondary);
+}
+.kc-unconfirmed-btn:focus-visible {
+  outline: 2px solid var(--ring, var(--text)); outline-offset: 2px;
+}
+
 @media (max-width: 560px) {
   .rv-line { grid-template-columns: minmax(0, 1fr); gap: 2px; }
 }
