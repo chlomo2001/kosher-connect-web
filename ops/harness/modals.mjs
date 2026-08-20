@@ -26,7 +26,16 @@ import { measure, report } from './contrast.mjs'
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '../..')
 const require = createRequire(import.meta.url)
-const { chromium } = require(path.join(ROOT, 'node_modules/playwright-core'))
+
+// Loaded WHERE IT IS USED, not here. This module exports MODALS as a plain
+// registry that four other harnesses and one unit test import; requiring a
+// browser at module scope makes every one of them need Chromium installed to
+// read a list of strings. It broke CI for 17 hours from 19 Aug: `npm ci` does
+// not install playwright-core (it is not in package.json — it comes with the
+// dev container), so test/manualShots.test.mjs threw on import, taking its ten
+// tests with it and reporting as one failure. render.mjs already keeps its own
+// require inside the run-directly block, which is why it never had this bug.
+const loadChromium = () => require(path.join(ROOT, 'node_modules/playwright-core')).chromium
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? process.argv[i + 1] : d }
 const width = Number(arg('--width', 390))
@@ -158,6 +167,7 @@ export const TRANSIENTS = [
 // MODALS without opening a browser.
 if (import.meta.url === `file://${process.argv[1]}`) {
   const file = buildAppHtml()
+  const chromium = loadChromium()
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', env: BROWSER_ENV })
   const ctx = await browser.newContext({ locale: 'en-GB', viewport: { width, height: 844 }, colorScheme: theme })
   const page = await ctx.newPage()
