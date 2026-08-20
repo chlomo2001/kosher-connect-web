@@ -1,7 +1,5 @@
 import { useEffect } from 'react'
 import Head from 'next/head'
-import fs from 'node:fs'
-import path from 'node:path'
 import ThemeToggle from '../components/ThemeToggle'
 import AppStyles from '../components/AppStyles'
 import { requireStaffCookie } from '../lib/pageAuth'
@@ -120,7 +118,12 @@ function Screen({ s, shots }) {
   )
 }
 
-export default function Manual({ shots }) {
+// `shots` defaults to {} because the offline page harness renders this
+// component without running getServerSideProps. A page that throws when a
+// server-supplied prop is absent cannot be checked offline at all, and the
+// pictures are an enhancement — their absence must degrade to the text page,
+// which is the same contract test/manualShots.test.mjs already holds.
+export default function Manual({ shots = {} }) {
   // Marks the page for the print rules in app.css. body and #__next are sized
   // and clipped for the app frame, and printing inherits that: the first
   // attempt printed exactly one page — the part of the manual on screen — and
@@ -201,6 +204,13 @@ export async function getServerSideProps({ req }) {
   // A screen whose shot has not been taken yet simply reads as it always did,
   // instead of showing a broken image — the manual degrades to the old page
   // rather than to a worse one.
+  // Imported HERE, not at module scope. A top-level `import fs from 'node:fs'`
+  // is invisible to Next (it strips getServerSideProps from the client bundle)
+  // but NOT to the offline page harness, which parses the module as written —
+  // and it dropped /manual out of the harness entirely for a day. Server-only
+  // modules belong inside the server-only function.
+  const { default: fs } = await import('node:fs')
+  const { default: path } = await import('node:path')
   let shots = {}
   try {
     const dir = path.join(process.cwd(), 'public/manual')

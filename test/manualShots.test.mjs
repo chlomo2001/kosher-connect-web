@@ -96,3 +96,16 @@ test('the manual is behind the staff gate, unconditionally', () => {
   assert.doesNotMatch(src, /PREVIEW|BYPASS|process\.env\.[A-Z_]*MANUAL/,
     'a bypass was left in the manual page')
 })
+
+// The manual page must render with no props at all. The offline page harness
+// renders components without running getServerSideProps, and a top-level
+// `import fs from 'node:fs'` plus an undefined `shots` took /manual out of
+// that harness for a day — four checks silently going from pass to fail.
+test('the page survives being rendered with no server props', () => {
+  const src = readFileSync(path.join(ROOT, 'pages/manual.js'), 'utf8')
+  assert.match(src, /export default function Manual\(\{ shots = \{\} \}\)/,
+    'shots must default — the offline harness renders this with no props')
+  const beforeGssp = src.slice(0, src.indexOf('export async function getServerSideProps'))
+  assert.doesNotMatch(beforeGssp, /^import .* from ['"]node:/m,
+    'server-only modules must be imported inside getServerSideProps, not at module scope')
+})
