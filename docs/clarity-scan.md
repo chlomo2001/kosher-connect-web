@@ -6,17 +6,23 @@ not reachable from this session.
 
 ## How much of this ran, honestly
 
-Seven lenses were planned. **Four completed** — names that lie, vocabulary
-drift, money whose meaning is ambiguous, and the person is denormalised. Three
-did not: state machines, silent defaults, and the shape of the plan, all lost
-when the run hit a monthly spend limit. The adversarial refuter pass and the
-synthesis agent died the same way, so **the refuting and the diagnosis below
-are mine, done by reading the code the findings point at** — every claim in
-this document was re-opened at its file and line before it was kept or killed.
+Seven lenses were planned. **All seven have now run.** Four completed on
+18 August — names that lie, vocabulary drift, money whose meaning is ambiguous,
+and the person is denormalised. The remaining three — state machines, silent
+defaults, and the shape of the plan — were lost that night to a monthly spend
+limit and were **run on 19 August**; their findings are the last three sections
+before the refuter pass.
 
-That the "shape of the plan" lens never ran matters, because it was the lens
-written to test the standing hypothesis. What follows tests that hypothesis
-from the other four lenses' evidence instead, which is weaker but not nothing.
+The adversarial refuter agent and the synthesis agent died with the first run
+and were never revived, so **the refuting and the diagnosis are mine, done by
+reading the code the findings point at** — every claim in this document was
+re-opened at its file and line before it was kept or killed. Of the six
+findings the last three lenses raised, **two were killed on refutation and one
+had its citation corrected**; the tally is at the foot of the refuter section.
+
+The source repo (`earothbart-ai/pixel-perfect-peek`) is **not reachable from
+this environment** — cross-owner `add_repo` is refused — so the method here is
+rebuilt from the brief's description of it, not copied from the original scan.
 
 ## The diagnosis
 
@@ -46,6 +52,40 @@ Partly confirmed, and demoted.** The blob is real and the person-identity lens
 found it independently. But it is one half of the split, not the cause of it:
 the same seam produces money findings and status findings that have nothing to
 do with `sims`. The blob is the symptom that hurts most, not the disease.
+
+**Sharpened on 19 August by the shape-of-the-plan lens, and this is the version
+to act on.** The sentence above says the two models run "with no rule about
+which is true". That was wrong, and being wrong about it made the problem look
+worse in one way and better in another. There *is* a rule. It is written down,
+in the header of `lib/mappers.js:4-6`:
+
+> "legacy_extras stores the COMPLETE app object, so reading back is an exact
+> round-trip **regardless of how much the typed projection captures**. The
+> typed columns exist for SQL, FK integrity, and the post-cutover world."
+
+So the blob wins, deliberately, and the typed columns are a projection for a
+cutover that has not happened. The real finding is what that means per table,
+which nothing states anywhere:
+
+| table | app READS | app WRITES | drift detectable? |
+|---|---|---|---|
+| `customers` | typed columns + blob | both | **yes** — `customerDrift`, `lib/mappers.js:149` |
+| `sims` | **blob only** | both | no |
+| `rentals` | **blob only** | both | no |
+| `lines` | **blob only** | both | no |
+
+`lib/tableStore.js:34-46` is the whole of it: `listApp()` selects the single
+column `legacy_extras` and nothing else. For three of the four tables the
+typed columns are **write-only** — the app fills them in and never reads them
+back. So the diagnosis is not "no rule about which model is true"; it is:
+
+> **One model is read and the other is written, and which is which changes per
+> table, and that fact is recorded nowhere a maintainer would look.**
+
+That is a better diagnosis because it explains a finding the first pass could
+only describe. "Customer merge re-parents a foreign key the app never reads"
+is not a curiosity — it is the *predicted* consequence of re-parenting a typed
+column on `sims`, a table whose typed columns are never read.
 
 The practical consequence, which is what makes this worth writing down: **a
 maintainer cannot tell which model to trust by reading either one.** The
@@ -91,6 +131,10 @@ in the morning, and it is the single most valuable thing this scan found.
 | 5 | arrearsTotal is a negative number named as a positive quantity | `pages/api/ledger.js:231` | arrearsTotal: -350.00 (negative = customers owe £350), silently abs'd at every point of use → serve the magnitude at the boundary — `arrearsTotal: Math.abs(Number(totals.owed) \|\| 0)` — and drop the two  |
 | 6 | 'Charged Out Today' lumps revenue charged (no cash moved) with refunds physically handed back | `public/main.js:9718` | 'Charged Out Today' = \|charges billed + refunds paid out\|, one figure, called 'charged' → relabel to 'Charged & paid out today' (or 'Billed today' if payouts get their own line); comment on cashup.js  |
 | 7 | sim_mail.recipient's column comment claims it is 'the address we PAIRED on', but for every row in the pending queue — th | `supabase/migrations/20260816160000_sim_mail.sql:21` | Comment at :21-23: '-- The address we PAIRED on: the original per-SIM recipient, never the kosher-connect.com  → Reword the comment (and mirror it at the write site): '-- The recipient that best identifies the SIM: the addr |
+| 8 | `sim_status.renewal_pending` is drawn by the customer portal in both languages and set by no code path | `supabase/migrations/20260712120000_initial_schema.sql:17` | enum value with no writer → comment the enum value: `-- renewal_pending: drawn by the portal (pages/portal.js:83,156,677); NOTHING sets it. Either give the SIM form the option or drop it — do not leave it half-built.` |
+| 9 | `rental_status.overdue` is declared but never stored; it is computed from dates at read time | `supabase/migrations/20260712120000_initial_schema.sql:13` | enum value no row occupies → comment: `-- overdue is COMPUTED, never stored — see getComputedStatus (public/main.js:3056). A query filtering on it returns nothing, correctly.` |
+| 10 | A dead second default on a column the line above already guaranteed | `pages/api/kol-torah.js:236` | `method: row.method \|\| 'cash'` → `method: row.method` — line 211 already validated it into `METHODS`; the fallback can only mislead a reader into thinking the column is nullable |
+| 11 | The read/write split between typed columns and the blob is stated in one file's header and nowhere the maintainer of another file would look | `lib/tableStore.js:34` | `listApp()` selects `legacy_extras` alone, with no comment saying that is the whole model → comment at the select: `-- Reads the BLOB ONLY. sims/rentals/lines typed columns are write-only (see lib/mappers.js:4-6). customers is the exception — it reads typed and drift-checks.` |
 
 ### Why each one, in one line
 
@@ -101,6 +145,10 @@ in the morning, and it is the single most valuable thing this scan found.
 - **arrearsTotal is a negative number named as a positive quantity** — A field whose name reads 'total arrears' but whose value is negative is a trap for the next call site: printed raw it renders '−£350' as outstanding, and a `arrearsTotal > threshold` check silently never fires. The magnitude convention is what both existing consumers already reconstruct by hand.
 - **'Charged Out Today' lumps revenue charged (no cash moved) with refunds physically handed back** — To the shop, 'charged out' reads as money that left — but most of the figure is invoicing that moved nothing, while the slice that DID leave the drawer (refund payouts) is hidden inside it. The codebase itself draws this exact distinction everywhere else (refunded vs paidOut in the revenue report, ledger.js:154-157), so the label is behind its own data model.
 - **sim_mail.recipient's column comment claims it is 'the address we PAIRED on', but for every row in the pending ** — The column stores the app's best guess at WHO a message concerns, and the comment describes only the happy path; the unhappy path is the entire human queue. One sentence stops the next person from 'fixing' the fall-back at inbound/mail.js:265 as a bug.
+- **`sim_status.renewal_pending` is drawn by the portal and set by nothing** — This is the half-built state in its purest form: the customer-facing half is complete, correct and bilingual, and no half exists that could ever produce it. The cost is not a broken screen — nothing looks broken — it is that the one SIM state the shop built a customer warning for cannot occur, so the warning is decoration. A comment is the cheap fix; deciding whether to finish it or drop it is the owner's, because giving the staff form a fourth option changes what staff see.
+- **`rental_status.overdue` is declared but never stored** — Kept deliberately weak. The design is right; only the enum's silence about it is wrong, and a maintainer's wasted afternoon on a query that returns nothing is the whole cost. It is in Tier 1 rather than dropped because the comment costs one line and the confusion recurs for every new reader.
+- **A dead second default on an already-guaranteed column** — Harmless today, and exactly the shape that becomes harmful when someone moves line 211 or adds a second caller. A fallback onto a non-nullable value tells a reader the value is nullable; that is a false statement in code rather than in copy, and it is free to delete.
+- **The read/write split is documented in one file's header and nowhere else** — This is the single most valuable comment in the list. `lib/tableStore.js:34` is where a maintainer arrives when asking "where does a SIM come from", and it currently answers with a one-column select and no explanation. Every downstream confusion in this document — the unread FK, the write-only typed columns, the undetectable drift — is legible from that line once the line says what it is doing.
 
 ## Tier 2 — structural. Needs a migration or moves data, so each carries its counter-argument.
 
@@ -199,10 +247,146 @@ at least two cases I think it wins.
 - **Argument for:** A maintainer looking at the sims table in Supabase cannot see, filter or index the one field that decides where every piece of carrier mail lands; 'which SIMs share this mailbox' — the question behind every ambiguous queue row — is unanswerable in SQL. The provider column shows the team already decided routing-relevant SIM identity belongs in the typed projection.
 - **Counter-argument:** All three readers share one access pattern through buildSimIndex, and the matching itself needs mailboxKey's Gmail dot/plus normalisation, which a raw SQL column would not give you anyway — so the column buys an index nobody currently queries, at the price of committing to the column+blob double-write dance that the provider migration shows is easy to get wrong; the cheapest correct moment to type it is cutover, when the blob dies.
 
+## Lens 5 — state machines: states declared, states reachable, states drawn
+
+Every enum in `supabase/migrations/20260712120000_initial_schema.sql` and its
+later `add value` migrations, held against the code that writes each value and
+the screens that draw it. Two survived refutation.
+
+### S1 · `sim_status.renewal_pending` — the customer portal draws it in two languages and nothing can produce it
+
+Declared at `supabase/migrations/20260712120000_initial_schema.sql:17` and
+accepted at `lib/mappers.js:270`. The customer portal renders it fully: an
+English label "Renewal due" (`pages/portal.js:83`), a Hebrew one "לחידוש"
+(`pages/portal.js:156`), and a warning-coloured badge (`pages/portal.js:677`)
+— it is grouped with `overdue` as one of the two states worth alarming a
+customer about.
+
+Nothing writes it. The staff SIM form offers three options — Active, Suspended,
+Cancelled (`public/main.js:12309-12311`). No API route, no migration, no import
+script sets it. A customer can never see the one SIM state the portal was built
+to warn them about.
+
+The interesting half is *why it reads as fine*: the portal's own code is
+correct and complete. Nothing in the portal is broken. The gap is entirely
+between two files that never mention each other.
+
+### S2 · `rental_status.overdue` is declared but never stored — it is computed at read time
+
+`rental_status` declares four values (`…initial_schema.sql:13`). Three are
+stored. `overdue` appears nowhere else in the repository except that
+declaration: `getComputedStatus` (`public/main.js:3056-3058`) derives it from
+`toDate < today` every time it is asked.
+
+Computing it is the right design — a stored `overdue` needs a nightly job and
+goes stale between runs. The finding is not the design, it is that the enum
+advertises a state a maintainer will reasonably believe rows occupy. A
+`where status = 'overdue'` returns nothing, correctly and confusingly.
+
+**Counter-argument, and it is a fair one:** an enum is a permitted set, not a
+promise of occupancy. Kept as a Tier 1 comment only, not a migration — see
+T1 additions. It is the weakest finding in this document and is recorded at
+that strength deliberately.
+
+## Lens 6 — silent defaults: where an absent value becomes a meaningful one
+
+The lens the 18 August run most wanted, because it is written to catch the
+class of bug fixed that afternoon: the ticket-mail classifier defaulted to
+`confirmation`, so every unreadable airline email asserted a booking. The rule
+that fix wrote down is the lens: **"a default that names a meaning is a
+guess"** (`lib/ticketMail.mjs`, commit 96e0112).
+
+Searching every `||`/`??` fallback onto a `method`, `kind`, `type`, `status`,
+`category`, `confidence` or `source` across `lib/`, `pages/api/` and
+`public/main.js` returns six candidates. Four are neutral by construction
+(`'other'`, `'unknown'`, `'none'`, `''`) and are the pattern working. Two named
+a meaning and were investigated; **both were killed** — see the refuter pass.
+
+The lens's real result is therefore a negative one, and worth stating as such:
+**no second instance of the ticket-mail bug is present.** `pages/api/cashup.js:45`
+shows the codebase has internalised the rule — an absent method there becomes
+the neutral `'unspecified'` rather than a plausible `'cash'`, and that string
+exists for no other reason.
+
+One piece of genuine dead code fell out: `pages/api/kol-torah.js:236` applies
+`row.method || 'cash'` to a column that line 211 already guaranteed is
+populated. Harmless, and worth a comment rather than a change.
+
+## Lens 7 — the shape of the plan
+
+This was the lens written to test the standing hypothesis, and it is the one
+whose absence the 18 August run flagged as most costly. Its finding is in the
+diagnosis above, because it changes the diagnosis: the two-model split is
+**declared policy** (`lib/mappers.js:4-6`), not drift, and the app reads the
+blob exclusively for three of the four tables that carry one
+(`lib/tableStore.js:34-46`).
+
+One further finding of its own:
+
+### P1 · The drift detector covers one of the four tables, and reports to a server console
+
+`customerDrift` (`lib/mappers.js:149`) compares a stored row's typed columns
+against what the blob would derive, and is genuinely good: tested
+(`test/customers.test.mjs:47,53`), and wired into the read path
+(`lib/tableStore.js:88`).
+
+Its output is `console.warn` (`lib/tableStore.js:91`). There is no
+`simDrift`, `rentalDrift` or `lineDrift`.
+
+So the one mechanism that can detect the central problem in this document
+covers `customers` — the table that needs it *least*, being the only one whose
+typed columns are read and therefore the only one where drift has a visible
+symptom — and does not cover `sims`, `rentals` or `lines`, where drift is
+undetectable in principle because nothing reads the typed side to compare.
+Where it does run, it tells a log file.
+
+**Counter-argument:** on the three blob-only tables, drift between a written-
+but-never-read column and the blob has no user-visible consequence *today*.
+That is true, and it is precisely the argument that makes the cutover the
+brief's "post-cutover world" dangerous: the day anything starts reading those
+columns, every one of them is of unknown age, and there is no record of when
+they diverged. A detector is cheap now and archaeology later.
+
 ## The refuter pass — what did not survive
 
-A scan whose refuter kills nothing was not refuted. Three findings were opened
-at their line and did not hold:
+A scan whose refuter kills nothing was not refuted. **Six findings were opened
+at their line and did not hold** — three from the first four lenses, three from
+the last three. The 19 August additions are first because two of them are kills
+of findings raised the same day, which is the pass working at full speed.
+
+### From lenses 5–7 (19 August)
+
+- **A Kol Torah settlement invents `method: 'cash'` when none was recorded** (`pages/api/kol-torah.js:236`)
+  KILLED, and it took two corrections to kill properly. First the citation was
+  wrong: line 236 defaults a column that line 211 already populated, so 236 is
+  dead code and the invention, if any, happens at
+  `const method = METHODS.includes(b.method) ? b.method : 'cash'` (line 211).
+  Then the harm was wrong too. The claim was that an unmethoded settlement
+  would flow into `cashExpected` (`lib/money.mjs:83-88`), which counts every
+  `method === 'cash'` row into the expected drawer, leaving the person counting
+  up short with no explanation — and cash-up does read every ledger row in the
+  day window unfiltered (`pages/api/cashup.js:22`), so the mechanism is real.
+  But the input cannot be absent: the settlement control is a fixed four-option
+  `<select>` (`public/main.js:17904-17906`) whose values are exactly `METHODS`.
+  'cash' is the first option, so it is a **visible** default the operator is
+  looking at and can change — the opposite of a silent one. A direct API call
+  could still trip line 211, but that is a threat model, not a clarity finding.
+
+- **Restoring a parked till sale defaults its method to cash** (`public/main.js:17407`)
+  KILLED for the same reason and more cheaply. `posMethod = target.method || 'cash'`
+  restores a sale the operator parked minutes earlier and is standing in front
+  of; the method buttons are re-rendered on the same line
+  (`public/main.js:17410`). A default nobody can miss is a starting position,
+  not a claim.
+
+- **`rental_status.overdue` is declared but never stored** (`…initial_schema.sql:13`)
+  SURVIVED, but barely, and is recorded at its real strength rather than
+  written up as though it were a bug. See the counter-argument under S2: an
+  enum is a permitted set, not a promise of occupancy. It earns a comment and
+  nothing more. Noted here because a refuter pass that only reports kills
+  hides the findings it merely weakened.
+
+### From lenses 1–4 (18 August)
 
 - **Recent print/online service orders are pushed into the customer card as `type: 'sim'`** (`public/main.js:6923`)
   KILLED. Read the array: within allActiveServices, `type` is consumed only as the CSS class at main.js:7033-7034, and the print row has no simId so it renders as a span, not a SIM button. The filtering risk the finding describes is real in this file but on a DIFFERENT array (`c.services`, filtered by type !== 'sim' at 6768 and 6996) — so the accusation attaches to the wrong line. A one-word comment would settle it; a rename is churn.
@@ -215,9 +399,26 @@ at their line and did not hold:
 
 ## What this scan did not look at
 
-State machines, silent defaults, and the shape of the plan — three of the seven
-lenses — never ran. The silent-defaults lens in particular was written to hunt
-the class of bug that produced the ticket-mail `confirmation` default fixed on
-18 August; others of that shape are likely still standing and unfound. This
-document should not be read as a complete map.
+All seven lenses have now run, so the gap this section described on 18 August
+is closed. What replaces it is narrower and should not be mistaken for
+completeness:
+
+- **The lenses are static reading, not a walk through the running app.** Every
+  citation was opened at its line; none was confirmed by using the screen. The
+  `renewal_pending` finding (S1) is the shape that survives this method well —
+  two files that never mention each other — and a state that *is* set by
+  something at runtime that greps do not reach would survive it badly.
+- **The silent-defaults lens searched a fixed vocabulary** — fallbacks onto
+  `method`, `kind`, `type`, `status`, `category`, `confidence`, `source`. A
+  default that names a meaning under a field named something else was not
+  looked for. The negative result in that section is bounded by that list.
+- **Cosmetics remain out of scope**, as they were on 18 August.
+- **Nothing here has been acted on.** This document changed no behaviour, by
+  instruction. Tier 2 and the two surviving lens-5/7 findings need the owner
+  before anything moves.
+
+The tally, so the strength of the whole is legible: **six findings raised by
+lenses 5–7, two killed, one corrected in its citation and kept at reduced
+strength, three standing** (S1, P1, and the diagnosis sharpening that lens 7
+produced).
 
