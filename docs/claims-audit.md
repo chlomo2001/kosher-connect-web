@@ -12,7 +12,7 @@ handler that would have to do it, and given a verdict:
   commonest and most dangerous shape: it reads as reassurance).
 - **false** — no such write; the copy describes something the app cannot do.
 
-**67 claims audited: 52 true, 14 overstated, 1 false.** The 52 that hold are
+**67 claims audited: 52 true, 14 overstated, 1 false.** A later sweep on 20 August added five more — four true, one overstated and reworded; see below. The 52 that hold are
 listed at the end, because "we checked and it is true" is the point of an audit.
 
 ## How much of this ran
@@ -31,6 +31,39 @@ list that names work already done sends the reader chasing it, so each item now
 carries its status and the line that settles it.
 
 Nothing here is reported as verified that was not.
+
+## Later sweep — 20 August 2026
+
+Five claims shipped on 20 August after the audit was written. Each was traced
+the same way. Four hold; one did not.
+
+| claim | where | verdict |
+|---|---|---|
+| "£X is still to pay, by \<date\>" | `pages/api/email.js` `buildRental` | **true** — the figure is the rental's own total less what was taken, and the date is computed server-side from `rental_pay_days`. It states a term, it does not claim a write. |
+| "Pay £X online" → the money reaches their wallet | the receipt's Stripe button | **true** — the session carries `payment_intent_data[metadata][app_customer_id]` (`lib/stripe.js:248`) and `pages/api/stripe/webhook.js:32-44` posts a `payment` row keyed on `STRIPE-<pi>`, idempotent. |
+| "We took £60.00 by Cash" | same builder, part-paid branch | **true** — the counter payment is recorded through one channel, the rental's `amountPaid`, which `trueUpRentalLedger` posts as `PAY-RENTAL-<uuid>`; `saveRentals` is awaited and its failure returns before the panel that offers the receipt (`public/main.js:4707-4714`). |
+| "No payment method on X's plan — set one up before the next renewal" | `lib/carrierMail.mjs` `carrierMailTask` | **true** — the task row is written by `pages/api/inbound/mail.js` only when the message was actually stored (`inserted.length`), so a redelivery cannot raise it twice. |
+| "There is nothing further to pay." | the receipt's paid-in-full branch | **overstated — reworded below.** |
+
+### The one that did not hold
+
+The receipt's total is the RENTAL's price. It is not the customer's balance.
+Owner-defined extras (`applyExtraCharges` → `/api/custom-charges`) post to the
+same wallet moments after the receipt is built, and are not in that figure —
+the done-panel toast says "Incl. …" about them and the email never did. So a
+receipt could say "there is nothing further to pay" over a total that was
+already short of what had just been charged.
+
+**It has not gone out wrong.** `custom_charges` is empty today, so no rental
+extra exists to post. But an absolute claim about somebody's account was one
+settings row away from being a lie, and "the table happens to be empty" is not
+a defence a receipt should rest on.
+
+- **Reworded now (copy, safe):** "Nothing further to pay **on this rental**."
+- **Held for the owner:** putting the extras into the receipt's total, with
+  their own rows. That changes what a customer is billed-as-shown, which is a
+  money-read decision and not a finding — the same line the port plan draws
+  around C1.
 
 ## Fixed in this commit (copy only)
 

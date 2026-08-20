@@ -104,7 +104,8 @@ test('a rental left on account says the amount, the date and how to pay', () => 
   assert.match(owing, /Pay \$\{gbp\(owed\)\} online/)
   // And the paid case must not chase them.
   const paid = body.slice(body.indexOf("if (state === 'paid')"), body.indexOf('} else {'))
-  assert.match(paid, /nothing further to pay/)
+  assert.match(paid, /Nothing further to pay on this rental/,
+    'scoped to the rental — this total is not the customer’s balance')
   assert.doesNotMatch(paid, /still to pay/)
 })
 
@@ -280,7 +281,10 @@ test('a part payment reads as arithmetic the customer can follow', () => {
 test('paid in full is not chased and carries no button', () => {
   const out = build(COPY, WHO, { ...BASE, method: 'card', paidAmount: 20 }, { payBy: null })
   const t = text(out.html)
-  assert.match(t, /Paid in full by Card — thank you\. There is nothing further to pay\./)
+  assert.match(t, /Paid in full by Card — thank you\. Nothing further to pay on this rental\./)
+  // Not an absolute claim about their account: owner-defined extras post to the
+  // same wallet just after this is built and are not in this total.
+  assert.doesNotMatch(t, /nothing further to pay\.$/i)
   assert.doesNotMatch(t, /still to pay/)
   // The shell's footer has tel:/mailto: links of its own — it is the PAY
   // button that must be absent.

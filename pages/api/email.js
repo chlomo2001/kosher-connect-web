@@ -190,8 +190,19 @@ function buildRental(copy, who, b, extras = {}) {
   // receipt said nothing at all: no balance, no date, no way to pay.
   let moneyBlock
   if (state === 'paid') {
+    // "on this rental", NOT "there is nothing further to pay". The total here
+    // is the RENTAL's price; it is not the customer's balance. Owner-defined
+    // extras (applyExtraCharges → /api/custom-charges) post to the same wallet
+    // moments after this receipt is built and are NOT in this figure — the
+    // done-panel toast says "Incl. …" about them and the email never did. No
+    // rental extra is configured today (custom_charges is empty), so nothing
+    // has gone out wrong; the sentence was one settings row away from being a
+    // lie, and an absolute claim about somebody's account is not the place to
+    // rely on a table staying empty. Putting the extras INTO the total is the
+    // real fix and it changes what a customer is billed-as-shown, so it is
+    // owner-held — see docs/claims-audit.md.
     moneyBlock = `<tr><td colspan="2" style="padding:10px 0 0;color:#334155">
-      Paid in full${method ? ` by ${esc(method)}` : ''} — thank you. There is nothing further to pay.</td></tr>`
+      Paid in full${method ? ` by ${esc(method)}` : ''} — thank you. Nothing further to pay on this rental.</td></tr>`
   } else {
     const took = state === 'part'
       ? `We took ${gbp(money(b.paidAmount))}${method ? ` by ${esc(method)}` : ''}, so `
