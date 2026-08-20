@@ -12,13 +12,17 @@
 -- commits: everything runs inside one rolled-back transaction, so it cannot
 -- damage the scratch database it is testing.
 --
--- KC's four refusals, chosen for what they protect:
+-- KC's five refusals, chosen for what they protect:
 --   1. anon reading ledger        — the money book
 --   2. anon reading customers     — the community's contact details
 --   3. authenticated stranger reading another customer's rows — the portal
 --      trust boundary (portal users are 'authenticated'; RLS must scope them)
 --   4. deleting a ledger row      — the audit trail survives even a
 --      compromised client credential
+--   5. anon reading any zz_* snapshot or staging table — the undo copies,
+--      which carry passport numbers, dates of birth and addresses. Added
+--      19 Aug 2026 after the live database was found with 48 of them
+--      readable through the publishable key; see the block for the detail.
 
 \set ON_ERROR_STOP off
 begin;
@@ -67,8 +71,53 @@ begin
   end;
   reset role;
 
+  -- 5 · no snapshot or staging table is readable below service level.
+  --
+  --     This one is not hypothetical. On 19 Aug 2026 the Supabase advisor
+  --     found 48 zz_* tables with RLS off AND a select grant to anon, which
+  --     together mean every row was readable by anyone holding the
+  --     publishable key — and that key ships in the browser bundle of the
+  --     welcome page. Those tables are the worst possible ones to expose:
+  --     they are undo snapshots of customers and booking passengers, so they
+  --     carry passport numbers, dates of birth, phone numbers and addresses.
+  --     20260819021500_lock_down_zz_snapshots.sql closed it and set the rule
+  --     for new ones; this asserts the rule held through a restore.
+  --
+  --     Written as a loop over every zz_% table rather than a list, so a
+  --     snapshot taken next month is covered without anyone remembering to
+  --     add it here. A list would rot exactly the way the robots.txt
+  --     allow-list did.
+  declare
+    t record;
+    leaked text[] := '{}';
+  begin
+    for t in
+      select c.relname
+      from pg_class c join pg_namespace ns on ns.oid = c.relnamespace
+      where ns.nspname = 'public' and c.relkind = 'r' and c.relname like 'zz\_%'
+      order by c.relname
+    loop
+      begin
+        set local role anon;
+        execute format('select count(*) from public.%I', t.relname) into n;
+        if n > 0 then leaked := array_append(leaked, t.relname); end if;
+      exception when insufficient_privilege then null;  -- refusal by grant: good
+      end;
+      reset role;
+    end loop;
+    if array_length(leaked, 1) is not null then
+      broken := array_append(broken,
+        format('anon can READ %s snapshot/staging table(s): %s',
+               array_length(leaked, 1), array_to_string(leaked, ', ')));
+    end if;
+  end;
+
   if array_length(broken, 1) is null then
-    raise notice 'REFUSALS: all 4 held.';
+    -- The count is stated so a refusal quietly dropped from this file shows up
+    -- as a smaller number rather than as the same reassuring word. It was '4'
+    -- and stayed '4' when a fifth was added on 19 Aug 2026, which is the whole
+    -- argument for saying it out loud.
+    raise notice 'REFUSALS: all 5 held.';
   else
     raise warning 'REFUSAL BROKEN: %', array_to_string(broken, ' | ');
   end if;

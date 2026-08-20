@@ -7,6 +7,30 @@ A backup nobody has restored is a belief. This directory is the restore test in
 two halves, and only one of them has run. **Do not read this page as "the
 backup is proven." It is not.**
 
+## Added 19 Aug 2026 — a fifth refusal, and it was exercised
+
+`refusals.sql` gained a fifth check: **no `zz_*` snapshot or staging table is
+readable below service level.** It is written as a loop over every `zz\_%`
+table rather than a list, so a snapshot taken next month is covered without
+anyone remembering to add it.
+
+Not hypothetical. The Supabase advisor found 48 of those tables in the live
+project with RLS off and a `select` grant to `anon` — readable by anyone
+holding the publishable key, which ships in the browser bundle. They are undo
+copies of customers and booking passengers, so they carry passport numbers,
+dates of birth and addresses. `20260819021500_lock_down_zz_snapshots.sql`
+closed it; this asserts the fix survives a restore.
+
+Exercised the same day against a scratch PostgreSQL 16.13 database:
+
+- A **compliant** snapshot table (RLS on, grants revoked) → `REFUSALS: all 5 held.`
+- The **incident replanted** (RLS off, `grant select … to anon`) →
+  `REFUSAL BROKEN: anon can READ 1 snapshot/staging table(s): zz_snapshot_bad_20260809`
+  — caught by name, with the compliant table correctly ignored.
+
+The count in the success line is stated (`all 5 held`) rather than left as a
+bare word, because it read `all 4 held` for a day after the fifth was added.
+
 ## The half that RAN (18 Aug 2026, in the development container)
 
 The harness itself was built and exercised end-to-end against a local
