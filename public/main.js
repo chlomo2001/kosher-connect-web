@@ -143,6 +143,9 @@ window.api = {
   }).then(r => r.json()),
 
   getVirtualNumbers: () => kcFetch('/api/virtual-numbers').then(r => r.ok ? r.json() : []),
+  // Booleans only — never the payment-method ids. See pages/api/payment-methods.js.
+  getPaymentMethods: () => kcFetch('/api/payment-methods')
+    .then(r => r.ok ? r.json() : null).catch(() => null),
   getCarrierMail: (filter = 'pending') => kcFetch(`/api/sim-mail?filter=${encodeURIComponent(filter)}&limit=60`).then(r => r.ok ? r.json() : null),
   getSimMail: (simLegacyId) => kcFetch(`/api/sim-mail?simLegacyId=${encodeURIComponent(simLegacyId)}`)
     .then(r => r.ok ? r.json() : null).catch(() => null),
@@ -11944,8 +11947,63 @@ function providerBadge(name) {
   return `<span class="kc-prov kc-prov-${tint}">${escHtml(label)}</span>`;
 }
 
+// ── KC_SIMFUNDING mirror start ── (lib/simFunding.mjs)
+const KC_SIMFUNDING_DEAD = new Set(['cancelled']);
+function simFundingState(sim, method) {
+  if (!sim || sim.paymentType === 'direct') return 'not-billed';
+  if (KC_SIMFUNDING_DEAD.has(String(sim.status || ''))) return 'not-billed';
+  const dd = String(method?.dd || '');
+  if (dd === 'active') return 'dd';
+  if (method?.card) return 'card';
+  if (dd === 'pending') return 'dd-pending';
+  return 'none';
+}
+function fundingLabel(state) {
+  if (state === 'none') return 'nothing to collect from';
+  if (state === 'dd-pending') return 'DD setting up';
+  return '';
+}
+// ── KC_SIMFUNDING mirror end ──
+
+// The marker in the Payment cell. Nothing at all until the methods have
+// loaded, and nothing on a plan that is funded — a badge on every row is
+// wallpaper, and the point is that these few rows are not like the others.
+function fundingChip(sim) {
+  const method = simMethodFor(sim);
+  if (!method) return '';                 // not loaded: say nothing, claim nothing
+  const state = simFundingState(sim, method);
+  const label = fundingLabel(state);
+  if (!label) return '';
+  const cls = state === 'none' ? 'kc-unfunded' : 'kc-funding-pending';
+  const title = state === 'none'
+    ? 'The shop pays the network for this plan and the customer has no card on file and no Direct Debit mandate — there is no way to collect it.'
+    : 'A Direct Debit mandate is set up and not yet active. Bacs takes about two working days.';
+  return ` <span class="${cls}" title="${title}">${label}</span>`;
+}
+
+// What each customer has on file, as booleans — never the payment-method ids
+// (see pages/api/payment-methods.js). Null until the first load returns, and
+// the screen says so rather than claiming a plan is unfunded on no evidence:
+// a false "nothing to collect from" on 300 rows would be read once, disproved,
+// and then ignored forever.
+let simPayMethods = null;
+let simPayMethodsAsked = false;
+function simMethodFor(sim) {
+  return simPayMethods ? (simPayMethods[String(sim.customerId)] || {}) : null;
+}
+async function ensurePayMethods() {
+  if (simPayMethodsAsked) return;
+  simPayMethodsAsked = true;
+  const res = await window.api.getPaymentMethods();
+  // A failed load leaves it null — unknown, not "nobody has a card".
+  if (!res || !res.success) { simPayMethodsAsked = false; return; }
+  simPayMethods = res.methods || {};
+  renderSimRows();
+}
+
 function renderSimsTab() {
   const content  = document.getElementById('mainContent');
+  ensurePayMethods();
   const today    = localISO();
   const tomorrow = localISO(new Date(Date.now() + 86400000));
 
@@ -11982,6 +12040,11 @@ function renderSimsTab() {
       test: s => simMailboxBase(s.email) === m.base,
     })),
     { value: 'mb:none', label: '📭 No carrier account on file', test: s => !simMailboxBase(s.email) },
+    // The shop's own money. A through-me plan renews whether or not the
+    // customer has left us any way to collect — the network takes its payment
+    // either way — so this is the list of lines the shop is funding.
+    { value: 'unfunded', label: '💸 Through me, nothing to collect from',
+      test: s => simFundingState(s, simMethodFor(s)) === 'none' },
   ], [
     { value: 'name', label: 'Sort: Customer A–Z', cmp: kcCmpStr(s => s.customerName) },
     { value: 'renewal', label: 'Renewal (soonest)', cmp: (a, b) => String(a.renewalDate || '9999').localeCompare(String(b.renewalDate || '9999')) },
@@ -12167,7 +12230,7 @@ function renderSimRows() {
         title="${s.email ? escHtml(s.email) : 'No carrier account on file — this SIM can only ever be matched by its number'}">${
         simMailboxBase(s.email) ? escHtml(simMailboxBase(s.email).replace('@gmail.com', '')) : '—'}</td>
       <td class="kc-date" data-label="Renews" style="font-size:var(--fs-small);${renewalClass}">${fmtDateHeb(s.renewalDate)}${renewalLabel}</td>
-      <td data-label="Payment" style="font-size:var(--fs-small);">${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}</td>
+      <td data-label="Payment" style="font-size:var(--fs-small);">${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}${fundingChip(s)}</td>
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
@@ -12292,6 +12355,13 @@ function openSimFormModal(id, preselectCustomerId = null, prefill = null) {
           <option value="through-me" ${!s || s.paymentType === 'through-me' ? 'selected' : ''}>🔄 Through me</option>
           <option value="direct" ${s?.paymentType === 'direct' ? 'selected' : ''}>👤 Customer pays directly</option>
         </select>
+        <!-- Owner, 20 Aug: "suppose from now on HE gives us card details, saved
+             on his customer account, will it change to 'direct'?" It will not,
+             and the labels are why — they read as a question about whose money
+             it is, when what they actually decide is WHOSE CARD IS ON THE
+             NETWORK ACCOUNT. A card saved with us is still us collecting from
+             him, which is what through me means. -->
+        <span style="font-size:var(--fs-micro);color:var(--muted);">Whose card is on the network account — not whose card we hold. A card saved with us is still <em>through me</em>.</span>
       </div>
       <div class="form-group" id="simDdGroup" style="display:${(!s || s.paymentType !== 'direct') ? 'block' : 'none'};">
         <label class="form-label">DD Collection Day</label>

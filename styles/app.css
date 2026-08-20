@@ -1511,6 +1511,31 @@ body.pos-mode #kcNextAction { display: none; }
    not a warning about the record: the data is very probably fine, it has just
    never been checked by a person. A red badge on 1,865 rows would train
    everyone to stop seeing it on day one. */
+/* "Through me" with nothing behind it — the shop is paying the network and
+   has no way to collect. It sits in the Payment cell of the SIMs table, so it
+   has to read as trouble at a glance without turning a 300-row table red: a
+   tinted pill, not a banner. The pending twin is the same shape in the neutral
+   colour, because a mandate two days from active is news, not a problem. */
+.kc-unfunded,
+.kc-funding-pending {
+  display: inline-flex; align-items: center;
+  font-size: var(--fs-micro); font-weight: 600;
+  border-radius: 999px; padding: 1px 7px; margin-left: 6px;
+  white-space: nowrap; vertical-align: middle;
+}
+/* --danger-ink over a 10% wash of --danger: the same pairing .kc-contact-flag
+   uses, and the same reason — raw --danger on that wash measures 4.03:1 in
+   light, under the AA floor, and the contrast harness catches it. */
+.kc-unfunded {
+  color: var(--danger-ink);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+.kc-funding-pending {
+  color: var(--muted);
+  background: transparent;
+  border: 1px dashed var(--border-input);
+}
+
 .kc-unconfirmed {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: var(--fs-micro); font-weight: 500; color: var(--muted);
