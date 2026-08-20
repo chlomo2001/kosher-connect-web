@@ -31,7 +31,7 @@
 import crypto from 'node:crypto'
 import { db, tablesMode, selectAllPaged } from '../../../lib/db.js'
 import { normaliseInbound, carrierOf } from '../../../lib/inboundMail.mjs'
-import { buildSimIndex, matchSimForMail } from '../../../lib/simMailMatch.mjs'
+import { buildSimIndex, matchSimForMail, simMatchRow } from '../../../lib/simMailMatch.mjs'
 import { looksLikeTicket, parseTicketMail, suggestCustomer, ticketTaskTitle } from '../../../lib/ticketMail.mjs'
 import { carrierMailKind, carrierMailTask, ACTIONABLE, HIGH_PRIORITY_KINDS, NEVER_FILE } from '../../../lib/carrierMail.mjs'
 
@@ -67,17 +67,13 @@ const INDEX_TTL_MS = 60_000
 
 async function simIndex() {
   if (cache.index && Date.now() - cache.at < INDEX_TTL_MS) return cache.index
-  const rows = await selectAllPaged('sims', 'id,customer_id,legacy_extras,alt_emails', 'order=id.asc')
-  const index = buildSimIndex(rows.map((r) => ({
-    id: r.id,
-    email: r.legacy_extras?.email || '',
-    // The list of other addresses this line receives mail at (19 Aug). This is
-    // the index that decides AT ARRIVAL, so a message reaching an address the
-    // SIM claims is filed straight away rather than joining the queue and
-    // waiting for somebody to answer a question the record already answers.
-    altEmails: Array.isArray(r.alt_emails) ? r.alt_emails : [],
-    simNumber: r.legacy_extras?.simNumber || '',
-  })))
+  const rows = await selectAllPaged('sims',
+    'id,customer_id,legacy_extras,alt_emails,master_accounts(account_email)', 'order=id.asc')
+  // simMatchRow gathers every address a line receives at — the one on the SIM,
+  // any taught since, and the master account's carrier login. This is the index
+  // that decides AT ARRIVAL, so a message reaching an address the record
+  // already knows about is filed straight away rather than joining the queue.
+  const index = buildSimIndex(rows.map(simMatchRow))
   index.customerBySim = new Map(rows.map((r) => [String(r.id), r.customer_id]))
   // The customer's NAME as well, so a task raised from a port confirmation reads
   // "check Mordche Grinfeld's number is live" rather than naming a row id.

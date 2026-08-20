@@ -20,7 +20,7 @@
 
 import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode, selectAllPaged } from '../../lib/db.js'
-import { buildSimIndex, mailboxKey, addressTag } from '../../lib/simMailMatch.mjs'
+import { buildSimIndex, mailboxKey, addressTag, simMatchRow } from '../../lib/simMailMatch.mjs'
 import { carrierMailKind, kindLabel } from '../../lib/carrierMail.mjs'
 
 const enc = encodeURIComponent
@@ -33,7 +33,9 @@ const TTL_MS = 60_000
 async function simDirectory() {
   if (cache.sims && Date.now() - cache.at < TTL_MS) return cache.sims
   const rows = await selectAllPaged(
-    'sims', 'id,legacy_id,customer_id,provider,status,legacy_extras,alt_emails', 'order=id.asc'
+    'sims',
+    'id,legacy_id,customer_id,provider,status,legacy_extras,alt_emails,master_accounts(account_email)',
+    'order=id.asc'
   )
   // renewalDate and status come along for the ranking below — a renewal notice
   // is about a plan that is renewing, which is a strong hint at WHICH plan.
@@ -53,23 +55,21 @@ async function simDirectory() {
       customerName: r.legacy_extras?.customerName || '',
       renewalDate: r.legacy_extras?.renewalDate || '',
       // The addresses this line receives carrier mail at: the one typed on the
-      // SIM form, plus any taught since. Carried here so the SIM card can show
-      // them without a second read.
+      // SIM form, any taught since, and the master account's carrier login.
+      // Carried here so the SIM card can show them without a second read — and
+      // read through simMatchRow, the same shaper the index uses, because a
+      // card that omits an address the matcher files on leaves whoever is
+      // looking at it unable to explain why a message landed there.
       email: r.legacy_extras?.email || '',
-      altEmails: Array.isArray(r.alt_emails) ? r.alt_emails : [],
+      altEmails: simMatchRow(r).altEmails,
     }
     byId.set(String(r.id), entry)
     if (entry.legacyId) byLegacyId.set(entry.legacyId, entry)
   }
-  const index = buildSimIndex(rows.map((r) => ({
-    id: r.id,
-    email: r.legacy_extras?.email || '',
-    // A line can receive its mail at several addresses (19 Aug). Every one of
-    // them must index to this SIM, or the queue keeps asking about mail it
-    // already knows the answer to.
-    altEmails: Array.isArray(r.alt_emails) ? r.alt_emails : [],
-    simNumber: r.legacy_extras?.simNumber || '',
-  })))
+  // A line can receive its mail at several addresses (19 Aug). Every one of
+  // them must index to this SIM, or the queue keeps asking about mail it
+  // already knows the answer to — simMatchRow is the one list of where they live.
+  const index = buildSimIndex(rows.map(simMatchRow))
   const sims = { byId, byLegacyId, index }
   cache = { at: Date.now(), sims }
   return sims

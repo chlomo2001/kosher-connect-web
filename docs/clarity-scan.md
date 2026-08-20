@@ -221,7 +221,27 @@ at least two cases I think it wins.
 - **Argument for:** Every name on this table now asserts email-ness the rows don't have: someone querying `to_email` for an address audit gets phone numbers; a `subject` report gets SMS bodies; for inbound rows `to_email` is actually the FROM. The 2026-08-18 status migration proves people already trip on the drift — the constraint silently ate 'invalid' rows until today. The route (message-log.js), the UI ("message log"), and the comments all use the honest name; only the schema doesn't.
 - **Counter-argument:** It's an append-only audit table wired into lib/email.js, lib/sms.js, pages/api/email/webhook.js, sms-status.js, sms-inbound.js, cron/sweep.js, message-log.js, and two merge_customers DB functions — a rename must land atomically with a deploy or in-flight Twilio/Resend webhooks write to a table that no longer exists. The reuse is explicitly documented at every writer ("same table as email so there is ONE place to see every message"), and a compatibility view costs almost nothing versus that risk. Living with well-commented wrong names on an audit trail is a defensible trade.
 
-### T2.2 · The `pools`, `master_accounts` tables and `lines.pool_id` FK describe a pool model no code has ever used — the real pools live in a settings JSON key
+### T2.2 · The `pools` table and `lines.pool_id` FK describe a pool model no code has ever used — the real pools live in a settings JSON key
+
+> **Corrected 21 Aug, and it was nearly an expensive mistake.** This finding
+> named `master_accounts` alongside `pools` as an unused table. `pools` is
+> genuinely empty and `lines.pool_id` is never set — but **`master_accounts`
+> holds ten real Three accounts and ten SIMs point at them**, and
+> `account_email` on those rows is the carrier login the line actually sits
+> under. Acting on the finding as written would have dropped live data.
+>
+> Worse, it was live data nothing read: `buildSimIndex` was fed only
+> `legacy_extras.email` and `alt_emails`, so for the three SIMs whose blob holds
+> a POOLED mailbox (`gittb.i.lig@`, 253 lines) while the master account holds
+> the address that names the line, the naming address was invisible to the
+> carrier-mail matcher. Twenty-two messages were unresolved at one such address
+> on the morning of 21 Aug. Fixed the same day — `simMatchRow` in
+> `lib/simMailMatch.mjs`, no migration, nothing written.
+>
+> The lesson is the one this file keeps learning: a finding about dead code is
+> a claim about what runs, and a row count is cheap to check.
+
+
 
 - **Where:** `supabase/migrations/20260712120000_initial_schema.sql:99`
 - **Evidence:** grep across all .js/.mjs for `pools`, `pool_id`, `master_account` finds zero application code touching them (only the schema and RLS migrations). The live pool registry is the settings row `rental_pools` — a JSON array validated in pages/api/settings.js:350–382 ("Rental phone pools — name + activation window") and written by saveRentalPools (public/main.js:5035), while each phone's pool membership is a name string (`pool: 'Pool 3'`) inside lines.legacy_extras via the importer (lib/rentalPoolImport.mjs:286) — lib/mappers.js never writes pool_id.

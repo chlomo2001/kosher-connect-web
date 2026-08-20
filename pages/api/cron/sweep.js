@@ -27,7 +27,7 @@ import { advanceOneMonth, advancePastDate } from '../../../lib/money.mjs'
 import { displayDate } from '../../../lib/localDay.mjs'
 import { requirementFor, coverageStatus, KNOWN_DESTINATIONS } from '../../../lib/travelRules.mjs'
 import { loadTravelRules } from '../../../lib/travelRulesDb.js'
-import { buildSimIndex, matchSimForMail } from '../../../lib/simMailMatch.mjs'
+import { buildSimIndex, matchSimForMail, simMatchRow } from '../../../lib/simMailMatch.mjs'
 
 const DEST_NAME = Object.fromEntries(KNOWN_DESTINATIONS.map(d => [d.code, d.name]))
 const RECORDABLE = new Set(['ESTA', 'ETA_CA', 'ETA_IL', 'ETIAS', 'ETA_UK'])
@@ -679,15 +679,11 @@ async function handler(req, res) {
     // result certain enough to carry a sim_id is written back. An ambiguous
     // message stays ambiguous.
     let repaired = 0
-    const simRows = await selectAllPaged('sims', 'id,customer_id,legacy_extras,alt_emails', 'order=id.asc')
-    const simIndex = buildSimIndex(simRows.map((r) => ({
-      id: r.id,
-      email: r.legacy_extras?.email || '',
-      // Same list the queue matches against, or the nightly pass would reach a
-      // different answer from the screen and re-open settled questions.
-      altEmails: Array.isArray(r.alt_emails) ? r.alt_emails : [],
-      simNumber: r.legacy_extras?.simNumber || '',
-    })))
+    const simRows = await selectAllPaged('sims',
+      'id,customer_id,legacy_extras,alt_emails,master_accounts(account_email)', 'order=id.asc')
+    // The same builder the queue and the inbound hook use, or the nightly pass
+    // reaches a different answer from the screen and re-opens settled questions.
+    const simIndex = buildSimIndex(simRows.map(simMatchRow))
     const customerBySim = new Map(simRows.map((r) => [String(r.id), r.customer_id]))
     // `unpaired_at=is.null` — a message a PERSON has unfiled is left alone. It
     // is in exactly the state this pass hunts for, so without that filter the
