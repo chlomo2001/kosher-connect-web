@@ -792,6 +792,36 @@ Verified per item: gate (255 tests ×2 TZ + build) exit 0 and full audit-all
 clean before each commit, plus harness re-renders of the touched screens.
 Owner decisions pending: none new. The till's `.pos-methods` wrap stays ⚠.
 
+## UX loop — night of 2026-08-20
+
+| Item | Commit | Screens |
+|------|--------|---------|
+| `/manual` had silently dropped out of the offline page harness. The screenshot pipeline added `import fs from 'node:fs'` at module scope: Next strips `getServerSideProps` from the client bundle so the app never noticed, but the harness parses the module as written, and four checks (en/he × 390/1280) went from pass to fail. Server-only modules moved inside `getServerSideProps`, and `shots` defaults to `{}` because the harness renders components with no props — the pictures were always meant to degrade to the text page. Both held by `test/manualShots.test.mjs`, checked by putting the import back | f2b5b0a | /manual, tooling |
+| The manual's contents was 29 screen names in one flat grid — a list you read start to finish to find anything, running to fourteen rows at 390px. It now carries the same three headings the page below already uses, word for word, so contents and page agree and a reader can aim at a section | 5d85d27 | /manual |
+
+Discovery: the automated sweeps are all clean — contrast (light and dark), tap
+targets, overflow at 390 and 320, text scale, loading ghosts, focus stops,
+accessible names, card fit. Prior loops have done their work, so the night's
+finding came from running the *public-page* harness, which is the one sweep
+that renders whole pages rather than the app shell.
+
+Two candidates investigated and deliberately **not** built:
+
+- **Dark-mode variants of the 44 manual screenshots.** Rendered a real
+  screenshot inside the manual's dark palette to judge it rather than guessing.
+  The figure already carries a border and a muted caption and reads as an inset
+  document, not glare. Dimming it would cost legibility of small text, which is
+  the opposite of accessible. Shooting dark twins would add ~3 MB to the repo
+  for colour fidelity on a reference page — poor value, and the owner has
+  already flagged image weight. Left alone.
+- **The portal ignoring the OS dark preference.** Looked like a real gap —
+  `styles/globals.css` has 16 `[data-theme="dark"]` rules and no
+  `prefers-color-scheme` twin for them. It is deliberate and documented at
+  `styles/globals.css:1135-1141`: the stylesheet has no OS-dark palette at all
+  and `html` pins `color-scheme: light`, so an OS-preference rule there would
+  swap the dark artwork onto a light panel — the exact bug it replaced,
+  inverted. Refuted by a comment that anticipated it.
+
 ## UX loop — night of 2026-08-15
 
 | Item | Commit | Screens |
