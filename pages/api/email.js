@@ -18,6 +18,7 @@ import { rentalPayBy, rentalPayState, calendarWeeks } from '../../lib/rentalRece
 import { hebrewFromGregorian, hebrewNumeral, hebrewMonthName } from '../../lib/hebrewDate.mjs'
 import { stripeEnabled, webhookConfigured } from '../../lib/stripe.js'
 import { mintPayLink } from '../../lib/payLink.js'
+import { guideUrl } from '../../lib/serviceGuides.mjs'
 import { londonDate } from '../../lib/localDay.mjs'
 
 const money = (v) => (Math.round((Number(v) || 0) * 100) / 100)
@@ -324,6 +325,9 @@ function buildRental(copy, who, b, extras = {}) {
       ${rows}
       ${rentalCalendar(Array.isArray(b.dayList) ? b.dayList : [])}
       ${moneyBlock}
+      ${extras.guideUrl ? `<tr><td colspan="2" style="padding:14px 0 0;font-size:13px;color:#64748b">
+        New to travelling with one of our phones? <a href="${esc(extras.guideUrl)}" style="color:#0a2540;font-weight:600">How to use your rented phone</a> — getting it working when you land, and what to do if it stops.
+      </td></tr>` : ''}
     `, null, copy.email_closing),
   }
 }
@@ -361,16 +365,21 @@ function buildPayment(copy, who, b) {
 // who has just paid.
 async function rentalExtras(req, who, b) {
   const payBy = rentalPayBy(b.to, londonDate(), await rentalPayFloor())
+  // A LINK, not an attachment (#18). A PDF stapled to a receipt gets stripped
+  // by filters and cannot be corrected once it has gone; this page is fixable
+  // the day a carrier changes something, and every receipt ever sent is right
+  // again. Absolute, because a mail client has no base URL to resolve against.
+  const guide = guideUrl('rental', `https://${req.headers.host}`)
   const { state, owed } = rentalPayState(b.total, b.paidAmount)
-  if (state === 'paid' || !(owed > 0)) return { payBy: null }
+  if (state === 'paid' || !(owed > 0)) return { payBy: null, guideUrl: guide }
   // Same refusal as payment-link.js: without the webhook a paid link captures
   // money that never reaches the wallet.
-  if (!stripeEnabled || !webhookConfigured) return { payBy }
+  if (!stripeEnabled || !webhookConfigured) return { payBy, guideUrl: guide }
   try {
     const rows = await db.select('customers',
       `select=id,stripe_customer_id,email_raw,email_normalized,first_name,last_name&id=eq.${who.id}`)
     const c = rows[0]
-    if (!c) return { payBy }
+    if (!c) return { payBy, guideUrl: guide }
     // Keyed on the rental's own dates and the customer, so re-sending the same
     // receipt reuses one Checkout session instead of minting a new one each
     // time — Stripe's idempotency key is this reference.
@@ -381,10 +390,10 @@ async function rentalExtras(req, who, b) {
       reference: ref,
       base: `https://${req.headers.host}`,
     })
-    return { payBy, payUrl: session?.url || null }
+    return { payBy, payUrl: session?.url || null, guideUrl: guide }
   } catch (e) {
     console.warn('[api/email] rental pay link not minted:', String(e?.message || e).slice(0, 200))
-    return { payBy }
+    return { payBy, guideUrl: guide }
   }
 }
 
@@ -424,7 +433,7 @@ async function handler(req, res) {
             dayList: ['20', '21', '22', '23', '24', '25', '26', '27'].map((d) => ({
               iso: `2026-08-${d}`, free: d === '22', reason: d === '22' ? 'Shabbos' : '',
             })),
-          }, { payBy: '2026-08-27', payUrl: 'https://checkout.stripe.com/preview' })
+          }, { payBy: '2026-08-27', payUrl: 'https://checkout.stripe.com/preview', guideUrl: '/help/phone-rental' })
         : buildSale(copy, sample, {
             lines: [
               { name: 'Phone rental +1 518 555 0101 · 20 Aug 2026 → 27 Aug 2026', qty: 1, total: 35 },

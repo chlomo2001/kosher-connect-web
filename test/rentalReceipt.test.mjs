@@ -132,15 +132,28 @@ const extras = API.slice(API.indexOf('async function rentalExtras(req, who, b)')
 const ebody = extras.slice(0, extras.indexOf('\n}\n'))
 
 test('the receipt still goes when the link cannot be made', () => {
-  assert.match(ebody, /if \(!stripeEnabled \|\| !webhookConfigured\) return \{ payBy \}/,
+  // Matched on the invariant, not the literal object: these exits gained a
+  // guideUrl in #18 and will gain more. What must hold is that they carry the
+  // due date and NOT a payUrl.
+  const noLink = (re, why) => {
+    const m = ebody.match(re)
+    assert.ok(m, why)
+    assert.doesNotMatch(m[0], /payUrl/, `${why} — but this exit still hands one over`)
+    assert.match(m[0], /payBy/, `${why} — and the due date must survive it`)
+  }
+  noLink(/if \(!stripeEnabled \|\| !webhookConfigured\) return \{[^}]*\}/,
     'no webhook means no link — same refusal as payment-link.js')
-  assert.match(ebody, /catch \(e\)[\s\S]{0,220}?return \{ payBy \}/,
+  noLink(/catch \(e\)[\s\S]{0,260}?return \{[^}]*\}/,
     'a Stripe failure must cost the button, not the receipt')
   assert.doesNotMatch(ebody, /throw/, 'nothing here may abort the send')
 })
 
 test('nothing to pay means no link at all', () => {
-  assert.match(ebody, /if \(state === 'paid' \|\| !\(owed > 0\)\) return \{ payBy: null \}/)
+  const m = ebody.match(/if \(state === 'paid' \|\| !\(owed > 0\)\) return \{[^}]*\}/)
+  assert.ok(m, 'the settled case must return early')
+  assert.match(m[0], /payBy: null/, 'nothing owed, no deadline to state')
+  assert.doesNotMatch(m[0], /payUrl/,
+    'an idle £0 Checkout session is noise, and a Pay button insults somebody who just paid')
 })
 
 test('re-sending the same receipt reuses one Checkout session', () => {

@@ -23,6 +23,10 @@ const read = (p) => readFileSync(path.join(ROOT, p), 'utf8')
 const PUBLIC = new Set([
   'pages/welcome.js', 'pages/phone-guide.js', 'pages/repair.js',
   'pages/terms.js', 'pages/privacy.js', 'pages/refund.js', 'pages/login.js',
+  // The per-service how-to pages a receipt links to (#18). Public because the
+  // reader is a customer in an airport who is not going to sign in, and the
+  // content is instructions rather than anything of theirs.
+  'pages/help/[service].js',
 ])
 
 // Pages whose markup comes from a shared shell — the tag lives there once.
