@@ -151,11 +151,13 @@ Safe (loop-eligible), ranked value ÷ effort:
 ## From AHT portal reference (owner shared 2026-08-18 — see docs/DESIGN-NOTES-AHT.md)
 Owner shared the AHT/Yordex charity portal as a UX reference. Full read + ranking
 in the design note; the loop-safe (no money-read / no nav / no auth) items:
-- [ ] **P1 · M** — **Hebrew dates beside Gregorian** on ledger/rentals/bookings/
-      receipts. Build `lib/hebrewDate.mjs` FIRST — a pure converter with a real
-      test table (leap years, Adar I/II, Rosh Hashana boundary), mirrored into
-      main.js like pricing. The converter is loop-safe to build; **placement is
-      owner-judge** (which screens, subline vs column, default on?).
+- [x] **P1 · M** — **Hebrew dates beside Gregorian** — **DONE.**
+      `lib/hebrewDate.mjs` built and mirrored into main.js (`KC_HEBREW`), held by
+      `test/hebrewDate.test.mjs`, `test/hebrewDateMirror.test.mjs` and
+      `test/hebrewOnScreen.test.mjs`. Placement was the owner's call and he made
+      it on 19 Aug — "the counter screens" — shipped the same day (`bc3e273`): a
+      SIM's renewal, a rental's due-back day, a flight's travel date and the day
+      a repair came in. It sat unticked here for two days after it shipped.
 - [ ] **P2 · S** — **Direction badges** for ledger/till type — round colour-coded
       in/out/transfer/bank glyph in place of the text word. Pure display.
 - [ ] **P3 · S** — **"(N loaded)" count** in list search boxes. Cheap, honest.
@@ -290,7 +292,7 @@ reply box on the message log, #13 wiring lib/identity.mjs to the Duplicates tool
       `TWILIO_FROM`); (3) TEST-mode proof send; (4) inbound-SMS endpoint
       before any copy says "just reply" — nothing receives yet. Runbook
       updated: `docs/TWILIO-SENDER.md`.
-- [ ] **P3 · done-but-dark** — **myPOS ↔ till** one-tap. **BUILT 08-04 and
+- [x] **P3 · done-but-dark** — **myPOS ↔ till** one-tap. **BUILT 08-04 and
       PARKED by owner decision 08-04** ("we wait and work manually with the
       current K300"). Facts that closed it: K300 will never do ePOS
       (support, ticket 4235846); Glass/SoftPOS is SDK-only, not
@@ -301,8 +303,11 @@ reply box on the message log, #13 wiring lib/identity.mjs to the Duplicates tool
       205-test gate, mock verified). To wake it later: buy Carbon/Ultra →
       Partners Portal integration (POS Payments / Cash Register, has an
       approval step) → 3 keys + TID into Vercel env. No code work left.
-- [ ] **P2 · L** 🔒 — **Stripe** save-card + off-session charge + webhook (test keys
-      first). Least urgent of the three; card-present already works.
+- [x] **P2 · L** 🔒 — **Stripe** save-card + off-session charge + webhook — **DONE.**
+      `pages/api/portal/save-card.js`, `pages/api/stripe/webhook.js` and the
+      at-the-counter flow (`e0d2368`, "Save a card at the counter, in the app").
+      The webhook writes `stripe_pm_id` on `setup_intent.succeeded`; verified in
+      `docs/claims-audit.md`. Still on test keys — that flip is #7, not this.
 - [x] **P2 · S** — **Phone-migration job logging** — **DONE**. Verified 08-06:
       the Settings "Contact Tools" reference card is live (`public/main.js:12824`)
       as the phone-migration workbench SOP.
@@ -694,15 +699,18 @@ not been re-checked against the code and may have drifted the same way.
 
 ### Pre-launch, in the order I'd do them
 
-- [ ] **P1 · S** 🔒 — **Un-hold email.** Resend is configured and in TEST; every
+> **Un-hold email** — the same item as the 🔒 entry higher up this file, not a
+> second one. Resend is configured and in TEST; every
       message redirects to the test inbox. Receipts, reminders and sign-in links
       reach nobody until `MAIL_TEST_TO` is removed and `MAIL_LIVE=true`
       (`docs/EMAIL-GO-LIVE.md`). Owner's flip. This also unblocks the status-SMS
       drafts and the review-ask on receipts.
-- [ ] **P1 · S** 🔒 — **Open a business bank account.** Unchanged and still the
-      blocker: the shop's money runs through Shloime's personal account, so no
-      bank feed can be connected without pulling his personal transactions in.
-- [ ] **P1 · S** 🔒 — **Fill in the Google Business Profile** (~20 min, owner).
+> **Open a business bank account** — the same item as the 🔒 entry higher up
+> this file. Unchanged and still the blocker: the shop's money runs through
+> Shloime's personal account, so no bank feed can be connected without pulling
+> his personal transactions in.
+> **Fill in the Google Business Profile** (~20 min, owner) — the same item as
+> the 🔒 entry higher up this file.
 - [ ] **P1 · M** 🔒 — **241 SIM numbers with 2026 provider mail that the app has
       no record of**, plus 119 rows marked `active` with no mail since before
       2026. The SIM list is what the business runs on and it is out of step with
@@ -740,9 +748,14 @@ not been re-checked against the code and may have drifted the same way.
       that is an inference.
 - [ ] **P2 · S** — The 3 pre-existing `virtual_numbers` rows on `+44 20 7000 100X`
       match no real DID. Placeholders; confirm before overwriting.
-- [ ] **P3 · S** — Drop the undo/staging tables (`undo_20260806_*`,
-      `merge_map_20260806`, `rental_placeholders_20260806`, `elid_*_20260806`,
-      and the older `zz_snapshot_*`) once the above are signed off.
+- [ ] **P2 · S** — Drop the undo/staging tables once the above are signed off.
+      **Counted 21 Aug 2026: there are 61 of them** — 3 `undo_*` and 58 `zz_*`,
+      the oldest from 29 July. The entry used to name two patterns and read as a
+      tidy-up; at 61 tables it is most of what `list_tables` returns, which is
+      its own cost every time anyone reads the schema. They are snapshots taken
+      before bulk writes (the merges, the name splits, the flights import), so
+      each one is only droppable once the write it guards is signed off — that
+      is the work, not the DROP.
 
 ### Engineering hygiene
 
