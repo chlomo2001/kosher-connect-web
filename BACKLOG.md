@@ -16,18 +16,13 @@ it describes is true in the running app.
 Source: `docs/DESIGN-NOTES-AHT.md`. The owner asked on 18 Aug for that portal to
 be weighed for UX. The note ranks nine lifts; this is where they wait.
 
-### Done, but not placed
-
-- **1 · Hebrew dates beside Gregorian — the converter.** `lib/hebrewDate.mjs`
-  is built, mirrored into `public/main.js`, and held by
-  `test/hebrewDate.test.mjs` + `test/hebrewDateMirror.test.mjs` (15 assertions:
-  leap years, Adar I vs Adar II, the Rosh Hashana boundary, and the note's own
-  worked example — 18 Aug 2026 → `ה׳ אלול תשפ״ו`).
-  **Still owner-held: where it goes.** Which screens show a Hebrew date, whether
-  as a column or a subline, and whether it is on by default, are all decisions
-  about what staff read. Nothing is wired in. A wrong Hebrew date to this
-  readership is worse than none, which is why the converter was built and
-  tested first and the placement was not guessed.
+> **1 · Hebrew dates** has left this list. It waited here for a placement
+> decision, the owner made it on 19 Aug — "the counter screens" — and it
+> shipped the same day (`bc3e273`): a SIM's renewal, a rental's due-back day, a
+> flight's travel date and the day a repair came in, held by
+> `test/hebrewOnScreen.test.mjs`. It is recorded here for one line only because
+> this file said "Nothing is wired in" for a day after it was, and a waiting
+> list that names finished work sends the reader chasing it.
 
 ### Loop-safe — the 03:00 loop may take these
 
