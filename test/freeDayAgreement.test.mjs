@@ -1,0 +1,129 @@
+// The two answers to "was that day free" must be the same answer.
+//
+// The rental price is counted with `isShabbatOrHoliday(day, country)`
+// (public/main.js, inside calcRentalPrice). The words a customer reads — the
+// named free days on screen, and since 20 Aug the shaded cells in the emailed
+// receipt's calendar — come from `freeDayReason(day)`. Two functions, one
+// question, and only one of them decides what anybody is charged.
+//
+// They agree today. This test is here because of HOW they agree: by accident of
+// both reading the same map, not by construction. `isShabbatOrHoliday` declares
+// a `country` parameter and never uses it — an unused parameter on a pricing
+// predicate is an invitation. The day somebody makes Israeli rentals keep one
+// day of yom tov instead of two, the price changes and the receipt's calendar
+// does not, and a customer is looking at a shaded day they were charged for.
+//
+// A receipt that draws its own working has to be right about the working. So
+// the invariant is pinned: for every day in a three-year span, and for every
+// country the shop rents into, a day is free to the pricer exactly when it has
+// a reason to the reader.
+//
+// Neither function is executed from an import — public/main.js is a browser
+// script — so both are lifted out of the source and run against the same
+// holiday map, which is what makes this a test of the two READERS rather than
+// of the table. The table itself is test/yomTov.test.mjs's job.
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+
+const SRC = readFileSync(new URL('../public/main.js', import.meta.url), 'utf8')
+
+function lift() {
+  const grab = (name) => {
+    const m = SRC.match(new RegExp(`function ${name}\\([\\s\\S]*?\\n\\}`))
+    assert.ok(m, `${name} not found in public/main.js`)
+    return m[0]
+  }
+  // Faithful copies of the two date helpers (public/main.js:2010, :2018).
+  // Local midnight matters: new Date('2026-08-22') is UTC midnight, which in a
+  // negative-offset zone is a different weekday.
+  const helpers = `
+    function localISO(d) {
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+        + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function parseLocalDate(v) {
+      if (v instanceof Date) return new Date(v.getFullYear(), v.getMonth(), v.getDate());
+      const m = String(v || '').match(/^(\\d{4})-(\\d{2})-(\\d{2})/);
+      if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      return new Date(v);
+    }`
+  const code = `${helpers}\n${grab('isShabbatOrHoliday')}\n${grab('freeDayReason')}
+    ; return { isShabbatOrHoliday, freeDayReason };`
+  // The real map, parsed from the real table — same source both functions read.
+  const block = SRC.match(/const DIASPORA_YOM_TOV = \[([\s\S]*?)\n\];/)
+  assert.ok(block, 'DIASPORA_YOM_TOV table not found')
+  const names = SRC.match(/const YOM_TOV_NAMES = \{([\s\S]*?)\n\};/)
+  assert.ok(names, 'YOM_TOV_NAMES not found')
+  const nameFor = new Map([...names[1].matchAll(/(\w+):\s*'([^']+)'/g)].map((m) => [m[1], m[2]]))
+  const DIASPORA_HOLIDAYS = new Map(
+    [...block[1].matchAll(/'(\d{4}-\d{2}-\d{2})([a-z])'/g)].map((m) => [m[1], nameFor.get(m[2])])
+  )
+  return new Function('DIASPORA_HOLIDAYS', code)(DIASPORA_HOLIDAYS)
+}
+
+const { isShabbatOrHoliday, freeDayReason } = lift()
+
+// Every country the rental form offers. The pricer takes one; the reader does
+// not. If that ever starts to matter, this is where it shows up.
+const COUNTRIES = ['USA', 'UK', 'Israel', 'Europe', 'Canada', undefined, null, '']
+
+const eachDay = function* (fromISO, toISO) {
+  const [fy, fm, fd] = fromISO.split('-').map(Number)
+  const [ty, tm, td] = toISO.split('-').map(Number)
+  const cur = new Date(fy, fm - 1, fd)
+  const end = new Date(ty, tm - 1, td)
+  while (cur <= end) {
+    yield `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`
+    cur.setDate(cur.getDate() + 1)
+  }
+}
+
+test('free to the pricer means named to the reader, every day for three years', () => {
+  let free = 0, checked = 0
+  for (const iso of eachDay('2025-01-01', '2027-12-31')) {
+    const reason = freeDayReason(iso)
+    for (const country of COUNTRIES) {
+      assert.equal(
+        isShabbatOrHoliday(iso, country), reason !== '',
+        `${iso} (country ${JSON.stringify(country)}): the pricer says ` +
+        `${isShabbatOrHoliday(iso, country) ? 'free' : 'chargeable'} and the reader says ` +
+        `${reason === '' ? 'nothing' : `"${reason}"`}`)
+    }
+    checked++
+    if (reason) free++
+  }
+  // A guard against the whole thing passing vacuously — if the table went
+  // missing, every day would be chargeable and every assertion above would
+  // still hold.
+  assert.ok(checked > 1000, `only ${checked} days walked`)
+  // Three years is ~156 Shabbosim plus 13 yom tov days a year, less the ones
+  // that fall on a Shabbos and are already free — 186 on today's table. The
+  // floor is set below that, not at it: this guards against the table going
+  // missing, and is not a second copy of the calendar to maintain.
+  assert.ok(free > 150, `only ${free} free days in three years — the table is not being read`)
+})
+
+// The country argument is DECLARED and unused. That is the hazard this file
+// exists for, so it is stated out loud rather than left to be noticed.
+test('the pricer ignores its country argument — deliberately pinned', () => {
+  const answers = COUNTRIES.map((c) => isShabbatOrHoliday('2026-04-02', c))
+  assert.equal(new Set(answers).size, 1,
+    'the day country starts to matter, the receipt calendar must learn about it too')
+  const src = SRC.match(/function isShabbatOrHoliday\([\s\S]*?\n\}/)[0]
+  assert.match(src, /function isShabbatOrHoliday\(date, country\)/)
+  assert.ok(!/\bcountry\b/.test(src.slice(src.indexOf('{'))),
+    'if country is now used, this test and the receipt calendar both need revisiting')
+})
+
+// Shabbos that is also yom tov is one free day with two names — the pricer
+// must not count it twice, and the reader must not drop half the answer.
+test('a yom tov on Shabbos is one free day and two reasons', () => {
+  const both = [...eachDay('2025-01-01', '2027-12-31')]
+    .filter((iso) => freeDayReason(iso).includes(' · '))
+  assert.ok(both.length > 0, 'no yom tov fell on a Shabbos in three years?')
+  for (const iso of both) {
+    assert.equal(isShabbatOrHoliday(iso, 'USA'), true)
+    assert.match(freeDayReason(iso), /^Shabbos · .+/)
+  }
+})

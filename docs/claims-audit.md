@@ -45,6 +45,12 @@ the same way. Four hold; one did not.
 | "No payment method on X's plan — set one up before the next renewal" | `lib/carrierMail.mjs` `carrierMailTask` | **true** — the task row is written by `pages/api/inbound/mail.js` only when the message was actually stored (`inserted.length`), so a redelivery cannot raise it twice. |
 | "There is nothing further to pay." | the receipt's paid-in-full branch | **overstated — reworded below.** |
 
+### Added 20 August, later still — the receipt's calendar
+
+| claim | where | verdict |
+|---|---|---|
+| "Shaded days are not charged — Shabbos." | `pages/api/email.js` `rentalCalendar` | **true, and now pinned.** The shading comes from the counter's own day walk (`rentalDayList`, same `freeDayReason` and same step as `calcRentalPrice`), which travels with the receipt rather than being re-derived on a server that has no yom tov table. The pricer's own predicate reads the same map; `test/freeDayAgreement.test.mjs` holds the two to the same answer for every day of 2025–2027. The hazard that makes the test worth having is written up in `docs/clarity-scan.md`. |
+
 ### The one that did not hold
 
 The receipt's total is the RENTAL's price. It is not the customer's balance.

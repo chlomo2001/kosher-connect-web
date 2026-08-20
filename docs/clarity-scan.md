@@ -120,6 +120,40 @@ basis.
 This is a one-word fix and I have deliberately **not** made it: B1 changes no
 behaviour, and this is the AI drafting surface. It wants the owner's go-ahead
 in the morning, and it is the single most valuable thing this scan found.
+## A latent one, found on 20 August by checking a claim rather than trusting it
+
+`public/main.js:2025` — `isShabbatOrHoliday(date, country)` **declares a
+`country` parameter and never reads it.**
+
+It matters now in a way it did not before. Two functions answer "was this day
+free":
+
+| | who asks | reads |
+|---|---|---|
+| `isShabbatOrHoliday(day, country)` | `calcRentalPrice` — decides what is **charged** | Shabbos, `DIASPORA_HOLIDAYS` |
+| `freeDayReason(day)` | the named free days on screen, and since 20 Aug the **shaded cells in the emailed receipt's calendar** | Shabbos, `DIASPORA_HOLIDAYS` |
+
+They agree — but by both happening to read the same map, not by construction.
+The receipt now draws the shop's working for the customer, so the two agreeing
+has stopped being an internal tidiness question and become a claim made to a
+person about their bill.
+
+The unused parameter is the hazard. It reads as though country already matters,
+so the natural way to make Israeli rentals keep one day of yom tov instead of
+two is to fill it in — at which point the price changes and the receipt's
+calendar does not, and a customer is looking at a shaded day they were charged
+for. Nothing would fail; the number and the picture would simply stop meaning
+the same thing.
+
+**Not fixed, deliberately** — B1 changes no behaviour, and this is pricing.
+Removing the parameter is a Tier 1 rename in the money path and wants the
+owner's go-ahead. What HAS been done is behaviour-neutral: `test/freeDayAgreement.test.mjs`
+walks every day of 2025–2027 against every country the form offers and asserts
+the two answers are the same, plus pins the parameter as unused. Both mutations
+were checked — teaching the pricer to honour `country`, and stopping the reader
+naming yom tov — and each fails the suite. The drift can still be *chosen*; it
+can no longer happen quietly.
+
 ## Tier 1 — renames and comments. Zero behaviour change.
 
 | # | finding | file:line | current → proposed |
