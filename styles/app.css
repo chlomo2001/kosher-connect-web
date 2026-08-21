@@ -4251,6 +4251,17 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 .kc-man-screen { padding: 30px 0 8px; border-top: 1px solid var(--border-subtle); }
 .kc-man-toc a { color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border); }
 .kc-man-toc a:hover { border-bottom-color: var(--text); }
+/* The contents links measured 155x23 on a phone — a whole grid of them one
+   pixel under the 24px the rest of the app meets, in both languages. They are
+   grid items, so they are already full-column blocks; the 23 is the line box,
+   and neither line-height nor the grid gap moves it, because an inline box's
+   own height follows the font metrics. min-height is the lever, which is how
+   .kc-namelink and span.dash-link were already fixed. The underline is a
+   full-width rule rather than something hugging the text, so dropping it a
+   pixel does not show. */
+@media (pointer: coarse) {
+  .kc-man-toc a { display: flex; align-items: center; min-height: 24px; }
+}
 
 /* Pictures of the real app, built by scripts/build-manual-shots.mjs.
    The manual was four stacked bullet lists per screen; nobody could match "the
