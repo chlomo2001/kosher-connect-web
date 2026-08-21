@@ -233,6 +233,11 @@ async function handler(req, res) {
         charge_reference: `PAY-KT-SETTLE-${row.id}`,
         entry_type: 'payment',
         amount: got,
+        // NOT a dead fallback, though it reads like one. `kt_settlements.method`
+        // is nullable (20260719220000_kol_torah.sql:64), and this function also
+        // runs on a row read back from the table on the duplicate path above —
+        // not only on the row just inserted with a validated method. A re-run
+        // over an older settlement can genuinely arrive here with null.
         method: row.method || 'cash',
         description: `Kol Torah settlement — ${shul.name}`,
       })

@@ -3103,6 +3103,11 @@ function getItemStatus(r, item) {
   return 'undecided';
 }
 
+// 'overdue' is COMPUTED HERE and never stored. The rental_status enum declares
+// it (initial_schema.sql:13) and no row has ever held it, so a query filtering
+// on status = 'overdue' correctly returns nothing — which costs whoever writes
+// that query an afternoon. The design is right; the enum's silence about it is
+// the only wrong part, and this comment is the cheap half of the fix.
 function getComputedStatus(r, today) {
   if (r.status === 'booked') return 'booked'; // reservation — not picked up yet
   if (r.status !== 'returned') return r.toDate < today ? 'overdue' : 'active';
