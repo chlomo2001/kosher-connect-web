@@ -1,3 +1,4 @@
+import { COMPANY, companyNumberLine } from '../lib/company.mjs'
 import Head from 'next/head'
 import { LEGAL_CSS, LegalShell } from '../components/LegalShell'
 
@@ -13,7 +14,8 @@ export default function Terms() {
       <style dangerouslySetInnerHTML={{ __html: LEGAL_CSS }} />
       <LegalShell title="Terms of Service" updated="28 July 2026">
         <p>These terms cover your use of Kosher Connect’s services and website. Kosher Connect is a trading name of
-          <strong> Hatsluche Ltd</strong>, 421 Bury New Road, Salford M7 4ED. By using our services you agree to them.</p>
+          <strong> {COMPANY.legalName}</strong> ({companyNumberLine()}), 421 Bury New Road, Salford M7 4ED.
+          By using our services you agree to them.</p>
 
         <h2>1. What we do</h2>
         <p>We provide kosher mobile SIMs and phone plans, international and virtual numbers, phone rentals, repairs, accessories, Kol Torah audio, and travel bookings — in the shop and, for account holders, online.</p>
@@ -46,7 +48,8 @@ export default function Terms() {
         <p>These terms are governed by the law of England and Wales, and the courts of England and Wales have jurisdiction.</p>
 
         <h2>11. Contact us</h2>
-        <p>Kosher Connect (Hatsluche Ltd)<br />
+        <p>Kosher Connect ({COMPANY.legalName})<br />
+          {companyNumberLine()}<br />
           421 Bury New Road, Salford M7 4ED<br />
           Phone: <a href="tel:+441615311386">0161 531 1386</a><br />
           Email: <a href="mailto:support@kosher-connect.com">support@kosher-connect.com</a></p>

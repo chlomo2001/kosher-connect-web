@@ -1,3 +1,4 @@
+import { legalIdentifier } from '../lib/company.mjs'
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
@@ -44,7 +45,7 @@ const T = {
     urgent: 'Urgent? Skip the form —',
     urgentCall: 'call',
     brandName: 'Kosher Connect', rights: 'All rights reserved.',
-    tradingName: 'Kosher Connect is a trading name of Hatsluche Ltd.',
+    tradingName: 'Kosher Connect is a trading name of',
   },
   he: {
     dir: 'rtl',
@@ -75,7 +76,7 @@ const T = {
     urgent: 'דחוף? בלי טפסים —',
     urgentCall: 'התקשרו',
     brandName: 'כשר קונקט', rights: 'כל הזכויות שמורות.',
-    tradingName: 'כשר קונקט הוא שם מסחרי של Hatsluche Ltd.',
+    tradingName: 'כשר קונקט הוא שם מסחרי של',
   },
 }
 
@@ -212,7 +213,7 @@ export default function RepairBooking() {
           </section>
 
           <footer className="rp-foot">
-            © {new Date().getFullYear()} {t.brandName}. {t.rights} {t.tradingName}
+            © {new Date().getFullYear()} {t.brandName}. {t.rights} {t.tradingName} <bdi>{legalIdentifier()}</bdi>
           </footer>
         </div>
       </div>

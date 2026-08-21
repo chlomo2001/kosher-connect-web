@@ -448,12 +448,17 @@ reasoning. A bank feed is a **reconciliation source, not a posting source**:
 transactions land raw, a matcher proposes, a human confirms. `shouldAutoPost()`
 returns false unconditionally and is tested, so removing that guard has to be
 deliberate.
-- [ ] **P1 · S** 🔒 — **Open a business bank account.** The blocker, and it is
-      not technical. The shop's money runs through Shloime's personal account
-      (owner, 07-31), so a live feed would pull his personal transactions into
-      KC's database — a privacy problem no filtering fixes, because the
-      filtering happens after the data is stored. **Do not connect a feed until
-      the shop has its own account.**
+- [ ] **P2 · S** — **Bank feed: the account exists now, the question moved.**
+      Superseded 21 Aug. The 07-31 entry said the shop's money runs through
+      Shloime's PERSONAL account, so no feed could be connected without pulling
+      his personal transactions into KC's database — a privacy problem no
+      filtering fixes, because the filtering happens after storage.
+      **Owner, 21 Aug: there is a Revolut BUSINESS account in Hatsluche Ltd's
+      name.** That removes the privacy blocker for that account.
+      What is still open is narrower and worth asking plainly: **is the shop's
+      takings actually landing in it yet**, or does day-to-day money still run
+      through the personal account? Having the account and using it are not the
+      same fact, and only the second one makes a feed safe to connect.
 - [x] **Statement upload + triage UI — BUILT 08-04 (owner-directed loop,
       c3f1d36).** Wallet → "Bank statements" (owner-only): upload a CSV under
       an account label (multiple accounts = multiple labels — owner: "maybe he
@@ -790,12 +795,19 @@ not been re-checked against the code and may have drifted the same way.
       of recurring revenue across ~30 accounts. Blocked on the balance question
       below — turning billing on before that is settled risks double-charging
       people who already pay in the shop.
-- [ ] **P1 · S** 🔒 — **The −£3,330.09 question** (Shloime, Sunday 08-09). Do the
-      ELID customers pay in the shop? The arithmetic in
-      `docs/ELID-IMPORT-2026-08-06.md` shows the balances are accrued
-      subscription charges with **no payment ever posted in ELID**, which points
-      to an unmaintained meter rather than real arrears. Needs confirming before
-      any balance touches the wallet ledger.
+- [x] **P1 · S — ANSWERED by the owner, 21 Aug.** **The −£3,330.09 question.**
+      There are TWO layers on ELID, which is what the import could not see:
+      every customer has their own ELID account, and Shloime sits above them on
+      a reseller platform. Money moves customer → shop → Shloime → ELID
+      wholesale; ELID pays Shloime, and the balance sits on his reseller
+      account. So the per-customer balances in the import are **ELID's own
+      accrual meter on each customer's account, not a debt to KC** — which is
+      exactly what the arithmetic in `docs/ELID-IMPORT-2026-08-06.md` showed
+      (charges accrued, no payment ever posted).
+      **So: no ELID balance is ever posted to a wallet, and the ~30 accounts are
+      not blocked by customer debt.** The one thing that would overturn this is a
+      customer paying ELID DIRECTLY rather than through the shop; the owner has
+      not reported one, and it would need its own answer if it ever happens.
 
 ### ELID leftovers (detail in `docs/ELID-IMPORT-2026-08-06.md`)
 

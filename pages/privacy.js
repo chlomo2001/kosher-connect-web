@@ -1,3 +1,4 @@
+import { COMPANY, companyNumberLine } from '../lib/company.mjs'
 import Head from 'next/head'
 import { LEGAL_CSS, LegalShell } from '../components/LegalShell'
 
@@ -14,7 +15,7 @@ export default function Privacy() {
       <style dangerouslySetInnerHTML={{ __html: LEGAL_CSS }} />
       <LegalShell title="Privacy Policy" updated="28 July 2026">
         <p>This policy explains what personal information Kosher Connect collects, why, and your rights over it.
-          Kosher Connect is a trading name of <strong>Hatsluche Ltd</strong> (“we”, “us”), 421 Bury New Road,
+          Kosher Connect is a trading name of <strong>{COMPANY.legalName}</strong> ({companyNumberLine()}) (“we”, “us”), 421 Bury New Road,
           Salford M7 4ED, United Kingdom.</p>
 
         <h2>1. Information we collect</h2>

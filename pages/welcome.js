@@ -1,3 +1,4 @@
+import { legalIdentifier } from '../lib/company.mjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Head from 'next/head'
 import Script from 'next/script'
@@ -177,7 +178,7 @@ const T = {
     footServices: 'Services', footAccount: 'Your account', footLegal: 'Information',
     hoursLabel: 'Open',
     rights: 'All rights reserved.',
-    tradingName: 'Kosher Connect is a trading name of Hatsluche Ltd.',
+    tradingName: 'Kosher Connect is a trading name of',
     paidTitle: 'Payment received — thank you!',
     paidBody: 'Your payment went through and will show on your account shortly.',
     paidClose: 'Dismiss',
@@ -302,7 +303,7 @@ const T = {
     footServices: 'שירותים', footAccount: 'האזור האישי', footLegal: 'מידע',
     hoursLabel: 'שעות פתיחה',
     rights: 'כל הזכויות שמורות.',
-    tradingName: 'כשר קונקט הוא שם מסחרי של Hatsluche Ltd.',
+    tradingName: 'כשר קונקט הוא שם מסחרי של',
     paidTitle: 'התשלום התקבל — תודה רבה!',
     paidBody: 'התשלום עבר בהצלחה ויופיע בחשבון שלכם בקרוב.',
     paidClose: 'סגירה',
@@ -853,7 +854,7 @@ export default function Welcome() {
               </nav>
             </div>
             <p className="sk-foot-legal">
-              © {new Date().getFullYear()} {t.brandName}. {t.rights} {t.tradingName}
+              © {new Date().getFullYear()} {t.brandName}. {t.rights} {t.tradingName} <bdi>{legalIdentifier()}</bdi>
             </p>
           </div>
         </footer>
