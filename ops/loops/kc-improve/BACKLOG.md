@@ -812,9 +812,21 @@ not been re-checked against the code and may have drifted the same way.
       nothing, as 08-06 demonstrated when two runs died in a GitHub Actions
       incident and neither stopped a merge.
 - [ ] **P2 · M** — **`sims` has no typed number column.** All 840 SIM numbers
-      live in `legacy_extras.simNumber` as untyped JSON, and `customer_id` is
-      NOT NULL — which is what forced 39 fake "Rental" customers into the list.
-      Migration: make `customer_id` nullable, add `sim_number`, backfill.
+      live in `legacy_extras.simNumber` as untyped JSON, so nothing can index or
+      constrain them.
+      **Counted 21 Aug 2026** (797 rows now): 763 hold a usable UK mobile, 34
+      hold none at all, and **exactly one number is on two plans** —
+      07368293198, active on both Smarty (`pl-sim-284`) and giffgaff
+      (`pl-sim-612`), same customer, and it is his own contact number. It reads
+      like a port where the old plan was never closed; neither row carries a
+      renewal date, so nothing in the app says which network is live. Raised as
+      task `SIMDUP-7368293198` — the answer is the owner's, not a guess.
+      **What the column is worth, and what it is not.** A typed column that
+      nothing reads is the fault `docs/clarity-scan.md` T2.13 names, so it is
+      only worth adding with the two things that need it: a **unique index**, so
+      two plans can never claim one number again, and the carrier-mail matcher
+      reading it instead of the blob. The unique index cannot go on while that
+      one pair stands, which makes the task above the real first step.
 - [ ] **P2 · S** — Supabase auth: **leaked-password protection is off** (one
       toggle), and `current_staff_role()` is a `SECURITY DEFINER` function any
       signed-in user can call over RPC. Check that's intended.
