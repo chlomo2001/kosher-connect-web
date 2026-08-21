@@ -4249,6 +4249,12 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 .kc-man-shell { height: 100vh; width: 100%; overflow-y: auto; }
 
 .kc-man-screen { padding: 30px 0 8px; border-top: 1px solid var(--border-subtle); }
+/* The stamp: quiet on screen, and at the FOOT OF EVERY SHEET in print —
+   position:fixed repeats per printed page, which is what lets a held printout
+   say how old it is (the Virtual Mail idea). Hidden on screen below, shown in
+   the print block. */
+.kc-man-stamp { color: var(--muted); font-size: var(--fs-small); white-space: nowrap; }
+.kc-man-stampfoot { display: none; }
 .kc-man-toc a { color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border); }
 .kc-man-toc a:hover { border-bottom-color: var(--text); }
 /* The contents links measured 155x23 on a phone — a whole grid of them one
@@ -4336,6 +4342,13 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
      screen must not be split across a page break between its name and its
      first line, which is where a reader loses the thread. */
   .kc-man-chrome, .kc-man-toc { display: none; }
+  .kc-man-stampfoot {
+    display: block; position: fixed; bottom: 0; left: 0; right: 0;
+    font-size: 9px; color: #666; text-align: right;
+    padding: 2px 0; border-top: 1px solid #ddd; background: #fff;
+  }
+  /* Keep body text clear of the repeating footer. */
+  body.kc-manual { padding-bottom: 18px; }
   .kc-man-screen { break-inside: avoid; page-break-inside: avoid; }
   .kc-man-screen a { text-decoration: none; color: inherit; }
   /* A screenshot split down the middle by a page break is worse than none. */

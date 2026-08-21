@@ -3,7 +3,7 @@ import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
 import AppStyles from '../components/AppStyles'
 import { requireStaffCookie } from '../lib/pageAuth'
-import { SCREENS, screensOf, manualProgress } from '../lib/manual.mjs'
+import { SCREENS, screensOf, manualProgress, manualStampLine } from '../lib/manual.mjs'
 
 // /manual — the whole system, one screen at a time, on one printable page.
 //
@@ -170,7 +170,13 @@ export default function Manual({ shots = {} }) {
           any screen. Prices, free days and caps are not repeated here: they live in Settings, so there is only
           ever one price list. {written} of {total} screens are written out in full
           {drafts > 0 && `; ${drafts} are still short entries`}.
+          {' '}<span className="kc-man-stamp">{manualStampLine()}</span>
         </p>
+
+        {/* Repeats at the foot of EVERY printed sheet — position:fixed prints
+            per page, which is the whole trick. A held printout can be checked
+            against the live page without hunting for its first sheet. */}
+        <div className="kc-man-stampfoot" aria-hidden="true">Kosher Connect manual · {manualStampLine()}</div>
 
         <nav className="kc-man-toc" style={{ margin: '0 0 26px', padding: '12px 14px', borderRadius: 10,
           border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>

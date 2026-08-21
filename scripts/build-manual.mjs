@@ -12,7 +12,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
-import { SCREENS, screensOf, manualProgress } from '../lib/manual.mjs'
+import { SCREENS, screensOf, manualProgress, manualStampLine } from '../lib/manual.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = path.join(ROOT, 'docs/MANUAL.md')
@@ -54,6 +54,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **${written} of ${total} screens written out in full${drafts ? `; ${drafts} still short entries` : ''}.**
+*${manualStampLine()} — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 

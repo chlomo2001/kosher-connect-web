@@ -11,6 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
+*As of 21 Aug 2026 · m-bce7b3cb — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -889,6 +890,7 @@ This page: every screen in the system described in order, on one page that print
 - **🖨 Print** — Prints the whole manual, laid out so a screen's description is never split across two sheets. This is the copy to hand someone starting on Sunday.
 - **← Back to the app** — Returns to the app. The manual opens in its own tab from the help panel, so it can be read alongside the work rather than instead of it.
 - **❓ How do I…?** — The other half, inside the app: the same knowledge as steps for the job in front of you. Ask it in your own words.
+- **As of … stamp** — The date the manual’s words last changed, with a short code, at the top of the page and at the foot of every printed sheet. Hold a printout against the screen: if the codes differ, the paper is old — bin it and print again.
 
 **Rules that bite here**
 
