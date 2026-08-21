@@ -1,4 +1,4 @@
-import { COMPANY, companyNumberLine } from '../lib/company.mjs'
+import { COMPANY, companyNumberLine, registeredOfficeLine } from '../lib/company.mjs'
 import Head from 'next/head'
 import { LEGAL_CSS, LegalShell } from '../components/LegalShell'
 
@@ -50,7 +50,8 @@ export default function Terms() {
         <h2>11. Contact us</h2>
         <p>Kosher Connect ({COMPANY.legalName})<br />
           {companyNumberLine()}<br />
-          421 Bury New Road, Salford M7 4ED<br />
+          {registeredOfficeLine()}<br />
+          Shop: 421 Bury New Road, Salford M7 4ED<br />
           Phone: <a href="tel:+441615311386">0161 531 1386</a><br />
           Email: <a href="mailto:support@kosher-connect.com">support@kosher-connect.com</a></p>
       </LegalShell>

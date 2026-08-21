@@ -1,4 +1,4 @@
-import { COMPANY, companyNumberLine } from '../lib/company.mjs'
+import { COMPANY, companyNumberLine, registeredOfficeLine } from '../lib/company.mjs'
 import Head from 'next/head'
 import { LEGAL_CSS, LegalShell } from '../components/LegalShell'
 
@@ -16,7 +16,7 @@ export default function Refund() {
       <style dangerouslySetInnerHTML={{ __html: LEGAL_CSS }} />
       <LegalShell title="Refunds & Cancellations" updated="22 July 2026">
         <p>This policy explains when and how you can get a refund or cancel. Kosher Connect is a trading name of
-          <strong> {COMPANY.legalName}</strong> ({companyNumberLine()}), 421 Bury New Road, Salford M7 4ED. It sits alongside our{' '}
+          <strong> {COMPANY.legalName}</strong> ({companyNumberLine()}; {registeredOfficeLine()}), 421 Bury New Road, Salford M7 4ED. It sits alongside our{' '}
           <a href="/terms">Terms of Service</a> and does not affect your statutory rights under UK consumer law.</p>
 
         <h2>1. Phones &amp; accessories (physical goods)</h2>

@@ -2010,8 +2010,15 @@ clean.`, no ✗ anywhere, exit 0 — and after row 1 that sentence means somethi
 
 ### Found 21 Aug, NOT fixed — needs the owner
 
-- [ ] **P2 · S** 🔒 — **The registered office is not the shop, so the trading
-      disclosure is still incomplete.** `f896f2c` put the company number on every
+- [x] **P2 · S — DONE 21 Aug, once the owner answered.** The registered office
+      is the **accountant's address**, ordinary practice for a small company
+      here — so the objection that held this back (a registered office is often
+      somebody's home, and publishing a home is not a script's call) does not
+      apply, and it is published. It goes on the legal pages and on every
+      receipt, always LABELLED and with "not the shop; come to the address
+      above", because an unlabelled second address on a shop's website sends
+      somebody to the wrong door. Deliberately NOT added to the small bilingual
+      footers, which link to the legal pages instead. Original finding: `f896f2c` put the company number on every
       public page and every receipt, which was the missing half everyone notices.
       The other half is the **registered office address**, and checking the
       register showed the shop is not it: Companies House holds **158 Cromwell

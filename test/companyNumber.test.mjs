@@ -18,7 +18,7 @@ import test from 'node:test'
 import assert from 'node:assert'
 import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
-import { COMPANY, registeredLine, companyNumberLine } from '../lib/company.mjs'
+import { COMPANY, registeredLine, companyNumberLine, registeredOfficeLine } from '../lib/company.mjs'
 
 const ROOT = path.join(import.meta.dirname, '..')
 
@@ -93,4 +93,40 @@ test('the number is written once, not copied around', () => {
   }
   for (const d of ['lib', 'pages', 'components', 'public']) walk(d)
   assert.deepEqual(hits, [], 'the company number is hard-coded outside lib/company.mjs:\n  ' + hits.join('\n  '))
+})
+
+// ── the registered office ──────────────────────────────────────────────────
+//
+// The number is the half people notice. The rules ask for the registered office
+// too, and the shop address does not satisfy it — they are different addresses,
+// which is the whole reason this section exists.
+
+test('the registered office is its own address, not the shop', () => {
+  assert.ok(COMPANY.registeredOffice.length > 10)
+  assert.notEqual(COMPANY.registeredOffice, COMPANY.tradingAddress,
+    'if these are ever the same, say so deliberately rather than by accident')
+  assert.match(registeredOfficeLine(), /^Registered office: /,
+    'it must be LABELLED — an unlabelled second address on a shop website ' +
+    'sends somebody to the wrong door')
+  assert.ok(registeredOfficeLine().includes(COMPANY.registeredOffice))
+})
+
+test('the pages that carry the full disclosure carry the office too', () => {
+  // The long form belongs on the legal pages, which every footer links to, and
+  // on a receipt — a business letter with no linked page to defer to. NOT in
+  // the small bilingual footers: a second address there, read at a glance,
+  // is how somebody ends up at the accountant's instead of the shop.
+  for (const rel of ['pages/terms.js', 'pages/privacy.js', 'pages/refund.js']) {
+    const src = readFileSync(path.join(ROOT, rel), 'utf8')
+    assert.ok(src.includes('registeredOfficeLine'), `${rel} omits the registered office`)
+  }
+})
+
+test('a receipt carries the office, and says it is not the shop', async () => {
+  const { brandShell } = await import('../lib/email.js')
+  const html = brandShell({ title: 'Receipt', bodyRows: '<tr><td>x</td></tr>' })
+  assert.ok(html.includes(COMPANY.registeredOffice), 'the email footer omits the registered office')
+  assert.match(html, /not the shop/,
+    'the shop address and the registered office are both on this email — the ' +
+    'one a customer should walk to has to be the obvious one')
 })
