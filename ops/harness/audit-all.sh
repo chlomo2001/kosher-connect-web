@@ -107,6 +107,21 @@ run "staff app · nothing painted outside its card" \
 run "staff app · modals open + geometry, 390px both themes" \
   bash -eo pipefail -c 'for t in light dark; do node ops/harness/modals.mjs --width 390 --theme $t | tail -1; done'
 
+# --contrast, which this sweep had NEVER passed. modals.mjs measures contrast
+# while the dialog is actually on screen, and the comment beside that code says
+# why it exists: the page-level --contrast sweep renders a static page, so every
+# dialog, the palette and the toasts were never measured at all, and that is how
+# a 2.92:1 error toast survived every clean audit. The measurement was written,
+# and then nothing ran it — three modal lines here and not one of them asked for
+# it. First run found two: the bank reconciliation's confidence badges at 4.32:1
+# and 4.41:1 against the 4.5 an 11px label needs.
+#
+# Both themes, because a tint that passes on white can fail on the dark surface
+# and the dark palette is a different set of tokens, not a filter over the light
+# one.
+run "staff app · modals, contrast on the live dialog" \
+  bash -eo pipefail -c 'for t in light dark; do node ops/harness/modals.mjs --width 390 --contrast --theme $t | grep -v "^✓ "; done'
+
 # 320 as well: the modal sweep had only ever run at 390, and 320 is where a
 # footer with a left action and a Cancel+Save group first runs out of room.
 run "staff app · modals at 320px" \

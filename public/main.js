@@ -11152,9 +11152,15 @@ function bankPaint() {
     <button class="btn ${bankStateFilter === key ? 'btn-primary' : 'btn-outline'} btn-sm"
       onclick="bankStateFilter='${key}';bankPaint()">${label}${n != null ? ` · ${n}` : ''}</button>`;
 
+  // --success-ink / --warning-ink, not --success / --warning. These badges are
+  // --fs-micro (11px), so they need 4.5:1 rather than 3:1, and on their own
+  // tint the brighter tokens gave 4.32:1 and 4.41:1 — a near miss in the one
+  // place a near miss matters, since the badge IS the reader's confidence in
+  // the match. The ink pair exists for text on a tinted panel and is already
+  // used in twenty-six other places.
   const CONF_BADGE = {
-    strong:   'background:var(--success-bg,rgba(34,160,90,.12));color:var(--success);',
-    possible: 'background:var(--warning-bg,rgba(200,140,20,.12));color:var(--warning,#b07d10);',
+    strong:   'background:var(--success-bg,rgba(34,160,90,.12));color:var(--success-ink);',
+    possible: 'background:var(--warning-bg,rgba(200,140,20,.12));color:var(--warning-ink);',
     weak:     'background:var(--bg-secondary);color:var(--muted);',
   };
 
