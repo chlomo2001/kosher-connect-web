@@ -87,9 +87,12 @@ they were found — the standing task's own rule.
       in one week. Groups by the raiser's own reference prefix, orders high
       priority → nearest deadline → oldest, caps each group and always says how
       many it left out.
-      **The other half is the owner's.** Getting it in front of him needs a read
-      and a send, and the send is 🔒 — live email is HOLD-gated. Putting it on a
-      screen instead is a next-action row, which is B2 and owner-held.
+      **And the email**, `lib/digestEmail.mjs` — renders, does not send, held by
+      `test/digestEmail.test.mjs`. Split from the data half so that one keeps
+      importing nothing; a test fails if either crosses back.
+      **What is left is the owner's.** A read to fetch the open tasks, and the
+      send — 🔒, because live email is HOLD-gated. Putting it on a screen instead
+      is a next-action row, which is B2 and owner-held.
       <!-- backlog-ok: the module exists and is tested; the item stays open for
       the read and the HOLD-gated send, which are the owner's half -->
 - [ ] **P2 · M** 🔒 — **A credit limit, and a real statement.** Their Customer
