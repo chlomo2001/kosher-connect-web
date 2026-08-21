@@ -2008,6 +2008,32 @@ were still the browser's rather than the shop's.
 The whole sweep is clean at the end of the night — `AUDIT: all checks reported
 clean.`, no ✗ anywhere, exit 0 — and after row 1 that sentence means something.
 
+### Found 21 Aug, NOT fixed — needs the owner
+
+- [ ] **P2 · S** 🔒 — **The registered office is not the shop, so the trading
+      disclosure is still incomplete.** `f896f2c` put the company number on every
+      public page and every receipt, which was the missing half everyone notices.
+      The other half is the **registered office address**, and checking the
+      register showed the shop is not it: Companies House holds **158 Cromwell
+      Road, Salford M6 6DE** for HATSLUCHE LTD (14138193, incorporated
+      27 May 2022); the shop trades from 421 Bury New Road.
+      A UK company must disclose its registered office on its website and its
+      business letters, so naming only the trading address does not satisfy it.
+      **Deliberately left for the owner rather than shipped:** that address may
+      be a private home, and putting somebody's home on a live public website is
+      not a gap a script gets to close. Two ways out and both are his — publish
+      it, or move the registered office to an agent's address and publish that.
+      `lib/company.mjs` carries a commented-out `registeredOffice:` slot with the
+      reasoning, so whoever does it does not have to rediscover any of this.
+
+- [ ] **P2 · XS** 🔒 — **Check whether the annual accounts are overdue.** The
+      register listing read on 21 Aug says accounts to 31 May 2025 were **due by
+      28 February 2026** — a date now nearly six months past. That does NOT mean
+      they are late: the listing came through a search result rather than a live
+      read of the register (direct fetching is blocked here), so it may simply
+      predate a filing. Worth thirty seconds on Companies House to be sure,
+      because the penalty for late filing climbs with time.
+
 ### Checked and genuinely clean (so nobody re-checks them)
 
 - **Accessible names, all 15 tabs.** Every button, link, input, select and
