@@ -2009,6 +2009,7 @@ CODE CHECKED (a lesson bought mid-evening — see `cc6f61d`).
 | C | `6e173b5` | 📌 Pop-up notes: card banner, page banner, till toast; escaped; 140-char cap; the loud channel kept scarce |
 | D | `1408bb6` + `cc6f61d` | E4 stock story: derived trail, confessed opening figure, impossible counts called proven discrepancies. Second sha is the missing manual shot AND the ship-script fix after the gate ran red and shipped anyway |
 | E | `6216eff` | STOCKLOW sweep tasks on the dashboard's own rule, closing on recovery; digest group added |
+| H | `930fd07` | E6's last safe piece: the on-account-needs-a-customer rule now speaks in the tender area the moment "Paid now" is unticked on a walk-in — guard's own condition and wording, hard stops untouched |
 | G | `3117ced` | Issue #16 closed: carrier post toasts within the minute it arrives — cheap pulse (count + headlines, never bodies), server-timestamp watermark, burst compression. 5 tests |
 | F | `2cb3de5` | Common-jobs strip on /manual, drawn live from `lib/guides.mjs` (test makes a pasted question unshippable), print-hidden like the contents |
 
