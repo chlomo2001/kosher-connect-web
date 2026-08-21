@@ -363,6 +363,7 @@ Phones handed in to be fixed: what is wrong with each one, where it has got to, 
 
 - **The four counts** — Tickets open, phones waiting to be collected, what repairs have earned, and how many tickets there have ever been.
 - **+ New repair** — Opens a ticket: the customer, the handset in your hand, and the work from the price list. Notes are for what the customer told you — that matters later.
+- **✉️ on a Ready ticket** — Emails the customer that the phone is repaired and waiting, with the total and where to come. The 💬 beside it drafts the same thing as a text — the text is quicker, the email is the one that carries the figure. It names the address before it sends, and says so when the address on file is one of the shop’s own carrier logins rather than the customer’s.
 - **✉️ Email receipt** — On the confirmation after a ticket is opened. It says ESTIMATE, not Total — nobody has started the work yet — and tells the customer nothing is charged that they have not agreed to first. When the phone is ready the same email goes out as a Total, payable on collection.
 - **Filter** — Open and in progress, waiting for collection, collected, or cancelled. Waiting-for-collection is the one to work through: those phones are done and the money is not in.
 - **The status box on each row** — Moves the ticket along without opening anything. The shop can add stages of its own in Settings — a phone parked on "waiting for a part" is still open work and still counts as open.

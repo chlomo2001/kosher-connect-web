@@ -10123,6 +10123,82 @@ async function loadWalletSection(customerId) {
   renderNextBestAction(customerId);
 }
 
+// Confirm, send, say what happened. ONE path for the ✉️ buttons.
+//
+// This was written out twice — the wallet row and, as of tonight, the
+// ready-to-collect repair — and both copies had to remember the same four
+// things: name the recipient in the dialog, warn when the address on file is
+// one of OUR carrier logins rather than the customer's own, branch HOLD and
+// TEST off before claiming a send, and put the button back on failure. Getting
+// any of those wrong is a receipt in the wrong inbox or a screen saying "sent"
+// about a message the gate held.
+//
+// `opts.body` is the /api/email payload. `opts.what` is what the dialog calls
+// the thing being sent. `opts.log` is the line recorded against the customer.
+async function kcSendReceipt(btn, customerId, opts) {
+  const cust = customers.find(x => String(x.id) === String(customerId));
+  const to = (cust && cust.email) || '';
+  // Some rows carry OUR provider login (Lebara etc.) in the email field rather
+  // than the customer's own address. Sending there mails the shop.
+  const ours = to && isOwnAccountEmail(to);
+  if (!(await kcConfirm({
+    title: opts.title || '✉️ Send this email?',
+    body: `Sends ${opts.what} to ${
+      to ? `<strong>${escHtml(to)}</strong>` : 'the address on this customer’s record'
+    }.${ours ? ' <strong style="color:var(--gold);">That is a shop account login, not the customer’s own address.</strong>' : ''} An email cannot be unsent.`,
+    okLabel: opts.okLabel || 'Send',
+    ...(Number.isFinite(opts.amount) ? { amount: opts.amount } : {}),
+  }))) return false;
+  const idle = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  const restore = () => { if (btn) { btn.disabled = false; btn.textContent = idle; } };
+  const res = await kcFetch('/api/email', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...opts.body, customerId }),
+  }).then(r => r.json()).catch(() => null);
+  if (res && res.success && res.held) {
+    toast(res.note || 'Email is on hold — nothing was sent.', 'warning');
+    restore(); return false;
+  }
+  if (res && res.success && res.redirected) {
+    toast(res.note || `Test mode — sent to ${res.sentTo}.`, 'warning');
+    if (btn) btn.textContent = '✅';
+    return true;
+  }
+  if (res && res.success) {
+    toast(`Emailed to ${res.sentTo}.`, 'success');
+    if (opts.log) recordComm(customerId, { type: 'email', text: opts.log });
+    if (btn) btn.textContent = '✅';
+    return true;
+  }
+  toast(res?.error || 'Could not send it.', 'error');
+  restore(); return false;
+}
+
+// The repair is finished and the phone is on the shelf. The 💬 beside this
+// drafts a text; this sends the email, which is the one that carries the total
+// and the address to come to. Same builder as the booked-in email
+// (pages/api/email.js buildRepair) with ready:true, so it says Total rather
+// than Estimate.
+async function emailRepairReady(btn, repairId) {
+  const r = repairs.find(x => String(x.id) === String(repairId));
+  if (!r) { toast('Reload the list and try again.', 'error'); return; }
+  await kcSendReceipt(btn, r.customerId, {
+    title: '✉️ Tell them it is ready?',
+    what: `the ready-to-collect email for <strong>${escHtml(r.device || 'their phone')}</strong>`,
+    okLabel: 'Send it',
+    amount: Number(r.total) || 0,
+    log: `Ready-to-collect emailed — ${r.device || 'repair'}`,
+    body: {
+      kind: 'repair', ready: true, ref: String(r.id || ''),
+      device: r.device || '',
+      services: (r.services || []).map(x => x.name || x).join(', '),
+      total: Number(r.total) || 0,
+      paidAmount: 0, method: null,
+    },
+  });
+}
+
 // Email a receipt for one ledger entry from the customer card. Sales send the
 // itemised 'sale' template (one line rebuilt from the entry's description);
 // payments/top-ups send the 'payment' confirmation with the current balance.
@@ -10134,44 +10210,18 @@ async function emailLedgerReceipt(btn, customerId, idx) {
   if (!e) { toast('Reload the card and try again.', 'error'); return; }
   const abs = Math.abs(Number(e.amount) || 0);
   const body = e.type === 'payment' || e.type === 'top_up'
-    ? { kind: 'payment', customerId, amount: abs, method: e.method || null, note: e.description || null, balance: cached.balance }
-    : { kind: 'sale', customerId, lines: [{ name: e.description || 'Purchase', qty: 1, total: abs }], total: abs, method: e.method || null };
-  // Confirm before sending. This leaves the building the moment it is clicked
-  // and cannot be recalled, so it gets the same "are you sure?" as anything
-  // that touches a customer's money — and it names the recipient, because the
-  // mistake worth catching is the right receipt sent to the wrong person.
-  const cust = customers.find(x => x.id === customerId);
-  const to = (cust && cust.email) || '';
-  // isOwnAccountEmail: some rows carry OUR provider login (Lebara etc.) in the
-  // email field rather than the customer's own address. Sending a customer
-  // receipt there mails it to the shop, so say so plainly in the dialog.
-  const ours = to && isOwnAccountEmail(to);
-  if (!(await kcConfirm({
+    ? { kind: 'payment', amount: abs, method: e.method || null, note: e.description || null, balance: cached.balance }
+    : { kind: 'sale', lines: [{ name: e.description || 'Purchase', qty: 1, total: abs }], total: abs, method: e.method || null };
+  // The confirm, the own-alias warning, the HOLD/TEST branches and putting the
+  // button back all live in kcSendReceipt — this only says what is being sent.
+  await kcSendReceipt(btn, customerId, {
     title: '✉️ Email this receipt?',
-    body: `Sends a receipt for <strong>${escHtml(e.description || e.type)}</strong> to ${
-      to ? `<strong>${escHtml(to)}</strong>` : 'the address on this customer’s record'
-    }.${ours ? ' <strong style="color:var(--gold);">That is a shop account login, not the customer’s own address.</strong>' : ''} An email cannot be unsent.`,
+    what: `a receipt for <strong>${escHtml(e.description || e.type)}</strong>`,
     okLabel: 'Send receipt',
     amount: abs,
-  }))) return;
-  if (btn) { btn.disabled = true; btn.textContent = '…'; }
-  const res = await kcFetch('/api/email', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  }).then(r => r.json()).catch(() => null);
-  if (res && res.success && res.held) {
-    toast(res.note || 'Email is on hold — receipt not sent.', 'warning');
-    if (btn) { btn.disabled = false; btn.textContent = '✉️'; }
-  } else if (res && res.success && res.redirected) {
-    toast(res.note || `Test mode — sent to ${res.sentTo}.`, 'warning');
-    if (btn) btn.textContent = '✅';
-  } else if (res && res.success) {
-    toast(`Receipt emailed to ${res.sentTo}.`, 'success');
-    recordComm(customerId, { type: 'email', text: `Receipt emailed — ${fmtGbp(abs)} ${e.type}` });
-    if (btn) btn.textContent = '✅';
-  } else {
-    toast(res?.error || 'Could not send the receipt.', 'error');
-    if (btn) { btn.disabled = false; btn.textContent = '✉️'; }
-  }
+    log: `Receipt emailed — ${fmtGbp(abs)} ${e.type}`,
+    body,
+  });
 }
 
 // Refund a card payment back to the card (owner-only server-side). Reverses the
@@ -15415,7 +15465,8 @@ async function renderRepairsTab() {
         <td class="kc-date">${r.openedAt ? fmtDateHeb(r.openedAt) : '—'}</td>
         <td>${repairStatusBadge(r.status)}</td>
         <td style="white-space:nowrap;">
-          ${r.status === 'Ready' ? `<button class="action-btn" onclick="openRepairSmsModal('${escHtml(r.id)}')" title="Ready-to-collect message">💬</button>` : ''}
+          ${r.status === 'Ready' ? `<button class="action-btn" onclick="openRepairSmsModal('${escHtml(r.id)}')" title="Ready-to-collect message">💬</button>
+          <button class="action-btn" onclick="emailRepairReady(this, '${escHtml(r.id)}')" title="Email: ready to collect">✉️</button>` : ''}
           <button class="action-btn" onclick="openRemindModal('repair','${escHtml(r.id)}')" title="Remind me">⏰</button>
           <select class="form-input" style="width:120px;padding:5px 8px;font-size:var(--fs-small);"
             aria-label="Status for ${escHtml([r.customerName, r.device].filter(Boolean).join(' — ') || 'this repair')}"
