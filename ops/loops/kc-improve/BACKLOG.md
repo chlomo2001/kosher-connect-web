@@ -1996,6 +1996,21 @@ DISCOVERY: rendering real screens in the harness in states nobody had looked at
 - Loading states, focus visibility, contrast in both themes, dark-rule pairing,
   and touch targets at 390 — all already green.
 
+## Weekend blocks — 21 Aug 2026, evening (owner away; standing ff instruction)
+
+Worked from the owner's leaving brief: Epos ideas as far as they safely go,
+other SaaS catches, ff everything non-money after a green gate WITH ITS EXIT
+CODE CHECKED (a lesson bought mid-evening — see `cc6f61d`).
+
+| Block | Shipped | What |
+|---|---|---|
+| A | `11c2eb7` | Manual stamp: date + content fingerprint, on screen, in MANUAL.md, and at the foot of every printed sheet; test forces the date forward when the words change |
+| B | `c1f69f7` | E1's missing third: `/api/cron/digest` at 06:30 (after the sweep), sending only through the gated `sendEmail`; owner's flips are `DIGEST_TO` + `MAIL_LIVE` |
+| C | `6e173b5` | 📌 Pop-up notes: card banner, page banner, till toast; escaped; 140-char cap; the loud channel kept scarce |
+| D | `1408bb6` + `cc6f61d` | E4 stock story: derived trail, confessed opening figure, impossible counts called proven discrepancies. Second sha is the missing manual shot AND the ship-script fix after the gate ran red and shipped anyway |
+| E | `6216eff` | STOCKLOW sweep tasks on the dashboard's own rule, closing on recovery; digest group added |
+| F | `PENDINGF` | Common-jobs strip on /manual, drawn live from `lib/guides.mjs` (test makes a pasted question unshippable), print-hidden like the contents |
+
 ## UX/UI night — 21 Aug 2026 (03:20–05:30)
 
 `audit-all.sh` reported clean, so the night started by not believing it. It had

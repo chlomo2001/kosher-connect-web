@@ -4,6 +4,7 @@ import ThemeToggle from '../components/ThemeToggle'
 import AppStyles from '../components/AppStyles'
 import { requireStaffCookie } from '../lib/pageAuth'
 import { SCREENS, screensOf, manualProgress, manualStampLine } from '../lib/manual.mjs'
+import { GUIDES } from '../lib/guides.mjs'
 
 // /manual — the whole system, one screen at a time, on one printable page.
 //
@@ -177,6 +178,27 @@ export default function Manual({ shots = {} }) {
             per page, which is the whole trick. A held printout can be checked
             against the live page without hunting for its first sheet. */}
         <div className="kc-man-stampfoot" aria-hidden="true">Kosher Connect manual · {manualStampLine()}</div>
+
+        {/* Common jobs — the Virtual Mail idea of a task-shaped strip before
+            the reference (its navigation map opens with "Common shortcuts",
+            then the full key-by-key map). DERIVED from lib/guides.mjs at
+            render, never a second copy of any question or step — the guides
+            answer these in the app under ❓, and this strip only says which
+            jobs are already written out. Hidden in print for the same reason
+            the contents is: on paper it points at a button paper doesn't
+            have. */}
+        <nav className="kc-man-jobs" style={{ margin: '0 0 18px', padding: '12px 14px', borderRadius: 10,
+          border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+          <Heading>Common jobs</Heading>
+          <p style={{ margin: '0 0 8px', fontSize: 'var(--fs-small)', color: 'var(--muted)' }}>
+            These {GUIDES.length} jobs are written out step by step inside the app — press
+            <strong> ❓ How do I…?</strong> on any screen and ask in your own words. This page explains
+            the screens; that button walks the job.
+          </p>
+          <div className="kc-man-toc-grid">
+            {GUIDES.map((g) => <span key={g.id} className="kc-man-job">{g.q}</span>)}
+          </div>
+        </nav>
 
         <nav className="kc-man-toc" style={{ margin: '0 0 26px', padding: '12px 14px', borderRadius: 10,
           border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>

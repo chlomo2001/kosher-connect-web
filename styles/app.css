@@ -4272,6 +4272,7 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
    the print block. */
 .kc-man-stamp { color: var(--muted); font-size: var(--fs-small); white-space: nowrap; }
 .kc-man-stampfoot { display: none; }
+.kc-man-job { color: var(--text); font-size: var(--fs-body); }
 .kc-man-toc a { color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border); }
 .kc-man-toc a:hover { border-bottom-color: var(--text); }
 /* The contents links measured 155x23 on a phone — a whole grid of them one
@@ -4358,7 +4359,7 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
   /* No buttons, no theme switch, no contents list full of dead links — and a
      screen must not be split across a page break between its name and its
      first line, which is where a reader loses the thread. */
-  .kc-man-chrome, .kc-man-toc { display: none; }
+  .kc-man-chrome, .kc-man-toc, .kc-man-jobs { display: none; }
   .kc-man-stampfoot {
     display: block; position: fixed; bottom: 0; left: 0; right: 0;
     font-size: 9px; color: #666; text-align: right;

@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
-*As of 21 Aug 2026 · m-48f3b279 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 21 Aug 2026 · m-2283badd — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -888,6 +888,7 @@ This page: every screen in the system described in order, on one page that print
 
 **On the screen**
 
+- **Common jobs** — The jobs the app can walk you through step by step, listed so a newcomer knows what the ❓ button covers before needing it. Drawn live from the guides themselves — never a second copy — and hidden in print, because on paper it points at a button paper does not have.
 - **Contents** — Jumps to any screen. It is hidden when the page is printed, because a printed list of links is dead paper.
 - **🖨 Print** — Prints the whole manual, laid out so a screen's description is never split across two sheets. This is the copy to hand someone starting on Sunday.
 - **← Back to the app** — Returns to the app. The manual opens in its own tab from the help panel, so it can be read alongside the work rather than instead of it.
