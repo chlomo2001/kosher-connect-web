@@ -14809,6 +14809,10 @@ async function bookingGatePrompt(payload) {
 async function saveNewBooking() {
   const paxList = bkPassengers.filter(p => (p.fullName || '').trim());
   paxList.forEach(p => { p.fullName = capName(p.fullName); });
+  // Read once: the payload sends it to the server, and the receipt needs it to
+  // say HOW they paid. The API answers with paidNow as a boolean and no method,
+  // so this is the only place that knows.
+  const bkPayment = document.getElementById('bkPay').value;
   const payload = {
     customerId:       document.getElementById('bkCustomer').value,
     passenger:        paxList.map(p => p.fullName).join(', '),
@@ -14826,7 +14830,7 @@ async function saveNewBooking() {
     passportOnFile:   document.getElementById('bkPassport').checked,
     passportExpiry:   document.getElementById('bkPassport').checked
                         ? document.getElementById('bkPassportExpiry').value : '',
-    payment:          document.getElementById('bkPay').value,
+    payment:          bkPayment,
     checkinBy:        document.getElementById('bkCheckinBy').value,
     checkinDone:      document.getElementById('bkCheckinDone').checked,
     checkinDate:      document.getElementById('bkCheckinBy').value === 'us'
@@ -14913,8 +14917,15 @@ async function saveNewBooking() {
       travelDate: b.travelDate || '', returnDate: b.returnDate || '',
       bookingRef: b.bookingRef || '',
       total: Number.isFinite(res.charged) ? res.charged : b.price,
+      // A booking payment is all-or-nothing: pages/api/bookings.js posts one
+      // payment for the whole total, or none. So paidNow settles the amount and
+      // there is no part-paid state to carry here.
       paidAmount: res.paidNow ? (Number.isFinite(res.charged) ? res.charged : b.price) : 0,
-      method: null,
+      // HOW they paid, which the receipt could not say. The API returns paidNow
+      // as a boolean and no method, so this comes from what the form submitted
+      // — the same value the ledger row was written with. 'account' is not a
+      // payment, so it stays null and the receipt asks for the money instead.
+      method: res.paidNow && bkPayment !== 'account' ? bkPayment : null,
     },
     smsText: `Hi${bc?.firstName ? ' ' + bc.firstName : ''}, your flight is booked: ${b.route || ''}${b.travelDate ? ', ' + fmtDate(b.travelDate) : ''}${b.bookingRef ? '. Ref ' + b.bookingRef : ''}. Kosher Connect, 0161 531 1386.`,
     again: { label: '✈️ Another booking', sub: bc?.firstName ? `for ${bc.firstName}` : 'new flight', run: () => openNewBookingModal(b.customerId) },

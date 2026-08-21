@@ -227,3 +227,43 @@ test('the confirmation cards send their own kind, not a POS line', () => {
     assert.match(card, /ref: String\(/, `${near} sends no ref, so a re-send mints a second Checkout session`)
   }
 })
+
+// ── how a booking was paid ─────────────────────────────────────────────────
+//
+// The booking receipt could not say HOW they paid: the card passed method:null.
+// pages/api/bookings.js answers with `paidNow` as a boolean and no method, so
+// the only thing that knows is the form that was just submitted.
+//
+// Worth being exact about the shape while here: a booking payment is
+// ALL-OR-NOTHING — the API posts one payment row for the whole total, or none —
+// so there is no part-paid booking at save time and paidAmount is settled by
+// paidNow alone.
+test('a paid booking says how, and "on account" is not a way of paying', () => {
+  const i = SRC.indexOf("kind: 'booking'")
+  const card = SRC.slice(i, i + 1800)   // the block gained comments; keep the window ahead of it
+  assert.match(card, /method: res\.paidNow && bkPayment !== 'account' \? bkPayment : null/,
+    'the receipt must name the method, and must not call "on account" a payment')
+  // Read once, from the form, and used for both the payload and the receipt —
+  // two getElementById reads could disagree if the select changed between them.
+  assert.match(SRC, /const bkPayment = document\.getElementById\('bkPay'\)\.value;/)
+  assert.equal((SRC.match(/getElementById\('bkPay'\)\.value/g) || []).length, 1,
+    'bkPay is read in more than one place again')
+  assert.match(SRC, /payment:\s+bkPayment,/, 'the payload must send the same value')
+})
+
+test('an unpaid booking carries no method at all', () => {
+  // moneyRows only prints "by <method>" on a settled or part-settled receipt,
+  // and an on-account booking has neither.
+  const t = text(B.buildBooking(COPY, WHO, {
+    route: 'MAN–TLV', travelDate: '2026-11-12', total: 410, paidAmount: 0, method: null,
+  }, { payUrl: PAY }).html)
+  assert.match(t, /£410\.00 is still to pay/)
+  assert.doesNotMatch(t, / by /)
+})
+
+test('a paid booking reads like every other paid receipt', () => {
+  const t = text(B.buildBooking(COPY, WHO, {
+    route: 'MAN–TLV', travelDate: '2026-11-12', total: 410, paidAmount: 410, method: 'card',
+  }, {}).html)
+  assert.match(t, /Paid in full by Card — thank you\. Nothing further to pay on this booking\./)
+})
