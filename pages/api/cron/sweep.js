@@ -401,6 +401,41 @@ async function handler(req, res) {
     counts.travelClosed = travelClosed
     })
 
+    // ── Low stock → a task, not just a badge (E1, the alert it was modelled
+    // on). The dashboard counts items at or below their warn level and waits to
+    // be looked at; Epos Now POSTS the same fact every morning. The task is the
+    // push half — it lands on the Tasks screen today and in the morning digest
+    // once that is armed. The rule is THE DASHBOARD'S OWN, verbatim
+    // (quantity <= low_stock_at, active items only): two answers to "what is
+    // low" is the drift this repo keeps paying for.
+    await section('stock-low', async () => {
+      const items = await db.select('stock_items', 'select=id,company,model,quantity,low_stock_at,active&active=is.true')
+      let raised = 0
+      const lowIds = new Set()
+      for (const i of items) {
+        if ((i.quantity ?? 0) > (i.low_stock_at ?? 1)) continue
+        lowIds.add(String(i.id))
+        const name = `${i.company || ''} ${i.model || ''}`.trim() || 'Stock item'
+        await upsertOpenTask({
+          reference: `STOCKLOW-${i.id}`,
+          title: `Running out — ${name} (${i.quantity ?? 0} left, warns at ${i.low_stock_at ?? 1})`,
+          priority: 'medium',
+          notes: `Reorder or retire. The count and its story are on the Shop tab (edit the item → 📜 Story).`,
+        })
+        raised++
+      }
+      counts.stockLowTasks = raised
+
+      // Close STOCKLOW tasks whose item has been restocked or retired — the
+      // shelf recovering is the task being done, whoever did it.
+      const open = await db.select('tasks', 'select=id,reference&done=is.false&reference=like.STOCKLOW-*')
+      let closed = 0
+      for (const t of open) {
+        if (!lowIds.has(t.reference.slice('STOCKLOW-'.length))) closed += await closeOpenTask(t.reference)
+      }
+      counts.stockLowClosed = closed
+    })
+
     await section('pickups', async () => {
     // ── 1b. Reservation pickups due (booked, start date arrived) ──
     const pickups = await db.select(

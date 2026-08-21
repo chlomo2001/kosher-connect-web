@@ -189,7 +189,7 @@ test('it summarises tasks and derives nothing of its own', () => {
   }
   // Every group the sweep can raise has a home here.
   const keys = GROUPS.map(([k]) => k)
-  for (const k of ['OVERDUE', 'BALANCE', 'PASSPORT', 'PICKUP', 'SIMDUE', 'FLIGHT', 'VN', 'SIMMAIL']) {
+  for (const k of ['OVERDUE', 'BALANCE', 'PASSPORT', 'PICKUP', 'SIMDUE', 'FLIGHT', 'VN', 'SIMMAIL', 'STOCKLOW']) {
     assert.ok(keys.includes(k), `${k} tasks would fall into "other"`)
   }
 })
