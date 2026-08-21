@@ -137,3 +137,20 @@ idea of selling it separately.
 - [Multi Site Manager](https://www.eposnow.com/us/store/software/apps/multi-site-manager/)
 - [Epos Now Payments — Offline Mode](https://support.eposnow.com/s/article/Epos-Now-Payments-Offline-Payments?language=en_US)
 - [Capterra reviews](https://www.capterra.com/p/152638/Epos-Now/reviews/) · [Merchant Maverick](https://www.merchantmaverick.com/reviews/epos-now-retail/) · [Sonary](https://sonary.com/b/epos-now/epos-now+pos/)
+
+
+## Where the six stand — updated 21 Aug, evening
+
+| | Idea | State |
+|---|---|---|
+| E1 | Be told, don't look | **Built end to end, held at the switch.** `lib/dailyDigest.mjs` + `lib/digestEmail.mjs` + `pages/api/cron/digest.js` (06:30, after the sweep), and the sweep now raises `STOCKLOW-*` tasks — the low-stock alert E1 was modelled on. What remains is exactly two Vercel env flips, both the owner's: `DIGEST_TO` and `MAIL_LIVE`. |
+| E2 | Credit limit + statement | Not started — money surface, owner-held. |
+| E3 | Cash up per shift | Not started — money-adjacent, owner-held. |
+| E4 | Stock history as a trail | **Built.** 📜 Story on every stock item: derived from goods-in and sales, opening figure confessed, impossible arithmetic called a proven discrepancy. `lib/stockStory.mjs`, mirror, 7 tests. |
+| E5 | Loyalty as a customer type | Not started — pricing surface, owner-held. |
+| E6 | Customer attached before the sale | Narrow half shipped earlier (unpaid walk-ins refused server-side); the fuller till flow is UX-loop territory. |
+
+From the same read but the KB screenshots rather than the marketing pages:
+**Pop Up Notes shipped** (📌 on the customer: card banner, page banner, till
+toast). Refund/discount/no-sale REASONS remain the best unbuilt catch — held
+only because they sit on the refund path, which is money surface.
