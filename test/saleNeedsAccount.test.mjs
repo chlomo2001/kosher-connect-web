@@ -78,3 +78,22 @@ test('an absent paidNow is not read as "on account"', () => {
   assert.match(API, /b\.paidNow === false/)
   assert.doesNotMatch(API, /if \(!b\.paidNow && \(!b\.customerId/)
 })
+
+// ── E6's remaining half: the rule said at decision time ────────────────────
+//
+// The hard stop fired at CHARGE — after the basket was scanned, with the queue
+// watching. The tender area now carries the same sentence the moment "Paid
+// now" is unticked on a walk-in, where it costs nothing. The guard itself is
+// unchanged and these tests above still hold it; this holds the earlier echo.
+test('the tender area says the rule the moment it is decided', () => {
+  const CODE = SRC.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n')
+  const fn = CODE.match(/function posRenderTender\(\) \{[\s\S]*?\n\}/)
+  assert.ok(fn, 'posRenderTender not found')
+  assert.match(fn[0], /!paid && \(!custVal \|\| custVal === 'walkin'\)/,
+    'the advisory must key on the same condition as the guard')
+  assert.match(fn[0], /On account needs a customer/,
+    'and say the same thing the refusal says, so nobody meets two wordings')
+  const adv = fn[0].indexOf('kc-popnote')
+  const paint = fn[0].indexOf('el.innerHTML = html')
+  assert.ok(adv > -1 && paint > -1 && adv < paint, 'the advisory must be part of the paint, not an afterthought')
+})

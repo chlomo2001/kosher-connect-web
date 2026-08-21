@@ -17582,6 +17582,17 @@ function posRenderTender() {
         <span id="posChange" style="font-weight:700;font-size:var(--fs-ui);margin-left:auto;"></span>
       </div>`;
   }
+  // The on-account rule, said at the moment it is DECIDED rather than at the
+  // charge (E6's remaining half). Unticking "Paid now" on a walk-in used to
+  // read as accepted — the operator scanned on, pressed 💷 Charge, and only
+  // then met the refusal, with the queue watching. The hard stop in saveSale
+  // (and in pages/api/shop.js — the browser is not the only caller) stands
+  // unchanged; this is the same sentence, earlier, where it costs nothing.
+  if (!paid && (!custVal || custVal === 'walkin')) {
+    html += `
+      <div class="kc-popnote" style="margin:0 0 8px;">On account needs a customer — a walk-in has
+        no account to put it on. Pick who it is above, or tick "Paid now".</div>`;
+  }
   el.innerHTML = html;
   posChangeCalc();
 }
