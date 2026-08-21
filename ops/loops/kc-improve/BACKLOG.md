@@ -2030,16 +2030,24 @@ clean.`, no ✗ anywhere, exit 0 — and after row 1 that sentence means somethi
       be a private home, and putting somebody's home on a live public website is
       not a gap a script gets to close. Two ways out and both are his — publish
       it, or move the registered office to an agent's address and publish that.
-      `lib/company.mjs` carries a commented-out `registeredOffice:` slot with the
-      reasoning, so whoever does it does not have to rediscover any of this.
+      Address confirmed against the live register the same day: Companies House
+      shows "158 Cromwell Road, Salford, United Kingdom, M6 6DE", which is what
+      shipped.
 
-- [ ] **P2 · XS** 🔒 — **Check whether the annual accounts are overdue.** The
-      register listing read on 21 Aug says accounts to 31 May 2025 were **due by
-      28 February 2026** — a date now nearly six months past. That does NOT mean
-      they are late: the listing came through a search result rather than a live
-      read of the register (direct fetching is blocked here), so it may simply
-      predate a filing. Worth thirty seconds on Companies House to be sure,
-      because the penalty for late filing climbs with time.
+- [x] **P2 · XS — CHECKED 21 Aug, and it was a FALSE ALARM.** Nothing is
+      overdue. The owner opened the live register: **accounts to 31 May 2025 are
+      filed**, the next are for 31 May 2026 and not due until **28 February
+      2027**, the confirmation statement was filed 26 May 2026 with the next due
+      9 June 2027, and the company is Active.
+      The scare came from a search snapshot that was a YEAR stale — it reported
+      the 2025 accounts as still due by 28 Feb 2026. Flagged at the time as "may
+      simply predate a filing" rather than as a problem, and that hedge was the
+      right call: direct fetching of the register is blocked by this
+      environment's egress policy, so search is the only route from here and its
+      freshness cannot be assumed. **A search result about a live register is a
+      lead, not a fact.**
+      Recorded rather than deleted, because a false alarm that vanishes silently
+      gets raised again by the next person to run the same search.
 
 ### Checked and genuinely clean (so nobody re-checks them)
 
