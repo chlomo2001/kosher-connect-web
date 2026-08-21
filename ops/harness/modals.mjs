@@ -161,6 +161,42 @@ export const TRANSIENTS = [
   // which is exactly why the tab sweep never reaches it: the sweep renders
   // tabs, and the till is what the shop tab becomes once you press Sell.
   ['till',          'shop', `openSaleModal()`, 'body.pos-mode #mainContent', `closePosView()`],
+  // The two house dialogs, which nothing here had ever opened. They are the
+  // ask before every destructive action in the app — deleting a customer,
+  // removing a team member, charging a card, retiring a shop item — and on
+  // 21 Aug they took over eighteen questions that used to be window.confirm
+  // and window.prompt, so the sweep not covering them stopped being tolerable.
+  //
+  // Called the way the app calls them, not built by hand: `api.confirmDelete`
+  // is the real builder for ten of those questions, and the message text is
+  // lifted verbatim from a real call site. Both closers answer "no", so no
+  // entry here deletes, charges or patches anything.
+  //
+  // `void`, and it is load-bearing. Every other opener returns undefined, but a
+  // dialog opener returns the PROMISE the dialog resolves when it is answered —
+  // and `await page.evaluate(js)` waits on a returned promise. The runner sat
+  // waiting for an answer while the only thing that could answer was the closer
+  // thirty lines below, which it never reached. The first run of these four
+  // wedged the sweep for half an hour and printed nothing at all.
+  //
+  // And `\\n`, not `\n`: these openers are TEMPLATE LITERALS, so a single
+  // backslash-n becomes a real newline in the JS handed to page.evaluate —
+  // inside a single-quoted string, which is a syntax error.
+  ['confirm-delete', 'customers',
+    `void window.api.confirmDelete('Delete "Miriam Cohen"?\\n\\nThis cannot be undone.', 'Delete')`,
+    '#kcConfirm .modal', `kcConfirmDone(false)`],
+  // The longest message any of them carries, which is the one that would wrap
+  // badly first at 320px with Simple Mode text.
+  ['confirm-long',  'settings',
+    `void window.api.confirmDelete('Remove YOURSELF from the team?\\n\\nYou will be signed out immediately and lose all access. Only possible while another admin remains.', 'Remove')`,
+    '#kcConfirm .modal', `kcConfirmDone(false)`],
+  // kcPrompt asking for money — a decimal keypad and a £ label.
+  ['prompt-charge', 'customers', `void chargeCardOnFile(window.__kc.customer)`,
+    '#kcPrompt .modal', `kcPromptDone(null)`],
+  // kcPrompt with a pre-filled value, selected on open. Cancelling returns
+  // before patchTask, so the task id does not have to exist.
+  ['prompt-snooze', 'tasks', `void snoozeTask('none', 'pick')`,
+    '#kcPrompt .modal', `kcPromptDone(null)`],
 ]
 
 // Run directly to audit the modals; import it (css-diff.mjs does) to reuse

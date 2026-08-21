@@ -1975,3 +1975,40 @@ DISCOVERY: rendering real screens in the harness in states nobody had looked at
   no handler + sharing a row with a real control).
 - Loading states, focus visibility, contrast in both themes, dark-rule pairing,
   and touch targets at 390 — all already green.
+
+## UX/UI night — 21 Aug 2026 (03:20–05:30)
+
+`audit-all.sh` reported clean, so the night started by not believing it. It had
+printed a ✗ and signed off green in the same run, which turned out to be a
+defect in the sweep rather than a fluke — and the finding it was sitting on was
+real. After that the ground was the app's own dialogs: eighteen questions that
+were still the browser's rather than the shop's.
+
+| # | Shipped | What it was | Found by |
+|---|---|---|---|
+| 1 | `0281a43` | `public.mjs` counted its failures, printed "2 public-page check(s) failed" and exited **0** — the only one of nineteen harness scripts with no exit code — so `run()` saw success and the sweep said "all checks reported clean". `report()`'s return was thrown away too, so public-page contrast failures counted as nothing. And `tail -3 \| sed -n 1p` was showing one line of a two-line finding | reading the sweep's own output against its exit code |
+| 2 | `bf59319` | The /manual contents links measured 155×23 on a phone — 26 of them, in **both** languages — under the 24px the rest of the app meets. This is the finding #1 had been hiding | the sweep, once it could fail |
+| 3 | `4ae326e` | Eighteen dialogs were `window.confirm`/`window.prompt`: no dark mode, no text-size setting, no RTL, and phone chrome saying the BROWSER is asking at the moment the shop asks whether to delete a customer. `api.confirmDelete` was ten of them in one line | grep for native dialogs beside the house `kcConfirm`/`kcPrompt` |
+| 4 | `dd21ab5` | Nothing in `ops/harness/` had ever opened `kcConfirm` or `kcPrompt`, though they are the ask before every destructive action — and the modal runner measures contrast on the live dialog, so they had never been contrast-checked either | writing an ad-hoc 320px check for #3 and noticing it would be thrown away |
+
+### Checked and genuinely clean (so nobody re-checks them)
+
+- **Accessible names, all 15 tabs.** Every button, link, input, select and
+  textarea computes a name the way a screen reader would (aria-labelledby →
+  aria-label → `<label for>` → wrapping label → title → text). **Zero** without
+  one, and placeholders were deliberately not counted as names.
+  A regex over `main.js` had claimed five icon-only buttons with no name; all
+  five were false — the pattern stopped at the first `${…}` and never saw the
+  label after the icon (`✓ ${okLabel}`, `→ ${g.go}`, `£${n}`).
+  Measure the rendered DOM, not the template source.
+- **The scroll-wheel money hazard does not reproduce.** A focused
+  `type="number"` used to take a wheel notch as an increment, which would have
+  silently changed amounts on the charge-the-card dialog and the POS tender box.
+  Filled the charge box with "20", focused, hovered, sent one notch: unchanged.
+  Chromium no longer does this. Only the cosmetic spinner is left, across 51
+  inputs, and that is not worth a global change on its own. Firefox is not
+  available in this container, so no cross-browser claim is made either way.
+- **The new dialogs at 320px with Simple Mode text largest.** `.modal`'s inline
+  `width:430px`/`460px` does not defeat the stylesheet's `max-width:95vw`:
+  304px wide inside a 320px viewport, 48px buttons, no inner overflow, no
+  sideways page scroll.
