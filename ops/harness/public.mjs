@@ -399,11 +399,20 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       }
     }
   }
-  if (process.argv.includes('--contrast')) report(contrastAll, `the public pages (${arg('--theme', 'light')})`)
+  // `report` RETURNS how many it found, and dropping that return was half the
+  // reason this script could print failures and still exit 0.
+  if (process.argv.includes('--contrast')) bad += report(contrastAll, `the public pages (${arg('--theme', 'light')})`)
   if (wantTargets) {
     if (targetsBad.length) { bad += targetsBad.length; targetsBad.forEach((t) => console.log('✗ ' + t)) }
     else console.log('no public target under 24x24 on a coarse pointer')
   }
   console.log(bad ? `\n${bad} public-page check(s) failed` : '\nevery public page renders clean in both languages')
   await browser.close()
+  // Every other script in ops/harness/ ends this way — cardfit, clipped, focus,
+  // modals, render, textscale, theme-pairs, all nineteen of them. This one did
+  // not, and it was the only one, so `run()` in audit-all.sh saw success from a
+  // check that had just printed "2 public-page check(s) failed" and went on to
+  // say "AUDIT: all checks reported clean." A check nobody can fail is not a
+  // check. Set rather than process.exit() so the close above actually happens.
+  process.exitCode = bad ? 1 : 0
 }

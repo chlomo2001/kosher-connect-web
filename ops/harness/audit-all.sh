@@ -184,17 +184,25 @@ run "staff app · Simple Mode text sizes, every tab" \
 
 # 320 as well as the default 390/1280: the portal's top bar was overflowing at
 # 320 in English and up to 375 in Hebrew, and no sweep had ever run below 390.
+# `tail -3 | sed -n 1p` picked ONE line out of the tail, and when a check found
+# more than one thing that line was whichever failure happened to land third
+# from the end. On 21 Aug the touch-target check found the /manual contents
+# links short in BOTH languages and this printed only the Hebrew one — half a
+# finding reads as a smaller problem than it is. Drop the per-page ✓ lines
+# instead of counting from the end: every ✗ survives, the verdict survives, and
+# the log stays about as short. (grep -v always has the verdict line to print,
+# so it cannot exit 1 on a clean run and invent a failure under pipefail.)
 run "public pages · render + RTL, en and he" \
-  bash -eo pipefail -c 'node ops/harness/public.mjs --width 320,390,1280 | tail -1'
+  bash -eo pipefail -c 'node ops/harness/public.mjs --width 320,390,1280 | grep -v "^✓ "'
 
 run "public pages · touch targets (coarse pointer)" \
-  bash -eo pipefail -c 'node ops/harness/public.mjs --targets --width 390 | tail -3 | sed -n 1p'
+  bash -eo pipefail -c 'node ops/harness/public.mjs --targets --width 390 | grep -v "^✓ "'
 
 # All three states a public page can be painted in. dark-os is not a duplicate
 # of dark: /welcome and the legal shell carry their own prefers-color-scheme
 # palettes, so it exercises a different set of rules entirely.
 run "public pages · contrast, every theme state" \
-  bash -eo pipefail -c 'for t in light dark dark-os; do node ops/harness/public.mjs --contrast --theme $t | tail -3 | sed -n 1p; done'
+  bash -eo pipefail -c 'for t in light dark dark-os; do node ops/harness/public.mjs --contrast --theme $t | grep -v "^✓ "; done'
 
 run "dark rules written only once" \
   node ops/harness/theme-pairs.mjs
