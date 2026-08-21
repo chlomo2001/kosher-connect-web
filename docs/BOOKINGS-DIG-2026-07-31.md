@@ -294,3 +294,68 @@ way the Simplifly invoice was.
 - The searches themselves are worth keeping:
   `from:wizzair.com subject:"electronic invoice" after:2026/07/20` isolates the
   document batch; the eleven refs OR-ed together finds everything per booking.
+
+
+## What one PNR's invoices actually say — 21 Aug 2026
+
+Three invoices opened for **XU2WWH**, and they break the reconciliation plan
+that has been assumed since 31 July. Not one invoice per booking. Not GBP. Not
+one customer per PNR.
+
+| Invoice | Invoice date | Performance | Lines | Total |
+|---|---|---|---|---|
+| BWUK21691218 | 2026.07.09 | 2026.07.08 | WIZZ Discount Club Group €59.99 · Flight LGW-TLV / TLV-LTN €426.37 | **+€486.36** |
+| BWUK21843070 | 2026.07.21 | 2026.07.20 | Flight LGW-TLV / TLV-LTN | **+€8,385.75** |
+| BWUK21992332 | 2026.08.03 | 2026.07.23 | Flight TLV-LTN | **−€8,811.15** |
+
+Net across the three: **+€60.96**.
+
+Flight tickets total €426.37 + €8,385.75 = **€8,812.12**; the credit is
+**€8,811.15**. So the flights came back essentially in full, and what Wizz kept
+is the Discount Club fee: €60.96 − €59.99 = **€0.97**, a fare rounding. Checked
+with a calculator rather than by eye, because the whole point of this section is
+that the numbers are not what anyone assumed.
+
+### Four traps, each of which would produce a wrong reversal
+
+1. **There is more than one invoice per PNR, and they are not all charges.**
+   XU2WWH has at least three — two positive, one negative. "The invoice for the
+   booking" is not a thing. Only the **net across every invoice carrying that
+   PNR** means anything, and the 3 August batch is the credit leg alone.
+
+2. **The invoices are in EUR. KC's ledger is GBP.** Every figure above is euro.
+   What actually landed back on a card is a sterling amount at that day's rate
+   plus whatever the card issuer took, and it will not equal the euro figure.
+   A reversal posted from these numbers would be wrong in the third place before
+   anyone even asks which customer it belongs to.
+
+3. **One PNR can carry several KC customers.** €8,812 of flight tickets on a
+   single reference, booked as "WIZZ Discount Club **Group**", is not one
+   passenger. This finally explains the thing that has blocked a ref-keyed
+   reversal since 31 July: XU2WWH appears **twice** in the sheet (£360 and £145)
+   because those are **two KC customers on one group booking**, not two
+   bookings and not a duplicate. The ambiguity was real and the answer is
+   benign.
+   It also means **the per-PNR credit cannot be divided among customers without
+   knowing who was on it.** €8,811.15 back on one reference says nothing on its
+   own about what any individual is owed.
+
+4. **The Discount Club fee is not refunded.** Whatever share of it a customer
+   paid, they are not getting back, and a reversal of "what they paid" would
+   over-credit them by that share.
+
+### What follows
+
+The 31 July plan — reverse the eleven booking charges for the amounts paid —
+was already known to over-credit. These invoices show it is worse than that: the
+inputs are in the wrong currency, at the wrong granularity, and incomplete
+without the positive legs.
+
+**What is actually needed per PNR**, before any ledger entry:
+its full invoice set (not just the 3 August credit), the net in EUR, the
+sterling that reached the card, and **which KC customers were on it and for how
+much each**. The last one is KC's own data, not Wizz's.
+
+Nothing should be posted until that exists for every reference — and the
+question of whether the eleven are even the whole set is still open (the 23 July
+batch carries refs the sheet does not).
