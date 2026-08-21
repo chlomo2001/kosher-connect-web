@@ -408,11 +408,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
   console.log(bad ? `\n${bad} public-page check(s) failed` : '\nevery public page renders clean in both languages')
   await browser.close()
-  // Every other script in ops/harness/ ends this way — cardfit, clipped, focus,
-  // modals, render, textscale, theme-pairs, all nineteen of them. This one did
-  // not, and it was the only one, so `run()` in audit-all.sh saw success from a
-  // check that had just printed "2 public-page check(s) failed" and went on to
-  // say "AUDIT: all checks reported clean." A check nobody can fail is not a
-  // check. Set rather than process.exit() so the close above actually happens.
+  // Every other runnable check in ops/harness/ ends this way — cardfit,
+  // clipped, focus, modals, render, textscale, theme-pairs and eleven more,
+  // eighteen in all. (contrast.mjs is the twentieth file and has no exit code
+  // because it is a library, not a check.) This was the only one that could not
+  // fail, so `run()` in audit-all.sh saw success from a check that had just
+  // printed "2 public-page check(s) failed" and went on to say "AUDIT: all
+  // checks reported clean." A check nobody can fail is not a check. Set rather
+  // than process.exit() so the close above actually happens.
   process.exitCode = bad ? 1 : 0
 }
