@@ -43,7 +43,30 @@ window.api = {
 
   deleteCustomer: (id) => kcFetch('/api/customers?id=' + id, { method: 'DELETE' }).then(r => r.json()),
 
-  confirmDelete: (msg) => Promise.resolve(window.confirm(msg)),
+  // The house dialog, not the browser's. kcConfirm is themed, follows the
+  // text-size setting, keeps focus off the trigger button and looks like the
+  // rest of the app; window.confirm is a system sheet that does none of those
+  // and on a phone reads as a browser warning rather than a question the shop
+  // asked. Every one of the ten callers already awaits this, so the swap lives
+  // here and touches nothing else.
+  //
+  // The messages all share one shape — a question, a blank line, then what it
+  // means — so the question becomes the dialog's title and the rest its body.
+  // ESCAPED on the way in: kcConfirm takes `body` as HTML because other callers
+  // hand it markup, and these carry customer names, email addresses and item
+  // codes typed by a person.
+  //
+  // (Two callers are not deletions at all — the duplicate-name and the
+  // house-Gmail question on saving a customer. The name is older than they are;
+  // renaming it is a separate change to a separate set of call sites.)
+  confirmDelete: (msg, okLabel = 'Delete') => {
+    const [head, ...rest] = String(msg == null ? '' : msg).split('\n\n');
+    return kcConfirm({
+      title: head,
+      body: escHtml(rest.join('\n\n')).replace(/\n/g, '<br>'),
+      okLabel,
+    });
+  },
 
   exportCSV: () => kcFetch('/api/export-csv').then(async r => {
     if (!r.ok) return { success: false };
@@ -6749,8 +6772,11 @@ let kcPromptResolve = null;
 // phone number — a keypad is right for those and wrong for an address, and a
 // prompt that shows the wrong keyboard on a phone is a prompt people mistype
 // into. Defaulted rather than switched, so the existing callers are untouched.
+// `value` pre-fills the box. window.prompt took a second argument for this and
+// the snooze picker used it — offering a date a fortnight out beats an empty
+// field on a phone. Defaults to empty, so no existing caller changes.
 function kcPrompt({ title = '', body = '', label = '', placeholder = '', okLabel = 'Save', skipLabel = null,
-  type = 'tel', inputmode = 'tel', autocomplete = 'off' }) {
+  type = 'tel', inputmode = 'tel', autocomplete = 'off', value = '' }) {
   return new Promise(resolve => {
     kcPromptResolve = resolve;
     kcSaveReturnFocus('kcPrompt');
@@ -6770,7 +6796,7 @@ function kcPrompt({ title = '', body = '', label = '', placeholder = '', okLabel
         <div class="form-group">
           <label class="form-label" for="kcPromptInput">${escHtml(label)}</label>
           <input class="form-input" id="kcPromptInput" type="${escHtml(type)}" inputmode="${escHtml(inputmode)}" dir="ltr"
-            placeholder="${escHtml(placeholder)}" autocomplete="${escHtml(autocomplete)}"
+            placeholder="${escHtml(placeholder)}" autocomplete="${escHtml(autocomplete)}" value="${escHtml(value)}"
             onkeydown="if(event.key==='Enter'){event.preventDefault();kcPromptDone(document.getElementById('kcPromptInput').value)}">
         </div>
         <div class="modal-actions">
@@ -6783,7 +6809,12 @@ function kcPrompt({ title = '', body = '', label = '', placeholder = '', okLabel
       </div>`;
     el.classList.remove('hidden');
     const input = el.querySelector('#kcPromptInput');
-    if (input) { try { input.focus({ preventScroll: true }); } catch { input.focus(); } }
+    if (input) {
+      try { input.focus({ preventScroll: true }); } catch { input.focus(); }
+      // Selected, not just focused: a pre-filled value you have to clear by
+      // hand is slower than an empty box, which would defeat offering one.
+      if (value) { try { input.select(); } catch { /* type has no selection */ } }
+    }
   });
 }
 function kcPromptDone(value) {
@@ -6904,8 +6935,15 @@ function kcViewMatches(key, v) {
   }
   return (v.filter || '') === cur.filter;
 }
-function kcViewSaveCurrent(key) {
-  const name = (prompt('Name this view (e.g. "Overdue", "This week"):') || '').trim().slice(0, 24);
+async function kcViewSaveCurrent(key) {
+  const raw = await kcPrompt({
+    title: 'Save this view',
+    body: 'The filter and sort you have set now, kept under a name you can come back to.',
+    label: 'Name it', placeholder: 'Overdue', okLabel: 'Save view',
+    type: 'text', inputmode: 'text',
+  });
+  if (raw === null) return;
+  const name = raw.trim().slice(0, 24);
   if (!name) return;
   const list = kcSavedViews(key).filter(v => v.name !== name); // same name = overwrite
   list.unshift({ name, ...kcViewSnapshot(key) });
@@ -8464,7 +8502,16 @@ async function reviewCustomerDoc(custId, id, action) {
   // their portal next to a "Not accepted" badge. Escape backs out entirely.
   let note;
   if (action === 'reject') {
-    note = prompt('Why is it not accepted? This note shows in the customer’s portal (optional):');
+    note = await kcPrompt({
+      title: 'Why is it not accepted?',
+      body: 'This shows in the customer’s portal beside the “Not accepted” badge, so write it to them.',
+      label: 'Reason', placeholder: 'The photo cuts off the bottom edge',
+      okLabel: 'Reject the document', skipLabel: 'No reason',
+      type: 'text', inputmode: 'text',
+    });
+    // Back gives null and abandons the rejection; the skip button gives '' and
+    // rejects without a note. window.prompt could only tell those apart by
+    // Escape, which nobody discovers on a phone.
     if (note === null) return;
     note = note.trim();
   }
@@ -8650,7 +8697,12 @@ function printHouseStatement() {
 }
 
 async function chargeCardOnFile(custId) {
-  const amtStr = prompt('Charge the card on file — amount in £:');
+  const amtStr = await kcPrompt({
+    title: 'Charge the card on file',
+    body: 'How much to take from the card saved on this customer’s account.',
+    label: 'Amount in £', placeholder: '20.00', okLabel: 'Charge the card',
+    type: 'number', inputmode: 'decimal',
+  });
   if (amtStr == null) return;
   const amount = parseFloat(amtStr);
   if (!(amount > 0)) { toast('Enter a valid amount.', 'warning'); return; }
@@ -9077,7 +9129,11 @@ async function elidSetPrimary(customerId, u) {
 }
 async function elidRemoveLine(customerId, u) {
   const c = customers.find(x => x.id === customerId); if (!c) return;
-  if (!confirm(`Unlink ELID account “${u}” from this customer? (The ELID account itself is untouched.)`)) return;
+  if (!(await kcConfirm({
+    title: `Unlink ELID account “${u}”?`,
+    body: 'It stops being linked to this customer here. The ELID account itself is untouched.',
+    okLabel: 'Unlink',
+  }))) return;
   const remaining = elidLinesOf(c).filter(x => x.toLowerCase() !== u.toLowerCase());
   c.elidUsernames = remaining;
   if (!c.elidUsername || c.elidUsername.toLowerCase() === u.toLowerCase()) c.elidUsername = remaining[0] || '';
@@ -11903,7 +11959,7 @@ async function saveCustomer() {
     `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase().replace(/\s+/g, ' ').trim() === nameKey);
   if (nameDup) {
     const proceed = await window.api.confirmDelete(
-      `A customer named "${firstName} ${lastName}" already exists (${nameDup.phone || 'no phone'}).\n\nSave anyway as a separate customer?`
+      `A customer named "${firstName} ${lastName}" already exists (${nameDup.phone || 'no phone'}).\n\nSave anyway as a separate customer?`, 'Save anyway'
     );
     if (!proceed) return;
   }
@@ -11913,7 +11969,7 @@ async function saveCustomer() {
   let contactEmail = email;
   if (contactEmail && isOwnAccountEmail(contactEmail)) {
     const move = await window.api.confirmDelete(
-      `"${contactEmail}" is one of the business's own Gmail addresses (dot/plus variant).\n\nSave it as the ACCOUNT email instead of the customer's contact email?`
+      `"${contactEmail}" is one of the business's own Gmail addresses (dot/plus variant).\n\nSave it as the ACCOUNT email instead of the customer's contact email?`, 'Use as account email'
     );
     if (move) { if (!accountEmail) accountEmail = contactEmail; contactEmail = ''; }
   }
@@ -12009,7 +12065,7 @@ async function deleteCustomer(id) {
     toast('Cannot delete a customer who still has an unreturned rental.', 'error');
     return;
   }
-  const confirmed = await window.api.confirmDelete(`Delete "${c.firstName} ${c.lastName}"?\n\nThis cannot be undone.`);
+  const confirmed = await window.api.confirmDelete(`Delete "${c.firstName} ${c.lastName}"?\n\nThis cannot be undone.`, 'Delete');
   if (!confirmed) return;
   // Ask the server FIRST — a customer with ledger money history is not
   // deletable (append-only wallet), and nothing local should change then.
@@ -15371,7 +15427,11 @@ async function recordTravelAuth(bookingId, customerId, i, name, type, country) {
 }
 
 async function deleteTravelAuthRow(bookingId, id) {
-  if (!confirm('Remove this recorded authorisation?')) return;
+  if (!(await kcConfirm({
+    title: 'Remove this recorded authorisation?',
+    body: 'It comes off this booking.',
+    okLabel: 'Remove',
+  }))) return;
   const res = await window.api.deleteTravelAuth(id);
   if (!res.success) { toast(res.error || 'Could not remove it.', 'error'); return; }
   toast('Removed.', 'success');
@@ -17212,7 +17272,7 @@ async function saveStockItem(itemId) {
 }
 
 async function retireStockItem(itemId) {
-  const ok = await window.api.confirmDelete('Retire this item?\n\nIt disappears from the shop but past sales keep their history.');
+  const ok = await window.api.confirmDelete('Retire this item?\n\nIt disappears from the shop but past sales keep their history.', 'Retire');
   if (!ok) return;
   const res = await kcFetch('/api/shop', {
     method: 'PUT',
@@ -20247,8 +20307,13 @@ async function snoozeTask(id, choice) {
   if (choice === '3days')     { base.setDate(base.getDate() + 3); until = localISO(base); }
   if (choice === 'nextweek')  { base.setDate(base.getDate() + 7); until = localISO(base); }
   if (choice === 'pick') {
-    const d = prompt('Snooze until — a date (2026-08-03, 3/8) or “tomorrow”, “sunday”, “3d”, “next week”:',
-      localISO(new Date(Date.now() + 14 * 86400000)));
+    const d = await kcPrompt({
+      title: 'Snooze until',
+      body: 'A date — 2026-08-03 or 3/8 — or “tomorrow”, “sunday”, “3d”, “next week”.',
+      label: 'When should it come back?', okLabel: 'Snooze',
+      type: 'text', inputmode: 'text',
+      value: localISO(new Date(Date.now() + 14 * 86400000)),
+    });
     if (d == null || !String(d).trim()) return;
     until = kcParseWhen(d);
     if (!until) { toast('Couldn’t read that date — try 2026-08-03, 3/8, “tomorrow” or “sunday”.', 'error'); return; }
@@ -22245,7 +22310,7 @@ async function toggleVNStatus(id, status) {
 }
 
 async function deleteVN(id, number) {
-  const ok = await window.api.confirmDelete(`Delete virtual number "${number}"?\n\nThis cannot be undone.`);
+  const ok = await window.api.confirmDelete(`Delete virtual number "${number}"?\n\nThis cannot be undone.`, 'Delete');
   if (!ok) return;
   const res = await window.api.deleteVirtualNumber(id);
   if (!res.success) { toast(res.error || 'Could not delete.', 'error'); return; }
@@ -23744,7 +23809,11 @@ async function revealBizAccount(id) {
 }
 
 async function retireBizAccount(id, name) {
-  if (!confirm(`Retire "${name}" from the register? (It's kept in the database, just hidden.)`)) return;
+  if (!(await kcConfirm({
+    title: `Retire "${name}" from the register?`,
+    body: 'It is kept in the database, just hidden.',
+    okLabel: 'Retire',
+  }))) return;
   const res = await kcFetch('/api/business-accounts', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ op: 'retire', id }),
@@ -23835,7 +23904,11 @@ async function savePhoneModel(id) {
 }
 
 async function retirePhoneModel(id, name) {
-  if (!confirm(`Take "${name}" off the public guide? (Kept here — you can restore it any time.)`)) return;
+  if (!(await kcConfirm({
+    title: `Take "${name}" off the public guide?`,
+    body: 'It is kept here — you can restore it any time.',
+    okLabel: 'Hide it',
+  }))) return;
   const res = await kcFetch('/api/phone-guide', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ op: 'retire', id }),
@@ -23925,7 +23998,7 @@ async function saveExtraCharge(id) {
 }
 
 async function deleteExtraCharge(id) {
-  const ok = await window.api.confirmDelete('Remove this extra charge?\n\nIt stops applying to new charges; past ones are unaffected.');
+  const ok = await window.api.confirmDelete('Remove this extra charge?\n\nIt stops applying to new charges; past ones are unaffected.', 'Remove');
   if (!ok) return;
   const res = await kcFetch('/api/custom-charges?id=' + encodeURIComponent(id), { method: 'DELETE' })
     .then(r => r.json()).catch(() => null);
@@ -23936,7 +24009,7 @@ async function deleteExtraCharge(id) {
 
 async function deleteRateRow(table, code) {
   const ok = await window.api.confirmDelete(
-    `Remove ${code} from ${table === 'rental_rates' ? 'rental rates' : 'damage charges'}?\n\nExisting rentals keep their frozen prices; only new calculations are affected.`
+    `Remove ${code} from ${table === 'rental_rates' ? 'rental rates' : 'damage charges'}?\n\nExisting rentals keep their frozen prices; only new calculations are affected.`, 'Remove'
   );
   if (!ok) return;
   const res = await window.api.deleteSetting(table, code);
@@ -24065,7 +24138,7 @@ async function toggleEmailAlias(id, enabled) {
 }
 
 async function deleteEmailAlias(id, address) {
-  const ok = await window.api.confirmDelete(`Delete ${address}?\n\nMail sent to it will bounce, and any SMTP password for it stops working.`);
+  const ok = await window.api.confirmDelete(`Delete ${address}?\n\nMail sent to it will bounce, and any SMTP password for it stops working.`, 'Delete');
   if (!ok) return;
   const res = await kcFetch('/api/email-aliases?id=' + encodeURIComponent(id), { method: 'DELETE' })
     .then(r => r.json()).catch(() => null);
@@ -24281,7 +24354,7 @@ async function changeTeamRole(id, role) {
 async function removeTeamMember(id, label, isSelf = false) {
   const ok = await window.api.confirmDelete(isSelf
     ? `Remove YOURSELF from the team?\n\nYou will be signed out immediately and lose all access. Only possible while another admin remains.`
-    : `Remove "${label}" from the team?\n\nTheir access stops immediately. The login account is kept but no longer works for this app.`);
+    : `Remove "${label}" from the team?\n\nTheir access stops immediately. The login account is kept but no longer works for this app.`, 'Remove');
   if (!ok) return;
   const res = await kcFetch('/api/team?id=' + encodeURIComponent(id), { method: 'DELETE' }).then(r => r.json());
   if (!res.success) { toast(res.error || 'Could not remove the member.', 'error'); return; }
@@ -24380,7 +24453,7 @@ async function toggleAutomation(id, enabled) {
 }
 
 async function deleteAutomation(id) {
-  const ok = await window.api.confirmDelete('Delete this automation rule?\n\nAny open tasks it raised stay; it just stops running.');
+  const ok = await window.api.confirmDelete('Delete this automation rule?\n\nAny open tasks it raised stay; it just stops running.', 'Delete');
   if (!ok) return;
   const res = await kcFetch('/api/automations?id=' + encodeURIComponent(id), { method: 'DELETE' }).then(r => r.json());
   if (!res.success) { toast(res.error || 'Could not delete.', 'error'); return; }
