@@ -226,3 +226,71 @@ Also: **36 of the 41 upcoming bookings have no passport on file.** No upcoming
 trip has a passport that expires before its travel date, so nothing is on fire —
 but the passenger data is thin enough that the travel-requirements feature would
 have little to work with even if a destination were set.
+
+
+---
+
+## Where the refund figures actually live — found 21 Aug 2026
+
+The blocker was recorded as "the per-booking refund amount lives in
+`ch7023518@gmail.com`, which sessions can't read". Half right. The owner ran the
+searches on that mailbox and screenshotted the results, and the shape of the
+answer is not what either of us assumed.
+
+**There is no "refund" email.** Searching `refund OR refunded OR "credit note"`
+returns the batch below not because those words appear, but because Wizz's mail
+matches on other grounds. What is actually there is two events:
+
+**23 July 2026 — a mass reservation event.** A batch of
+`⚠️ Important Update Regarding Your Reservation <REF>`, one per booking. Reads
+as a cancellation across a route or a date. Refs visible in the screenshot:
+SLW7XC, ZMKWJP, SPSHHD, JQEQVQ, VU792E, FMLJ8J, XU2WWH, UGSJJB, IMPKJZ, HWGC5D,
+DSCUFH, IKFP7P, GPEQ2A, KU5R4B, BNKYRW, TMZZXC, USSGPK, MN8VSZ — and the list
+continues past the fold ("1–100 of many").
+
+**3 August 2026 — the documents.** `Wizz Air electronic invoice <NO> / <REF>`,
+one per booking, each with a **PDF attached**. Pairs read off the screenshot:
+
+| Invoice | Ref |
+|---|---|
+| DWAM-54418413 | FMLJ8J |
+| DWAM-54418414 | TMZZXC |
+| BWUK21991118 | IMPKJZ |
+| BWUK21991615 | MN8VSZ |
+| BWUK21991046 | HWGC5D |
+| BWUK21992246 | TLKCQC |
+| BWUK21991944 | UGSJJB |
+| BWUK21992332 | XU2WWH |
+| BWUK21991585 | VU792E |
+| BWUK21990870 | IJEVNV |
+| BWUK21990192 | DSCUFH |
+
+### The amount is ONLY in the PDF
+
+Checked, not assumed. A 2023 Wizz electronic invoice sits in the CONNECTED
+mailbox (`earothbart@gmail.com`, BWUK-8867645 / EJ1LVA) and can be read in full:
+the body is boilerplate — "In the attachment, you will find the electronic
+invoice corresponding to your reservation" — and carries **no figure of any
+kind**. Same template, seven digits of invoice number apart.
+
+So forwarding these emails to the connected mailbox would NOT unblock this. The
+Gmail tools available here expose attachment metadata (filename, id, mime type)
+and have no way to fetch the bytes. **The PDFs have to be uploaded to chat**, the
+way the Simplifly invoice was.
+
+### Two things the screenshots settled, and one they raised
+
+- **`XU2WWH` appears ONCE in the invoice list** (BWUK21992332), against TWO rows
+  in the sheet (£360 and £145). If there is genuinely only one invoice for that
+  ref, the two rows are two passengers on ONE booking, not two bookings — which
+  dissolves the ambiguity that has been blocking a ref-keyed reversal. Worth
+  scrolling the 85 results for a second XU2WWH before relying on it.
+- **The 23 July batch contains refs that are not among the eleven** — SLW7XC,
+  ZMKWJP, SPSHHD, JQEQVQ, IKFP7P, GPEQ2A, KU5R4B, USSGPK, and more below the
+  fold. Either those are KC bookings the sheet does not carry, in which case the
+  liability is larger than eleven, or they are not KC's at all. **Nobody should
+  reconcile the eleven until that is known**, because "we owe eleven customers"
+  and "we owe nineteen" are different problems.
+- The searches themselves are worth keeping:
+  `from:wizzair.com subject:"electronic invoice" after:2026/07/20` isolates the
+  document batch; the eleven refs OR-ed together finds everything per booking.
