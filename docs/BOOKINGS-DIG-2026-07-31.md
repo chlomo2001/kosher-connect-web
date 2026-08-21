@@ -424,11 +424,30 @@ So somewhere between **8 and 14** still need telling, and the sheet cannot say
 which. It is still a phone-call list and it still outranks every accounting
 question below — but the list is 8 certain, not 14.
 
-**What would settle it:** Shloime's Sent folder, searched for the references —
-`in:sent (HWGC5D OR JQEQVQ OR KU5R4B OR USSGPK OR XU2WWH OR ZMKWJP)`. The
-forwards are not in the connected mailbox (checked: searching those references
-and `wizz cancelled/refund` over the last 60 days returns nothing), so they went
-from his account and no session here can see them.
+**Settled the same day, and not in the comfortable direction.** The owner ran
+`in:sent (HWGC5D OR JQEQVQ OR KU5R4B OR USSGPK OR XU2WWH OR ZMKWJP)` on the
+sending account. **One thread, for one reference** — "1 of 1".
+
+That thread is HWGC5D and it is dated **19 July**, four days BEFORE the 23 July
+cancellation. It is the original booking flow: itinerary out, a payment request
+for £145, the customer replying "paid", and "Thanks Received". Nothing about a
+cancellation, and nothing at all for the other five references.
+
+So **no cancellation notice was sent to any of the eight**, and column J needs
+rereading. `Email Sent?` almost certainly means *the itinerary went out when the
+booking was made* — not *they were told the flight was cancelled*. Those are
+different facts and the column only ever recorded the first.
+
+If that reading is right — and one thread against six references is strong for
+it — then the six rows marked `Email Sent = True, Contacted = False` are **not**
+quietly-already-handled. They are booked-and-emailed-in-July and told nothing
+since. The range does not narrow to 8; it widens back towards 14, and the
+`Email Sent?` column is evidence about July, not about the cancellation.
+
+**What would still settle the remainder:** the same `in:sent` search over the
+other references — DSCUFH, GPEQ2A, IKFP7P, IMPKJZ, UGSJJB, and the six marked
+contacted — looking specifically for anything dated **after 23 July**. Date is
+the discriminator, not the presence of a thread.
 
 **And the lesson is the one this repo keeps relearning.** Two columns recording
 the same fact, updated by hand, at different times, is a second answer to one
