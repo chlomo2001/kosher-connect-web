@@ -359,3 +359,75 @@ much each**. The last one is KC's own data, not Wizz's.
 Nothing should be posted until that exists for every reference — and the
 question of whether the eleven are even the whole set is still open (the 23 July
 batch carries refs the sheet does not).
+
+
+## The updated sheet answers most of it — 21 Aug 2026
+
+The owner shared the current Wizz tickets spreadsheet. It has moved a long way
+past the eleven rows the 31 July dig was built on. **Not committed** — it holds
+customer names, phone numbers and email addresses, and belongs in the sheet, not
+in the repo. Figures only below.
+
+**39 booking rows · 109 passengers · £11,450 tickets + £3,395 fees = £14,845.**
+
+### The liability is 25 rows, not eleven — and it is £6,690, not £3,190
+
+Cancelled and not yet refunded:
+
+| | |
+|---|---|
+| rows | **25** |
+| passengers | **47** |
+| tickets | £4,860.00 |
+| service fees | £1,830.00 |
+| **total** | **£6,690.00** |
+
+Only two are settled — `EHC93Y` and `VU792E`, both marked `Refunded? = True`.
+
+### The "are the eleven the whole set?" question is ANSWERED: they were not
+
+Every reference that appeared in Wizz's 23 July batch but was missing from the
+old dig is now in the sheet — `SLW7XC`, `ZMKWJP`, `SPSHHD`, `JQEQVQ`, `IKFP7P`,
+`GPEQ2A`, `KU5R4B`, `USSGPK`. That was the right thing to have held the
+reconciliation for: acting on eleven would have missed fourteen.
+
+### The urgent thing is not the ledger
+
+**14 of the 25 have `Contacted = False`.** Their flights are cancelled, KC is
+holding their money, and nobody has told them:
+
+`DSCUFH`, `GPEQ2A`, `HWGC5D` ×2, `IKFP7P`, `IMPKJZ`, `JQEQVQ`, `KU5R4B`,
+`UGSJJB`, `USSGPK`, `XU2WWH` ×3, `ZMKWJP` — £3,435 across 25 passengers.
+
+That is a phone-call list, not a data problem, and it outranks every accounting
+question below.
+
+### And the Wizz invoices turn out NOT to be needed for it
+
+The scale settles it. Wizz credited **€8,811.15** on `XU2WWH` (≈ £7,600). KC's
+sheet records **£650** across 5 passengers on that same reference — three rows,
+£360 + £145 + £145. More than ten times apart, at any exchange rate. So either
+the PNR carries many passengers who are not KC's, or the sheet's "ticket price"
+is not the fare. Either way **the euro credit cannot be passed through to KC
+customers pro-rata**, and trying was always going to produce nonsense.
+
+The way out is that it does not have to be. **Two separate ledgers:**
+
+- **KC ↔ its customers.** What each is owed is what they paid KC, which is in
+  KC's own sheet: £6,690. This needs no Wizz document at all.
+- **Shloime ↔ Wizz.** What Wizz credits against a group PNR is a wholesale
+  matter on the reseller side — the same two-layer shape as ELID.
+
+Conflating them is what made this look unanswerable for three weeks.
+
+### The one decision left, and it is the owner's
+
+Of the £6,690, **£1,830 is service fees** — KC's own work, already done, on
+flights Wizz cancelled. Refundable or not is a business call, not an arithmetic
+one:
+
+- fees refunded → the liability is **£6,690**
+- fees retained → the liability is **£4,860**
+
+Nothing should be posted to any wallet until that is answered, and until the
+fourteen have been rung.
