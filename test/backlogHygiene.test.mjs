@@ -118,7 +118,11 @@ test('the backlogs parse at all — a rule nothing matches proves nothing', () =
 // trip it either.
 // The verb must not be hyphenated: "Full write-up in `docs/…`" is a citation,
 // not a promise, and `write` matched it.
-const PROMISED = /\b(build|create|add|write|make|new)\b(?!-)[^`\n]{0,40}`([\w./[\]-]*\/[\w.[\]-]+\.\w{2,4})`/gi
+// Past tense counts too. "Half built, 21 Aug: `lib/dailyDigest.mjs`" is an
+// item claiming the file exists, and the rule walked past it because `build`
+// does not match `built` — the right verdict reached for the wrong reason,
+// which is not a rule, it is luck.
+const PROMISED = /\b(build|built|create[sd]?|add(?:ed|s)?|write|written|wrote|make|made|new)\b(?!-)[^`\n]{0,40}`([\w./[\]-]*\/[\w.[\]-]+\.\w{2,4})`/gi
 
 test('an open item does not name a file that already exists', () => {
   const guilty = []

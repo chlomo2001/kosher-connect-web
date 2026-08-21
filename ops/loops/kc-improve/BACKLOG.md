@@ -78,11 +78,20 @@ they were found — the standing task's own rule.
 
 - [ ] **P1 · M** — **The shop is told, rather than having to look.** Their
       low-stock alert arrives daily by email; KC computes the same thing and
-      waits on a badge for somebody to notice it. Generalises well past stock —
-      the nightly sweep already knows about renewals, overdue rentals, plans with
-      no payment method and unfiled carrier mail. One quiet morning digest.
-      Building it is loop-safe; SENDING it is 🔒, because live email is
-      HOLD-gated.
+      waits on a badge for somebody to notice it.
+      **Half built, 21 Aug: `lib/dailyDigest.mjs`** — pure, 18 assertions in
+      `test/dailyDigest.test.mjs`. It SUMMARISES THE TASKS THE SWEEP ALREADY
+      RAISES rather than re-deriving anything: overdue rentals, debts, passports,
+      travel paperwork, carrier post and the rest are already tasks, and a second
+      answer to "what needs doing" is the fault that bit this repo three times
+      in one week. Groups by the raiser's own reference prefix, orders high
+      priority → nearest deadline → oldest, caps each group and always says how
+      many it left out.
+      **The other half is the owner's.** Getting it in front of him needs a read
+      and a send, and the send is 🔒 — live email is HOLD-gated. Putting it on a
+      screen instead is a next-action row, which is B2 and owner-held.
+      <!-- backlog-ok: the module exists and is tested; the item stays open for
+      the read and the HOLD-gated send, which are the owner's half -->
 - [ ] **P2 · M** 🔒 — **A credit limit, and a real statement.** Their Customer
       Credit carries a per-customer limit, a balance owed, and a statement over a
       date range with an amount due and a due date. KC's wallet has no line at
