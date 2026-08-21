@@ -5,6 +5,13 @@
   "installCommand": "npm install",
   "framework": "nextjs",
   "crons": [
-    { "path": "/api/cron/sweep", "schedule": "0 6 * * *" }
+    {
+      "path": "/api/cron/sweep",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/digest",
+      "schedule": "30 6 * * *"
+    }
   ]
 }

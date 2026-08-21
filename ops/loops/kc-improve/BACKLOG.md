@@ -90,11 +90,19 @@ they were found — the standing task's own rule.
       **And the email**, `lib/digestEmail.mjs` — renders, does not send, held by
       `test/digestEmail.test.mjs`. Split from the data half so that one keeps
       importing nothing; a test fails if either crosses back.
-      **What is left is the owner's.** A read to fetch the open tasks, and the
-      send — 🔒, because live email is HOLD-gated. Putting it on a screen instead
-      is a next-action row, which is B2 and owner-held.
-      <!-- backlog-ok: the module exists and is tested; the item stays open for
-      the read and the HOLD-gated send, which are the owner's half -->
+      **The read and the hand-off shipped 21 Aug** — `pages/api/cron/digest.js`,
+      scheduled 06:30, deliberately after the 06:00 sweep so it never describes
+      yesterday. It reads the open tasks, builds, and hands to `sendEmail`,
+      whose gate does what it does for receipts: MAIL_LIVE unset → built,
+      logged HELD, nothing leaves. Quiet morning → nothing at all. Held by
+      `test/digestCron.test.mjs` (auth like the sweep, gate-only sending, no
+      writes, scheduled after the sweep — the schedule test goes red if the
+      order flips).
+      **What is left is exactly two env vars, both the owner's:** `DIGEST_TO`
+      (who it goes to; unset → the endpoint skips) and the house `MAIL_LIVE`
+      flip. 🔒
+      <!-- backlog-ok: code complete and scheduled; open only for the two
+      owner-held env flips, DIGEST_TO and MAIL_LIVE -->
 - [ ] **P2 · M** 🔒 — **A credit limit, and a real statement.** Their Customer
       Credit carries a per-customer limit, a balance owed, and a statement over a
       date range with an amount due and a due date. KC's wallet has no line at
