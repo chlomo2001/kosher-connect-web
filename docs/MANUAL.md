@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
-*As of 21 Aug 2026 · m-103335a9 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 21 Aug 2026 · m-48f3b279 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -437,7 +437,8 @@ Stock and the counter: what is on the shelf, what it cost and sells for, and the
 
 **Boxes that open on top of it**
 
-- **stock-item** — Adding or editing one item: its category (phone, SIM, charger, cable, earphones, case, power bank, memory card, car accessory, repair part, accessory or other), code, barcode, brand, name, cost, selling price, quantity, and the level to warn at.
+- **stock-item** — Adding or editing one item: its category (phone, SIM, charger, cable, earphones, case, power bank, memory card, car accessory, repair part, accessory or other), code, barcode, brand, name, cost, selling price, quantity, and the level to warn at. On an item already on the shelf, 📜 Story opens the count’s history.
+- **stock-story** — Every recorded movement behind one item’s count — deliveries in, sales out, newest first — with the arithmetic said in words. It also says what the records cannot itemise (a hand-edited quantity, a supplier return), and if the movements cannot possibly end at the number on the shelf, it says the count and the records disagree rather than smoothing it over.
 - **goods-in** — A delivery being booked in — supplier, date, one line per item, the invoice reference and total, and a note about anything odd.
 - **supplier-return** — Stock going back: the supplier, what is going, what it is worth, and where the claim stands.
 - **supplier-return-manage** — The same return afterwards — moving it along as the supplier replies, and closing it when they settle.

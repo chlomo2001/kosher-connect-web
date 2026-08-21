@@ -76,6 +76,10 @@ export const MODALS = [
   ['supplier-return','shop',     `openSupplierReturnModal()`],
   ['supplier-return-manage','shop', `openSupplierReturnModal(window.__kc.supplierReturn)`],
   ['goods-in',      'shop',      `openGoodsInModal()`],
+  // The stock story (E4). The opener is async and resolves once the dialog is
+  // painted — safe to await, unlike the confirm/prompt openers below whose
+  // promise only settles when a person answers.
+  ['stock-story',   'shop',      `openStockStory(shopItems[0].id)`],
   // The duplicate review. It shipped unmeasured, and the first run of it here
   // found four sub-24px targets and two sides of a pair that a phone stacked
   // into an unreadable column — exactly the class of thing the other nineteen

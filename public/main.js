@@ -2300,6 +2300,57 @@ const KC_MONEY = (() => {
 })();
 // ── KC_MONEY mirror end ──
 
+// ── KC_STOCKSTORY mirror start ──
+// MIRROR of lib/stockStory.mjs — the stock trail, derived, never stored twice.
+// test/stockStory.test.mjs lifts this block and holds it identical to the
+// module. Edit the module first; copy here verbatim.
+const KC_STOCKSTORY = (() => {
+function buildStockStory({ quantityNow, sales, goodsIn }) {
+  const moves = []
+  for (const g of goodsIn || []) {
+    const qty = Math.max(0, Math.round(Number(g.qty) || 0))
+    if (!qty) continue
+    moves.push({ when: String(g.delivery_date || '').slice(0, 10), kind: 'in', qty,
+      label: g.supplier ? `Goods in — ${g.supplier}` : 'Goods in' })
+  }
+  for (const s of sales || []) {
+    const qty = Math.max(0, Math.round(Number(s.qty) || 0))
+    if (!qty) continue
+    moves.push({ when: String(s.created_at || '').slice(0, 10), kind: 'out', qty,
+      label: s.who ? `Sold — ${s.who}` : 'Sold' })
+  }
+  // Newest first; a tie reads better with the sale after the delivery that
+  // made it possible, so 'out' sorts above 'in' on the same day.
+  moves.sort((a, b) => b.when.localeCompare(a.when) ||
+    (a.kind === b.kind ? 0 : a.kind === 'out' ? -1 : 1))
+
+  const totalIn = moves.filter((m) => m.kind === 'in').reduce((n, m) => n + m.qty, 0)
+  const totalOut = moves.filter((m) => m.kind === 'out').reduce((n, m) => n + m.qty, 0)
+  const now = Math.round(Number(quantityNow) || 0)
+  const opening = now - (totalIn - totalOut)
+  return { moves, totalIn, totalOut, opening, impossible: opening < 0 ? -opening : 0 }
+}
+
+function stockStoryLine({ totalIn, totalOut, opening, impossible }, quantityNow) {
+  const now = Math.round(Number(quantityNow) || 0)
+  if (impossible) {
+    return `The records do not add up: ${totalIn} in and ${totalOut} out ` +
+      `cannot end at ${now} — at least ${impossible} of movement was never recorded ` +
+      `(a hand edit to the count, or a sale or return that bypassed the till).`
+  }
+  if (!totalIn && !totalOut) {
+    return `No recorded movements. The count of ${now} is where the story starts.`
+  }
+  return `${totalIn} in, ${totalOut} out, ${now} on the shelf — which puts the count ` +
+    `before these records at ${opening}. Hand edits and supplier returns are not ` +
+    `itemised; they live inside that figure.`
+}
+
+  return { buildStockStory, stockStoryLine };
+})();
+// ── KC_STOCKSTORY mirror end ──
+
+
 // Inline style for a stat value, or '' to leave it the default navy ink.
 function statBandStyle(name, value) {
   const ink = STAT_BAND_INK[statBand(name, value)];
@@ -17255,7 +17306,8 @@ function openStockItemModal(itemId = null) {
       </div>
     </div>
     <div class="modal-actions" style="justify-content:space-between;">
-      <span>${i ? `<button class="btn btn-outline" onclick="retireStockItem('${i.id}')">🗑 Retire</button>` : ''}</span>
+      <span>${i ? `<button class="btn btn-outline" onclick="retireStockItem('${i.id}')">🗑 Retire</button>
+        <button class="btn btn-outline" onclick="openStockStory('${i.id}')" title="Every recorded movement behind this count">📜 Story</button>` : ''}</span>
       <span class="modal-actions-group">
         <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
         <button class="btn btn-primary" onclick="saveStockItem(${i ? `'${i.id}'` : 'null'})">💾 Save</button>
@@ -17288,6 +17340,36 @@ async function saveStockItem(itemId) {
   closeDynamicModal();
   toast('Item saved.', 'success');
   renderShopTab();
+}
+
+// The stock story (E4 from the Epos Now read): every recorded movement behind
+// the count — goods in on one side, sales on the other — with the
+// reconciliation said in words. Derived from records that already exist
+// (lib/stockStory.mjs + the KC_STOCKSTORY mirror), never stored twice; what
+// deriving cannot itemise is confessed in the opening figure, and an
+// arithmetic that cannot end at the shelf number is called out as a proven
+// discrepancy rather than smoothed over.
+async function openStockStory(itemId) {
+  const item = shopItems.find(x => String(x.id) === String(itemId));
+  if (!item) return;
+  const d = await kcFetch('/api/shop?story=' + encodeURIComponent(itemId))
+    .then(r => r.json()).catch(() => null);
+  if (!d || !d.success) { toast('Could not load the story.', 'error'); return; }
+  const story = KC_STOCKSTORY.buildStockStory({ quantityNow: item.quantity, sales: d.sales, goodsIn: d.goodsIn });
+  const line = KC_STOCKSTORY.stockStoryLine(story, item.quantity);
+  const rows = story.moves.map(m => `
+    <div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--border-subtle);font-size:var(--fs-body);">
+      <span style="color:var(--muted);font-size:var(--fs-small);min-width:86px;">${escHtml(fmtDate(m.when))}</span>
+      <span style="min-width:34px;font-weight:700;${m.kind === 'in' ? 'color:var(--success-ink);' : ''}">${m.kind === 'in' ? '+' : '−'}${m.qty}</span>
+      <span style="flex:1;">${escHtml(m.label)}</span>
+    </div>`).join('');
+  showDynamicModal(`
+    <div class="modal-title">📜 ${escHtml(`${item.company || ''} ${item.model || ''}`.trim() || 'Stock item')} — the story of the count</div>
+    <div style="font-size:var(--fs-ui);line-height:1.6;margin-bottom:12px;${story.impossible ? 'color:var(--warning-ink);font-weight:600;' : 'color:var(--muted);'}">${escHtml(line)}</div>
+    ${d.capped ? `<div style="font-size:var(--fs-small);color:var(--warning-ink);margin-bottom:8px;">Only the most recent 1,000 of each kind are shown — the reconciliation above may be off by what fell outside them.</div>` : ''}
+    <div style="max-height:320px;overflow-y:auto;">${rows || '<div style="color:var(--muted);font-size:var(--fs-body);">Nothing recorded yet.</div>'}</div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
+  `);
 }
 
 async function retireStockItem(itemId) {

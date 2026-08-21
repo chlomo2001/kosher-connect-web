@@ -81,6 +81,27 @@ async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
+      // The stock story (E4): every recorded movement for ONE item, complete —
+      // the tab's own GET caps sales at 100 across the whole shop, and a story
+      // built from a capped list would silently truncate, which reads as
+      // "covered everything" when it has not. Read-only; the derivation itself
+      // lives in lib/stockStory.mjs and its mirror in main.js.
+      if (req.query.story) {
+        const itemId = encodeURIComponent(String(req.query.story))
+        const [sales, lines] = await Promise.all([
+          db.select('stock_sales', `select=qty,created_at,customers(first_name,last_name)&stock_item_id=eq.${itemId}&order=created_at.desc&limit=1000`),
+          db.select('goods_in_lines', `select=qty,goods_in(delivery_date,suppliers(name))&item_id=eq.${itemId}&limit=1000`),
+        ])
+        return res.json({
+          success: true,
+          sales: sales.map((r) => ({ qty: r.qty, created_at: r.created_at,
+            who: r.customers ? `${r.customers.first_name || ''} ${r.customers.last_name || ''}`.trim() : '' })),
+          goodsIn: lines.map((l) => ({ qty: l.qty,
+            delivery_date: l.goods_in?.delivery_date || '',
+            supplier: l.goods_in?.suppliers?.name || '' })),
+          capped: sales.length >= 1000 || lines.length >= 1000,
+        })
+      }
       const [items, sales] = await Promise.all([
         db.select('stock_items', 'order=category.asc,model.asc'),
         db.select('stock_sales', 'select=*,customers(first_name,last_name),stock_items(company,model)&order=created_at.desc&limit=100'),
