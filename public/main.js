@@ -2795,7 +2795,8 @@ function renderRentalsTab() {
     <div class="rentals-split" style="${rentalView === 'calendar' ? 'display:none;' : ''}">
       <div class="rentals-split-col">
         <div class="section-header">
-          <div class="section-title">Active & Recent Rentals</div>
+          <div class="section-title">Active &amp; Recent Rentals
+            <span id="rentalCount" style="font-size:var(--fs-small);color:var(--muted);font-weight:400;margin-left:8px;"></span></div>
         </div>
         <div class="rentals-filter-row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           ${rentalBar}
@@ -2826,7 +2827,8 @@ function renderRentalsTab() {
       </div>
       <div class="rentals-split-col">
         <div class="section-header">
-          <div class="section-title">Phone Inventory</div>
+          <div class="section-title">Phone Inventory
+            <span id="phoneCount" style="font-size:var(--fs-small);color:var(--muted);font-weight:400;margin-left:8px;"></span></div>
         </div>
         <div class="rentals-filter-row rentals-inv-spacer" aria-hidden="true"></div>
         <div class="kc-resizable-box">
@@ -3162,6 +3164,9 @@ function renderRentalRows() {
   }
   // Balance + status now live in the shared control's dimensions (B5).
   filtered = kcViewApply('rentals', filtered);
+  // Set before the empty-state returns, so a filtered-to-nothing list still
+  // says "0 of 214" rather than leaving the last count on screen.
+  kcListCount('rentalCount', filtered.length, rentals.length);
 
   if (filtered.length === 0) {
     // "No rentals yet" was shown even with a full pool behind an active
@@ -3531,6 +3536,7 @@ function renderPhoneRows() {
   invRestoreHeight();
 
   if (phones.length === 0) {
+    kcListCount('phoneCount', 0, 0);
     tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="emoji">📋</div><p>No phones in inventory.</p><small>Click "⚙️ Manage phones" to add phones.</small></div></td></tr>`;
     return;
   }
@@ -3538,6 +3544,7 @@ function renderPhoneRows() {
   // The search box filters this table too — it used to sit at full length
   // beside a filtered rentals list, which read as "no such handset".
   const shown = phonesMatchingSearch();
+  kcListCount('phoneCount', shown.length, phones.length);
   if (shown.length === 0) {
     tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔍</div><p>No handset matches “${escHtml(rentalSearchTerm)}”.</p><small>Searches number, IMEI, model, carrier, pool — and who has it out.</small></div></td></tr>`;
     return;
@@ -7042,7 +7049,8 @@ function renderCustomersTab() {
     </div>
 
     <div class="section-header">
-      <div class="section-title">Customer List</div>
+      <div class="section-title">Customer List
+        <span id="custCount" style="font-size:var(--fs-small);color:var(--muted);font-weight:400;margin-left:8px;"></span></div>
       <div style="display:flex;gap:8px;align-items:center;">
         <select class="form-input kc-fs-sel" onchange="customerFilter=this.value; renderTableRows()">
           <option value="all" ${customerFilter==='all'?'selected':''}>Filter: everyone</option>
@@ -7210,6 +7218,9 @@ function renderTableRows() {
   const surnameFirst = customerSort === 'surname' || customerSort === 'surname_desc';
   const th = document.getElementById('thCustomerName');
   if (th) th.textContent = surnameFirst ? 'Surname, first name' : 'Customer name';
+  // Against the whole book, not against filteredCustomers — the point is to
+  // say how much of the shop this view is showing.
+  kcListCount('custCount', shown.length, customers.length);
 
   // A failed load must never read as "No customers yet." — with 751 real
   // records behind it that invites a panicked re-entry of data that already
@@ -12229,6 +12240,27 @@ function simMailboxCounts(limit = 8) {
     .slice(0, limit);
 }
 
+// "12 of 797" beside a list, so a search result is readable as a search result.
+//
+// A filtered list and an empty list look identical, and this shop's lists are
+// big enough for that to matter: 797 SIMs, 788 customers. Somebody who types a
+// name and sees three rows cannot tell whether three matched or whether the
+// list failed to load — and the empty states already say so in words ("No SIM
+// plans match this view"), which only helps when the answer is zero.
+//
+// The SIM tab and the Shop tab each grew their own copy of this line. This is
+// the same line, once, so the four lists that were missing it did not become
+// four more copies.
+function kcListCount(el, shown, total, noun) {
+  const node = typeof el === 'string' ? document.getElementById(el) : el;
+  if (!node) return;
+  // Unfiltered, the "of" half is noise — the reader can see the list is whole.
+  // The Shop tab names its unit there ("12 items") and it reads better for it,
+  // so the noun is optional rather than dropped to make the lists match.
+  const whole = noun ? `${total} ${noun}${total === 1 ? '' : 's'}` : `${total}`;
+  node.textContent = shown === total ? whole : `${shown} of ${total}`;
+}
+
 function renderSimRows() {
   const tbody = document.getElementById('simTableBody');
   if (!tbody) return;
@@ -12259,7 +12291,7 @@ function renderSimRows() {
   const sorted = kcViewApply('sim', filtered);
 
   const countEl = document.getElementById('simCount');
-  if (countEl) countEl.textContent = `${sorted.length} of ${sims.length}`;
+  kcListCount(countEl, sorted.length, sims.length);
 
   if (sorted.length === 0) {
     // Same trap as Rentals: with 800+ SIMs on file, "No SIM plans yet" reads
@@ -16423,9 +16455,7 @@ function renderShopRows() {
   if (count) {
     const active = shopItems.filter(i => i.active);
     const shown = active.filter(i => matchStockItem(i, shopFacets));
-    count.textContent = shown.length === active.length
-      ? `${active.length} item${active.length === 1 ? '' : 's'}`
-      : `${shown.length} of ${active.length}`;
+    kcListCount(count, shown.length, active.length, 'item');
   }
 }
 

@@ -199,7 +199,12 @@ in the design note; the loop-safe (no money-read / no nav / no auth) items:
       a repair came in. It sat unticked here for two days after it shipped.
 - [ ] **P2 · S** — **Direction badges** for ledger/till type — round colour-coded
       in/out/transfer/bank glyph in place of the text word. Pure display.
-- [ ] **P3 · S** — **"(N loaded)" count** in list search boxes. Cheap, honest.
+- [x] **P3 · S** — **"(N loaded)" count** in list search boxes — **DONE 21 Aug.**
+      Landed as "12 of 797": a filtered list and an empty list looked identical,
+      and with 797 SIMs and 788 customers that matters. Turned out the SIM tab
+      and the Shop tab had each grown their OWN copy of the line and four lists
+      had nothing — so `kcListCount` is one line, once, now used by Customers,
+      Rentals, Phone Inventory, SIMs and Shop. Held by `test/listCount.test.mjs`.
 - [ ] **P2 · S** — **Live "Preview" pattern** — show the computed result inline as
       the owner edits (receipt text, SMS draft, public account string).
 - [ ] **P2 · M** — **Wizard stepper** component for multi-step flows (New Booking/
