@@ -393,14 +393,47 @@ reconciliation for: acting on eleven would have missed fourteen.
 
 ### The urgent thing is not the ledger
 
-**14 of the 25 have `Contacted = False`.** Their flights are cancelled, KC is
-holding their money, and nobody has told them:
+**CORRECTED, same day.** The first version of this section said "14 of the 25
+have not been contacted" — read straight off column Q and stated as fact. The
+owner's reaction was "maybe the contacted one is stale, I think he forwarded
+emails to all of them", and checking says he is right to doubt it, though not
+only in the direction he meant.
 
-`DSCUFH`, `GPEQ2A`, `HWGC5D` ×2, `IKFP7P`, `IMPKJZ`, `JQEQVQ`, `KU5R4B`,
-`UGSJJB`, `USSGPK`, `XU2WWH` ×3, `ZMKWJP` — £3,435 across 25 passengers.
+The sheet has TWO columns for this — J `Email Sent?` and Q `Contacted` — and
+**they disagree on 12 of the 25**:
 
-That is a phone-call list, not a data problem, and it outranks every accounting
-question below.
+| `Email Sent?` | `Contacted` | rows | pax | value | references |
+|---|---|---|---|---|---|
+| False | False | **8** | 14 | £2,090 | HWGC5D, JQEQVQ, KU5R4B, USSGPK, XU2WWH ×3, ZMKWJP |
+| True | False | 6 | 12 | £1,690 | DSCUFH, GPEQ2A, HWGC5D, IKFP7P, IMPKJZ, UGSJJB |
+| False | True | 6 | 12 | £1,660 | BNKYRW, FMLJ8J, SLW7XC ×2, SPSHHD, TLKCQC |
+| True | True | 5 | 9 | £1,250 | IJEVNV, MN8VSZ, SW9PXJ, TMZZXC, VU15UH |
+
+Almost uncorrelated, which means **neither column can be trusted on its own**
+and the honest answer is a range, not a number:
+
+- **8 rows have neither flag** — no email recorded, not marked contacted. These
+  are the ones most likely genuinely untold. £2,090, 14 passengers. Treat this
+  as the floor and start here.
+- **6 have an email but no tick** — the owner's hunch, and the likeliest stale
+  column.
+- **6 are ticked with no email** — probably rung rather than emailed, which is
+  a perfectly good way to contact somebody and not evidence of anything wrong.
+
+So somewhere between **8 and 14** still need telling, and the sheet cannot say
+which. It is still a phone-call list and it still outranks every accounting
+question below — but the list is 8 certain, not 14.
+
+**What would settle it:** Shloime's Sent folder, searched for the references —
+`in:sent (HWGC5D OR JQEQVQ OR KU5R4B OR USSGPK OR XU2WWH OR ZMKWJP)`. The
+forwards are not in the connected mailbox (checked: searching those references
+and `wizz cancelled/refund` over the last 60 days returns nothing), so they went
+from his account and no session here can see them.
+
+**And the lesson is the one this repo keeps relearning.** Two columns recording
+the same fact, updated by hand, at different times, is a second answer to one
+question — and this codebase has been bitten by that four times in a fortnight.
+Whichever survives, one of them should go.
 
 ### And the Wizz invoices turn out NOT to be needed for it
 
