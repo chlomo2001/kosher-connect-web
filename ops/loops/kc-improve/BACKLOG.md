@@ -1991,6 +1991,11 @@ were still the browser's rather than the shop's.
 | 3 | `4ae326e` | Eighteen dialogs were `window.confirm`/`window.prompt`: no dark mode, no text-size setting, no RTL, and phone chrome saying the BROWSER is asking at the moment the shop asks whether to delete a customer. `api.confirmDelete` was ten of them in one line | grep for native dialogs beside the house `kcConfirm`/`kcPrompt` |
 | 4 | `71a509a` | Nothing in `ops/harness/` had ever opened `kcConfirm` or `kcPrompt`, though they are the ask before every destructive action — and the modal runner measures contrast on the live dialog, so they had never been contrast-checked either | writing an ad-hoc 320px check for #3 and noticing it would be thrown away |
 
+| 5 | `7d0f4df` | The modal sweep announced "3 modal(s) flagged" on a run whose own line above said "2 distinct contrast failure(s)" — `bad += contrastAll.length` counted raw occurrences while `report()` dedupes and returns the real number. Two numbers for one answer, and the louder one was wrong | reading the sweep output added in row 4 |
+
+The whole sweep is clean at the end of the night — `AUDIT: all checks reported
+clean.`, no ✗ anywhere, exit 0 — and after row 1 that sentence means something.
+
 ### Checked and genuinely clean (so nobody re-checks them)
 
 - **Accessible names, all 15 tabs.** Every button, link, input, select and

@@ -293,8 +293,16 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     })
     await page.waitForTimeout(120)
   }
-  if (wantContrast) { report(contrastAll, `the modals (${theme})`); bad += contrastAll.length }
+  // `report` DEDUPES — the same 11px badge repeated down four rows is one thing
+  // to fix, not four — and RETURNS that count. Adding contrastAll.length instead
+  // counted raw occurrences, so a run with two distinct failures announced
+  // "3 modal(s) flagged" while the line above it said "2 distinct contrast
+  // failure(s)". Two numbers for one answer, and the louder one was wrong.
+  // (public.mjs had the mirror image of this bug: it threw the return away.)
+  if (wantContrast) { bad += report(contrastAll, `the modals (${theme})`) }
   await browser.close()
-  console.log(bad ? `\n${bad} modal(s) flagged at ${width}px${fsSize === 'standard' ? '' : ' / text ' + fsSize} ${theme}` : `\nall modals geometrically clean at ${width}px ${theme} — now look at the screenshots`)
+  // "modal(s)" was wrong too once contrast joined the count: a contrast failure
+  // is a finding inside a dialog, not a dialog.
+  console.log(bad ? `\n${bad} finding(s) at ${width}px${fsSize === 'standard' ? '' : ' / text ' + fsSize} ${theme}` : `\nall modals geometrically clean at ${width}px ${theme} — now look at the screenshots`)
   process.exit(bad ? 1 : 0)
 }
