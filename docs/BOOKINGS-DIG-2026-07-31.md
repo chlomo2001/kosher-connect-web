@@ -497,3 +497,86 @@ one:
 
 Nothing should be posted to any wallet until that is answered, and until the
 fourteen have been rung.
+
+
+## The 27 threads, read in full — 21 Aug 2026
+
+The owner bulk-forwarded the whole `in:sent (wizzair cancelled)` result set as
+.eml attachments and uploaded the zip. All 27 parsed. Sixteen are older,
+unrelated correspondence the search happened to catch (2023–2025 disruption
+claims, older PNRs, quotes); eleven are the July 2026 event, and they carry
+per-customer figures in sterling. Names mapped to sheet rows via the sheet's own
+name/contact columns; refs only below.
+
+### First, the context nothing else had: these were GLITCH-FARE bookings
+
+The 24 July mass thread ("Urgent Update: Wizz Air Booking Status", ~20
+participants) says it outright, in Shloime's own words at booking time: the
+tickets were booked on an error fare; "there is a high risk that WizzAir will
+see the error/glitch and can cancel all bookings, or may ask to pay the
+different fare (average of £750 each way per passenger)"; Wizz then demanded the
+fare difference within 48 hours or cancellation; and "as I have cleared it out
+while making the booking… I will not be able to guarantee a refund from Wizz."
+One cancellation wave (confirmed again in the 26 July "your ticket is NOT
+cancelled" reply to a customer who escaped it).
+
+So the risk was disclosed at purchase, and Wizz's refunds are of the glitch fare
+— which is why they do not resemble KC's sale prices and why the EUR invoices
+were never going to reconcile against the sheet.
+
+### The reconciliation, ref by ref
+
+Where the customer had ALREADY PAID KC, the Wizz refund is owed onward to them.
+Where they had NOT yet paid, the refund landed with KC and the customer owes the
+remainder. Both directions exist, which no single "liability" number captured.
+
+**KC owes the customer (they had paid):**
+
+| Ref | Sheet total | Wizz refunded | KC owes | State |
+|---|---|---|---|---|
+| EHC93Y | £520 | £320 | — | **settled** (sheet `Refunded? = True` ✓) |
+| DSCUFH | £325 | £195 | **£195** | ⚠ **customer chasing since 17 Aug** — "you got the refund from wizzair and you still didn't send back the money"; being sent to a named third party's Wise account |
+| IJEVNV | £380 | £170 | **£170** | asked how they want it, 29 Jul; no reply in the set |
+| MN8VSZ | £175 | £90 | **£90** | asked where to send it, 29 Jul |
+
+Known onward-owing: **£455**.
+
+**Customer owes KC (they had not paid):**
+
+| Ref | Sheet total | Wizz refunded | Balance asked | State |
+|---|---|---|---|---|
+| TLKCQC | £335 | £205 | £130 | **PAID — "Yes, received £130"** (30 Jul). Sheet not updated |
+| VU15UH | £335 | £205 | £130 | requested 2 Aug |
+| SPSHHD | £410 | £250 | £160 | requested — matches sheet `New Balance` 160 exactly |
+| SLW7XC ×2 | £145 each | £80 | £65 each | requested; customer replied 12 Aug still confused whether the flight is cancelled |
+| SW9PXJ | £175 | £90 | £85 | requested inside the TLKCQC thread |
+| ZMKWJP + OKQKKS | £395 + £770 | £185 | **£980** | one customer, two bookings: OKQKKS (6 pax) NOT cancelled, ZMKWJP (3 pax) cancelled. £1,165 − £185 = £980 requested. **Explains the sheet's odd `Cancelled = No` on OKQKKS** — it is genuinely uncancelled; the cancelled trio is the other row |
+
+Known receivable: **£1,485** (£130 of it already collected on TLKCQC).
+
+**No figure found in the sent set** — XU2WWH ×3, HWGC5D ×2, JQEQVQ, KU5R4B,
+USSGPK, GPEQ2A, IKFP7P, IMPKJZ, UGSJJB, TMZZXC, BNKYRW, FMLJ8J. Sheet value
+≈ £3,600. For these the Wizz-refund figure has to come from somewhere else —
+the inbox side rather than sent, or Wizz's own records. FMLJ8J is also
+internally inconsistent: the sheet says unpaid, the email offers to send the
+customer the £45 refund; one of the two is wrong.
+
+### What this corrects from earlier sections
+
+- **The £6,690 "liability" was the wrong shape.** The real structure is two
+  opposite flows: ~£455 KC→customers (known so far) and ~£1,485 customers→KC,
+  with ~£3,600 of rows still unquantified. Neither direction is £6,690.
+- **The service-fee question is being answered in practice**: Shloime passes on
+  exactly the Wizz refund and the fee stays. Given the risk was disclosed at
+  booking, that is a defensible position already in effect, not a decision
+  waiting to be made.
+- **"Nine rows unreachable" overstated it** — the sent folder holds working
+  addresses for several rows whose sheet contact cell is empty (Zieg for
+  SLW7XC, the email36 address on TLKCQC). The sheet is missing the data; the
+  mailbox is not.
+
+### The one thing that should happen today
+
+**DSCUFH: send the £195.** The customer paid promptly, the Wizz refund arrived,
+they have chased in writing, and it is a month. Everything else here is
+bookkeeping; that one is a customer relationship degrading in real time.
