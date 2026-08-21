@@ -580,3 +580,27 @@ customer the £45 refund; one of the two is wrong.
 **DSCUFH: send the £195.** The customer paid promptly, the Wizz refund arrived,
 they have chased in writing, and it is a month. Everything else here is
 bookkeeping; that one is a customer relationship degrading in real time.
+
+
+### Recorded in the app — 21 Aug 2026, ~15:40
+
+Ten tasks inserted into production `tasks` (owner asked "is it all recorded in
+app now?" — until then it was only this document). Reference prefix
+`FLIGHT-WIZZ-<ref>`, so they group under **Travel** on the Tasks screen and in
+the digest. Deliberately tasks and NOT ledger entries: the figures are complete
+for only half the rows, and this document's own conclusion stands — nothing
+touches a wallet until they all exist.
+
+| Priority | Reference | Task |
+|---|---|---|
+| high, due today | FLIGHT-WIZZ-DSCUFH | send the £195 (chasing since 17 Aug) |
+| high | FLIGHT-WIZZ-IJEVNV | send the £170 |
+| high | FLIGHT-WIZZ-MN8VSZ | send the £90 |
+| medium | FLIGHT-WIZZ-VU15UH · SPSHHD · SLW7XC · SW9PXJ · ZMKWJP | collect £130 / £160 / £65×2 / £85 / £980 |
+| medium | FLIGHT-WIZZ-FIGURES | find the refund figure for the 12 unquantified rows |
+| low | FLIGHT-WIZZ-TLKCQC | mark the settled one settled everywhere |
+
+Each task's `raw_text` carries the evidence line, so whoever picks it up does
+not need this document open. Checked for duplicates first: no WIZZ task existed
+(only the 19 Aug flights-import discrepancy tasks). Undo, if ever needed, is
+one delete by `reference like 'FLIGHT-WIZZ-%'`.
