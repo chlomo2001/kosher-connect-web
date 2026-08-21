@@ -167,6 +167,27 @@ async function handler(req, res) {
   if (req.method === 'GET') {
     const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50))
 
+    // The live pulse (issue #16): "has carrier post arrived since <when>?",
+    // answered as cheaply as it can be asked — a count and the newest line,
+    // never the mailbox. The app polls this once a minute while it is open, so
+    // the shape is the whole point: two indexed selects, ~200 bytes back.
+    if (req.query.since !== undefined) {
+      const since = String(req.query.since || '')
+      if (!/^\d{4}-\d{2}-\d{2}T[\d:.]+Z?$/.test(since)) {
+        return res.status(400).json({ success: false, error: 'since must be an ISO timestamp' })
+      }
+      const fresh = await db.select('sim_mail',
+        `select=id,received_at,carrier,subject&received_at=gt.${enc(since)}&order=received_at.desc&limit=6`)
+      return res.json({
+        success: true,
+        count: fresh.length,
+        // 6 fetched, 5 named: the sixth row only proves "more than five".
+        capped: fresh.length > 5,
+        latest: fresh.slice(0, 5).map((m) => ({
+          receivedAt: m.received_at, carrier: m.carrier || '', subject: m.subject || '' })),
+      })
+    }
+
     // One SIM's mail, for its record card. Answered from the app's own id.
     if (req.query.simLegacyId) {
       const { byLegacyId } = await simDirectory()

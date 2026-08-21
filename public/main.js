@@ -502,6 +502,43 @@ async function initApp() {
   // Same-day ⏰ reminders: check every 20s while the app is open.
   checkLocalReminders();
   setInterval(checkLocalReminders, 20000);
+  // Carrier post, live (owner ask #16, 20 Aug: "a small pop-up when carrier
+  // mail arrived, for a few seconds? so that a worker on the app sees live
+  // interaction"). One cheap poll a minute — a count and the newest lines,
+  // never the mailbox — and a toast per fresh message. The watermark starts at
+  // page load: mail from before you opened the app is the Mail tab's job.
+  kcMailSeenAt = new Date().toISOString();
+  setInterval(kcMailPulse, 60000);
+}
+
+// ── Live carrier-post pulse (issue #16) ─────────────────────────────────────
+let kcMailSeenAt = null;
+let kcMailPulseBusy = false;
+async function kcMailPulse() {
+  // Not while hidden: twenty parked tabs polling is a tiny stampede, and the
+  // person is not there to see a toast anyway.
+  if (document.hidden || kcMailPulseBusy || !kcMailSeenAt) return;
+  kcMailPulseBusy = true;
+  try {
+    const d = await kcFetch('/api/sim-mail?since=' + encodeURIComponent(kcMailSeenAt))
+      .then(r => r.json()).catch(() => null);
+    if (!d?.success || !d.count) return;
+    // The watermark only ever advances to a SERVER timestamp. Advancing it to
+    // the client's own clock would let a skewed clock skip mail forever; on a
+    // quiet minute it simply stays put, which costs nothing — an empty answer
+    // is the same few bytes whatever the window.
+    kcMailSeenAt = d.latest[0]?.receivedAt || kcMailSeenAt;
+    if (d.count <= 3 && !d.capped) {
+      // A working counter sees each arrival by name, oldest first.
+      for (const m of d.latest.slice(0, 3).reverse()) {
+        toast(`📬 Carrier post — ${m.carrier || 'unknown carrier'}: ${m.subject || '(no subject)'}`, 'success');
+      }
+    } else {
+      // Back from lunch (or a burst): one compact catch-up, never a replay —
+      // a drip of stale toasts teaches everyone to ignore the live ones.
+      toast(`📬 ${d.capped ? 'More than 5' : d.count} carrier posts arrived — see Carrier Mail`, 'success');
+    }
+  } finally { kcMailPulseBusy = false; }
 }
 
 function reconcilePhoneStatuses() {

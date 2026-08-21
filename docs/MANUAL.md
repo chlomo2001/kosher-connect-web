@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
-*As of 21 Aug 2026 · m-2283badd — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 21 Aug 2026 · m-37517e1b — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -582,6 +582,7 @@ Post arriving from the networks — renewals, ports, warnings, payment problems 
 
 **On the screen**
 
+- **📬 The live toast** — While the app is open, a small message appears within the minute when carrier post arrives — the sender and the subject, for a few seconds. A handful arriving together compress into one line. Post from before the app was opened does not toast; it is already on this screen.
 - **Needs a human** — The queue: messages the app could not confidently file. This is the whole job of the screen.
 - **↩ Undo match** — Puts a message that is filed on a SIM back into the queue for somebody to file by hand. Most matches are made automatically and nobody sees them being made, so this is how a wrong one gets corrected. The nightly sweep will not re-match it afterwards — you have said the automatic answer was wrong, and it should not argue with you.
 - **📤 Forward to customers** — Owner only. Carrier mail worth sending on to the person whose line it is — a renewal receipt, a payment that failed, a completed port, something about to expire. It opens a queue showing what would go, to whom, and why, and it shows what will NOT go and what is stopping it, so the rule can be understood rather than guessed at. Nothing here decides whose a message is: it only ever goes to the customer the message is already filed against, and a message covering more than one number goes to nobody at all. The safety gate still decides what happens to an approved message.
