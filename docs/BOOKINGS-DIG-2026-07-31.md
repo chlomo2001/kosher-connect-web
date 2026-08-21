@@ -391,68 +391,82 @@ old dig is now in the sheet — `SLW7XC`, `ZMKWJP`, `SPSHHD`, `JQEQVQ`, `IKFP7P`
 `GPEQ2A`, `KU5R4B`, `USSGPK`. That was the right thing to have held the
 reconciliation for: acting on eleven would have missed fourteen.
 
-### The urgent thing is not the ledger
+### Were the customers told? Yes — and it took three wrong answers to find out
 
-**CORRECTED, same day.** The first version of this section said "14 of the 25
-have not been contacted" — read straight off column Q and stated as fact. The
-owner's reaction was "maybe the contacted one is stale, I think he forwarded
-emails to all of them", and checking says he is right to doubt it, though not
-only in the direction he meant.
+This section replaces three earlier versions of itself. Keeping the trail
+because the way it went wrong is more useful than the answer.
 
-The sheet has TWO columns for this — J `Email Sent?` and Q `Contacted` — and
-**they disagree on 12 of the 25**:
+**Wrong answer 1.** "14 of the 25 have `Contacted = False`" — column Q read at
+face value and handed over as fact.
 
-| `Email Sent?` | `Contacted` | rows | pax | value | references |
-|---|---|---|---|---|---|
-| False | False | **8** | 14 | £2,090 | HWGC5D, JQEQVQ, KU5R4B, USSGPK, XU2WWH ×3, ZMKWJP |
-| True | False | 6 | 12 | £1,690 | DSCUFH, GPEQ2A, HWGC5D, IKFP7P, IMPKJZ, UGSJJB |
-| False | True | 6 | 12 | £1,660 | BNKYRW, FMLJ8J, SLW7XC ×2, SPSHHD, TLKCQC |
-| True | True | 5 | 9 | £1,250 | IJEVNV, MN8VSZ, SW9PXJ, TMZZXC, VU15UH |
+**Wrong answer 2.** The owner said "maybe the contacted one is stale, I think he
+forwarded emails to all of them". Checking showed the sheet has TWO columns for
+this, J `Email Sent?` and Q `Contacted`, and they disagree on 12 of the 25 —
+so the honest answer became a range, 8 to 14, rather than a number.
 
-Almost uncorrelated, which means **neither column can be trusted on its own**
-and the honest answer is a range, not a number:
+**Wrong answer 3.** Searching the sending account for the references
+(`in:sent (HWGC5D OR JQEQVQ OR …)`) returned one thread, dated four days BEFORE
+the cancellation. Conclusion drawn: nobody was told. **That search could only
+ever find mail that quotes the booking reference**, and the owner said so —
+"maybe he sent it to the customers WITHOUT mentioning the pnr". Exactly right.
 
-- **8 rows have neither flag** — no email recorded, not marked contacted. These
-  are the ones most likely genuinely untold. £2,090, 14 passengers. Treat this
-  as the floor and start here.
-- **6 have an email but no tick** — the owner's hunch, and the likeliest stale
-  column.
-- **6 are ticked with no email** — probably rung rather than emailed, which is
-  a perfectly good way to contact somebody and not evidence of anything wrong.
+**The answer.** `in:sent (wizzair cancelled)` returns **27 threads**, and they
+are cancellation notices to customers, in plain English, going back to 24 July.
+The customers were told. Column Q is stale, and badly.
 
-So somewhere between **8 and 14** still need telling, and the sheet cannot say
-which. It is still a phone-call list and it still outranks every accounting
-question below — but the list is 8 certain, not 14.
+### The refund figures are in those emails, in STERLING
 
-**Settled the same day, and not in the comfortable direction.** The owner ran
-`in:sent (HWGC5D OR JQEQVQ OR KU5R4B OR USSGPK OR XU2WWH OR ZMKWJP)` on the
-sending account. **One thread, for one reference** — "1 of 1".
+This is the part that matters, and it dissolves the currency problem three
+sections below. Shloime told each customer what came back, in pounds, in his own
+words. Read off the message previews:
 
-That thread is HWGC5D and it is dated **19 July**, four days BEFORE the 23 July
-cancellation. It is the original booking flow: itinerary out, a payment request
-for £145, the customer replying "paid", and "Thanks Received". Nothing about a
-cancellation, and nothing at all for the other five references.
+| Ref | What the message says |
+|---|---|
+| `VU15UH` | refunded **£205**, "your balance is now **£130**" |
+| `SPSHHD` | refunded **£250**, "your balance is now **£160**" |
+| `TLKCQC` | refunded **£90**, "the balance is **£85**" — and a later thread says **£205** |
+| `MN8VSZ` | "cancelled your booking and refunded **£90**" |
+| `FMLJ8J` | "cancelled your booking and refunded **£45**" |
+| `OKQKKS` | "Balance at the moment £1165 − £185 (WizzAir refund)" |
+| `SLW7XC` | "FLIGHT IS CANCELLED" (12 Aug) |
+| — | £195 (17 Aug), £320 and £170 (29 Jul) — refs not in the preview |
 
-So **no cancellation notice was sent to any of the eight**, and column J needs
-rereading. `Email Sent?` almost certainly means *the itinerary went out when the
-booking was made* — not *they were told the flight was cancelled*. Those are
-different facts and the column only ever recorded the first.
+**And it corroborates the sheet.** `SPSHHD` "your balance is now £160" matches
+the sheet's `New Balance` of 160 exactly. So `New Balance` is the post-refund
+figure, maintained from these emails — which is why only three rows have one:
+three is how many got that far, not a bug.
 
-If that reading is right — and one thread against six references is strong for
-it — then the six rows marked `Email Sent = True, Contacted = False` are **not**
-quietly-already-handled. They are booked-and-emailed-in-July and told nothing
-since. The range does not narrow to 8; it widens back towards 14, and the
-`Email Sent?` column is evidence about July, not about the cancellation.
+A 24 July thread titled "Urgent Update: Wizz Air Booking Status" has **twenty
+participants**. That looks like the mass notification, and it is the reason a
+per-reference search found nothing: one message, many customers, no PNR.
 
-**What would still settle the remainder:** the same `in:sent` search over the
-other references — DSCUFH, GPEQ2A, IKFP7P, IMPKJZ, UGSJJB, and the six marked
-contacted — looking specifically for anything dated **after 23 July**. Date is
-the discriminator, not the presence of a thread.
+### What is actually left to do
 
-**And the lesson is the one this repo keeps relearning.** Two columns recording
-the same fact, updated by hand, at different times, is a second answer to one
-question — and this codebase has been bitten by that four times in a fortnight.
-Whichever survives, one of them should go.
+Not "ring fourteen people". The work is:
+
+1. **Read the 27 threads and pull `ref → refunded £ → balance £`.** They are the
+   only source that is already in the right currency, at the right granularity,
+   and per customer. No Wizz invoice needed.
+2. **Reconcile against the sheet** and fill `New Balance` for the other 22 rows.
+3. **Then** decide the service-fee question below.
+
+### Nine rows KC may have no way to reach at all
+
+Separately, and this one is not stale data — it is missing data. Of the 25
+outstanding rows:
+
+| | rows | pax | value |
+|---|---|---|---|
+| contact email on file | 14 | 32 | £4,385 |
+| phone only | 2 | 2 | £320 |
+| **neither email nor phone** | **9** | **13** | **£1,985** |
+
+`HWGC5D` ×2, `JQEQVQ`, `KU5R4B`, `SLW7XC`, `USSGPK`, `XU2WWH` ×3.
+
+KC is holding £1,985 for thirteen passengers with no recorded way to contact
+them from this sheet. They may well be reachable another way — the shop knows
+its customers — but the sheet cannot say who they are, and that is worth fixing
+before the next cancellation rather than after.
 
 ### And the Wizz invoices turn out NOT to be needed for it
 
