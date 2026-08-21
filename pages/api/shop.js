@@ -152,6 +152,19 @@ async function handler(req, res) {
         return res.status(400).json({ success: false, error: 'Missing idempotency token — refresh and try again.' })
       }
 
+      // ON ACCOUNT NEEDS AN ACCOUNT. Unpaid + walk-in posts the charge against
+      // the built-in Walk-in customer: a debt belonging to nobody, on a record
+      // nobody opens, which cannot be chased and cannot be moved onto a person
+      // later. Refused here as well as in the till (public/main.js saveSale),
+      // because the browser is not the only caller and a rule that lives only
+      // in a screen is not a rule.
+      if (b.paidNow === false && (!b.customerId || b.customerId === 'walkin')) {
+        return res.status(400).json({
+          success: false,
+          error: 'A sale left on account needs a customer — a walk-in has no account to put it on.',
+        })
+      }
+
       const customerUuid = !b.customerId || b.customerId === 'walkin'
         ? await walkInCustomer()
         : (await db.select('customers', `select=id&legacy_id=eq.${encodeURIComponent(String(b.customerId))}`))[0]?.id

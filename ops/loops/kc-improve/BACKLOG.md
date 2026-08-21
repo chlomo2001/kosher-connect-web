@@ -98,10 +98,14 @@ they were found — the standing task's own rule.
       types; KC has no categories at all, so there is no way to say "Kol Torah",
       "trade", "staff family". The types are the useful half for this shop; the
       points scheme is not. 🔒 the moment a type changes a price.
-- [ ] **P2 · S** — **Attach the customer BEFORE the sale, or it is anonymous.**
-      Their loyalty docs are blunt that a sale saved without a customer loses the
-      points. KC's till has the same trap and it is how a wallet ends up not
-      matching a drawer. A guard, not a warning.
+- [x] **P2 · S** — **Attach the customer BEFORE the sale, or it is anonymous** —
+      **DONE 21 Aug.** Landed narrower and sharper than filed: a PAID walk-in is
+      most of what this shop does and must not grow a question, so the guard is
+      on **unpaid** walk-ins only. Untick "Paid now" with no customer and the
+      charge posted against the built-in Walk-in account — a debt belonging to
+      nobody that cannot be chased or moved onto a person later. Refused in the
+      till and in `pages/api/shop.js`, before the idempotency key is burnt.
+      Never happened: the walkin account's six ledger rows net to £0.00.
 
 ## From competitive research 2026-07-17 (big-tech / premium idea-hunt)
 Scouted live product/help pages (Linear, Stripe, Square, Loyverse, Booqable,

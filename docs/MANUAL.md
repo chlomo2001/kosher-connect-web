@@ -441,6 +441,7 @@ Stock and the counter: what is on the shelf, what it cost and sells for, and the
 
 **Rules that bite here**
 
+- A sale left on account needs a customer. A walk-in has no account to put it on — the charge would sit on a record nobody opens, and a sale is saved once. Pick who it is, or take the money now.
 - Selling through the till is what moves the shelf count. Handing something over without ringing it in leaves the count wrong, and the count is what the reorder list is built from.
 - A walk-in sale needs no customer; choosing one puts the sale on their record and lets it go on account. Choose deliberately — it decides whether the money is in or owed.
 - The warn-when-below level is per item, because one of a rare handset is low and one phone case is not.

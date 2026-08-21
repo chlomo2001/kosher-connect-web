@@ -17839,6 +17839,23 @@ function kcTillRecordResult(payRef, amount, r) {
 async function saveSale() {
   if (!posBasket.length) { toast('The basket is empty.', 'error'); return; }
   const paidNow = document.getElementById('posPaid').checked;
+  // ON ACCOUNT NEEDS AN ACCOUNT.
+  //
+  // Untick "Paid now" on a walk-in and the charge posts against the built-in
+  // Walk-in customer — a debt belonging to nobody, on a record no one will ever
+  // open, which cannot be chased and cannot be attached to a person afterwards.
+  // The till gives no other way back: a sale is saved once.
+  //
+  // It has not happened yet (the walkin account's six ledger rows net to zero),
+  // which is why this is a guard and not a repair. Refused here AND in
+  // pages/api/shop.js — the browser is not the only caller, and a rule that
+  // lives only in a screen is not a rule.
+  const custNow = document.getElementById('posCustomer')?.value || 'walkin';
+  if (!paidNow && (!custNow || custNow === 'walkin')) {
+    toast('A sale left on account needs a customer — a walk-in has no account to put it on. Pick who it is, or tick "Paid now".', 'error');
+    document.getElementById('posCustomer_search')?.focus();
+    return;
+  }
   const given = parseFloat(document.getElementById('posTenderIn')?.value);
   const totalBefore = posTotalNow();
   const walletAmount = Math.min(Math.max(posWallet, 0), totalBefore);
