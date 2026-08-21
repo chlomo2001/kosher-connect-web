@@ -64,6 +64,45 @@ in this order:
 Archive findings in `docs/IDEAS-EPOSNOW-<date>.md`, same shape as
 `docs/IDEAS-2026-07-17.md`.
 
+**First run: 21 Aug 2026 → `docs/IDEAS-EPOSNOW-2026-08-21.md`.** Read via web
+SEARCH only — this environment's network policy blocks eposnow.com and every
+review site at the egress proxy, so item 1 (structure: how they cut the product
+into areas, what lives on one screen vs many) is the part answered least well
+and wants re-running by anyone who can open the pages. Six ideas came out of it,
+below.
+
+### Ideas from that run (21 Aug 2026)
+
+Sourced and argued in `docs/IDEAS-EPOSNOW-2026-08-21.md`. Not built the night
+they were found — the standing task's own rule.
+
+- [ ] **P1 · M** — **The shop is told, rather than having to look.** Their
+      low-stock alert arrives daily by email; KC computes the same thing and
+      waits on a badge for somebody to notice it. Generalises well past stock —
+      the nightly sweep already knows about renewals, overdue rentals, plans with
+      no payment method and unfiled carrier mail. One quiet morning digest.
+      Building it is loop-safe; SENDING it is 🔒, because live email is
+      HOLD-gated.
+- [ ] **P2 · M** 🔒 — **A credit limit, and a real statement.** Their Customer
+      Credit carries a per-customer limit, a balance owed, and a statement over a
+      date range with an amount due and a due date. KC's wallet has no line at
+      which somebody says stop — see the £10,925 of unbilled bookings (#12).
+- [ ] **P2 · S** 🔒 — **Cash up per shift, not only per day.** `till_counts` is
+      one row per date, so two people on one day is one variance nobody can
+      attribute. Their end-of-day collection runs at end of shift too.
+- [ ] **P2 · M** — **Stock history and discrepancy as a trail, not a number.**
+      They report stock CHANGES over time; KC knows current stock and nothing
+      about how it got there, so "we are three short" has no answer. Read-side
+      only, built on writes the app already makes.
+- [ ] **P3 · M** — **Customer types.** Their loyalty scheme hangs on customer
+      types; KC has no categories at all, so there is no way to say "Kol Torah",
+      "trade", "staff family". The types are the useful half for this shop; the
+      points scheme is not. 🔒 the moment a type changes a price.
+- [ ] **P2 · S** — **Attach the customer BEFORE the sale, or it is anonymous.**
+      Their loyalty docs are blunt that a sale saved without a customer loses the
+      points. KC's till has the same trap and it is how a wallet ends up not
+      matching a drawer. A guard, not a warning.
+
 ## From competitive research 2026-07-17 (big-tech / premium idea-hunt)
 Scouted live product/help pages (Linear, Stripe, Square, Loyverse, Booqable,
 RepairShopr/RepairDesk, Airalo/Holafly, Superhuman, Goodshuffle). Full sourced
