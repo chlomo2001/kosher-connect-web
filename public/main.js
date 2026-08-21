@@ -7924,9 +7924,18 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         <button class="card-action" onclick="openNewServiceModal('${c.id}')"><span class="ca-icon">🖨️</span> Print / Online</button>
       </div>`;
 
+  // The pop-up note, FIRST — above the header on BOTH surfaces, because its
+  // whole contract is that it cannot be missed. The first version banners only
+  // the full page and the test caught it: the card overlay is the surface staff
+  // actually open all day. Customer-typed text, so escaped; the pin and the
+  // border are what say "read me", not colour alone.
+  const popNoteHtml = c.popNote ? `
+      <div class="kc-popnote" role="alert">📌 ${escHtml(c.popNote)}</div>` : '';
+
   if (!isPage) {
     return `
     <div class="detail-panel" id="detailPanel">
+      ${popNoteHtml}
       ${headerHtml}
       ${statsHtml}
       ${overviewHtml}
@@ -7963,6 +7972,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   }
   return `
     <div class="detail-panel kc-cpage" id="detailPanel">
+      ${popNoteHtml}
       ${headerHtml}
       ${statsHtml}
       ${subtabsHtml}
@@ -11742,6 +11752,7 @@ function openEditModal(id) {
   if (aeEl) aeEl.value = c.accountEmail || '';
   document.getElementById('fAddress').value = c.address || '';
   { const n = document.getElementById('fNotes'); if (n) n.value = c.notes || ''; }
+  { const n = document.getElementById('fPopNote'); if (n) n.value = c.popNote || ''; }
   { const hw = document.getElementById('fHasWhatsapp'); if (hw) hw.checked = !!c.hasWhatsapp; }
   document.getElementById('fPassportOnFile').checked = !!c.passportOnFile;
   const ha = c.houseAccount || null;
@@ -11801,6 +11812,7 @@ function clearModal() {
   const hw = document.getElementById('fHasWhatsapp'); if (hw) hw.checked = false;
   const ae = document.getElementById('fAccountEmail'); if (ae) ae.value = '';
   const nt = document.getElementById('fNotes'); if (nt) nt.value = '';
+  const pn = document.getElementById('fPopNote'); if (pn) pn.value = '';
   const pm = document.getElementById('fPayMethod'); if (pm) pm.value = '';
   document.getElementById('fCountryCode').value = '+44';
   KC_OPTIONAL_FIELDS.forEach(kcCollapseField);
@@ -11914,6 +11926,7 @@ async function saveCustomer() {
   const altEmail  = document.getElementById('fAltEmail')?.value.trim() || '';
   const address   = document.getElementById('fAddress').value.trim();
   const notes     = document.getElementById('fNotes')?.value.trim() || '';
+  const popNote   = document.getElementById('fPopNote')?.value.trim().slice(0, 140) || '';
   const editId    = document.getElementById('editId').value;
 
   if (!firstName) { setErr('errFirstName', true); setInputErr('fFirstName', true); valid = false; }
@@ -11980,7 +11993,7 @@ async function saveCustomer() {
     if (move) { if (!accountEmail) accountEmail = contactEmail; contactEmail = ''; }
   }
 
-  const payload = { title, firstName, lastName, phone: fullPhone, altPhone, email: contactEmail, altEmail, address, notes,
+  const payload = { title, firstName, lastName, phone: fullPhone, altPhone, email: contactEmail, altEmail, address, notes, popNote,
     accountEmail,
     // How this customer usually pays. '' means "ask each time" — the till and
     // the wallet start on it, they do not enforce it.
@@ -17482,6 +17495,10 @@ function posCustomerChange() {
   const id = document.getElementById('posCustomer')?.value;
   const c = id && id !== 'walkin' ? customers.find(x => String(x.id) === String(id)) : null;
   if (c?.defaultPaymentMethod) posSetMethod(c.defaultPaymentMethod);
+  // The pop-up note fires the moment the customer is attached — the Epos Now
+  // Pop Up Notes idea. A toast, not a modal: the counter is mid-sale and the
+  // note must interrupt the EYE, not the hands.
+  if (c?.popNote) toast(`📌 ${c.popNote}`, 'warning');
   posRenderTender();
   // Straight back to scanning once someone is chosen — but not while the
   // operator is still typing a name, which also lands here the moment the

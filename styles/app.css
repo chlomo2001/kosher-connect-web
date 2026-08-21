@@ -4246,6 +4246,23 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 /* The scroll container. body/#__next are overflow:hidden for the app frame, so
    a standalone page has to carry its own — the same arrangement as .tool-shell
    and .welcome-shell, and the same bug both of those exist to avoid. */
+/* The customer pop-up note — the one line the counter must meet. Bordered and
+   led by the pin so it reads as a flag in both themes without relying on
+   colour; role="alert" carries it to a screen reader the same way. */
+.kc-popnote {
+  border: 1px solid var(--warning, #b45309);
+  border-left-width: 4px;
+  background: var(--warning-wash, #fdf6ec);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 0 0 14px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 .kc-man-shell { height: 100vh; width: 100%; overflow-y: auto; }
 
 .kc-man-screen { padding: 30px 0 8px; border-top: 1px solid var(--border-subtle); }

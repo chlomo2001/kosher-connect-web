@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
-*As of 21 Aug 2026 · m-bce7b3cb — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 21 Aug 2026 · m-103335a9 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -137,6 +137,7 @@ Everyone on the books: how to reach them, what they owe, and everything they hav
 - **unconfirmed — confirm?** — On a record that came in from an import and nobody has checked, the marker under the name is the answer button. Pressing it vouches that what the app holds matches reality, and confirms the SIMs, bookings and virtual numbers that came in with them — the same as the Confirm Data screen, without leaving the person you are looking at. It asks first. In lists the same marker stays a plain label.
 - **Wallet** — The one place money is offered on the record. It says the balance in the same words as the rest of the app, lists what made it up, and carries a single button — which asks for the payment when they owe and offers to record one when they do not. The balance used to be stated three times on one screen with two buttons doing the same job; two controls of the same shape for one task is how the wrong one gets pressed.
 - **⚙️ Manage** — Set yourself a reminder about them, edit their details, and — for the owner — look up what their line is doing with the carrier.
+- **📌 Pop-up note** — One line, set in Edit details, that shows loudly every time: a pinned banner across the top of their card and page, and a warning at the till the moment they are rung up. Only for what must not be missed — a passport about to expire, a payment that must be taken first. Everything else belongs in Notes, or the loud channel stops being loud.
 - **Documents** — Files shared with the customer, which they see in their own portal, and anything they have sent back. What they upload waits for you to approve or reject it, so nothing lands on the record unread. From four documents up they group into folders by what they are — passports and ID, tickets, receipts, forms, photos — so finding one is a glance rather than a read. The folders are worked out from the filename and are on this screen only; the customer's own portal is unchanged.
 
 **Worked example — somebody rings and you have their number, not their name**

@@ -406,6 +406,17 @@ export default function AppShell({ initialTab = 'dashboard' }) {
               <textarea className="form-input" id="fNotes" rows={2} placeholder="e.g. prefers the £20 US plan · pays end of month · brother of Yossi Adler" style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4 }}></textarea>
             </div>
 
+            {/* The pop-up note (Epos Now's Pop Up Notes, KB read 21 Aug). Notes
+                above are a drawer you open; this is the one line the counter
+                must MEET — it banners on the profile and toasts at the till the
+                moment the customer is picked. Kept separate from Notes so the
+                loud channel stays scarce: a popup that fires on everyone is a
+                popup everyone dismisses unread. */}
+            <div className="form-group form-full">
+              <label className="form-label" htmlFor="fPopNote">📌 Pop-up note <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(shows loudly every time — only for what must not be missed)</span></label>
+              <input className="form-input" id="fPopNote" type="text" maxLength={140} placeholder="e.g. passport expires Oct — chase before any booking" autoComplete="off" />
+            </div>
+
             <div className="form-group form-full">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                 <input type="checkbox" id="fPassportOnFile" style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
