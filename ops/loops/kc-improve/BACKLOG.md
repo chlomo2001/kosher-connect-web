@@ -2035,6 +2035,7 @@ CODE CHECKED (a lesson bought mid-evening — see `cc6f61d`).
 | C | `6e173b5` | 📌 Pop-up notes: card banner, page banner, till toast; escaped; 140-char cap; the loud channel kept scarce |
 | D | `1408bb6` + `cc6f61d` | E4 stock story: derived trail, confessed opening figure, impossible counts called proven discrepancies. Second sha is the missing manual shot AND the ship-script fix after the gate ran red and shipped anyway |
 | E | `6216eff` | STOCKLOW sweep tasks on the dashboard's own rule, closing on recovery; digest group added |
+| J | `26ddab5` | Clarity-scan Tier 1 #7 and #8 closed as comments at the write site and the SIM form — not in applied migrations, and the scan says why. #4/#5/#6 held: renames of served fields and money labels are not weekend material |
 | I | `3642620` | Claims re-sweep over the week's five new surfaces: four true, one false — the digest footer claimed "everything open, the same list the Tasks screen shows" while dropping snoozed tasks the screen shows. Reworded honestly, test re-pinned |
 | H | `930fd07` | E6's last safe piece: the on-account-needs-a-customer rule now speaks in the tender area the moment "Paid now" is unticked on a walk-in — guard's own condition and wording, hard stops untouched |
 | G | `3117ced` | Issue #16 closed: carrier post toasts within the minute it arrives — cheap pulse (count + headlines, never bodies), server-timestamp watermark, burst compression. 5 tests |
