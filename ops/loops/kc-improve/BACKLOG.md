@@ -2001,8 +2001,9 @@ DISCOVERY: rendering real screens in the harness in states nobody had looked at
 Ground was the WEEK'S NEW SURFACES in states nobody had rendered — the strip,
 the story, the pop-note and the pulse all shipped in the last 24 hours against
 390px light, and fresh eyes at 320/dark/largest and against a slowed network
-found three real items. The full audit ran alongside; zero ✗ through its first ~19 sections at the
-time this table shipped, final verdict appended when it lands.
+found three real items. The full audit ran alongside and finished clean: zero ✗ across every section,
+`AUDIT: all checks reported clean.`, exit 0 — including the three items above,
+which shipped mid-run and were re-covered by the sections that followed.
 
 | # | Shipped | What it was | Found by |
 |---|---|---|---|
