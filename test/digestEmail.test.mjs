@@ -97,5 +97,8 @@ test('it goes through the house shell, so it looks like everything else', () => 
   const html = digestEmail(buildDigest([T()])).html
   assert.match(html, /logo-full-tight\.png/, 'the wordmark')
   assert.match(html, /421 Bury New Road/, 'the business footer')
-  assert.match(html, /the same list the Tasks screen shows/, 'and where it came from')
+  assert.match(html, /Anything you have snoozed is left to sleep/,
+    'the footer must claim only what buildDigest actually does — the Tasks ' +
+    'screen shows snoozed tasks in a lane, the digest drops them, and the old ' +
+    'wording said they were the same list')
 })

@@ -222,3 +222,22 @@ These were checked and the write is there. Money claims dominate, which is the r
 | Receipt emailed to ${res.sentTo}. | `public/main.js:4140 (same pattern at 9142, 9643, 16114)` | public/main.js:4135-4139 branches held and redirected off first with warning toasts quoting the server's gate note, so this success toast is reached only on the live path; lib/emai |
 | SMS sent to ${r.customerName \|\| 'the customer'} ✔ | `public/main.js:9501` | public/main.js:9498-9500 handles held and redirected first with the server's own warning notes (pages/api/sms.js:59-64), so this toast fires only when lib/sms.js:139-149 actually d |
 | Kosher Connect test — the SMS connection works. 👍 | `pages/api/sms-test.js:30` | lib/sms.js:131-149 — in HOLD mode the message is only logged and no reader ever sees the claim; in TEST/LIVE it is read only after Twilio actually accepted and delivered it, so the |
+
+
+## Re-sweep over the week's new claims — 22 Aug 2026
+
+The 21–22 Aug work added five user-facing surfaces with claims of their own.
+Each checked against the code that backs it, the audit's standing method.
+
+| Where | Claim | Verdict |
+|---|---|---|
+| Digest email footer | "This is everything open in the app right now — the same list the Tasks screen shows" | **FALSE, fixed this sweep.** `buildDigest` drops snoozed tasks; the Tasks screen shows them in their own 💤 lane. And each pile is capped at five. Reworded to say exactly that: the open list, snoozes left to sleep, a long pile says how many it left out. `test/digestEmail.test.mjs` now pins the honest wording. |
+| Manual stamp | "the code changes whenever the words do, so a printout can be checked against this line" | TRUE — `manualFingerprint` hashes the screen entries; `test/manualStamp.test.mjs` proves a one-character prose change moves it, and the stamp cannot ship stale. |
+| Stock story dialog | "Only the most recent 1,000 of each kind are shown — the reconciliation above may be off" (when capped); "hand edits and supplier returns are not itemised" | TRUE — matches `limit=1000` and `capped` in the API branch; returns and edits genuinely have no per-item records. |
+| Carrier-mail manual entry | "a small message appears within the minute"; "post from before the app was opened does not toast" | TRUE — 60s poll; the watermark starts at page load and only advances to server timestamps. |
+| Common-jobs strip | "These N jobs are written out step by step inside the app" | TRUE by construction — N is `GUIDES.length` and the questions are interpolated from the guides; `test/manualJobs.test.mjs` makes a pasted copy unshippable. |
+| Tender advisory | "On account needs a customer …" | TRUE — same condition and wording as the enforcing guard, by test. |
+
+One false claim in five surfaces, caught the day after it shipped rather than
+in a month — which is the argument for running this sweep every time a batch
+of copy lands.
