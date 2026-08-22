@@ -75,3 +75,17 @@ test('the mirror in main.js computes exactly what the module computes', () => {
   assert.deepEqual(B.buildStockStory(args), buildStockStory(args))
   assert.equal(B.stockStoryLine(B.buildStockStory(args), 3), stockStoryLine(buildStockStory(args), 3))
 })
+
+// ── the dialog's manners ───────────────────────────────────────────────────
+test('the dialog paints before the network answers, and a late answer cannot lie', () => {
+  const MAINSRC = readFileSync(path.join(import.meta.dirname, '..', 'public/main.js'), 'utf8')
+  const CODE = MAINSRC.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n')
+  const fn = CODE.match(/async function openStockStory\(itemId\) \{[\s\S]*?\n\}/)
+  assert.ok(fn, 'openStockStory not found')
+  const shell = fn[0].indexOf('showDynamicModal')
+  const fetch_ = fn[0].indexOf('kcFetch')
+  assert.ok(shell > -1 && fetch_ > -1 && shell < fetch_,
+    'the shell must open BEFORE the read — a button that waits on the network reads as dead and gets pressed twice')
+  assert.match(fn[0], /body\.dataset\.item !== String\(itemId\)/,
+    'a slow answer for item A must never paint itself under item B\u2019s title')
+})

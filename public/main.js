@@ -17389,9 +17389,27 @@ async function saveStockItem(itemId) {
 async function openStockStory(itemId) {
   const item = shopItems.find(x => String(x.id) === String(itemId));
   if (!item) return;
+  // The dialog opens BEFORE the read, on the house never-wait rule: a button
+  // that answers only after the network answers reads as a button that did
+  // nothing, and gets pressed twice. The shell paints now; the records fill it
+  // when they land — and only if this dialog is still the one on screen.
+  const itemName = escHtml(`${item.company || ''} ${item.model || ''}`.trim() || 'Stock item');
+  showDynamicModal(`
+    <div class="modal-title">📜 ${itemName} — the story of the count</div>
+    <div id="storyBody" data-item="${escHtml(String(itemId))}"><div style="color:var(--muted);font-size:var(--fs-body);">Reading the records…</div></div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
+  `);
   const d = await kcFetch('/api/shop?story=' + encodeURIComponent(itemId))
     .then(r => r.json()).catch(() => null);
-  if (!d || !d.success) { toast('Could not load the story.', 'error'); return; }
+  const body = document.getElementById('storyBody');
+  // Closed, replaced by another dialog, or replaced by ANOTHER ITEM'S story —
+  // the last one is the sharp edge: a slow answer for item A must never paint
+  // itself under item B's title. The body carries the id it was opened for.
+  if (!body || body.dataset.item !== String(itemId)) return;
+  if (!d || !d.success) {
+    body.innerHTML = `<div style="color:var(--warning-ink);font-size:var(--fs-body);">Could not read the records — check the connection and try again.</div>`;
+    return;
+  }
   const story = KC_STOCKSTORY.buildStockStory({ quantityNow: item.quantity, sales: d.sales, goodsIn: d.goodsIn });
   const line = KC_STOCKSTORY.stockStoryLine(story, item.quantity);
   const rows = story.moves.map(m => `
@@ -17400,13 +17418,10 @@ async function openStockStory(itemId) {
       <span style="min-width:34px;font-weight:700;${m.kind === 'in' ? 'color:var(--success-ink);' : ''}">${m.kind === 'in' ? '+' : '−'}${m.qty}</span>
       <span style="flex:1;">${escHtml(m.label)}</span>
     </div>`).join('');
-  showDynamicModal(`
-    <div class="modal-title">📜 ${escHtml(`${item.company || ''} ${item.model || ''}`.trim() || 'Stock item')} — the story of the count</div>
+  body.innerHTML = `
     <div style="font-size:var(--fs-ui);line-height:1.6;margin-bottom:12px;${story.impossible ? 'color:var(--warning-ink);font-weight:600;' : 'color:var(--muted);'}">${escHtml(line)}</div>
     ${d.capped ? `<div style="font-size:var(--fs-small);color:var(--warning-ink);margin-bottom:8px;">Only the most recent 1,000 of each kind are shown — the reconciliation above may be off by what fell outside them.</div>` : ''}
-    <div style="max-height:320px;overflow-y:auto;">${rows || '<div style="color:var(--muted);font-size:var(--fs-body);">Nothing recorded yet.</div>'}</div>
-    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
-  `);
+    <div style="max-height:320px;overflow-y:auto;">${rows || '<div style="color:var(--muted);font-size:var(--fs-body);">Nothing recorded yet.</div>'}</div>`;
 }
 
 async function retireStockItem(itemId) {
