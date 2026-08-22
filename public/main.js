@@ -12698,6 +12698,14 @@ function openSimFormModal(id, preselectCustomerId = null, prefill = null) {
           <option value="active"    ${(!s || s.status === 'active')    ? 'selected' : ''}>Active</option>
           <option value="suspended" ${s?.status === 'suspended' ? 'selected' : ''}>Suspended</option>
           <option value="cancelled" ${s?.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+          <!-- sim_status also declares 'renewal_pending', and the customer
+               portal is fully built to show it in both languages
+               (pages/portal.js) — but NOTHING can set it, this form included,
+               so that warning has never once fired. Half-built on purpose is
+               fine; half-built by accident is issue #13, where the owner
+               decides: add the option here (and the wording it triggers), or
+               drop the enum value and the portal branches together. Do not add
+               it casually — the moment it exists, customers see it. -->
         </select>
       </div>
     </div>

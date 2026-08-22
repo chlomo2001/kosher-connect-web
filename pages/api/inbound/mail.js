@@ -282,10 +282,14 @@ export default async function handler(req, res) {
     const inserted = await db.insertIgnoreDup('sim_mail', [{
       message_id: mail.messageId,
       ...(mail.receivedAt ? { received_at: mail.receivedAt } : {}),
-      // The address that identified the SIM, not whichever hop happened to be
-      // first on the envelope — see matchSimForMail. With the shop's mailboxes
-      // forwarding into one business-only inbox, recipients[0] is the hub on
-      // every single message, which tells a human nothing.
+      // The recipient that best IDENTIFIES the SIM: the address matched on
+      // when the message paired (see matchSimForMail), or the first envelope
+      // hop when it did not — which, with every shop mailbox forwarding into
+      // one business-only inbox, is the hub and tells a human nothing. So on
+      // the PENDING queue this column is usually the hub, not a pairing:
+      // the migration's older comment ("the address we PAIRED on") described
+      // only the happy half, and the pending queue is exactly where somebody
+      // reads this column hardest.
       recipient: match.matchedOn || mail.recipients[0] || null,
       // The hops as well, so the route a message took is a fact on the row
       // rather than a thing to argue about — see the migration for why.
