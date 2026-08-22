@@ -1996,6 +1996,31 @@ DISCOVERY: rendering real screens in the harness in states nobody had looked at
 - Loading states, focus visibility, contrast in both themes, dark-rule pairing,
   and touch targets at 390 — all already green.
 
+## UX/UI night — 22 Aug 2026 (03:07–05:30)
+
+Ground was the WEEK'S NEW SURFACES in states nobody had rendered — the strip,
+the story, the pop-note and the pulse all shipped in the last 24 hours against
+390px light, and fresh eyes at 320/dark/largest and against a slowed network
+found three real items. The full audit ran alongside; zero ✗ through its first ~19 sections at the
+time this table shipped, final verdict appended when it lands.
+
+| # | Shipped | What it was | Found by |
+|---|---|---|---|
+| 1 | `7a45342` | The common-jobs strip at 320px was a single-column wall of twenty questions burying the Contents — the page's own navigation — a screen and a half down. Bounded to ~5 visible rows, scrolling in place, under 560px only | rendering /manual one width narrower than it was designed at |
+| 2 | `7f1b2b9` | 📜 Story opened only after the network answered — a dead-feeling button that invites a second press — and a slow answer for item A could paint itself under item B's title. Shell paints first; the fill checks the item id it was opened for and a late answer dies silently | pressing the dialog with a 500ms fetch instead of the harness's instant one |
+| 3 | `689b923` | 📜 Story REPLACED the item-edit form it lives inside — a half-typed quantity was lost and closing landed on the tab. Now stacked over the form; proven by typing 77, opening the story, Escape: the 77 is still in the box | walking the actual mid-edit path a member of staff walks |
+
+### Checked and genuinely clean (so nobody re-checks them)
+
+- Pop-note at 320/dark/largest with a 140-char note: a tall tower but legible,
+  wraps clean, no clipping — the cap bounds it.
+- The tender advisory at 320/dark/largest: fits, no overflow.
+- Four pulse toasts at once at 320px: stack readably, under half the screen.
+- Empty stock story: "where the story starts" line renders as designed.
+- The story dialog with a 60-char item name at 320/largest: fits, no sideways
+  scroll.
+- /manual in Hebrew keeps the (English) strip and stamp rendering cleanly.
+
 ## Weekend blocks — 21 Aug 2026, evening (owner away; standing ff instruction)
 
 Worked from the owner's leaving brief: Epos ideas as far as they safely go,
