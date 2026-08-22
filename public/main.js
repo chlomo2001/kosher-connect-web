@@ -17394,11 +17394,16 @@ async function openStockStory(itemId) {
   // nothing, and gets pressed twice. The shell paints now; the records fill it
   // when they land — and only if this dialog is still the one on screen.
   const itemName = escHtml(`${item.company || ''} ${item.model || ''}`.trim() || 'Stock item');
-  showDynamicModal(`
+  // STACKED, not the base dialog: the 📜 button lives inside the item-edit
+  // form, and showDynamicModal would REPLACE that form — taking a half-typed
+  // quantity with it, and dropping the operator back at the tab instead of the
+  // edit they were in. The stacked layer closes back onto the form, values
+  // intact, which is the whole reason the button is there.
+  showStackedModal(`
     <div class="modal-title">📜 ${itemName} — the story of the count</div>
     <div id="storyBody" data-item="${escHtml(String(itemId))}"><div style="color:var(--muted);font-size:var(--fs-body);">Reading the records…</div></div>
-    <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button></div>
-  `);
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeStackedModal()">Close</button></div>
+  `, { width: 520 });
   const d = await kcFetch('/api/shop?story=' + encodeURIComponent(itemId))
     .then(r => r.json()).catch(() => null);
   const body = document.getElementById('storyBody');

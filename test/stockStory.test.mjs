@@ -82,10 +82,14 @@ test('the dialog paints before the network answers, and a late answer cannot lie
   const CODE = MAINSRC.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n')
   const fn = CODE.match(/async function openStockStory\(itemId\) \{[\s\S]*?\n\}/)
   assert.ok(fn, 'openStockStory not found')
-  const shell = fn[0].indexOf('showDynamicModal')
+  const shell = fn[0].indexOf('showStackedModal')
   const fetch_ = fn[0].indexOf('kcFetch')
   assert.ok(shell > -1 && fetch_ > -1 && shell < fetch_,
     'the shell must open BEFORE the read — a button that waits on the network reads as dead and gets pressed twice')
   assert.match(fn[0], /body\.dataset\.item !== String\(itemId\)/,
     'a slow answer for item A must never paint itself under item B\u2019s title')
+  // STACKED, because the button lives inside the item-edit form: the base
+  // dialog would replace that form and take a half-typed quantity with it.
+  assert.doesNotMatch(fn[0], /showDynamicModal/,
+    'the story must stack OVER the edit form, not replace it')
 })
