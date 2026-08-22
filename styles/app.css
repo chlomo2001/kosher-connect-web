@@ -4273,6 +4273,20 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 .kc-man-stamp { color: var(--muted); font-size: var(--fs-small); white-space: nowrap; }
 .kc-man-stampfoot { display: none; }
 .kc-man-job { color: var(--text); font-size: var(--fs-body); }
+/* On a phone the twenty questions become a single-column wall that buries the
+   Contents — the page's own navigation — below a screen and a half of strip.
+   Bound the list and let it scroll in place (the house rule for wide content,
+   applied downward): about five questions show, the stated count says there
+   are twenty, and the Contents is back within a thumb's reach. Desktop keeps
+   the full glanceable grid. */
+@media (max-width: 560px) {
+  .kc-man-jobs .kc-man-toc-grid {
+    max-height: 176px;
+    overflow-y: auto;
+    padding-right: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+}
 .kc-man-toc a { color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border); }
 .kc-man-toc a:hover { border-bottom-color: var(--text); }
 /* The contents links measured 155x23 on a phone — a whole grid of them one

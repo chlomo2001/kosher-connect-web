@@ -35,3 +35,14 @@ test('hidden in print, like the contents and for the same reason', () => {
   assert.match(CSS, /\.kc-man-chrome, \.kc-man-toc, \.kc-man-jobs \{ display: none; \}/,
     'on paper the strip points at a button paper does not have')
 })
+
+test('on a phone the strip is bounded, so it cannot bury the contents', () => {
+  // At 320px the twenty questions rendered as a single-column wall a screen
+  // and a half tall, with the Contents — the page's own navigation — below
+  // it. The list scrolls in place instead: the house rule for wide content,
+  // applied downward.
+  assert.match(CSS, /@media \(max-width: 560px\) \{\s*\.kc-man-jobs \.kc-man-toc-grid \{[^}]*max-height/s,
+    'the narrow-screen bound is gone — twenty questions will wall off the contents again')
+  assert.match(CSS, /\.kc-man-jobs \.kc-man-toc-grid \{[^}]*overflow-y: auto/s,
+    'bounded but not scrollable is fifteen hidden questions')
+})
