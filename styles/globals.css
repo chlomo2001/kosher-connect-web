@@ -394,6 +394,13 @@ button, summary { user-select: none; }
    actually expects, and the extra 8px costs nothing on a desktop screen.
    min-height rather than a fixed height, so a two-line label still fits. */
 .btn {
+  /* A button may never be wider than what holds it. Found by the offline
+     audit, 23 Aug: "💰 Record payment / credit" measured 324px inside a 306px
+     column at 320px with the largest text, and hung 18px off the Wallet tab.
+     max-width lets it shrink and the label wrap onto a second line, which the
+     40px min-height already has room to grow past — a two-line button is
+     ordinary, a button off the edge of the screen is not. */
+  max-width: 100%;
   padding: 10px 18px;
   min-height: 40px;
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -413,7 +420,16 @@ button, summary { user-select: none; }
    audits already treat as comfortable; .btn-sm keeps its compact size for
    in-table actions, or tables would double in height. */
 .btn-primary { background: var(--accent); color: var(--on-accent); min-height: 48px; padding: 12px 24px; font-weight: 600; }
-.btn-sm.btn-primary, .btn-primary.btn-sm { min-height: 0; padding: 6px 12px; font-weight: 600; }
+/* 26px, not 0. Writing `min-height: 0` let a small button be genuinely small,
+   and it also removed the FLOOR — after which sixteen call sites set
+   `padding:3px 10px` inline and the tasks screen's "✈️ Confirm booking
+   details" measured 235×22 at the largest text size, under the 24×24 floor
+   every other control in this app is held to. A floor is a different property
+   from the padding those call sites set, so one rule fixes all sixteen and
+   the next one nobody has written yet. Found on 23 Aug only because fixing
+   the Wallet overflow let the audit REACH this check: `bash -e` had been
+   stopping the group at the earlier failure. */
+.btn-sm.btn-primary, .btn-primary.btn-sm { min-height: 26px; padding: 6px 12px; font-weight: 600; }
 .btn-primary:hover { background: var(--primary-deep); }
 .btn-primary:active { background: var(--primary-press); }
 /* The destructive twin of .btn-primary — issue #19, option 2 (owner, 23 Aug:
@@ -422,7 +438,7 @@ button, summary { user-select: none; }
    the token is deliberately not overridden on dark — see its definition), so
    a literal #fff here is correct where .btn-primary needs --on-accent. */
 .btn-danger { background: var(--danger-solid); color: #fff; min-height: 48px; padding: 12px 24px; font-weight: 600; }
-.btn-sm.btn-danger, .btn-danger.btn-sm { min-height: 0; padding: 6px 12px; font-weight: 600; }
+.btn-sm.btn-danger, .btn-danger.btn-sm { min-height: 26px; padding: 6px 12px; font-weight: 600; }
 .btn-danger:hover { background: #8c0f2a; }
 .btn-danger:active { background: #750b22; }
 .btn-danger:disabled, .btn-danger:disabled:hover { background: var(--danger-solid); color: #fff; opacity: .55; cursor: not-allowed; }

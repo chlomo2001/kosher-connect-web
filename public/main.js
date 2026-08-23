@@ -742,7 +742,7 @@ function setupNav() {
   // white-space:nowrap and the rail hides its overflow. Below that the rail
   // collapse is the right answer, and it is one keystroke away. The ceiling is
   // where the rail starts eating the working area on a laptop screen.
-  const SB_W_KEY = 'kcNavWidth', SB_W_DEFAULT = 208, SB_W_MIN = 184, SB_W_MAX = 380;
+  const SB_W_KEY = 'kcNavWidth', SB_W_DEFAULT = 224, SB_W_MIN = 184, SB_W_MAX = 380;
   const sbGrip = document.getElementById('navGrip');
   // The width we ASKED for, not the width the box currently paints at. The
   // sidebar carries a 0.2s width transition for the ⌘B rail, so measuring the

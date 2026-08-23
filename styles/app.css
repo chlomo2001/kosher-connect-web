@@ -107,7 +107,7 @@
      kcNavWidth). The default is the 208px this rail has always been; the rail
      collapse and the phone drawer below both set their own width and win on
      specificity, so neither can be dragged into a bad state. */
-  width: var(--sb-w, 208px);
+  width: var(--sb-w, 224px);   /* CSS fallback tracks SB_W_DEFAULT in main.js */
   position: relative;
   background: var(--brand-dark);
   display: flex; flex-direction: column;
@@ -216,17 +216,31 @@
 
 .nav-item, .nav-link {
   display: flex; align-items: center; gap: 10px;
-  /* 2px/7px, not 1px/6px: twenty-odd destinations stacked at 30px apart read
-     as one striped block, and stripes are what the eye has to fight to keep
-     its place in. Four more pixels per row is the whole difference between a
-     list you scan and a list you parse. */
-  margin: 2px 8px; padding: 7px 10px; border-radius: var(--radius-lg);
-  font-size: var(--fs-body); font-weight: 400; line-height: 1.35;
+  /* 37px tall, and FIXED — owner, 23 Aug, after comparing against other apps:
+     "i dont think its the color, its more the size of the buttons".
+     The rail used to shrink its rows as the window got shorter (32px on a big
+     desktop, 28px on a laptop, 24px on a 768p screen) purely so it would never
+     scroll — the short-screen tiers below said so outright. That is the trade
+     made backwards: a sidebar scrolling is something nobody minds, and every
+     app of this shape does it; a 24px row is under the 24×24 floor this app
+     tests every other control against, and it is the thing a person aims at
+     forty times an hour. 36px is the desktop standard (44 if it is ever
+     touched); 9px of padding on 14px text lands at 37. */
+  margin: 2px 8px; padding: 9px 10px; border-radius: var(--radius-lg);
+  font-size: var(--fs-ui); font-weight: 400; line-height: 1.35;
   color: rgba(var(--sb-fg-rgb),0.74); cursor: pointer; text-decoration: none;
   transition: background 0.15s, color 0.15s;
 }
 
-.nav-item:hover, .nav-link:hover { color: var(--sb-ink); background: rgba(var(--sb-fg-rgb),0.08); }
+/* A hover is a HINT; the row you are on is an ANSWER. They were 0.08 and 0.14
+   — measured on the track that is +63% luminance for the hover and only a
+   further +37% for the selection, so "where my pointer is" and "where I am"
+   arrived as nearly the same shade, and the pointer's version flashed hardest
+   because it moves. Owner, 23 Aug: "the color when hovering upon — or even
+   just without hovering, is it something odd as per design logics?" It was.
+   The hover comes down to a murmur and the selection goes up to something you
+   can find without reading it. */
+.nav-item:hover, .nav-link:hover { color: var(--sb-ink); background: rgba(var(--sb-fg-rgb),0.06); }
 
 /* The global keyboard ring is a translucent blue (rgba(0,96,168,.22)) sized for
    the ivory content column. On the navy rail it lands blue-on-navy and simply
@@ -242,7 +256,7 @@
 /* Rimless selected state — a soft frosted panel (no accent bar), like the
    Travel-Planner reference: the highlight reads as a calm shade, not a rule. */
 
-.nav-item.active { color: var(--sb-ink); background: rgba(var(--sb-fg-rgb),0.14); font-weight: 500; }
+.nav-item.active { color: var(--sb-ink); background: rgba(var(--sb-fg-rgb),0.22); font-weight: 500; }
 
 .nav-icon { width: 18px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0.88; }
 
@@ -368,8 +382,9 @@
 
   .logo img { width: 28px; height: 28px; }
 
-  .nav-item, .nav-link { padding: 5px 10px; }
-
+  /* The ROWS are deliberately absent here now — see .nav-item above. What is
+     left is furniture: labels, the logo, the footer. Trimming those costs
+     nobody a target to hit. */
   .nav-group-label { padding: 9px 18px 2px; }
 
   .sidebar-bottom { padding: 6px 18px 8px; }
@@ -384,7 +399,6 @@
 
 @media (max-height: 760px) {
   .logo-sub { display: none; }
-  .nav-item, .nav-link { padding: 3px 10px; }
   .nav-group-label { padding: 6px 18px 1px; }
   .sb-row { height: 26px; }
   .sb-version { display: none; }
