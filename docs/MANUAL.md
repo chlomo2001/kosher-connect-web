@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
-*As of 23 Aug 2026 · m-d0e5f14e — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 23 Aug 2026 · m-5804401c — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -122,6 +122,7 @@ Everyone on the books: how to reach them, what they owe, and everything they hav
 - **The balance column** — Said the same way as everywhere else in the app: owes the amount, holds that much in credit, settled, or not checked yet. The last is not a fault — it means the wallet figures have not arrived on this screen, either because they are still loading or because this member of staff cannot see the wallet. No balance is shown rather than a guess at one.
 - **Filter** — Narrows the list to one kind of customer: an active rental, a flight coming up, a SIM plan, a virtual number, an open repair, money owed, a passport on file, or nobody-can-ring-them — no number of theirs and no SIM of ours either.
 - **Sort** — Surname or first name, either direction; most owed first when chasing money; recently added after an import; most services first to find the shop's busiest customers.
+- **Press a letter** — Like flicking a phone book: with the list in front of you, pressing A shows only the A’s — of whichever column the sort says, surname or first name — and a small chip says the letter is on. The same letter again, Escape, or the chip’s ✕ shows everyone. It never fires while you are typing in a box.
 - **Export CSV** — The list as it is filtered and sorted, as a file — for a mail merge, or for anything the app does not do itself.
 - **👥 Duplicates** — Owner only. Reviews the whole book for records that look like the same person entered twice — matching on the name, the phone line and the person behind an email address — with the evidence and a strength beside each pair.
 - **+ New customer** — Adds someone. A name and a number is enough to start; everything else can follow.

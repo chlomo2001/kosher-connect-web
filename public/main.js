@@ -376,6 +376,11 @@ let customerPageCat = 'all';      // activity-log category filter
 let searchTerm = '';
 let customerSort = 'surname'; // name | surname | name_desc | surname_desc | owed | recent | services
 let customerFilter = 'all'; // all | rental | flight | sim | vn | repair | arrears | passport
+// The phone-book jump (owner, 23 Aug): on the Customers tab, pressing a bare
+// letter narrows the list to that initial — of the SORT column, so it follows
+// what the header says the rows are ordered by. Same letter again, or Escape,
+// clears it. '' = off.
+let customerInitial = '';
 
 // ─────────────────────────────────────────────
 //  INIT — called directly since script loads after DOM is ready
@@ -7197,6 +7202,7 @@ function renderCustomersTab() {
       <div class="section-title">Customer List
         <span id="custCount" style="font-size:var(--fs-small);color:var(--muted);font-weight:400;margin-left:8px;"></span></div>
       <div style="display:flex;gap:8px;align-items:center;">
+        <span id="custInitialChip"></span>
         <select class="form-input kc-fs-sel" onchange="customerFilter=this.value; renderTableRows()">
           <option value="all" ${customerFilter==='all'?'selected':''}>Filter: everyone</option>
           <option value="rental" ${customerFilter==='rental'?'selected':''}>📱 Active rental</option>
@@ -7356,16 +7362,27 @@ function renderTableRows() {
   if (!tbody) return;
   // #51 — derive the shown list; never re-filter filteredCustomers in place
   // (that narrowed the search result cumulatively on every render/filter change).
-  const shown = sortCustomers(filteredCustomers.filter(customerMatchesFilter));
   // The column header names the order the rows are in, and the rows are printed
   // to match it. Set here rather than in the tab template because the sort can
   // change without the table being rebuilt.
   const surnameFirst = customerSort === 'surname' || customerSort === 'surname_desc';
+  let pool = filteredCustomers.filter(customerMatchesFilter);
+  if (customerInitial) {
+    const initialOf = (c) => String((surnameFirst ? (c.lastName || c.firstName) : (c.firstName || c.lastName)) || '')
+      .trim().charAt(0).toUpperCase();
+    pool = pool.filter((c) => initialOf(c) === customerInitial);
+  }
+  const shown = sortCustomers(pool);
   const th = document.getElementById('thCustomerName');
   if (th) th.textContent = surnameFirst ? 'Surname, first name' : 'Customer name';
   // Against the whole book, not against filteredCustomers — the point is to
   // say how much of the shop this view is showing.
   kcListCount('custCount', shown.length, customers.length);
+  const chip = document.getElementById('custInitialChip');
+  if (chip) chip.innerHTML = customerInitial
+    ? `<button class="btn btn-outline btn-sm" onclick="setCustomerInitial('')"
+         title="Press the letter again or Escape to clear">${surnameFirst ? 'Surname' : 'Name'}: ${escHtml(customerInitial)} ✕</button>`
+    : '';
 
   // A failed load must never read as "No customers yet." — with 751 real
   // records behind it that invites a panicked re-entry of data that already
@@ -7380,14 +7397,17 @@ function renderTableRows() {
       <tr><td colspan="5">
         <div class="empty-state">
           <div class="emoji">👥</div>
-          <p>${searchTerm ? `No customers match “${escHtml(searchTerm)}”.` : 'No customers yet.'}</p>
+          <p>${searchTerm ? `No customers match “${escHtml(searchTerm)}”.`
+            : customerInitial ? `Nobody under “${escHtml(customerInitial)}” in this view.` : 'No customers yet.'}</p>
           ${/* A search that matches nothing used to be a dead end: an empty
                table with the term still in a box at the top of the screen, and
                nothing on the empty state to undo it. Every other list in the
                app offers kcClearFiltersBtn in the same situation. */''}
           ${searchTerm
             ? `<button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="clearCustomerSearch()">✕ Clear search</button>`
-            : '<small>Click "+ New customer" to add your first customer.</small>'}
+            : customerInitial
+              ? `<button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="setCustomerInitial('')">✕ Show every letter</button>`
+              : '<small>Click "+ New customer" to add your first customer.</small>'}
         </div>
       </td></tr>`;
     return;
@@ -8920,6 +8940,31 @@ document.addEventListener('keydown', (e) => {
     closeCardMenus();
   }
 }, true);
+
+// ── The phone-book jump ──────────────────────────────────────────────────
+// On the Customers tab, a bare letter filters the list to that initial — no
+// trip to the search box (owner, 23 Aug: "while pressing 'A' it should filter
+// to all A initials customers"). Deliberately narrow about when it listens:
+// never while typing anywhere, never under a modal, never with a modifier
+// held — a shortcut that eats letters someone is typing is worse than none.
+function setCustomerInitial(letter) {
+  customerInitial = letter;
+  renderTableRows();
+}
+document.addEventListener('keydown', (e) => {
+  if (currentTab !== 'customers') return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+  if (kcTopModalOverlay()) return;
+  if (/^[a-z]$/i.test(e.key) || /^[א-ת]$/.test(e.key)) {
+    const L = e.key.toUpperCase();
+    setCustomerInitial(customerInitial === L ? '' : L);   // same letter = off
+    e.preventDefault();
+  } else if (e.key === 'Escape' && customerInitial) {
+    setCustomerInitial('');
+  }
+});
 
 // ── Save a card on file, from the counter ────────────────────────────────
 // A hosted Stripe page, opened here or sent to them. The number is typed into
