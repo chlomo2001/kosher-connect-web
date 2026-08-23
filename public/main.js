@@ -17208,7 +17208,7 @@ function openSupplierReturnModal(retId = null) {
               `<option value="${escHtml(String(i.id))}" data-max="${i.quantity}">${escHtml(`${i.company || ''} ${i.model || ''}`.trim())} — ${i.quantity} in stock</option>`).join('')
             || '<option value="">Nothing is in stock to return</option>'}
           </select>
-          <input class="form-input" type="number" id="srPickQty" min="1" step="1" value="1" style="width:84px;" onchange="srPickClamp()">
+          <input class="form-input" type="number" id="srPickQty" min="1" step="1" value="1" style="width:84px;" aria-label="How many to return" title="How many to return" onchange="srPickClamp()">
           <button class="btn btn-outline" onclick="srPickAdd()">＋ Add</button>
         </div>
         <div id="srLines" style="display:grid;gap:4px;margin-top:8px;"></div>
