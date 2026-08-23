@@ -20,9 +20,13 @@ const ROOT = path.join(import.meta.dirname, '..')
 const read = (p) => readFileSync(path.join(ROOT, p), 'utf8')
 
 // Public by decision (the owner's shop-front). Everything else must noindex.
+// /login moved OUT of this set on 23 Aug: left indexable, the sign-in page
+// was the result Google chose to headline the whole site with ("Sign in ·
+// KosherConnect" at #6, owner's screenshot) — a staff door dressed as the
+// front. It is still freely reachable; it just stops asking to be listed.
 const PUBLIC = new Set([
   'pages/welcome.js', 'pages/phone-guide.js', 'pages/repair.js',
-  'pages/terms.js', 'pages/privacy.js', 'pages/refund.js', 'pages/login.js',
+  'pages/terms.js', 'pages/privacy.js', 'pages/refund.js',
   // The per-service how-to pages a receipt links to (#18). Public because the
   // reader is a customer in an airport who is not going to sign in, and the
   // content is instructions rather than anything of theirs.

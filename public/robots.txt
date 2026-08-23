@@ -37,4 +37,4 @@ Disallow: /api/
 #   with no per-customer slug to leak — and it is already in every message
 #   the shop sends, so the pattern is not a secret to keep.
 
-Sitemap: https://app.kosher-connect.com/sitemap.xml
+Sitemap: https://www.kosher-connect.com/sitemap.xml

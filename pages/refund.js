@@ -12,7 +12,8 @@ export default function Refund() {
   return (
     <>
       <Head><title>Refunds &amp; Cancellations · Kosher Connect</title>
-        <meta name="robots" content="index" /></Head>
+        <meta name="robots" content="index" />
+        <link rel="canonical" href="https://www.kosher-connect.com/refund" /></Head>
       <style dangerouslySetInnerHTML={{ __html: LEGAL_CSS }} />
       <LegalShell title="Refunds & Cancellations" updated="22 July 2026">
         <p>This policy explains when and how you can get a refund or cancel. Kosher Connect is a trading name of

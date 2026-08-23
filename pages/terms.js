@@ -10,7 +10,8 @@ export default function Terms() {
   return (
     <>
       <Head><title>Terms of Service · Kosher Connect</title>
-        <meta name="robots" content="index" /></Head>
+        <meta name="robots" content="index" />
+        <link rel="canonical" href="https://www.kosher-connect.com/terms" /></Head>
       <style dangerouslySetInnerHTML={{ __html: LEGAL_CSS }} />
       <LegalShell title="Terms of Service" updated="28 July 2026">
         <p>These terms cover your use of Kosher Connect’s services and website. Kosher Connect is a trading name of

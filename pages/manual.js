@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
 import AppStyles from '../components/AppStyles'
@@ -119,6 +119,20 @@ function Screen({ s, shots }) {
   )
 }
 
+// Everything a screen's entry says, flattened once for the filter box. The
+// filter reads the SAME objects the page renders — there is no second index
+// to go stale, which is the manual's one law applied to its own search.
+function screenText(s) {
+  return [
+    s.name, s.path, s.what,
+    ...s.parts.flatMap((p) => p),
+    ...s.dialogs.flatMap((d) => d),
+    ...s.rules,
+    ...s.wrong.flatMap((w) => w),
+    ...(s.example ? [s.example.title, ...s.example.steps] : []),
+  ].join(' ').toLowerCase()
+}
+
 // `shots` defaults to {} because the offline page harness renders this
 // component without running getServerSideProps. A page that throws when a
 // server-supplied prop is absent cannot be checked offline at all, and the
@@ -134,9 +148,27 @@ export default function Manual({ shots = {} }) {
     return () => document.body.classList.remove('kc-manual')
   }, [])
 
-  const frame = screensOf('frame')
-  const staff = screensOf('staff')
-  const pages = screensOf('public')
+  // The filter (owner, 23 Aug: "why is the manual still so uninteractive?").
+  // Word-match against everything each entry says; empty query = the whole
+  // manual, unchanged. Printing prints what is SHOWING — filter to one screen
+  // and 🖨 gives you that screen's sheets for the till, not all twenty-nine.
+  const [q, setQ] = useState('')
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean)
+  const hits = useMemo(() => {
+    if (!words.length) return null
+    const ok = new Set()
+    for (const s of SCREENS) {
+      const text = screenText(s)
+      if (words.every((w) => text.includes(w))) ok.add(s.id)
+    }
+    return ok
+  }, [q]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const keep = (list) => (hits ? list.filter((s) => hits.has(s.id)) : list)
+  const frame = keep(screensOf('frame'))
+  const staff = keep(screensOf('staff'))
+  const pages = keep(screensOf('public'))
+  const shown = frame.length + staff.length + pages.length
   const { total, written, drafts } = manualProgress()
 
   return (
@@ -179,6 +211,26 @@ export default function Manual({ shots = {} }) {
             against the live page without hunting for its first sheet. */}
         <div className="kc-man-stampfoot" aria-hidden="true">Kosher Connect manual · {manualStampLine()}</div>
 
+        <div className="kc-man-filter" style={{ margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <input
+            className="form-input"
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Find in the manual — a screen, a button, a problem…"
+            aria-label="Find in the manual"
+            style={{ maxWidth: 420 }}
+          />
+          {q && (
+            <>
+              <span style={{ fontSize: 'var(--fs-small)', color: 'var(--muted)' }}>
+                {shown === 0 ? 'Nothing mentions that.' : `${shown} of ${total} screens mention it.`}
+              </span>
+              <button className="btn btn-outline btn-sm" onClick={() => setQ('')}>Show everything</button>
+            </>
+          )}
+        </div>
+
         {/* Common jobs — the Virtual Mail idea of a task-shaped strip before
             the reference (its navigation map opens with "Common shortcuts",
             then the full key-by-key map). DERIVED from lib/guides.mjs at
@@ -210,7 +262,7 @@ export default function Manual({ shots = {} }) {
               word for word, so the contents and the page agree. */}
           {[['The frame around every screen', frame],
             ['The staff app', staff],
-            ['Pages with their own address', pages]].map(([label, group]) => (
+            ['Pages with their own address', pages]].filter(([, g]) => g.length).map(([label, group]) => (
             <div key={label} className="kc-man-toc-group">
               <div className="kc-man-toc-label">{label}</div>
               <div className="kc-man-toc-grid">
@@ -222,14 +274,20 @@ export default function Manual({ shots = {} }) {
 
         {/* The chrome first: it is what someone is looking at before they have
             chosen a screen, and it is where the three help buttons are explained. */}
-        <h2 style={{ margin: '0 0 12px' }}>The frame around every screen</h2>
-        {frame.map((s) => <Screen key={s.id} s={s} shots={shots} />)}
+        {frame.length > 0 && <>
+          <h2 style={{ margin: '0 0 12px' }}>The frame around every screen</h2>
+          {frame.map((s) => <Screen key={s.id} s={s} shots={shots} />)}
+        </>}
 
-        <h2 style={{ margin: '26px 0 12px' }}>The staff app</h2>
-        {staff.map((s) => <Screen key={s.id} s={s} shots={shots} />)}
+        {staff.length > 0 && <>
+          <h2 style={{ margin: '26px 0 12px' }}>The staff app</h2>
+          {staff.map((s) => <Screen key={s.id} s={s} shots={shots} />)}
+        </>}
 
-        <h2 style={{ margin: '26px 0 12px' }}>Pages with their own address</h2>
-        {pages.map((s) => <Screen key={s.id} s={s} shots={shots} />)}
+        {pages.length > 0 && <>
+          <h2 style={{ margin: '26px 0 12px' }}>Pages with their own address</h2>
+          {pages.map((s) => <Screen key={s.id} s={s} shots={shots} />)}
+        </>}
       </div>
       </div>
 

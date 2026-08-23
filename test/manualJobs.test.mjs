@@ -32,7 +32,7 @@ test('every guide still has a question the strip can show', () => {
 })
 
 test('hidden in print, like the contents and for the same reason', () => {
-  assert.match(CSS, /\.kc-man-chrome, \.kc-man-toc, \.kc-man-jobs \{ display: none; \}/,
+  assert.match(CSS, /\.kc-man-chrome, \.kc-man-toc, \.kc-man-jobs, \.kc-man-filter \{ display: none; \}/,
     'on paper the strip points at a button paper does not have')
 })
 

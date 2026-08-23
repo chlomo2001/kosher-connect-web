@@ -329,6 +329,10 @@ const LD_JSON = JSON.stringify({
   telephone: '+441615311386',
   email: EMAIL,
   url: 'https://www.kosher-connect.com/',
+  // The square icon, not logo.png: Google's logo guidance wants a square
+  // image at a stable URL, same rule as the favicon it was refusing.
+  logo: 'https://www.kosher-connect.com/icon-512.png',
+  image: 'https://www.kosher-connect.com/logo-full.png',
   address: {
     '@type': 'PostalAddress',
     streetAddress: '421 Bury New Road, Level 2',

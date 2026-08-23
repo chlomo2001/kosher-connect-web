@@ -14,8 +14,13 @@ export default function Document() {
   return (
     <Html lang="en-GB">
       <Head>
-        <link rel="icon" type="image/png" href="/logo.png" />
-        <link rel="apple-touch-icon" href="/logo.png" />
+        {/* SQUARE icons, generated from logo.png (which is 326×334 — not
+            square, and Google refuses a non-square favicon and shows the
+            grey globe instead; owner spotted it in the results, 23 Aug). */}
+        <link rel="icon" type="image/png" sizes="96x96" href="/icon-96.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
         <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f3ea" />
         <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0d11" />
         {/* Apply the saved theme before first paint — no flash of light.

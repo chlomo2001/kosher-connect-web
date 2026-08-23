@@ -72,6 +72,10 @@ export default function Login({ supabaseUrl, googleEnabled }) {
       <Head>
         <title>Kosher Connect — Sign in</title>
         <meta property="og:site_name" content="Kosher Connect" />
+        {/* The staff door. Left indexable, this was the page Google chose to
+            headline the whole site with ("Sign in · KosherConnect" — owner,
+            23 Aug); /welcome is the front the world should see. */}
+        <meta name="robots" content="noindex" />
       </Head>
       <div className="login-shell">
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />

@@ -11,7 +11,8 @@ export default function Privacy() {
   return (
     <>
       <Head><title>Privacy Policy · Kosher Connect</title>
-        <meta name="robots" content="index" /></Head>
+        <meta name="robots" content="index" />
+        <link rel="canonical" href="https://www.kosher-connect.com/privacy" /></Head>
       <style dangerouslySetInnerHTML={{ __html: LEGAL_CSS }} />
       <LegalShell title="Privacy Policy" updated="28 July 2026">
         <p>This policy explains what personal information Kosher Connect collects, why, and your rights over it.
