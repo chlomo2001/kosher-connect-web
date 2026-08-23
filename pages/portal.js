@@ -45,6 +45,9 @@ const P = {
     rentals: 'Rentals', noRentals: 'No active rentals.',
     flights: 'Flights', noFlights: 'No upcoming flights.',
     simPlan: (n) => (n === 1 ? 'My SIM plan' : 'My SIM plans'), noSims: 'No SIM plan with us yet.',
+    simLogin: 'Sign-in email', simLoginOurs: 'ours, set up for this line — use it to sign in at the carrier; don\u2019t email it',
+    simLoginNone: 'Sign-in email not on record — call us and we\u2019ll sort it.',
+    simOtp: 'Sign-in code', simOtpAt: (t) => `received ${t}`,
     downloadFailed: 'Couldn’t open that file — try again, or call us and we’ll send it over.',
     renews: (d) => `Renews ${d}`,
     renewIn: (n) => (n === 1 ? 'tomorrow' : `in ${n} days`),
@@ -128,6 +131,9 @@ const P = {
     rentals: 'השכרות', noRentals: 'אין כרגע השכרות פעילות.',
     flights: 'טיסות', noFlights: 'אין טיסות קרובות ביומן.',
     simPlan: (n) => (n === 1 ? 'חבילת הסים שלי' : 'חבילות הסים שלי'), noSims: 'עוד אין חבילת סים אצלנו.',
+    simLogin: 'מייל כניסה', simLoginOurs: 'שלנו, הוקם עבור הקו הזה — להתחברות אצל הספק; לא לשליחת מיילים',
+    simLoginNone: 'אין מייל כניסה רשום — התקשרו אלינו ונסדר.',
+    simOtp: 'קוד כניסה', simOtpAt: (t) => `התקבל ${t}`,
     downloadFailed: 'לא הצלחנו לפתוח את הקובץ — נסו שוב, או התקשרו אלינו ונשלח לכם אותו.',
     renews: (d) => `מתחדשת ב־${d}`,
     renewIn: (n) => (n === 1 ? 'מחר' : `בעוד ${n} ימים`),
@@ -864,6 +870,25 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
                         <div className="p-row-title"><bdi dir="ltr">{s.provider || 'SIM'}{s.tier ? ` · ${s.tier}` : ''}</bdi></div>
                         {(() => { const r = simRenewal(s); return r
                           ? <div className={`p-row-sub ${r.cls}`}>{r.text}</div> : null })()}
+                        {/* #15 part 1 — the carrier login, per PLAN. The API
+                            sends it only when the address is tagged; a blank
+                            here means the login is honestly not on record,
+                            and says so rather than showing a pool address. */}
+                        <div className="p-row-sub">
+                          {s.login
+                            ? <>{L.simLogin}: <bdi dir="ltr" style={{ fontWeight: 600 }}>{s.login}</bdi>
+                                {' '}<span style={{ opacity: 0.75 }}>({L.simLoginOurs})</span></>
+                            : L.simLoginNone}
+                        </div>
+                        {/* #15 part 3 — the freshest sign-in code, so a
+                            customer with no email on file can still read it.
+                            The API only sends codes younger than 15 minutes. */}
+                        {s.otp && (
+                          <div className="p-row-sub" style={{ fontWeight: 700 }}>
+                            {L.simOtp}: <bdi dir="ltr" style={{ fontSize: '1.15em', letterSpacing: '0.06em' }}>{s.otp.code || s.otp.text}</bdi>
+                            {' '}<span style={{ fontWeight: 400, opacity: 0.75 }}>{L.simOtpAt(new Date(s.otp.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))}</span>
+                          </div>
+                        )}
                       </div>
                       <span className={`p-badge ${stClass(s.status)}`}>{stLabel(s.status)}</span>
                     </div>

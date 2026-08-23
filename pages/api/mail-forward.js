@@ -17,9 +17,10 @@
 // owner flips it when they have read a few in the queue and believe it.
 import { withStaff } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
-import { sendEmail, emailEnabled } from '../../lib/email.js'
+import { emailEnabled } from '../../lib/email.js'
 import { carrierMailKind } from '../../lib/carrierMail.mjs'
 import { forwardPlan } from '../../lib/mailForward.mjs'
+import { sendCarrierForward } from '../../lib/forwardSend.js'
 
 const enc = encodeURIComponent
 const LIMIT = 100
@@ -79,36 +80,8 @@ function toMessage(row, sims) {
   }
 }
 
-/**
- * What the customer receives.
- *
- * The carrier's own words, quoted, with one line of our own saying why they
- * have it. Not rewritten: a paraphrase of a carrier's message is a new claim
- * made in the shop's name, and this shop should not be making claims about
- * somebody else's network.
- */
-function forwardBody({ name, carrier, subject, snippet, reason }) {
-  const hello = name ? `Dear ${name},` : 'Hello,'
-  const from = carrier ? `${carrier}` : 'your network'
-  const text =
-    `${hello}\n\n` +
-    `${from} sent us this about your line, and we thought you would want to see it.\n\n` +
-    `--- ${subject || '(no subject)'} ---\n${snippet || '(no text)'}\n---\n\n` +
-    `${reason}\n\n` +
-    `You do not need to reply to this. If anything about it looks wrong, ring us on 0161 531 1386.\n\n` +
-    `Kosher Connect`
-  const esc = (s) => String(s || '').replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]))
-  const html =
-    `<p>${esc(hello)}</p>` +
-    `<p>${esc(from)} sent us this about your line, and we thought you would want to see it.</p>` +
-    `<blockquote style="border-left:3px solid #ccc;padding-left:12px;margin:16px 0;">` +
-    `<strong>${esc(subject || '(no subject)')}</strong><br>${esc(snippet || '(no text)').replace(/\n/g, '<br>')}` +
-    `</blockquote>` +
-    `<p>${esc(reason)}</p>` +
-    `<p style="color:#666;font-size:13px;">You do not need to reply to this. If anything about it looks wrong, ` +
-    `ring us on 0161 531 1386.</p><p>Kosher Connect</p>`
-  return { text, html }
-}
+// The body builder lives in lib/forwardSend.js now — shared with the auto
+// path (issue #15), so an approved forward and an automatic one read the same.
 
 async function handler(req, res) {
   if (!tablesMode) return res.status(503).json({ success: false, error: 'Needs the relational data layer.' })
@@ -155,38 +128,22 @@ async function handler(req, res) {
       return res.status(503).json({ success: false, error: 'Email is not configured yet.' })
     }
 
-    const body = forwardBody({
-      name: plan.to.name, carrier: row.carrier, subject: row.subject, snippet: row.snippet, reason: plan.reason,
-    })
-    try {
-      const r = await sendEmail({
-        to: plan.to.email,
-        subject: `About your line — ${row.subject || 'a message from your network'}`,
-        text: body.text,
-        html: body.html,
-        kind: 'carrier_forward',
-        customerId: plan.to.customerId,
-      })
-      if (r && r.invalid) {
-        return res.status(400).json({ success: false, error: `That address was refused: ${r.reason}.` })
-      }
-      // Recorded whatever the gate did with it. On HOLD the message was built
-      // and logged and nothing left the building — but the owner has APPROVED
-      // it, and re-offering it tomorrow would ask them the same question again.
-      await db.update('sim_mail', `id=eq.${enc(String(row.id))}`, {
-        forwarded_at: new Date().toISOString(),
-        forwarded_to: plan.to.email,
-      })
-      return res.json({
-        success: true,
-        held: !!(r && r.held),
-        redirected: !!(r && r.redirectedTo),
-        sentTo: (r && (r.sentTo || r.redirectedTo)) || plan.to.email,
-      })
-    } catch (e) {
-      console.error('[api/mail-forward]', e)
+    // markHeld: the owner has APPROVED it, so even a HELD build is marked —
+    // re-offering it tomorrow would ask them the same question again. (The
+    // auto path marks only real sends; see lib/forwardSend.js.)
+    const r = await sendCarrierForward({ row, to: plan.to, reason: plan.reason, markHeld: true })
+    if (r && r.invalid) {
+      return res.status(400).json({ success: false, error: `That address was refused: ${r.reason}.` })
+    }
+    if (r && r.error) {
       return res.status(502).json({ success: false, error: 'The mail provider refused that.' })
     }
+    return res.json({
+      success: true,
+      held: !!(r && r.held),
+      redirected: !!(r && r.redirectedTo),
+      sentTo: (r && (r.sentTo || r.redirectedTo)) || plan.to.email,
+    })
   }
 
   return res.status(405).end()

@@ -31,9 +31,11 @@
 import crypto from 'node:crypto'
 import { db, tablesMode, selectAllPaged } from '../../../lib/db.js'
 import { normaliseInbound, carrierOf } from '../../../lib/inboundMail.mjs'
-import { buildSimIndex, matchSimForMail, simMatchRow } from '../../../lib/simMailMatch.mjs'
+import { buildSimIndex, matchSimForMail, simMatchRow, mailboxKey } from '../../../lib/simMailMatch.mjs'
 import { looksLikeTicket, parseTicketMail, suggestCustomer, ticketTaskTitle } from '../../../lib/ticketMail.mjs'
 import { carrierMailKind, carrierMailTask, ACTIONABLE, HIGH_PRIORITY_KINDS, NEVER_FILE } from '../../../lib/carrierMail.mjs'
+import { AUTO_FORWARD_KINDS, forwardTarget, forwardReason } from '../../../lib/mailForward.mjs'
+import { sendCarrierForward } from '../../../lib/forwardSend.js'
 
 // Bodies are parsed mail, not attachments — but a forwarded message with an
 // inline image can still be chunky, and a 413 would make Forward Email retry
@@ -341,6 +343,69 @@ export default async function handler(req, res) {
       }
     }
 
+    // ── Auto-forward (issue #15, owner's yes to all three, 23 Aug) ─────────
+    //
+    // The four safe kinds forward themselves on arrival — the approval step
+    // deleted for exactly them, the certainty test (forwardTarget) kept
+    // exactly as it was. An OTP forwards too, under STRICTER conditions:
+    // the address itself paired the message (confidence 'address' — one SIM,
+    // no guessing), and that address carries a +tag, because a bare pool
+    // address names hundreds of lines and an OTP to the wrong person is an
+    // account handed to a stranger — worse than a late one.
+    //
+    // Fresh arrivals only, never the nightly re-pair: a notice that waited
+    // days in the queue is history, and forwarding a repaired backlog would
+    // greet a customer with ninety old emails.
+    //
+    // The mail gate still rules. The four kinds obey it fully (on HOLD the
+    // forward is built, logged and left UNMARKED for the approval queue). An
+    // OTP may pass the hold — and only the hold — when the settings switch
+    // otp_forward_live says so: an OTP that waits for a human is expired.
+    let forwarded = false
+    if (inserted.length && match.simId && !filedResolved &&
+        (AUTO_FORWARD_KINDS.has(kind) || kind === 'otp')) {
+      try {
+        const custUuid = index.customerBySim.get(String(match.simId)) || null
+        const custRow = custUuid
+          ? (await db.select('customers', `select=id,first_name,last_name,email_raw&id=eq.${custUuid}`))[0]
+          : null
+        const message = {
+          id: inserted[0].id,
+          subject: mail.subject,
+          numbers: match.numbers,
+          kind,
+          sim: {
+            customerId: custUuid,
+            customerName: custRow ? `${custRow.first_name || ''} ${custRow.last_name || ''}`.trim() : '',
+            customerEmail: custRow ? (custRow.email_raw || '') : '',
+            number: (match.numbers && match.numbers[0]) || null,
+          },
+        }
+        const target = forwardTarget(message)
+        const key = mailboxKey(match.matchedOn || '')
+        const otpCertain = kind !== 'otp' ||
+          (match.confidence === 'address' && key.includes('+'))
+        if (!target.error && otpCertain) {
+          let forceLive = false
+          if (kind === 'otp') {
+            const s = await db.select('settings', 'select=num_value&key=eq.otp_forward_live').catch(() => [])
+            forceLive = Number(s[0]?.num_value) === 1
+          }
+          const r = await sendCarrierForward({
+            row: { id: inserted[0].id, carrier: carrierOf(mail.from), subject: mail.subject, snippet: mail.snippet },
+            to: { email: target.email, name: target.name, customerId: target.customerId },
+            reason: forwardReason(kind),
+            forceLive,
+          })
+          forwarded = !!(r && r.ok && !r.held)
+        }
+      } catch (e) {
+        // Best-effort by design: the message is filed either way, and a failed
+        // forward must not have Forward Email redeliver a stored message.
+        console.error('[inbound/mail] auto-forward failed', kind, e)
+      }
+    }
+
     // 200 on a duplicate too: a retry is not an error, and a non-2xx would have
     // Forward Email redeliver it indefinitely.
     return res.json({
@@ -351,6 +416,7 @@ export default async function handler(req, res) {
       confidence: match.confidence,
       kind,
       paired: !!match.simId,
+      forwarded,
       // Said plainly, because "stored: true" on an advert would otherwise read
       // as it having landed in somebody's queue.
       resolvedOnArrival: filedResolved,

@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
-*As of 23 Aug 2026 · m-d0a5b6a3 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 23 Aug 2026 · m-e60b2429 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -587,7 +587,7 @@ Post arriving from the networks — renewals, ports, warnings, payment problems 
 - **📬 The live toast** — While the app is open, a small message appears within the minute when carrier post arrives — the sender and the subject, for a few seconds. A handful arriving together compress into one line. Post from before the app was opened does not toast; it is already on this screen.
 - **Needs a human** — The queue: messages the app could not confidently file. This is the whole job of the screen.
 - **↩ Undo match** — Puts a message that is filed on a SIM back into the queue for somebody to file by hand. Most matches are made automatically and nobody sees them being made, so this is how a wrong one gets corrected. The nightly sweep will not re-match it afterwards — you have said the automatic answer was wrong, and it should not argue with you.
-- **📤 Forward to customers** — Owner only. Carrier mail worth sending on to the person whose line it is — a renewal receipt, a payment that failed, a completed port, something about to expire. It opens a queue showing what would go, to whom, and why, and it shows what will NOT go and what is stopping it, so the rule can be understood rather than guessed at. Nothing here decides whose a message is: it only ever goes to the customer the message is already filed against, and a message covering more than one number goes to nobody at all. The safety gate still decides what happens to an approved message.
+- **📤 Forward to customers** — Owner only. Carrier mail worth sending on to the person whose line it is. The four everyday kinds — a renewal receipt, a payment that failed, a completed port, something about to expire — now forward THEMSELVES the moment they arrive, and a sign-in code goes too, fastest of all, when the app is certain beyond doubt whose it is. This queue is what remains: everything the automatic path was not certain enough to send, shown with what would go, to whom, and what is stopping it. Nothing anywhere decides whose a message is by guessing — a forward only ever follows what the message is already filed against, and a message covering more than one number goes to nobody at all.
 - **What the message means** — Every row says what it IS before it says whose it is — renewing soon, renewed, about to expire, port completed, PAC code, payment problem, payment method removed. The ports and the money ones are the ones that carry colour, because they are the ones that mean work; the renewals are the wallpaper.
 - **Payment method removed** — The shop’s own card gets a line going and then comes off the network account, so the shop is not left carrying somebody’s monthly bill. Between the card coming off and the customer’s own method going on the plan cannot pay for itself, and the network says nothing more about it until the day the line stops. So the confirmation raises a task at high priority the moment it arrives. It is not forwarded to the customer: it is the shop’s card, removed by the shop.
 - **Port completed** — A finished port is not post, it is the end of a job: the customer's number has moved onto our SIM, so the plan usually still shows the number it was set up with. Where the carrier names the new number, one press puts it on the plan. Where it does not — Lebara's confirmation names no number, it tells the customer to dial a code — the row says so and opens the plan to be corrected.
@@ -713,6 +713,8 @@ A customer's own account page — what they have with the shop, what they owe, a
 **On the screen**
 
 - **Their account** — What they have on the go and what their balance is, read-only. It answers the questions the shop is otherwise rung up about.
+- **Sign-in email on each plan** — The address the shop opened their carrier account with, shown on the plan it belongs to — so they can sign in at Lebara or giffgaff themselves instead of ringing. It is only shown when the address names that one line; otherwise the plan says the login is not on record and to call. It is the shop’s address: for signing in, never for writing to.
+- **Sign-in code** — When the carrier sends a code for their line, the newest one appears on the plan for a quarter of an hour — so even a customer with no email on file can finish signing in. Codes are also emailed on to them the moment they arrive, without waiting for anybody.
 - **Documents** — What staff have shared with them to download, and a way to send files back. What they send arrives marked as waiting, and a person approves it before it counts.
 - **Pay by card** — Clears what they owe through Stripe. It says plainly when card payment is not switched on rather than failing quietly.
 - **English / lashon hakodesh** — The same language choice as the front page, because some customers do not read English.

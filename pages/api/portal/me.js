@@ -11,6 +11,8 @@
 import { db, tablesMode } from '../../../lib/db.js'
 import { verifyPortalToken } from '../../../lib/auth.js'
 import { normalizeEmail } from '../../../lib/mappers.js'
+import { mailboxKey } from '../../../lib/simMailMatch.mjs'
+import { carrierMailKind } from '../../../lib/carrierMail.mjs'
 
 export default async function handler(req, res) {
   if (process.env.PORTAL_ENABLED !== '1') {
@@ -46,9 +48,12 @@ export default async function handler(req, res) {
     db.select('rentals', `select=legacy_extras&customer_id=eq.${cust.id}&order=created_at.desc`),
     db.select('bookings', `select=route,airline,booking_reference,travel_date,status&customer_id=eq.${cust.id}&order=travel_date.desc`),
     // SIM plans: 88% of customers have one — without this card the portal
-    // looks empty/broken to the typical customer. Safe columns only: never
-    // the alias email or anything credential-adjacent.
-    db.select('sims', `select=provider,tier,status,next_renewal_date&customer_id=eq.${cust.id}&order=created_at.asc`),
+    // looks empty/broken to the typical customer. legacy_extras is read for
+    // ONE field: the carrier login address. Withholding it was a deliberate
+    // decision, deliberately REVERSED (issue #15, owner's yes, 23 Aug) — a
+    // customer who cannot name their own login cannot manage their own line.
+    // The tagged-address rule below is what keeps the reversal safe.
+    db.select('sims', `select=id,provider,tier,status,next_renewal_date,legacy_extras&customer_id=eq.${cust.id}&order=created_at.asc`),
     // Mini statement: the customer's own last few wallet lines — date,
     // description and amount only (no references, no staff ids).
     // 12, not 6: the balance hero sums the customer's WHOLE ledger, so with
@@ -75,11 +80,45 @@ export default async function handler(req, res) {
     status: b.status || '',
   }))
 
+  // The carrier login, per PLAN — never per customer: one person's lines are
+  // registered under different tagged addresses. Shown only when the address
+  // carries a +tag: gitt.bilig+moshe@… names this one line, while the bare
+  // base names hundreds of them, and printing the bare base on a portal hands
+  // out the shop's master mailbox. Untagged or absent → '' and the portal
+  // says the login is not on record.
+  const loginOf = (s) => {
+    const raw = String(s.legacy_extras?.email || '').trim()
+    return raw && (mailboxKey(raw) || '').includes('+') ? raw : ''
+  }
+
+  // Sign-in codes (issue #15 part 3): the last OTP the carrier sent about each
+  // plan in the past 15 minutes — the life of a code, roughly — so a customer
+  // with no email on file can still read it here. Kind is computed on read,
+  // same as the carrier-mail queue; only otp rows and only THIS customer's
+  // sims are ever looked at.
+  const simIds = simRows.map((s) => String(s.id))
+  let otpBySim = new Map()
+  if (simIds.length) {
+    const cutoff = new Date(Date.now() - 15 * 60000).toISOString()
+    const mailRows = await db.select('sim_mail',
+      `select=sim_id,received_at,subject,snippet&sim_id=in.(${simIds.map(encodeURIComponent).join(',')})` +
+      `&received_at=gte.${encodeURIComponent(cutoff)}&order=received_at.desc&limit=30`).catch(() => [])
+    for (const m of mailRows) {
+      const key = String(m.sim_id)
+      if (otpBySim.has(key)) continue
+      if (carrierMailKind({ subject: m.subject, snippet: m.snippet }) !== 'otp') continue
+      const code = (`${m.subject || ''} ${m.snippet || ''}`.match(/\b(\d{4,8})\b/) || [])[1] || ''
+      otpBySim.set(key, { at: m.received_at, code, text: String(m.snippet || '').slice(0, 160) })
+    }
+  }
+
   const sims = simRows.map((s) => ({
     provider: s.provider || '',
     tier: s.tier || '',
     status: s.status || '',
     renewalDate: s.next_renewal_date || '',
+    login: loginOf(s),
+    otp: otpBySim.get(String(s.id)) || null,
   }))
 
   // Running balance per line, so the hero figure can be followed down the
