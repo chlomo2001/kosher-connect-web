@@ -79,7 +79,12 @@ function toApp(row, byUuid) {
     // Whether this message is a booking to MAKE. Marketing and the unclassified
     // are not, so the card offers to read and dismiss them, not to book them.
     bookable: !NOT_BOOKABLE.has(computedKind(row)),
-    reference: row.booking_reference || '',
+    // bookingReference, not bare 'reference' (clarity-scan Tier 1 #4; owner
+    // said rename, 23 Aug): in this codebase 'reference' also means a ledger
+    // idempotency key and a task dedupe key. The PNR gets the same name
+    // bookings already use, so `bookingReference: t.reference` cross-wiring
+    // can't happen again.
+    bookingReference: row.booking_reference || '',
     passengers: row.passengers || [],
     origin: row.origin || '',
     destination: row.destination || '',

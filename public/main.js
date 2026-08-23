@@ -11019,7 +11019,8 @@ async function renderWalletTab() {
 
   const arrears = data.arrears || [];
   const credits = data.credits || [];
-  const arrearsTotal = Math.abs(data.arrearsTotal || 0);
+  // The API serves the magnitude already (ledger.js, Tier 1 #5) — no abs here.
+  const arrearsTotal = data.arrearsTotal || 0;
   const creditsTotal = data.creditsTotal || 0;
 
   const balanceRow = (b, negative) => `
@@ -11061,7 +11062,13 @@ async function renderWalletTab() {
     <div class="stats-row">
       <div class="stat-card"><div class="stat-label">Money In Today</div>
         <div class="stat-value" style="color:var(--success);">${fmtGbp((data.todayIn || 0))}</div></div>
-      <div class="stat-card"><div class="stat-label">Charged Out Today</div>
+      ${/* 'Charged & paid out', because it is BOTH (clarity-scan Tier 1 #6;
+           owner said rename, 23 Aug): most of this figure is invoicing that
+           moved no cash, and the slice that DID leave the drawer — refund
+           payouts — is folded in. The revenue report splits the two
+           (refunded vs paidOut, ledger.js); this headline can't, so its
+           label stops pretending everything in it went out the door. */''}
+      <div class="stat-card"><div class="stat-label">Charged &amp; paid out today</div>
         <div class="stat-value">${fmtGbp(Math.abs(data.todayOut || 0))}</div></div>
       <div class="stat-card"><div class="stat-label">Outstanding</div>
         <div class="stat-value" style="${statBandStyle('arrears', arrearsTotal)}">${fmtGbp(arrearsTotal)}</div>
@@ -13762,7 +13769,7 @@ function tmCardHtml(t) {
   // or the customer forwarding what the shop booked last week. Offering to
   // "confirm booking details" here opens a NEW booking form, and pressing it
   // charges the same journey twice.
-  const already = bookingForReference(t.reference, bookings);
+  const already = bookingForReference(t.bookingReference, bookings);
 
   return `
     <div class="tm-row">
@@ -13774,7 +13781,7 @@ function tmCardHtml(t) {
       <div class="tm-main">
         <div class="tm-head">
           <strong>${escHtml(t.airline || 'Airline')}</strong>
-          ${t.reference ? `<code class="tm-ref">${escHtml(t.reference)}</code>` : ''}
+          ${t.bookingReference ? `<code class="tm-ref">${escHtml(t.bookingReference)}</code>` : ''}
           ${kindLabel ? `<span class="tm-kind" style="color:${kindColour}">${escHtml(kindLabel)}</span>` : ''}
           <span class="tm-when">${t.receivedAt ? escHtml(fmtWhen(t.receivedAt)) : ''}</span>
         </div>
@@ -13797,7 +13804,7 @@ function tmCardHtml(t) {
         <div class="tm-cust">${who}</div>`}
         ${t.kind === 'payment_due' ? `<div class="tm-missing">Not paid yet — the airline is holding the seats and will cancel them if payment is not completed. Deal with the payment before booking it in.</div>` : ''}
         ${t.kind === 'checkin_open' ? `<div class="tm-note">Check-in is open for this flight. This is a reminder about a trip, not a new booking — find it in the register if it needs checking in.</div>` : ''}
-        ${already ? `<div class="tm-booked">✓ <strong>${escHtml(t.reference)}</strong> is already booked —
+        ${already ? `<div class="tm-booked">✓ <strong>${escHtml(t.bookingReference)}</strong> is already booked —
             <a href="#" onclick="event.preventDefault();tmOpenBooking('${escJs(String(already.id))}')">${escName(already.customerName || 'this booking')}${
               already.route ? ' · ' + escHtml(already.route) : ''}${
               already.travelDate ? ' · ' + escHtml(fmtDate(already.travelDate)) : ''}</a>.
@@ -13852,9 +13859,9 @@ function tmBook(id) {
   if (!t) return;
   // Belt to the card's braces: this is also reachable from the split flow and
   // from a stale card rendered before the booking was made.
-  const already = bookingForReference(t.reference, bookings);
+  const already = bookingForReference(t.bookingReference, bookings);
   if (already) {
-    toast(`${t.reference} is already booked — file this email on it instead of booking it again.`, 'error');
+    toast(`${t.bookingReference} is already booked — file this email on it instead of booking it again.`, 'error');
     return;
   }
   if (t.kind === 'cancellation') {
@@ -13864,7 +13871,7 @@ function tmBook(id) {
     ticketId: t.id,
     route: t.route,
     airline: t.airline,
-    bookingReference: t.reference,
+    bookingReference: t.bookingReference,
     travelDate: t.travelDate,
     departureTime: t.departureTime,
     arrivalTime: t.arrivalTime,
@@ -13878,7 +13885,7 @@ function tmBook(id) {
     // instead of a human re-reading a sentence.
     returnDate: t.returnDate,
     notes: [
-      t.reference ? `From ${t.airline || 'airline'} email, ref ${t.reference}` : 'From airline email',
+      t.bookingReference ? `From ${t.airline || 'airline'} email, ref ${t.bookingReference}` : 'From airline email',
       t.price !== null && t.currency && t.currency !== 'GBP' ? `airline charged ${t.currency} ${t.price.toFixed(2)}` : '',
     ].filter(Boolean).join(' · '),
   });
@@ -13926,7 +13933,7 @@ function tmSplit(id) {
     feeEach: 25,
     feeMode: 'each',
     payment: 'account',
-    route: t.route, airline: t.airline, reference: t.reference,
+    route: t.route, airline: t.airline, bookingReference: t.bookingReference,
     travelDate: t.travelDate, returnDate: t.returnDate,
     departureTime: t.departureTime, arrivalTime: t.arrivalTime,
   };
@@ -13968,7 +13975,7 @@ function tsRender() {
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
       ${escHtml(tsState.airline || 'Flight')}${tsState.route ? ' · ' + escHtml(tsState.route) : ''}${
         tsState.travelDate ? ' · ' + escHtml(fmtDate(tsState.travelDate)) : ''}${
-        tsState.reference ? ' · ' + escHtml(tsState.reference) : ''}
+        tsState.bookingReference ? ' · ' + escHtml(tsState.bookingReference) : ''}
       <br>One booking each — one wallet charge each — sharing the reference.
     </div>
 
@@ -14074,7 +14081,7 @@ async function tsSave() {
       passengers: r.name ? [{ fullName: capName(r.name) }] : [],
       route: tsState.route,
       airline: tsState.airline || '',
-      bookingReference: tsState.reference || '',
+      bookingReference: tsState.bookingReference || '',
       travelDate: tsState.travelDate,
       returnDate: tsState.returnDate || '',
       departureTime: tsState.departureTime || '',
@@ -14082,7 +14089,7 @@ async function tsSave() {
       price: r.ticket,
       bookingFee: r.fee,
       payment: tsState.payment,
-      notes: `Split booking — ${shares.length} payers on ${tsState.reference || 'one ticket'}`,
+      notes: `Split booking — ${shares.length} payers on ${tsState.bookingReference || 'one ticket'}`,
       // Its own token, so a retry of ONE payer's booking cannot dedupe against
       // another's. This is the guarantee that makes a partial failure safe to
       // retry: the ones that succeeded stay exactly one charge each.
@@ -14151,7 +14158,7 @@ function tmAttach(id) {
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
       ${escHtml(t.airline || 'This flight')}${t.route ? ' · ' + escHtml(t.route) : ''}${
         t.travelDate ? ' · ' + escHtml(fmtDate(t.travelDate)) : ''}${
-        t.reference ? ' · ' + escHtml(t.reference) : ''}
+        t.bookingReference ? ' · ' + escHtml(t.bookingReference) : ''}
       <br>It becomes a <strong>flight on that booking</strong> — no new charge, because the
       booking was already charged when it was made.
     </div>
@@ -14220,7 +14227,7 @@ async function tmDismiss(id) {
   const t = (tmData?.tickets || []).find(x => String(x.id) === String(id));
   if (!(await kcConfirm({
     title: 'Dismiss this ticket email?',
-    body: `${escHtml(t?.airline || 'This email')}${t?.reference ? ' · ' + escHtml(t.reference) : ''}<br>
+    body: `${escHtml(t?.airline || 'This email')}${t?.bookingReference ? ' · ' + escHtml(t.bookingReference) : ''}<br>
       It stays on file, but it stops asking to be booked. Do this when the
       booking is already in the app, or the email isn't ours.`,
     okLabel: 'Dismiss',
@@ -22113,7 +22120,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   const highTasks = openTasks.filter(t => t.priority === 'High');
 
   const arrears = money ? money.arrears : [];
-  const arrearsTotal = money ? Math.abs(money.arrearsTotal) : 0;
+  const arrearsTotal = money ? (money.arrearsTotal || 0) : 0;
 
   // ── Header: date (EN + Hebrew) · greeting · quick actions ──
   const hour = now.getHours();

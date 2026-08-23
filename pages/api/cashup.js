@@ -45,6 +45,11 @@ function summarize(rows, float = 0) {
       const m = r.method || 'unspecified'
       methods[m] = (methods[m] || 0) + amt
     } else {
+      // Negative ledger amounts are TWO different things summed as one:
+      // charges billed (no cash moved) and refund payouts (cash physically
+      // handed back). The wallet screen labels the sum 'Charged & paid out
+      // today' for exactly that reason (clarity-scan Tier 1 #6); only
+      // expectedCash below cares which was which, via the method on cash rows.
       totalOut += amt
     }
   }

@@ -228,7 +228,12 @@ async function handler(req, res) {
           credits,
           // Totals from the DB aggregate — exact no matter how many rows exist.
           creditsTotal: Number(totals.credit) || 0,
-          arrearsTotal: Number(totals.owed) || 0,
+          // MAGNITUDE, not the signed sum (clarity-scan Tier 1 #5; owner said
+          // rename, 23 Aug). totals.owed is negative — balances in arrears —
+          // and every consumer was quietly abs'ing it; a new one printing it
+          // raw would show '−£350 owed', and a `> threshold` check would never
+          // fire. The sign convention stays in the rows; the headline is a size.
+          arrearsTotal: Math.abs(Number(totals.owed) || 0),
           todayIn: Number(flow.money_in) || 0,
           todayOut: Number(flow.money_out) || 0,
           // Same weekday last week to this time of day, and the month so far.

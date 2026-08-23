@@ -1607,7 +1607,6 @@
     "kind": "payment_due",
     "kindLabel": "Not paid yet",
     "bookable": true,
-    "reference": "8DGFF9",
     "passengers": [
      "Chaim Kopilowitz"
     ],
@@ -1635,7 +1634,8 @@
     "body": "Please complete the payment for reservation 8DGFF9.",
     "bookingId": null,
     "resolvedAt": null,
-    "dismissedReason": ""
+    "dismissedReason": "",
+    "bookingReference": "8DGFF9"
    },
    {
     "id": 72,
@@ -1646,7 +1646,6 @@
     "kind": "marketing",
     "kindLabel": "Not about a booking",
     "bookable": false,
-    "reference": "",
     "passengers": [],
     "origin": "",
     "destination": "",
@@ -1666,7 +1665,8 @@
     "body": "We're updating our privacy policy.",
     "bookingId": null,
     "resolvedAt": null,
-    "dismissedReason": ""
+    "dismissedReason": "",
+    "bookingReference": ""
    },
    {
     "id": 71,
@@ -1675,7 +1675,6 @@
     "subject": "Your booking is confirmed — XU2WWH",
     "airline": "Wizz Air",
     "kind": "confirmation",
-    "reference": "XU2WWH",
     "passengers": [
      "Menachem Adler",
      "Rivka Adler"
@@ -1706,7 +1705,8 @@
     "resolvedAt": null,
     "dismissedReason": "",
     "kindLabel": "Booking confirmation",
-    "bookable": true
+    "bookable": true,
+    "bookingReference": "XU2WWH"
    },
    {
     "id": 70,
@@ -1715,7 +1715,6 @@
     "subject": "Ryanair booking confirmation",
     "airline": "Ryanair",
     "kind": "confirmation",
-    "reference": "QK4T2M",
     "passengers": [
      "Yossi Taitelbaum"
     ],
@@ -1752,7 +1751,8 @@
     "resolvedAt": null,
     "dismissedReason": "",
     "kindLabel": "Booking confirmation",
-    "bookable": true
+    "bookable": true,
+    "bookingReference": "QK4T2M"
    },
    {
     "id": 69,
@@ -1761,7 +1761,6 @@
     "subject": "Your flight has been cancelled — IJEVNV",
     "airline": "Wizz Air",
     "kind": "cancellation",
-    "reference": "IJEVNV",
     "passengers": [],
     "origin": "LTN",
     "destination": "TLV",
@@ -1785,7 +1784,8 @@
     "resolvedAt": null,
     "dismissedReason": "",
     "kindLabel": "Cancelled",
-    "bookable": true
+    "bookable": true,
+    "bookingReference": "IJEVNV"
    }
   ]
  },

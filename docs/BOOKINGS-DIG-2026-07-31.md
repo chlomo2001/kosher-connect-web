@@ -604,3 +604,26 @@ Each task's `raw_text` carries the evidence line, so whoever picks it up does
 not need this document open. Checked for duplicates first: no WIZZ task existed
 (only the 19 Aug flights-import discrepancy tasks). Undo, if ever needed, is
 one delete by `reference like 'FLIGHT-WIZZ-%'`.
+
+### The owner's verdicts — 23 Aug 2026
+
+Three answers that close the open questions above, in the owner's words: "fee
+retained, no contact details shall just be a task, not all landing to that
+account yet".
+
+- **Fees are retained.** The service-fee question at "The one decision left"
+  is decided: the £1,830 of fees stays with KC, so the customer-side liability
+  is **£4,860**, not £6,690. This ratifies what was already happening in
+  practice (Shloime passes on exactly the Wizz refund) — now it is policy, not
+  drift.
+- **The nine contactless rows are a task, not a blocker.** `FLIGHT-WIZZ-CONTACT`
+  inserted into production tasks (medium): get contact details for HWGC5D ×2,
+  JQEVNV/JQEQVQ, KU5R4B, SLW7XC, USSGPK, XU2WWH ×3 — £1,985 across 13
+  passengers. First stop is Shloime and the group-PNR emails. Nothing else
+  waits on them.
+- **The Revolut business account (Hatsluche Ltd) is not yet receiving all
+  takings.** Until the owner says takings land there in full, a bank feed
+  cannot reconcile the till — OPEN-BANKING.md's premise ("a feed is a
+  reconciliation source") only works against a complete feed. The bank-feed
+  idea stays parked; revisit when the owner says the account carries
+  everything.

@@ -4,6 +4,12 @@ Status: **spike, nothing connected.** No provider account, no credentials, no
 migration applied. This is the shape of the thing, plus the reasoning that fixes
 that shape, so the decision is on the record before any money data arrives.
 
+**Parked harder — 23 Aug 2026.** The owner confirmed the Revolut business
+account (Hatsluche Ltd) is *not yet receiving all takings*. A partial feed
+cannot reconcile anything — every gap reads as a missing payment — so nothing
+here moves until the owner says the account carries everything. That word is
+the trigger to pick this file back up.
+
 ## Why this is not built like the Stripe integration
 
 The instinct is "like Stripe, but the bank". It isn't, and the difference is the
