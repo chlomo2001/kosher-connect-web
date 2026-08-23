@@ -627,3 +627,13 @@ account yet".
   reconciliation source") only works against a complete feed. The bank-feed
   idea stays parked; revisit when the owner says the account carries
   everything.
+
+### DSCUFH: paid — 23 Aug 2026
+
+The one this document said should happen first, done: the owner confirmed
+Yoel Lefkovits received his £195. Recorded as the pair it was — `refund`
+in (Wizz's money, owed onward) and `refund_payout` out (handed to him) —
+refs `ISSUE12-WIZZ-DSCUFH-IN/-OUT`, netting to the £0.00 his wallet
+already showed. `FLIGHT-WIZZ-DSCUFH` closed. The remaining Wizz tasks are
+collections and the nine contact-detail rows; nothing else is a customer
+chasing the shop.
