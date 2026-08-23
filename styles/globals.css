@@ -86,7 +86,18 @@
      is enough to separate them and still be unmistakably the logo's navy.
      White text on it is 11.8:1; the nav's own alphas were re-tuned to match
      (see .nav-item / .nav-group-label). */
-  --brand-dark: #14395f;        /* sidebar track — navy, one step off the ink */
+  /* Sidebar track. DESATURATED from #14395f at the same lightness (owner,
+     23 Aug: "the side bar UI also needs some redoing in term of eye
+     comfort"). Saturated blue is the hardest colour for an eye to focus —
+     the lens bends short wavelengths differently, so a strongly blue field
+     under white text shimmers, and a rail somebody looks at all day is the
+     worst place for it. Same luminance, so every measured contrast on this
+     track is unchanged; only the colourfulness comes down. */
+  --brand-dark: #1d3956;        /* sidebar track — navy, one step off the ink */
+  /* Never pure #fff on the rail: white on a dark saturated field haloes —
+     the glyphs bloom and the edges soften, which is the specific tiredness
+     a long shift produces. Off-white still measures 10.6:1 here. */
+  --sb-ink: #eef1f5;
   --vn: #7c3aed;                /* virtual-number violet */
 
   /* ── Text — navy ink on warm paper ── */
@@ -225,6 +236,7 @@
   --accent-wash: #10202e;
   --warning-wash: #2a2113;
   --brand-dark: #1a1f28;       /* sidebar track — lifted off the dark canvas */
+  --sb-ink: #e8ecf1;           /* same anti-halation rule, darker track */
   --vn: #a78bfa;
 
   --text: #f2f0ea;

@@ -175,7 +175,7 @@
    out and the version line on the floor now that the nav no longer stretches. */
 .sidebar-bottom { flex-shrink: 0; margin-top: auto; }
 
-.logo-title { font-size: var(--fs-ui); font-weight: 500; color: #ffffff; letter-spacing: -0.1px; line-height: 1.2; }
+.logo-title { font-size: var(--fs-ui); font-weight: 500; color: var(--sb-ink); letter-spacing: -0.1px; line-height: 1.2; }
 
 /* Truncates rather than wraps: the lockup is one row tall by design, and a
    second line here would put the brand back in the nav's way. */
@@ -190,14 +190,18 @@
    deliberately not .nav-item, which main.js binds to renderTab(). */
 
 .nav-item, .nav-link {
-  display: flex; align-items: center; gap: 9px;
-  margin: 1px 8px; padding: 6px 10px; border-radius: var(--radius-lg);
+  display: flex; align-items: center; gap: 10px;
+  /* 2px/7px, not 1px/6px: twenty-odd destinations stacked at 30px apart read
+     as one striped block, and stripes are what the eye has to fight to keep
+     its place in. Four more pixels per row is the whole difference between a
+     list you scan and a list you parse. */
+  margin: 2px 8px; padding: 7px 10px; border-radius: var(--radius-lg);
   font-size: var(--fs-body); font-weight: 400; line-height: 1.35;
   color: rgba(255,255,255,0.74); cursor: pointer; text-decoration: none;
   transition: background 0.15s, color 0.15s;
 }
 
-.nav-item:hover, .nav-link:hover { color: #ffffff; background: rgba(255,255,255,0.08); }
+.nav-item:hover, .nav-link:hover { color: var(--sb-ink); background: rgba(255,255,255,0.08); }
 
 /* The global keyboard ring is a translucent blue (rgba(0,96,168,.22)) sized for
    the ivory content column. On the navy rail it lands blue-on-navy and simply
@@ -213,7 +217,7 @@
 /* Rimless selected state — a soft frosted panel (no accent bar), like the
    Travel-Planner reference: the highlight reads as a calm shade, not a rule. */
 
-.nav-item.active { color: #ffffff; background: rgba(255,255,255,0.15); font-weight: 500; }
+.nav-item.active { color: var(--sb-ink); background: rgba(255,255,255,0.14); font-weight: 500; }
 
 .nav-icon { width: 18px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0.88; }
 
@@ -232,7 +236,7 @@
    switched off; 0.55 on the lighter track measures 4.7:1. */
 
 .nav-group-label {
-  padding: 12px 18px 3px; font-size: var(--fs-overline); font-weight: 600;
+  padding: 16px 18px 4px; font-size: var(--fs-overline); font-weight: 600;
   letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.2;
   color: rgba(255,255,255,0.55);
 }
@@ -283,7 +287,7 @@
   display: flex; flex-direction: column;
 }
 
-.sidebar-bottom a:hover { color: #ffffff !important; }
+.sidebar-bottom a:hover { color: var(--sb-ink) !important; }
 
 .sb-row {
   display: flex; align-items: center; gap: 9px; height: 30px;
@@ -2200,9 +2204,21 @@ body.kc-win-dragging .kc-wgrip::after { opacity: 0.55; }
    card's right edge, unreachable. Wrapping costs nothing on a wide screen
    (one line stays one line) and on a phone the tools become their own row. */
 
-.detail-header { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 18px; }
+.detail-header { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
 
-.detail-headline { flex: 1; min-width: 0; }
+/* The identity gets a floor, and the menus yield to it. With a bare `flex:1`
+   the three tool menus took their natural ~350px first and left the headline
+   whatever remained — about 184px on a 660px card, so a phone number, an
+   email and a login address each dropped onto a line of their own beside a
+   half-empty row of buttons. The person is what the card is ABOUT; asking for
+   320px before the tools may share the row means that on anything narrower
+   the tools wrap to their own line and the facts flow two and three across,
+   which is both shorter and calmer. */
+/* min(), not a flat 320px: a flat floor is wider than a phone card's whole
+   content column, so the headline could not sit beside the 48px avatar at all
+   and the avatar was left alone on a row of its own above the name. The
+   proportion wins on a phone, the pixel floor wins on a desktop. */
+.detail-headline { flex: 1 1 min(320px, 60%); min-width: 0; }
 
 .avatar {
   width: 48px; height: 48px;
@@ -2218,7 +2234,29 @@ body.kc-win-dragging .kc-wgrip::after { opacity: 0.55; }
 
 .detail-name { font-size: var(--fs-display-1); font-weight: 300; letter-spacing: -0.2px; }
 
-.detail-meta { font-size: var(--fs-body); color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
+/* A ROW OF FACTS, not a run-on sentence (owner, 23 Aug: "why am i still so
+   uncomfortable with this UI?"). It used to be one inline flow with " · "
+   typed between the pieces — and the moment the card was narrow enough for it
+   to wrap, which is always, the separators were left stranded at the ends of
+   lines: "unconfirmed — confirm? ·", "+44 7703 572 578 ·". Punctuation that
+   points at nothing is litter, and the eye keeps going back to it.
+   Flex + gap does the separating instead: the space between facts is the
+   same whether they sit on one line or six, and nothing dangles. */
+.detail-meta {
+  font-size: var(--fs-body); color: var(--muted); margin-top: 5px;
+  display: flex; flex-wrap: wrap; align-items: center;
+  column-gap: 12px; row-gap: 5px;
+  overflow-wrap: anywhere;
+}
+/* min-width:0 so a long login address may break inside itself rather than
+   forcing the whole row wider than the card. */
+.detail-meta > * { min-width: 0; }
+
+/* The carrier login, told apart from the customer's own address by SHAPE, not
+   by loose gold text. It was the loudest thing on the card after the name,
+   which is the wrong order: it is a fact about our account, useful once in a
+   while, and it was out-shouting the phone number. */
+.kc-acct { color: var(--gold); font-size: var(--fs-small); }
 /* `overflow-wrap: anywhere` above is there for long email addresses, which
    have no spaces to break at. It must not reach the phone number: the owner's
    screenshot showed "+44" left at the end of one line and "7311 492 097"
