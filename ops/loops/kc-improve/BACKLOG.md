@@ -1996,6 +1996,33 @@ DISCOVERY: rendering real screens in the harness in states nobody had looked at
 - Loading states, focus visibility, contrast in both themes, dark-rule pairing,
   and touch targets at 390 — all already green.
 
+## UX/UI night — 23 Aug 2026 (03:07–04:00) — a short one, on purpose
+
+Ground checked: CI green through `f11ec6e` (the Saturday-afternoon check-in
+that queued while the session was idle), tree clean, main == branch.
+
+The night's chosen lane was BIDI CORRECTNESS ON THE PORTAL — the footer bug of
+21 Aug (".Hatsluche Ltd") proved the pattern exists in this codebase and no
+geometry sweep can catch it. The sweep found the opposite of work:
+
+### Checked and genuinely clean (so nobody re-checks them)
+
+- **The Hebrew portal, light AND dark, rendered and read line by line.** The
+  money templates (`יתרה לתשלום: £45.00`, the pay button with an embedded
+  amount), Hebrew-localised dates ("2 באוג׳ 2026"), signed amounts in the
+  transactions column (−£120.00 rendered sign-first), the KC-1042 bank
+  reference inside Hebrew prose, and "Direct Debit" mid-sentence — all
+  correctly ordered. Past sessions' 20 `<bdi dir="ltr">` wrappers are doing
+  their job; the 10 Hebrew template functions that interpolate values all
+  embed single LTR runs, which the bidi algorithm handles without help.
+
+Nothing shipped, and that is the honest result: two consecutive nights of
+fresh-eyes discovery (plus the weekend blocks) have drained the pool of
+defects reachable without the owner. The no-invented-work rule outranks the
+keep-busy rule. What remains needs him: money renames (Tier 1 #4/#5/#6),
+issue #19's dialog styling, #13's half-built enum, the digest env flips, and
+the Wizz decisions.
+
 ## UX/UI night — 22 Aug 2026 (03:07–05:30)
 
 Ground was the WEEK'S NEW SURFACES in states nobody had rendered — the strip,
