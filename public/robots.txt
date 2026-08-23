@@ -19,6 +19,14 @@ Allow: /
 # The API is endpoints, not pages: a fetch does server work, some GETs carry
 # tokens in query strings (document downloads), and noindex cannot be put on
 # JSON. Nothing under /api/ is worth listing.
+#
+# One carve-out (23 Aug 2026, Search Console live test): /api/public/* is the
+# shop-door data — opening hours, the confirmed price band — that the welcome
+# page RENDERS FROM. Blocked, Googlebot's snapshot of the front page loses its
+# hours and prices; these endpoints are deliberately auth-free and carry no
+# customer data, which is what makes the carve-out safe. Longest-match wins,
+# so everything else under /api/ stays disallowed.
+Allow: /api/public/
 Disallow: /api/
 
 # The brief this came from named two more fetch-is-the-harm categories. Both

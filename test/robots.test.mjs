@@ -56,6 +56,12 @@ test('robots.txt is default-open, with Disallow only where fetching is the harm'
   const disallows = robots.match(/^Disallow: .*$/gm) || []
   assert.deepEqual(disallows, ['Disallow: /api/'],
     'a new Disallow needs its justification here and in the file — the bare "Disallow: /" trap must not return')
+  // The one carve-out: the welcome page renders from /api/public/*, and a
+  // blocked fetch strips the hours and price band out of Googlebot's snapshot
+  // of the front page (Search Console live test, 23 Aug). Auth-free,
+  // customer-data-free endpoints only — that is what keeps this line safe.
+  assert.match(robots, /^Allow: \/api\/public\/$/m,
+    'without this, Google renders the front page minus its opening hours and prices')
 })
 
 test('every page is classified: public by name, or carrying noindex', () => {
