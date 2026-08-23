@@ -28,6 +28,7 @@ import { displayDate } from '../../../lib/localDay.mjs'
 import { requirementFor, coverageStatus, KNOWN_DESTINATIONS } from '../../../lib/travelRules.mjs'
 import { loadTravelRules } from '../../../lib/travelRulesDb.js'
 import { buildSimIndex, matchSimForMail, simMatchRow } from '../../../lib/simMailMatch.mjs'
+import { customerDrift, simDrift, rentalDrift, lineDrift } from '../../../lib/mappers.js'
 
 const DEST_NAME = Object.fromEntries(KNOWN_DESTINATIONS.map(d => [d.code, d.name]))
 const RECORDABLE = new Set(['ESTA', 'ETA_CA', 'ETA_IL', 'ETIAS', 'ETA_UK'])
@@ -861,6 +862,65 @@ async function handler(req, res) {
       await closeOpenTask('SMSFAIL')
     }
     counts.smsUndelivered = failed.length
+    })
+
+    await section('drift', async () => {
+    // ── 9. Typed-vs-blob drift, made visible (issue #14) ──
+    //
+    // Four tables carry both a typed projection and the legacy_extras blob the
+    // app actually reads. On sims, rentals and lines the typed columns are
+    // WRITE-ONLY, so a disagreement has no symptom until the day something
+    // starts reading them — and customerDrift's own report was a console.warn
+    // nobody reads. This surfaces each table's count where every other broken
+    // thing already surfaces: the task list. One rolling task per table,
+    // closed the day the table is clean.
+    //
+    // The FK check is the one the field detectors cannot do alone: a customer
+    // merge re-parents the typed customer_id but the blob keeps naming the
+    // DELETED duplicate — 206 sims measured on 23 Aug, invisible in the app
+    // because the app resolves the blob's id and finds nobody.
+    const custAll = await selectAllPaged('customers', 'id,legacy_id', 'order=id.asc')
+    const uuidByLegacy = new Map(custAll.map((c) => [String(c.legacy_id), c.id]))
+    const tables = [
+      ['customers', 'id,legacy_id,first_name,last_name,phone_country_code,phone_number,email_raw,email_normalized,address,passport_on_file,has_whatsapp,notes,legacy_extras',
+        customerDrift, null],
+      ['sims', 'id,legacy_id,customer_id,provider,billing_option,next_renewal_date,paid_by,provider_monthly_cost,dd_collection_day,status,legacy_extras',
+        simDrift, (r) => r.legacy_extras?.customerId],
+      ['rentals', 'id,legacy_id,customer_id,country_code,start_date,end_date,vn_selection,vn_prefix,chargeable_days,calendar_days,base_charge,late_fee,damage_charges,total_charge,status,discount_type,discount_value,notes,legacy_extras',
+        rentalDrift, (r) => r.legacy_extras?.customerId],
+      ['lines', 'id,legacy_id,number,region,carrier,iccid,wrap_imei,status,notes,legacy_extras',
+        lineDrift, null],
+    ]
+    for (const [table, select, detect, blobCustomerOf] of tables) {
+      const rows = await selectAllPaged(table, select, 'order=id.asc')
+      const examples = []
+      let fieldDrift = 0
+      let fkDrift = 0
+      for (const r of rows) {
+        const diffs = detect(r)
+        const blobCust = blobCustomerOf ? blobCustomerOf(r) : null
+        const fkOff = blobCust != null &&
+          String(r.customer_id || '') !== String(uuidByLegacy.get(String(blobCust)) || '')
+        if (diffs.length) fieldDrift++
+        if (fkOff) fkDrift++
+        if ((diffs.length || fkOff) && examples.length < 3) {
+          examples.push(`${r.legacy_id}: ${fkOff ? 'customer link' : diffs.map((d) => d.field).slice(0, 3).join(', ')}`)
+        }
+      }
+      const total = fieldDrift + fkDrift
+      counts[`drift_${table}`] = total
+      if (total) {
+        await upsertOpenTask({
+          reference: `DRIFT-${table}`,
+          title: `🧬 ${table}: ${total} row${total === 1 ? '' : 's'} where the typed columns disagree with the app's own record`,
+          notes: `e.g. ${examples.join(' · ')}. The app reads legacy_extras; the typed columns are what SQL and any future `
+               + 'cutover read. Neither is wrong by definition — each row needs a look at which side holds the truth. '
+               + 'Issue #14 has the map.',
+        })
+      } else {
+        await closeOpenTask(`DRIFT-${table}`)
+      }
+    }
     })
 
     await section('custom-rules', async () => {
