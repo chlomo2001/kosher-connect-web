@@ -8051,6 +8051,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         <button class="card-action" onclick="openNewVNModal('${c.id}')"><span class="ca-icon">🔢</span> Virtual number</button>
         <button class="card-action" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal('${c.id}')})()"><span class="ca-icon">🔧</span> Repair</button>
         <button class="card-action" onclick="openNewServiceModal('${c.id}')"><span class="ca-icon">🖨️</span> Print / Online</button>
+        <button class="card-action" onclick="posOpenForCustomer('${c.id}')"><span class="ca-icon">🛒</span> Sell at the till</button>
       </div>`;
 
   // The pop-up note, FIRST — above the header on BOTH surfaces, because its
@@ -17826,6 +17827,24 @@ function posSplitText() {
   const paid = document.getElementById('posPaid')?.checked;
   const restLabel = rest <= 0 ? '' : ` · ${paid ? (METHOD_LABELS[posMethod] || posMethod) : 'On account'} ${fmtGbp(rest)}`;
   return `👛 Wallet ${fmtGbp(w)}${restLabel}`;
+}
+
+// One visit, one place (owner, 23 Aug: a customer wanted a rental, tickets
+// AND a few items, "but i couldnt do it all from one place"). Every other
+// service already starts from the customer card with the person pre-filled;
+// this is the till's version: land on the Shop tab with them attached, so
+// their wallet credit, usual payment method, credit limit and pop-up note
+// all arrive with them — posCustomerChange is the same code path the till
+// itself runs when a customer is picked by hand.
+function posOpenForCustomer(custId) {
+  try { closeCustomerCard(); } catch { /* card may not be open — palette path */ }
+  // The till is what the Shop tab BECOMES (pos-mode), so it has to be opened,
+  // not merely navigated to — the customer picker does not exist until then.
+  openOnTab('shop', () => {
+    openSaleModal();
+    kcPickerSet('posCustomer', String(custId));
+    posCustomerChange();
+  });
 }
 
 function posCustomerChange() {
