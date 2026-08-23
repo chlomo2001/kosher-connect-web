@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
-*As of 23 Aug 2026 · m-68cbc7ff — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 23 Aug 2026 · m-d0a5b6a3 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -138,6 +138,7 @@ Everyone on the books: how to reach them, what they owe, and everything they hav
 - **Wallet** — The one place money is offered on the record. It says the balance in the same words as the rest of the app, lists what made it up, and carries a single button — which asks for the payment when they owe and offers to record one when they do not. The balance used to be stated three times on one screen with two buttons doing the same job; two controls of the same shape for one task is how the wrong one gets pressed.
 - **⚙️ Manage** — Set yourself a reminder about them, edit their details, and — for the owner — look up what their line is doing with the carrier.
 - **📌 Pop-up note** — One line, set in Edit details, that shows loudly every time: a pinned banner across the top of their card and page, and a warning at the till the moment they are rung up. Only for what must not be missed — a passport about to expire, a payment that must be taken first. Everything else belongs in Notes, or the loud channel stops being loud.
+- **🧾 Credit limit** — Set in Edit details: how much this customer may run up on account before the till warns whoever is serving them. The sale still goes through when the counter says so — it is a line drawn, not a door locked. Left blank, there is no line.
 - **Documents** — Files shared with the customer, which they see in their own portal, and anything they have sent back. What they upload waits for you to approve or reject it, so nothing lands on the record unread. From four documents up they group into folders by what they are — passports and ID, tickets, receipts, forms, photos — so finding one is a glance rather than a read. The folders are worked out from the filename and are on this screen only; the customer's own portal is unchanged.
 
 **Worked example — somebody rings and you have their number, not their name**
@@ -446,6 +447,7 @@ Stock and the counter: what is on the shelf, what it cost and sells for, and the
 **Rules that bite here**
 
 - A sale left on account needs a customer. A walk-in has no account to put it on — the charge would sit on a record nobody opens, and a sale is saved once. Pick who it is, or take the money now. The till says this the moment “Paid now” is unticked on a walk-in, not only when Charge is pressed.
+- A customer can carry a credit limit — how far on account before the till speaks up. Past it, the tender panel says so the moment the sale would cross the line, and Charge asks again on a red button. It is a warning, never a refusal: the counter can see the person, the till cannot. Blank means no limit, and the limit is set in the customer’s own details.
 - Selling through the till is what moves the shelf count. Handing something over without ringing it in leaves the count wrong, and the count is what the reorder list is built from.
 - A walk-in sale needs no customer; choosing one puts the sale on their record and lets it go on account. Choose deliberately — it decides whether the money is in or owed.
 - The warn-when-below level is per item, because one of a rare handset is low and one phone case is not.

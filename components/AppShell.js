@@ -396,6 +396,16 @@ export default function AppShell({ initialTab = 'dashboard' }) {
               </select>
             </div>
 
+            {/* The Epos Now Customer Credit idea (KB read 23 Aug): their till
+                carries a per-customer Max Credit and refuses credit past it.
+                KC warns instead of refusing — the counter can see the person,
+                the till cannot — but the line is drawn here. Blank = no
+                limit, and nothing anywhere changes. */}
+            <div className="form-group">
+              <label className="form-label" htmlFor="fCreditLimit">🧾 Credit limit £ <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(till warns past this on account)</span></label>
+              <input className="form-input" id="fCreditLimit" type="number" min="0" step="1" placeholder="no limit" autoComplete="off" />
+            </div>
+
             <div className="form-group form-full">
               <label className="form-label" htmlFor="fAddress">Address</label>
               <input className="form-input" id="fAddress" type="text" placeholder="123 Baker Street, London" autoComplete="off" />

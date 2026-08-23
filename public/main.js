@@ -11853,6 +11853,7 @@ function openEditModal(id) {
   document.getElementById('fEmail').value   = c.email   || '';
   { const ae2 = document.getElementById('fAltEmail'); if (ae2) ae2.value = c.altEmail || ''; }
   { const pm = document.getElementById('fPayMethod'); if (pm) pm.value = c.defaultPaymentMethod || ''; }
+  { const cl = document.getElementById('fCreditLimit'); if (cl) cl.value = (Number(c.creditLimit) > 0 ? c.creditLimit : ''); }
   KC_OPTIONAL_FIELDS.forEach(kcCollapseField);   // open only what holds a value
   const aeg = document.getElementById('fAccountEmailGroup');
   if (aeg) aeg.style.display = '';   // hidden while adding, always shown here
@@ -11924,6 +11925,7 @@ function clearModal() {
   const nt = document.getElementById('fNotes'); if (nt) nt.value = '';
   const pn = document.getElementById('fPopNote'); if (pn) pn.value = '';
   const pm = document.getElementById('fPayMethod'); if (pm) pm.value = '';
+  const cl = document.getElementById('fCreditLimit'); if (cl) cl.value = '';
   document.getElementById('fCountryCode').value = '+44';
   KC_OPTIONAL_FIELDS.forEach(kcCollapseField);
   ['errFirstName','errLastName','errPhone'].forEach(id => document.getElementById(id).classList.remove('visible'));
@@ -12108,6 +12110,10 @@ async function saveCustomer() {
     // How this customer usually pays. '' means "ask each time" — the till and
     // the wallet start on it, they do not enforce it.
     defaultPaymentMethod: document.getElementById('fPayMethod')?.value || '',
+    // How far on account before the till WARNS (the Epos Now Customer Credit
+    // idea, KC-shaped: a warning, never a refusal). '' = no limit.
+    creditLimit: (Number(document.getElementById('fCreditLimit')?.value) > 0
+      ? Number(document.getElementById('fCreditLimit').value) : ''),
     // Only sent when the field is on screen — the PUT merges over the stored
     // row, so omitting it while the WhatsApp channel is off preserves whatever
     // was already recorded instead of silently clearing it.
@@ -17698,6 +17704,18 @@ function posRenderTender() {
         <span style="font-size:var(--fs-small);color:var(--muted);margin-left:auto;">${credit > 0 ? `credit ${fmtGbp(credit)}` : 'no credit'}</span>
       </div>
       <div id="posSplitInfo" style="font-size:var(--fs-small);color:var(--ink-secondary);margin-bottom:8px;min-height:15px;">${posSplitText()}</div>`;
+
+    // The Epos Now Customer Credit idea, KC-shaped: a per-customer limit on
+    // how far on account, said HERE — at the moment it is decided, same as
+    // the walk-in rule below — and warned, never refused: the counter can
+    // see the person standing there, the till cannot.
+    const overBy = posOverCreditLimit(cust, paid, total);
+    if (overBy !== null) {
+      html += `
+      <div class="kc-popnote" style="margin:0 0 8px;">Past their credit limit — this sale on account
+        leaves ${escName(capName(cust.firstName || ''))} owing ${fmtGbp(overBy.owing)}, and their limit is
+        ${fmtGbp(overBy.limit)}. It still goes through if you say so.</div>`;
+    }
   }
 
   if (paid && posMethod === 'cash') {
@@ -17722,6 +17740,23 @@ function posRenderTender() {
   }
   el.innerHTML = html;
   posChangeCalc();
+}
+
+// Would putting this sale on account leave the customer past their credit
+// limit? null = no (paid now, no limit set, walk-in, or within it); otherwise
+// { owing, limit } for the warning and the confirm to read the same numbers.
+// The portion landing on account is total minus the wallet slice — identical
+// arithmetic to posCashDue, on the unpaid branch.
+function posOverCreditLimit(cust, paid, total) {
+  if (paid || !cust) return null;
+  const limit = Number(cust.creditLimit);
+  if (!Number.isFinite(limit) || limit <= 0) return null;
+  const bal = customerLedgerBalance(cust);
+  const onAccount = Math.max(0, +(total - Math.min(Math.max(posWallet, 0), total)).toFixed(2));
+  if (onAccount <= 0) return null;
+  const after = (typeof bal === 'number' ? bal : 0) - onAccount;
+  if (after >= -limit) return null;
+  return { owing: -after, limit };
 }
 
 // £ still to settle at the till after the wallet portion (the cash/card due).
@@ -18293,6 +18328,23 @@ async function saveSale() {
   if (paidNow && posMethod === 'cash' && Number.isFinite(given) && given < cashDue) {
     toast(`Cash given (${fmtGbp(given)}) is less than the ${fmtGbp(cashDue)} due.`, 'error');
     return;
+  }
+  // The credit-limit line, held at the charge as well as shown in the tender
+  // panel — the panel warning can scroll past a busy counter; this one cannot.
+  // Red button: pressing on IS the money-moving choice (#19's rule applied).
+  if (!paidNow && custNow !== 'walkin') {
+    const custObj = customers.find(c => String(c.id) === String(custNow));
+    const over = posOverCreditLimit(custObj, false, totalBefore);
+    if (over) {
+      const ok = await kcConfirm({
+        title: 'Past their credit limit',
+        body: `${escName(capName(`${custObj.firstName || ''} ${custObj.lastName || ''}`.trim()))} would owe `
+            + `<strong>${fmtGbp(over.owing)}</strong> after this sale — their limit is ${fmtGbp(over.limit)}.`,
+        okLabel: 'Put it on account anyway',
+        danger: true,
+      });
+      if (!ok) return;
+    }
   }
   // Guard against a double-tap firing two sales; the per-HANDOVER token (kept
   // across failed attempts, cleared on success/duplicate) makes an operator

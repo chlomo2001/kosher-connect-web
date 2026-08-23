@@ -154,3 +154,22 @@ From the same read but the KB screenshots rather than the marketing pages:
 **Pop Up Notes shipped** (📌 on the customer: card banner, page banner, till
 toast). Refund/discount/no-sale REASONS remain the best unbuilt catch — held
 only because they sit on the refund path, which is money surface.
+
+## Second KB capture — Customer Credit (owner-supplied, 23 Aug)
+
+The environment cannot fetch eposnow.com, so the owner saved the page and
+uploaded it ("is this the kb waht u wanted?" — yes, exactly this shape).
+
+What their feature is: a per-customer **Max Credit**; the till REFUSES a
+credit sale past it; paying back happens at the till; credit cannot transfer
+between accounts.
+
+What KC already had: on-account sales, live wallet balance at the till,
+pay-back via wallet payments, and merge instead of transfer. What it lacked
+was the LINE — nothing said how far on account was too far.
+
+**Built the same day**: `creditLimit` on the customer form (blank = no
+limit), warned twice at the till — a tender-panel line the moment the sale
+would cross it, and a red confirm at Charge ("Put it on account anyway").
+Deliberately a warning, never Epos's refusal: the counter can see the person,
+the till cannot. test/creditLimit.test.mjs runs the projection maths.
