@@ -49,6 +49,63 @@ export default function ScanReader() {
     setItems((p) => p.map((it, i) => (i === idx ? { ...it, ...patch } : it)))
   }
 
+  // A TYPABLE picker, not a 600-option dropdown (owner, 23 Aug: "AGAIN no
+  // dropdown or typable field. i need it EVERYWHERE!"). The staff app's own
+  // customerPicker lives in main.js and cannot be reached from a React tools
+  // page, so this is the same idea in miniature: type, see the eight best
+  // matches, press one. It opens pre-filtered with the passport's surname,
+  // so the right person is usually already the first row.
+  function CustomerPick({ it, idx }) {
+    const picked = it.saveTarget === 'new'
+      ? null
+      : (customers || []).find((c) => String(c.id) === String(it.saveTarget))
+    const q = it.pickQ !== undefined ? it.pickQ : ((it.mrzEdit || it.mrz)?.surname || '')
+    const words = q.toLowerCase().split(/\s+/).filter(Boolean)
+    const matches = (customers || []).filter((c) => {
+      if (!words.length) return true
+      const hay = `${c.firstName || ''} ${c.lastName || ''} ${c.phone || ''}`.toLowerCase()
+      return words.every((w) => hay.includes(w))
+    }).slice(0, 8)
+    return (
+      <div style={{ position: 'relative', minWidth: 280 }}>
+        <input className="form-input" type="search"
+          placeholder="Type a name or number…"
+          value={picked ? `${picked.firstName} ${picked.lastName || ''}` : q}
+          onFocus={() => patchItem(idx, { saveTarget: '', pickOpen: true, pickQ: q })}
+          onChange={(e) => patchItem(idx, { saveTarget: '', pickOpen: true, pickQ: e.target.value })}
+          style={{ padding: '7px 8px', fontSize: 13, width: '100%' }} />
+        {it.pickOpen && !picked && it.saveTarget !== 'new' && (
+          <div style={{ position: 'absolute', zIndex: 5, top: '100%', left: 0, right: 0, marginTop: 4,
+            background: 'var(--surface, #fff)', border: '1px solid var(--border)', borderRadius: 8,
+            boxShadow: 'var(--shadow-2, 0 4px 14px rgba(0,0,0,.15))', overflow: 'hidden' }}>
+            <button type="button" className="btn" style={{ display: 'block', width: '100%', textAlign: 'start',
+              border: 0, borderRadius: 0, padding: '8px 10px', fontSize: 13 }}
+              onClick={() => patchItem(idx, { saveTarget: 'new', pickOpen: false })}>
+              ➕ New customer from this passport
+            </button>
+            {matches.map((c) => (
+              <button type="button" key={c.id} className="btn" style={{ display: 'block', width: '100%',
+                textAlign: 'start', border: 0, borderRadius: 0, padding: '8px 10px', fontSize: 13 }}
+                onClick={() => patchItem(idx, { saveTarget: c.id, pickOpen: false })}>
+                {c.firstName} {c.lastName || ''}{c.phone ? <span style={{ color: 'var(--muted)' }}> · {c.phone}</span> : null}
+              </button>
+            ))}
+            {!matches.length && (
+              <div style={{ padding: '8px 10px', fontSize: 12, color: 'var(--muted)' }}>
+                Nobody matches — check the spelling, or press “New customer”.
+              </div>
+            )}
+          </div>
+        )}
+        {it.saveTarget === 'new' && (
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+            ➕ Will create the customer from the passport’s own name fields.
+          </div>
+        )}
+      </div>
+    )
+  }
+
   // Save the scan into the customer's documents and file the extracted
   // passport details (DOB, expiry, number → owner data on the customer;
   // passport_on_file flips on). "new" first creates the customer from the
@@ -309,14 +366,7 @@ export default function ScanReader() {
                             ))}
                           </div>
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                            <select className="form-input" style={{ maxWidth: 280, padding: '7px 8px', fontSize: 13 }}
-                              value={it.saveTarget || ''} onChange={(e) => patchItem(idx, { saveTarget: e.target.value })}>
-                              <option value="">— pick the customer —</option>
-                              <option value="new">➕ New customer from this passport</option>
-                              {(customers || []).map((c) => (
-                                <option key={c.id} value={c.id}>{c.firstName} {c.lastName || ''}</option>
-                              ))}
-                            </select>
+                            <CustomerPick it={it} idx={idx} />
                             <button className="btn btn-primary" disabled={!it.saveTarget || it.saving}
                               onClick={() => savePassportTo(idx)}>{it.saving ? 'Saving…' : '💾 Save scan + details'}</button>
                             <button className="btn btn-outline" onClick={() => patchItem(idx, { dismissed: true })}>Not relevant</button>

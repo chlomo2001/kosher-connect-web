@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
-*As of 23 Aug 2026 · m-e60b2429 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 23 Aug 2026 · m-d0e5f14e — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -854,6 +854,7 @@ Staff tool: gets the text out of a photograph or a scan, in English or Hebrew, r
 - **Drop the picture** — A photo a customer sent, or something off the scanner.
 - **Read it** — The text comes out on screen to copy into whatever needs it.
 - **English or Hebrew** — Both are read on this machine, with nothing sent away.
+- **Passport detected** — When the scan is a passport, the tool offers to save it: type a name or number to find the customer — the box starts on the passport’s own surname, so the right person is usually the first row — or press “New customer” to create them from the passport itself. The scan lands in their Documents and the details go on their record, with the passport-held tick flipped on.
 
 **Rules that bite here**
 
