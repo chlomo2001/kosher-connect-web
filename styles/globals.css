@@ -399,6 +399,16 @@ button, summary { user-select: none; }
 .btn-sm.btn-primary, .btn-primary.btn-sm { min-height: 0; padding: 6px 12px; font-weight: 600; }
 .btn-primary:hover { background: var(--primary-deep); }
 .btn-primary:active { background: var(--primary-press); }
+/* The destructive twin of .btn-primary — issue #19, option 2 (owner, 23 Aug:
+   "option 2 for issue 19"). A delete must not dress like a save. Painted with
+   --danger-solid, the one red that carries white text in BOTH themes (7.5:1;
+   the token is deliberately not overridden on dark — see its definition), so
+   a literal #fff here is correct where .btn-primary needs --on-accent. */
+.btn-danger { background: var(--danger-solid); color: #fff; min-height: 48px; padding: 12px 24px; font-weight: 600; }
+.btn-sm.btn-danger, .btn-danger.btn-sm { min-height: 0; padding: 6px 12px; font-weight: 600; }
+.btn-danger:hover { background: #8c0f2a; }
+.btn-danger:active { background: #750b22; }
+.btn-danger:disabled, .btn-danger:disabled:hover { background: var(--danger-solid); color: #fff; opacity: .55; cursor: not-allowed; }
 /* Every variant, not only the blue one. .btn-primary had a disabled look and
    .btn-outline had none at all, so a disabled outline button was
    indistinguishable from a live one — which is the "looks pressable and isn't"

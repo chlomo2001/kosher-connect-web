@@ -59,12 +59,17 @@ window.api = {
   // (Two callers are not deletions at all — the duplicate-name and the
   // house-Gmail question on saving a customer. The name is older than they are;
   // renaming it is a separate change to a separate set of call sites.)
-  confirmDelete: (msg, okLabel = 'Delete') => {
+  // Red by default (issue #19, option 2): every caller but two IS a deletion,
+  // so the destructive look is the default and the exceptions opt out. The two
+  // that do — "Save anyway" on a duplicate name and "Use as account email" —
+  // are saves wearing this helper for its message shape, not its meaning.
+  confirmDelete: (msg, okLabel = 'Delete', { danger = true } = {}) => {
     const [head, ...rest] = String(msg == null ? '' : msg).split('\n\n');
     return kcConfirm({
       title: head,
       body: escHtml(rest.join('\n\n')).replace(/\n/g, '<br>'),
       okLabel,
+      danger,
     });
   },
 
@@ -3492,6 +3497,7 @@ async function deleteSelectedRentals() {
       `Each rental's wallet charge is reversed to £0. This can't be undone.`,
     amount: totalPrice,
     okLabel: `Delete ${picked.length} rentals`,
+    danger: true,
   }))) return;
   const ids = picked.map(r => r.id);
   picked.forEach(r => {
@@ -5784,7 +5790,7 @@ async function deleteRentalPool(name) {
   if (phones.some(p => (p.pool || '').trim() === name)) {
     toast('Phones are still assigned to this pool — move them first.', 'error'); return;
   }
-  if (!(await kcConfirm({ title: `Remove pool “${name}”?`, body: 'No phones are assigned — this just removes it from the list.', okLabel: 'Remove' }))) return;
+  if (!(await kcConfirm({ title: `Remove pool “${name}”?`, body: 'No phones are assigned — this just removes it from the list.', okLabel: 'Remove', danger: true }))) return;
   if (!(await saveRentalPools(rentalPools().filter(p => p.name !== name)))) return;
   toast(`Pool “${name}” removed.`, 'warning');
   openPoolsModal();
@@ -6272,6 +6278,7 @@ async function deleteRental(id) {
     body: `<strong>${escHtml(r?.customerName || 'Rental')}</strong>${r?.phoneNumber ? ' · ' + escHtml(r.phoneNumber) : ''}<br>Its wallet charge is reversed to £0. This can’t be undone.`,
     amount: r ? (Number(r.price) || 0) : 0,
     okLabel: 'Delete rental',
+    danger: true,
   }))) return;
   if (r && r.status === 'active') {
     const phone = phones.find(p => p.id === r.phoneId);
@@ -6817,7 +6824,7 @@ let kcConfirmResolve = null;
 // `blocking: true` renders a dialog with NO confirm button — used by the
 // booking gate, where the answer to "passport expires before the flight" is not
 // a decision the operator gets to make. It always resolves false.
-function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm charge', amount = null, blocking = false }) {
+function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm charge', amount = null, blocking = false, danger = false }) {
   return new Promise(resolve => {
     kcConfirmResolve = resolve;
     kcSaveReturnFocus('kcConfirm');
@@ -6837,7 +6844,7 @@ function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm cha
         ${amount !== null ? `<div style="font-size:var(--fs-h1);font-weight:700;margin:0 0 16px;font-feature-settings:'tnum';">${fmtGbp(Number(amount))}</div>` : ''}
         <div class="modal-actions">
           <button class="btn btn-outline" onclick="kcConfirmDone(false)">${blocking ? 'Close' : 'Cancel'}</button>
-          ${blocking ? '' : `<button class="btn btn-primary" onclick="kcConfirmDone(true)">✓ ${escHtml(okLabel)}</button>`}
+          ${blocking ? '' : `<button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" onclick="kcConfirmDone(true)">✓ ${escHtml(okLabel)}</button>`}
         </div>
       </div>`;
     el.classList.remove('hidden');
@@ -9231,6 +9238,7 @@ async function elidRemoveLine(customerId, u) {
     title: `Unlink ELID account “${u}”?`,
     body: 'It stops being linked to this customer here. The ELID account itself is untouched.',
     okLabel: 'Unlink',
+    danger: true,
   }))) return;
   const remaining = elidLinesOf(c).filter(x => x.toLowerCase() !== u.toLowerCase());
   c.elidUsernames = remaining;
@@ -12066,7 +12074,7 @@ async function saveCustomer() {
     `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase().replace(/\s+/g, ' ').trim() === nameKey);
   if (nameDup) {
     const proceed = await window.api.confirmDelete(
-      `A customer named "${firstName} ${lastName}" already exists (${nameDup.phone || 'no phone'}).\n\nSave anyway as a separate customer?`, 'Save anyway'
+      `A customer named "${firstName} ${lastName}" already exists (${nameDup.phone || 'no phone'}).\n\nSave anyway as a separate customer?`, 'Save anyway', { danger: false }
     );
     if (!proceed) return;
   }
@@ -12076,7 +12084,7 @@ async function saveCustomer() {
   let contactEmail = email;
   if (contactEmail && isOwnAccountEmail(contactEmail)) {
     const move = await window.api.confirmDelete(
-      `"${contactEmail}" is one of the business's own Gmail addresses (dot/plus variant).\n\nSave it as the ACCOUNT email instead of the customer's contact email?`, 'Use as account email'
+      `"${contactEmail}" is one of the business's own Gmail addresses (dot/plus variant).\n\nSave it as the ACCOUNT email instead of the customer's contact email?`, 'Use as account email', { danger: false }
     );
     if (move) { if (!accountEmail) accountEmail = contactEmail; contactEmail = ''; }
   }
@@ -12607,6 +12615,7 @@ async function deleteSelectedSims() {
     body: `<strong>${escHtml(names.slice(0, 4).join(', '))}${names.length > 4 ? ` +${names.length - 4} more` : ''}</strong><br>` +
       `Any SIM charges on the wallet are reversed. This can't be undone.`,
     okLabel: `Delete ${picked.length} SIM plans`,
+    danger: true,
   }))) return;
   const ids = picked.map(s => s.id);
   sims = sims.filter(s => !ids.includes(s.id));
@@ -12942,6 +12951,7 @@ async function simForgetAddress(simLegacyId, address) {
       `and will go back to the queue for someone to place by hand.<br><br>` +
       `Mail already filed by it stays where it is — use “Undo match” on a message to move that.`,
     okLabel: 'Remove the address',
+    danger: true,
   }))) return;
   try {
     const res = await window.api.settleCarrierMail({ op: 'forgetAddress', simLegacyId, address });
@@ -13194,6 +13204,7 @@ async function deleteSim(id) {
     title: 'Delete SIM plan?',
     body: `<strong>${escHtml(capName(s.customerName) || 'SIM plan')}</strong>${s.provider ? ' · ' + escHtml(s.provider) : ''}<br>Any SIM charges on the wallet are reversed. This can’t be undone.`,
     okLabel: 'Delete SIM plan',
+    danger: true,
   }))) return;
   sims = sims.filter(x => x.id !== id);
   const res = await saveSims(sims, [id]);
@@ -15546,6 +15557,7 @@ async function deleteTravelAuthRow(bookingId, id) {
     title: 'Remove this recorded authorisation?',
     body: 'It comes off this booking.',
     okLabel: 'Remove',
+    danger: true,
   }))) return;
   const res = await window.api.deleteTravelAuth(id);
   if (!res.success) { toast(res.error || 'Could not remove it.', 'error'); return; }
@@ -22625,6 +22637,7 @@ async function deleteSelectedVNs() {
     title: `Delete ${picked.length} virtual numbers?`,
     body: `<strong>${picked.slice(0, 4).map(v => escHtml(fmtPhone(v.number))).join(', ')}${picked.length > 4 ? ` +${picked.length - 4} more` : ''}</strong><br>This cannot be undone.`,
     okLabel: `Delete ${picked.length} numbers`,
+    danger: true,
   }))) return;
   let failed = 0;
   for (const v of picked) {
@@ -24092,6 +24105,7 @@ async function retireBizAccount(id, name) {
     title: `Retire "${name}" from the register?`,
     body: 'It is kept in the database, just hidden.',
     okLabel: 'Retire',
+    danger: true,
   }))) return;
   const res = await kcFetch('/api/business-accounts', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -24187,6 +24201,7 @@ async function retirePhoneModel(id, name) {
     title: `Take "${name}" off the public guide?`,
     body: 'It is kept here — you can restore it any time.',
     okLabel: 'Hide it',
+    danger: true,
   }))) return;
   const res = await kcFetch('/api/phone-guide', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },

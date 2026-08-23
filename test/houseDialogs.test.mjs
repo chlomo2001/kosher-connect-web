@@ -124,7 +124,33 @@ test('every caller names the verb its button should carry', () => {
   // one retires a shop item.
   const bare = []
   for (const m of SRC.matchAll(/api\.confirmDelete\(([\s\S]{0,400}?)\);/g)) {
-    if (!/,\s*'[^']+'\s*$/.test(m[1].trim())) bare.push(m[1].trim().slice(0, 70))
+    // A trailing options object (the #19 danger opt-out) may follow the verb.
+    const args = m[1].trim().replace(/,\s*\{[^}]*\}\s*$/, '')
+    if (!/,\s*'[^']+'\s*$/.test(args)) bare.push(args.slice(0, 70))
   }
   assert.deepEqual(bare, [], 'these fall back to "Delete":\n  ' + bare.join('\n  '))
+})
+
+// ── issue #19, option 2: a delete must not dress like a save ───────────────
+
+test('the confirming button is red exactly when the caller says danger', async () => {
+  const kcConfirmSrc = SRC.match(/function kcConfirm\(\{[\s\S]*?\n\}/)[0]
+  assert.match(kcConfirmSrc, /danger = false/,
+    'kcConfirm must take a danger flag, off by default — most confirms are not deletions')
+  assert.match(kcConfirmSrc, /\$\{danger \? 'btn-danger' : 'btn-primary'\}/,
+    'the flag must swap the confirming button class, nothing else')
+})
+
+test('confirmDelete is red by default, and the two saves opt out', () => {
+  const helper = SRC.match(/confirmDelete: \(msg[\s\S]*?\n  \},/)[0]
+  assert.match(helper, /danger = true/, 'deletion is this helper’s whole job — red is its default')
+  const optOuts = [...SRC.matchAll(/confirmDelete\([\s\S]{0,400}?\{ danger: false \}/g)]
+  assert.equal(optOuts.length, 2,
+    'exactly the duplicate-name and account-email saves opt out of the red button')
+})
+
+test('.btn-danger exists, in the stylesheet the app actually loads', () => {
+  const css = readFileSync(new URL('../styles/globals.css', import.meta.url), 'utf8')
+  assert.match(css, /\.btn-danger \{ background: var\(--danger-solid\)/,
+    'issue #19 noted .btn-danger was referenced but never defined — --danger-solid is the one red that carries white in both themes')
 })
