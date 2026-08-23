@@ -25,6 +25,22 @@ test('the strip renders the guides, not a copy of them', () => {
   }
 })
 
+test('a question opens into its steps — interpolated, never pasted', () => {
+  // 23 Aug: the strip's questions became <details> that open into the guide's
+  // own steps. Same law as the questions: rendered from GUIDES, so the steps
+  // shown here and the steps the ❓ button walks are one copy shown twice.
+  assert.match(PAGE, /<details key=\{g\.id\} className="kc-man-job">/)
+  assert.match(PAGE, /g\.steps\.map\(/, 'the steps must be interpolated from the guide')
+  for (const g of GUIDES) {
+    for (const st of g.steps) {
+      assert.ok(!PAGE.includes(st), `a guide step is pasted into the page: "${st.slice(0, 50)}"`)
+    }
+  }
+  // The affordance is visible: the summary dresses as a link with a chevron.
+  assert.match(CSS, /\.kc-man-job > summary \{[^}]*cursor: pointer/s)
+  assert.match(CSS, /\.kc-man-job > summary::before \{ content: '▸'/)
+})
+
 test('every guide still has a question the strip can show', () => {
   for (const g of GUIDES) {
     assert.ok(g.q && g.q.length > 8 && g.q.endsWith('?'), `guide ${g.id} has no readable question`)

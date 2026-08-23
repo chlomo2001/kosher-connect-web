@@ -4312,7 +4312,28 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
    the print block. */
 .kc-man-stamp { color: var(--muted); font-size: var(--fs-small); white-space: nowrap; }
 .kc-man-stampfoot { display: none; }
+/* Each job is a <details> that opens into its steps (owner, 23 Aug: the
+   plain-text strip read as "so many text, non of it clickable"). The summary
+   dresses as a link — accent ink, a chevron that turns — so the affordance is
+   visible before the first click. Native details/summary keeps keyboard and
+   screen-reader behaviour with no script. */
 .kc-man-job { color: var(--text); font-size: var(--fs-body); }
+.kc-man-job > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex; align-items: flex-start; gap: 6px;
+  min-height: 24px;
+  color: var(--accent); font-weight: 600;
+}
+.kc-man-job > summary::-webkit-details-marker { display: none; }
+.kc-man-job > summary::before { content: '▸'; flex: none; transition: transform .12s ease; }
+.kc-man-job[open] > summary::before { transform: rotate(90deg); }
+.kc-man-job > summary:hover { text-decoration: underline; }
+.kc-man-job > ol {
+  margin: 6px 0 8px; padding-left: 24px;
+  display: grid; gap: 4px;
+  font-size: var(--fs-small); color: var(--text);
+}
 /* On a phone the twenty questions become a single-column wall that buries the
    Contents — the page's own navigation — below a screen and a half of strip.
    Bound the list and let it scroll in place (the house rule for wide content,

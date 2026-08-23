@@ -243,12 +243,22 @@ export default function Manual({ shots = {} }) {
           border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
           <Heading>Common jobs</Heading>
           <p style={{ margin: '0 0 8px', fontSize: 'var(--fs-small)', color: 'var(--muted)' }}>
-            These {GUIDES.length} jobs are written out step by step inside the app — press
-            <strong> ❓ How do I…?</strong> on any screen and ask in your own words. This page explains
-            the screens; that button walks the job.
+            The {GUIDES.length} jobs the app can walk you through. <strong>Press a question to read
+            its steps right here</strong> — or press <strong>❓ How do I…?</strong> on any screen in
+            the app to be walked through it while you work.
           </p>
+          {/* Each question OPENS — the steps render live from the same
+              lib/guides.mjs the ❓ button reads, so this is the one copy
+              shown twice, never a second copy (owner, 23 Aug: "so many
+              text, non of it clickable"). Native <details>: no JS, keyboard
+              and screen-reader behaviour for free. */}
           <div className="kc-man-toc-grid">
-            {GUIDES.map((g) => <span key={g.id} className="kc-man-job">{g.q}</span>)}
+            {GUIDES.map((g) => (
+              <details key={g.id} className="kc-man-job">
+                <summary>{g.q}</summary>
+                <ol>{g.steps.map((st, i) => <li key={i}>{st}</li>)}</ol>
+              </details>
+            ))}
           </div>
         </nav>
 
