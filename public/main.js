@@ -913,6 +913,7 @@ function renderTab(tab) {
   // card overlay open the moment the list renders.
   if (customerPageId) { customerPageId = null; selectedId = null; }
   document.body.classList.remove('pos-mode'); // leaving the till via any nav
+  posReturnCustomer = null; // a chosen navigation is not an exit — no bounce later
   const searchBox = document.getElementById('searchBox');
   const btnNew = document.getElementById('btnNewCustomer');
   const meta = TAB_META[tab] || TAB_META.customers; // unknown ids fall back to Customers
@@ -17639,6 +17640,18 @@ function openSaleModal(preselectItemId = null) { // name kept: every Sell button
 
 function closePosView() {
   document.body.classList.remove('pos-mode');
+  // Bounce back to the card the till was OPENED from (owner, 23 Aug: "yes,
+  // bounce back to the card when done") — only on the explicit Exit, and only
+  // when the visit started at a card. A sidebar navigation away is a person
+  // choosing somewhere else to be, and is left alone (renderTab clears
+  // pos-mode without coming through here).
+  if (posReturnCustomer != null) {
+    const backTo = posReturnCustomer;
+    posReturnCustomer = null;
+    goToTab('customers');
+    setTimeout(() => renderDetailPanel(backTo), 150);
+    return;
+  }
   renderShopTab();
 }
 
@@ -17836,6 +17849,7 @@ function posSplitText() {
 // their wallet credit, usual payment method, credit limit and pop-up note
 // all arrive with them — posCustomerChange is the same code path the till
 // itself runs when a customer is picked by hand.
+let posReturnCustomer = null; // bounce target: set only by the card's button
 function posOpenForCustomer(custId) {
   try { closeCustomerCard(); } catch { /* card may not be open — palette path */ }
   // The till is what the Shop tab BECOMES (pos-mode), so it has to be opened,
@@ -17844,6 +17858,9 @@ function posOpenForCustomer(custId) {
     openSaleModal();
     kcPickerSet('posCustomer', String(custId));
     posCustomerChange();
+    // Set AFTER arriving: the nav that brings us here is the same guard that
+    // clears stale bounce targets, and setting first meant it wiped itself.
+    posReturnCustomer = custId;
   });
 }
 
