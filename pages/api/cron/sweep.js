@@ -739,7 +739,10 @@ async function handler(req, res) {
         sim_id: again.simId,
         customer_id: customerBySim.get(String(again.simId)) || null,
         confidence: again.confidence,
-        recipient: again.matchedOn || m.recipient,
+        // A pair by NUMBER must not stamp the pool address the envelope merely
+        // crossed over the address the carrier actually wrote to — same rule
+        // as the inbound hook (the gitt.bilig masking, 23 Aug).
+        recipient: (again.confidence !== 'number' && again.matchedOn) || m.recipient,
       })
       repaired++
     }

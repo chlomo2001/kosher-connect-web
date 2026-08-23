@@ -275,6 +275,39 @@ test('two SIMs claiming the same extra address is still ambiguous', () => {
   assert.equal(m.confidence, 'ambiguous')
 })
 
+test('THE GITT.BILIG PILE-UP — bare-base mail pairs on the number of a +tagged SIM', () => {
+  // Lebara writes account-level notices to the BARE base address. Hundreds of
+  // SIMs share that base, but the SIM the notice is about is registered under
+  // its +tag — so it is not among the address candidates at all. The number in
+  // the body must still settle it.
+  const idx = buildSimIndex([
+    { id: 'base1', email: 'gitt.bilig@gmail.com', simNumber: '07700900001' },
+    { id: 'base2', email: 'gitt.bilig@gmail.com', simNumber: '07700900002' },
+    { id: 'tagged', email: 'gitt.bilig+moshe@gmail.com', simNumber: '07493054346' },
+  ])
+  const m = matchSimForMail({
+    deliveredTo: 'gitt.bilig@gmail.com',
+    snippet: 'Your Plan for 07493054346 will renew tomorrow',
+  }, idx)
+  assert.equal(m.simId, 'tagged')
+  assert.equal(m.confidence, 'number')
+})
+
+test('…but a number shared by two SIMs still lands with a human', () => {
+  const idx = buildSimIndex([
+    { id: 'base1', email: 'gitt.bilig@gmail.com', simNumber: '07700900001' },
+    { id: 'base2', email: 'gitt.bilig@gmail.com', simNumber: '07700900002' },
+    { id: 'dup1', email: 'gitt.bilig+a@gmail.com', simNumber: '07493054346' },
+    { id: 'dup2', email: 'gitt.bilig+b@gmail.com', simNumber: '07493054346' },
+  ])
+  const m = matchSimForMail({
+    deliveredTo: 'gitt.bilig@gmail.com',
+    snippet: 'Your Plan for 07493054346 will renew tomorrow',
+  }, idx)
+  assert.equal(m.simId, null)
+  assert.equal(m.confidence, 'ambiguous')
+})
+
 test('a SIM with no extra addresses behaves exactly as before', () => {
   const before = buildSimIndex([{ id: 's', email: 'a@b.com', simNumber: '07700900123' }])
   const after = buildSimIndex([{ id: 's', email: 'a@b.com', simNumber: '07700900123', altEmails: [] }])

@@ -282,15 +282,17 @@ export default async function handler(req, res) {
     const inserted = await db.insertIgnoreDup('sim_mail', [{
       message_id: mail.messageId,
       ...(mail.receivedAt ? { received_at: mail.receivedAt } : {}),
-      // The recipient that best IDENTIFIES the SIM: the address matched on
-      // when the message paired (see matchSimForMail), or the first envelope
-      // hop when it did not — which, with every shop mailbox forwarding into
-      // one business-only inbox, is the hub and tells a human nothing. So on
-      // the PENDING queue this column is usually the hub, not a pairing:
-      // the migration's older comment ("the address we PAIRED on") described
-      // only the happy half, and the pending queue is exactly where somebody
-      // reads this column hardest.
-      recipient: match.matchedOn || mail.recipients[0] || null,
+      // The recipient that best IDENTIFIES the SIM. matchedOn earns the column
+      // only when an ADDRESS actually paired the message: on a failed match it
+      // names the pool the mail merely crossed — gitt.bilig@ forwards for the
+      // other family accounts, so a notice to redfarbilig+kre@ was stored as
+      // "sent to gitt.bilig@gmail.com" and the owner could not tell which
+      // mailbox, dots or plus, the carrier had written to (23 Aug: "it didnt
+      // see for exactle which gitt.blig like the dots ot plus"). A pair BY
+      // NUMBER is the same masking one step later — the number did the work,
+      // so the envelope's own first address is the honest thing to show.
+      recipient: (match.simId && match.confidence !== 'number' ? match.matchedOn : null)
+        || mail.recipients[0] || null,
       // The hops as well, so the route a message took is a fact on the row
       // rather than a thing to argue about — see the migration for why.
       route: mail.route && mail.route.length ? mail.route : null,

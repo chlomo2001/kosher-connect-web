@@ -224,6 +224,17 @@ async function handler(req, res) {
 
     const messages = rows.map((m) => {
       const sim = m.sim_id ? byId.get(String(m.sim_id)) || null : null
+      // On an UNPAIRED row the stored recipient can be the pool a failed match
+      // merely crossed: gitt.bilig@ forwards for the other family accounts, so
+      // the queue read "sent to gitt.bilig@gmail.com" on mail the carrier had
+      // written to redfarbilig+kre@ — and the owner could not tell which
+      // mailbox, dots or plus (23 Aug). The route's first hop is the address
+      // as the carrier wrote it; the write side stores that now, and reading
+      // it here repairs the rows stored before the fix.
+      const recipient = (!m.sim_id && Array.isArray(m.route)
+        && String(m.route[0] || '').includes('@'))
+        ? String(m.route[0]).split(/\s+/)[0]
+        : (m.recipient || '')
       // Candidates only matter for a row a human still has to settle.
       let candidates = []
       let candidatesTotal = 0
@@ -234,7 +245,7 @@ async function handler(req, res) {
         // the postbox behind it has candidates to choose from. The tag is a
         // narrower answer when it exists; when it does not, the postbox beats
         // an empty screen.
-        const key = mailboxKey(m.recipient) || ''
+        const key = mailboxKey(recipient) || ''
         const baseKey = key.includes('+') ? `${key.slice(0, key.indexOf('+'))}@${key.split('@')[1]}` : ''
         const fromAddress = index.byAddress.get(key)
           || (baseKey ? index.byAddress.get(baseKey) : null) || []
@@ -252,9 +263,9 @@ async function handler(req, res) {
         carrier: m.carrier || '',
         subject: m.subject || '',
         snippet: m.snippet || '',
-        recipient: m.recipient || '',
+        recipient,
         // Only ever a search term for the person deciding — never a match.
-        recipientTag: addressTag(m.recipient),
+        recipientTag: addressTag(recipient),
         confidence: m.confidence,
         numbers: m.numbers || [],
         resolvedAt: m.resolved_at,
@@ -387,10 +398,14 @@ async function handler(req, res) {
     if (op === 'learn') {
       const learnFor = simId || simLegacyIdOf(req.body)
       if (!learnFor) return res.status(400).json({ success: false, error: 'Pick a SIM.' })
-      const msgs = await db.select('sim_mail', `select=id,recipient&id=eq.${enc(id)}&limit=1`)
+      const msgs = await db.select('sim_mail', `select=id,recipient,route&id=eq.${enc(id)}&limit=1`)
       const msg = msgs[0]
       if (!msg) return res.status(404).json({ success: false, error: 'No such message.' })
-      const address = String(msg.recipient || '').trim()
+      // The route's first hop, same as the queue now shows — the stored
+      // recipient on an old row can be the pool a failed match crossed, and
+      // teaching THAT to a SIM would hand it 336 other SIMs' mail.
+      const routeFirst = Array.isArray(msg.route) ? String(msg.route[0] || '').split(/\s+/)[0] : ''
+      const address = (routeFirst.includes('@') ? routeFirst : String(msg.recipient || '')).trim()
       if (!mailboxKey(address)) {
         return res.status(400).json({ success: false, error: 'That message has no address to learn.' })
       }
