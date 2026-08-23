@@ -816,7 +816,16 @@ body.pos-mode .content { padding: 14px 18px; }
 }
 
 
+/* .table-card is in this list because at ≥1024px IT is the scroll box (rule
+   above) — and the shadows lived only on the inner table, whose own scrollbox
+   no longer scrolls there. Result on a wide screen with Simple Mode text: the
+   inventory's action column sat 74px past the edge, reachable by a scroll
+   nothing advertised, and macOS hides scrollbars until touched — so it read as
+   CUT (owner screenshot, 23 Aug, 2000px at text largest). The cover-gradient
+   trick makes this safe at every width: when an element does not scroll, the
+   surface-coloured covers sit over the shadows and nothing shows. */
 .table-wrap,
+.table-card,
 .table-card > table {
   background-image:
     linear-gradient(to right, var(--surface) 30%, rgba(0, 0, 0, 0)),
