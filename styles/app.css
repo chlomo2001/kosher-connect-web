@@ -4348,6 +4348,20 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
     border-bottom: 1px solid var(--border);
   }
 }
+/* The manual's lightbox: one picture, full size, dimmed page behind. Click
+   anywhere or Escape closes — the reader never leaves the page. */
+.kc-man-zoom {
+  position: fixed; inset: 0; z-index: 80;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  background: rgba(10, 12, 16, 0.82); cursor: zoom-out; padding: 24px;
+}
+.kc-man-zoom img {
+  max-width: min(1180px, 94vw); max-height: 88vh;
+  border-radius: 10px; box-shadow: 0 8px 40px rgba(0,0,0,.5);
+  background: #fff;
+}
+.kc-man-zoom-hint { color: rgba(255,255,255,.75); font-size: var(--fs-small); }
+
 /* ↑ Top — floats once the reader is 600px down (owner, 23 Aug). Fixed to the
    viewport, above the page's own scroll container; hidden in print below. */
 .kc-man-top {

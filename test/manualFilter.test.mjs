@@ -50,3 +50,12 @@ test('the manual describes its own filter, and print hides the box', () => {
   const css = readFileSync(new URL('../styles/app.css', import.meta.url), 'utf8')
   assert.match(css, /\.kc-man-filter \{ display: none; \}/)
 })
+
+test('a picture opens full size in a lightbox, and Escape closes it', () => {
+  // Owner, 23 Aug: zoom was the "first" pick of the next interactivity round.
+  assert.match(PAGE, /className="kc-man-zoom"/)
+  assert.match(PAGE, /onZoom && onZoom\(\{ src: screenShot/)
+  assert.match(PAGE, /e\.key === 'Escape'\) setZoom\(null\)/)
+  const css = readFileSync(new URL('../styles/app.css', import.meta.url), 'utf8')
+  assert.match(css, /\.kc-man-zoom \{\s*\n\s*position: fixed; inset: 0;/)
+})

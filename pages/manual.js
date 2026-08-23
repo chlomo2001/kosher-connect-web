@@ -32,7 +32,7 @@ const Heading = ({ children }) => (
     letterSpacing: '.04em', color: 'var(--muted)', margin: '0 0 6px' }}>{children}</div>
 )
 
-function Screen({ s, shots }) {
+function Screen({ s, shots, onZoom }) {
   const screenShot = shots[`screen-${s.id}`]
   return (
     <section id={s.id} className="kc-man-screen">
@@ -47,8 +47,13 @@ function Screen({ s, shots }) {
           into describing a version of the screen that no longer exists. */}
       {screenShot && (
         <figure className="kc-man-shot">
-          <img src={screenShot} alt={`The ${s.name} screen`} loading="lazy" />
-          <figcaption>{s.name} — the screen as it opens, with example data.</figcaption>
+          {/* Pressable (owner, 23 Aug: zoom "first") — opens the picture full
+              size in a lightbox rather than a tab, so a glance costs nothing
+              and Escape puts you straight back where you were reading. */}
+          <img src={screenShot} alt={`The ${s.name} screen`} loading="lazy"
+            style={{ cursor: 'zoom-in' }} title="Press to see it full size"
+            onClick={() => onZoom && onZoom({ src: screenShot, alt: `The ${s.name} screen` })} />
+          <figcaption>{s.name} — the screen as it opens, with example data. Press the picture to zoom.</figcaption>
         </figure>
       )}
 
@@ -153,6 +158,14 @@ export default function Manual({ shots = {} }) {
   // the scroll both belong to it — window never moves here.
   const shellRef = useRef(null)
   const [showTop, setShowTop] = useState(false)
+  // The lightbox: one zoomed picture at a time; click anywhere or Escape closes.
+  const [zoom, setZoom] = useState(null)
+  useEffect(() => {
+    if (!zoom) return
+    const onKey = (e) => { if (e.key === 'Escape') setZoom(null) }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [zoom])
   useEffect(() => {
     const el = shellRef.current
     if (!el) return
@@ -299,17 +312,17 @@ export default function Manual({ shots = {} }) {
             chosen a screen, and it is where the three help buttons are explained. */}
         {frame.length > 0 && <>
           <h2 style={{ margin: '0 0 12px' }}>The frame around every screen</h2>
-          {frame.map((s) => <Screen key={s.id} s={s} shots={shots} />)}
+          {frame.map((s) => <Screen key={s.id} s={s} shots={shots} onZoom={setZoom} />)}
         </>}
 
         {staff.length > 0 && <>
           <h2 style={{ margin: '26px 0 12px' }}>The staff app</h2>
-          {staff.map((s) => <Screen key={s.id} s={s} shots={shots} />)}
+          {staff.map((s) => <Screen key={s.id} s={s} shots={shots} onZoom={setZoom} />)}
         </>}
 
         {pages.length > 0 && <>
           <h2 style={{ margin: '26px 0 12px' }}>Pages with their own address</h2>
-          {pages.map((s) => <Screen key={s.id} s={s} shots={shots} />)}
+          {pages.map((s) => <Screen key={s.id} s={s} shots={shots} onZoom={setZoom} />)}
         </>}
       </div>
       {showTop && (
@@ -317,6 +330,12 @@ export default function Manual({ shots = {} }) {
           onClick={() => shellRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}>
           ↑ Top
         </button>
+      )}
+      {zoom && (
+        <div className="kc-man-zoom" role="dialog" aria-label={zoom.alt} onClick={() => setZoom(null)}>
+          <img src={zoom.src} alt={zoom.alt} />
+          <div className="kc-man-zoom-hint">Press anywhere, or Escape, to close</div>
+        </div>
       )}
       </div>
 
