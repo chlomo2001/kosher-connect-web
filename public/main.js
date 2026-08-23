@@ -7335,7 +7335,14 @@ function sortCustomers(list) {
 // longer fakes a green tick; it now only surfaces as a "marked but no details
 // entered" note on the trip card.
 function customerHasPassport(c) {
-  return bookings.some(b => b.customerId === c.id && b.hasPassportDetails);
+  // Both places real details live: on a booking's passenger record, AND on
+  // the customer themselves — the OCR passport save writes the customer copy,
+  // and counting only bookings hid exactly those people (owner, 23 Aug:
+  // "moshe zev doesnt even come up" — Moishe Zev Salinsky, passport saved
+  // via the scan reader, invisible to this filter). dob alone does not
+  // count: it is a fact about a person, not evidence of a passport.
+  return !!(c.passportNumber || c.passportExpiry) ||
+    bookings.some(b => b.customerId === c.id && b.hasPassportDetails);
 }
 
 function customerMatchesFilter(c) {

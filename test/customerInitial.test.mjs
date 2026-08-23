@@ -36,3 +36,19 @@ test('the letter is visible while it narrows: chip on, empty state honest', () =
   assert.match(CODE, /setCustomerInitial\(''\)/)
   assert.match(CODE, /Nobody under/)
 })
+
+// ── the passport filter, while we are on this screen ───────────────────────
+
+test('the 🛂 filter counts a passport saved on the CUSTOMER, not only on a booking', () => {
+  // Moishe Zev Salinsky (owner, 23 Aug): passport saved via the scan reader —
+  // details on his customer record, no flight anywhere — and the filter
+  // showed everyone but him, because it read bookings alone.
+  const m = MAIN.match(/function customerHasPassport\(c\) \{[\s\S]*?\n\}/)[0]
+  assert.match(m, /c\.passportNumber \|\| c\.passportExpiry/)
+  assert.match(m, /b\.hasPassportDetails/)
+  const fn = new Function('bookings', `${m}; return customerHasPassport;`)([])
+  assert.equal(fn({ passportNumber: 'X' }), true)
+  assert.equal(fn({ passportExpiry: '2030-01-01' }), true)
+  assert.equal(fn({ dob: '1990-01-01' }), false, 'a birthday is not a passport')
+  assert.equal(fn({}), false)
+})

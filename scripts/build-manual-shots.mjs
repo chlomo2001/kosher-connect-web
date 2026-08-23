@@ -23,6 +23,7 @@ import { mkdirSync, writeFileSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildAppHtml, BROWSER_ENV } from '../ops/harness/render.mjs'
+import { buildPublicHtml } from '../ops/harness/public.mjs'
 import { SCREENS } from '../lib/manual.mjs'
 import { MODALS } from '../ops/harness/modals.mjs'
 
@@ -107,6 +108,28 @@ for (const [name, tab, js, root] of MODALS) {
     await page.evaluate(() => { try { window.closeDynamicModal?.(); window.closeModal?.() } catch {} })
     await page.waitForTimeout(120)
   } catch (e) { problems.push(`${name}: ${String(e.message).split('\n')[0]}`) }
+}
+
+// The public pages too (owner, 23 Aug: "some more ... screenshots rendered").
+// Same offline harness the public sweep audits with, English, light — the
+// manual's own section for them was the only one with no pictures at all.
+for (const s of SCREENS) {
+  if (s.kind !== 'public' || s.status !== 'written') continue
+  if (only && s.id !== only) continue
+  try {
+    const pf = buildPublicHtml(s.id, 'en', null, 'light')
+    const p2 = await ctx.newPage()
+    p2.on('pageerror', (e) => console.log(`  pageerror on ${s.id}:`, String(e).split('\n')[0]))
+    await p2.goto('file://' + pf, { waitUntil: 'load' })
+    await p2.waitForTimeout(700)
+    bytes += await (async () => {
+      const out = path.join(OUT, `screen-${s.id}.png`)
+      await p2.screenshot({ path: out, fullPage: false })
+      return statSync(out).size
+    })()
+    n++
+    await p2.close()
+  } catch (e) { problems.push(`${s.id}: ${String(e.message).split('\n')[0]}`) }
 }
 
 await browser.close()

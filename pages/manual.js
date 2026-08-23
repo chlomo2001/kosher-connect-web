@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
 import AppStyles from '../components/AppStyles'
@@ -148,6 +148,19 @@ export default function Manual({ shots = {} }) {
     return () => document.body.classList.remove('kc-manual')
   }, [])
 
+  // ↑ Top (owner, 23 Aug: "a back to top button on the manual would nelp").
+  // The page is its own scroll container (.kc-man-shell), so the listener and
+  // the scroll both belong to it — window never moves here.
+  const shellRef = useRef(null)
+  const [showTop, setShowTop] = useState(false)
+  useEffect(() => {
+    const el = shellRef.current
+    if (!el) return
+    const onScroll = () => setShowTop(el.scrollTop > 600)
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
   // The filter (owner, 23 Aug: "why is the manual still so uninteractive?").
   // Word-match against everything each entry says; empty query = the whole
   // manual, unchanged. Printing prints what is SHOWING — filter to one screen
@@ -184,7 +197,7 @@ export default function Manual({ shots = {} }) {
           frame, so a long standalone page is UNSCROLLABLE without this — every
           screen below the first one unreachable. /welcome shipped that bug
           once; this page shipped it again on 18 Aug. */}
-      <div className="kc-man-shell">
+      <div className="kc-man-shell" ref={shellRef}>
       <div style={{ maxWidth: 820, margin: '0 auto', padding: '24px 18px 60px' }}>
         <div className="kc-man-chrome" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
           {/* A plain link, like every other page here: leaving the manual is a
@@ -299,6 +312,12 @@ export default function Manual({ shots = {} }) {
           {pages.map((s) => <Screen key={s.id} s={s} shots={shots} />)}
         </>}
       </div>
+      {showTop && (
+        <button className="kc-man-top" aria-label="Back to the top"
+          onClick={() => shellRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}>
+          ↑ Top
+        </button>
+      )}
       </div>
 
     </>
