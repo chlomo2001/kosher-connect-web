@@ -73,10 +73,10 @@ test('forceLive bypasses ONLY the hold — test mode still redirects, and it is 
   assert.ok(holdBypass < testBranch, 'the bypass rewrites hold to live BEFORE the test/live fork, so TEST still redirects')
 })
 
-test('an automatic forward held by the gate stays UNMARKED for the queue', () => {
+test('an automatic forward held OR test-redirected stays UNMARKED for the queue', () => {
   assert.match(SEND, /markHeld = false/)
-  assert.match(SEND, /if \(!held \|\| markHeld\)/,
-    'marking a held auto-forward as forwarded would silently drop it for ever')
+  assert.match(SEND, /!r\.held && !r\.redirectedTo/,
+    'held and test-redirected forwards never reached the customer — marking either would silently drop it for ever')
   const APPROVE = code('../pages/api/mail-forward.js')
   assert.match(APPROVE, /markHeld: true/, 'an owner approval IS a decision — held builds are marked there')
 })

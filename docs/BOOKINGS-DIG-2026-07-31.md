@@ -637,3 +637,25 @@ refs `ISSUE12-WIZZ-DSCUFH-IN/-OUT`, netting to the £0.00 his wallet
 already showed. `FLIGHT-WIZZ-DSCUFH` closed. The remaining Wizz tasks are
 collections and the nine contact-detail rows; nothing else is a customer
 chasing the shop.
+
+### TLKCQC closed, and what a Wizz invoice does and does not answer — 23 Aug
+
+The owner produced Wizz credit note BWUK21992246 (3 Aug 2026): **−€3,625.48**
+on PNR TLKCQC, customer named Abraham Diamant, flight ticket TLV-LTN. Two
+things follow, one from each ledger:
+
+- **KC ↔ Diamant is square and now closed.** The book already told the whole
+  story — £335 charged, reversed on cancellation, the non-refunded £130
+  reinstated, the £130 received ("Yes, received £130", 30 Jul) — net £0.00.
+  `FLIGHT-WIZZ-TLKCQC` marked done.
+- **The invoice belongs to the OTHER ledger.** −€3,625.48 is the wholesale
+  glitch-fare refund on the group PNR, Shloime ↔ Wizz. It confirms Wizz
+  refunded that PNR, and it reconciles against nothing in KC's sterling book —
+  which is the two-ledger conclusion doing its job, not a discrepancy.
+
+**Does this kind of document help?** For the Shloime-side ledger and for
+confirming a PNR was refunded: yes, keep them coming. For the twelve rows
+still missing a KC-side figure (`FLIGHT-WIZZ-FIGURES`): no — those figures
+are what customers paid KC in sterling, and they live in Shloime's SENT
+emails, not in Wizz's EUR invoices. The `in:sent (wizzair cancelled)` search
+is still the tool for those.
