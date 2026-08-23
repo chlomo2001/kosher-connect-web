@@ -17082,6 +17082,7 @@ async function renderShopTab() {
 // ── Returns to supplier (RMA) — create + manage in one modal ──
 function openSupplierReturnModal(retId = null) {
   const r = retId ? supplierReturns.find(x => x.id === retId) : null;
+  if (!r) srPicked = []; // a fresh return starts with an empty list
   const supplierOptions = suppliers.filter(s => s.active || (r && s.id === r.supplierId))
     .map(s => `<option value="${s.id}" ${r?.supplierId === s.id ? 'selected' : ''}>${escHtml(s.name)}</option>`).join('');
   showDynamicModal(`
@@ -17098,11 +17099,34 @@ function openSupplierReturnModal(retId = null) {
         <label class="form-label">New supplier name *</label>
         <input class="form-input" id="srNewSupplier" placeholder="e.g. TechTrade Wholesale">
       </div>
+      ${r ? `
       <div class="form-group form-full">
         <label class="form-label">What's going back *</label>
         <textarea class="form-input" id="srItems" rows="2"
           placeholder="e.g. 6× Nokia 105, screens dead">${escHtml(r?.items || '')}</textarea>
-      </div>
+      </div>` : `
+      <div class="form-group form-full">
+        <label class="form-label">What's going back *</label>
+        <!-- A PICKER, not a text box (owner, 23 Aug): "it should only let
+             anything which is already in stock and only the amount we have."
+             A return of six phones the shelf never held is a claim the
+             supplier will bounce and the stock count cannot absorb. Only
+             active items with quantity > 0 are offered, and the amount is
+             clamped to the shelf. Free prose stays where it belongs — the
+             fault goes in Notes. Editing an OLDER return keeps the plain text
+             above: its lines were written before the picker existed, and
+             rewriting history is not this form's job. -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          <select class="form-input" id="srPickItem" style="flex:1;min-width:170px;" onchange="srPickClamp()">
+            ${shopItems.filter(i => i.active && (i.quantity || 0) > 0).map(i =>
+              `<option value="${escHtml(String(i.id))}" data-max="${i.quantity}">${escHtml(`${i.company || ''} ${i.model || ''}`.trim())} — ${i.quantity} in stock</option>`).join('')
+            || '<option value="">Nothing is in stock to return</option>'}
+          </select>
+          <input class="form-input" type="number" id="srPickQty" min="1" step="1" value="1" style="width:84px;" onchange="srPickClamp()">
+          <button class="btn btn-outline" onclick="srPickAdd()">＋ Add</button>
+        </div>
+        <div id="srLines" style="display:grid;gap:4px;margin-top:8px;"></div>
+      </div>`}
       <div class="form-group form-full">
         <label class="form-label">IMEIs <span style="color:var(--muted);font-weight:400;">(optional, one per line)</span></label>
         <textarea class="form-input" id="srImeis" rows="2" style="direction:ltr;">${escHtml(r?.imeis || '')}</textarea>
@@ -17135,7 +17159,54 @@ function openSupplierReturnModal(retId = null) {
   `);
 }
 
+// The picker's lines for a NEW return. Serialised into the same `items` text
+// the API has always stored — the constraint lives at ENTRY, where it can
+// still be answered, and nothing downstream changes shape.
+let srPicked = [];
+function srPickClamp() {
+  const sel = document.getElementById('srPickItem');
+  const qty = document.getElementById('srPickQty');
+  const max = Number(sel?.selectedOptions[0]?.dataset.max || 0);
+  if (!qty) return;
+  qty.max = max || 1;
+  const v = Math.round(Number(qty.value) || 1);
+  qty.value = Math.min(Math.max(1, v), Math.max(1, max));
+}
+function srPickAdd() {
+  const sel = document.getElementById('srPickItem');
+  const id = sel?.value;
+  const item = shopItems.find(x => String(x.id) === String(id));
+  if (!item) return;
+  srPickClamp();
+  const qty = Math.round(Number(document.getElementById('srPickQty')?.value) || 1);
+  const already = srPicked.find(l => String(l.id) === String(id));
+  const onShelf = item.quantity || 0;
+  // The cap counts what is ALREADY on this return: two lines of 3 against a
+  // shelf of 4 is the same over-claim as one line of 6.
+  const room = onShelf - (already ? already.qty : 0);
+  if (qty > room) { toast(`Only ${onShelf} on the shelf${already ? ` and ${already.qty} already on this return` : ''}.`, 'warning'); return; }
+  if (already) already.qty += qty;
+  else srPicked.push({ id: item.id, code: item.code || '', name: `${item.company || ''} ${item.model || ''}`.trim(), qty });
+  srPickRender();
+}
+function srPickRemove(i) { srPicked.splice(i, 1); srPickRender(); }
+function srPickRender() {
+  const el = document.getElementById('srLines');
+  if (!el) return;
+  el.innerHTML = srPicked.map((l, i) => `
+    <div style="display:flex;gap:8px;align-items:center;font-size:var(--fs-body);padding:4px 8px;background:var(--bg-secondary);border-radius:6px;">
+      <strong>${l.qty}×</strong><span style="flex:1;">${escHtml(l.name)}${l.code ? ` <span style="color:var(--muted);">(${escHtml(l.code)})</span>` : ''}</span>
+      <button class="btn btn-outline btn-sm" style="min-height:0;padding:2px 8px;" onclick="srPickRemove(${i})" aria-label="Remove ${escHtml(l.name)}">✕</button>
+    </div>`).join('');
+}
+
 async function saveSupplierReturn(retId) {
+  // New returns carry the picker's lines; edits keep their original text.
+  let srItemsText = '';
+  if (!retId) {
+    if (!srPicked.length) { toast('Add what is going back — pick the item and the amount.', 'warning'); return; }
+    srItemsText = srPicked.map(l => `${l.qty}× ${l.name}${l.code ? ` (${l.code})` : ''}`).join(', ');
+  }
   let supplierId = document.getElementById('srSupplier').value;
   if (supplierId === '__new') {
     const name = document.getElementById('srNewSupplier').value.trim();
@@ -17150,7 +17221,7 @@ async function saveSupplierReturn(retId) {
   const payload = {
     op: 'return',
     supplierId,
-    items: document.getElementById('srItems').value.trim(),
+    items: retId ? document.getElementById('srItems').value.trim() : srItemsText,
     imeis: document.getElementById('srImeis').value.trim(),
     claimedValue: document.getElementById('srValue').value === '' ? null : parseFloat(document.getElementById('srValue').value),
     notes: document.getElementById('srNotes').value.trim(),
