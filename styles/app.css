@@ -120,18 +120,43 @@
 .nav-item, .nav-link, .sb-row { white-space: nowrap; }
 
 
+/* ── THE LIGHT RAIL, opt-in via <html data-rail="light"> (prototype, 23 Aug).
+   Its TOKENS live in globals.css beside the other palettes; the rules that
+   consume them live here, because every selector below is staff chrome and a
+   /welcome visitor must not pay for it (test/appCss.test.mjs holds the line). */
+/* The alpha scale does NOT carry over for the text-bearing rules, and the
+   arithmetic says so rather than the eye: on the dark rail a 0.55-white group
+   label measures 4.77:1, and the same 0.55 in navy over parchment is 3.43:1 —
+   under AA. Ink on a light ground needs more of itself than light ink on a
+   dark one. Measured, not guessed: 0.65 buys 4.5:1 here and 0.80 buys 7:1, so
+   every secondary line below is set at or above the first and the rows at the
+   second. (The washes — hover, active, hairlines — keep the shared alphas:
+   those carry contrast for no text.) */
+:root[data-rail="light"] .nav-item,
+:root[data-rail="light"] .nav-link { color: rgba(var(--sb-fg-rgb), 0.80); }
+:root[data-rail="light"] .nav-group-label { color: rgba(var(--sb-fg-rgb), 0.72); }
+:root[data-rail="light"] .logo-sub { color: rgba(var(--sb-fg-rgb), 0.72); }
+:root[data-rail="light"] .sidebar-bottom { color: rgba(var(--sb-fg-rgb), 0.78); }
+:root[data-rail="light"] .sb-version { color: rgba(var(--sb-fg-rgb), 0.70); }
+
+/* On the dark rail the COLOUR was the boundary. Parchment beside ivory is a
+   6% luminance step — enough to tell them apart, not enough to say where one
+   ends — so the light rail draws the edge it no longer implies. */
+:root[data-rail="light"] .sidebar { border-right: 1px solid var(--border); }
+
+
 /* Brand lockup — horizontal, so it costs one row of height rather than four.
    Stacked, it spent ~90px of the rail before the first destination. */
 
 .logo {
   display: flex; align-items: center; gap: 10px;
   padding: 0 15px 12px; margin-bottom: 6px;
-  border-bottom: 1px solid rgba(255,255,255,0.11);
+  border-bottom: 1px solid rgba(var(--sb-fg-rgb),0.11);
 }
 
 .logo img {
   width: 31px; height: 31px; border-radius: 50%; flex-shrink: 0;
-  border: 1.5px solid rgba(255,255,255,0.28);
+  border: 1.5px solid rgba(var(--sb-fg-rgb),0.28);
 }
 
 .logo-text { display: flex; flex-direction: column; min-width: 0; }
@@ -161,14 +186,14 @@
    scrolling. */
 .sidebar-nav {
   flex: 0 1 auto; min-height: 0; overflow-y: auto;
-  border-bottom: 1px solid rgba(255,255,255,0.11);
-  scrollbar-color: rgba(255,255,255,0.28) transparent;
+  border-bottom: 1px solid rgba(var(--sb-fg-rgb),0.11);
+  scrollbar-color: rgba(var(--sb-fg-rgb),0.28) transparent;
 }
 
 .sidebar-nav::-webkit-scrollbar { width: 8px; }
 
 .sidebar-nav::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.22); border: 2px solid var(--brand-dark);
+  background: rgba(var(--sb-fg-rgb),0.22); border: 2px solid var(--brand-dark);
 }
 
 /* auto, not flex-grow on the nav — see the note above. This is what keeps Sign
@@ -181,7 +206,7 @@
    second line here would put the brand back in the nav's way. */
 .logo-sub {
   font-size: var(--fs-overline); font-weight: 400; letter-spacing: 0.04em;
-  text-transform: uppercase; color: rgba(255,255,255,0.58); margin-top: 2px;
+  text-transform: uppercase; color: rgba(var(--sb-fg-rgb),0.58); margin-top: 2px;
   overflow: hidden; text-overflow: ellipsis;
 }
 
@@ -197,11 +222,11 @@
      list you scan and a list you parse. */
   margin: 2px 8px; padding: 7px 10px; border-radius: var(--radius-lg);
   font-size: var(--fs-body); font-weight: 400; line-height: 1.35;
-  color: rgba(255,255,255,0.74); cursor: pointer; text-decoration: none;
+  color: rgba(var(--sb-fg-rgb),0.74); cursor: pointer; text-decoration: none;
   transition: background 0.15s, color 0.15s;
 }
 
-.nav-item:hover, .nav-link:hover { color: var(--sb-ink); background: rgba(255,255,255,0.08); }
+.nav-item:hover, .nav-link:hover { color: var(--sb-ink); background: rgba(var(--sb-fg-rgb),0.08); }
 
 /* The global keyboard ring is a translucent blue (rgba(0,96,168,.22)) sized for
    the ivory content column. On the navy rail it lands blue-on-navy and simply
@@ -210,14 +235,14 @@
    White carries the contrast the rail needs; inset so it can't collide with the
    8px item margins or the rail's own edge. */
 .nav-item:focus-visible, .nav-link:focus-visible, .sb-row:focus-visible {
-  outline: 2px solid rgba(255,255,255,0.92); outline-offset: -2px;
+  outline: 2px solid rgba(var(--sb-fg-rgb),0.92); outline-offset: -2px;
 }
 
 
 /* Rimless selected state — a soft frosted panel (no accent bar), like the
    Travel-Planner reference: the highlight reads as a calm shade, not a rule. */
 
-.nav-item.active { color: var(--sb-ink); background: rgba(255,255,255,0.14); font-weight: 500; }
+.nav-item.active { color: var(--sb-ink); background: rgba(var(--sb-fg-rgb),0.14); font-weight: 500; }
 
 .nav-icon { width: 18px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0.88; }
 
@@ -238,7 +263,7 @@
 .nav-group-label {
   padding: 16px 18px 4px; font-size: var(--fs-overline); font-weight: 600;
   letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.2;
-  color: rgba(255,255,255,0.55);
+  color: rgba(var(--sb-fg-rgb),0.55);
 }
 
 
@@ -282,8 +307,8 @@
 
 .sidebar-bottom {
   padding: 7px 18px 9px;
-  border-top: 1px solid rgba(255,255,255,0.11);
-  font-size: var(--fs-body); color: rgba(255,255,255,0.62);
+  border-top: 1px solid rgba(var(--sb-fg-rgb),0.11);
+  font-size: var(--fs-body); color: rgba(var(--sb-fg-rgb),0.62);
   display: flex; flex-direction: column;
 }
 
@@ -294,7 +319,7 @@
   color: inherit; text-decoration: none;
 }
 
-.sb-version { padding-top: 4px; font-size: var(--fs-micro); color: rgba(255,255,255,0.56); }
+.sb-version { padding-top: 4px; font-size: var(--fs-micro); color: rgba(var(--sb-fg-rgb),0.56); }
 
 
 
@@ -306,14 +331,14 @@
 .sidebar-user {
   display: flex; align-items: center; gap: 9px;
   padding: 2px 0 7px; margin: 0 0 4px;
-  border-bottom: 1px solid rgba(255,255,255,0.10);
+  border-bottom: 1px solid rgba(var(--sb-fg-rgb),0.10);
 }
 
 .sidebar-user[hidden] { display: none; }
 
 .su-avatar {
   width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
-  background: rgba(255,255,255,0.14); color: #fff;
+  background: rgba(var(--sb-fg-rgb),0.14); color: var(--sb-ink);
   display: flex; align-items: center; justify-content: center;
   font-size: var(--fs-micro); font-weight: 700; letter-spacing: 0.3px;
 }
@@ -321,13 +346,13 @@
 .su-meta { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
 
 .su-name {
-  font-size: var(--fs-small); font-weight: 600; color: rgba(255,255,255,0.85);
+  font-size: var(--fs-small); font-weight: 600; color: rgba(var(--sb-fg-rgb),0.85);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 .su-role {
   font-size: var(--fs-overline); font-weight: 500; text-transform: uppercase;
-  letter-spacing: 0.06em; color: rgba(255,255,255,0.56);
+  letter-spacing: 0.06em; color: rgba(var(--sb-fg-rgb),0.56);
 }
 /* Short-screen tiers — the whole rail (16 rows + 5 group labels + footer) has
    to fit at default zoom with NO vertical scrolling. The sizing above fits a
@@ -530,7 +555,7 @@ body.kc-resizing-x .sidebar { transition: none; }
   body.nav-collapsed .nav-link { justify-content: center; gap: 0; padding: 9px 0; margin: 2px 8px; font-size: 0; }
   body.nav-collapsed .nav-group-label {
     height: 0; padding: 0; margin: 9px 16px 8px; overflow: hidden;
-    border-top: 1px solid rgba(255,255,255,0.10);
+    border-top: 1px solid rgba(var(--sb-fg-rgb),0.10);
   }
   body.nav-collapsed .sidebar-bottom { padding: 10px 8px 12px; }
   body.nav-collapsed .sb-version { display: none; }

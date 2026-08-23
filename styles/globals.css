@@ -98,6 +98,10 @@
      the glyphs bloom and the edges soften, which is the specific tiredness
      a long shift produces. Off-white still measures 10.6:1 here. */
   --sb-ink: #eef1f5;
+  /* Everything painted ON the rail — idle rows, group labels, hairlines, the
+     hover and active washes — is this colour at some alpha. One token, so the
+     whole rail can be inverted by changing what its foreground IS. */
+  --sb-fg-rgb: 255, 255, 255;
   --vn: #7c3aed;                /* virtual-number violet */
 
   /* ── Text — navy ink on warm paper ── */
@@ -237,6 +241,7 @@
   --warning-wash: #2a2113;
   --brand-dark: #1a1f28;       /* sidebar track — lifted off the dark canvas */
   --sb-ink: #e8ecf1;           /* same anti-halation rule, darker track */
+  --sb-fg-rgb: 255, 255, 255;
   --vn: #a78bfa;
 
   --text: #f2f0ea;
@@ -1240,3 +1245,25 @@ html { scroll-behavior: smooth; }
 .pd-skel-title { height: 22px; width: 240px; max-width: 60%; margin: 0 0 20px; }
 @keyframes pdShimmer { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .pd-skel { animation: none; } }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   THE LIGHT RAIL — a prototype for the owner to judge (23 Aug), opt-in via
+   <html data-rail="light">. Nothing changes without that attribute.
+
+   The dark rail's remaining discomfort is structural, not fixable by tuning:
+   a large dark field beside a warm ivory page is a hard luminance edge that
+   the eye re-adapts across every time it crosses — and it crosses constantly,
+   because the rail is how you get anywhere. Painting the rail in the page's
+   own family removes the edge rather than softening it, and there is no
+   white-on-dark halation left to reduce because there is no dark field.
+
+   The alpha scale carries over unchanged: every value was chosen as
+   "foreground over track", and inverting both ends keeps the hierarchy.
+   ───────────────────────────────────────────────────────────────────────── */
+:root[data-rail="light"] {
+  --brand-dark: #ece4d4;        /* parchment rail — one step off the canvas */
+  --sb-ink: var(--kc-navy);     /* full ink for the row you are on */
+  --sb-fg-rgb: 10, 37, 64;      /* kc-navy, the colour everything is a wash of */
+}
+
+
