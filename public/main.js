@@ -21472,7 +21472,9 @@ async function renderConfirmTab() {
   const content = document.getElementById('mainContent');
   kcSkeleton('stats');
   let data = null;
-  try { data = await window.api.getReviewQueue(12); }
+  // The whole list (owner, 23 Aug) — the batch of twelve made a person press
+  // "Load next batch" twenty times to see what everyone already owed them.
+  try { data = await window.api.getReviewQueue(500); }
   catch { content.innerHTML = errorHtml('Couldn’t load the confirmation queue'); return; }
   if (!data || !data.success) { content.innerHTML = errorHtml('Couldn’t load the confirmation queue'); return; }
   confirmQueue = Array.isArray(data.bundles) ? data.bundles : [];
@@ -21491,9 +21493,9 @@ function paintConfirm() {
       <div class="card"><div class="empty-state">
         <div class="emoji">${remaining ? '☕' : '🎉'}</div>
         <p>${remaining
-          ? 'That’s this batch done — reload for the next twelve.'
+          ? `${remaining} more to go — beyond what one screen can carry at once.`
           : 'Every imported record has been confirmed by a human.'}</p>
-        ${remaining ? '<button class="btn btn-primary" onclick="renderConfirmTab()">Load next batch</button>' : ''}
+        ${remaining ? '<button class="btn btn-primary" onclick="renderConfirmTab()">Load the next 500</button>' : ''}
       </div></div>`;
     return;
   }

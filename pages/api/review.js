@@ -35,7 +35,11 @@ async function handler(req, res) {
   if (!tablesMode) return res.status(503).json({ success: false, error: 'Storage unavailable.' })
 
   if (req.method === 'GET') {
-    const limit = Math.min(25, Math.max(1, parseInt(req.query.limit, 10) || 10))
+    // 500, not 25 (owner, 23 Aug: "why only 12 at a time? i want the whole
+    // list!"). The batch-of-twelve was a work-rhythm nobody asked for; the
+    // ceiling that remains is a payload guard, not a rhythm, and the client
+    // says so on screen when it is ever hit.
+    const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 10))
     // The queue itself: oldest imported customers nobody has confirmed.
     const customers = await db.select(
       'customers',

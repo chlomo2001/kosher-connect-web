@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
-*As of 23 Aug 2026 · m-790cf2d5 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 23 Aug 2026 · m-f6b422cd — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -553,12 +553,12 @@ Records that came in from an import and are not yet trusted: read each one again
 **On the screen**
 
 - **The three counts** — How many records were imported, how many have been confirmed, and how many are still waiting on a person.
-- **A card per record** — The whole batch on one screen, a card each, with everything else that came in for that person beside it — so the decision is made on the whole person, not on a single row, and a batch can be worked without a repaint between every answer.
+- **A card per record** — The whole queue on one screen, a card each, with everything else that came in for that person beside it — so the decision is made on the whole person, not on a single row, and the list can be worked without a repaint between every answer.
 - **✓ Yes — confirm** — Accepts the record as it stands. Where other imported rows are attached to the same person, it accepts those too, which is what makes the queue finishable.
 - **✏️ Fix first** — Opens the record to correct it before it is trusted. Confirming something you know is wrong is worse than leaving it in the queue.
 - **Skip for now** — Leaves it for someone who knows. Skipping is a legitimate answer — guessing is not.
 - **✓ Confirm all shown** — Answers for every card on the screen at once, after saying so. It stops at the first record that will not save rather than reporting a finish it did not reach. It never reaches records you have not seen.
-- **Load next batch** — Brings the next set through. The queue is worked in batches so it can be put down and picked up.
+- **Load the next 500** — Only appears if the queue is somehow longer than five hundred people — the whole list loads at once otherwise.
 - **Not the only way in** — A record can also be confirmed from the customer card itself — the unconfirmed marker under the name is a button. Same effect, same attached records; this screen is for working through them in bulk.
 
 **Rules that bite here**
