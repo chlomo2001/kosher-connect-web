@@ -2933,6 +2933,11 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 
 /* SIM STATUS BADGES */
 
+/* A live line whose renewal date has passed and is waiting on its payment
+   check (issue #13) — warning, not danger: nothing is broken yet. Ink tokens
+   already clear AA on their washes in both themes (see globals.css). */
+.badge-renewal { background: rgba(180,83,9,0.12); color: var(--warning-ink); }
+
 .badge-suspended { background: var(--canvas-cream); color: var(--gold); }
 
 .badge-cancelled { background: rgba(100,116,141,0.12); color: var(--muted); }

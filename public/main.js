@@ -1094,6 +1094,13 @@ function kcNextDo(key) {
  * The counts, taken from the SAME expressions the dashboard uses for its own
  * headline numbers — so the row and the number above it can never disagree.
  */
+// A line that is LIVE — billable, coverable, occupying its number. 'Renewal
+// pending' is a live line mid-cycle (the sweep flips it while a lapsed date
+// waits for its payment check — issue #13), not a lapsed one: every "has a
+// SIM" check, count and renewal view must include it, or a line vanishes
+// from the app for the days the flip lasts.
+function simLive(s) { return !!s && (s.status === 'active' || s.status === 'renewal_pending'); }
+
 function kcNextFacts() {
   const today = localISO();
   const soon = localISO(new Date(Date.now() + 2 * 86400000));
@@ -1103,7 +1110,7 @@ function kcNextFacts() {
     overdueRentals: activeRentals.filter(r => r.toDate && r.toDate < today).length,
     dueTodayRentals: activeRentals.filter(r => r.toDate === today).length,
     readyRepairs: (repairs || []).filter(r => r.status === 'Ready').length,
-    lateRenewals: (sims || []).filter(s => s.status === 'active' && s.renewalDate && s.renewalDate < today).length,
+    lateRenewals: (sims || []).filter(s => simLive(s) && s.renewalDate && s.renewalDate < today).length,
     dueTasks: tks.filter(t => !t.done && t.dueDate && t.dueDate <= today).length,
     highTasks: tks.filter(t => !t.done && t.priority === 'High').length,
     mailPending: (cmData && cmData.counts && cmData.counts.pending) || 0,
@@ -2518,7 +2525,7 @@ function ticketFeeFor(svc, passengers) {
 // Price list: "3 or more plans — 10% Off" (SIM setup). Applies to the
 // monthly/annual prefills in the charge modal.
 function multiSimDiscountPct(allSims, customerId) {
-  const active = allSims.filter(s => s.customerId === customerId && s.status === 'active').length;
+  const active = allSims.filter(s => s.customerId === customerId && simLive(s)).length;
   const from_ = Math.max(2, settingNum('multi_sim_discount_from', 3));
   return active >= from_ ? settingNum('multi_sim_discount_pct', 10) : 0;
 }
@@ -7176,7 +7183,7 @@ function renderCustomersTab() {
       </div>
       <div class="stat-card">
         <div class="stat-label">Active SIM Plans</div>
-        <div class="stat-value sim">${sims.filter(s => s.status === 'active').length}</div>
+        <div class="stat-value sim">${sims.filter(simLive).length}</div>
         <div class="stat-sub">Running now</div>
       </div>
       <div class="stat-card">
@@ -7274,7 +7281,7 @@ function customerUpcomingBookings(c) {
 function customerServiceCount(c) {
   return rentals.filter(r => r.customerId === c.id && (r.status === 'active' || r.status === 'overdue')).length
     + customerUpcomingBookings(c).length
-    + sims.filter(s => s.customerId === c.id && s.status === 'active').length
+    + sims.filter(s => s.customerId === c.id && simLive(s)).length
     + virtualNumbers.filter(v => v.customerId === c.id && v.status === 'Active').length
     + repairs.filter(r => r.customerId === c.id && r.status !== 'Collected' && r.status !== 'Cancelled').length;
 }
@@ -7329,7 +7336,7 @@ function customerMatchesFilter(c) {
   switch (customerFilter) {
     case 'rental':   return rentals.some(r => r.customerId === c.id && (r.status === 'active' || r.status === 'overdue'));
     case 'flight':   return customerUpcomingBookings(c).length > 0;
-    case 'sim':      return sims.some(s => s.customerId === c.id && s.status === 'active');
+    case 'sim':      return sims.some(s => s.customerId === c.id && simLive(s));
     case 'vn':       return virtualNumbers.some(v => v.customerId === c.id && v.status === 'Active');
     case 'repair':   return repairs.some(r => r.customerId === c.id && r.status !== 'Collected' && r.status !== 'Cancelled');
     case 'arrears':  return customerOwed(c) > 0;
@@ -7391,7 +7398,7 @@ function renderTableRows() {
     const activeCustomerRentals = rentals.filter(r => r.customerId === c.id && (r.status === 'active' || r.status === 'overdue'));
     // Real linked services (not just legacy embedded ones) — same fix as the
     // detail panel so SIMs/VNs/repairs aren't invisible in the list either.
-    const cSimCount = sims.filter(s => s.customerId === c.id && s.status === 'active').length;
+    const cSimCount = sims.filter(s => s.customerId === c.id && simLive(s)).length;
     const cVnCount = virtualNumbers.filter(v => v.customerId === c.id && v.status === 'Active').length;
     const cOpenRepairs = repairs.filter(r => r.customerId === c.id && r.status !== 'Collected' && r.status !== 'Cancelled').length;
     const cUpcomingFlights = customerUpcomingBookings(c).length;
@@ -7565,7 +7572,7 @@ function customerLifecycle(c) {
   const spend = timeline.reduce((s, e) => s + (Number(e.amount) || 0), 0);
   const hasLive =
     rentals.some(r => r.customerId === cid && (r.status === 'active' || r.status === 'overdue')) ||
-    sims.some(s => s.customerId === cid && s.status === 'active') ||
+    sims.some(s => s.customerId === cid && simLive(s)) ||
     virtualNumbers.some(v => v.customerId === cid && v.status === 'Active') ||
     repairs.some(r => r.customerId === cid && r.status !== 'Collected' && r.status !== 'Cancelled') ||
     customerUpcomingBookings(c).length > 0;
@@ -7650,7 +7657,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   const cActiveRentals = rentals.filter(r => r.customerId === c.id && (r.status === 'active' || r.status === 'overdue'));
   // Real linked SIMs and virtual numbers (the global lists), not the legacy
   // embedded c.services — those seeded plans were being missed entirely.
-  const cSims = sims.filter(s => s.customerId === c.id && s.status === 'active');
+  const cSims = sims.filter(s => s.customerId === c.id && simLive(s));
   const cVNs = virtualNumbers.filter(v => v.customerId === c.id && v.status === 'Active');
   const cOpenRepairs = repairs.filter(r => r.customerId === c.id && r.status !== 'Collected' && r.status !== 'Cancelled');
   const otherServices = (c.services || []).filter(s => s.type !== 'rental' && s.type !== 'sim' && s.type !== 'vn' && s.type !== 'repair');
@@ -7703,7 +7710,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   if (nextTrip) {
     const phoneCover = rentals.find(r => r.customerId === c.id && r.status !== 'returned' &&
       r.fromDate && r.toDate && r.fromDate <= nextTrip.travelDate && r.toDate >= tripLastDay(nextTrip));
-    const simCover = sims.find(s => s.customerId === c.id && s.status === 'active');
+    const simCover = sims.find(s => s.customerId === c.id && simLive(s));
     const vnCover = virtualNumbers.find(v => v.customerId === c.id && v.status === 'Active');
     const item = (ok, okLabel, missingLabel, fixHtml) => `
       <div style="display:flex;align-items:center;gap:8px;font-size:var(--fs-body);padding:4px 0;">
@@ -10620,7 +10627,7 @@ function buildReminderDraft(c) {
   const overdue = rentals.filter(r => r.customerId === c.id && r.status === 'overdue');
   for (const r of overdue) { lines.push(`Your rental phone ${r.phoneNumber || ''} was due back on ${fmtDate(r.toDate)} — please return it to avoid extra charges.`); any = true; }
   const soon = localISO(new Date(Date.now() + 7 * 86400000));
-  for (const s of sims.filter(s => s.customerId === c.id && s.status === 'active' && s.renewalDate && s.renewalDate >= today && s.renewalDate <= soon)) {
+  for (const s of sims.filter(s => s.customerId === c.id && simLive(s) && s.renewalDate && s.renewalDate >= today && s.renewalDate <= soon)) {
     lines.push(`Your SIM plan${s.provider ? ' (' + s.provider + ')' : ''} renews on ${fmtDate(s.renewalDate)}.`); any = true;
   }
   for (const b of customerUpcomingBookings(c).filter(b => b.travelDate && b.travelDate >= today && b.travelDate <= soon)) {
@@ -10694,7 +10701,7 @@ function customerContextForAi(c) {
   for (const r of rentals.filter(r => r.customerId === c.id && (r.status === 'active' || r.status === 'booked'))) {
     lines.push(`Has a rental phone ${r.phoneNumber || ''} (${getComputedStatus(r)}) due back ${fmtDate(r.toDate)}.`);
   }
-  for (const s of sims.filter(s => s.customerId === c.id && s.status === 'active' && s.renewalDate && s.renewalDate >= today && s.renewalDate <= soon)) {
+  for (const s of sims.filter(s => s.customerId === c.id && simLive(s) && s.renewalDate && s.renewalDate >= today && s.renewalDate <= soon)) {
     lines.push(`SIM plan${s.provider ? ' (' + s.provider + ')' : ''} renews ${fmtDate(s.renewalDate)}.`);
   }
   for (const b of customerUpcomingBookings(c).filter(b => b.travelDate && b.travelDate >= today && b.travelDate <= soon)) {
@@ -12313,8 +12320,8 @@ function renderSimsTab() {
   const today    = localISO();
   const tomorrow = localISO(new Date(Date.now() + 86400000));
 
-  const active   = sims.filter(s => s.status === 'active').length;
-  const renewing = sims.filter(s => s.status === 'active' && (s.renewalDate === today || s.renewalDate === tomorrow));
+  const active   = sims.filter(simLive).length;
+  const renewing = sims.filter(s => simLive(s) && (s.renewalDate === today || s.renewalDate === tomorrow));
   const totalRev = sims.reduce((sum, s) => sum + (s.history || []).reduce((a, h) => a + (h.amount || 0), 0), 0);
 
   const bannerHtml = renewing.length > 0 ? `
@@ -12504,13 +12511,13 @@ function renderSimRows() {
       !phoneDigitsMatch(term, customers.find(c => c.id === s.customerId))) return false;
     if (simFilterPay === 'direct' && s.paymentType !== 'direct') return false;
     if (simFilterPay === 'through-me' && s.paymentType === 'direct') return false;
-    if (simFilterStatus === 'active' && s.status !== 'active') return false;
+    if (simFilterStatus === 'active' && !simLive(s)) return false;
     if (simFilterStatus === 'renewing' && !(s.renewalDate === today || s.renewalDate === tomorrow)) return false;
-    if (simFilterStatus === 'week' && !(s.status === 'active' && s.renewalDate && s.renewalDate >= today && s.renewalDate <= in7)) return false;
+    if (simFilterStatus === 'week' && !(simLive(s) && s.renewalDate && s.renewalDate >= today && s.renewalDate <= in7)) return false;
     // The overdue half. The dashboard's SIM card and its attention row both
     // land here — owner, 19 Aug: the link "takes me to the normal sims tab,
     // without even the ability to filter the overdue ones".
-    if (simFilterStatus === 'late' && !(s.status === 'active' && s.renewalDate && s.renewalDate < today)) return false;
+    if (simFilterStatus === 'late' && !(simLive(s) && s.renewalDate && s.renewalDate < today)) return false;
     return true;
   });
 
@@ -12535,6 +12542,7 @@ function renderSimRows() {
   tbody.innerHTML = sorted.map(s => {
     const statusBadge =
       s.status === 'active'    ? `<span class="badge badge-active">Active</span>` :
+      s.status === 'renewal_pending' ? `<span class="badge badge-renewal">Renewal due</span>` :
       s.status === 'suspended' ? `<span class="badge badge-suspended">Suspended</span>` :
                                  `<span class="badge badge-cancelled">Cancelled</span>`;
 
@@ -12705,16 +12713,14 @@ function openSimFormModal(id, preselectCustomerId = null, prefill = null) {
         <label class="form-label">Status</label>
         <select class="form-input" id="simStatus">
           <option value="active"    ${(!s || s.status === 'active')    ? 'selected' : ''}>Active</option>
+          <!-- Owner settled issue #13 (23 Aug): the option exists, AND the
+               sweep sets it by itself the day next_renewal_date passes,
+               flipping back to active once the date is ahead again. The
+               customer portal shows it as "Renewal due" in both languages
+               (pages/portal.js) — picking it is visible to the customer. -->
+          <option value="renewal_pending" ${s?.status === 'renewal_pending' ? 'selected' : ''}>Renewal due</option>
           <option value="suspended" ${s?.status === 'suspended' ? 'selected' : ''}>Suspended</option>
           <option value="cancelled" ${s?.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
-          <!-- sim_status also declares 'renewal_pending', and the customer
-               portal is fully built to show it in both languages
-               (pages/portal.js) — but NOTHING can set it, this form included,
-               so that warning has never once fired. Half-built on purpose is
-               fine; half-built by accident is issue #13, where the owner
-               decides: add the option here (and the wording it triggers), or
-               drop the enum value and the portal branches together. Do not add
-               it casually — the moment it exists, customers see it. -->
         </select>
       </div>
     </div>
@@ -13018,7 +13024,8 @@ function openManageSimModal(id) {
       <div style="color:var(--muted);">Next DD Amount</div><div style="font-weight:700;${s.simMonthlyCost ? 'color:var(--success);' : 'color:var(--muted);font-weight:400;'}">${s.simMonthlyCost ? fmtGbp(ddMonthlyAmount(s.simMonthlyCost)) : '—'}</div>
       ` : ''}
       <div style="color:var(--muted);">Status</div><div>${
-        s.status === 'suspended' ? '<span class="badge badge-suspended">Suspended</span>'
+        s.status === 'renewal_pending' ? '<span class="badge badge-renewal">Renewal due</span>'
+        : s.status === 'suspended' ? '<span class="badge badge-suspended">Suspended</span>'
         : s.status === 'cancelled' ? '<span class="badge" style="background:rgba(107,114,128,0.15);color:var(--muted);">Cancelled</span>'
         : '<span class="badge badge-active">Active</span>'}</div>
     </div>
@@ -21237,7 +21244,7 @@ async function simCancelContactCheck(sim, customer) {
   if (!t || kcTail10(sim.simNumber) !== t) return true;          // not their contact line
   if (kcTail10(customer.altPhone)) return true;                   // a second number exists
   const othersLive = customerSimsOf(customer)
-    .some(s => s.id !== sim.id && s.status === 'active' && kcTail10(s.simNumber));
+    .some(s => s.id !== sim.id && simLive(s) && kcTail10(s.simNumber));
   if (othersLive) return true;                                    // another line of ours reaches them
 
   const name = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
@@ -22096,11 +22103,11 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   const openRepairs = reps.filter(r => r.status !== 'Collected' && r.status !== 'Cancelled' && r.status !== 'Ready');
   const readyRepairs = reps.filter(r => r.status === 'Ready');
   const travel7 = bookings.filter(b => b.status !== 'Cancelled' && b.travelDate >= today && b.travelDate <= in7);
-  const renewals7 = sims.filter(s => s.status === 'active' && s.renewalDate && s.renewalDate >= today && s.renewalDate <= in7);
+  const renewals7 = sims.filter(s => simLive(s) && s.renewalDate && s.renewalDate >= today && s.renewalDate <= in7);
   // Renewal dates that have already passed on a plan still marked active — 29
   // of them today. Nothing in the app showed these, and they are the half that
   // is actually wrong rather than merely upcoming.
-  const renewalsLate = sims.filter(s => s.status === 'active' && s.renewalDate && s.renewalDate < today);
+  const renewalsLate = sims.filter(s => simLive(s) && s.renewalDate && s.renewalDate < today);
   // Snoozed tasks are deliberately parked — keep them off the dashboard.
   const openTasks = tks.filter(t => !t.done && !(t.snoozedUntil && t.snoozedUntil > today));
   const highTasks = openTasks.filter(t => t.priority === 'High');

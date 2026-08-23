@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
-*As of 23 Aug 2026 · m-da280d29 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 23 Aug 2026 · m-f75c198e — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -233,7 +233,7 @@ The UK SIM-only plans the shop manages for customers: whose number is on which n
 - **The four counts** — How many plans there are, how many are running, how many renew shortly, and what they have brought in.
 - **+ New SIM plan** — Puts a plan on the books: the customer, the network, the number, the SIM's own long number, the login email at the provider, what the plan is, and when it renews next.
 - **Filter and sort** — Renewal soonest is the working order — it is the list of what is about to cost money. There is also a filter for plans with no carrier account on file, which are the ones nobody can log in and manage, and one for plans the shop pays for with no way to collect the money back.
-- **The list** — Customer, network, number, plan, mailbox, renewal date, how it is paid and whether it is running.
+- **The list** — Customer, network, number, plan, mailbox, renewal date, how it is paid and whether it is running. A plan whose renewal date has passed reads “Renewal due” — that happens by itself overnight, and clears by itself the moment the date is moved on. The line is still live while it says so; it is a nudge, not a stoppage.
 - **⚙ Manage** — Everything about one plan: the details, its service history, the letters and emails that have come in from the carrier about it, and adding a charge for it.
 - **✉️ Email receipt** — On the confirmation after a plan is saved. The customer gets their number, the network, the plan and the day it renews — the things they need months later and cannot get from a till slip. A setup fee still owing says so, with a button to pay it, and there is a link to the page explaining how the plan works.
 - **Payment** — Whose card sits on the NETWORK account — not whose card the shop holds. A card saved with the shop is still the shop collecting, which is “through me”; it only becomes “customer pays directly” when their own card goes on to the network’s account and the shop bills nothing monthly.

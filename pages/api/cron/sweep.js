@@ -551,9 +551,13 @@ async function handler(req, res) {
     // whole renewal stack (SIMDUE tasks, banners, drafts) goes dark again one
     // cycle after the owner fills the dates in. 3-day grace so the SIMDUE
     // "check payment goes through" task survives the renewal itself.
+    // renewal_pending lines are in here too: the flip below (4b) parks a line
+    // in that status the day its date passes, and THIS is what lets it out —
+    // an active-only filter would strand every flipped line in renewal_pending
+    // with a date nothing would ever advance again.
     const lapsed = await db.select(
       'sims',
-      `select=id,next_renewal_date,legacy_extras&status=eq.active&next_renewal_date=lt.${localDate(-3)}`
+      `select=id,next_renewal_date,legacy_extras&status=in.(active,renewal_pending)&next_renewal_date=lt.${localDate(-3)}`
     )
     let advanced = 0
     for (const s of lapsed) {
@@ -569,6 +573,42 @@ async function handler(req, res) {
       advanced++
     }
     counts.simRenewalsAdvanced = advanced
+    })
+
+    await section('sim-renewal-pending', async () => {
+    // ── 4b. Status follows the date (issue #13, owner 23 Aug: "set it
+    // automatically when next_renewal_date passes") ──
+    //
+    // The day a line's renewal date passes, it goes renewal_pending: the staff
+    // list shows "Renewal due" and the customer portal warns in both
+    // languages. It comes BACK by the same rule the moment the date is ahead
+    // again — whether a person pushed it forward or 4a rolled it after the
+    // 3-day grace — so the status is never something anybody has to remember
+    // to reset. Both writes patch legacy_extras.status too: sims persist by
+    // whole-array upsert from the app blob, so a typed-only flip would be
+    // reverted by the next admin SIM save (same trap as renewalDate in 4a).
+    const goPending = await db.select(
+      'sims',
+      `select=id,legacy_extras&status=eq.active&next_renewal_date=lt.${today}`
+    )
+    for (const s of goPending) {
+      await db.update('sims', `id=eq.${enc(s.id)}`, {
+        status: 'renewal_pending',
+        legacy_extras: { ...(s.legacy_extras || {}), status: 'renewal_pending' },
+      })
+    }
+    const goActive = await db.select(
+      'sims',
+      `select=id,legacy_extras&status=eq.renewal_pending&or=(next_renewal_date.gte.${today},next_renewal_date.is.null)`
+    )
+    for (const s of goActive) {
+      await db.update('sims', `id=eq.${enc(s.id)}`, {
+        status: 'active',
+        legacy_extras: { ...(s.legacy_extras || {}), status: 'active' },
+      })
+    }
+    counts.simsRenewalPending = goPending.length
+    counts.simsRenewalCleared = goActive.length
     })
 
     await section('sim-renewals', async () => {
@@ -599,7 +639,9 @@ async function handler(req, res) {
     for (const t of openSimDue) {
       const simId = t.reference.slice('SIMDUE-'.length)
       const row = await db.select('sims', `select=status,next_renewal_date&id=eq.${enc(simId)}`)
-      const stale = !row.length || row[0].status !== 'active' ||
+      // renewal_pending is the renewal actually HAPPENING — closing its
+      // "check payment goes through" task then would be exactly backwards.
+      const stale = !row.length || !['active', 'renewal_pending'].includes(row[0].status) ||
         !row[0].next_renewal_date || row[0].next_renewal_date > localDate(3)
       if (stale) simClosed += await closeOpenTask(t.reference)
     }
