@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
-*As of 23 Aug 2026 · m-f6b422cd — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 23 Aug 2026 · m-da280d29 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -424,7 +424,7 @@ Stock and the counter: what is on the shelf, what it cost and sells for, and the
 
 **On the screen**
 
-- **🧾 Open Till** — The counter screen. It takes over the page — scan or tap items into a basket, choose the customer if they are on the books, take the money, and the stock and the day's takings both move at once. A sale can be parked to serve the next person and picked up again.
+- **🧾 Open Till** — The counter screen. It takes over the page and opens on large colour-coded CATEGORY buttons — press one and that category’s items appear as tiles. Scanning a barcode or typing in the search box skips the categories entirely, so the fast path stays fast. Tap items into the basket, choose the customer if they are on the books, take the money, and the stock and the day's takings both move at once. A sale can be parked to serve the next person and picked up again.
 - **💷 Charge · ⏸ Park sale** — Both are greyed until something is in the basket, so neither invites a press that can only fail. They wake as soon as the first item is scanned. Ctrl and Enter from the scan box charges without reaching for the mouse — and it still refuses an empty basket, because the keyboard never touches the button.
 - **💰 Cash up** — The same end-of-day count as on the Wallet screen, here because this is where the drawer is.
 - **➕ Add item** — Puts something new on the shelf: code, barcode, brand, name, what it cost, what it sells for, how many, and when to warn that it is running out.

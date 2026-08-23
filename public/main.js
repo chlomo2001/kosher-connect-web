@@ -17524,7 +17524,11 @@ async function retireStockItem(itemId) {
 
 // ── POS (shopfloor till): full-screen till — scan/tap → receipt → tender ──
 let posBasket = []; // [{itemId, qty, imei}]
-let posCat = 'all';
+// null = no category chosen yet (owner, 23 Aug: the till opens on LARGE
+// colour-coded category buttons, and an item only shows once its category is
+// pressed). Scanning and typing stay the fast path — a query shows its matches
+// whatever the category state.
+let posCat = null;
 let posMethod = 'cash';
 let posWallet = 0;  // £ of the sale drawn from the customer's wallet credit (split tender)
 // One idempotency token per HANDOVER, minted on the first Charge press and kept
@@ -17538,7 +17542,7 @@ function openSaleModal(preselectItemId = null) { // name kept: every Sell button
   const sellable = shopItems.filter(i => i.active && i.quantity > 0);
   if (!sellable.length) { toast('Nothing in stock to sell — add quantities first.', 'warning'); return; }
   posBasket = preselectItemId ? [{ itemId: preselectItemId, qty: 1, imei: '' }] : [];
-  posCat = 'all';
+  posCat = null;
   posMethod = 'cash';
   posWallet = 0;
   posSaleRef = null;   // fresh till session = fresh handover token
@@ -17577,11 +17581,7 @@ function renderPosView() {
             data-size="${escHtml(currentTextSize().key)}" title="Text size: ${escHtml(currentTextSize().label)}"
             aria-label="Text size: ${escHtml(currentTextSize().label)}. Press to change.">${textSizeBtnInner()}</button>
         </div>
-        <div class="pos-cats">
-          <button class="pos-cat${posCat === 'all' ? ' on' : ''}" onclick="posSetCat('all')">All</button>
-          ${cats.map(c => `<button class="pos-cat${posCat === c ? ' on' : ''}" onclick="posSetCat('${c}')">
-            ${STOCK_CATEGORY_LABELS[c] || escHtml(c)}</button>`).join('')}
-        </div>
+        <div class="pos-cats" id="posCats">${posCatsHtml(cats)}</div>
         <div id="posTiles" class="pos-tiles pos-tiles-full"></div>
       </div>
       <div class="pos-side">
@@ -17638,8 +17638,10 @@ function posSetMethod(m) {
 
 function posSetCat(c) {
   posCat = c;
-  document.querySelectorAll('.pos-cat').forEach(b => b.classList.toggle('on',
-    b.textContent.trim() === 'All' ? c === 'all' : b.getAttribute('onclick').includes(`'${c}'`)));
+  // Rebuild rather than toggle: posCatsHtml computes .on from posCat, and one
+  // renderer means the strip and the big choosing grid can never disagree.
+  const strip = document.getElementById('posCats');
+  if (strip) strip.innerHTML = posCatsHtml();
   posRenderTiles();
   document.getElementById('posScan')?.focus();
 }
@@ -17802,8 +17804,21 @@ function posScanEnter() {
   else toast('No matching item.', 'warning');
 }
 
+// One hue per category, spread by the golden angle so the twelve built-ins
+// and any owner-added ones stay tellable-apart without a hand-pinned palette.
+// The CSS reads --cat-h; light and dark each mix their own lightness from it.
+function posCatHue(c, cats) {
+  const i = Math.max(0, cats.indexOf(c));
+  return Math.round((i * 137.5) % 360);
+}
+function posCatsHtml(cats) {
+  cats = cats || stockCategories().map(([k]) => k).filter(k => shopItems.some(i => i.active && i.quantity > 0 && i.category === k));
+  const btn = (val, label) => `<button class="pos-cat${posCat === val ? ' on' : ''}"
+    style="--cat-h:${val === 'all' ? 215 : posCatHue(val, cats)};" onclick="posSetCat('${escJs(val)}')">${label}</button>`;
+  return btn('all', 'Everything') + cats.map(c => btn(c, STOCK_CATEGORY_LABELS[c] || escHtml(c))).join('');
+}
 function posTileMatch(i, q) {
-  if (posCat !== 'all' && i.category !== posCat) return false;
+  if (posCat && posCat !== 'all' && i.category !== posCat) return false;
   if (!q) return true;
   const hay = `${i.barcode || ''} ${i.code || ''} ${i.company || ''} ${i.model || ''}`.toLowerCase();
   return hay.includes(q.toLowerCase());
@@ -17813,6 +17828,16 @@ function posRenderTiles() {
   const q = document.getElementById('posScan')?.value.trim() || '';
   const el = document.getElementById('posTiles');
   if (!el) return;
+  // No category picked and nothing typed → the choosing state: the tile area
+  // IS the category buttons, big. A keystroke in the scan box overrides it —
+  // whoever is scanning barcodes must never have to touch a category first.
+  if (!posCat && !q) {
+    const cats = stockCategories().map(([k]) => k).filter(k => shopItems.some(i => i.active && i.quantity > 0 && i.category === k));
+    el.innerHTML = `<div class="pos-cat-choose">${posCatsHtml(cats)}</div>`;
+    const strip = document.getElementById('posCats'); if (strip) strip.innerHTML = '';
+    return;
+  }
+  { const strip = document.getElementById('posCats'); if (strip && !strip.childElementCount) strip.innerHTML = posCatsHtml(); }
   const list = shopItems.filter(i => i.active && i.quantity > 0 && posTileMatch(i, q)).slice(0, 60);
   el.innerHTML = list.map(i => `
     <div class="pos-tile" onclick="posAdd('${i.id}')">

@@ -389,7 +389,14 @@ button, summary { user-select: none; }
               transform var(--dur-1) var(--ease-out);
   white-space: nowrap;
 }
-.btn-primary { background: var(--accent); color: var(--on-accent); }
+/* CTA uplift (owner, 23 Aug: "much larger CTA buttons"). SIZE and WEIGHT,
+   deliberately not a new colour: a striking colour on every primary makes
+   every screen shout and nothing stand out — the till's category wall is the
+   one loud place instead. min-height 48px is the thumb target the touch
+   audits already treat as comfortable; .btn-sm keeps its compact size for
+   in-table actions, or tables would double in height. */
+.btn-primary { background: var(--accent); color: var(--on-accent); min-height: 48px; padding: 12px 24px; font-weight: 600; }
+.btn-sm.btn-primary, .btn-primary.btn-sm { min-height: 0; padding: 6px 12px; font-weight: 600; }
 .btn-primary:hover { background: var(--primary-deep); }
 .btn-primary:active { background: var(--primary-press); }
 /* Every variant, not only the blue one. .btn-primary had a disabled look and

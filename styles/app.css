@@ -3319,16 +3319,42 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 
 .pos-cats { display: flex; gap: 8px; flex-wrap: wrap; }
 
+/* Colour-coded categories (owner, 23 Aug): each carries --cat-h, a hue spread
+   by the golden angle in posCatHue. Light mixes a pale wash of it; dark a deep
+   one; the SELECTED state goes full-strength with white text — 34% lightness
+   keeps ≥4.5:1 for every hue on the wheel. Colour is the till's one loud
+   place on purpose: category recognition at arm's length is what a counter
+   needs, and it is why the CTA uplift below stays inside the house blue. */
 .pos-cat {
-  border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 18px;
-  background: var(--surface); cursor: pointer; font-size: var(--fs-body); font-weight: 500;
-  color: var(--ink-secondary);
+  border: 1px solid hsl(var(--cat-h, 215) 45% 62%); border-radius: var(--radius);
+  padding: 12px 20px; min-height: 48px;
+  background: hsl(var(--cat-h, 215) 65% 93%);
+  cursor: pointer; font-size: var(--fs-ui); font-weight: 600;
+  color: var(--ink);
 }
+/* The staff app goes dark by data-theme only (the toggle sets it, the
+   pre-paint script restores it) — so light is the base and dark is one
+   attribute override, with .on repeated there so selection always outranks
+   the theme wash. */
+.pos-cat.on { background: hsl(var(--cat-h, 215) 55% 34%); border-color: hsl(var(--cat-h, 215) 55% 34%); color: #fff; }
+:root[data-theme="dark"] .pos-cat { background: hsl(var(--cat-h, 215) 35% 22%); border-color: hsl(var(--cat-h, 215) 35% 40%); color: var(--ink); }
+:root[data-theme="dark"] .pos-cat.on { background: hsl(var(--cat-h, 215) 55% 40%); border-color: hsl(var(--cat-h, 215) 55% 40%); color: #fff; }
+
+/* The choosing state: no category picked, nothing typed — the tile area IS
+   the categories, big enough to hit from a step back. */
+.pos-cat-choose {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px; padding: 6px;
+  /* The tile area is itself a grid; without this the whole choosing wall sat
+     inside ONE tile column, a 170px tower on an 800px floor. */
+  grid-column: 1 / -1;
+}
+.pos-cat-choose .pos-cat { min-height: 84px; font-size: var(--fs-title); border-width: 2px; }
 
 /* --on-accent, not #fff: --accent lightens for dark surfaces, so the selected
    category measured 2.62:1 at the till in the evening. The till had escaped
    every contrast sweep because it is a page takeover, not a tab. */
-.pos-cat.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+/* (superseded by the hue-driven .pos-cat.on above) */
 
 
 /* Big shopfloor tiles that fill the space and are easy to tap. */
