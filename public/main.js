@@ -2931,11 +2931,11 @@ function renderRentalsTab() {
     </div>
 
     <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-      <button class="btn btn-primary" onclick="openNewRentalModal()">📱 New rental</button>
-      <button class="btn btn-outline" onclick="openManagePhonesModal()">⚙️ Manage phones</button>
-      <button class="btn btn-outline" onclick="openPoolsModal()">📶 Pools</button>
-      <button class="btn ${rentalView === 'calendar' ? 'btn-primary' : 'btn-outline'}"
-        onclick="rentalView = rentalView === 'calendar' ? 'list' : 'calendar'; renderRentalsTab();">📅 Availability</button>
+      <button class="btn btn-primary kc-ic kc-ic-phone" onclick="openNewRentalModal()">New rental</button>
+      <button class="btn btn-outline kc-ic kc-ic-gear" onclick="openManagePhonesModal()">Manage phones</button>
+      <button class="btn btn-outline kc-ic kc-ic-signal" onclick="openPoolsModal()">Pools</button>
+      <button class="btn ${rentalView === 'calendar' ? 'btn-primary' : 'btn-outline'} kc-ic kc-ic-calendar"
+        onclick="rentalView = rentalView === 'calendar' ? 'list' : 'calendar'; renderRentalsTab();">Availability</button>
       <input class="search-box" type="text" id="rentalScan"
         inputmode="numeric" autocomplete="off"
         placeholder="📷 Scan IMEI — out or back"
@@ -2964,8 +2964,8 @@ function renderRentalsTab() {
         </div>
         <div id="rentalBulkBar" style="display:none;margin:8px 0 0;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary);align-items:center;gap:10px;flex-wrap:wrap;">
           <strong id="rentalBulkCount" style="font-size:var(--fs-body);"></strong>
-          <button class="btn btn-outline btn-sm" style="color:var(--success);border-color:var(--success);" onclick="returnSelectedRentals()">📥 Mark returned</button>
-          <button class="btn btn-outline btn-sm" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedRentals()">🗑 Delete selected</button>
+          <button class="btn btn-outline btn-sm kc-ic kc-ic-download" style="color:var(--success);border-color:var(--success);" onclick="returnSelectedRentals()">Mark returned</button>
+          <button class="btn btn-outline btn-sm kc-ic kc-ic-trash" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedRentals()">Delete selected</button>
           <button class="btn btn-outline btn-sm" id="rentalBulkSameCust" style="display:none;" onclick="selectSameCustomerRentals()"></button>
           <button class="btn btn-outline btn-sm" onclick="clearRentalSel()">Deselect all</button>
         </div>
@@ -3384,7 +3384,7 @@ function renderRentalRows() {
       <td>
         <div class="row-actions">
           ${computedStatus === 'booked' ? `<button class="action-btn" style="color:var(--success);font-weight:600;" onclick="startReservation('${r.id}')">▶ Start</button>` : ''}
-          <button class="action-btn" onclick="openManageRentalModal('${r.id}')">⚙ Manage</button>
+          <button class="action-btn kc-ic kc-ic-gear" onclick="openManageRentalModal('${r.id}')">Manage</button>
           ${kcRowMenuHtml([
             { label: '⏰ Remind me about this', onclick: `openRemindModal('rental','${r.id}')` },
             { label: '✉️ Draft a status text', onclick: `openRentalSmsModal('${r.id}')` },
@@ -3750,7 +3750,7 @@ function renderPhoneRows() {
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
-          ${phoneOutWithoutRental(p) ? `<button class="action-btn" style="color:var(--success);font-weight:600;" onclick="markPhoneBack('${p.id}')" title="Record the return${p.heldByNote ? ' from ' + escHtml(p.heldByNote) : ''}">📥 It's back</button>` : ''}
+          ${phoneOutWithoutRental(p) ? `<button class="action-btn kc-ic kc-ic-download" style="color:var(--success);font-weight:600;" onclick="markPhoneBack('${p.id}')" title="Record the return${p.heldByNote ? ' from ' + escHtml(p.heldByNote) : ''}">It's back</button>` : ''}
           <button class="action-btn" onclick="openEditPhoneModal('${p.id}')">Edit</button>
           <button class="action-btn danger" onclick="deletePhone('${p.id}')">Delete</button>
         </div>
@@ -4251,8 +4251,8 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-outline" onclick="saveNewRental(true)" title="Save, then reopen prefilled with the same customer and dates — for the family renting several phones">💾 Save + another phone</button>
-      <button class="btn btn-primary" onclick="saveNewRental()">💾 Save rental</button>
+      <button class="btn btn-outline kc-ic kc-ic-save" onclick="saveNewRental(true)" title="Save, then reopen prefilled with the same customer and dates — for the family renting several phones">Save + another phone</button>
+      <button class="btn btn-primary kc-ic kc-ic-save" onclick="saveNewRental()">Save rental</button>
     </div>
   `);
 
@@ -4632,10 +4632,8 @@ function showDonePanel(d) {
   const phone = (c && c.phone) || d.customerPhone || '';
 
   const emailBtn = canEmail
-    ? `<button class="btn btn-primary rd-act" id="rdEmail" onclick="kcDoneEmail(this)">
-         ✉️ Email receipt<span class="rd-sub">${escHtml(email)}</span></button>`
-    : `<button class="btn btn-outline rd-act" disabled title="${ours ? 'That address is a shop account login, not the customer\u2019s own' : 'No email address on this customer'}">
-         ✉️ Email receipt<span class="rd-sub">${ours ? 'shop login, not theirs' : 'no address on file'}</span></button>`;
+    ? `<button class="btn btn-primary rd-act kc-ic kc-ic-mail" id="rdEmail" onclick="kcDoneEmail(this)">Email receipt<span class="rd-sub">${escHtml(email)}</span></button>`
+    : `<button class="btn btn-outline rd-act kc-ic kc-ic-mail" disabled title="${ours ? 'That address is a shop account login, not the customer\u2019s own' : 'No email address on this customer'}">Email receipt<span class="rd-sub">${ours ? 'shop login, not theirs' : 'no address on file'}</span></button>`;
   const smsBtn = phone && d.smsText
     ? `<button class="btn btn-outline rd-act" onclick="kcDoneText()">
          💬 Text receipt<span class="rd-sub">${escHtml(fmtPhone(phone))}</span></button>`
@@ -4725,8 +4723,8 @@ function openTextReceiptModal(customerId, text) {
       <span class="modal-actions-group">
         <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
         ${waLink(c || {}, '') ? `<button class="btn btn-outline" onclick="kcTextReceiptWa('${escJs(String(customerId))}')">💬 WhatsApp</button>` : ''}
-        <button class="btn btn-outline" onclick="kcTextReceiptCopy('${escJs(String(customerId))}')">📋 Copy</button>
-        <button class="btn btn-primary" onclick="kcTextReceiptSend('${escJs(String(customerId))}')">📤 Send</button>
+        <button class="btn btn-outline kc-ic kc-ic-clipboard" onclick="kcTextReceiptCopy('${escJs(String(customerId))}')">Copy</button>
+        <button class="btn btn-primary kc-ic kc-ic-upload" onclick="kcTextReceiptSend('${escJs(String(customerId))}')">Send</button>
       </span>
     </div>
   `);
@@ -5139,8 +5137,8 @@ function openVoidRentalModal(rentalId) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" style="background:var(--danger-ink);border-color:var(--danger-ink);"
-        onclick="confirmVoidRental('${rentalId}')">↩ Void this rental</button>
+      <button class="btn btn-primary kc-ic kc-ic-undo" style="background:var(--danger-ink);border-color:var(--danger-ink);"
+        onclick="confirmVoidRental('${rentalId}')">Void this rental</button>
     </div>
   `);
 }
@@ -5392,8 +5390,8 @@ function reviewRowHtml(p) {
       </details>
       <div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap;">
         ${p.status === 'rented' || p.status === 'permanent'
-          ? `<button class="btn btn-outline" style="font-size:var(--fs-small);padding:4px 11px;" onclick="reviewMarkBack('${escHtml(p.id)}')">📥 It's back</button>` : ''}
-        <button class="btn btn-outline" style="font-size:var(--fs-small);padding:4px 11px;" onclick="reviewOpenPhone('${escHtml(p.id)}')">✏️ Edit line</button>
+          ? `<button class="btn btn-outline kc-ic kc-ic-download" style="font-size:var(--fs-small);padding:4px 11px;" onclick="reviewMarkBack('${escHtml(p.id)}')">It's back</button>` : ''}
+        <button class="btn btn-outline kc-ic kc-ic-pencil" style="font-size:var(--fs-small);padding:4px 11px;" onclick="reviewOpenPhone('${escHtml(p.id)}')">Edit line</button>
         <button class="btn btn-outline" style="font-size:var(--fs-small);padding:4px 11px;" onclick="reviewDismiss('${escHtml(p.id)}')">✓ Looks right</button>
       </div>
     </div>`;
@@ -5447,7 +5445,7 @@ function openEditPhoneModal(phoneId) {
     ? `<div style="margin-top:6px;font-size:var(--fs-body);color:var(--muted);">Rented to: <strong style="color:var(--text);">${escName(activeRental.customerName)}</strong> &nbsp;<button class="btn btn-outline" style="padding:3px 10px;font-size:var(--fs-small);" onclick="closeDynamicModal();openManageRentalModal('${activeRental.id}')">Manage rental</button></div>`
     : phoneOutWithoutRental(p)
     ? `<div style="margin-top:6px;font-size:var(--fs-body);color:var(--muted);">${p.heldByNote ? `With: <strong style="color:var(--text);">${escHtml(p.heldByNote)}</strong> (no rental attached)` : 'Out with no rental attached'}
-        &nbsp;<button class="btn btn-outline" style="padding:3px 10px;font-size:var(--fs-small);color:var(--success);" onclick="markPhoneBack('${p.id}')">📥 It’s back</button></div>`
+        &nbsp;<button class="btn btn-outline kc-ic kc-ic-download" style="padding:3px 10px;font-size:var(--fs-small);color:var(--success);" onclick="markPhoneBack('${p.id}')">It’s back</button></div>`
     : '';
   // The read-only row and the Line state select describe the same fact — they
   // must never disagree (a "🟢 Available" header over a Retired select did).
@@ -6034,11 +6032,11 @@ function openManageRentalModal(rentalId) {
     <div class="modal-actions" style="justify-content:space-between;">
       ${r.voided
         ? `<span style="font-size:var(--fs-small);color:var(--muted);">↩ Voided ${fmtDate(r.voided.at)} — ${escHtml(r.voided.reason)}</span>`
-        : `<button class="btn btn-outline" style="color:var(--danger-ink);border-color:var(--danger-ink);"
-            onclick="openVoidRentalModal('${rentalId}')" title="Undo this rental — wrong person, didn't fly…">↩ Void</button>`}
+        : `<button class="btn btn-outline kc-ic kc-ic-undo" style="color:var(--danger-ink);border-color:var(--danger-ink);"
+            onclick="openVoidRentalModal('${rentalId}')" title="Undo this rental — wrong person, didn't fly…">Void</button>`}
       <span class="modal-actions-group">
         <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-        <button class="btn btn-primary" id="mgSaveBtn" onclick="saveManageRental('${rentalId}')">💾 Save changes</button>
+        <button class="btn btn-primary kc-ic kc-ic-save" id="mgSaveBtn" onclick="saveManageRental('${rentalId}')">Save changes</button>
       </span>
     </div>
   `);
@@ -7259,7 +7257,7 @@ function renderCustomersTab() {
         </select>
         <button class="btn btn-outline" id="btnExportCSV">Export CSV</button>
         ${(!currentStaff || currentStaff.role === 'owner')
-          ? `<button class="btn btn-outline" onclick="openDupScanModal()" title="Review customers who look like the same person entered twice">👥 Duplicates</button>` : ''}
+          ? `<button class="btn btn-outline kc-ic kc-ic-users" onclick="openDupScanModal()" title="Review customers who look like the same person entered twice">Duplicates</button>` : ''}
       </div>
     </div>
 
@@ -7786,7 +7784,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         ${item(!!phoneCover,
           `Phone covered — ${phoneCover ? rentalDeviceChip(phoneCover) : ''} until ${fmtDate(phoneCover?.toDate)}`,
           'No rental phone covering the travel date',
-          `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="openNewRentalModal('${c.id}')">📱 Book a phone</button>`)}
+          `<button class="btn btn-outline btn-sm kc-ic kc-ic-phone" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="openNewRentalModal('${c.id}')">Book a phone</button>`)}
         ${item(!!simCover,
           `SIM plan active — ${escHtml(simCover?.provider || '')}`,
           'No active SIM plan',
@@ -7794,11 +7792,11 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         ${item(!!vnCover,
           `Virtual number — ${escHtml(fmtPhone(vnCover?.number || ''))}`,
           'No virtual number (family cannot call locally)',
-          `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="openNewVNModal('${c.id}')">🔢 Add a number</button>`)}
+          `<button class="btn btn-outline btn-sm kc-ic kc-ic-digits" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="openNewVNModal('${c.id}')">Add a number</button>`)}
         ${item(nextTrip.hasPassportDetails,
           'Passport details on file',
           nextTrip.passportOnFile ? 'Passport marked on file — but no details entered' : 'Passport not on file',
-          `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="openPassengersModal('${nextTrip.id}')">🛂 Add details</button>`)}
+          `<button class="btn btn-outline btn-sm kc-ic kc-ic-passport" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="openPassengersModal('${nextTrip.id}')">Add details</button>`)}
       </div>`;
   }
 
@@ -7825,7 +7823,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
           · ${ha.lastSettled === thisYm ? `<span style="color:var(--success);">this month settled ✔</span>` : ha.lastSettled ? `last settled ${escHtml(ha.lastSettled)}` : 'never settled yet'}
           ${ha.lastInvoiceUrl ? ` · <a href="${escHtml(ha.lastInvoiceUrl)}" target="_blank" rel="noopener" style="color:var(--accent);">🧾 last invoice${ha.lastInvoiceNumber ? ' ' + escHtml(ha.lastInvoiceNumber) : ''} ↗</a>` : ''}
         </span>
-        <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="openHouseSettleModal('${c.id}')">💳 Settle month</button>
+        <button class="btn btn-outline btn-sm kc-ic kc-ic-card" style="margin-left:auto;" onclick="openHouseSettleModal('${c.id}')">Settle month</button>
       </div>` : '';
 
   // Notes + this customer's open reminders/tasks (Force E — the record was a
@@ -8755,10 +8753,10 @@ async function openHouseSettleModal(custId) {
       </div>
     </div>
     <div class="modal-actions" style="justify-content:space-between;">
-      <button class="btn btn-outline" onclick="printHouseStatement()">🖨 Print statement</button>
+      <button class="btn btn-outline kc-ic kc-ic-printer" onclick="printHouseStatement()">Print statement</button>
       <span class="modal-actions-group">
         <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="settleHouseAccount('${c.id}')">💳 Charge & settle</button>
+        <button class="btn btn-primary kc-ic kc-ic-card" onclick="settleHouseAccount('${c.id}')">Charge & settle</button>
       </span>
     </div>
   `);
@@ -9036,7 +9034,7 @@ async function saveCardOnFile(custId) {
     <div class="modal-actions">
       <span class="modal-actions-group">
         <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-        <button class="btn btn-primary" id="kcCardSave" onclick="kcSaveCardConfirm('${escJs(String(custId))}')" disabled>🔒 Save the card</button>
+        <button class="btn btn-primary kc-ic kc-ic-lock" id="kcCardSave" onclick="kcSaveCardConfirm('${escJs(String(custId))}')" disabled>Save the card</button>
       </span>
     </div>
   `);
@@ -9168,7 +9166,7 @@ function openPaymentLinkModal(custId) {
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
       <button class="btn btn-outline" id="plGo" onclick="createPaymentLink('${escHtml(String(custId))}')">Create link</button>
       ${waLink(c, '') ? `<button class="btn btn-outline" id="plWa" style="display:none;" onclick="waPaymentLink('${escHtml(String(custId))}')">💬 Open in WhatsApp</button>` : ''}
-      <button class="btn btn-primary" id="plCopy" style="display:none;" onclick="copyPaymentLink()">📋 Copy link</button>
+      <button class="btn btn-primary kc-ic kc-ic-clipboard" id="plCopy" style="display:none;" onclick="copyPaymentLink()">Copy link</button>
     </div>
   `);
 }
@@ -10182,7 +10180,7 @@ function renderDupScan(j) {
       </div>
       <div class="dup-foot">
         <span class="dup-foot-note">Keeping one removes the other.</span>
-        <button class="btn btn-outline btn-sm" onclick="dupMarkNotSame('${escHtml(p.a.id)}','${escHtml(p.b.id)}')">✋ Not the same person</button>
+        <button class="btn btn-outline btn-sm kc-ic kc-ic-hand" onclick="dupMarkNotSame('${escHtml(p.a.id)}','${escHtml(p.b.id)}')">Not the same person</button>
       </div>
     </div>`).join('') ||
     '<div style="color:var(--success);font-size:var(--fs-body);">Nothing left to review. 🎉</div>';
@@ -10358,8 +10356,8 @@ async function loadWalletSection(customerId) {
             ${e.amount >= 0 ? '+' : '−'}${fmtGbp(Math.abs(e.amount))}</div>
           ${RECEIPTABLE[e.type] && Math.abs(e.amount) >= 0.005 ? `<button class="btn btn-secondary" style="font-size:var(--fs-micro);padding:3px 8px;margin-left:10px;"
             title="Email a receipt for this entry" onclick="emailLedgerReceipt(this, '${escHtml(customerId)}', ${i})">✉️</button>` : ''}
-          ${e.type === 'payment' && e.method === 'card' && typeof e.reference === 'string' && /^STRIPE-pi_/.test(e.reference) ? `<button class="btn btn-secondary" style="font-size:var(--fs-micro);padding:3px 8px;margin-left:6px;"
-            title="Refund this card payment back to the card" onclick="openRefundModal('${escHtml(customerId)}', ${i})">↩️ Refund</button>` : ''}
+          ${e.type === 'payment' && e.method === 'card' && typeof e.reference === 'string' && /^STRIPE-pi_/.test(e.reference) ? `<button class="btn btn-secondary kc-ic kc-ic-undo" style="font-size:var(--fs-micro);padding:3px 8px;margin-left:6px;"
+            title="Refund this card payment back to the card" onclick="openRefundModal('${escHtml(customerId)}', ${i})">Refund</button>` : ''}
         </div>`).join('');
 
   el.innerHTML = `
@@ -10376,8 +10374,8 @@ async function loadWalletSection(customerId) {
              control that used to sit in the next-action strip above, so the
              wording has to carry what that one carried: a customer in arrears
              is a thing to DO, not a state to note. */''}
-      <button class="btn btn-primary" style="font-size:var(--fs-small);padding:6px 14px;"
-        onclick="openWalletModal('${escHtml(customerId)}', ${Number(bal) || 0})">💰 ${bal < -0.005 ? 'Take payment' : 'Record payment / credit'}</button>
+      <button class="btn btn-primary kc-ic kc-ic-money" style="font-size:var(--fs-small);padding:6px 14px;"
+        onclick="openWalletModal('${escHtml(customerId)}', ${Number(bal) || 0})">${bal < -0.005 ? 'Take payment' : 'Record payment / credit'}</button>
       ${data.entries.length > 8 ? `<span style="color:var(--muted);font-size:var(--fs-micro);">showing 8 of ${data.entries.length}</span>` : ''}
     </div>
     <div class="history-list">${entriesHtml}</div>`;
@@ -10735,7 +10733,7 @@ function openDraftReminderModal(customerId) {
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
       ${waLink(c, '') ? `<button class="btn btn-outline" onclick="waReminderDraft('${escHtml(String(customerId))}')">💬 Open in WhatsApp</button>` : ''}
-      <button class="btn btn-primary" onclick="copyReminderDraft('${escHtml(String(customerId))}')">📋 Copy message</button>
+      <button class="btn btn-primary kc-ic kc-ic-clipboard" onclick="copyReminderDraft('${escHtml(String(customerId))}')">Copy message</button>
     </div>
   `);
 }
@@ -10831,8 +10829,8 @@ function openAiReplyModal(customerId) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
-      <button class="btn btn-outline" id="airGoBtn" onclick="runAiReply('${escHtml(String(customerId))}')">✨ Draft reply</button>
-      <button class="btn btn-primary" id="airCopyBtn" style="display:none;" onclick="copyAiReply('${escHtml(String(customerId))}')">📋 Copy reply</button>
+      <button class="btn btn-outline kc-ic kc-ic-sparkle" id="airGoBtn" onclick="runAiReply('${escHtml(String(customerId))}')">Draft reply</button>
+      <button class="btn btn-primary kc-ic kc-ic-clipboard" id="airCopyBtn" style="display:none;" onclick="copyAiReply('${escHtml(String(customerId))}')">Copy reply</button>
     </div>
   `);
 }
@@ -10914,9 +10912,9 @@ function openRentalSmsModal(rentalId) {
     <textarea class="form-input" id="rsmsText" rows="5" style="font-family:inherit;">${escHtml(buildRentalSms(r))}</textarea>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
-      <button class="btn btn-outline" onclick="sendRentalSms('${escHtml(String(rentalId))}')">📤 Send SMS</button>
+      <button class="btn btn-outline kc-ic kc-ic-upload" onclick="sendRentalSms('${escHtml(String(rentalId))}')">Send SMS</button>
       ${waLink(waC, '') ? `<button class="btn btn-outline" onclick="waRentalSms('${escHtml(String(rentalId))}')">💬 Open in WhatsApp</button>` : ''}
-      <button class="btn btn-primary" onclick="copyRentalSms('${escHtml(String(rentalId))}')">📋 Copy message</button>
+      <button class="btn btn-primary kc-ic kc-ic-clipboard" onclick="copyRentalSms('${escHtml(String(rentalId))}')">Copy message</button>
     </div>
   `);
 }
@@ -11005,7 +11003,7 @@ function openWalletModal(customerId, balance = null) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveWalletEntry('${escHtml(customerId)}')">💰 Record</button>
+      <button class="btn btn-primary kc-ic kc-ic-money" onclick="saveWalletEntry('${escHtml(customerId)}')">Record</button>
     </div>
   `);
 }
@@ -11117,8 +11115,8 @@ async function renderWalletTab() {
       <span class="feed-label"><strong>${escName(b.customerName)}</strong></span>
       <span style="font-feature-settings:'tnum';color:${negative ? 'var(--danger-ink)' : 'var(--success)'};font-weight:600;">
         ${negative ? '−' : '+'}${fmtGbp(Math.abs(b.balance))}</span>
-      ${b.customerId ? `<button class="btn btn-outline btn-sm" style="margin-left:10px;font-size:var(--fs-micro);padding:4px 10px;"
-        onclick="event.stopPropagation();openWalletModal('${escHtml(String(b.customerId))}', ${Number(b.balance) || 0})">💰 ${negative ? 'Take payment' : 'Record'}</button>` : ''}
+      ${b.customerId ? `<button class="btn btn-outline btn-sm kc-ic kc-ic-money" style="margin-left:10px;font-size:var(--fs-micro);padding:4px 10px;"
+        onclick="event.stopPropagation();openWalletModal('${escHtml(String(b.customerId))}', ${Number(b.balance) || 0})">${negative ? 'Take payment' : 'Record'}</button>` : ''}
       <span class="feed-go">›</span>
     </div>`;
 
@@ -11170,11 +11168,11 @@ async function renderWalletTab() {
         placeholder: 'Choose a customer…', label: 'Customer',
         style: 'min-height:0;padding:8px 12px;font-size:var(--fs-body);',
       })}</div>
-      <button class="btn btn-primary" onclick="(()=>{const id=document.getElementById('wtCustomer').value;
-        if(!id){toast('Choose a customer first.','error');return;}openWalletModal(id)})()">💰 Record payment / credit</button>
-      <button class="btn btn-outline" onclick="openCashupModal()" style="margin-left:auto;">🧾 Cash-up</button>
+      <button class="btn btn-primary kc-ic kc-ic-money" onclick="(()=>{const id=document.getElementById('wtCustomer').value;
+        if(!id){toast('Choose a customer first.','error');return;}openWalletModal(id)})()">Record payment / credit</button>
+      <button class="btn btn-outline kc-ic kc-ic-receipt" onclick="openCashupModal()" style="margin-left:auto;">Cash-up</button>
       ${(!currentStaff || currentStaff.role === 'owner')
-        ? `<button class="btn btn-outline" onclick="renderBankRecon()">🏦 Bank &amp; card reconciliation</button>` : ''}
+        ? `<button class="btn btn-outline kc-ic kc-ic-bank" onclick="renderBankRecon()">Bank &amp; card reconciliation</button>` : ''}
     </div>
 
     <div class="dash-cols">
@@ -11259,7 +11257,7 @@ async function openCashupModal(dateISO) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
-      <button class="btn btn-primary" onclick="saveCashup('${today}')">🧾 Save count</button>
+      <button class="btn btn-primary kc-ic kc-ic-receipt" onclick="saveCashup('${today}')">Save count</button>
     </div>
   `);
 }
@@ -11462,7 +11460,7 @@ function bankPaint() {
     <div class="table-card" style="padding:16px 18px;margin-bottom:16px;">
       <div class="section-divider" style="margin:0 0 10px;">Card payments taken through Stripe</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-        <button class="btn btn-primary" id="bankStripeBtn" onclick="bankPullStripe()">💳 Pull from Stripe</button>
+        <button class="btn btn-primary kc-ic kc-ic-card" id="bankStripeBtn" onclick="bankPullStripe()">Pull from Stripe</button>
         <span style="font-size:var(--fs-small);color:var(--muted);flex:1;min-width:220px;">
           Money taken on a Stripe payment link never reached a wallet — the checkout doesn’t know
           which customer it was. This brings those payments in to be matched, exactly like a
@@ -11804,7 +11802,8 @@ function setupTopbarButtons() {
     b.setAttribute('aria-label', 'Search everything');
     // The word is in a span so phones can drop it and keep the icon — the
     // topbar was wrapping to three rows at 390px just to say "Ask"/"Search".
-    b.innerHTML = '🔍<span class="kc-btn-label"> Search</span><span class="kc-chord">Ctrl K</span>';
+    b.classList.add('kc-ic', 'kc-ic-search');
+    b.innerHTML = '<span class="kc-btn-label">Search</span><span class="kc-chord">Ctrl K</span>';
     b.addEventListener('click', openPalette);
     btnNew.parentElement.insertBefore(b, btnNew);
   }
@@ -11823,7 +11822,8 @@ function setupTopbarButtons() {
     h.style.cssText = 'font-size:var(--fs-small);padding:8px 12px;margin-right:8px;';
     h.title = 'Help — step-by-step for any job, and questions about the shop';
     h.setAttribute('aria-label', 'Help');
-    h.innerHTML = '❓<span class="kc-btn-label"> Help</span>';
+    h.classList.add('kc-ic', 'kc-ic-help');
+    h.innerHTML = '<span class="kc-btn-label">Help</span>';
     h.addEventListener('click', () => openHowToModal());
     btnNew.parentElement.insertBefore(h, document.getElementById('btnPalette'));
   }
@@ -12514,7 +12514,7 @@ function renderSimsTab() {
 
     <div id="simBulkBar" style="display:none;margin:0 0 10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary);align-items:center;gap:10px;flex-wrap:wrap;">
       <strong id="simBulkCount" style="font-size:var(--fs-body);"></strong>
-      <button class="btn btn-outline btn-sm" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedSims()">🗑 Delete selected</button>
+      <button class="btn btn-outline btn-sm kc-ic kc-ic-trash" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedSims()">Delete selected</button>
       <button class="btn btn-outline btn-sm" onclick="clearSimSel()">Deselect all</button>
     </div>
 
@@ -12669,7 +12669,7 @@ function renderSimRows() {
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
-          <button class="action-btn" onclick="openManageSimModal('${s.id}')">⚙ Manage</button>
+          <button class="action-btn kc-ic kc-ic-gear" onclick="openManageSimModal('${s.id}')">Manage</button>
           ${kcRowMenuHtml([
             { label: '⏰ Remind me about this', onclick: `openRemindModal('sim','${s.id}')` },
             { label: '🗑 Delete this SIM plan', onclick: `deleteSim('${s.id}')`, danger: true },
@@ -12826,7 +12826,7 @@ function openSimFormModal(id, preselectCustomerId = null, prefill = null) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveSimForm('${id || ''}')">💾 Save</button>
+      <button class="btn btn-primary kc-ic kc-ic-save" onclick="saveSimForm('${id || ''}')">Save</button>
     </div>
   `);
 }
@@ -13187,7 +13187,7 @@ function openManageSimModal(id) {
     <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;margin-top:4px;">
       <span style="font-size:var(--fs-body);color:var(--muted);">Total charged: <strong style="color:var(--success);">${fmtGbp(totalCharged)}</strong></span>
       <div class="modal-actions-group">
-        <button class="btn btn-outline btn-sm" onclick="openEditSimModal('${id}');void(0)">✏️ Edit details</button>
+        <button class="btn btn-outline btn-sm kc-ic kc-ic-pencil" onclick="openEditSimModal('${id}');void(0)">Edit details</button>
         <button class="btn btn-outline btn-sm" onclick="closeDynamicModal()">Close</button>
       </div>
     </div>
@@ -13525,7 +13525,15 @@ function toggleTheme() {
 }
 function updateThemeBtns() {
   const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-  document.querySelectorAll('[data-theme-btn]').forEach(b => { b.textContent = dark ? '☀️' : '🌙'; });
+  document.querySelectorAll('[data-theme-btn]').forEach(b => {
+    // Icon-only, so this button's NAME lives on aria-label (set in AppShell)
+    // and never in its text. Swapping classes instead of textContent keeps it
+    // that way and lets the drawn icon follow the topbar's ink.
+    b.textContent = '';
+    b.classList.add('kc-ic');
+    b.classList.toggle('kc-ic-sun', dark);
+    b.classList.toggle('kc-ic-moon', !dark);
+  });
 }
 
 // Simple Mode — text size. Three steps of one multiplier (--fs-scale in
@@ -13942,8 +13950,8 @@ function tmCardHtml(t) {
                title="Another flight on the same booking">➕ Add as another flight</button>
              <button class="btn btn-outline btn-sm" onclick="tmShowMail(${t.id})">Read the email</button>
              <button class="btn btn-outline btn-sm" onclick="tmDismiss(${t.id})">Dismiss</button>`
-          : `<button class="btn btn-primary btn-sm" onclick="tmBook(${t.id})">✈️ Confirm booking details</button>
-             ${t.passengers.length > 1 ? `<button class="btn btn-outline btn-sm" onclick="tmSplit(${t.id})" title="Each passenger pays their own">👥 Split across payers</button>` : ''}
+          : `<button class="btn btn-primary btn-sm kc-ic kc-ic-plane" onclick="tmBook(${t.id})">Confirm booking details</button>
+             ${t.passengers.length > 1 ? `<button class="btn btn-outline btn-sm kc-ic kc-ic-users" onclick="tmSplit(${t.id})" title="Each passenger pays their own">Split across payers</button>` : ''}
              <button class="btn btn-outline btn-sm" onclick="tmAttach(${t.id})" title="Another leg of a journey already booked">➕ Add to a booking</button>
              <button class="btn btn-outline btn-sm" onclick="tmShowMail(${t.id})">Read the email</button>
              <button class="btn btn-outline btn-sm" onclick="tmDismiss(${t.id})">Dismiss</button>`}
@@ -14142,7 +14150,7 @@ function tsRender() {
 
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeStackedModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="tsSave()">👥 Create ${tsState.rows.length} booking${tsState.rows.length === 1 ? '' : 's'}</button>
+      <button class="btn btn-primary kc-ic kc-ic-users" onclick="tsSave()">Create ${tsState.rows.length} booking${tsState.rows.length === 1 ? '' : 's'}</button>
     </div>
   `, { width: 720 });
 }
@@ -14449,7 +14457,7 @@ function tmShowMail(id) {
       From ${escHtml(t.from || 'unknown')}${t.receivedAt ? ' · ' + escHtml(fmtDate(t.receivedAt)) : ''}</div>
     <pre class="tm-body" data-kc-scroller>${tmMailHtml(t.body)}</pre>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
-      <button class="btn btn-outline btn-sm" onclick="tmMailTask(${Number(t.id)})">📝 Make this a task</button>
+      <button class="btn btn-outline btn-sm kc-ic kc-ic-edit-note" onclick="tmMailTask(${Number(t.id)})">Make this a task</button>
     </div>
   `, { width: 680 });
 }
@@ -14547,7 +14555,7 @@ function renderBookingsTab() {
     </div>
     <div id="bkBulkBar" style="display:${bkSelected.size ? 'flex' : 'none'};margin:0 0 10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary);align-items:center;gap:10px;flex-wrap:wrap;">
       <strong id="bkBulkCount" style="font-size:var(--fs-body);">${bkSelected.size} booking${bkSelected.size === 1 ? '' : 's'} selected</strong>
-      <button class="btn btn-outline btn-sm" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedBookings()">🗑 Delete selected</button>
+      <button class="btn btn-outline btn-sm kc-ic kc-ic-trash" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedBookings()">Delete selected</button>
       <button class="btn btn-outline btn-sm" onclick="bkSelected.clear(); renderBookingsTab()">Deselect all</button>
     </div>
     <div class="table-card">
@@ -14948,7 +14956,7 @@ async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveNewBooking()">✈️ Save booking</button>
+      <button class="btn btn-primary kc-ic kc-ic-plane" onclick="saveNewBooking()">Save booking</button>
     </div>
   `);
   if (preselectCustomerId) bkOnCustomerChange(); // #48 — offer passenger reuse straight away
@@ -15297,8 +15305,8 @@ async function openCheckinModal(bookingId) {
         <div style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:var(--fs-small);line-height:1.7;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <strong class="copy-val" tabindex="0" role="button" style="font-size:var(--fs-body);" title="Click to copy name" onclick="copyText('${escJs(p.fullName || '')}','name')">${escName(p.fullName || '(no name)')}</strong>
-            <button type="button" class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;"
-              onclick="copyText(paxCopyBlocks[${i}],'all details')">📋 Copy all</button>
+            <button type="button" class="btn btn-outline btn-sm kc-ic kc-ic-clipboard" style="font-size:var(--fs-micro);padding:3px 10px;"
+              onclick="copyText(paxCopyBlocks[${i}],'all details')">Copy all</button>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;margin-top:4px;">
             ${cell('DOB', p.dob && fmtDate(p.dob))}
@@ -15493,11 +15501,11 @@ function openEditBookingModal(id) {
       &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openTravelReqModal('${escHtml(b.id)}');return false;">🛂 Travel requirements</a>
     </div>
     <div class="modal-actions" style="justify-content:space-between;">
-      <button class="btn btn-outline" style="color:var(--danger);border-color:color-mix(in srgb, var(--danger) 40%, var(--border));"
-        onclick="closeDynamicModal();deleteBookingRow('${escHtml(b.id)}')">🗑 Delete</button>
+      <button class="btn btn-outline kc-ic kc-ic-trash" style="color:var(--danger);border-color:color-mix(in srgb, var(--danger) 40%, var(--border));"
+        onclick="closeDynamicModal();deleteBookingRow('${escHtml(b.id)}')">Delete</button>
       <span class="modal-actions-group">
         <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveEditBooking('${escHtml(b.id)}')">💾 Save</button>
+        <button class="btn btn-primary kc-ic kc-ic-save" onclick="saveEditBooking('${escHtml(b.id)}')">Save</button>
       </span>
     </div>
   `);
@@ -15854,7 +15862,7 @@ function openNewRepairModal(preselectCustomerId = null) {
         <span style="color:var(--muted);font-size:var(--fs-micro);">— charged to wallet on collection</span></div>
       <div class="modal-actions" style="margin:0;">
         <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveNewRepair()">🔧 Open Ticket</button>
+        <button class="btn btn-primary kc-ic kc-ic-wrench" onclick="saveNewRepair()">Open Ticket</button>
       </div>
     </div>
   `);
@@ -15971,7 +15979,7 @@ function openRepairSmsModal(repairId) {
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
       ${c && waLink(c, '') ? `<button class="btn btn-outline" onclick="waRepairSms('${escHtml(String(repairId))}')">💬 Open in WhatsApp</button>` : ''}
-      <button class="btn btn-primary" onclick="copyRepairSms('${escHtml(String(repairId))}')">📋 Copy message</button>
+      <button class="btn btn-primary kc-ic kc-ic-clipboard" onclick="copyRepairSms('${escHtml(String(repairId))}')">Copy message</button>
     </div>
   `);
 }
@@ -16317,7 +16325,7 @@ async function svcTimerPopOut() {
       <div class="sub" id="pipSub"></div>
       <div class="btns">
         <button id="pipHold"></button>
-        <button id="pipStop" class="stop">⏹ Stop</button>
+        <button id="pipStop" class="stop kc-ic kc-ic-stop">Stop</button>
       </div>
     </div>`;
 
@@ -16518,8 +16526,8 @@ async function renderServicesTab() {
           <span id="svcTimerProj" style="font-size:var(--fs-body);color:var(--muted);"></span>
           ${paused
             ? `<button class="btn btn-outline" onclick="svcTimerResume()">▶ Resume</button>`
-            : `<button class="btn btn-outline" onclick="svcTimerPause()">⏸ Pause</button>`}
-          <button class="btn btn-primary" onclick="svcTimerStop()">⏹ Stop &amp; charge</button>
+            : `<button class="btn btn-outline kc-ic kc-ic-pause" onclick="svcTimerPause()">Pause</button>`}
+          <button class="btn btn-primary kc-ic kc-ic-stop" onclick="svcTimerStop()">Stop &amp; charge</button>
           ${svcPipSupported()
             ? `<button class="btn btn-outline" onclick="svcTimerPopOut()" title="A small always-on-top window that stays in front of every other site and app">⧉ Float on top</button>`
             : ''}
@@ -16634,7 +16642,7 @@ async function openNewServiceModal(preselectCustomerId = null) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveNewServiceOrder()">🖨️ Charge</button>
+      <button class="btn btn-primary kc-ic kc-ic-printer" onclick="saveNewServiceOrder()">Charge</button>
     </div>
   `);
 }
@@ -16837,7 +16845,7 @@ function shopRowsHtml() {
           ${i.profit === null ? '—' : fmtGbp(i.profit)}</td>
         <td style="font-weight:700;${i.quantity <= i.lowStockAt ? 'color:var(--danger-ink);' : ''}">${i.quantity}</td>
         <td style="white-space:nowrap;">
-          <button class="action-btn" onclick="openSaleModal('${i.id}')">💷 Sell</button>
+          <button class="action-btn kc-ic kc-ic-pound" onclick="openSaleModal('${i.id}')">Sell</button>
           <button class="action-btn" aria-label="Edit ${escHtml(i.name || 'item')}" onclick="openStockItemModal('${i.id}')">✏️</button>
         </td>
       </tr>`).join('');
@@ -16897,8 +16905,8 @@ function poRowsHtml() {
         </div>
         <div class="history-amount" style="margin:0 10px;">${total ? fmtGbp(total) : '—'}</div>
         <div class="row-actions">
-          ${po.status === 'draft' ? `<button class="action-btn" onclick="poSetStatus('${escJs(po.id)}','ordered')">📤 Mark ordered</button>` : ''}
-          ${po.status === 'ordered' ? `<button class="action-btn" style="color:var(--success);font-weight:600;" onclick="poReceive('${escJs(po.id)}')">📥 Receive</button>` : ''}
+          ${po.status === 'draft' ? `<button class="action-btn kc-ic kc-ic-upload" onclick="poSetStatus('${escJs(po.id)}','ordered')">Mark ordered</button>` : ''}
+          ${po.status === 'ordered' ? `<button class="action-btn kc-ic kc-ic-download" style="color:var(--success);font-weight:600;" onclick="poReceive('${escJs(po.id)}')">Receive</button>` : ''}
           ${po.status === 'draft' || po.status === 'ordered'
             ? kcRowMenuHtml([{ label: '✕ Cancel this order', onclick: `poSetStatus('${escJs(po.id)}','cancelled')`, danger: true }], { label: 'More for this order' })
             : ''}
@@ -16949,7 +16957,7 @@ function openPurchaseOrderModal() {
       <span class="modal-actions-group">
         <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
         <button class="btn btn-outline" onclick="poSave('draft')">Save as draft</button>
-        <button class="btn btn-primary" onclick="poSave('ordered')">📤 Save &amp; mark ordered</button>
+        <button class="btn btn-primary kc-ic kc-ic-upload" onclick="poSave('ordered')">Save &amp; mark ordered</button>
       </span>
     </div>
   `);
@@ -17166,11 +17174,11 @@ async function renderShopTab() {
     </div>
     ${lowBanner}
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-      <button class="btn btn-primary" onclick="openSaleModal()">🧾 Open Till</button>
-      <button class="btn btn-outline" onclick="openCashupModal()">💰 Cash up</button>
+      <button class="btn btn-primary kc-ic kc-ic-receipt" onclick="openSaleModal()">Open Till</button>
+      <button class="btn btn-outline kc-ic kc-ic-money" onclick="openCashupModal()">Cash up</button>
       <button class="btn btn-outline" onclick="openStockItemModal()">➕ Add item</button>
-      <button class="btn btn-outline" onclick="openSupplierReturnModal()">↩️ Return to supplier</button>
-      <button class="btn btn-outline" onclick="openGoodsInModal()">📦 Goods in</button>
+      <button class="btn btn-outline kc-ic kc-ic-undo" onclick="openSupplierReturnModal()">Return to supplier</button>
+      <button class="btn btn-outline kc-ic kc-ic-package" onclick="openGoodsInModal()">Goods in</button>
     </div>
     <div class="dash-cols dash-cols-table">
       <div class="table-card">
@@ -17208,7 +17216,7 @@ async function renderShopTab() {
         <div class="table-card" style="padding:8px 18px 14px;margin-bottom:14px;">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
             <div class="section-divider" style="margin-top:12px;">On order</div>
-            <button class="btn btn-outline btn-sm" onclick="openPurchaseOrderModal()">📦 New order</button>
+            <button class="btn btn-outline btn-sm kc-ic kc-ic-package" onclick="openPurchaseOrderModal()">New order</button>
           </div>
           ${poRowsHtml()}
         </div>
@@ -17307,7 +17315,7 @@ function openSupplierReturnModal(retId = null) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveSupplierReturn(${r ? `'${r.id}'` : 'null'})">💾 Save</button>
+      <button class="btn btn-primary kc-ic kc-ic-save" onclick="saveSupplierReturn(${r ? `'${r.id}'` : 'null'})">Save</button>
     </div>
   `);
 }
@@ -17475,7 +17483,7 @@ function openGoodsInModal() {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveGoodsIn()">💾 Save</button>
+      <button class="btn btn-primary kc-ic kc-ic-save" onclick="saveGoodsIn()">Save</button>
     </div>
   `);
 }
@@ -17575,11 +17583,11 @@ function openStockItemModal(itemId = null) {
       </div>
     </div>
     <div class="modal-actions" style="justify-content:space-between;">
-      <span>${i ? `<button class="btn btn-outline" onclick="retireStockItem('${i.id}')">🗑 Retire</button>
-        <button class="btn btn-outline" onclick="openStockStory('${i.id}')" title="Every recorded movement behind this count">📜 Story</button>` : ''}</span>
+      <span>${i ? `<button class="btn btn-outline kc-ic kc-ic-trash" onclick="retireStockItem('${i.id}')">Retire</button>
+        <button class="btn btn-outline kc-ic kc-ic-scroll" onclick="openStockStory('${i.id}')" title="Every recorded movement behind this count">Story</button>` : ''}</span>
       <span class="modal-actions-group">
         <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveStockItem(${i ? `'${i.id}'` : 'null'})">💾 Save</button>
+        <button class="btn btn-primary kc-ic kc-ic-save" onclick="saveStockItem(${i ? `'${i.id}'` : 'null'})">Save</button>
       </span>
     </div>
   `);
@@ -17735,8 +17743,8 @@ function renderPosView() {
       <div class="pos-main">
         <div style="display:flex;gap:8px;align-items:center;">
           <button class="btn btn-outline" onclick="closePosView()" style="white-space:nowrap;">← Exit till</button>
-          <button id="posParkedBtn" class="btn btn-outline" onclick="posToggleParked()" title="Resume a held sale"
-            style="white-space:nowrap;${parkedN ? '' : 'display:none;'}">⏸ Parked (<span id="posParkedN">${parkedN}</span>)</button>
+          <button id="posParkedBtn" class="btn btn-outline kc-ic kc-ic-pause" onclick="posToggleParked()" title="Resume a held sale"
+            style="white-space:nowrap;${parkedN ? '' : 'display:none;'}">Parked (<span id="posParkedN">${parkedN}</span>)</button>
           <input class="form-input pos-scan" id="posScan" placeholder="${kcHint('🔍 Scan a barcode, or type to search…', '🔍 Scan or search')}"
             autocomplete="off" oninput="posRenderTiles()"
             onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();saveSale();}else if(event.key==='Enter'){event.preventDefault();posScanEnter();}">
@@ -17774,10 +17782,10 @@ function renderPosView() {
                  posParkSale STAY: Ctrl+Enter reaches saveSale without touching
                  this button at all, so disabling it is the appearance and the
                  guard is the rule. */''}
-          <button class="btn btn-primary pos-charge" id="posChargeBtn" onclick="saveSale()" disabled
-            title="Scan or tap something first — then Ctrl+Enter from the scan box">💷 Charge<span class="kc-chord">Ctrl ⏎</span></button>
-          <button class="btn btn-outline" id="posParkBtn" onclick="posParkSale()" style="width:100%;margin-top:8px;" disabled
-            title="Hold this sale to serve someone else, then resume it later">⏸ Park sale</button>
+          <button class="btn btn-primary pos-charge kc-ic kc-ic-pound" id="posChargeBtn" onclick="saveSale()" disabled
+            title="Scan or tap something first — then Ctrl+Enter from the scan box">Charge<span class="kc-chord">Ctrl ⏎</span></button>
+          <button class="btn btn-outline kc-ic kc-ic-pause" id="posParkBtn" onclick="posParkSale()" style="width:100%;margin-top:8px;" disabled
+            title="Hold this sale to serve someone else, then resume it later">Park sale</button>
         </div>
       </div>
     </div>`;
@@ -18743,15 +18751,15 @@ async function renderKolTorahTab() {
             selected: s.customerId, special: { value: '', label: 'No wallet link' },
             label: 'Wallet link', style: 'min-height:0;padding:6px 9px;font-size:var(--fs-small);',
           })}</div>
-          <button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);" onclick="ktSaveShul('${s.id}')">💾 Save</button>
+          <button class="btn btn-outline btn-sm kc-ic kc-ic-save" style="font-size:var(--fs-micro);" onclick="ktSaveShul('${s.id}')">Save</button>
         </div>` : ''}
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
           <select class="form-input" id="ktMoveTitle_${s.id}" aria-label="Title to move for ${escHtml(s.name)}" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);max-width:min(330px, 100%);">${titleOptions}</select>
           <label class="kt-fld">How many
             <input class="form-input" id="ktMoveQty_${s.id}" type="number" min="1" step="1" value="1" style="width:74px;min-height:0;padding:6px 9px;font-size:var(--fs-small);"></label>
-          <button class="btn btn-outline" style="font-size:var(--fs-micro);padding:5px 9px;" onclick="ktMove('${s.id}','delivery')">📦 Deliver</button>
-          <button class="btn btn-outline" style="font-size:var(--fs-micro);padding:5px 9px;" onclick="ktMove('${s.id}','sold')">💿 Sold</button>
-          <button class="btn btn-outline" style="font-size:var(--fs-micro);padding:5px 9px;" onclick="ktMove('${s.id}','return')">↩ Return</button>
+          <button class="btn btn-outline kc-ic kc-ic-package" style="font-size:var(--fs-micro);padding:5px 9px;" onclick="ktMove('${s.id}','delivery')">Deliver</button>
+          <button class="btn btn-outline kc-ic kc-ic-disc" style="font-size:var(--fs-micro);padding:5px 9px;" onclick="ktMove('${s.id}','sold')">Sold</button>
+          <button class="btn btn-outline kc-ic kc-ic-undo" style="font-size:var(--fs-micro);padding:5px 9px;" onclick="ktMove('${s.id}','return')">Return</button>
         </div>
         ${/* Labels above the boxes, not placeholders inside them. "£ collected"
              did not fit its own 98px box and rendered as "£ collectec" — and a
@@ -18767,7 +18775,7 @@ async function renderKolTorahTab() {
           <select class="form-input" id="ktSettleMethod_${s.id}" aria-label="Settlement method for ${escHtml(s.name)}" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);width:110px;">
             <option value="cash">💵 Cash</option><option value="bank_transfer">🏦 Transfer</option><option value="card">💳 Card</option><option value="other">Other</option>
           </select>
-          <button class="btn btn-primary" style="font-size:var(--fs-micro);padding:5px 10px;" onclick="ktSettle('${s.id}')">🧾 Settle</button>
+          <button class="btn btn-primary kc-ic kc-ic-receipt" style="font-size:var(--fs-micro);padding:5px 10px;" onclick="ktSettle('${s.id}')">Settle</button>
         </div>
       </div>`;
   }).join('');
@@ -19162,7 +19170,7 @@ function openRemindModal(kind, id) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveReminder('${escHtml(kind)}','${escHtml(String(id))}')">⏰ Set reminder</button>
+      <button class="btn btn-primary kc-ic kc-ic-clock" onclick="saveReminder('${escHtml(kind)}','${escHtml(String(id))}')">Set reminder</button>
     </div>
   `);
 }
@@ -19648,9 +19656,8 @@ function openHowToModal(prefill = '') {
          numbers say". Whatever has been typed is carried across, so a question
          the guides missed does not have to be typed twice. -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 4px;">
-      <button class="btn btn-outline btn-sm" style="white-space:normal;text-align:left;"
-        onclick="closeDynamicModal();openAssistantModal(document.getElementById('howToSearch')?.value || '')">
-        🤖 Ask about the shop's numbers</button>
+      <button class="btn btn-outline btn-sm kc-ic kc-ic-bot" style="white-space:normal;text-align:left;"
+        onclick="closeDynamicModal();openAssistantModal(document.getElementById('howToSearch')?.value || '')">Ask about the shop's numbers</button>
       <a class="btn btn-outline btn-sm" href="/manual" target="_blank" rel="noopener">📖 The full manual</a>
     </div>
     <div id="howToOut" style="margin-top:12px;"></div>
@@ -19687,9 +19694,8 @@ function renderHowTo() {
     // which is good at questions about DATA, and say which is which.
     out.innerHTML = `<div class="customer-dropdown-empty" style="padding:0 0 10px;">
         Nothing in the guides matches “${escHtml(q)}”.</div>
-      <button class="btn btn-primary" style="white-space:normal;text-align:left;"
-        onclick="closeDynamicModal();openAssistantModal('${escJs(q)}')">
-        🤖 Ask the assistant instead</button>
+      <button class="btn btn-primary kc-ic kc-ic-bot" style="white-space:normal;text-align:left;"
+        onclick="closeDynamicModal();openAssistantModal('${escJs(q)}')">Ask the assistant instead</button>
       <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;">
         It answers questions about the shop's own numbers — who owes, what is overdue.</div>`;
     return;
@@ -20692,7 +20698,7 @@ function renderTaskTriage(j) {
           <div style="font-size:var(--fs-micro);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
             ${t.action ? `<span style="color:var(--accent);">→ ${escHtml(t.action)}</span>` : ''}
             ${t.customerId
-              ? `<button style="background:none;border:0;color:var(--accent);cursor:pointer;padding:0;font-size:var(--fs-micro);" onclick="openCustomerById('${escHtml(String(t.customerId))}')">👤 ${escName(t.customerName || 'open customer')}</button>`
+              ? `<button style="background:none;border:0;color:var(--accent);cursor:pointer;padding:0;font-size:var(--fs-micro);" onclick="openCustomerById('${escHtml(String(t.customerId))}')" class="kc-ic kc-ic-user">${escName(t.customerName || 'open customer')}</button>`
               : (t.customerName ? `<span style="color:var(--muted);">👤 ${escName(t.customerName)}</span>` : '')}
           </div>
         </div>
@@ -20920,8 +20926,8 @@ function paintCarrierMail() {
                 deciding "should this person get this" is its own job, and doing
                 it in the margin of the filing screen is how it gets skimmed. */''}
           ${currentStaff && currentStaff.role === 'owner'
-            ? `<button class="btn btn-outline btn-sm" onclick="openForwardQueue()"
-                 title="Carrier mail worth sending on to the customer">📤 Forward to customers</button>` : ''}
+            ? `<button class="btn btn-outline btn-sm kc-ic kc-ic-upload" onclick="openForwardQueue()"
+                 title="Carrier mail worth sending on to the customer">Forward to customers</button>` : ''}
           <button class="btn btn-outline btn-sm" onclick="renderCarrierMailTab()"
             title="Check for mail that has just arrived">↻ Check now</button>
         </div>
@@ -21096,9 +21102,8 @@ function cmRowHtml(m) {
                  every message from the second one lands here for ever. Adding
                  it as a new SIM would be wrong: it would be the same phone
                  twice. */''}
-            ${m.recipient ? `<button class="btn btn-outline btn-sm" onclick="cmLearn(${m.id})"
-                title="Tell the app which existing line receives mail at this address">
-                🔗 A line I already have gets mail here</button>` : ''}
+            ${m.recipient ? `<button class="btn btn-outline btn-sm kc-ic kc-ic-link" onclick="cmLearn(${m.id})"
+                title="Tell the app which existing line receives mail at this address">A line I already have gets mail here</button>` : ''}
             <span style="color:var(--muted);font-size:var(--fs-small);">
               No SIM on record carries ${numbers ? 'that number' : 'this address'}${m.numbers.length
                 ? ' — adding it files this message on the new plan.' : '.'}</span>
@@ -21110,12 +21115,12 @@ function cmRowHtml(m) {
              for the matches nobody chose: 33 of the first 36 filed messages
              were matched automatically, so a wrong one sat on the wrong
              customer's line with nobody prompted to look. */''}
-        ${m.sim ? `<button class="btn btn-outline btn-sm" onclick="cmUnpair(${m.id})"
-             title="Put this back in the queue — it will not be matched automatically again">↩ Undo match</button>` : ''}
+        ${m.sim ? `<button class="btn btn-outline btn-sm kc-ic kc-ic-undo" onclick="cmUnpair(${m.id})"
+             title="Put this back in the queue — it will not be matched automatically again">Undo match</button>` : ''}
         ${settled ? '<span style="color:var(--muted);font-size:var(--fs-micro);">done</span>'
           : `<button class="btn btn-outline btn-sm" onclick="cmResolve(${m.id})" title="Nothing to do about this one">Dismiss</button>`}
-        <button class="btn btn-outline btn-sm" onclick="cmMakeTask(${m.id})"
-          title="Put this on the task list">📝 Task</button>
+        <button class="btn btn-outline btn-sm kc-ic kc-ic-edit-note" onclick="cmMakeTask(${m.id})"
+          title="Put this on the task list">Task</button>
       </div>
     </div>`;
 }
@@ -21173,7 +21178,7 @@ async function openForwardQueue() {
              <div class="fwd-why">${escHtml(p.reason)}</div>`
           : `<div class="fwd-block">Not going anywhere — ${escHtml(p.blockedBy || 'it does not qualify')}</div>`}
       </div>
-      ${p.ready ? `<button class="btn btn-primary btn-sm" onclick="approveForward(${i})">📤 Send it</button>` : ''}
+      ${p.ready ? `<button class="btn btn-primary btn-sm kc-ic kc-ic-upload" onclick="approveForward(${i})">Send it</button>` : ''}
     </div>`;
   body.innerHTML = `
     <div style="margin-bottom:10px;">
@@ -21825,7 +21830,7 @@ function confirmCardHtml(b) {
       ${attached ? `<div class="rv-attached"><div class="rv-label">Also imported for them</div><ul>${attached}</ul></div>` : ''}
       <div class="rv-actions">
         <button class="btn btn-primary btn-sm" id="rvConfirm_${id}" onclick="confirmBundle('${id}')">✓ Yes — confirm${attached ? ' all' : ''}</button>
-        <button class="btn btn-outline btn-sm" onclick="openEditModal('${escHtml(String(b.legacyId))}')">✏️ Fix first</button>
+        <button class="btn btn-outline btn-sm kc-ic kc-ic-pencil" onclick="openEditModal('${escHtml(String(b.legacyId))}')">Fix first</button>
         <button class="btn btn-outline btn-sm" onclick="skipConfirmBundle('${id}')">Skip for now</button>
       </div>
     </div>`;
@@ -21981,8 +21986,8 @@ async function renderTasksTab() {
       ${!t.done ? `
       <div class="task-actions">
         ${/^New signup:/i.test(t.title || '') && !t.customerId ? `<button class="btn btn-primary btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="addCustomerFromTask('${escHtml(t.id)}')">➕ Add as customer</button>` : ''}
-        ${/^TICKET-/.test(t.reference || '') ? `<button class="btn btn-primary btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="tmOpenFromTask('${escHtml(t.reference)}')">✈️ Confirm booking details</button>` : ''}
-        ${isMoneyTask ? `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="openWalletModal('${escHtml(String(t.customerId))}')">💰 Record</button>` : ''}
+        ${/^TICKET-/.test(t.reference || '') ? `<button class="btn btn-primary btn-sm kc-ic kc-ic-plane" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="tmOpenFromTask('${escHtml(t.reference)}')">Confirm booking details</button>` : ''}
+        ${isMoneyTask ? `<button class="btn btn-outline btn-sm kc-ic kc-ic-money" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="openWalletModal('${escHtml(String(t.customerId))}')">Record</button>` : ''}
         ${chaseCust && waLink(chaseCust, '') ? `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="waChaseCustomer('${escHtml(String(t.customerId))}')" title="Open a chase message in WhatsApp">💬 WhatsApp</button>` : ''}
         <select class="task-mini" onchange="setTaskPriority('${escHtml(t.id)}', this.value)" title="Priority">
           ${['High', 'Normal', 'Low'].map(p => `<option value="${p}" ${t.priority === p ? 'selected' : ''}>${p === 'High' ? '🔥 Now' : p === 'Normal' ? '📋 Next' : '🌙 Later'}</option>`).join('')}
@@ -22016,8 +22021,8 @@ async function renderTasksTab() {
           <div class="history-desc">${escHtml(t.title)}</div>
           <div style="font-size:var(--fs-micro);color:var(--muted);">wakes ${fmtDate(t.snoozedUntil)}</div>
         </div>
-        <button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;"
-          onclick="snoozeTask('${escHtml(t.id)}', 'wake')">⏰ Wake now</button>
+        <button class="btn btn-outline btn-sm kc-ic kc-ic-clock" style="font-size:var(--fs-micro);padding:3px 10px;"
+          onclick="snoozeTask('${escHtml(t.id)}', 'wake')">Wake now</button>
       </div>
     </div>`;
 
@@ -22055,7 +22060,7 @@ async function renderTasksTab() {
       </div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-      <button class="btn btn-outline" onclick="openTaskTriageModal()" title="Let AI read your whole open list and rank what to do first, and why">🧠 AI plan my day</button>
+      <button class="btn btn-outline kc-ic kc-ic-brain" onclick="openTaskTriageModal()" title="Let AI read your whole open list and rank what to do first, and why">AI plan my day</button>
       ${tkBar}
     </div>
     <div class="dash-cols">
@@ -22549,11 +22554,11 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
       </div>
       <div class="dash-actions">
         <button class="btn btn-outline" onclick="renderDashboardTab()" title="Reload today's money & tasks">↻ Refresh</button>
-        ${(!currentStaff || currentStaff.role === 'owner') ? `<button class="btn btn-outline" onclick="openBusinessSummary()" title="Revenue by service — this week & month">📊 Summary</button>` : ''}
-        <button class="btn btn-outline" onclick="openNewRentalModal()">📱 New rental</button>
-        <button class="btn btn-outline" onclick="openNewBookingModal()">✈️ New booking</button>
-        <button class="btn btn-outline" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal()})()">🔧 New repair</button>
-        <button class="btn btn-outline" onclick="document.querySelector('[data-tab=customers]').click();setTimeout(()=>document.getElementById('btnNewCustomer')?.click(),100)">👤 New customer</button>
+        ${(!currentStaff || currentStaff.role === 'owner') ? `<button class="btn btn-outline kc-ic kc-ic-chart" onclick="openBusinessSummary()" title="Revenue by service — this week & month">Summary</button>` : ''}
+        <button class="btn btn-outline kc-ic kc-ic-phone" onclick="openNewRentalModal()">New rental</button>
+        <button class="btn btn-outline kc-ic kc-ic-plane" onclick="openNewBookingModal()">New booking</button>
+        <button class="btn btn-outline kc-ic kc-ic-wrench" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal()})()">New repair</button>
+        <button class="btn btn-outline kc-ic kc-ic-user" onclick="document.querySelector('[data-tab=customers]').click();setTimeout(()=>document.getElementById('btnNewCustomer')?.click(),100)">New customer</button>
       </div>
     </div>
 
@@ -22630,8 +22635,8 @@ async function renderVirtualTab() {
         <td style="white-space:nowrap;">
           <button class="action-btn" style="font-size:var(--fs-micro);padding:4px 10px;"
             onclick="openRemindModal('vn','${escHtml(v.id)}')" title="Remind me">⏰</button>
-          <button class="action-btn" style="font-size:var(--fs-micro);padding:4px 10px;"
-            onclick="openVNBillingModal('${escHtml(v.id)}')">💷 Billing</button>
+          <button class="action-btn kc-ic kc-ic-pound" style="font-size:var(--fs-micro);padding:4px 10px;"
+            onclick="openVNBillingModal('${escHtml(v.id)}')">Billing</button>
           <button class="action-btn" style="font-size:var(--fs-micro);padding:4px 10px;"
             onclick="toggleVNStatus('${escHtml(v.id)}', '${v.status === 'Active' ? 'Inactive' : 'Active'}')">
             ${v.status === 'Active' ? '⏸ Deactivate' : '▶ Activate'}</button>
@@ -22651,7 +22656,7 @@ async function renderVirtualTab() {
     </div>
     <div id="vnBulkBar" style="display:${vnSelected.size ? 'flex' : 'none'};margin:0 0 10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary);align-items:center;gap:10px;flex-wrap:wrap;">
       <strong id="vnBulkCount" style="font-size:var(--fs-body);">${vnSelected.size} number${vnSelected.size === 1 ? '' : 's'} selected</strong>
-      <button class="btn btn-outline btn-sm" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedVNs()">🗑 Delete selected</button>
+      <button class="btn btn-outline btn-sm kc-ic kc-ic-trash" style="color:var(--danger-ink);border-color:var(--danger-ink);" onclick="deleteSelectedVNs()">Delete selected</button>
       <button class="btn btn-outline btn-sm" onclick="vnSelected.clear(); renderVirtualTab()">Deselect all</button>
     </div>
     <div class="table-card">
@@ -22711,7 +22716,7 @@ function openNewVNModal(preselectCustomerId) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveNewVN()">🔢 Save</button>
+      <button class="btn btn-primary kc-ic kc-ic-digits" onclick="saveNewVN()">Save</button>
     </div>
   `);
 }
@@ -22795,7 +22800,7 @@ function openVNBillingModal(id) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveVNBilling('${escHtml(v.id)}')">💷 Save</button>
+      <button class="btn btn-primary kc-ic kc-ic-pound" onclick="saveVNBilling('${escHtml(v.id)}')">Save</button>
     </div>
   `);
 }
@@ -22927,8 +22932,8 @@ async function renderSettingsTab() {
               </select>
             </td>
             <td style="white-space:nowrap;">
-              <button class="action-btn" style="font-size:var(--fs-micro);"
-                onclick="openResetPasswordModal('${escHtml(m.id)}', '${escJs(m.fullName || m.email)}')">🔑 Reset password</button>
+              <button class="action-btn kc-ic kc-ic-key" style="font-size:var(--fs-micro);"
+                onclick="openResetPasswordModal('${escHtml(m.id)}', '${escJs(m.fullName || m.email)}')">Reset password</button>
               <button class="action-btn danger" style="font-size:var(--fs-micro);"
                 onclick="removeTeamMember('${escHtml(m.id)}', '${escJs(m.fullName || m.email)}', ${m.isYou})">✕ Remove${m.isYou ? ' (you)' : ''}</button></td>
           </tr>`).join('')}
@@ -22954,7 +22959,7 @@ async function renderSettingsTab() {
             <input type="checkbox" class="htTab" value="${t}" style="accent-color:var(--accent);cursor:pointer;"
               ${(cfg.settings.find(s => s.key === 'helper_tabs')?.textValue || '').split(',').includes(t) ? 'checked' : ''}>
             ${t}</label>`).join('')}
-        <button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);" onclick="saveHelperTabs()">💾 Save access</button>
+        <button class="btn btn-outline btn-sm kc-ic kc-ic-save" style="font-size:var(--fs-micro);" onclick="saveHelperTabs()">Save access</button>
         <span style="font-size:var(--fs-micro);color:var(--muted);">Wallet, shop &amp; settings are also blocked server-side when unticked.</span>
       </div>`) : '';
 
@@ -23101,7 +23106,7 @@ async function renderSettingsTab() {
     <tr>
       <td style="max-width:340px;"><strong>${escHtml(m.label)}</strong>${m.help ? `<div style="color:var(--muted);font-size:var(--fs-micro);line-height:1.4;margin-top:2px;">${escHtml(m.help)}</div>` : ''}</td>
       <td style="white-space:nowrap;">${num(`st_${s.key}`, s.numValue)} <span style="color:var(--muted);font-size:var(--fs-micro);">${escHtml(m.unit || '')}</span></td>
-      <td><button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 12px;" onclick="saveSettingKey('${escHtml(s.key)}')">💾 Save</button></td>
+      <td><button class="btn btn-outline kc-ic kc-ic-save" style="font-size:var(--fs-small);padding:5px 12px;" onclick="saveSettingKey('${escHtml(s.key)}')">Save</button></td>
     </tr>`;
   const settingRows = Object.entries(feeGroups).map(([group, items]) =>
     `<tr><td colspan="3" style="background:var(--bg-secondary);font-size:var(--fs-micro);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);padding:6px 16px;">${group}</td></tr>` +
@@ -23132,7 +23137,7 @@ async function renderSettingsTab() {
               <td>${menuNum(`mi_rep_${m.id}`, m.repeatPrice)}</td>
               <td>${menuNum(`mi_bulk_${m.id}`, m.bulkPrice)}</td>
               <td><input type="checkbox" id="mi_active_${m.id}" ${m.active ? 'checked' : ''} style="accent-color:var(--accent);cursor:pointer;"></td>
-              <td><button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 12px;" onclick="saveMenuItem('${escHtml(String(m.id))}')">💾 Save</button></td>
+              <td><button class="btn btn-outline kc-ic kc-ic-save" style="font-size:var(--fs-small);padding:5px 12px;" onclick="saveMenuItem('${escHtml(String(m.id))}')">Save</button></td>
             </tr>`).join('');
         }).join('')}
         <tr style="background:var(--bg-secondary);">
@@ -23207,7 +23212,7 @@ async function renderSettingsTab() {
       <div style="padding:8px 16px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <input class="form-input" id="ivrPlatformsInput" value="${escHtml(ivrList.join(', '))}"
           placeholder="elid, FreePBX, OpenBPX, 3CX…" style="flex:1;min-width:240px;min-height:0;padding:8px 12px;font-size:var(--fs-body);">
-        <button class="btn btn-outline btn-sm" onclick="saveIvrPlatforms()">💾 Save providers</button>
+        <button class="btn btn-outline btn-sm kc-ic kc-ic-save" onclick="saveIvrPlatforms()">Save providers</button>
       </div>
       <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
         Comma-separated. These appear in the <strong>Platform / IVR provider</strong> dropdown when you add a virtual number.
@@ -23216,7 +23221,7 @@ async function renderSettingsTab() {
       <div style="padding:8px 16px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <input class="form-input" id="voidReasonsInput" value="${escHtml(voidReasons().join(', '))}"
           placeholder="Mistake, Didn’t fly, Other…" style="flex:1;min-width:240px;min-height:0;padding:8px 12px;font-size:var(--fs-body);">
-        <button class="btn btn-outline btn-sm" onclick="saveVoidReasons()">💾 Save reasons</button>
+        <button class="btn btn-outline btn-sm kc-ic kc-ic-save" onclick="saveVoidReasons()">Save reasons</button>
       </div>
       <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
         Comma-separated. Offered when a rental is <strong>voided</strong> (↩ in Manage Rental) — every undo keeps its why.</div>
@@ -23225,7 +23230,7 @@ async function renderSettingsTab() {
       <div style="padding:8px 16px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <input class="form-input" id="monthlyTargetInput" type="number" min="0" step="10" placeholder="e.g. 4000"
           value="${monthlyTargetValue() || ''}" style="width:160px;min-height:0;padding:8px 12px;font-size:var(--fs-body);">
-        <button class="btn btn-outline btn-sm" onclick="saveMonthlyTarget()">💾 Save target</button>
+        <button class="btn btn-outline btn-sm kc-ic kc-ic-save" onclick="saveMonthlyTarget()">Save target</button>
       </div>
       <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
         Money in, per calendar month. Shown on the dashboard as progress under today's takings.
@@ -23235,7 +23240,7 @@ async function renderSettingsTab() {
       <div style="padding:8px 16px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <input class="form-input" id="repairStagesInput" value="${escHtml(repairStages().join(', '))}"
           placeholder="Waiting for part, Quote sent, Customer approved…" style="flex:1;min-width:240px;min-height:0;padding:8px 12px;font-size:var(--fs-body);">
-        <button class="btn btn-outline btn-sm" onclick="saveRepairStages()">💾 Save stages</button>
+        <button class="btn btn-outline btn-sm kc-ic kc-ic-save" onclick="saveRepairStages()">Save stages</button>
       </div>
       <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
         Your own steps, shown between <strong>In Progress</strong> and <strong>Ready</strong> in the repair status
@@ -23248,7 +23253,7 @@ async function renderSettingsTab() {
       <div style="padding:8px 16px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <input class="form-input" id="stockCatsInput" value="${escHtml(customStockCategoriesClient().join(', '))}"
           placeholder="Gift set, Watch strap, Bluetooth speaker…" style="flex:1;min-width:240px;min-height:0;padding:8px 12px;font-size:var(--fs-body);">
-        <button class="btn btn-outline btn-sm" onclick="saveStockCategories()">💾 Save categories</button>
+        <button class="btn btn-outline btn-sm kc-ic kc-ic-save" onclick="saveStockCategories()">Save categories</button>
       </div>
       <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
         Your own stock types, added to the twelve built in (📱 Phone, 💳 SIM, 🔌 Charger, 🔗 Cable, 🎧 Earphones,
@@ -23335,7 +23340,7 @@ async function renderSettingsTab() {
             <td style="font-feature-settings:'tnum';">${a.monthlyCost != null ? fmtGbp(a.monthlyCost) : '—'}</td>
             <td class="kc-date">${a.renewalDate ? `<span style="${a.renewalDate <= soon10 ? 'color:var(--danger-ink);font-weight:600;' : ''}">${fmtDate(a.renewalDate)}${a.renewalDate < today10 ? ' ⚠' : ''}</span>` : '—'}</td>
             <td style="white-space:nowrap;">
-              ${a.hasCred ? `<button class="action-btn" style="font-size:var(--fs-micro);" onclick="revealBizAccount('${escHtml(a.id)}')">🔑 Reveal</button>` : ''}
+              ${a.hasCred ? `<button class="action-btn kc-ic kc-ic-key" style="font-size:var(--fs-micro);" onclick="revealBizAccount('${escHtml(a.id)}')">Reveal</button>` : ''}
               <button class="action-btn" aria-label="Edit ${escHtml(a.name || 'account')}" onclick="openBizAccountModal('${escHtml(a.id)}')">✏️</button>
               <button class="action-btn danger" aria-label="Retire ${escHtml(a.name || 'account')}" onclick="retireBizAccount('${escHtml(a.id)}', '${escJs(a.name)}')">✕</button>
             </td>
@@ -23372,7 +23377,7 @@ async function renderSettingsTab() {
       <div style="padding:8px 14px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
         <button class="btn btn-outline btn-sm" onclick="openPhoneModelModal()">+ Add phone</button>
         <a class="btn btn-outline btn-sm" href="/phone-guide" target="_blank" rel="noopener">👁 View the public page ↗</a>
-        ${retiredModels.length ? `<span style="font-size:var(--fs-micro);color:var(--muted);">Hidden: ${retiredModels.map(m => `${escHtml(m.name)} <button class="action-btn" style="font-size:var(--fs-micro);" onclick="restorePhoneModel('${escHtml(m.id)}')">↩ restore</button>`).join(' · ')}</span>` : ''}
+        ${retiredModels.length ? `<span style="font-size:var(--fs-micro);color:var(--muted);">Hidden: ${retiredModels.map(m => `${escHtml(m.name)} <button class="action-btn kc-ic kc-ic-undo" style="font-size:var(--fs-micro);" onclick="restorePhoneModel('${escHtml(m.id)}')">restore</button>`).join(' · ')}</span>` : ''}
       </div>`) : '';
 
   // ── Messaging status (email + SMS) — reads /api/health, which reports each
@@ -23407,7 +23412,7 @@ async function renderSettingsTab() {
       <div style="padding:8px 14px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
         <input class="form-input" id="smsTestTo" type="tel" dir="ltr" placeholder="+44 7…  (your own number)"
           style="min-height:0;padding:7px 10px;font-size:var(--fs-body);width:220px;">
-        <button class="btn btn-outline btn-sm" onclick="sendTestSms()">📤 Send test SMS</button>
+        <button class="btn btn-outline btn-sm kc-ic kc-ic-upload" onclick="sendTestSms()">Send test SMS</button>
         <span style="font-size:var(--fs-micro);color:var(--muted);">Safe in every mode — on HOLD it only logs; on TEST it goes to the test number whatever you type.</span>
       </div>
       <div style="padding:0 14px 14px;border-top:1px solid var(--border);">
@@ -23441,7 +23446,7 @@ async function renderSettingsTab() {
         <label style="font-size:var(--fs-body);color:var(--muted);">Opening hours</label>
         <input class="form-input" id="stOpeningHours" value="${escHtml(openingHours)}"
           style="min-height:0;padding:7px 10px;font-size:var(--fs-body);flex:1;min-width:240px;" placeholder="e.g. Sunday–Thursday, 2:00–6:30pm">
-        <button class="btn btn-primary btn-sm" onclick="saveOpeningHours()">💾 Save</button>
+        <button class="btn btn-primary btn-sm kc-ic kc-ic-save" onclick="saveOpeningHours()">Save</button>
         <span style="flex-basis:100%;font-size:var(--fs-micro);color:var(--muted);">Shown on the public welcome page (Visit-the-shop card and footer). Free text — write it the way you'd say it.</span>
       </div>`);
 
@@ -23468,9 +23473,9 @@ async function renderSettingsTab() {
                 oninput="emailCopyDirty()">${escHtml(copyOf(key, dflt))}</textarea>
             </label>`).join('')}
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            <button class="btn btn-primary btn-sm" onclick="saveEmailCopy()">💾 Save wording</button>
-            <button class="btn btn-outline btn-sm" onclick="loadEmailPreview('sale')">👁 Preview receipt</button>
-            <button class="btn btn-outline btn-sm" onclick="loadEmailPreview('payment')">👁 Preview payment</button>
+            <button class="btn btn-primary btn-sm kc-ic kc-ic-save" onclick="saveEmailCopy()">Save wording</button>
+            <button class="btn btn-outline btn-sm kc-ic kc-ic-eye" onclick="loadEmailPreview('sale')">Preview receipt</button>
+            <button class="btn btn-outline btn-sm kc-ic kc-ic-eye" onclick="loadEmailPreview('payment')">Preview payment</button>
             <span id="emailCopyNote" style="font-size:var(--fs-micro);color:var(--muted);"></span>
           </div>
           <div style="font-size:var(--fs-micro);color:var(--muted);">
@@ -23513,7 +23518,7 @@ async function renderSettingsTab() {
           ${ELID_ROSTER_NOTE}
         </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <button class="btn btn-outline btn-sm" id="elidBalBtn" onclick="elidLoadBalances()">📞 Read balances</button>
+          <button class="btn btn-outline btn-sm kc-ic kc-ic-call" id="elidBalBtn" onclick="elidLoadBalances()">Read balances</button>
           <span id="elidBalNote" style="font-size:var(--fs-small);color:var(--muted);"></span>
         </div>
         <div id="elidBalBody" style="margin-top:10px;"></div>
@@ -23557,8 +23562,8 @@ async function renderSettingsTab() {
     <div class="settings-main" id="settingsMain">
     <div style="margin-bottom:8px;padding:10px 14px;border-radius:8px;background:var(--bg-secondary);font-size:var(--fs-small);color:var(--muted);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <span style="flex:1;">Everything that runs the business — people, prices, messages and automation — lives here. Price edits apply to <strong>new</strong> charges only; existing tickets never reprice.</span>
-      <button class="btn btn-outline btn-sm" onclick="openChangePasswordModal()" title="Change your own login password">🔑 My password</button>
-      <button class="btn btn-outline btn-sm" onclick="runSweepsNow()" title="Overdue rentals, arrears, passport expiry, SIM renewals">⏰ Run sweeps now</button>
+      <button class="btn btn-outline btn-sm kc-ic kc-ic-key" onclick="openChangePasswordModal()" title="Change your own login password">My password</button>
+      <button class="btn btn-outline btn-sm kc-ic kc-ic-clock" onclick="runSweepsNow()" title="Overdue rentals, arrears, passport expiry, SIM renewals">Run sweeps now</button>
     </div>
 
     ${sectionHead('Shop', 'public-facing details')}
@@ -23781,14 +23786,14 @@ async function loadMessageLog() {
         // person who has just asked to be left alone is the one message this
         // shop must not send, so the control is not there to be pressed.
         e.kind === 'sms_in' && e.status !== 'opt_out'
-          ? `<button class="btn btn-outline btn-sm" style="margin-top:6px;"
-               onclick="msgLogReply('${escHtml(String(e.id))}')">↩ Reply</button>`
+          ? `<button class="btn btn-outline btn-sm kc-ic kc-ic-undo" style="margin-top:6px;"
+               onclick="msgLogReply('${escHtml(String(e.id))}')">Reply</button>`
           : ''}${
         // Answering is not the only thing a text can need. Somebody who texted
         // STOP still gets this one — taking them off a list IS work.
         e.kind === 'sms_in'
-          ? `<button class="btn btn-outline btn-sm" style="margin-top:6px;"
-               onclick="msgLogTask('${escHtml(String(e.id))}')">📝 Task</button>`
+          ? `<button class="btn btn-outline btn-sm kc-ic kc-ic-edit-note" style="margin-top:6px;"
+               onclick="msgLogTask('${escHtml(String(e.id))}')">Task</button>`
           : ''}</td>
     </tr>`;
   }).join('');
@@ -23827,7 +23832,7 @@ function msgLogReply(id) {
       style="font-family:inherit;" oninput="smsReplyCount()"
       placeholder="Type the answer you would give at the counter."></textarea>
     <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;">
-      <button class="btn btn-primary" id="smsReplySend" onclick="sendSmsReply('${escHtml(String(e.id))}')">📤 Send reply</button>
+      <button class="btn btn-primary kc-ic kc-ic-upload" id="smsReplySend" onclick="sendSmsReply('${escHtml(String(e.id))}')">Send reply</button>
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
       <span id="smsReplyCount" style="font-size:var(--fs-micro);color:var(--muted);margin-left:auto;">0 / 640</span>
     </div>
@@ -23941,8 +23946,8 @@ function kcTaskFromHere({ title = '', notes = '', customerId = null, customerUui
     ${notes ? `<div style="font-size:var(--fs-micro);color:var(--muted);margin-top:10px;">Kept with the task</div>
       <blockquote class="sms-quote" style="margin-top:4px;">${escHtml(String(notes).slice(0, 400))}</blockquote>` : ''}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
-      <button class="btn btn-primary" id="tfhSave"
-        onclick="kcTaskFromHereSave('${escJs(String(customerId || ''))}', '${escJs(String(notes || '').slice(0, 400))}', '${escJs(String(customerUuid || ''))}')">📝 Add the task</button>
+      <button class="btn btn-primary kc-ic kc-ic-edit-note" id="tfhSave"
+        onclick="kcTaskFromHereSave('${escJs(String(customerId || ''))}', '${escJs(String(notes || '').slice(0, 400))}', '${escJs(String(customerUuid || ''))}')">Add the task</button>
       <button class="btn btn-outline" onclick="closeStackedModal()">Cancel</button>
     </div>
   `);
@@ -24291,7 +24296,7 @@ function openBizAccountModal(id = null) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveBizAccount(${a ? `'${a.id}'` : 'null'})">💾 Save</button>
+      <button class="btn btn-primary kc-ic kc-ic-save" onclick="saveBizAccount(${a ? `'${a.id}'` : 'null'})">Save</button>
     </div>
   `);
 }
@@ -24402,7 +24407,7 @@ function openPhoneModelModal(id = null) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="savePhoneModel(${m ? `'${m.id}'` : 'null'})">💾 Save</button>
+      <button class="btn btn-primary kc-ic kc-ic-save" onclick="savePhoneModel(${m ? `'${m.id}'` : 'null'})">Save</button>
     </div>
   `);
 }
@@ -24632,7 +24637,7 @@ function openEmailAliasModal(id = null) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveEmailAlias(${a ? `'${escHtml(a.id)}'` : 'null'})">💾 Save</button>
+      <button class="btn btn-primary kc-ic kc-ic-save" onclick="saveEmailAlias(${a ? `'${escHtml(a.id)}'` : 'null'})">Save</button>
     </div>
   `);
 }
@@ -24729,7 +24734,7 @@ function openChangePasswordModal() {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveChangePassword()">🔑 Change</button>
+      <button class="btn btn-primary kc-ic kc-ic-key" onclick="saveChangePassword()">Change</button>
     </div>
   `);
 }
@@ -24760,7 +24765,7 @@ function openResetPasswordModal(id, label) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveResetPassword('${escHtml(id)}')">🔑 Set password</button>
+      <button class="btn btn-primary kc-ic kc-ic-key" onclick="saveResetPassword('${escHtml(id)}')">Set password</button>
     </div>
   `);
 }
@@ -24940,7 +24945,7 @@ function openAutomationModal(id = null) {
     <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;">The rule raises a task in the daily sweep for every matching customer, and closes it automatically when the condition clears.</div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveAutomation(${r ? `'${escHtml(r.id)}'` : 'null'})">💾 Save rule</button>
+      <button class="btn btn-primary kc-ic kc-ic-save" onclick="saveAutomation(${r ? `'${escHtml(r.id)}'` : 'null'})">Save rule</button>
     </div>
   `);
 }
