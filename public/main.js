@@ -1448,7 +1448,16 @@ function mgRenderGate(rentalId) {
           onclick="mgSignGate('${escHtml(rentalId)}','${escHtml(c.id)}')">Sign off</button>` : ''}
       </div>`).join('')}`;
   if (btn) {
-    btn.disabled = !gate.canClose;
+    // NOT disabled, deliberately. This dialog is taller than the screen: the
+    // toggle reads "Returned ✓" at the top while the gate and this button are
+    // below the fold, so a disabled button explained itself somewhere the
+    // operator was not looking. The result was a close that never happened and
+    // never said so — reported on a phone that WAS back (24 Aug). A control
+    // that refuses and explains beats one that goes quiet: the click is still
+    // taken, saveManageRental re-checks the gate, toasts the reason, and
+    // scrolls the gate into view.
+    btn.disabled = false;
+    btn.classList.toggle('kc-blocked', !gate.canClose);
     btn.title = gate.canClose ? '' : (gate.blockers[0] || gate.needsVerification[0])?.detail || '';
   }
 }
@@ -2651,7 +2660,25 @@ function rentalDebt(r) {
 function saveRentals(data, deletedIds = []) {
   if (saveBlocked('rentals')) return Promise.resolve({ success: false, blocked: true });
   rentals = data;
-  return reportSave('rentals', window.api.saveAllRentals(data, deletedIds));
+  return reportSave('rentals', window.api.saveAllRentals(data, deletedIds))
+    .then((res) => {
+      // A refused close is undone ON THE SERVER, so the copy in this tab is
+      // now the only place the rental looks closed. Put it back in step and
+      // repaint, or the operator is looking at a status the database does not
+      // have — the exact reading that made this bug invisible.
+      if (res && res.gateRefused && res.gateRefused.length) {
+        const today = localISO();
+        for (const g of res.gateRefused) {
+          const r = rentals.find((x) => String(x.id) === String(g.id));
+          if (!r) continue;
+          r.status = r.toDate && r.toDate < today ? 'overdue' : 'active';
+          const p = phones.find((x) => x.id === r.phoneId);
+          if (p) p.status = 'rented';       // it never came back off hire
+        }
+        if (typeof renderRentalsTab === 'function' && currentTab === 'rentals') renderRentalsTab();
+      }
+      return res;
+    });
 }
 function savePhones(data, deletedIds = []) {
   if (saveBlocked('phones')) return Promise.resolve({ success: false, blocked: true });
@@ -2671,6 +2698,15 @@ function reportSave(label, promise) {
         // #8 — the server caught a double-booking a racing tab slipped past.
         const c = res.conflicts[0];
         toast(`⚠ Double-booking: ${c.a?.customer || 'a rental'} and ${c.b?.customer || 'another'} overlap on the same phone. Check the rentals list.`, 'error');
+      } else if (res.gateRefused && res.gateRefused.length) {
+        // The server re-runs the Charge Gate on anything arriving CLOSED, and
+        // when it is not satisfied it undoes the close alone rather than
+        // rejecting the whole payload (syncRentals says why). It has always
+        // reported that back — and nothing here ever read it, so the operator
+        // saw a dialog close, no error, and a rental that quietly stayed
+        // overdue. Reported for real on 24 Aug, on a phone that WAS back.
+        const first = res.gateRefused[0];
+        toast(`Not closed — ${first.reason || 'the rental is not ready to close.'}`, 'error', 'blocked');
       }
       return res || { success: false };
     })
@@ -5249,17 +5285,51 @@ function openManagePhonesModal() {
     <div style="margin-top:14px;">
       <button class="btn btn-primary" onclick="saveNewPhone()">➕ Add phone</button>
     </div>
-    <div class="section-divider" style="margin-top:20px;">Current Inventory (${phones.length})</div>
-    <div style="max-height:200px;overflow-y:auto;">
-      ${phones.length === 0 ? '<p style="color:var(--muted);font-size:var(--fs-body);">No phones yet.</p>' :
-        phones.map(p => `
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:var(--fs-body);">
-            <span style="font-weight:600;">${escHtml(fmtPhone(p.number))}</span>
-            <span style="color:var(--muted);display:flex;align-items:center;gap:5px;">${countryFlag(p.country)}${escHtml(p.country)} · ${escHtml(p.company||'—')}</span>
-            <span class="badge ${p.status==='rented'?'badge-rental':'badge-active'}">${p.status}</span>
-          </div>`).join('')}
-    </div>
+    <div class="section-divider" style="margin-top:20px;">Current Inventory
+      <span id="mpInvCount" style="font-weight:400;color:var(--muted);margin-inline-start:6px;"></span></div>
+    <input class="search-box" id="mpInvSearch" type="text" autocomplete="off"
+      placeholder="Number, model, IMEI, country or carrier…"
+      aria-label="Search the phone inventory"
+      oninput="mpRenderInventory()" style="margin-bottom:8px;">
+    <div id="mpInvList" style="max-height:200px;overflow-y:auto;"></div>
   `);
+  mpRenderInventory();
+}
+
+// The inventory inside Manage phones. It used to be a wall of plain <div>s:
+// every handset in the shop, in one 200px scroller, with nothing to type into
+// and nothing to press — so finding one meant scrolling, and finding it told
+// you nothing you could act on (owner, 24 Aug: "none were clickable or
+// searchable"). The Rentals tab's own inventory table has had both for months;
+// this list simply never got them.
+function mpRenderInventory() {
+  const list = document.getElementById('mpInvList');
+  if (!list) return;
+  const q = (document.getElementById('mpInvSearch')?.value || '').trim().toLowerCase();
+  const hits = !q ? phones : phones.filter(p => [
+    p.number, fmtPhone(p.number), p.model, p.imei, p.country, p.company, p.status,
+  ].some(v => String(v || '').toLowerCase().includes(q)));
+
+  // kcListCount, not a hand-rolled string — test/listCount.test.mjs holds every
+  // big list to the one wording, and caught this the moment it grew its own.
+  kcListCount('mpInvCount', hits.length, phones.length, 'phone');
+
+  if (!phones.length) {
+    list.innerHTML = '<p style="color:var(--muted);font-size:var(--fs-body);">No phones yet.</p>';
+    return;
+  }
+  if (!hits.length) {
+    list.innerHTML = `<p style="color:var(--muted);font-size:var(--fs-body);">No handset matches “${escHtml(q)}”.</p>`;
+    return;
+  }
+  // A real <button>, so the row answers the keyboard as well as the mouse.
+  list.innerHTML = hits.map(p => `
+    <button type="button" class="kc-inv-row" onclick="openEditPhoneModal('${escJs(String(p.id))}')"
+      title="Open ${escHtml(fmtPhone(p.number))}">
+      <span style="font-weight:600;">${escHtml(fmtPhone(p.number))}</span>
+      <span style="color:var(--muted);display:flex;align-items:center;gap:5px;">${countryFlag(p.country)}${escHtml(p.country)} · ${escHtml(p.company||'—')}</span>
+      <span class="badge ${p.status==='rented'?'badge-rental':'badge-active'}">${escHtml(p.status)}</span>
+    </button>`).join('');
 }
 
 function saveNewPhone() {
@@ -6204,6 +6274,16 @@ async function saveManageRental(rentalId) {
       const first = gate.blockers[0] || gate.needsVerification[0];
       toast(first ? `${first.label}: ${first.detail}` : 'This rental is not ready to close.', 'error');
       mgRenderGate(rentalId);
+      // Take them TO the reason. The gate is below the fold on this dialog and
+      // a toast alone leaves "so what do I press?" unanswered — the sign-off
+      // button lives in the box we are scrolling to.
+      const box = document.getElementById('mgGateBox');
+      if (box) {
+        try { box.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch { box.scrollIntoView(); }
+        box.classList.remove('kc-gate-knock');
+        void box.offsetWidth;
+        box.classList.add('kc-gate-knock');
+      }
       return;
     }
   }
@@ -6228,7 +6308,15 @@ async function saveManageRental(rentalId) {
       <span style="color:var(--muted);font-size:var(--fs-small);">was ${fmtGbp(oldGrand)}</span>`,
     amount: grandTotal,
     okLabel: 'Apply charges',
-  }))) return;
+  }))) {
+    // Backing out of the charge confirm abandons the WHOLE save, including
+    // the return you just marked — and the toggle above still reads
+    // "Returned ✓", so the dialog looks like it holds a closed rental. Say
+    // plainly that nothing moved, or this is the silent-refusal bug again
+    // wearing a different hat.
+    toast('Nothing saved — the charge change was not applied.', 'warning', 'blocked');
+    return;
+  }
 
   const oldPrice   = r.price;
   r.fromDate       = newFrom;
