@@ -123,7 +123,6 @@ const T = {
     repairCta: 'Something broken? Book a repair →',
     friendsEyebrow: 'Why people send their friends',
     friendsText: 'No contracts, no middleman, no jargon — just the deal that actually fits you. And if you’re already on a good one, we’ll tell you.',
-    contactEyebrow: 'Message us',
     contactTitle: 'Send us a message',
     contactLead: 'Ask a question, tell us your plan, or leave your bill details — we’ll get back to you.',
     fName: 'Your name', fContact: 'Phone or email', fMsg: 'How can we help?', fSend: 'Send message', fSending: 'Sending…',
@@ -141,7 +140,6 @@ const T = {
     },
     fPrivacy: 'We only use these details to reply to you.', fPrivacyLink: 'Privacy notice',
     legalPrivacy: 'Privacy', legalTerms: 'Terms', legalRefunds: 'Refunds',
-    faqEyebrow: 'Common questions',
     faqTitle: 'The things people ring up and ask',
     faq: [
       { q: 'Which kosher phone should I get?',
@@ -161,7 +159,6 @@ const T = {
       { q: 'You are closed — can I still get help?',
         a: 'Leave us a message with the form on this page, or ring and leave a voicemail. We pick both up when we open. For an urgent problem abroad, say so in the message and we will come back to you first.' },
     ],
-    appEyebrow: 'The Kosher Connect app',
     appTitle: 'Your account online — what the app does',
     appBody1: 'Kosher Connect is this shop’s online account app. Customers sign in to see their SIM plans, phone rentals, flight bookings, repairs and balance, and to pay online — and our team runs the shop on the same system: rentals, SIM plan management, repairs, bookings and the till.',
     appBody2: 'Signing in with Google is optional and only confirms your name and email address, so we know which account is yours. We never see or access your Gmail, your Drive files, your contacts or anything else in your Google account. The full detail is in our privacy policy.',
@@ -248,7 +245,6 @@ const T = {
     repairCta: 'משהו התקלקל? לקבוע תיקון ←',
     friendsEyebrow: 'למה ממליצים עלינו',
     friendsText: 'בלי חוזים, בלי מתווכים, בלי אותיות קטנות — פשוט מה שמתאים לכם באמת. וכשאתם כבר על חבילה טובה? נגיד לכם לא לגעת.',
-    contactEyebrow: 'דברו איתנו',
     contactTitle: 'שלחו לנו הודעה',
     contactLead: 'שאלה, בקשה, או פרטים מהחשבונית — כתבו לנו ונחזור אליכם.',
     fName: 'שם מלא', fContact: 'טלפון או מייל', fMsg: 'איך אפשר לעזור?', fSend: 'שליחה', fSending: 'שולחים…',
@@ -266,7 +262,6 @@ const T = {
     },
     fPrivacy: 'הפרטים משמשים אותנו רק כדי לחזור אליכם.', fPrivacyLink: 'מדיניות הפרטיות',
     legalPrivacy: 'פרטיות', legalTerms: 'תנאים', legalRefunds: 'החזרים',
-    faqEyebrow: 'שאלות נפוצות',
     faqTitle: 'מה שהכי שואלים אותנו בטלפון',
     faq: [
       { q: 'איזה טלפון כשר מתאים לי?',
@@ -286,7 +281,6 @@ const T = {
       { q: 'אתם סגורים — אפשר בכל זאת לקבל עזרה?',
         a: 'השאירו לנו הודעה בטופס שבעמוד, או התקשרו והשאירו הודעה קולית. אנחנו אוספים את שתיהן עם הפתיחה. אם זה דחוף ואתם בחו״ל — כתבו זאת, ונחזור אליכם ראשונים.' },
     ],
-    appEyebrow: 'האפליקציה של כשר קונקט',
     appTitle: 'החשבון שלכם אונליין — מה האפליקציה עושה',
     appBody1: 'כשר קונקט היא אפליקציית החשבון המקוון של החנות. לקוחות נכנסים כדי לראות את חבילות הסים, השכרות הטלפונים, הזמנות הטיסות, התיקונים והיתרה — ולשלם אונליין. הצוות שלנו מנהל באותה מערכת את החנות עצמה: השכרות, חבילות, תיקונים, הזמנות והקופה.',
     appBody2: 'התחברות עם Google היא אופציונלית ומאשרת רק את השם וכתובת המייל שלכם, כדי שנדע איזה חשבון שייך לכם. אין לנו גישה ל‑Gmail, לקבצי Drive, לאנשי הקשר או לכל דבר אחר בחשבון Google שלכם. הפירוט המלא במדיניות הפרטיות.',
@@ -632,11 +626,11 @@ export default function Welcome() {
 
         <section className="sk-also" id="services">
           <div className="sk-wrap">
-            <h2 className="sk-reveal">{t.moreTitle}</h2>
-            <p className="sk-also-lead sk-reveal">{t.moreLead}</p>
+            <h2>{t.moreTitle}</h2>
+            <p className="sk-also-lead">{t.moreLead}</p>
             {t.moreGroups.map((g, gi) => (
               <div key={`${lang}-g${gi}`}>
-                <div className="sk-group-label sk-reveal">{g.label}</div>
+                <div className="sk-group-label">{g.label}</div>
                 <div className="sk-grid">
                   {g.items.map((m, i) => {
                     const Icon = MORE_ICONS[m.icon] || ChatIcon
@@ -647,7 +641,7 @@ export default function Welcome() {
                     // clobbering what the visitor already typed.
                     const Tag = m.href ? 'a' : 'div'
                     return (
-                      <Tag className={`sk-tile sk-reveal ${m.href ? 'sk-tile-link' : ''}`}
+                      <Tag className={`sk-tile ${m.href ? 'sk-tile-link' : ''}`}
                         key={`${lang}-g${gi}-m${i}`}
                         {...(m.href ? {
                           href: m.href,
@@ -671,15 +665,14 @@ export default function Welcome() {
         </section>
 
         <section className="sk-friends">
-          <div className="sk-wrap sk-reveal">
+          <div className="sk-wrap">
             <span className="sk-eyebrow">{t.friendsEyebrow}</span>
             <p className="sk-friends-line">{t.friendsText}</p>
           </div>
         </section>
 
         <section className="sk-faq" id="faq">
-          <div className="sk-wrap sk-reveal">
-            <span className="sk-eyebrow">{t.faqEyebrow}</span>
+          <div className="sk-wrap">
             <h2>{t.faqTitle}</h2>
             <div className="sk-faq-list">
               {t.faq.map((f, i) => (
@@ -703,7 +696,6 @@ export default function Welcome() {
             fails the check exactly like a missing one. */}
         <section className="sk-appinfo" id="app">
           <div className="sk-wrap">
-            <span className="sk-eyebrow">{t.appEyebrow}</span>
             <h2>{t.appTitle}</h2>
             <p>{t.appBody1}</p>
             <p>{t.appBody2}</p>
@@ -715,8 +707,7 @@ export default function Welcome() {
         </section>
 
         <section className="sk-contact" id="contact">
-          <div className="sk-wrap sk-reveal">
-            <span className="sk-eyebrow">{t.contactEyebrow}</span>
+          <div className="sk-wrap">
             <h2>{t.contactTitle}</h2>
             <p className="sk-contact-lead">{t.contactLead}</p>
             <form className="sk-form" onSubmit={submit}>
@@ -777,8 +768,7 @@ export default function Welcome() {
         </section>
 
         <section className="sk-visit" id="visit">
-          <div className="sk-wrap sk-reveal">
-            <span className="sk-eyebrow">{t.nav.visit}</span>
+          <div className="sk-wrap">
             <h2>{t.visitTitle}</h2>
             <div className="sk-visit-grid">
               <div className="sk-map-card">
@@ -1037,7 +1027,7 @@ const SKY_CSS = `
   .sk-hero-sub{color:#9fb4d6;max-width:46ch;margin:24px auto 0;font-size:15px}
 
   /* feature bands — centred, text only */
-  .sk-band{padding:70px 0;border-bottom:1px solid var(--sk-line)}
+  .sk-band{padding:84px 0;border-bottom:1px solid var(--sk-line)}
   .sk-band-tint{background:var(--sk-band-alt)}
   .sk-band-inner{max-width:760px;margin:0 auto;text-align:center;display:flex;flex-direction:column;align-items:center}
   .sk-band-inner h2{font-size:clamp(26px,4vw,38px);line-height:1.08}
@@ -1062,7 +1052,7 @@ const SKY_CSS = `
   :root[data-theme="dark"] .sk-accent{color:var(--sk-sky-bright)}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-accent{color:var(--sk-sky-bright)}}
   .sk-subline{color:var(--sk-gold-ink);font-size:17px;font-weight:600;margin-top:8px;
-    font-style:italic;line-height:1.35}
+    line-height:1.35}
   .sk-band-body{color:var(--sk-muted);margin:18px 0 0;font-size:16.5px;max-width:60ch}
   .sk-band-note{color:var(--sk-muted);margin:10px 0 0;font-size:15px;font-weight:600;max-width:60ch}
   .sk-band-price{color:var(--sk-muted);margin:12px 0 0;font-size:13.5px}
@@ -1073,7 +1063,7 @@ const SKY_CSS = `
   .sk-band-inner .sk-btn{margin-top:26px}
 
   /* more grid, grouped */
-  .sk-also{padding:70px 0;background:var(--sk-band)}
+  .sk-also{padding:56px 0;background:var(--sk-band)}
   .sk-also h2{font-size:clamp(24px,3.6vw,34px);text-align:center}
   .sk-also-lead{color:var(--sk-muted);text-align:center;max-width:60ch;margin:12px auto 30px}
   .sk-group-label{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
@@ -1097,13 +1087,13 @@ const SKY_CSS = `
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-guide a{color:var(--sk-sky-bright)}}
   /* friends — dark one-liner band */
   .sk-friends{background:radial-gradient(130% 150% at 84% 0%,#123a6b 0%,#0b2350 45%,#071634 100%);
-    color:#eaf2ff;padding:60px 0;text-align:center}
+    color:#eaf2ff;padding:44px 0;text-align:center}
   .sk-friends .sk-eyebrow{color:#7db8e6}
   .sk-friends-line{font-family:var(--sk-fdisp);font-weight:800;letter-spacing:-.02em;
     font-size:clamp(21px,3.2vw,30px);line-height:1.25;max-width:24ch;margin:0 auto;color:#fff}
 
   /* contact + message form */
-  .sk-contact{padding:70px 0;background:var(--sk-band-alt);text-align:center}
+  .sk-contact{padding:66px 0;background:var(--sk-band-alt);text-align:center}
   .sk-contact h2{font-size:clamp(24px,3.6vw,34px)}
   .sk-contact-lead{color:var(--sk-muted);max-width:52ch;margin:12px auto 26px}
   .sk-form{max-width:440px;margin:0 auto;display:flex;flex-direction:column;gap:12px;text-align:start}
@@ -1117,7 +1107,7 @@ const SKY_CSS = `
   .sk-form-reach{display:flex;flex-direction:column;gap:8px}
   .sk-form-hint{font-size:13px;color:var(--sk-muted);font-weight:600}
   .sk-form-privacy{margin:12px 0 0;font-size:12.5px;color:var(--sk-muted);line-height:1.5}
-  .sk-faq{padding:74px 0}
+  .sk-faq{padding:62px 0}
   /* About-the-app: modest strip; exists chiefly for the OAuth review's
      homepage checklist, so it must stay real page copy, not footer print. */
   .sk-appinfo{padding:0 0 74px}
@@ -1141,7 +1131,7 @@ const SKY_CSS = `
   .sk-faq-item summary:focus-visible{outline:2px solid var(--sk-sky);outline-offset:-2px}
   .sk-faq-item p{margin:0;padding:0 22px 20px;color:var(--sk-muted);line-height:1.65;font-size:15px}
   @media (max-width:560px){
-    .sk-faq{padding:54px 0}
+    .sk-faq{padding:46px 0}
     .sk-faq-item summary{padding:16px 16px;font-size:15px}
     .sk-faq-item p{padding:0 16px 18px;font-size:14.5px}
   }
@@ -1167,7 +1157,7 @@ const SKY_CSS = `
   :root[data-theme="dark"] .sk-prefer a{color:var(--sk-sky-bright)}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-prefer a{color:var(--sk-sky-bright)}}
   /* visit — live map card + shop details */
-  .sk-visit{padding:70px 0 76px;background:var(--sk-band);text-align:center}
+  .sk-visit{padding:62px 0 68px;background:var(--sk-band);text-align:center}
   .sk-visit h2{font-size:clamp(24px,3.6vw,34px)}
   .sk-visit-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:20px;margin-top:32px;text-align:start}
   .sk-map-card{position:relative;border:1px solid var(--sk-line);border-radius:16px;overflow:hidden;
@@ -1319,65 +1309,28 @@ const SKY_CSS = `
   }
   @media (max-width:820px){ .sk-grid{grid-template-columns:1fr} .sk-visit-grid{grid-template-columns:1fr} .sk-map-card{min-height:300px} .sk-map-card iframe{min-height:300px} }
 
-  /* ── PROTOTYPE, off unless :root[data-sk="calm"] ────────────────────────
-     The four findings from the 24 Aug design audit that survived a second
-     look. Inert by default — exactly like the light-rail prototype — so the
-     page a customer sees is unchanged until the owner has judged these.
-     If adopted, each one becomes a real edit (markup deleted, base values
-     changed) rather than an override; display:none is how you AUDITION a
-     removal, not how you ship one.
+  /* The four findings from the 24 Aug design audit were auditioned here as an
+     inert :root[data-sk="calm"] prototype, judged by the owner and adopted on
+     24 Aug — so each is now a real edit at its source rather than an override,
+     and the prototype block is gone. What changed, and why it is worth knowing:
 
-     1. NINE EYEBROWS. Uppercase letter-spaced labels above nine of the page's
-        sections. As a device they mark a chapter; used on every section they
-        mark nothing — and four of them restate the heading directly beneath
-        ("Message us" over "Send us a message", "Common questions" over "The
-        things people ring up and ask", "Visit us" over "Come and see us",
-        "The Kosher Connect app" over "Your account online"). Those four go.
-        The other five stay and the reason is in each: the hero's carries the
-        town, the three band labels are the words the nav links use — with a
-        scrollspy lighting them, the label confirms you arrived where you
-        clicked — and "Why people send their friends" has no heading under
-        it, so it IS the heading. */
-  :root[data-sk="calm"] .sk-faq .sk-eyebrow,
-  :root[data-sk="calm"] .sk-appinfo .sk-eyebrow,
-  :root[data-sk="calm"] .sk-contact .sk-eyebrow,
-  :root[data-sk="calm"] .sk-visit .sk-eyebrow{display:none}
-
-  /*  2. ONE RHYTHM FOR EVERY SECTION. Eight sections at 70–76px top and
-        bottom, so the page scrolls at a metronome tick and nothing is
-        louder than anything else. Padding is the cheapest way to say what
-        matters. The pitch (the three bands) gets air; the list of extras
-        gets tightened because it is a list; the one-line "why people send
-        their friends" gets least, because a single sentence between two
-        big sections is punctuation, not a chapter. */
-  :root[data-sk="calm"] .sk-band{padding:84px 0}
-  :root[data-sk="calm"] .sk-also{padding:56px 0}
-  :root[data-sk="calm"] .sk-friends{padding:44px 0}
-  :root[data-sk="calm"] .sk-faq{padding:62px 0}
-  :root[data-sk="calm"] .sk-contact{padding:66px 0}
-  :root[data-sk="calm"] .sk-visit{padding:62px 0 68px}
-  /* The phone already tightens the FAQ (74→54 in the max-width:560px block).
-     A flat calm value out-specifies that and made the section BIGGER on a
-     phone than it is today — the opposite of the finding. Keep the same
-     ratio the phone rule chose, against the new desktop number. */
-  @media (max-width:560px){ :root[data-sk="calm"] .sk-faq{padding:46px 0} }
-
-  /*  3. EVERYTHING FADES UP. Nine blocks carry .sk-reveal, so the page never
-        settles: something is always arriving. Keep the entrance where it is
-        an entrance — the three feature bands, which are the argument, read
-        as one orchestrated run — and let the practical half of the page
-        simply BE there when the reader arrives at it. Someone scrolling to
-        find the phone number should not have to wait for it to animate. */
-  :root[data-sk="calm"] .js-on .sk-also .sk-reveal:not(.in),
-  :root[data-sk="calm"] .js-on .sk-friends .sk-reveal:not(.in),
-  :root[data-sk="calm"] .js-on .sk-faq .sk-reveal:not(.in),
-  :root[data-sk="calm"] .js-on .sk-contact .sk-reveal:not(.in),
-  :root[data-sk="calm"] .js-on .sk-visit .sk-reveal:not(.in){opacity:1;transform:none}
-
-  /*  4. THE ITALIC SUBLINE. Tier three of every band heading is italic. An
-        italicised line inside an otherwise upright heading stack is one of
-        the most reliable generated-page tells, and this one does not need
-        it: the line is already gold and already 600, which is two signals
-        of difference before the slant. Roman, and nothing else changes. */
-  :root[data-sk="calm"] .sk-subline{font-style:normal}
+     1. Four eyebrows deleted from the markup (FAQ, app info, contact, visit),
+        with their strings, because each restated the heading directly beneath
+        it. Five stay: the hero's carries the town, the three band labels are
+        the words the nav links use — with the scrollspy lighting them, the
+        label confirms you arrived where you clicked — and "Why people send
+        their friends" has no heading under it, so it IS the heading.
+     2. Section padding is no longer a metronome. The pitch (.sk-band) gets
+        air at 84; the list of extras is tightened to 56 because it is a list;
+        the one-line friends section gets 44, because a single sentence between
+        two big sections is punctuation, not a chapter. The phone's FAQ rule
+        keeps its old ratio against the new desktop number (74→62, 54→46) —
+        a flat value there out-specified it and made the section BIGGER on a
+        phone, which was the opposite of the finding.
+     3. .sk-reveal now marks only the three feature bands, which are the
+        argument and read as one orchestrated run. Someone scrolling to find
+        the phone number should not have to wait for it to animate.
+     4. .sk-subline is roman. It is already gold and already 600, which is two
+        signals of difference before the slant, and an italic line inside an
+        otherwise upright heading stack is a reliable generated-page tell. */
 `
