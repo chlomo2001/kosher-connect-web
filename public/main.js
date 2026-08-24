@@ -471,7 +471,7 @@ async function initApp() {
   }
   if (allowedTabs && allowedTabs.length === 0) {
     document.getElementById('mainContent').innerHTML = `<div class="empty-state">
-      <div class="emoji">🔒</div>
+      <div class="emoji kc-ic kc-ic-lock"></div>
       <p>No areas are enabled for your account.</p>
       <small>Ask the owner to set them under Settings → Team, then sign in again.</small></div>`;
     return;
@@ -541,12 +541,12 @@ async function kcMailPulse() {
     if (d.count <= 3 && !d.capped) {
       // A working counter sees each arrival by name, oldest first.
       for (const m of d.latest.slice(0, 3).reverse()) {
-        toast(`📬 Carrier post — ${m.carrier || 'unknown carrier'}: ${m.subject || '(no subject)'}`, 'success');
+        toast(`Carrier post — ${m.carrier || 'unknown carrier'}: ${m.subject || '(no subject)'}`, 'success', 'inbox');
       }
     } else {
       // Back from lunch (or a burst): one compact catch-up, never a replay —
       // a drip of stale toasts teaches everyone to ignore the live ones.
-      toast(`📬 ${d.capped ? 'More than 5' : d.count} carrier posts arrived — see Carrier Mail`, 'success');
+      toast(`${d.capped ? 'More than 5' : d.count} carrier posts arrived — see Carrier Mail`, 'success', 'inbox');
     }
   } finally { kcMailPulseBusy = false; }
 }
@@ -1412,7 +1412,12 @@ function mgDraftRental(rentalId) {
   return draft;
 }
 
-const GATE_ICON = { block: '⛔', verify: '✍️', pass: '✓' };
+// Class names, not glyphs: this feeds .kc-gate-icon, which is a span the
+// stylesheet can reach. 'pass' keeps ✓ because ✓ is monochrome text that
+// already follows currentColor — it never had the theme problem.
+const GATE_ICON = { block: '<i class="kc-ic kc-ic-blocked" aria-hidden="true"></i>',
+                    verify: '<i class="kc-ic kc-ic-sign" aria-hidden="true"></i>',
+                    pass: '✓' };
 
 // The panel. Shown only while the Returned toggle is on — the gate is about
 // closing, and a rental still running has nothing to answer for yet.
@@ -3335,7 +3340,7 @@ function renderRentalRows() {
     // "No rentals yet" was shown even with a full pool behind an active
     // filter — the one message a busy shop would read as data loss.
     const narrowed = rentals.length > 0;
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="emoji">📱</div>
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="emoji kc-ic kc-ic-phone"></div>
       <p>${narrowed ? 'No rentals match this view.' : 'No rentals yet.'}</p>
       <small>${narrowed ? '' : 'Click "New rental" to get started.'}</small>
       ${narrowed ? kcClearFiltersBtn('rentals') : ''}</div></td></tr>`;
@@ -3348,7 +3353,7 @@ function renderRentalRows() {
     const computedStatus = getComputedStatus(r, today);
     let statusBadge;
     if      (r.voided)                                  statusBadge = `<span class="badge" style="background:rgba(148,163,184,0.18);color:var(--muted);" title="${escHtml(r.voided.reason)}${r.voided.note ? ' — ' + escHtml(r.voided.note) : ''}">↩ Voided</span>`;
-    else if (computedStatus === 'booked')               statusBadge = `<span class="badge" style="background:var(--canvas-cream);color:var(--gold);">📅 Reserved${r.fromDate <= today ? ' — pickup due' : ''}</span>`;
+    else if (computedStatus === 'booked')               statusBadge = `<span class="badge" style="background:var(--canvas-cream);color:var(--gold);"><i class="kc-ic kc-ic-calendar" aria-hidden="true"></i> Reserved${r.fromDate <= today ? ' — pickup due' : ''}</span>`;
     else if (computedStatus === 'active' && r.toDate === today) statusBadge = `<span class="badge badge-sim">Due Today</span>`;
     else if (computedStatus === 'active')               statusBadge = `<span class="badge badge-rental">Active</span>`;
     else if (computedStatus === 'overdue')              statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--danger-ink);">Overdue ⚠</span>`;
@@ -3505,7 +3510,7 @@ async function returnSelectedRentals() {
     body: `Marks the phone, SIM and charger <strong>returned</strong> on each — if anything is missing, close that one in Manage instead.<br><br>` +
       closable.slice(0, 8).map(line).join('<br>') +
       (closable.length > 8 ? `<br>+${closable.length - 8} more` : '') +
-      (gated.length ? `<br><br>⛔ ${gated.length} stay${gated.length === 1 ? 's' : ''} open — a lost item or unsettled charge; open each to finish.` : ''),
+      (gated.length ? `<br><br><i class="kc-ic kc-ic-blocked" aria-hidden="true"></i> ${gated.length} stay${gated.length === 1 ? 's' : ''} open — a lost item or unsettled charge; open each to finish.` : ''),
     okLabel: `📥 Return ${closable.length}`,
   }))) return;
   let phonesTouched = false;
@@ -3701,7 +3706,7 @@ function renderPhoneRows() {
 
   if (phones.length === 0) {
     kcListCount('phoneCount', 0, 0);
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="emoji">📋</div><p>No phones in inventory.</p><small>Click "⚙️ Manage phones" to add phones.</small></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="emoji kc-ic kc-ic-clipboard"></div><p>No phones in inventory.</p><small>Click "⚙️ Manage phones" to add phones.</small></div></td></tr>`;
     return;
   }
 
@@ -3710,7 +3715,7 @@ function renderPhoneRows() {
   const shown = phonesMatchingSearch();
   kcListCount('phoneCount', shown.length, phones.length);
   if (shown.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔍</div><p>No handset matches “${escHtml(rentalSearchTerm)}”.</p><small>Searches number, IMEI, model, carrier, pool — and who has it out.</small></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="emoji kc-ic kc-ic-search"></div><p>No handset matches “${escHtml(rentalSearchTerm)}”.</p><small>Searches number, IMEI, model, carrier, pool — and who has it out.</small></div></td></tr>`;
     return;
   }
 
@@ -3722,11 +3727,11 @@ function renderPhoneRows() {
     else if (p.maintenance)            statusBadge = `<span class="badge" style="background:rgba(217,119,6,0.14);color:var(--gold);" title="${escHtml(p.maintenanceNote || 'Out of service')}">🔧 Maintenance</span>`;
     // Out-of-stock line states each get their own words — before this they
     // all wore the green "Available" badge, which is the one thing they are not.
-    else if (p.status === 'retired')    statusBadge = `<span class="badge" style="background:rgba(107,114,128,0.15);color:var(--muted);">🗄️ Retired</span>`;
-    else if (p.status === 'not_working')statusBadge = `<span class="badge" style="background:rgba(220,38,38,0.12);color:var(--danger-ink);">⛔ Not working</span>`;
-    else if (p.status === 'permanent')  statusBadge = `<span class="badge" style="background:rgba(99,102,241,0.12);color:var(--accent);">🏠 Permanent</span>`;
-    else if (p.status === 'suspended')  statusBadge = `<span class="badge" style="background:rgba(217,119,6,0.14);color:var(--gold);">⏸ Suspended</span>`;
-    else if (p.status === 'unknown')    statusBadge = `<span class="badge" style="background:rgba(107,114,128,0.15);color:var(--muted);">❓ Unknown</span>`;
+    else if (p.status === 'retired')    statusBadge = `<span class="badge" style="background:rgba(107,114,128,0.15);color:var(--muted);"><i class="kc-ic kc-ic-archive" aria-hidden="true"></i> Retired</span>`;
+    else if (p.status === 'not_working')statusBadge = `<span class="badge" style="background:rgba(220,38,38,0.12);color:var(--danger-ink);"><i class="kc-ic kc-ic-blocked" aria-hidden="true"></i> Not working</span>`;
+    else if (p.status === 'permanent')  statusBadge = `<span class="badge" style="background:rgba(99,102,241,0.12);color:var(--accent);"><i class="kc-ic kc-ic-home" aria-hidden="true"></i> Permanent</span>`;
+    else if (p.status === 'suspended')  statusBadge = `<span class="badge" style="background:rgba(217,119,6,0.14);color:var(--gold);"><i class="kc-ic kc-ic-pause" aria-hidden="true"></i> Suspended</span>`;
+    else if (p.status === 'unknown')    statusBadge = `<span class="badge" style="background:rgba(107,114,128,0.15);color:var(--muted);"><i class="kc-ic kc-ic-help" aria-hidden="true"></i> Unknown</span>`;
     else if (p.status === 'available' && p.poolExpiry && !poolExpired)
                                         statusBadge = `<span class="badge badge-sim">Available (active pool)</span>`;
     else if (poolExpired)               statusBadge = `<span class="badge" style="background:rgba(107,114,128,0.15);color:var(--muted);">Pool Expired</span>`;
@@ -4043,7 +4048,8 @@ function kcRentalScanEnter() {
     const note = document.createElement('div');
     note.setAttribute('role', 'status');
     note.style.cssText = 'margin-top:8px;font-size:var(--fs-small);color:var(--muted);background:var(--bg-secondary);border-radius:6px;padding:7px 9px;';
-    note.textContent = '📷 Scanned in — marked returned for you. Check the charges below before saving.';
+    note.classList.add('kc-ic', 'kc-ic-camera');
+  note.textContent = 'Scanned in — marked returned for you. Check the charges below before saving.';
     anchor.appendChild(note);
   }
   toast(res.message, 'success');
@@ -4102,7 +4108,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
   nrPhones = [];
 
   showDynamicModal(`
-    <div class="modal-title">📱 New rental</div>
+    <div class="modal-title kc-ic kc-ic-phone">New rental</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
@@ -4144,7 +4150,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
       <div class="form-group form-full" style="flex-direction:row;align-items:center;gap:10px;">
         <input type="checkbox" id="rAddVN" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent);"
           onchange="document.getElementById('rVNSection').style.display=this.checked?'contents':'none'">
-        <label for="rAddVN" style="font-size:var(--fs-ui);cursor:pointer;">🔢 Add Virtual Number</label>
+        <label for="rAddVN" style="font-size:var(--fs-ui);cursor:pointer;"><i class="kc-ic kc-ic-digits" aria-hidden="true"></i> Add Virtual Number</label>
       </div>
 
       <div id="rVNSection" style="display:none;" class="form-full">
@@ -4182,8 +4188,8 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
       <div class="form-group form-full">
         <div class="section-divider" style="margin-bottom:8px;">Equipment given to customer</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <div class="eq-btn" tabindex="0" role="button" id="nrGiven_phone" data-given="0" onclick="nrToggleGiven('phone')">📱 Phone</div>
-          <div class="eq-btn" tabindex="0" role="button" id="nrGiven_sim"   data-given="1" onclick="nrToggleGiven('sim')">💳 SIM</div>
+          <div class="eq-btn" tabindex="0" role="button" id="nrGiven_phone" data-given="0" onclick="nrToggleGiven('phone')"><i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Phone</div>
+          <div class="eq-btn" tabindex="0" role="button" id="nrGiven_sim"   data-given="1" onclick="nrToggleGiven('sim')"><i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM</div>
           <div class="eq-btn" tabindex="0" role="button" id="nrGiven_charger" data-given="0" onclick="nrToggleGiven('charger')">🔌 Charger</div>
         </div>
         <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;">Tap to toggle — bright = given</div>
@@ -4192,8 +4198,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
       <div class="form-group form-full" id="rDiscountRow">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--fs-body);">
           <input type="checkbox" id="rAddDiscount" style="accent-color:var(--accent);"
-            onchange="document.getElementById('rDiscountBox').style.display=this.checked?'flex':'none'; updateRentalCalc()">
-          🏷️ Apply discount
+            onchange="document.getElementById('rDiscountBox').style.display=this.checked?'flex':'none'; updateRentalCalc()"><i class="kc-ic kc-ic-tag" aria-hidden="true"></i> Apply discount
         </label>
         <div id="rDiscountBox" style="display:none;gap:8px;align-items:center;margin-top:8px;">
           <select class="form-input" id="rDiscountType" style="width:100px;padding:7px 10px;" onchange="updateRentalCalc()">
@@ -4230,8 +4235,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
       <div class="form-group form-full">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--fs-body);">
           <input type="checkbox" id="rDeposit" style="accent-color:var(--accent);"
-            onchange="document.getElementById('rDepositBox').style.display=this.checked?'flex':'none'">
-          🔒 Hold a refundable deposit
+            onchange="document.getElementById('rDepositBox').style.display=this.checked?'flex':'none'"><i class="kc-ic kc-ic-lock" aria-hidden="true"></i> Hold a refundable deposit
         </label>
         <div id="rDepositBox" style="display:none;gap:8px;align-items:center;margin-top:8px;">
           £<input class="form-input" type="number" id="rDepositAmount" min="0" step="1" style="width:100px;" placeholder="e.g. 50">
@@ -4243,7 +4247,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
         <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:var(--fs-body);">
           <input type="checkbox" id="rTerms" style="accent-color:var(--accent);margin-top:2px;"
             onchange="document.getElementById('rTermsName').style.display=this.checked?'block':'none'">
-          <span>📝 Customer acknowledged the loss &amp; late-return terms at pickup</span>
+          <span><i class="kc-ic kc-ic-edit-note" aria-hidden="true"></i> Customer acknowledged the loss &amp; late-return terms at pickup</span>
         </label>
         <input class="form-input" id="rTermsName" style="display:none;margin-top:8px;width:260px;"
           placeholder="Type the customer's name to sign">
@@ -4420,8 +4424,7 @@ function updateRentalCalc() {
     const ranked = poolPhoneSuggestions(phones, rentals, from, to, localISO());
     const best = ranked[0];
     if (best && best.phone.id !== (phone && phone.id)) {
-      poolLine = `<div style="margin-top:6px;font-size:var(--fs-micro);line-height:1.5;">
-        💡 <span style="color:var(--accent);font-weight:600;">Best pool match:</span> ${deviceChip(best.phone)}
+      poolLine = `<div style="margin-top:6px;font-size:var(--fs-micro);line-height:1.5;"><i class="kc-ic kc-ic-idea" aria-hidden="true"></i> <span style="color:var(--accent);font-weight:600;">Best pool match:</span> ${deviceChip(best.phone)}
         <button type="button" class="btn btn-outline" style="padding:1px 8px;font-size:var(--fs-micro);margin-left:4px;"
           onclick="nrPickPhone('${escJs(String(best.phone.id))}')">Use</button>
         <br><span style="color:var(--muted);">${escHtml(best.reason)}</span></div>`;
@@ -4432,9 +4435,8 @@ function updateRentalCalc() {
     <span style="color:var(--muted);">Shabbos/Yom Tov excluded:</span> <span style="color:var(--gold);">${excluded}</span> &nbsp;|&nbsp;
     <span style="color:var(--muted);">Chargeable days:</span> ${chargeableDays} &nbsp;|&nbsp;
     <strong style="color:var(--success);font-size:var(--fs-ui);">${fmtGbp(price)}</strong>${discountLine}
-    <div style="margin-top:6px;font-size:var(--fs-micro);color:var(--muted);line-height:1.6;">
-      🧮 ${steps.join(' → ')}
-      ${excluded > 0 ? `<br>📅 ${excluded} free day${excluded === 1 ? '' : 's'} — the phone is kept over these at no charge:${freeDayStamps(from, to)}` : ''}
+    <div style="margin-top:6px;font-size:var(--fs-micro);color:var(--muted);line-height:1.6;"><i class="kc-ic kc-ic-abacus" aria-hidden="true"></i> ${steps.join(' → ')}
+      ${excluded > 0 ? `<br><i class="kc-ic kc-ic-calendar" aria-hidden="true"></i> ${excluded} free day${excluded === 1 ? '' : 's'} — the phone is kept over these at no charge:${freeDayStamps(from, to)}` : ''}
     </div>${poolLine}
   `;
   // #25 — keep the payment row's default in step with the live total.
@@ -5178,7 +5180,7 @@ async function confirmVoidRental(rentalId) {
 // ══ MANAGE PHONES MODAL ══
 function openManagePhonesModal() {
   showDynamicModal(`
-    <div class="modal-title">⚙️ Manage phones</div>
+    <div class="modal-title kc-ic kc-ic-gear">Manage phones</div>
     <div class="section-divider">Add New Phone</div>
     <div class="form-grid">
       <div class="form-group">
@@ -5320,7 +5322,7 @@ let reviewFilter = 'all';
 function openReviewQueueModal(filter = 'all') {
   reviewFilter = filter;
   showDynamicModal(`
-    <div class="modal-title">🔍 Lines needing a look</div>
+    <div class="modal-title kc-ic kc-ic-search">Lines needing a look</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
       Imported from the rental sheet. Nothing here is wrong — it's what the sheet
       couldn't tell us for certain. Work through it whenever; the pool is usable
@@ -5337,7 +5339,7 @@ function renderReviewQueue() {
   const all = reviewQueue();
   if (!all.length) {
     el.innerHTML = `<div style="padding:28px;text-align:center;color:var(--muted);">
-      Nothing left to review. 🎉</div>`;
+      Nothing left to review.</div>`;
     return;
   }
   // Count by reason across the whole queue, not the filtered view — the chips
@@ -5450,13 +5452,13 @@ function openEditPhoneModal(phoneId) {
   // The read-only row and the Line state select describe the same fact — they
   // must never disagree (a "🟢 Available" header over a Retired select did).
   const statusFace = {
-    rented:      ['var(--accent)',     '🔴 Rented'],
+    rented:      ['var(--accent)',     '<span class="kc-dot kc-dot-high"></span>Rented'],
     permanent:   ['var(--accent)',     '🏠 Permanent'],
     not_working: ['var(--danger-ink)', '⛔ Not working'],
     retired:     ['var(--muted)',      '🗄️ Retired'],
     suspended:   ['var(--gold)',       '⏸ Suspended'],
     unknown:     ['var(--muted)',      '❓ Unknown'],
-  }[p.status] || ['var(--success)', '🟢 Available'];
+  }[p.status] || ['var(--success)', '<span class="kc-dot kc-dot-ok"></span>Available'];
   const statusColor = p.maintenance && p.status !== 'rented' ? 'var(--gold)' : statusFace[0];
   const statusLabel = p.maintenance && p.status !== 'rented' ? '🔧 Maintenance' : statusFace[1];
   // Line state is editable only while the phone is not out on a rental — a
@@ -5478,7 +5480,7 @@ function openEditPhoneModal(phoneId) {
         <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">Retired keeps the number and every past rental on record — nothing is deleted; it just stops being offered out.</div>
       </div>`;
   showDynamicModal(`
-    <div class="modal-title">✏️ Edit Phone — ${escHtml(fmtPhone(p.number))}</div>
+    <div class="modal-title kc-ic kc-ic-pencil">Edit Phone — ${escHtml(fmtPhone(p.number))}</div>
     <div class="form-grid">
       ${p.country === 'USA' ? `
       <div class="form-group">
@@ -5518,7 +5520,7 @@ function openEditPhoneModal(phoneId) {
       <div class="form-group form-full">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--fs-body);">
           <input type="checkbox" id="epMaint" ${p.maintenance ? 'checked' : ''} style="accent-color:var(--gold);">
-          <span>🔧 Under maintenance — hidden from New rental until cleared</span>
+          <span><i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> Under maintenance — hidden from New rental until cleared</span>
         </label>
         <input class="form-input" id="epMaintNote" type="text" value="${escHtml(p.maintenanceNote || '')}"
           placeholder="Why? e.g. cracked screen, battery on order (optional)" style="margin-top:6px;">
@@ -5638,7 +5640,7 @@ function openNewPoolCard({ selectId = null, previous = '', prefill = '', after =
   poolNewForSelect = { id: selectId, previous, after };
   const today = localISO();
   showStackedModal(`
-    <div class="modal-title">📶 New pool</div>
+    <div class="modal-title kc-ic kc-ic-signal">New pool</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
       One carrier plan shared by several lines. Set the window now and every phone you
       put in this pool carries it — New rental prefers already-active pool phones, and
@@ -5753,7 +5755,7 @@ function openPoolsModal() {
     return `
       <div class="table-card" style="margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;flex-wrap:wrap;">
-          <strong style="font-size:var(--fs-ui);">📶 ${escHtml(name)}</strong>
+          <strong style="font-size:var(--fs-ui);"><i class="kc-ic kc-ic-signal" aria-hidden="true"></i> ${escHtml(name)}</strong>
           <span class="badge ${live ? 'badge-active' : 'badge-rental'}">${live ? 'ACTIVE' : 'not active'}</span>
           <span style="font-size:var(--fs-small);color:var(--muted);">
             ${ps.length} phone${ps.length === 1 ? '' : 's'} · ${rented} out
@@ -5789,7 +5791,7 @@ function openPoolsModal() {
   };
 
   showDynamicModal(`
-    <div class="modal-title">📶 Pools</div>
+    <div class="modal-title kc-ic kc-ic-signal">Pools</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
       One carrier plan shared by several lines. Add the pool here, pick it on each phone
       (✏️ Edit Phone → Pool dropdown), and set the activation window once — every phone in the pool
@@ -5808,7 +5810,7 @@ function openPoolsModal() {
       </div>
     </div>
     ${names.length ? names.map(poolCard).join('')
-      : `<div class="empty-state"><div class="emoji">📶</div><p>No pools yet.</p><small>Add the first pool above, then pick it on each phone.</small></div>`}
+      : `<div class="empty-state"><div class="emoji kc-ic kc-ic-signal"></div><p>No pools yet.</p><small>Add the first pool above, then pick it on each phone.</small></div>`}
     ${unpooled ? `<div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">${unpooled} USA phone${unpooled === 1 ? '' : 's'} have no pool yet — open ✏️ Edit Phone to assign one.</div>` : ''}
   `);
 }
@@ -5976,8 +5978,8 @@ function openManageRentalModal(rentalId) {
     <div style="margin-bottom:8px;">
       <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:6px;">Given to customer — tap to toggle</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
-        <div class="eq-btn" tabindex="0" role="button" id="mgGivenPhone" data-given="${(r.equipmentGiven?.phone??false)?'1':'0'}" onclick="mgToggleGiven('phone')">📱 Phone</div>
-        <div class="eq-btn" tabindex="0" role="button" id="mgGivenSim"   data-given="${(r.equipmentGiven?.sim??true)?'1':'0'}"   onclick="mgToggleGiven('sim')">💳 SIM</div>
+        <div class="eq-btn" tabindex="0" role="button" id="mgGivenPhone" data-given="${(r.equipmentGiven?.phone??false)?'1':'0'}" onclick="mgToggleGiven('phone')"><i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Phone</div>
+        <div class="eq-btn" tabindex="0" role="button" id="mgGivenSim"   data-given="${(r.equipmentGiven?.sim??true)?'1':'0'}"   onclick="mgToggleGiven('sim')"><i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM</div>
         <div class="eq-btn" tabindex="0" role="button" id="mgGivenCharger" data-given="${chargerGiven(r)?'1':'0'}" onclick="mgToggleGiven('charger')">🔌 Charger</div>
       </div>
       <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:6px;">Item status — tap Returned or Lost for each item given</div>
@@ -5987,8 +5989,7 @@ function openManageRentalModal(rentalId) {
     <div class="section-divider" style="margin-top:12px;">Discount</div>
     <div style="margin-bottom:16px;">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--fs-body);">
-        <input type="checkbox" id="mgAddDiscount" style="accent-color:var(--accent);" ${(r.discountValue||0)>0?'checked':''} onchange="document.getElementById('mgDiscountBox').style.display=this.checked?'flex':'none'; mgUpdateCalc()">
-        🏷️ Apply discount
+        <input type="checkbox" id="mgAddDiscount" style="accent-color:var(--accent);" ${(r.discountValue||0)>0?'checked':''} onchange="document.getElementById('mgDiscountBox').style.display=this.checked?'flex':'none'; mgUpdateCalc()"><i class="kc-ic kc-ic-tag" aria-hidden="true"></i> Apply discount
       </label>
       <div id="mgDiscountBox" style="display:${(r.discountValue||0)>0?'flex':'none'};gap:8px;align-items:center;margin-top:8px;">
         <div class="cs-wrap" id="csDiscountType">
@@ -6022,8 +6023,7 @@ function openManageRentalModal(rentalId) {
     <div class="form-group" style="margin-bottom:16px;">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--fs-body);">
         <input type="checkbox" id="mgDepositSettled" style="accent-color:var(--accent);"
-          ${r.depositSettled ? 'checked' : ''} onchange="mgUpdateCalc()">
-        🔒 The ${escHtml(fmtGbp(r.depositHeld))} deposit has been refunded or put against the bill
+          ${r.depositSettled ? 'checked' : ''} onchange="mgUpdateCalc()"><i class="kc-ic kc-ic-lock" aria-hidden="true"></i> The ${escHtml(fmtGbp(r.depositHeld))} deposit has been refunded or put against the bill
       </label>
     </div>` : ''}
     ${/* The Charge Gate. Empty and hidden until the Returned toggle goes on —
@@ -7435,7 +7435,7 @@ function renderTableRows() {
     tbody.innerHTML = `
       <tr><td colspan="5">
         <div class="empty-state">
-          <div class="emoji">👥</div>
+          <div class="emoji kc-ic kc-ic-users"></div>
           <p>${searchTerm ? `No customers match “${escHtml(searchTerm)}”.`
             : customerInitial ? `Nobody under “${escHtml(customerInitial)}” in this view.` : 'No customers yet.'}</p>
           ${/* A search that matches nothing used to be a dead end: an empty
@@ -7464,10 +7464,10 @@ function renderTableRows() {
     const otherServices = (c.services || []).filter(s => s.type !== 'rental' && s.type !== 'sim' && s.type !== 'vn');
     const services = [
       ...activeCustomerRentals.map(r => `<span class="badge badge-rental">Rental ${countryFlag(r.country)}</span>`),
-      ...(cUpcomingFlights ? [`<span class="badge badge-booking">✈️ Flight${cUpcomingFlights > 1 ? ' ×' + cUpcomingFlights : ''}</span>`] : []),
-      ...(cSimCount ? [`<span class="badge badge-sim">💳 SIM${cSimCount > 1 ? ' ×' + cSimCount : ''}</span>`] : []),
-      ...(cVnCount ? [`<span class="badge badge-vn">🔢 VN${cVnCount > 1 ? ' ×' + cVnCount : ''}</span>`] : []),
-      ...(cOpenRepairs ? [`<span class="badge badge-repair">🔧 Repair${cOpenRepairs > 1 ? ' ×' + cOpenRepairs : ''}</span>`] : []),
+      ...(cUpcomingFlights ? [`<span class="badge badge-booking"><i class="kc-ic kc-ic-plane" aria-hidden="true"></i> Flight${cUpcomingFlights > 1 ? ' ×' + cUpcomingFlights : ''}</span>`] : []),
+      ...(cSimCount ? [`<span class="badge badge-sim"><i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM${cSimCount > 1 ? ' ×' + cSimCount : ''}</span>`] : []),
+      ...(cVnCount ? [`<span class="badge badge-vn"><i class="kc-ic kc-ic-digits" aria-hidden="true"></i> VN${cVnCount > 1 ? ' ×' + cVnCount : ''}</span>`] : []),
+      ...(cOpenRepairs ? [`<span class="badge badge-repair"><i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> Repair${cOpenRepairs > 1 ? ' ×' + cOpenRepairs : ''}</span>`] : []),
       ...otherServices.map(s => `<span class="badge badge-${s.type}">${escHtml(s.label)}</span>`),
     ].join('');
 
@@ -7778,7 +7778,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         ${!ok ? fixHtml : ''}
       </div>`;
     tripHtml = `
-      <div class="section-divider">✈️ Next trip — ${escHtml(nextTrip.route)} on ${fmtDate(nextTrip.travelDate)}${nextTrip.departureTime ? ' · ' + escHtml(nextTrip.departureTime) : ''}</div>
+      <div class="section-divider"><i class="kc-ic kc-ic-plane" aria-hidden="true"></i> Next trip — ${escHtml(nextTrip.route)} on ${fmtDate(nextTrip.travelDate)}${nextTrip.departureTime ? ' · ' + escHtml(nextTrip.departureTime) : ''}</div>
       <div style="background:var(--bg-secondary);border-radius:10px;padding:10px 14px;margin-bottom:18px;">
         ${item(true, `Flight booked${nextTrip.airline ? ' — ' + escHtml(nextTrip.airline) : ''}${nextTrip.bookingReference ? ' (' + escHtml(nextTrip.bookingReference) + ')' : ''}`, '', '')}
         ${item(!!phoneCover,
@@ -7805,7 +7805,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   // record and in the passengers editor where staff actually need it.
   const passportHtml = (c.passportNumber || c.dob || c.passportExpiry) ? `
       <div style="background:var(--bg-secondary);border-left:3px solid var(--accent);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:var(--fs-body);">
-        <span style="color:var(--muted);font-size:var(--fs-micro);display:block;margin-bottom:2px;">🛂 Passport on file</span>
+        <span style="color:var(--muted);font-size:var(--fs-micro);display:block;margin-bottom:2px;"><i class="kc-ic kc-ic-passport" aria-hidden="true"></i> Passport on file</span>
         ${c.passportNumber ? `№ ····${escHtml(String(c.passportNumber).slice(-4))}` : ''}
         ${c.dob ? ` · born ${fmtDate(c.dob)}` : ''}
         ${c.passportExpiry ? ` · expires <strong${c.passportExpiry < localISO() ? ' style="color:var(--danger-ink);"' : ''}>${fmtDate(c.passportExpiry)}</strong>${c.passportExpiry < localISO() ? ' ⚠ expired' : ''}` : ''}
@@ -7817,11 +7817,11 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   const houseHtml = ha?.enabled ? `
       <div style="background:var(--bg-secondary);border-left:3px solid var(--success);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:var(--fs-body);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <span>
-          <span style="color:var(--muted);font-size:var(--fs-micro);display:block;margin-bottom:2px;">💳 House account</span>
+          <span style="color:var(--muted);font-size:var(--fs-micro);display:block;margin-bottom:2px;"><i class="kc-ic kc-ic-card" aria-hidden="true"></i> House account</span>
           Settles day <strong>${ha.day || 1}</strong> monthly on the saved card
           ${ha.min ? ` · min ${fmtGbp(ha.min)}` : ''}${ha.max ? ` · max ${fmtGbp(ha.max)}` : ''}
           · ${ha.lastSettled === thisYm ? `<span style="color:var(--success);">this month settled ✔</span>` : ha.lastSettled ? `last settled ${escHtml(ha.lastSettled)}` : 'never settled yet'}
-          ${ha.lastInvoiceUrl ? ` · <a href="${escHtml(ha.lastInvoiceUrl)}" target="_blank" rel="noopener" style="color:var(--accent);">🧾 last invoice${ha.lastInvoiceNumber ? ' ' + escHtml(ha.lastInvoiceNumber) : ''} ↗</a>` : ''}
+          ${ha.lastInvoiceUrl ? ` · <a href="${escHtml(ha.lastInvoiceUrl)}" target="_blank" rel="noopener" style="color:var(--accent);"><i class="kc-ic kc-ic-receipt" aria-hidden="true"></i> last invoice${ha.lastInvoiceNumber ? ' ' + escHtml(ha.lastInvoiceNumber) : ''} ↗</a>` : ''}
         </span>
         <button class="btn btn-outline btn-sm kc-ic kc-ic-card" style="margin-left:auto;" onclick="openHouseSettleModal('${c.id}')">Settle month</button>
       </div>` : '';
@@ -7831,12 +7831,12 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   // surfaced on the card).
   const notesHtml = c.notes ? `
       <div style="background:var(--bg-secondary);border-left:3px solid var(--gold);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:var(--fs-body);color:var(--text);white-space:pre-wrap;">
-        <span style="color:var(--muted);font-size:var(--fs-micro);display:block;margin-bottom:2px;">📝 Notes</span>${escHtml(c.notes)}
+        <span style="color:var(--muted);font-size:var(--fs-micro);display:block;margin-bottom:2px;"><i class="kc-ic kc-ic-edit-note" aria-hidden="true"></i> Notes</span>${escHtml(c.notes)}
       </div>` : '';
   const custTasks = (tasksList || []).filter(t => t.customerId === c.id && !t.done)
     .sort((a, b) => String(a.dueDate || '').localeCompare(String(b.dueDate || '')));
   const tasksHtml = custTasks.length ? `
-      <div class="section-divider">⏰ Open reminders & tasks</div>
+      <div class="section-divider"><i class="kc-ic kc-ic-clock" aria-hidden="true"></i> Open reminders & tasks</div>
       <div style="margin-bottom:16px;">
         ${custTasks.slice(0, 6).map(t => `
           <div style="display:flex;align-items:center;gap:8px;font-size:var(--fs-body);padding:5px 0;border-bottom:1px solid var(--border);">
@@ -7974,7 +7974,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
           : `<span class="kc-id-missing">no contact email</span>`)}
         ${factRow('Also', c.altEmail ? `<a href="mailto:${escHtml(c.altEmail)}" dir="ltr">${escHtml(c.altEmail)}</a>` : '')}
         ${factRow('Carrier login', c.accountEmail
-          ? `<span dir="ltr" style="color:var(--gold);">⚙️ ${escHtml(c.accountEmail)}</span>` : '',
+          ? `<span dir="ltr" style="color:var(--gold);"><i class="kc-ic kc-ic-gear" aria-hidden="true"></i> ${escHtml(c.accountEmail)}</span>` : '',
           'ours, not theirs — never write to it')}
         ${factRow('Address', c.address ? escHtml(c.address) : '')}
         ${factRow('Customer since', since ? escHtml(since) : '')}
@@ -8055,20 +8055,19 @@ function buildCustomerPanelHtml(c, mode = 'card') {
       <div class="section-divider">Active Services</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">${servicesHTML}</div>`}
 
-      <div class="section-divider">💰 Wallet</div>
+      <div class="section-divider"><i class="kc-ic kc-ic-money" aria-hidden="true"></i> Wallet</div>
       <div id="walletSection-${c.id}" style="margin-bottom:18px;">
         <div style="color:var(--muted);font-size:var(--fs-body);padding:6px 0;">Loading wallet…</div>
       </div>
 
-      <div class="section-divider">📄 Documents</div>
+      <div class="section-divider"><i class="kc-ic kc-ic-file" aria-hidden="true"></i> Documents</div>
       <div id="docsSection-${c.id}" style="margin-bottom:18px;">
         <div style="color:var(--muted);font-size:var(--fs-body);padding:6px 0;">Loading documents…</div>
       </div>`;
 
   const historyDetailsHtml = `
       <details style="margin-top:18px;margin-bottom:6px;">
-        <summary style="cursor:pointer;font-weight:600;color:var(--text);font-size:var(--fs-body);padding:6px 0;border-top:1px solid var(--border);">
-          📋 Full history — ${timeline.length} record${timeline.length === 1 ? '' : 's'}${lifetimeSpend > 0 ? ` · ${fmtGbp(lifetimeSpend)} lifetime` : ''}
+        <summary style="cursor:pointer;font-weight:600;color:var(--text);font-size:var(--fs-body);padding:6px 0;border-top:1px solid var(--border);"><i class="kc-ic kc-ic-clipboard" aria-hidden="true"></i> Full history — ${timeline.length} record${timeline.length === 1 ? '' : 's'}${lifetimeSpend > 0 ? ` · ${fmtGbp(lifetimeSpend)} lifetime` : ''}
           ${timelineSummary ? `<div style="font-weight:400;color:var(--muted);font-size:var(--fs-micro);margin-top:2px;">${escHtml(timelineSummary)}</div>` : ''}
         </summary>
         <div style="max-height:300px;overflow-y:auto;margin-top:8px;">${timelineHtml}</div>
@@ -8092,7 +8091,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   // actually open all day. Customer-typed text, so escaped; the pin and the
   // border are what say "read me", not colour alone.
   const popNoteHtml = c.popNote ? `
-      <div class="kc-popnote" role="alert">📌 ${escHtml(c.popNote)}</div>` : '';
+      <div class="kc-popnote" role="alert"><i class="kc-ic kc-ic-pin" aria-hidden="true"></i> ${escHtml(c.popNote)}</div>` : '';
 
   if (!isPage) {
     return `
@@ -8587,7 +8586,7 @@ function renderDocsSection(custId, docs) {
     </div>`;
   const pendingHtml = pending.length ? `
     <div style="background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:8px 10px;margin-bottom:8px;">
-      <div style="font-size:var(--fs-micro);font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">⏳ Customer uploads — awaiting review</div>
+      <div style="font-size:var(--fs-micro);font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;"><i class="kc-ic kc-ic-hourglass" aria-hidden="true"></i> Customer uploads — awaiting review</div>
       ${pending.map(d => `
         <div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:var(--fs-body);">
           <span style="flex:1;">${escHtml(d.filename)}</span>
@@ -8731,7 +8730,7 @@ async function openHouseSettleModal(custId) {
   const monthRows = (data.entries || []).filter(e => String(e.at || '').slice(0, 7) === ym);
   houseStatementCache = { c, ym, bal, entries: monthRows };
   showDynamicModal(`
-    <div class="modal-title">💳 Settle month — ${escName(c.firstName)} ${escName(c.lastName || '')}</div>
+    <div class="modal-title kc-ic kc-ic-card">Settle month — ${escName(c.firstName)} ${escName(c.lastName || '')}</div>
     <div style="font-size:var(--fs-body);margin-bottom:12px;">
       Wallet balance: <strong style="color:${bal < 0 ? 'var(--danger-ink)' : 'var(--success)'};">${escHtml(KC_MONEY.moneySayShort({ balance: bal }).text)}</strong>
       ${clampNote ? `<br><span style="color:var(--gold);">${escHtml(clampNote)}</span>` : ''}
@@ -9020,7 +9019,7 @@ async function saveCardOnFile(custId) {
   if (!res || !res.success) { toast(res?.error || 'Could not reach Stripe.', 'error'); return; }
 
   showDynamicModal(`
-    <div class="modal-title">💳 Save a card on file</div>
+    <div class="modal-title kc-ic kc-ic-card">Save a card on file</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
       ${c ? `For <strong>${escName(`${c.firstName || ''} ${c.lastName || ''}`.trim())}</strong>. ` : ''}Type the card here —
       the field belongs to Stripe, so the number never reaches this app. Nothing is charged now.
@@ -9108,7 +9107,7 @@ async function kcSaveCardConfirm(custId) {
 
   if (out?.error) {
     if (err) { err.textContent = out.error.message; err.style.display = ''; }
-    if (btn) { btn.disabled = false; btn.textContent = '🔒 Save the card'; }
+    if (btn) { btn.disabled = false; btn.classList.add('kc-ic', 'kc-ic-lock'); btn.textContent = 'Save the card'; }
     return;
   }
   // Stripe has the card. It attaches to the customer when the
@@ -9140,7 +9139,7 @@ function openPaymentLinkModal(custId) {
   const c = customers.find(x => x.id === custId);
   if (!c) return;
   showDynamicModal(`
-    <div class="modal-title">🔗 Payment link — ${escName(c.firstName)} ${escName(c.lastName)}</div>
+    <div class="modal-title kc-ic kc-ic-link">Payment link — ${escName(c.firstName)} ${escName(c.lastName)}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">Creates a Stripe pay-by-card link tied to this customer. When they pay, it's credited to their wallet automatically. Copy it and send it however you message this customer.</div>
     <div class="form-grid">
       <div class="form-group">
@@ -9245,7 +9244,7 @@ function openElidModal(customerId) {
   const guess = elidLinesOf(c).length ? '' : elidGuessUsername(c);
   const cid = escHtml(String(customerId));
   showDynamicModal(`
-    <div class="modal-title">📡 ELID accounts — ${escName(c.firstName)} ${escName(c.lastName)}</div>
+    <div class="modal-title kc-ic kc-ic-antenna">ELID accounts — ${escName(c.firstName)} ${escName(c.lastName)}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Live balance &amp; status on the ELID telecom switch. Read-only. A customer can have more than one line (e.g. a main line and a calling-card) — the ★ primary is summarised on the card.</div>
     <div id="elidLines"></div>
     <div style="display:flex;gap:8px;align-items:flex-end;margin-top:12px;">
@@ -9347,7 +9346,7 @@ let elidMatchStop = false;
 function openElidMatchModal() {
   elidMatchStop = false;
   showDynamicModal(`
-    <div class="modal-title">🔗 Match customers to ELID</div>
+    <div class="modal-title kc-ic kc-ic-link">Match customers to ELID</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">Goes through every customer, guesses their ELID username from the name, and — <strong>only when ELID confirms the account and the name matches</strong> — saves the link on the customer. Read-only against ELID; nothing is mislinked and no new customers are created. Safe to stop anytime.</div>
     <div id="emProg" style="font-size:var(--fs-body);margin-bottom:8px;">Ready when you are.</div>
     <div id="emList" style="max-height:220px;overflow:auto;font-size:var(--fs-body);border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:none;"></div>
@@ -9403,7 +9402,7 @@ async function runElidMatch() {
 // CREATE). Creation pulls each account's real name live from ELID, so imported
 // customers are named correctly; internal/test accounts are pre-unticked.
 async function openElidImportModal() {
-  showDynamicModal(`<div class="modal-title">📥 Import ELID accounts</div><div id="eiBody" style="font-size:var(--fs-body);color:var(--muted);">Loading ELID accounts…</div>`);
+  showDynamicModal(`<div class="modal-title kc-ic kc-ic-download">Import ELID accounts</div><div id="eiBody" style="font-size:var(--fs-body);color:var(--muted);">Loading ELID accounts…</div>`);
   try {
     const r = await kcFetch('/api/elid/accounts');
     const j = await r.json().catch(() => ({}));
@@ -9505,7 +9504,7 @@ function renderElidImport(accounts) {
       <span style="flex:1;">${escHtml(a.username)}</span>${a.internal ? '<span style="font-size:var(--fs-micro);color:var(--warning,#b7791f);">internal?</span>' : ''}
     </label>`).join('') || '<div style="color:var(--muted);font-size:var(--fs-small);">None — every new account is either linked or matched.</div>';
   showDynamicModal(`
-    <div class="modal-title">📥 Import ELID accounts</div>
+    <div class="modal-title kc-ic kc-ic-download">Import ELID accounts</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">${linked.length} already linked · ${possible} likely existing (${exact.length} same spelling + ${fuzzy.length} similar) · ${fresh.length} new. Nothing happens until you press a button. Names for new customers are pulled live from ELID.</div>
     <div class="section-divider" style="margin:6px 0;">Likely already a customer — link instead <span style="color:var(--muted);font-weight:400;">(${possible})</span></div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin:0 0 6px;">Exact matches are pre-ticked; “similar — check” are spelling-variant guesses left un-ticked — tick the ones that are really the same person.</div>
@@ -10084,7 +10083,7 @@ async function dupMarkNotSame(aId, bId) {
 }
 
 async function openDupScanModal() {
-  showDynamicModal(`<div class="modal-title">👥 Possible duplicate customers</div><div id="dupBody" style="font-size:var(--fs-body);color:var(--muted);">Comparing every customer against every other…</div>`);
+  showDynamicModal(`<div class="modal-title kc-ic kc-ic-users">Possible duplicate customers</div><div id="dupBody" style="font-size:var(--fs-body);color:var(--muted);">Comparing every customer against every other…</div>`);
   try {
     const r = await kcFetch('/api/customers/duplicates');
     const j = await r.json().catch(() => ({}));
@@ -10183,10 +10182,10 @@ function renderDupScan(j) {
         <button class="btn btn-outline btn-sm kc-ic kc-ic-hand" onclick="dupMarkNotSame('${escHtml(p.a.id)}','${escHtml(p.b.id)}')">Not the same person</button>
       </div>
     </div>`).join('') ||
-    '<div style="color:var(--success);font-size:var(--fs-body);">Nothing left to review. 🎉</div>';
+    '<div style="color:var(--success);font-size:var(--fs-body);">Nothing left to review.</div>';
 
   showDynamicModal(`
-    <div class="modal-title">👥 Possible duplicate customers</div>
+    <div class="modal-title kc-ic kc-ic-users">Possible duplicate customers</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
       <span id="dupCount">${pairs.length} pair${pairs.length === 1 ? '' : 's'}</span> to judge${j.dismissed ? ` · ${j.dismissed} already marked "not the same"` : ''}.
       Merging moves every SIM, rental, flight, repair and money line onto the record you keep, then removes the other —
@@ -10215,7 +10214,7 @@ function dupPairSettled(aId, bId) {
   if (!left.length) {
     const list = document.querySelector('.dup-list');
     if (list) list.innerHTML =
-      '<div style="color:var(--success);font-size:var(--fs-body);">Nothing left to review. 🎉</div>';
+      '<div style="color:var(--success);font-size:var(--fs-body);">Nothing left to review.</div>';
   }
 }
 
@@ -10492,7 +10491,7 @@ function openRefundModal(customerId, idx) {
   if (!e || !/^STRIPE-pi_/.test(e.reference || '')) { toast('Reload the card and try again.', 'error'); return; }
   const max = Math.abs(Number(e.amount) || 0);
   showDynamicModal(`
-    <div class="modal-title">↩️ Refund card payment</div>
+    <div class="modal-title kc-ic kc-ic-undo">Refund card payment</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">Refunds money back to the customer's card via Stripe and removes the matching wallet credit. Original payment: <strong>${fmtGbp(max)}</strong>${e.description ? ' · ' + escHtml(e.description) : ''}.</div>
     <div class="form-group form-full">
       <label class="form-label">Amount to refund</label>
@@ -10667,7 +10666,7 @@ async function recordComm(customerId, entry) {
 function openLogCommModal(customerId) {
   const c = customers.find(x => x.id === customerId);
   showDynamicModal(`
-    <div class="modal-title">📞 Log a call / note${c ? ' — ' + escName(c.firstName) + ' ' + escName(c.lastName) : ''}</div>
+    <div class="modal-title kc-ic kc-ic-call">Log a call / note${c ? ' — ' + escName(c.firstName) + ' ' + escName(c.lastName) : ''}</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Type</label>
@@ -10727,7 +10726,7 @@ function openDraftReminderModal(customerId) {
   if (!c) return;
   const draft = buildReminderDraft(c);
   showDynamicModal(`
-    <div class="modal-title">✉️ Draft reminder — ${escName(c.firstName)} ${escName(c.lastName)}</div>
+    <div class="modal-title kc-ic kc-ic-mail">Draft reminder — ${escName(c.firstName)} ${escName(c.lastName)}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Built from what this customer currently owes / has coming up. Edit it, then copy — <strong>nothing is sent</strong>.</div>
     <textarea class="form-input" id="drText" rows="9" aria-label="Reminder message — edit before copying" style="font-family:inherit;">${escHtml(draft)}</textarea>
     <div class="modal-actions">
@@ -10858,7 +10857,7 @@ async function runAiReply(customerId) {
     if (out) out.value = j.draft || '';
     const wrap = document.getElementById('airOutWrap'); if (wrap) wrap.style.display = '';
     const copyBtn = document.getElementById('airCopyBtn'); if (copyBtn) copyBtn.style.display = '';
-    if (btn) btn.textContent = '✨ Redraft';
+    if (btn) { btn.classList.add('kc-ic', 'kc-ic-sparkle'); btn.textContent = 'Redraft'; }
   } catch {
     toast('Could not reach the reply drafter.', 'error');
   } finally {
@@ -10905,7 +10904,7 @@ function openRentalSmsModal(rentalId) {
   if (!r) return;
   const waC = customers.find(x => x.id === r.customerId) || { phone: r.customerPhone };
   showDynamicModal(`
-    <div class="modal-title">✉️ Status SMS — ${custNameLink(r.customerId, escName(r.customerName || ''))}</div>
+    <div class="modal-title kc-ic kc-ic-mail">Status SMS — ${custNameLink(r.customerId, escName(r.customerName || ''))}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
       Drafted from the rental's current status${r.customerPhone ? ` · 📞 <span class="copy-val">${escHtml(fmtPhone(r.customerPhone))}</span>` : ''}.
       Edit it, then copy — or send it directly once Twilio is connected.</div>
@@ -10963,7 +10962,7 @@ function openWalletModal(customerId, balance = null) {
         onclick="document.getElementById('wlKind').value='payment';document.getElementById('wlMethodWrap').style.display='block';document.getElementById('wlAmount').value='${owed.toFixed(2)}'">Pay full ${fmtGbp(owed)}</button>`
     : '';
   showDynamicModal(`
-    <div class="modal-title">💰 Record payment / credit — ${c ? escName(c.firstName) + ' ' + escName(c.lastName) : ''}</div>
+    <div class="modal-title kc-ic kc-ic-money">Record payment / credit — ${c ? escName(c.firstName) + ' ' + escName(c.lastName) : ''}</div>
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">Type</label>
@@ -10997,7 +10996,7 @@ function openWalletModal(customerId, balance = null) {
       </div>
       ${c && c.email && !isOwnAccountEmail(c.email) ? `<div class="form-group form-full">
         <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:var(--fs-body);">
-          <input type="checkbox" id="wlEmail"> <span style="min-width:0;overflow-wrap:anywhere;">✉️ Email a receipt to ${escHtml(c.email)}</span>
+          <input type="checkbox" id="wlEmail"> <span style="min-width:0;overflow-wrap:anywhere;"><i class="kc-ic kc-ic-mail" aria-hidden="true"></i> Email a receipt to ${escHtml(c.email)}</span>
         </label>
       </div>` : ''}
     </div>
@@ -11097,7 +11096,7 @@ async function renderWalletTab() {
   const data = await kcFetch(`/api/ledger?since=${today}&recent=50`)
     .then(r => r.ok ? r.json() : null).catch(() => null);
   if (!data || !data.success) {
-    content.innerHTML = `<div class="empty-state"><div class="emoji">💰</div>
+    content.innerHTML = `<div class="empty-state"><div class="emoji kc-ic kc-ic-money"></div>
       <p>Wallet unavailable${data?.error ? ' — ' + escHtml(data.error) : ''}.</p></div>`;
     return;
   }
@@ -11121,7 +11120,7 @@ async function renderWalletTab() {
     </div>`;
 
   const arrearsHtml = arrears.length === 0
-    ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">Nobody owes money. 🎉</div>`
+    ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">Nobody owes money.</div>`
     : arrears.map(b => balanceRow(b, true)).join('');
   const creditsHtml = credits.length === 0
     ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">No prepaid credit held.</div>`
@@ -11220,7 +11219,7 @@ async function openCashupModal(dateISO) {
 
   showDynamicModal(`
     <div class="modal-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <span>🧾 Cash-up — ${fmtDate(today)}</span>
+      <span><i class="kc-ic kc-ic-receipt" aria-hidden="true"></i> Cash-up — ${fmtDate(today)}</span>
       <span style="display:flex;gap:6px;">
         <button class="btn btn-outline btn-sm" onclick="openCashupModal('${prevISO}')" title="Count an earlier day">‹ ${fmtDate(prevISO)}</button>
         ${isToday ? '' : `<button class="btn btn-outline btn-sm" onclick="openCashupModal('${nextISO}')" title="Later day">${fmtDate(nextISO)} ›</button>`}
@@ -11330,7 +11329,7 @@ async function renderBankRecon() {
   kcSkeleton('bank');
   const data = await kcFetch('/api/bank').then(r => r.json()).catch(() => null);
   if (!data || !data.success) {
-    content.innerHTML = `<div class="empty-state"><div class="emoji">🏦</div>
+    content.innerHTML = `<div class="empty-state"><div class="emoji kc-ic kc-ic-bank"></div>
       <p>${escHtml(data?.error || 'Bank reconciliation is unavailable.')}</p>
       <button class="btn btn-outline" onclick="renderTab('wallet')">← Back to Wallet</button></div>`;
     return;
@@ -11482,7 +11481,7 @@ function bankPaint() {
 
     <div class="table-card" style="padding:6px 18px 12px;">
       ${shown.length ? shown.map(row).join('') : `
-        <div class="empty-state" style="padding:32px 0;"><div class="emoji">🏦</div>
+        <div class="empty-state" style="padding:32px 0;"><div class="emoji kc-ic kc-ic-bank"></div>
           <p>${(d.transactions || []).length === 0
             ? 'No bank rows yet — import a statement above to start.'
             : 'Nothing in this view.'}</p></div>`}
@@ -12630,7 +12629,7 @@ function renderSimRows() {
     // Same trap as Rentals: with 800+ SIMs on file, "No SIM plans yet" reads
     // as the list having been wiped rather than filtered.
     const narrowed = sims.length > 0;
-    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="emoji">💳</div>
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="emoji kc-ic kc-ic-card"></div>
       <p>${narrowed ? 'No SIM plans match this view.' : 'No SIM plans yet.'}</p>
       <small>${narrowed ? '' : 'Click "+ New SIM plan" to add one.'}</small>
       ${narrowed ? kcClearFiltersBtn('sim') : ''}</div></td></tr>`;
@@ -13117,7 +13116,7 @@ function openManageSimModal(id) {
         </div>`).join('');
 
   showDynamicModal(`
-    <div class="modal-title">💳 ${custNameLink(s.customerId, escHtml(capName(s.customerName)))} ${providerBadge(s.provider)}</div>
+    <div class="modal-title kc-ic kc-ic-card">${custNameLink(s.customerId, escHtml(capName(s.customerName)))} ${providerBadge(s.provider)}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:var(--fs-body);">
       <div style="color:var(--muted);">SIM Number</div><div style="font-weight:600;">${escHtml(s.simNumber||'—')}</div>
       <div style="color:var(--muted);">ICCID</div><div style="font-size:var(--fs-micro);">${escHtml(s.iccid||'—')}</div>
@@ -13148,7 +13147,7 @@ function openManageSimModal(id) {
     <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;">
       <div class="section-divider" style="margin-top:0;">Add Charge</div>
       ${multiSimDiscountPct(sims, s.customerId) > 0
-        ? `<div style="font-size:var(--fs-small);color:var(--gold);margin-bottom:8px;">🏷️ 3+ active plans — ${multiSimDiscountPct(sims, s.customerId)}% off applied to monthly/annual prefills.</div>` : ''}
+        ? `<div style="font-size:var(--fs-small);color:var(--gold);margin-bottom:8px;"><i class="kc-ic kc-ic-tag" aria-hidden="true"></i> 3+ active plans — ${multiSimDiscountPct(sims, s.customerId)}% off applied to monthly/annual prefills.</div>` : ''}
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
         <div style="display:flex;flex-direction:column;gap:4px;flex:2;min-width:min(100%, 28ch);">
           <label style="font-size:var(--fs-micro);color:var(--muted);font-weight:600;">Type</label>
@@ -13608,10 +13607,21 @@ function fallbackCopy(t, done) {
   ta.remove();
 }
 
-function toast(msg, type = 'success') {
+function toast(msg, type = 'success', icon = null) {
   const container = document.getElementById('toast-container');
   const el = document.createElement('div');
   el.className = `toast toast-${type}`;
+  // The message is still set as TEXT — a toast carries customer names and
+  // free-typed notes, and the day it starts parsing HTML is the day one of
+  // those becomes markup. The icon therefore rides beside it as its own
+  // element rather than inside the string, which is also why call sites pass
+  // an icon NAME here instead of prefixing a glyph to msg.
+  if (icon) {
+    const ic = document.createElement('i');
+    ic.className = `kc-ic kc-ic-${icon}`;
+    ic.setAttribute('aria-hidden', 'true');
+    el.appendChild(ic);
+  }
   const body = document.createElement('span');
   body.textContent = msg;
   el.appendChild(body);
@@ -13822,7 +13832,7 @@ function tmQueueHtml() {
   return `
     <div class="card" id="tmPanel" style="margin-bottom:12px;">
       <div class="card-head">
-        <h2 class="card-title">✉️ Tickets from email
+        <h2 class="card-title"><i class="kc-ic kc-ic-mail" aria-hidden="true"></i> Tickets from email
           <span class="tm-count">${tmData.tickets.length}</span></h2>
         <span style="font-size:var(--fs-micro);color:var(--muted);">
           Read from the airline's own confirmation — confirm the details and it becomes a booking.</span>
@@ -14078,7 +14088,7 @@ function tsRender() {
     </label>`;
 
   showStackedModal(`
-    <div class="modal-title">👥 Split this ticket across payers</div>
+    <div class="modal-title kc-ic kc-ic-users">Split this ticket across payers</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
       ${escHtml(tsState.airline || 'Flight')}${tsState.route ? ' · ' + escHtml(tsState.route) : ''}${
         tsState.travelDate ? ' · ' + escHtml(fmtDate(tsState.travelDate)) : ''}${
@@ -14270,7 +14280,7 @@ function tmAttach(id) {
       booking was already charged when it was made.
     </div>
     ${candidates.length ? candidates.map(row).join('')
-      : '<div class="empty-state"><div class="emoji">✈️</div><p>No booking to add it to yet.</p><small>Confirm one of these tickets as a booking first, then add the other legs to it.</small></div>'}
+      : '<div class="empty-state"><div class="emoji kc-ic kc-ic-plane"></div><p>No booking to add it to yet.</p><small>Confirm one of these tickets as a booking first, then add the other legs to it.</small></div>'}
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeStackedModal()">Cancel</button></div>
   `, { width: 560 });
 }
@@ -14452,7 +14462,7 @@ function tmShowMail(id) {
   // and squeezing one into a phone-width column is how it became unreadable in
   // the first place. Capped by max-width:95vw like every other dialog.
   showStackedModal(`
-    <div class="modal-title">✉️ ${escHtml(t.subject || '(no subject)')}</div>
+    <div class="modal-title kc-ic kc-ic-mail">${escHtml(t.subject || '(no subject)')}</div>
     <div style="font-size:var(--fs-micro);color:var(--muted);margin-bottom:8px;">
       From ${escHtml(t.from || 'unknown')}${t.receivedAt ? ' · ' + escHtml(fmtDate(t.receivedAt)) : ''}</div>
     <pre class="tm-body" data-kc-scroller>${tmMailHtml(t.body)}</pre>
@@ -14489,7 +14499,7 @@ function renderBookingsTab() {
   const rows = loadFailed.bookings
     ? `<tr><td colspan="10">${errorHtml('Couldn’t load your bookings')}</td></tr>`
     : bkShown.length === 0
-    ? `<tr><td colspan="10"><div class="empty-state"><div class="emoji">✈️</div><p>${bookings.length ? 'No bookings match this filter.' : 'No bookings yet.'}</p><small>${bookings.length ? 'Change the filter above.' : 'Click "New booking" to add the first one.'}</small>${kcClearFiltersBtn('bookings')}</div></td></tr>`
+    ? `<tr><td colspan="10"><div class="empty-state"><div class="emoji kc-ic kc-ic-plane"></div><p>${bookings.length ? 'No bookings match this filter.' : 'No bookings yet.'}</p><small>${bookings.length ? 'Change the filter above.' : 'Click "New booking" to add the first one.'}</small>${kcClearFiltersBtn('bookings')}</div></td></tr>`
     : bkShown.map(b => `
       <tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a,input'))openEditBookingModal('${escHtml(b.id)}')" title="Open booking">
         <td onclick="event.stopPropagation()">
@@ -14772,7 +14782,7 @@ function openPassengersModal(bookingId) {
   bkPassengers = (b.passengers || []).map(p => ({ ...p }));
   if (!bkPassengers.length) bkPassengers.push({});
   showDynamicModal(`
-    <div class="modal-title">👥 Passengers — ${escHtml(b.route)} ${b.travelDate ? fmtDate(b.travelDate) : ''}</div>
+    <div class="modal-title kc-ic kc-ic-users">Passengers — ${escHtml(b.route)} ${b.travelDate ? fmtDate(b.travelDate) : ''}</div>
     <div id="bkPaxEditor">${paxEditorHtml()}</div>
     <button type="button" class="btn btn-outline" onclick="bkAddPax()"
       style="padding:5px 12px;font-size:var(--fs-small);margin-top:2px;">+ Add passenger</button>
@@ -14822,8 +14832,8 @@ async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
     .map(s => `<option value="${escHtml(s.id)}">${escHtml(s.name)} — ${fmtGbp(s.price)}</option>`)
     .join('');
   showDynamicModal(`
-    <div class="modal-title">✈️ ${prefill ? 'Confirm booking details' : 'New booking'}</div>
-    ${prefill ? `<div class="tm-prefill">✉️ Filled in from the ${escHtml(prefill.airline || 'airline')} email${
+    <div class="modal-title kc-ic kc-ic-plane">${prefill ? 'Confirm booking details' : 'New booking'}</div>
+    ${prefill ? `<div class="tm-prefill"><i class="kc-ic kc-ic-mail" aria-hidden="true"></i> Filled in from the ${escHtml(prefill.airline || 'airline')} email${
       prefill.bookingReference ? ` · ${escHtml(prefill.bookingReference)}` : ''
     } — this is what the app read, not what it decided. Change anything that is wrong, then save.${
       /* The fee is tiered per passenger and the email says how many. The
@@ -15323,7 +15333,7 @@ async function openCheckinModal(bookingId) {
   // string into an inline handler).
   window.paxCopyBlocks = pax.map(paxAll);
   showDynamicModal(`
-    <div class="modal-title">🛫 Check-in — ${escHtml(b.route)} ${b.travelDate ? fmtDate(b.travelDate) : ''}</div>
+    <div class="modal-title kc-ic kc-ic-takeoff">Check-in — ${escHtml(b.route)} ${b.travelDate ? fmtDate(b.travelDate) : ''}</div>
     ${paxHtml}
     <div class="form-grid">
       <div class="form-group">
@@ -15457,7 +15467,7 @@ function openEditBookingModal(id) {
   if (!b) return;
   ebLegs = Array.isArray(b.legs) ? b.legs.map(l => ({ ...l })) : [];
   showDynamicModal(`
-    <div class="modal-title">✈️ ${custNameLink(b.customerId, escName(b.customerName || 'Booking'))} — ${escHtml(b.route || '')}</div>
+    <div class="modal-title kc-ic kc-ic-plane">${custNameLink(b.customerId, escName(b.customerName || 'Booking'))} — ${escHtml(b.route || '')}</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Passenger(s) summary</label>
@@ -15494,11 +15504,10 @@ function openEditBookingModal(id) {
       <div class="form-group form-full"><label class="form-label">Notes</label>
         <textarea class="form-input" id="ebNotes" rows="2">${escHtml(b.notes || '')}</textarea></div>
     </div>
-    <div style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-secondary);font-size:var(--fs-small);color:var(--muted);">
-      💷 Price <strong>${fmtGbp((b.price || 0))}</strong> + fee <strong>${fmtGbp((b.bookingFee || 0))}</strong> (read-only — adjust money via the customer's wallet).
-      &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openPassengersModal('${escHtml(b.id)}');return false;">👥 Passengers</a>
-      &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openCheckinModal('${escHtml(b.id)}');return false;">🛫 Check-in</a>
-      &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openTravelReqModal('${escHtml(b.id)}');return false;">🛂 Travel requirements</a>
+    <div style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-secondary);font-size:var(--fs-small);color:var(--muted);"><i class="kc-ic kc-ic-pound" aria-hidden="true"></i> Price <strong>${fmtGbp((b.price || 0))}</strong> + fee <strong>${fmtGbp((b.bookingFee || 0))}</strong> (read-only — adjust money via the customer's wallet).
+      &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openPassengersModal('${escHtml(b.id)}');return false;"><i class="kc-ic kc-ic-users" aria-hidden="true"></i> Passengers</a>
+      &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openCheckinModal('${escHtml(b.id)}');return false;"><i class="kc-ic kc-ic-takeoff" aria-hidden="true"></i> Check-in</a>
+      &nbsp;·&nbsp; <a href="#" onclick="closeDynamicModal();openTravelReqModal('${escHtml(b.id)}');return false;"><i class="kc-ic kc-ic-passport" aria-hidden="true"></i> Travel requirements</a>
     </div>
     <div class="modal-actions" style="justify-content:space-between;">
       <button class="btn btn-outline kc-ic kc-ic-trash" style="color:var(--danger);border-color:color-mix(in srgb, var(--danger) 40%, var(--border));"
@@ -15598,7 +15607,7 @@ async function openTravelReqModal(bookingId) {
     const validity = r.validityMonths ? ` · valid ~${Math.round(r.validityMonths / 12)} yr${r.validityMonths >= 24 ? 's' : ''}` : '';
     const link = r.url ? `<a href="${escHtml(r.url)}" target="_blank" rel="noopener">Open official site ↗</a>` : '';
     const draftBtn = r.code !== 'NONE'
-      ? `<a href="#" onclick="copyTravelDraft(${JSON.stringify(destName)},${JSON.stringify(r.label)},${JSON.stringify(r.url || '')});return false;">✉️ Copy draft for customer</a>` : '';
+      ? `<a href="#" onclick="copyTravelDraft(${JSON.stringify(destName)},${JSON.stringify(r.label)},${JSON.stringify(r.url || '')});return false;"><i class="kc-ic kc-ic-mail" aria-hidden="true"></i> Copy draft for customer</a>` : '';
 
     if (cov.status === 'not-needed') {
       cover = `<div style="color:var(--success);font-size:var(--fs-body);">No entry authorisation needed — passport only.</div>`;
@@ -15638,7 +15647,7 @@ async function openTravelReqModal(bookingId) {
   }).join('');
 
   showDynamicModal(`
-    <div class="modal-title">🛂 Travel requirements${res.route ? ` — ${escHtml(res.route)}` : ''}</div>
+    <div class="modal-title kc-ic kc-ic-passport">Travel requirements${res.route ? ` — ${escHtml(res.route)}` : ''}</div>
     <div class="form-group form-full">
       <label class="form-label">Destination</label>
       <select class="form-input" onchange="saveBookingDestination('${escHtml(bookingId)}', this.value)">${destSel}</select>
@@ -15777,7 +15786,7 @@ async function renderRepairsTab() {
   const shown = kcViewApply('repairs', repairs);
   const emptyMsg = repairs.length ? 'No repairs match this filter.' : 'No repairs yet.';
   const rows = shown.length === 0
-    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🔧</div><p>${emptyMsg}</p><small>${repairs.length ? 'Change the filter above.' : 'Click "New repair" to open the first ticket.'}</small>${kcClearFiltersBtn('repairs')}</div></td></tr>`
+    ? `<tr><td colspan="7"><div class="empty-state"><div class="emoji kc-ic kc-ic-wrench"></div><p>${emptyMsg}</p><small>${repairs.length ? 'Change the filter above.' : 'Click "New repair" to open the first ticket.'}</small>${kcClearFiltersBtn('repairs')}</div></td></tr>`
     : shown.map(r => `
       <tr>
         <td><div class="customer-name">${custNameLink(r.customerId, escName(r.customerName || '—'))}</div></td>
@@ -15830,7 +15839,7 @@ function openNewRepairModal(preselectCustomerId = null) {
       <strong class="rpPriceLbl">${fmtGbp(m.price)}</strong>
     </label>`).join('');
   showDynamicModal(`
-    <div class="modal-title">🔧 New repair</div>
+    <div class="modal-title kc-ic kc-ic-wrench">New repair</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
@@ -15843,8 +15852,7 @@ function openNewRepairModal(preselectCustomerId = null) {
       <div class="form-group form-full" style="flex-direction:row;align-items:center;gap:10px;">
         <input type="checkbox" id="rpKC" onchange="rpKCToggle()"
           style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent);">
-        <label for="rpKC" style="font-size:var(--fs-body);cursor:pointer;">
-          🏷️ Phone purchased at Kosher Connect — discounted prices
+        <label for="rpKC" style="font-size:var(--fs-body);cursor:pointer;"><i class="kc-ic kc-ic-tag" aria-hidden="true"></i> Phone purchased at Kosher Connect — discounted prices
         </label>
       </div>
       <div class="form-group form-full">
@@ -15973,7 +15981,7 @@ function openRepairSmsModal(repairId) {
   if (!r) return;
   const c = customers.find(x => x.id === r.customerId);
   showDynamicModal(`
-    <div class="modal-title">✉️ Ready to collect — ${custNameLink(r.customerId, escName(r.customerName || ''))}</div>
+    <div class="modal-title kc-ic kc-ic-mail">Ready to collect — ${custNameLink(r.customerId, escName(r.customerName || ''))}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Edit it, then ${WHATSAPP_ENABLED ? 'copy or open WhatsApp' : 'copy it into your messages'} — <strong>nothing is sent</strong> from here.</div>
     <textarea class="form-input" id="rpsmsText" rows="4" style="font-family:inherit;">${escHtml(buildRepairSms(r))}</textarea>
     <div class="modal-actions">
@@ -16007,7 +16015,7 @@ function openCollectRepairModal(id) {
   const r = repairs.find(x => x.id === id);
   if (!r) return;
   showDynamicModal(`
-    <div class="modal-title">🔧 Collect repair — ${custNameLink(r.customerId, escName(r.customerName || ''))}</div>
+    <div class="modal-title kc-ic kc-ic-wrench">Collect repair — ${custNameLink(r.customerId, escName(r.customerName || ''))}</div>
     <div style="font-size:var(--fs-ui);margin-bottom:12px;">${escHtml(r.device || 'device')} · total <strong>${fmtGbp((r.total || 0))}</strong></div>
     <div class="form-group">
       <label class="form-label">Payment</label>
@@ -16376,7 +16384,13 @@ function svcPipTick() {
   const sub = d.getElementById('pipSub');
   if (sub) sub.textContent = `${fmtGbp(amount)} · ${minutes} min at £${settingNum('online_hourly_rate', 45)}/hr`;
   const hold = d.getElementById('pipHold');
-  if (hold) hold.textContent = paused ? '▶ Resume' : '⏸ Pause';
+  // ▶ is monochrome text and stays; ⏸ was a colour emoji, so the pause face
+  // becomes a class. Both states set BOTH classes so neither can stick.
+  if (hold) {
+    hold.classList.toggle('kc-ic', !paused);
+    hold.classList.toggle('kc-ic-pause', !paused);
+    hold.textContent = paused ? '▶ Resume' : 'Pause';
+  }
 }
 
 function svcTimerFloatTick() {
@@ -16485,7 +16499,7 @@ async function renderServicesTab() {
   ], renderServicesTab);
   const svcShown = kcViewApply('services', serviceOrders);
   const orderRows = svcShown.length === 0
-    ? `<tr><td colspan="5"><div class="empty-state"><div class="emoji">🖨️</div><p>${serviceOrders.length ? 'No orders match this filter.' : 'No services charged yet.'}</p>${serviceOrders.length ? '' : '<small>Click "+ Charge a service" to record the first one.</small>'}${kcClearFiltersBtn('services')}</div></td></tr>`
+    ? `<tr><td colspan="5"><div class="empty-state"><div class="emoji kc-ic kc-ic-printer"></div><p>${serviceOrders.length ? 'No orders match this filter.' : 'No services charged yet.'}</p>${serviceOrders.length ? '' : '<small>Click "+ Charge a service" to record the first one.</small>'}${kcClearFiltersBtn('services')}</div></td></tr>`
     : svcShown.map(o => `
       <tr>
         <td><div class="customer-name">${custNameLink(o.customerId, escName(o.customerName || '—'))}</div></td>
@@ -16597,7 +16611,7 @@ async function openNewServiceModal(preselectCustomerId = null) {
   const svcOptions = onlineMenu.map(m =>
     `<option value="${escHtml(String(m.id))}">${escHtml(m.name)} — ${fmtGbp(m.price)}${m.repeatPrice !== null ? ` (${onlineRepeatFrom()}+ ${fmtGbp(m.repeatPrice)})` : ''}</option>`).join('');
   showDynamicModal(`
-    <div class="modal-title">🖨️ Charge a service</div>
+    <div class="modal-title kc-ic kc-ic-printer">Charge a service</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
@@ -16828,7 +16842,7 @@ function shopRowsHtml() {
   const shopShown = kcViewApply('shop', faceted);
   if (shopShown.length === 0) {
     const narrowed = active.length > 0;
-    return `<tr><td colspan="7"><div class="empty-state"><div class="emoji">🛍️</div>
+    return `<tr><td colspan="7"><div class="empty-state"><div class="emoji kc-ic kc-ic-bag"></div>
       <p>${narrowed ? 'No stock matches this view.' : 'No stock yet — add your first item.'}</p>
       ${narrowed && shopFacetsActive()
         ? '<button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="shopClearFacets()">✕ Clear the filters</button>'
@@ -16924,7 +16938,7 @@ function openPurchaseOrderModal() {
   }
   poLines = [{ stockItemId: '', qty: 1, unitCost: '' }];
   showDynamicModal(`
-    <div class="modal-title">📦 New purchase order</div>
+    <div class="modal-title kc-ic kc-ic-package">New purchase order</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
       What has been ordered from a wholesaler. Nothing is charged and the shelf does not move —
       receiving it later is what puts the quantities on.</div>
@@ -17137,7 +17151,7 @@ async function renderShopTab() {
         <div class="history-desc"><strong>${escHtml(d.supplierName || '?')}</strong>${d.invoiceRef ? ' — ' + escHtml(d.invoiceRef) : ''}
           — ${d.lines.map(l => `${l.qty}× ${escHtml(l.description)}`).join(', ')}</div>
         <div style="font-size:var(--fs-micro);color:var(--muted);">
-          ${fmtDate(d.deliveryDate)}${d.paid ? ` · <span style="color:var(--success-ink);font-weight:600;">✔ Paid${d.paidAt ? ' ' + fmtDate(d.paidAt) : ''}</span>` : d.invoiceTotal !== null ? ' · <span style="color:var(--warning-ink);font-weight:600;">⏳ Unpaid</span>' : ''}
+          ${fmtDate(d.deliveryDate)}${d.paid ? ` · <span style="color:var(--success-ink);font-weight:600;">✔ Paid${d.paidAt ? ' ' + fmtDate(d.paidAt) : ''}</span>` : d.invoiceTotal !== null ? ' · <span style="color:var(--warning-ink);font-weight:600;"><i class="kc-ic kc-ic-hourglass" aria-hidden="true"></i> Unpaid</span>' : ''}
           ${d.notes ? ' · ' + escHtml(d.notes) : ''}
         </div>
       </div>
@@ -17441,7 +17455,7 @@ function openGoodsInModal() {
   const supplierOptions = suppliers.filter(s => s.active)
     .map(s => `<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
   showDynamicModal(`
-    <div class="modal-title">📥 Goods In</div>
+    <div class="modal-title kc-ic kc-ic-download">Goods In</div>
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">Supplier *</label>
@@ -17640,7 +17654,7 @@ async function openStockStory(itemId) {
   // edit they were in. The stacked layer closes back onto the form, values
   // intact, which is the whole reason the button is there.
   showStackedModal(`
-    <div class="modal-title">📜 ${itemName} — the story of the count</div>
+    <div class="modal-title kc-ic kc-ic-scroll">${itemName} — the story of the count</div>
     <div id="storyBody" data-item="${escHtml(String(itemId))}"><div style="color:var(--muted);font-size:var(--fs-body);">Reading the records…</div></div>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeStackedModal()">Close</button></div>
   `, { width: 520 });
@@ -17758,7 +17772,7 @@ function renderPosView() {
         <div id="posTiles" class="pos-tiles pos-tiles-full"></div>
       </div>
       <div class="pos-side">
-        <div class="pos-receipt-head">🧾 Current sale</div>
+        <div class="pos-receipt-head"><i class="kc-ic kc-ic-receipt" aria-hidden="true"></i> Current sale</div>
         <div id="posLastSale"></div>
         <div id="posBasket" class="pos-receipt"></div>
         <div class="pos-summary">
@@ -17837,7 +17851,7 @@ function posRenderTender() {
     const maxW = Math.min(credit, total);
     html += `
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
-        <label style="font-size:var(--fs-body);flex-shrink:0;">👛 From wallet £</label>
+        <label style="font-size:var(--fs-body);flex-shrink:0;"><i class="kc-ic kc-ic-purse" aria-hidden="true"></i> From wallet £</label>
         <input class="form-input" id="posWalletIn" type="number" min="0" step="0.01"
           value="${posWallet ? posWallet.toFixed(2) : ''}" placeholder="0.00"
           oninput="posWalletInput()" style="width:96px;min-height:0;padding:7px 10px;">
@@ -17953,7 +17967,7 @@ function posCustomerChange() {
   // The pop-up note fires the moment the customer is attached — the Epos Now
   // Pop Up Notes idea. A toast, not a modal: the counter is mid-sale and the
   // note must interrupt the EYE, not the hands.
-  if (c?.popNote) toast(`📌 ${c.popNote}`, 'warning');
+  if (c?.popNote) toast(`${c.popNote}`, 'warning', 'pin');
   posRenderTender();
   // Straight back to scanning once someone is chosen — but not while the
   // operator is still typing a name, which also lands here the moment the
@@ -18846,7 +18860,7 @@ async function renderKolTorahTab() {
 
     ${ktSectionHead('Consignment by shul', 'deliver / sold / return moves the count; Settle records the money')}
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr));gap:10px;">
-      ${shulCards || '<div class="empty-state" style="grid-column:1/-1;"><div class="emoji">🏛️</div><p>No shuls yet — add the first one below.</p></div>'}
+      ${shulCards || '<div class="empty-state" style="grid-column:1/-1;"><div class="emoji kc-ic kc-ic-institution"></div><p>No shuls yet — add the first one below.</p></div>'}
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px;padding:10px 12px;border:1px dashed var(--border);border-radius:8px;">
       <span style="font-size:var(--fs-small);font-weight:700;color:var(--accent);">➕ Add a shul</span>
@@ -18882,7 +18896,7 @@ async function renderKolTorahTab() {
     <div class="table-wrap"><table>
       <thead><tr><th>Date</th><th>Shul</th><th>£ sold</th><th>£ collected</th><th>Method</th><th>Note</th></tr></thead>
       <tbody>${d.settlements.length === 0
-        ? '<tr><td colspan="6"><div class="empty-state"><div class="emoji">🧾</div><p>No settlements recorded yet.</p></div></td></tr>'
+        ? '<tr><td colspan="6"><div class="empty-state"><div class="emoji kc-ic kc-ic-receipt"></div><p>No settlements recorded yet.</p></div></td></tr>'
         : d.settlements.map(x => `
           <tr>
             <td class="kc-date">${fmtDate(x.createdAt)}</td>
@@ -19115,7 +19129,7 @@ async function saveQuickReminder(kind, id, minutes) {
     customerId: ctx.customerId || null,
   }).catch(() => null);
   closeDynamicModal();
-  toast(`⏰ Will pop up in ${minutes >= 60 ? (minutes / 60) + ' hour' + (minutes > 60 ? 's' : '') : minutes + ' minutes'}.`, 'success');
+  toast(`Will pop up in ${minutes >= 60 ? (minutes / 60) + ' hour' + (minutes > 60 ? 's' : '') : minutes + ' minutes'}.`, 'success', 'clock');
 }
 
 function checkLocalReminders() {
@@ -19124,7 +19138,7 @@ function checkLocalReminders() {
   if (!due.length) return;
   localStorage.setItem('kcLocalReminders', JSON.stringify(list.filter(r => r.at > Date.now())));
   for (const r of due) {
-    toast(`⏰ REMINDER: ${r.label}`, 'warning');
+    toast(`REMINDER: ${r.label}`, 'warning', 'clock');
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification('Kosher Connect — reminder', { body: r.label, icon: '/logo.png' });
     }
@@ -19137,7 +19151,7 @@ function openRemindModal(kind, id) {
   const tomorrow = parseLocalDate(localISO());
   tomorrow.setDate(tomorrow.getDate() + 1);
   showDynamicModal(`
-    <div class="modal-title">⏰ Remind me</div>
+    <div class="modal-title kc-ic kc-ic-clock">Remind me</div>
     <div style="font-size:var(--fs-body);color:var(--muted);margin-bottom:14px;">${escHtml(ctx.label)}</div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
       <span style="font-size:var(--fs-small);color:var(--muted);">Quick (pops up in-app):</span>
@@ -19279,7 +19293,7 @@ let bizCustom = null;   // { from, to, now, prev, prevLabel }
 
 async function openBusinessSummary() {
   showDynamicModal(`
-    <div class="modal-title">📊 Business summary</div>
+    <div class="modal-title kc-ic kc-ic-chart">Business summary</div>
     <div id="bizSummaryBody" style="color:var(--muted);padding:20px 4px;">Loading…</div>`);
 
   const rep = (from) => kcFetch('/api/ledger?report=1&from=' + from)
@@ -19642,7 +19656,7 @@ const filterView = (tab, apply, reRender) => { apply(); goToTab(tab); if (reRend
 // counter reading a step that was corrected somewhere else.
 function openHowToModal(prefill = '') {
   showDynamicModal(`
-    <div class="modal-title">❓ Help</div>
+    <div class="modal-title kc-ic kc-ic-help">Help</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
       Every job in the shop, step by step. Ask in your own words — "someone brought a phone back",
       "the writing is too small".</div>
@@ -19658,7 +19672,7 @@ function openHowToModal(prefill = '') {
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 4px;">
       <button class="btn btn-outline btn-sm kc-ic kc-ic-bot" style="white-space:normal;text-align:left;"
         onclick="closeDynamicModal();openAssistantModal(document.getElementById('howToSearch')?.value || '')">Ask about the shop's numbers</button>
-      <a class="btn btn-outline btn-sm" href="/manual" target="_blank" rel="noopener">📖 The full manual</a>
+      <a class="btn btn-outline btn-sm" href="/manual" target="_blank" rel="noopener"><i class="kc-ic kc-ic-book" aria-hidden="true"></i> The full manual</a>
     </div>
     <div id="howToOut" style="margin-top:12px;"></div>
   `);
@@ -19676,7 +19690,7 @@ function renderHowTo() {
   if (!out) return;
   const all = howToGuides();
   if (!all.length) {
-    out.innerHTML = `<div class="empty-state"><div class="emoji">❓</div><p>The guides did not load.</p>
+    out.innerHTML = `<div class="empty-state"><div class="emoji kc-ic kc-ic-help"></div><p>The guides did not load.</p>
       <small>Reload the page — and Ctrl+K → “Ask” still reaches the assistant meanwhile.</small></div>`;
     return;
   }
@@ -19755,7 +19769,7 @@ let assistantPending = null;
 
 function openAssistantModal(prefill) {
   showDynamicModal(`
-    <div class="modal-title">🤖 Ask Kosher Connect</div>
+    <div class="modal-title kc-ic kc-ic-bot">Ask Kosher Connect</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Ask a question or say what you want to do — e.g. “who owes money?”, “overdue rentals”, “what's Abraham Diamant's balance?”, “draft a reminder for Yoel Kahana”, “create a £50 payment link for Shloime Grinfeld”, “add a task to order chargers”. Anything that makes a change is shown for you to confirm first.</div>
     <div style="display:flex;gap:8px;align-items:flex-end;">
       <input class="form-input" id="askInput" placeholder="Type here…" style="flex:1;" onkeydown="if(event.key==='Enter')runAssistant()">
@@ -19818,7 +19832,7 @@ async function assistantWhoOwes() {
     const j = await r.json().catch(() => ({}));
     if (!r.ok || !j.success) return '<div style="color:var(--danger-ink);font-size:var(--fs-body);">Could not load balances.</div>';
     const owers = (j.arrears || []).slice().sort((a, b) => Math.abs(Number(b.balance)) - Math.abs(Number(a.balance)));
-    if (!owers.length) return '<div style="color:var(--success);font-size:var(--fs-body);">Nobody is in debt right now. 🎉</div>';
+    if (!owers.length) return '<div style="color:var(--success);font-size:var(--fs-body);">Nobody is in debt right now.</div>';
     const total = owers.reduce((s, b) => s + Math.abs(Number(b.balance) || 0), 0);
     const rows = owers.slice(0, 40).map((b) =>
       `<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:var(--fs-body);">
@@ -19847,7 +19861,7 @@ async function assistantCustomerInfo(name) {
 }
 function assistantOverdue() {
   const od = rentals.filter((r) => r.status === 'overdue');
-  if (!od.length) return '<div style="color:var(--success);font-size:var(--fs-body);">No overdue rentals. 🎉</div>';
+  if (!od.length) return '<div style="color:var(--success);font-size:var(--fs-body);">No overdue rentals.</div>';
   const rows = od.map((r) =>
     `<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:var(--fs-body);">
       <button style="background:none;border:0;color:var(--accent);cursor:pointer;padding:0;text-align:start;" onclick="openCustomerById('${escHtml(String(r.customerId))}')">${escHtml(assistantNameOf(r.customerId))}</button>
@@ -20382,7 +20396,7 @@ function openShortcuts() {
   el.addEventListener('mousedown', e => { if (e.target === el) closeShortcuts(); });
   el.innerHTML = `
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="kcShortcutsTitle" style="width:460px;">
-      <div class="modal-title" id="kcShortcutsTitle">⌨️ Keyboard shortcuts</div>
+      <div class="modal-title kc-ic kc-ic-keyboard" id="kcShortcutsTitle">Keyboard shortcuts</div>
       <div class="kc-shortcuts">
         ${KC_SHORTCUTS.map(([k, d]) => `<div class="kc-shortcut"><span class="kbd">${escHtml(k)}</span><span class="kc-shortcut-desc">${escHtml(d)}</span></div>`).join('')}
       </div>
@@ -20674,7 +20688,7 @@ else startSvcTimerFloat();
 // then shows the plan grouped Now / Today / Soon with a reason and next step.
 // Advisory: ticking ✓ marks a task done; nothing else is changed automatically.
 async function openTaskTriageModal() {
-  showDynamicModal(`<div class="modal-title">🧠 AI plan for your day</div><div id="aiPlanBody" style="font-size:var(--fs-body);color:var(--muted);">Reading your open tasks and working out the order…</div>`);
+  showDynamicModal(`<div class="modal-title kc-ic kc-ic-brain">AI plan for your day</div><div id="aiPlanBody" style="font-size:var(--fs-body);color:var(--muted);">Reading your open tasks and working out the order…</div>`);
   try {
     const r = await kcFetch('/api/tasks/prioritize', { method: 'POST' });
     const j = await r.json().catch(() => ({}));
@@ -20685,8 +20699,8 @@ async function openTaskTriageModal() {
 function renderTaskTriage(j) {
   const buckets = [
     { key: 'now', label: '🔴 Now', color: 'var(--danger-ink)' },
-    { key: 'today', label: '🟡 Today', color: 'var(--warning,#b7791f)' },
-    { key: 'soon', label: '⚪ Soon', color: 'var(--muted)' },
+    { key: 'today', label: '<span class="kc-dot kc-dot-medium"></span>Today', color: 'var(--warning,#b7791f)' },
+    { key: 'soon', label: '<span class="kc-dot kc-dot-idle"></span>Soon', color: 'var(--muted)' },
   ];
   const row = (t) => `
     <div class="triage-row" style="padding:8px 0;border-bottom:1px solid var(--border);">
@@ -20699,7 +20713,7 @@ function renderTaskTriage(j) {
             ${t.action ? `<span style="color:var(--accent);">→ ${escHtml(t.action)}</span>` : ''}
             ${t.customerId
               ? `<button style="background:none;border:0;color:var(--accent);cursor:pointer;padding:0;font-size:var(--fs-micro);" onclick="openCustomerById('${escHtml(String(t.customerId))}')" class="kc-ic kc-ic-user">${escName(t.customerName || 'open customer')}</button>`
-              : (t.customerName ? `<span style="color:var(--muted);">👤 ${escName(t.customerName)}</span>` : '')}
+              : (t.customerName ? `<span style="color:var(--muted);"><i class="kc-ic kc-ic-user" aria-hidden="true"></i> ${escName(t.customerName)}</span>` : '')}
           </div>
         </div>
       </div>
@@ -20710,9 +20724,9 @@ function renderTaskTriage(j) {
     return `<div style="margin-bottom:14px;"><div class="section-divider" style="color:${b.color};">${b.label} <span style="color:var(--muted);font-weight:400;">· ${list.length}</span></div>${list.map(row).join('')}</div>`;
   }).join('');
   showDynamicModal(`
-    <div class="modal-title">🧠 AI plan for your day</div>
+    <div class="modal-title kc-ic kc-ic-brain">AI plan for your day</div>
     ${j.focus ? `<div style="background:var(--accent-wash);border:1px solid var(--primary-subdued);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:var(--fs-body);"><strong>Start here:</strong> ${escHtml(j.focus)}</div>` : ''}
-    <div style="max-height:420px;overflow:auto;">${groups || '<div style="color:var(--success);font-size:var(--fs-body);">Nothing open. 🎉</div>'}</div>
+    <div style="max-height:420px;overflow:auto;">${groups || '<div style="color:var(--success);font-size:var(--fs-body);">Nothing open.</div>'}</div>
     <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:8px;">An AI suggestion from your live task list — you decide. Ticking ✓ marks the task done.</div>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeDynamicModal()">Close</button><button class="btn btn-primary" onclick="openTaskTriageModal()">↻ Re-plan</button></div>
   `);
@@ -21157,7 +21171,7 @@ function cmMakeTask(id) {
  */
 async function openForwardQueue() {
   showDynamicModal(`
-    <div class="modal-title">📤 Forward to customers</div>
+    <div class="modal-title kc-ic kc-ic-upload">Forward to customers</div>
     <div id="fwdBody" style="font-size:var(--fs-body);color:var(--muted);">Reading the queue…</div>
   `, { width: 720 });
   const res = await kcFetch('/api/mail-forward').then(r => r.json()).catch(() => null);
@@ -21270,7 +21284,7 @@ function cmLearn(id) {
   // names eight different people, so this saves typing and decides nothing.
   cmLearnFilter = String(m.recipientTag || '');
   showDynamicModal(`
-    <div class="modal-title">🔗 Which line gets mail at this address?</div>
+    <div class="modal-title kc-ic kc-ic-link">Which line gets mail at this address?</div>
     <p style="font-size:var(--fs-small);color:var(--muted);margin:0 0 12px;">
       Carrier mail sent to <strong>${escHtml(m.recipient)}</strong> will be filed on the line you
       pick — this message and every one after it. Pick the line the address really belongs to;
@@ -21767,7 +21781,7 @@ function paintConfirm() {
     content.innerHTML = `
       <div class="stats-row">${confirmStatsHtml()}</div>
       <div class="card"><div class="empty-state">
-        <div class="emoji">${remaining ? '☕' : '🎉'}</div>
+        <div class="emoji">${remaining ? '☕' : ''}</div>
         <p>${remaining
           ? `${remaining} more to go — beyond what one screen can carry at once.`
           : 'Every imported record has been confirmed by a human.'}</p>
@@ -21819,7 +21833,7 @@ function confirmCardHtml(b) {
       <div class="rv-name">${b.name ? escName(b.name) : '<span style="color:var(--muted)">(no name)</span>'}</div>
       ${line('Phone', b.phone
         ? `${escHtml(fmtPhone(b.phone))}${b.contact && b.contact.kind === 'ours'
-            ? ' <span class="kc-contact-ours">📶 also a SIM with us</span>'
+            ? ' <span class="kc-contact-ours"><i class="kc-ic kc-ic-signal" aria-hidden="true"></i> also a SIM with us</span>'
             : b.contact && b.contact.kind === 'outside'
               ? ' <span class="kc-contact-outside">outside line</span>' : ''}`
         : `<span class="kc-contact-flag">${escHtml((b.contact && b.contact.label) || 'No contact number on record')}</span>${b.sims.length
@@ -21965,7 +21979,7 @@ async function renderTasksTab() {
     const custLabel = t.customerName
       ? (t.customerId
           ? `<a class="dash-link kc-namelink" href="/customers/${encodeURIComponent(String(t.customerId))}" style="color:var(--accent);cursor:pointer;"
-            onclick="event.stopPropagation();if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();kcOpenCustomerLink('${escJs(String(t.customerId))}')">👤 ${escName(t.customerName)}</a> · `
+            onclick="event.stopPropagation();if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();kcOpenCustomerLink('${escJs(String(t.customerId))}')"><i class="kc-ic kc-ic-user" aria-hidden="true"></i> ${escName(t.customerName)}</a> · `
           : '👤 ' + escName(t.customerName) + ' · ')
       : '';
     return `
@@ -22002,7 +22016,7 @@ async function renderTasksTab() {
       </div>` : ''}
       ${s && !t.done ? `
       <div class="task-suggest">
-        <span>💡 Suggests <strong>${s.priority === 'High' ? '🔥 Now' : s.priority === 'Normal' ? '📋 Next' : '🌙 Later'}</strong> — ${escHtml(s.reason)}</span>
+        <span><i class="kc-ic kc-ic-idea" aria-hidden="true"></i> Suggests <strong>${s.priority === 'High' ? '🔥 Now' : s.priority === 'Normal' ? '📋 Next' : '🌙 Later'}</strong> — ${escHtml(s.reason)}</span>
         <span class="task-suggest-actions">
           <button class="btn btn-primary btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;"
             onclick="acceptSuggestion('${escHtml(t.id)}', '${s.priority}')">✓ Accept</button>
@@ -22034,10 +22048,10 @@ async function renderTasksTab() {
 
   content.innerHTML = `
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-label">🔥 Now</div><div class="stat-value" style="color:${nowLane.length ? 'var(--danger-ink)' : 'var(--success)'};">${nowLane.length}</div></div>
-      <div class="stat-card"><div class="stat-label">📋 Next</div><div class="stat-value">${nextLane.length}</div></div>
-      <div class="stat-card"><div class="stat-label">💤 Snoozed</div><div class="stat-value">${snoozed.length}</div></div>
-      <div class="stat-card"><div class="stat-label">💡 Suggestions</div><div class="stat-value" style="color:${suggestions.length ? 'var(--accent)' : 'var(--text)'};">${suggestions.length}</div>
+      <div class="stat-card"><div class="stat-label"><i class="kc-ic kc-ic-urgent" aria-hidden="true"></i> Now</div><div class="stat-value" style="color:${nowLane.length ? 'var(--danger-ink)' : 'var(--success)'};">${nowLane.length}</div></div>
+      <div class="stat-card"><div class="stat-label"><i class="kc-ic kc-ic-clipboard" aria-hidden="true"></i> Next</div><div class="stat-value">${nextLane.length}</div></div>
+      <div class="stat-card"><div class="stat-label"><i class="kc-ic kc-ic-snooze" aria-hidden="true"></i> Snoozed</div><div class="stat-value">${snoozed.length}</div></div>
+      <div class="stat-card"><div class="stat-label"><i class="kc-ic kc-ic-idea" aria-hidden="true"></i> Suggestions</div><div class="stat-value" style="color:${suggestions.length ? 'var(--accent)' : 'var(--text)'};">${suggestions.length}</div>
         ${suggestions.length ? '<div class="stat-sub">awaiting your call</div>' : '<div class="stat-sub">all agreed</div>'}</div>
     </div>
     <div class="table-card" style="padding:14px;margin-bottom:14px;">
@@ -22064,12 +22078,12 @@ async function renderTasksTab() {
       ${tkBar}
     </div>
     <div class="dash-cols">
-      ${lane('🔥 Now — do these first', nowLane, 'Nothing urgent. 🎉')}
+      ${lane('🔥 Now — do these first', nowLane, 'Nothing urgent.')}
       ${lane('📋 Next — when the counter is quiet', nextLane, 'Nothing queued.')}
     </div>
     ${snoozed.length ? `
     <div class="table-card" style="padding:8px 16px 12px;margin-top:16px;">
-      <div class="section-divider" style="margin-top:10px;">💤 Snoozed <span style="color:var(--muted);font-weight:400;">· ${snoozed.length}</span></div>
+      <div class="section-divider" style="margin-top:10px;"><i class="kc-ic kc-ic-snooze" aria-hidden="true"></i> Snoozed <span style="color:var(--muted);font-weight:400;">· ${snoozed.length}</span></div>
       ${snoozed.map(snoozeCard).join('')}
     </div>` : ''}
     ${doneTasks.length ? `
@@ -22383,7 +22397,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
       <div class="dash-hero-divider"></div>
       <div class="dash-hero-label">Outstanding</div>
       <div class="dash-hero-value" style="font-size:var(--fs-hero);letter-spacing:-0.28px;">${stillLoading ? '…' : fmtGbp(arrearsTotal)}</div>
-      <div class="dash-hero-sub">${arrears.length ? arrears.length + ' customer' + (arrears.length === 1 ? '' : 's') + ' in arrears' : (stillLoading ? '&nbsp;' : 'nobody owes money 🎉')}</div>
+      <div class="dash-hero-sub">${arrears.length ? arrears.length + ' customer' + (arrears.length === 1 ? '' : 's') + ' in arrears' : (stillLoading ? '&nbsp;' : 'nobody owes money')}</div>
       ${arrears.length ? `<div class="dash-hero-divider"></div>` +
         arrears.slice(0, 8).map(a => `
           <div class="dash-hero-row${a.customerId ? ' dash-link' : ''}"${a.customerId
@@ -22511,7 +22525,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   const comingShown = coming.slice(0, 5);
   dashFeedActions = shown.concat(comingShown).map(a => a[2]);
   const attentionHtml = shown.length === 0
-    ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">All clear. 🎉</div>`
+    ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">All clear.</div>`
     : shown.map(([icon, html], i) => `
         <div class="feed-item dash-link" onclick="dashFeedActions[${i}]()" title="Open">
           <span class="feed-icon">${icon}</span><span>${html}</span>
@@ -22617,7 +22631,7 @@ async function renderVirtualTab() {
   [...vnSelected].forEach(id => { if (!liveVnIds.has(id)) vnSelected.delete(id); });
   vnVisibleIds = vnShown.map(v => String(v.id));
   const rows = vnShown.length === 0
-    ? `<tr><td colspan="8"><div class="empty-state"><div class="emoji">🔢</div><p>${virtualNumbers.length ? 'No numbers match this filter.' : 'No virtual numbers yet.'}</p>${virtualNumbers.length ? '' : '<small>Click "+ New number" to add one.</small>'}${kcClearFiltersBtn('virtual')}</div></td></tr>`
+    ? `<tr><td colspan="8"><div class="empty-state"><div class="emoji kc-ic kc-ic-digits"></div><p>${virtualNumbers.length ? 'No numbers match this filter.' : 'No virtual numbers yet.'}</p>${virtualNumbers.length ? '' : '<small>Click "+ New number" to add one.</small>'}${kcClearFiltersBtn('virtual')}</div></td></tr>`
     : vnShown.map(v => `
       <tr>
         <td><input type="checkbox" aria-label="Select this number" ${vnSelected.has(String(v.id)) ? 'checked' : ''}
@@ -22671,7 +22685,7 @@ async function renderVirtualTab() {
     </div>
     ${vnPriceMatrix.length ? `
     <div class="table-card" style="margin-top:16px;">
-      <div class="section-divider" style="margin:12px 14px 4px;">💷 Bundle price reference <span style="color:var(--muted);font-weight:400;">· per month · customer price list</span></div>
+      <div class="section-divider" style="margin:12px 14px 4px;"><i class="kc-ic kc-ic-pound" aria-hidden="true"></i> Bundle price reference <span style="color:var(--muted);font-weight:400;">· per month · customer price list</span></div>
       <table>
         <thead><tr><th>Bundle</th><th>Incoming only</th><th>+100 outgoing</th><th>Unlimited</th><th>PAYG</th></tr></thead>
         <tbody>${vnPriceMatrix.map(p => `
@@ -22688,7 +22702,7 @@ async function renderVirtualTab() {
 
 function openNewVNModal(preselectCustomerId) {
   showDynamicModal(`
-    <div class="modal-title">🔢 New Virtual Number</div>
+    <div class="modal-title kc-ic kc-ic-digits">New Virtual Number</div>
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">Number *</label>
@@ -22770,7 +22784,7 @@ function openVNBillingModal(id) {
   const planOptions = Object.entries(VN_PLAN_LABELS).map(([k, label]) =>
     `<option value="${k}" ${v.plan === k ? 'selected' : ''}>${label}</option>`).join('');
   showDynamicModal(`
-    <div class="modal-title">💷 Monthly Billing — ${escHtml(fmtPhone(v.number))}</div>
+    <div class="modal-title kc-ic kc-ic-pound">Monthly Billing — ${escHtml(fmtPhone(v.number))}</div>
     <div style="color:var(--muted);font-size:var(--fs-body);margin-bottom:14px;">
       ${v.customerName ? `Customer: <strong style="color:var(--text);">${escName(v.customerName)}</strong>` :
         '<span style="color:var(--danger-ink);">⚠ No customer assigned — billing needs one.</span>'}
@@ -22952,7 +22966,7 @@ async function renderSettingsTab() {
           <td><button class="btn btn-primary btn-sm" onclick="saveNewTeamMember()">+ Add</button></td>
         </tr>
       </tbody></table>
-      <div class="section-divider" style="margin:14px 14px 4px;">🔓 What helpers can see</div>
+      <div class="section-divider" style="margin:14px 14px 4px;"><i class="kc-ic kc-ic-unlock" aria-hidden="true"></i> What helpers can see</div>
       <div style="padding:4px 14px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
         ${['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'shop', 'koltorah', 'virtual', 'tasks', 'review', 'mail', 'settings'].map(t => `
           <label style="display:flex;align-items:center;gap:5px;font-size:var(--fs-small);cursor:pointer;">
@@ -22975,7 +22989,7 @@ async function renderSettingsTab() {
           <tr style="${r.enabled ? '' : 'opacity:0.5;'}">
             <td><strong>${escHtml(r.name)}</strong></td>
             <td style="font-size:var(--fs-small);">${escHtml((autoTriggers[r.trigger]?.label || r.trigger).replace('N', r.threshold))}</td>
-            <td style="font-size:var(--fs-small);">📋 task <span class="badge badge-${r.priority === 'high' ? 'rental' : 'sim'}" style="font-size:var(--fs-micro);">${escHtml(r.priority)}</span></td>
+            <td style="font-size:var(--fs-small);"><i class="kc-ic kc-ic-clipboard" aria-hidden="true"></i> task <span class="badge badge-${r.priority === 'high' ? 'rental' : 'sim'}" style="font-size:var(--fs-micro);">${escHtml(r.priority)}</span></td>
             <td><label style="font-size:var(--fs-small);cursor:pointer;"><input type="checkbox" ${r.enabled ? 'checked' : ''} onchange="toggleAutomation('${escHtml(r.id)}', this.checked)" style="accent-color:var(--accent);"> on</label></td>
             <td style="white-space:nowrap;">
               <button class="action-btn" aria-label="Edit this rule" onclick="openAutomationModal('${escHtml(r.id)}')">✏️</button>
@@ -23011,7 +23025,7 @@ async function renderSettingsTab() {
       </tbody></table>
       <div style="padding:8px 14px 14px;">
         <button class="btn btn-outline btn-sm" onclick="openEmailAliasModal()">+ New address</button>
-        <span style="font-size:var(--fs-micro);color:var(--muted);margin-left:8px;">🔑 makes an SMTP password so the app (or Gmail send-as) can send from that address.</span>
+        <span style="font-size:var(--fs-micro);color:var(--muted);margin-left:8px;"><i class="kc-ic kc-ic-key" aria-hidden="true"></i> makes an SMTP password so the app (or Gmail send-as) can send from that address.</span>
       </div>`) : settingsCard('emails', '📧 Email addresses', 'not connected yet',
     `<div style="padding:8px 16px 14px;font-size:var(--fs-body);color:var(--muted);">${escHtml(aliases.error || 'Unavailable.')}</div>`));
 
@@ -23226,7 +23240,7 @@ async function renderSettingsTab() {
       <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
         Comma-separated. Offered when a rental is <strong>voided</strong> (↩ in Manage Rental) — every undo keeps its why.</div>
 
-      <div style="padding:10px 16px 2px;border-top:1px solid var(--border);font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;">🎯 Monthly target</div>
+      <div style="padding:10px 16px 2px;border-top:1px solid var(--border);font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;"><i class="kc-ic kc-ic-target" aria-hidden="true"></i> Monthly target</div>
       <div style="padding:8px 16px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <input class="form-input" id="monthlyTargetInput" type="number" min="0" step="10" placeholder="e.g. 4000"
           value="${monthlyTargetValue() || ''}" style="width:160px;min-height:0;padding:8px 12px;font-size:var(--fs-body);">
@@ -23236,7 +23250,7 @@ async function renderSettingsTab() {
         Money in, per calendar month. Shown on the dashboard as progress under today's takings.
         Leave it empty for no target — an empty bar every morning is a nag, not a number.</div>
 
-      <div style="padding:10px 16px 2px;border-top:1px solid var(--border);font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;">🔧 Repair stages</div>
+      <div style="padding:10px 16px 2px;border-top:1px solid var(--border);font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;"><i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> Repair stages</div>
       <div style="padding:8px 16px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <input class="form-input" id="repairStagesInput" value="${escHtml(repairStages().join(', '))}"
           placeholder="Waiting for part, Quote sent, Customer approved…" style="flex:1;min-width:240px;min-height:0;padding:8px 12px;font-size:var(--fs-body);">
@@ -23249,7 +23263,7 @@ async function renderSettingsTab() {
         charges the wallet and Cancelled is what closes a job without charging, so those two names carry money.
         Removing a stage here leaves any repair already on it exactly where it is.</div>
 
-      <div style="padding:10px 16px 2px;border-top:1px solid var(--border);font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;">📦 Stock categories</div>
+      <div style="padding:10px 16px 2px;border-top:1px solid var(--border);font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;"><i class="kc-ic kc-ic-package" aria-hidden="true"></i> Stock categories</div>
       <div style="padding:8px 16px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <input class="form-input" id="stockCatsInput" value="${escHtml(customStockCategoriesClient().join(', '))}"
           placeholder="Gift set, Watch strap, Bluetooth speaker…" style="flex:1;min-width:240px;min-height:0;padding:8px 12px;font-size:var(--fs-body);">
@@ -23376,7 +23390,7 @@ async function renderSettingsTab() {
       </tbody></table>
       <div style="padding:8px 14px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
         <button class="btn btn-outline btn-sm" onclick="openPhoneModelModal()">+ Add phone</button>
-        <a class="btn btn-outline btn-sm" href="/phone-guide" target="_blank" rel="noopener">👁 View the public page ↗</a>
+        <a class="btn btn-outline btn-sm" href="/phone-guide" target="_blank" rel="noopener"><i class="kc-ic kc-ic-eye" aria-hidden="true"></i> View the public page ↗</a>
         ${retiredModels.length ? `<span style="font-size:var(--fs-micro);color:var(--muted);">Hidden: ${retiredModels.map(m => `${escHtml(m.name)} <button class="action-btn kc-ic kc-ic-undo" style="font-size:var(--fs-micro);" onclick="restorePhoneModel('${escHtml(m.id)}')">restore</button>`).join(' · ')}</span>` : ''}
       </div>`) : '';
 
@@ -23395,7 +23409,7 @@ async function renderSettingsTab() {
       <table><thead><tr><th>Channel</th><th>Provider</th><th>Status</th><th>What the status means</th></tr></thead>
       <tbody>
         <tr>
-          <td><strong>📧 Email</strong></td>
+          <td><strong><i class="kc-ic kc-ic-email" aria-hidden="true"></i> Email</strong></td>
           <td style="font-size:var(--fs-small);">${escHtml(health?.email?.provider || '—')}</td>
           <td>${chanBadge(health?.email)}</td>
           <td style="font-size:var(--fs-small);color:var(--muted);">HOLD builds &amp; logs but sends nothing · TEST sends everything to your own address · LIVE emails real customers (MAIL_LIVE).</td>
@@ -23417,7 +23431,7 @@ async function renderSettingsTab() {
       </div>
       <div style="padding:0 14px 14px;border-top:1px solid var(--border);">
         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 0 4px;">
-          <strong style="font-size:var(--fs-body);">📜 Message log</strong>
+          <strong style="font-size:var(--fs-body);"><i class="kc-ic kc-ic-scroll" aria-hidden="true"></i> Message log</strong>
           <span style="font-size:var(--fs-micro);color:var(--muted);">every email &amp; SMS the system built — including ones the safety gate held back</span>
           <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadMessageLog()">↻ Load the log</button>
         </div>
@@ -23925,7 +23939,7 @@ async function sendSmsReply(id) {
 function kcTaskFromHere({ title = '', notes = '', customerId = null, customerUuid = null, customerName = '', source = '' } = {}) {
   const suggested = String(title || '').replace(/\s+/g, ' ').trim().slice(0, 120);
   showStackedModal(`
-    <div class="modal-title">📝 Make this a task</div>
+    <div class="modal-title kc-ic kc-ic-edit-note">Make this a task</div>
     ${source ? `<div style="font-size:var(--fs-micro);color:var(--muted);margin-bottom:8px;">from ${escHtml(source)}${customerName ? ` · ${escName(customerName)}` : ''}</div>` : ''}
     <label class="form-label" for="tfhTitle">What needs doing</label>
     <input class="form-input" id="tfhTitle" value="${escHtml(suggested)}" maxlength="160"
@@ -24330,7 +24344,7 @@ async function revealBizAccount(id) {
   if (!res.success) { toast(res.error || 'Could not reveal.', 'error'); return; }
   const a = bizAccountsCache.find(x => x.id === id);
   showDynamicModal(`
-    <div class="modal-title">🔑 ${escHtml(a?.name || 'Credential')}</div>
+    <div class="modal-title kc-ic kc-ic-key">${escHtml(a?.name || 'Credential')}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:8px;">Shown once — close this when you've used it.</div>
     <input class="form-input" readonly value="${escHtml(res.credential)}" onclick="this.select()" style="font-family:monospace;">
     <div class="modal-actions">
@@ -24611,7 +24625,7 @@ let emailAliasCache = [];
 function openEmailAliasModal(id = null) {
   const a = id ? emailAliasCache.find(x => x.id === id) : null;
   showDynamicModal(`
-    <div class="modal-title">📧 ${a ? 'Edit ' + escHtml(a.address) : 'New email address'}</div>
+    <div class="modal-title kc-ic kc-ic-email">${a ? 'Edit ' + escHtml(a.address) : 'New email address'}</div>
     <div class="form-grid">
       ${a ? '' : `<div class="form-group">
         <label class="form-label">Address</label>
@@ -24696,7 +24710,7 @@ async function generateAliasPassword(id, address) {
   if (!res || !res.success) { toast(res?.error || 'Could not generate a password.', 'error'); return; }
   // Shown ONCE — Forward Email never reveals it again, and we don't store it.
   showDynamicModal(`
-    <div class="modal-title">🔑 SMTP password — shown once</div>
+    <div class="modal-title kc-ic kc-ic-key">SMTP password — shown once</div>
     <div style="font-size:var(--fs-body);line-height:1.7;">
       <div style="margin-bottom:10px;color:var(--muted);">Copy these now — this password can't be viewed again (only regenerated).</div>
       <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:var(--fs-body);">
@@ -24717,7 +24731,7 @@ async function generateAliasPassword(id, address) {
 
 function openChangePasswordModal() {
   showDynamicModal(`
-    <div class="modal-title">🔑 Change my password</div>
+    <div class="modal-title kc-ic kc-ic-key">Change my password</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Current password</label>
@@ -24756,7 +24770,7 @@ async function saveChangePassword() {
 
 function openResetPasswordModal(id, label) {
   showDynamicModal(`
-    <div class="modal-title">🔑 Reset password — ${escHtml(label)}</div>
+    <div class="modal-title kc-ic kc-ic-key">Reset password — ${escHtml(label)}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
       Admin reset: no current password needed. Tell them the new one in person.</div>
     <div class="form-group">
@@ -24917,7 +24931,7 @@ function openAutomationModal(id = null) {
   const trigOptions = Object.entries(autoTriggers).map(([k, t]) =>
     `<option value="${k}" ${r && r.trigger === k ? 'selected' : ''}>${escHtml(t.label)}</option>`).join('');
   showDynamicModal(`
-    <div class="modal-title">🤖 ${r ? 'Edit' : 'New'} automation rule</div>
+    <div class="modal-title kc-ic kc-ic-bot">${r ? 'Edit' : 'New'} automation rule</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Rule name</label>

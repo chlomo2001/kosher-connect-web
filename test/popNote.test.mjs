@@ -46,8 +46,12 @@ test('the profile banners it, escaped, above everything', () => {
 test('the till toasts it the moment the customer is picked', () => {
   const fn = CODE.match(/function posCustomerChange\(\) \{[\s\S]*?\n\}/)
   assert.ok(fn, 'posCustomerChange not found')
-  assert.match(fn[0], /if \(c\?\.popNote\) toast\(`📌 \$\{c\.popNote\}`, 'warning'\)/,
-    'picking a customer at the till must surface the note')
+  // The 📌 moved out of the string on 24 Aug: toast() now takes an icon NAME
+  // as its third argument and appends a drawn <i> beside the message, because
+  // the message itself is set with textContent and can never carry markup.
+  // Still pinned hard — the note must reach the till, loudly, and as a warning.
+  assert.match(fn[0], /if \(c\?\.popNote\) toast\(`\$\{c\.popNote\}`, 'warning', 'pin'\)/,
+    'picking a customer at the till must surface the note, with the pin icon')
 })
 
 test('the banner style exists and does not rely on colour alone', () => {
