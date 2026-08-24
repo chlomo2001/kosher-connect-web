@@ -190,6 +190,28 @@
   scrollbar-color: rgba(var(--sb-fg-rgb),0.28) transparent;
 }
 
+/* "There is more this way." On short screens the nav scrolls (rows stopped
+   shrinking, 24 Aug) but the overlay scrollbar paints nothing at rest — the
+   fold read as the end of the menu with Settings below it. A fade at the live
+   edge, exactly the trailing-fade promise the welcome chip strip makes.
+   Sticky children of the scroller: no layout cost, they ride the scroll.
+   Built from var(--brand-dark) so the light rail's cream repaints them too.
+   main.js (kcNavFades) toggles the classes from the scroll position. */
+.sidebar-nav::before, .sidebar-nav::after {
+  content: ''; position: sticky; display: block; height: 26px; z-index: 1;
+  pointer-events: none; opacity: 0; transition: opacity 0.15s var(--ease-out);
+}
+.sidebar-nav::before {
+  top: 0; margin-bottom: -26px;
+  background: linear-gradient(to bottom, var(--brand-dark), transparent);
+}
+.sidebar-nav::after {
+  bottom: 0; margin-top: -26px;
+  background: linear-gradient(to top, var(--brand-dark), transparent);
+}
+.sidebar-nav.kc-more-above::before { opacity: 1; }
+.sidebar-nav.kc-more-below::after { opacity: 1; }
+
 .sidebar-nav::-webkit-scrollbar { width: 8px; }
 
 .sidebar-nav::-webkit-scrollbar-thumb {

@@ -862,7 +862,36 @@ function applyTabVisibility() {
     else if (el.style.display !== 'none') kept = true;
   }
   settle();
+  kcNavFades();
 }
+
+// ── "There is more this way", on the rail ────────────────────────────────
+// The nav scrolls on short screens now that its rows no longer shrink — but
+// Chromium's overlay scrollbar paints nothing at rest, so at 640px tall eight
+// rows (Settings among them) sat below a fold that looked finished. Same
+// promise the welcome page's chip strip makes with its trailing fade: a
+// gradient at whichever edge still hides rows. CSS owns the fades
+// (.sidebar-nav::before/::after); this only says which edges are live.
+function kcNavFades() {
+  const nav = document.querySelector('.sidebar-nav');
+  if (!nav) return;
+  nav.classList.toggle('kc-more-above', nav.scrollTop > 4);
+  nav.classList.toggle('kc-more-below', nav.scrollTop + nav.clientHeight < nav.scrollHeight - 4);
+}
+(() => {
+  const nav = document.querySelector('.sidebar-nav');
+  if (!nav) return;
+  nav.addEventListener('scroll', kcNavFades, { passive: true });
+  window.addEventListener('resize', kcNavFades);
+  // Row heights move without a window resize too — the text-size setting, a
+  // tab hidden by role. Observing the nav and its rows catches both.
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(kcNavFades);
+    ro.observe(nav);
+    for (const el of nav.children) ro.observe(el);
+  }
+  kcNavFades();
+})();
 
 // #49 / #58 — ONE source of truth per destination: its human label, its page
 // title, its render fn, whether the search box shows, and (optionally) its
