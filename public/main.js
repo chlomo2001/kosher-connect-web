@@ -1563,6 +1563,25 @@ function deviceChip(device, { flag = true, model = true, stacked = false, extra 
 // borrowing its model would put the wrong device on the row. (The offline seed
 // has exactly this shape by accident — three rentals, three numbers, one
 // phoneId — which is how the rule got written down.)
+// Every item that went out has been answered, and the hire is still open.
+// This is a HALF-FINISHED job, not an ordinary overdue one: the shop already
+// knows where everything is, so chasing the customer would be wrong. Moshe
+// Bodner's rental sat in this state for days looking like an ordinary overdue
+// (owner, 24 Aug), which is what made a stuck close invisible from the list.
+function rentalItemsAllAnswered(r) {
+  if (!r || r.status === 'returned' || r.voided) return false;
+  const given = ['phone', 'sim', 'charger'].filter((k) => wasGivenUi(r, k));
+  if (!given.length) return false;
+  return given.every((k) => uiItemStatus(r, k) !== 'undecided');
+}
+// The gate's wasGiven, in the browser's own vocabulary (charger = plug|cable).
+function wasGivenUi(r, key) {
+  const eq = r.equipmentGiven;
+  if (!eq) return true;
+  if (key === 'charger') return (eq.plug ?? false) || (eq.cable ?? false);
+  return eq[key] ?? false;
+}
+
 function rentalDeviceChip(rental, opts = {}) {
   const live = ((typeof phones !== 'undefined' && phones) || [])
     .find(x => x.id === rental.phoneId && x.number === rental.phoneNumber);
@@ -2863,7 +2882,34 @@ function mgApplyItemStatus(item, resolved) {
     if (!show) lostAmt.value = '';
   }
   mgUpdateCalc();
+  mgOfferClose();
 }
+
+// When the LAST item is answered, tick the close. The two questions are not
+// duplicates — the items say what happened to each thing, this says the hire
+// is finished — but answering all three and then being made to say "and
+// therefore it is finished" separately is the double entry the owner objected
+// to (24 Aug), and forgetting the second half is how a rental ends up with
+// every item returned and a status still reading overdue.
+//
+// Only ever ticks ON, and only from a full set of answers. It never unticks:
+// clearing one item back to Pending must not silently re-open a hire the
+// operator has deliberately closed — the gate will refuse the save and say so.
+function mgOfferClose() {
+  const hidden = document.getElementById('mgReturned');
+  if (!hidden || hidden.value === '1') return;
+  const given = MG_UI_ITEMS.filter((item) => {
+    const row = document.getElementById('mgEqRow_' + item);
+    return row && row.style.display !== 'none';
+  });
+  if (!given.length) return;
+  const allAnswered = given.every((item) =>
+    (document.getElementById('mgItemStatus_' + item)?.value || 'undecided') !== 'undecided');
+  if (!allAnswered) return;
+  toggleReturned();                 // flips the hidden field, label and gate
+  toast('Every item is accounted for — this hire is marked closed.', 'success');
+}
+
 function nrToggleGiven(item) {
   const el = document.getElementById('nrGiven_' + item);
   if (!el) return;
@@ -2920,7 +2966,7 @@ function renderRentalsTab() {
       { value: 'active', label: 'Active', test: r => getComputedStatus(r, localISO()) === 'active' },
       { value: 'due_today', label: 'Due today', test: r => getComputedStatus(r, localISO()) === 'active' && r.toDate === localISO() },
       { value: 'overdue', label: 'Overdue', test: r => getComputedStatus(r, localISO()) === 'overdue' },
-      { value: 'returned', label: 'Returned', test: r => getComputedStatus(r, localISO()) === 'returned' },
+      { value: 'returned', label: 'Closed', test: r => getComputedStatus(r, localISO()) === 'returned' },
       { value: 'returned_incomplete', label: 'Returned ⚠', test: r => getComputedStatus(r, localISO()) === 'returned_incomplete' },
     ] },
   ], [
@@ -3393,7 +3439,7 @@ function renderRentalRows() {
     else if (computedStatus === 'active' && r.toDate === today) statusBadge = `<span class="badge badge-sim">Due Today</span>`;
     else if (computedStatus === 'active')               statusBadge = `<span class="badge badge-rental">Active</span>`;
     else if (computedStatus === 'overdue')              statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--danger-ink);">Overdue ⚠</span>`;
-    else if (computedStatus === 'returned')             statusBadge = `<span class="badge badge-active">Returned</span>`;
+    else if (computedStatus === 'returned')             statusBadge = `<span class="badge badge-active">Closed</span>`;
     else                                                statusBadge = `<span class="badge" style="background:var(--canvas-cream);color:var(--gold);">Returned ⚠</span>`;
 
     const paid = r.amountPaid || 0;
@@ -3421,7 +3467,9 @@ function renderRentalRows() {
       <td class="kc-money" data-label="Balance" style="font-weight:700;${debtColor}">
         ${totalOwed > 0 ? '£'+totalOwed+' owed' : '✓ Paid'}
         <div class="kc-money-sub">${fmtGbp(r.price)} hire</div></td>
-      <td>${statusBadge}</td>
+      <td>${statusBadge}${rentalItemsAllAnswered(r) ? `
+        <span class="badge kc-ic kc-ic-package" style="background:var(--accent-wash);color:var(--accent);margin-top:3px;"
+          title="Every item is accounted for — this hire just needs closing">All items in</span>` : ''}</td>
       <td>
         <div class="row-actions">
           ${computedStatus === 'booked' ? `<button class="action-btn" style="color:var(--success);font-weight:600;" onclick="startReservation('${r.id}')">▶ Start</button>` : ''}
@@ -6016,15 +6064,26 @@ function openManageRentalModal(rentalId) {
         <input class="form-input" type="number" id="mgPrice" value="${r.price}" min="0" step="0.5" oninput="mgUpdateDebt()">
       </div>
       <div class="form-group form-full">
-        <label class="form-label">Return Status</label>
+        <!-- Not "Return Status", and not "Returned". This control does not say
+            whether the handset came back — the three item rows above say that,
+            each one separately. It says whether the HIRE is finished, and a
+            hire can finish with every item lost and charged for (the gate
+            allows exactly that). Sharing the word "Returned" with the item
+            rows an inch above made the two read as one duplicated question
+            (owner, 24 Aug: "isn't it duplicate in the first place?") while
+            being capable of saying something flatly untrue on a money screen.
+            The STORED value is still 'returned' — it is a database enum,
+            mirrored and tested, so renaming that is a migration, not a
+            label. -->
+        <label class="form-label">This hire</label>
         <div style="display:flex;align-items:center;gap:14px;margin-top:4px;">
           <div class="toggle-wrap" onclick="toggleReturned()" id="mgReturnedToggle"
-            role="switch" aria-checked="${r.status === 'returned'}" aria-label="Phone returned"
+            role="switch" aria-checked="${r.status === 'returned'}" aria-label="Close this rental"
             style="width:52px;height:28px;border-radius:14px;cursor:pointer;transition:background 0.2s;position:relative;background:${r.status==='returned'?'var(--success)':'var(--border)'};">
             <div id="mgToggleKnob" style="position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transform:translateX(${r.status==='returned'?'22px':'0'});transition:transform 0.2s var(--ease-out);"></div>
           </div>
           <span id="mgReturnedLabel" style="font-size:var(--fs-ui);font-weight:600;color:${r.status==='returned'?'var(--success)':'var(--muted)'};">
-            ${r.status==='returned' ? 'Returned ✔' : 'Not returned yet'}
+            ${r.status==='returned' ? 'Closed ✔' : 'Close this rental'}
           </span>
         </div>
         <input type="hidden" id="mgReturned" value="${r.status==='returned'?'1':'0'}">
@@ -6230,7 +6289,7 @@ function toggleReturned() {
   // rests at left:3px and travels 22px, so 25px - 3px.
   knob.style.transform = isNowReturned ? 'translateX(22px)' : 'translateX(0)';
   label.style.color = isNowReturned ? 'var(--success)' : 'var(--muted)';
-  label.textContent = isNowReturned ? 'Returned ✔' : 'Not returned yet';
+  label.textContent = isNowReturned ? 'Closed ✔' : 'Close this rental';
   // The Charge Gate is about closing, so it appears with the toggle.
   if (typeof mgGateRentalId !== 'undefined' && mgGateRentalId) mgRenderGate(mgGateRentalId);
 }
