@@ -117,18 +117,34 @@ export async function run({ width = 1280 } = {}) {
           }
         }
         const tail = /"\s*>/.test(txt) ? (txt.match(/.{0,44}"\s*>/) || [''])[0] : ''
+        // (d) THE NAME IS WELL-FORMED AND SAYS NOTHING. The card menus derived
+        // their aria-label from the display label with `.replace(/^\S+\s/,'')`,
+        // which stripped a leading emoji — and then stripped `<i` and nothing
+        // else once the icon became markup, shipping
+        //   class="kc-ic kc-ic-pound" aria-hidden="true"></i> Money
+        // to a screen reader. The attribute parses; names.mjs sees a name and
+        // passes. Only reading what the name SAYS finds it.
+        const named = []
+        for (const el of document.querySelectorAll('[aria-label],[title],[alt]')) {
+          for (const a of ['aria-label', 'title', 'alt']) {
+            const v = el.getAttribute(a)
+            if (v && (/kc-ic|<\/?i[ >]|<span|<div|aria-hidden/.test(v))) named.push(`${a}="${v.slice(0, 48)}"`)
+          }
+        }
         const all = [...document.querySelectorAll('.kc-ic')]
         const unresolved = all.filter((e) => !/url\(/.test(getComputedStyle(e, '::before').maskImage || ''))
           .map((e) => e.className).slice(0, 3)
         return {
           literal, sample: literal ? (txt.match(/.{0,40}(kc-ic|<i class).{0,40}/) || [''])[0] : '',
           n: all.length, unresolved, junk: [...new Set(junk)].slice(0, 4), tail,
+          named: [...new Set(named)].slice(0, 4),
         }
       })
       iconsSeen += r.n
       if (r.literal) problems.push(`${where}: markup in an escaped sink → ${r.sample.trim()}`)
       if (r.junk.length) problems.push(`${where}: BROKEN ATTRIBUTE → ${r.junk.join(' ')}`)
       if (r.tail) problems.push(`${where}: stray attribute tail → ${r.tail.trim()}`)
+      if (r.named.length) problems.push(`${where}: markup read out as a NAME → ${r.named.join(' ')}`)
       if (r.unresolved.length) problems.push(`${where}: unresolved mask on ${r.unresolved.join(', ')}`)
     }
 

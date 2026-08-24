@@ -7724,35 +7724,35 @@ function buildCustomerTimeline(c) {
   // timeline is a way IN to each record (edit, delete), not just a listing —
   // before this, imported history was visible here but unreachable.
   for (const r of rentals.filter(x => x.customerId === cid)) {
-    ev.push({ date: r.fromDate || r.createdAt, icon: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i>', cat: 'Rental',
+    ev.push({ date: r.fromDate || r.createdAt, icon: 'phone', cat: 'Rental',
       title: `Rental${r.phoneNumber ? ' — ' + r.phoneNumber : r.country ? ' — ' + r.country : ''}`,
       sub: `${r.status}${r.fromDate ? ' · ' + fmtDate(r.fromDate) + (r.toDate ? ' → ' + fmtDate(r.toDate) : '') : ''}`,
       amount: rentalGrandTotal(r), open: { fn: 'openManageRentalModal', id: r.id } });
   }
   for (const b of bookings.filter(x => x.customerId === cid)) {
-    ev.push({ date: b.travelDate || b.createdAt, icon: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i>', cat: 'Flight',
+    ev.push({ date: b.travelDate || b.createdAt, icon: 'plane', cat: 'Flight',
       title: `${b.route || 'Flight'}${b.passenger ? ' — ' + b.passenger : ''}`,
       sub: `${b.status || ''}${b.travelDate ? ' · ' + fmtDate(b.travelDate) : ''}`,
       amount: Number(b.price || b.total || 0), open: { fn: 'openEditBookingModal', id: b.id } });
   }
   for (const s of sims.filter(x => x.customerId === cid)) {
-    ev.push({ date: s.createdAt || s.renewalDate, icon: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i>', cat: 'SIM',
+    ev.push({ date: s.createdAt || s.renewalDate, icon: 'signal', cat: 'SIM',
       title: `SIM — ${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}`,
       sub: `${s.status || ''}${s.renewalDate ? ' · renews ' + fmtDate(s.renewalDate) : ''}`,
       open: { fn: 'openManageSimModal', id: s.id } });
   }
   for (const v of virtualNumbers.filter(x => x.customerId === cid)) {
-    ev.push({ date: v.createdAt, icon: '<i class="kc-ic kc-ic-digits" aria-hidden="true"></i>', cat: 'Virtual number',
+    ev.push({ date: v.createdAt, icon: 'digits', cat: 'Virtual number',
       title: `VN ${fmtPhone(v.number || '')}`.trim(), sub: v.status || '',
       open: { fn: 'openVNBillingModal', id: v.id } });
   }
   for (const r of repairs.filter(x => x.customerId === cid)) {
-    ev.push({ date: r.openedAt || r.createdAt, icon: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i>', cat: 'Repair',
+    ev.push({ date: r.openedAt || r.createdAt, icon: 'wrench', cat: 'Repair',
       title: `Repair${r.device ? ' — ' + r.device : ''}`, sub: r.status || '',
       amount: Number(r.total || 0), open: { fn: 'goToTab', id: 'repairs' } });
   }
   for (const o of serviceOrders.filter(x => x.customerId === cid)) {
-    ev.push({ date: o.createdAt, icon: '<i class="kc-ic kc-ic-printer" aria-hidden="true"></i>', cat: 'Service',
+    ev.push({ date: o.createdAt, icon: 'printer', cat: 'Service',
       title: o.serviceName || 'Service', sub: o.createdAt ? fmtDate(o.createdAt) : '',
       amount: Number(o.total || 0) });
   }
@@ -7760,7 +7760,7 @@ function buildCustomerTimeline(c) {
   (c.commLog || []).forEach((m, i) => {
     const v = KC_COMMLOG.entryView(m);
     ev.push({
-      date: m.at, icon: m.icon || '💬', cat: 'Contact',
+      date: m.at, icon: kcIconName(m.icon) || 'chat', cat: 'Contact',
       title: v.current || m.type || 'Note',
       sub: m.by ? 'by ' + m.by : '',
       // What it used to say, and who changed it. Carried on the event so the
@@ -7823,7 +7823,7 @@ function customerNextBestAction(c) {
   // shelf, a trip with no phone cover, a passport about to expire.
   const ready = repairs.find(r => r.customerId === cid && r.status === 'Ready');
   if (ready) {
-    return { icon: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i>', text: `Repair ready — ${escHtml(ready.device || 'device')} waiting for collection`,
+    return { icon: 'wrench', text: `Repair ready — ${escHtml(ready.device || 'device')} waiting for collection`,
       btn: `<button class="btn btn-outline btn-sm" onclick="openCollectRepairModal('${ready.id}')">Collect</button>` };
   }
   const trip = bookings.filter(b => b.customerId === cid && b.status !== 'Cancelled' && b.travelDate && b.travelDate >= today)
@@ -7834,13 +7834,13 @@ function customerNextBestAction(c) {
     const phoneCover = rentals.find(r => r.customerId === cid && r.status !== 'returned'
       && r.fromDate && r.toDate && r.fromDate <= trip.travelDate && r.toDate >= tripLastDay(trip));
     if (!phoneCover) {
-      return { icon: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i>', text: `Flies ${fmtDate(trip.travelDate)} — no phone booked yet`,
+      return { icon: 'plane', text: `Flies ${fmtDate(trip.travelDate)} — no phone booked yet`,
         btn: `<button class="btn btn-rental btn-sm" onclick="openNewRentalModal('${cid}')">Book a phone</button>` };
     }
   }
   const overdue = rentals.find(r => r.customerId === cid && r.status === 'overdue');
   if (overdue) {
-    return { icon: '<i class="kc-ic kc-ic-clock" aria-hidden="true"></i>', text: `Rental overdue since ${fmtDate(overdue.toDate)}`, btn: '' };
+    return { icon: 'clock', text: `Rental overdue since ${fmtDate(overdue.toDate)}`, btn: '' };
   }
   return null;
 }
@@ -8010,7 +8010,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   const timelineRow = (e, withDate) => `
         <div class="history-item${e.open ? ' dash-link' : ''}" style="align-items:flex-start;gap:8px;${e.open ? 'cursor:pointer;' : ''}"
           ${e.open ? `onclick="${e.open.fn}('${escHtml(String(e.open.id))}')" title="Open this ${escHtml(e.cat.toLowerCase())}"` : ''}>
-          <span style="width:20px;flex-shrink:0;text-align:center;">${e.icon}</span>
+          <span style="width:20px;flex-shrink:0;text-align:center;" class="${e.icon ? `kc-ic kc-ic-${e.icon}` : ''}" aria-hidden="true"></span>
           <div style="flex:1;min-width:0;">
             <div style="font-size:var(--fs-body);color:var(--text);">${escHtml(e.title)}</div>
             ${/* Owner item 1: a corrected entry shows what it used to say, struck
@@ -8170,7 +8170,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
       <button class="kc-unit kc-unit-${escHtml(u.kind)}${u.ended ? ' kc-unit-ended' : ''}"
         onclick="kcOpenUnit('${escJs(u.kind)}', '${escJs(String(u.id))}')"
         title="${escHtml(opens ? `Open this ${u.label.toLowerCase()}` : `Go to ${u.label.toLowerCase()}s`)}">
-        <span class="kc-unit-icon" aria-hidden="true">${u.icon}</span>
+        <span class="kc-unit-icon${u.icon ? ` kc-ic kc-ic-${u.icon}` : ''}" aria-hidden="true"></span>
         <span class="kc-unit-main">
           <span class="kc-unit-title"${u.number ? ' dir="ltr"' : ''}>${escHtml(lead)}</span>
           ${under ? `<span class="kc-unit-detail">${escHtml(under)}</span>` : ''}
@@ -8230,13 +8230,13 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   const newServiceHtml = `
       <div class="section-divider" style="margin-top:18px;">New Service</div>
       <div class="card-action-grid">
-        <button class="card-action" onclick="openNewRentalModal('${c.id}')"><span class="ca-icon">📱</span> Rental</button>
-        <button class="card-action" onclick="openAddSimModal('${c.id}')"><span class="ca-icon">💳</span> SIM plan</button>
-        <button class="card-action" onclick="openNewBookingModal('${c.id}')"><span class="ca-icon">✈️</span> Flight</button>
-        <button class="card-action" onclick="openNewVNModal('${c.id}')"><span class="ca-icon">🔢</span> Virtual number</button>
-        <button class="card-action" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal('${c.id}')})()"><span class="ca-icon">🔧</span> Repair</button>
-        <button class="card-action" onclick="openNewServiceModal('${c.id}')"><span class="ca-icon">🖨️</span> Print / Online</button>
-        <button class="card-action" onclick="posOpenForCustomer('${c.id}')"><span class="ca-icon">🛒</span> Sell at the till</button>
+        <button class="card-action" onclick="openNewRentalModal('${c.id}')"><span class="ca-icon kc-ic kc-ic-phone" aria-hidden="true"></span> Rental</button>
+        <button class="card-action" onclick="openAddSimModal('${c.id}')"><span class="ca-icon kc-ic kc-ic-card" aria-hidden="true"></span> SIM plan</button>
+        <button class="card-action" onclick="openNewBookingModal('${c.id}')"><span class="ca-icon kc-ic kc-ic-plane" aria-hidden="true"></span> Flight</button>
+        <button class="card-action" onclick="openNewVNModal('${c.id}')"><span class="ca-icon kc-ic kc-ic-digits" aria-hidden="true"></span> Virtual number</button>
+        <button class="card-action" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal('${c.id}')})()"><span class="ca-icon kc-ic kc-ic-wrench" aria-hidden="true"></span> Repair</button>
+        <button class="card-action" onclick="openNewServiceModal('${c.id}')"><span class="ca-icon kc-ic kc-ic-printer" aria-hidden="true"></span> Print / Online</button>
+        <button class="card-action" onclick="posOpenForCustomer('${c.id}')"><span class="ca-icon kc-ic kc-ic-trolley" aria-hidden="true"></span> Sell at the till</button>
       </div>`;
 
   // The pop-up note, FIRST — above the header on BOTH surfaces, because its
@@ -8563,7 +8563,7 @@ const KC_UNIT_OPENS_ITSELF = new Set(['sim', 'rental', 'vn', 'booking']);
 const KC_RECORD = (() => {
   const KINDS = {
     sim: {
-      label: 'SIM plan', icon: '<i class="kc-ic kc-ic-card" aria-hidden="true"></i>', open: 'sim', one: 'SIM plan', many: 'SIM plans',
+      label: 'SIM plan', icon: 'card', open: 'sim', one: 'SIM plan', many: 'SIM plans',
       ended: (s) => String(s.status || '').toLowerCase() === 'cancelled',
       when: (s) => s.renewalDate || s.expiryDate || '',
       number: (s) => s.simNumber || '',
@@ -8571,7 +8571,7 @@ const KC_RECORD = (() => {
       detail: () => '',
     },
     rental: {
-      label: 'Phone rental', icon: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i>', open: 'rental', one: 'phone rental', many: 'phone rentals',
+      label: 'Phone rental', icon: 'phone', open: 'rental', one: 'phone rental', many: 'phone rentals',
       ended: (r) => ['returned', 'void', 'cancelled', 'lost'].includes(String(r.status || '').toLowerCase()),
       when: (r) => r.toDate || '',
       number: (r) => r.phoneNumber || '',
@@ -8579,7 +8579,7 @@ const KC_RECORD = (() => {
       detail: () => '',
     },
     vn: {
-      label: 'Virtual number', icon: '<i class="kc-ic kc-ic-digits" aria-hidden="true"></i>', open: 'vn', one: 'virtual number', many: 'virtual numbers',
+      label: 'Virtual number', icon: 'digits', open: 'vn', one: 'virtual number', many: 'virtual numbers',
       ended: (v) => String(v.status || '').toLowerCase() !== 'active',
       when: () => '',
       number: (v) => v.number || '',
@@ -8587,7 +8587,7 @@ const KC_RECORD = (() => {
       detail: () => '',
     },
     booking: {
-      label: 'Flight', icon: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i>', open: 'booking', one: 'flight', many: 'flights',
+      label: 'Flight', icon: 'plane', open: 'booking', one: 'flight', many: 'flights',
       // Flown counts as over. Nothing else in the app treated a past travel
       // date as finished, which is why flown flights sat under "Active".
       ended: (b, today) => String(b.status || '').toLowerCase().startsWith('cancel')
@@ -8600,7 +8600,7 @@ const KC_RECORD = (() => {
       detail: (b) => b.bookingRef || b.airline || '',
     },
     repair: {
-      label: 'Repair', icon: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i>', open: 'repair', one: 'repair', many: 'repairs',
+      label: 'Repair', icon: 'wrench', open: 'repair', one: 'repair', many: 'repairs',
       ended: (r) => ['collected', 'cancelled'].includes(String(r.status || '').toLowerCase()),
       when: (r) => r.openedAt || '',
       number: () => '',
@@ -8608,7 +8608,7 @@ const KC_RECORD = (() => {
       detail: (r) => r.status || '',
     },
     service: {
-      label: 'Print / online job', icon: '<i class="kc-ic kc-ic-printer" aria-hidden="true"></i>', open: 'service', one: 'print job', many: 'print jobs',
+      label: 'Print / online job', icon: 'printer', open: 'service', one: 'print job', many: 'print jobs',
       ended: () => true,
       when: (o) => o.createdAt || '',
       number: () => '',
@@ -9075,32 +9075,42 @@ async function chargeCardOnFile(custId) {
 function cardToolMenus(c, isPage) {
   const owner = !currentStaff || currentStaff.role === 'owner';
   const id = escJs(String(c.id));
+  // [key, icon, name, items] — and the NAME is its own field for a reason. It
+  // used to be derived from the display label with `label.replace(/^\S+\s/,'')`,
+  // which stripped a leading emoji and worked for as long as the label was
+  // "💬 Contact". When the icons became markup the same expression stripped `<i`
+  // and nothing else, so the Money and Manage menus went to production
+  // announcing themselves as
+  //   class="kc-ic kc-ic-pound" aria-hidden="true"></i> Money
+  // — a well-formed attribute holding nonsense, which is why nothing that
+  // checks whether a control HAS a name could see it. Display markup is not a
+  // source of words; carry the words separately.
   const GROUPS = [
-    ['contact', '💬 Contact', [
-      ['✉️', 'Draft a reminder', `openDraftReminderModal('${id}')`, 'Written for you — nothing is sent'],
-      ['🤖', 'AI reply', `openAiReplyModal('${id}')`, 'Draft a reply to their message'],
-      ['📞', 'Log a call or note', `openLogCommModal('${id}')`, 'Goes on their record'],
+    ['contact', 'chat', 'Contact', [
+      ['email', 'Draft a reminder', `openDraftReminderModal('${id}')`, 'Written for you — nothing is sent'],
+      ['bot', 'AI reply', `openAiReplyModal('${id}')`, 'Draft a reply to their message'],
+      ['telephone', 'Log a call or note', `openLogCommModal('${id}')`, 'Goes on their record'],
     ]],
-    ['money', '<i class="kc-ic kc-ic-pound" aria-hidden="true"></i> Money', [
-      ['💳', 'Charge the card on file', `chargeCardOnFile('${id}')`, 'Their saved card, via Stripe'],
-      ['➕', 'Save a card on file', `saveCardOnFile('${id}')`, 'Opens Stripe — we never see the number'],
-      ['🔗', 'Create a payment link', `openPaymentLinkModal('${id}')`, 'Send it to them to pay'],
+    ['money', 'pound', 'Money', [
+      ['card', 'Charge the card on file', `chargeCardOnFile('${id}')`, 'Their saved card, via Stripe'],
+      ['plus', 'Save a card on file', `saveCardOnFile('${id}')`, 'Opens Stripe — we never see the number'],
+      ['link', 'Create a payment link', `openPaymentLinkModal('${id}')`, 'Send it to them to pay'],
     ]],
-    ['manage', '<i class="kc-ic kc-ic-gear" aria-hidden="true"></i> Manage', [
-      ['⏰', 'Remind me about this customer', `openRemindModal('customer','${id}')`, 'A task for you, not for them'],
-      ...(owner ? [['📡', 'ELID lookup', `openElidModal('${id}')`, 'Telecom balance & status']] : []),
-      ['✏️', 'Edit customer', `openEditModal('${id}')`, ''],
-      ...(isPage ? [] : [['⤢', 'Open as a full page', `openCustomerPage('${id}')`, 'Own link, refresh-safe, shareable']]),
+    ['manage', 'gear', 'Manage', [
+      ['clock', 'Remind me about this customer', `openRemindModal('customer','${id}')`, 'A task for you, not for them'],
+      ...(owner ? [['antenna', 'ELID lookup', `openElidModal('${id}')`, 'Telecom balance & status']] : []),
+      ['pencil', 'Edit customer', `openEditModal('${id}')`, ''],
+      ...(isPage ? [] : [['eye', 'Open as a full page', `openCustomerPage('${id}')`, 'Own link, refresh-safe, shareable']]),
     ]],
   ];
-  return GROUPS.map(([key, label, items]) => `
+  return GROUPS.map(([key, icon, name, items]) => `
     <span class="card-menu-wrap">
-      <button class="card-menu-btn" id="cmBtn_${key}" aria-haspopup="menu" aria-expanded="false"
-        onclick="toggleCardMenu(event, '${key}')">${label} <span class="card-menu-chev" aria-hidden="true">▾</span></button>
-      <div class="card-menu" id="cmMenu_${key}" role="menu" aria-label="${escHtml(label.replace(/^\S+\s/, ''))}">
-        ${items.map(([icon, text, run, sub]) => `
+      <button class="card-menu-btn kc-ic kc-ic-${icon}" id="cmBtn_${key}" aria-haspopup="menu" aria-expanded="false"
+        onclick="toggleCardMenu(event, '${key}')">${escHtml(name)} <span class="card-menu-chev" aria-hidden="true">▾</span></button>
+      <div class="card-menu" id="cmMenu_${key}" role="menu" aria-label="${escHtml(name)}">
+        ${items.map(([ic, text, run, sub]) => `
           <button class="card-menu-item" role="menuitem" onclick="closeCardMenus();${run}">
-            <span class="card-menu-icon" aria-hidden="true">${icon}</span>
+            <span class="card-menu-icon kc-ic kc-ic-${ic}" aria-hidden="true"></span>
             <span><span class="card-menu-text">${escHtml(text)}</span>${sub ? `<span class="card-menu-sub">${escHtml(sub)}</span>` : ''}</span>
           </button>`).join('')}
       </div>
@@ -10698,7 +10708,7 @@ function renderNextBestAction(customerId) {
   if (!nba) { strip.innerHTML = ''; return; }
   strip.innerHTML = `
     <div class="nba-strip">
-      <span class="nba-icon">${nba.icon}</span>
+      <span class="nba-icon${nba.icon ? ` kc-ic kc-ic-${nba.icon}` : ''}" aria-hidden="true"></span>
       <span class="nba-text">${nba.text}</span>
       ${nba.btn || ''}
     </div>`;
@@ -10707,7 +10717,14 @@ function renderNextBestAction(customerId) {
 // #60 — communication log. A shared writer appends to c.commLog so both the
 // manual "log a call/note" button and auto events (a sent receipt) land on the
 // same customer timeline.
-const COMM_ICONS = { call_in: '📞', call_out: '📲', message: '💬', note: '📝', email: '✉️' };
+const COMM_ICONS = { call_in: 'telephone', call_out: 'mobile-in', message: 'chat', note: 'edit-note', email: 'email' };
+// A comm-log entry PERSISTS its icon, and every row written before 24 Aug holds
+// an emoji rather than an icon name. Those rows are history — they are not
+// rewritten — so the glyphs that were ever stored are mapped on the way out
+// instead of being dropped, which would leave the whole timeline iconless for
+// any customer with a call logged before today.
+const KC_LEGACY_ICONS = { '📞': 'telephone', '📲': 'mobile-in', '💬': 'chat', '📝': 'edit-note', '✉️': 'email', '✉': 'email' };
+const kcIconName = (v) => KC_LEGACY_ICONS[v] || v || '';
 
 // ── KC_COMMLOG mirror start ──
 // Mirrors lib/commLog.mjs. Held to it by test/commLogMirror.test.mjs.
@@ -10798,7 +10815,7 @@ function logComm(c, { type, text, icon }) {
   if (!c.commLog) c.commLog = [];
   c.commLog.push({
     at: new Date().toISOString(), type: type || 'note', text: text || '',
-    icon: icon || COMM_ICONS[type] || '💬',
+    icon: icon || COMM_ICONS[type] || 'chat',
     by: (currentStaff && (currentStaff.full_name || currentStaff.email)) || 'staff',
   });
 }
@@ -11264,7 +11281,7 @@ async function renderWalletTab() {
   const balanceRow = (b, negative) => `
     <div class="feed-item${b.customerId ? ' dash-link' : ''}"${b.customerId
       ? ` onclick="goToTab('customers',{customerId:'${escHtml(String(b.customerId))}'})" title="Open customer"` : ''}>
-      <span class="feed-icon">${negative ? '🔴' : '🟢'}</span>
+      <span class="feed-icon kc-dot ${negative ? 'kc-dot-high' : 'kc-dot-ok'}" aria-hidden="true"></span>
       <span class="feed-label"><strong>${escName(b.customerName)}</strong></span>
       <span style="font-feature-settings:'tnum';color:${negative ? 'var(--danger-ink)' : 'var(--success)'};font-weight:600;">
         ${negative ? '−' : '+'}${fmtGbp(Math.abs(b.balance))}</span>
@@ -19389,25 +19406,34 @@ async function saveReminder(kind, id) {
 
 // ── Business summary ─────────────────────────────────────────────────────
 // Ledger entry_types collapsed into the services the owner thinks in.
+// entry_type → [icon, name]. The name is separate from the icon, and that is
+// the whole point: these values used to BE the display markup, and the same
+// string was doing three jobs — the bar's label, the row's grouping key, and
+// the tooltip via escHtml(). The third job shipped
+//   title="<i class="kc-ic kc-ic-phone" aria-hidden="true">…"
+// into the business summary. Markup is not words; a value that has to be read
+// as words carries them itself.
 const REVENUE_CATS = {
-  rental: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Rentals', rental_loss: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Rentals', rental_adjustment: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Rentals',
-  sim_charge: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i> SIM plans', sim_annual: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i> SIM plans', sim_additional: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i> SIM plans',
-  sim_replacement: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i> SIM plans', sim_service: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i> SIM plans',
-  repair: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> Repairs',
-  booking: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i> Flights & tickets',
-  online_service: '<i class="kc-ic kc-ic-printer" aria-hidden="true"></i> Print & online',
-  phone_sale: '<i class="kc-ic kc-ic-trolley" aria-hidden="true"></i> Shop', stock_sale: '<i class="kc-ic kc-ic-trolley" aria-hidden="true"></i> Shop',
-  virtual_number: '<i class="kc-ic kc-ic-digits" aria-hidden="true"></i> Virtual numbers',
-  extra_charge: '➕ Extra charges',
-  manual_adjustment: '<i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Adjustments',
+  rental: ['phone', 'Rentals'], rental_loss: ['phone', 'Rentals'], rental_adjustment: ['phone', 'Rentals'],
+  sim_charge: ['signal', 'SIM plans'], sim_annual: ['signal', 'SIM plans'], sim_additional: ['signal', 'SIM plans'],
+  sim_replacement: ['signal', 'SIM plans'], sim_service: ['signal', 'SIM plans'],
+  repair: ['wrench', 'Repairs'],
+  booking: ['plane', 'Flights & tickets'],
+  online_service: ['printer', 'Print & online'],
+  phone_sale: ['trolley', 'Shop'], stock_sale: ['trolley', 'Shop'],
+  virtual_number: ['digits', 'Virtual numbers'],
+  extra_charge: ['plus', 'Extra charges'],
+  manual_adjustment: ['pencil', 'Adjustments'],
 };
+// name → icon, so a row that has been grouped by its words can still draw one.
+const REVENUE_CAT_ICONS = Object.fromEntries(Object.values(REVENUE_CATS).map(([ic, name]) => [name, ic]));
 function groupRevenue(byType) {
   const groups = {};
   const otherTypes = [];
   for (const [type, amt] of Object.entries(byType || {})) {
-    const label = REVENUE_CATS[type];
-    if (!label) otherTypes.push(`${type.replace(/_/g, ' ')} ${fmtGbp(amt)}`);
-    const key = label || '• Other';
+    const cat = REVENUE_CATS[type];
+    if (!cat) otherTypes.push(`${type.replace(/_/g, ' ')} ${fmtGbp(amt)}`);
+    const key = cat ? cat[1] : 'Other';
     groups[key] = (groups[key] || 0) + amt;
   }
   const rows = Object.entries(groups).sort((a, b) => b[1] - a[1]);
@@ -19701,12 +19727,12 @@ function renderBizSummary() {
     const move = (was === undefined || was === 0) ? '' :
       (amt > was ? '<span class="biz-move up" aria-hidden="true">▲</span>'
        : amt < was ? '<span class="biz-move down" aria-hidden="true">▼</span>' : '');
-    const other = label === '• Other' && otherTypes.length
+    const other = label === 'Other' && otherTypes.length
       ? ` — ${otherTypes.join(', ')}` : '';
     const wasNote = was === undefined ? '' : ` — was ${fmtGbp(was)} ${P.prevLabel}`;
     return `
       <div class="bizbar-row" title="${escHtml(label + wasNote + other)}">
-        <span class="bizbar-label">${label}</span>
+        <span class="bizbar-label kc-ic kc-ic-${REVENUE_CAT_ICONS[label] || 'tag'}">${escHtml(label)}</span>
         <div class="bizbar-track"><div class="bizbar-fill" style="width:${Math.max(3, (amt / max) * 100).toFixed(1)}%;"></div></div>
         <span class="bizbar-val">${move}${fmtGbp(amt)}<span class="bizbar-share">${share}%</span></span>
       </div>`;
@@ -20113,60 +20139,60 @@ async function assistantBuildAction(plan) {
 
 const PALETTE_COMMANDS = [
   // ── Create ──
-  { icon: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i>', label: 'New rental', sub: 'create', run: () => openNewRentalModal() },
-  { icon: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i>', label: 'New booking', sub: 'create', run: () => openNewBookingModal() },
-  { icon: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i>', label: 'New repair', sub: 'create', run: async () => { repairMenu = await window.api.getServiceMenu('repair'); openNewRepairModal(); } },
-  { icon: '<i class="kc-ic kc-ic-user" aria-hidden="true"></i>', label: 'New customer', sub: 'create', run: () => goToTab('customers', {}) || setTimeout(() => document.getElementById('btnNewCustomer')?.click(), 120) },
-  { icon: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i>', label: 'New SIM plan', sub: 'create', run: () => openOnTab('sim', openSimFormModal) },
-  { icon: '<i class="kc-ic kc-ic-telephone" aria-hidden="true"></i>', label: 'New Virtual Number', sub: 'create', run: () => openOnTab('virtual', openNewVNModal) },
-  { icon: '<i class="kc-ic kc-ic-printer" aria-hidden="true"></i>', label: 'Charge a service', sub: 'create', run: () => openOnTab('services', openNewServiceModal) },
-  { icon: '<i class="kc-ic kc-ic-package" aria-hidden="true"></i>', label: 'Add Stock Item', sub: 'create', run: () => openOnTab('shop', openStockItemModal) },
+  { icon: 'phone', label: 'New rental', sub: 'create', run: () => openNewRentalModal() },
+  { icon: 'plane', label: 'New booking', sub: 'create', run: () => openNewBookingModal() },
+  { icon: 'wrench', label: 'New repair', sub: 'create', run: async () => { repairMenu = await window.api.getServiceMenu('repair'); openNewRepairModal(); } },
+  { icon: 'user', label: 'New customer', sub: 'create', run: () => goToTab('customers', {}) || setTimeout(() => document.getElementById('btnNewCustomer')?.click(), 120) },
+  { icon: 'signal', label: 'New SIM plan', sub: 'create', run: () => openOnTab('sim', openSimFormModal) },
+  { icon: 'telephone', label: 'New Virtual Number', sub: 'create', run: () => openOnTab('virtual', openNewVNModal) },
+  { icon: 'printer', label: 'Charge a service', sub: 'create', run: () => openOnTab('services', openNewServiceModal) },
+  { icon: 'package', label: 'Add Stock Item', sub: 'create', run: () => openOnTab('shop', openStockItemModal) },
   // ── Tools ──
-  { icon: '<i class="kc-ic kc-ic-stopwatch" aria-hidden="true"></i>', label: 'Start help timer', sub: 'tool', run: () => openOnTab('services', () => kcPickerFocus('svcTimerCustomer')) },
-  { icon: '⧉', label: 'Float the help timer on top', sub: 'tool', keys: ['float', 'pin', 'on top', 'timer', 'always on top', 'popout', 'pop out'],
+  { icon: 'stopwatch', label: 'Start help timer', sub: 'tool', run: () => openOnTab('services', () => kcPickerFocus('svcTimerCustomer')) },
+  { icon: 'eye', label: 'Float the help timer on top', sub: 'tool', keys: ['float', 'pin', 'on top', 'timer', 'always on top', 'popout', 'pop out'],
     run: () => svcTimerPopOut() },
-  { icon: '<i class="kc-ic kc-ic-trolley" aria-hidden="true"></i>', label: 'Point of Sale (Till)', sub: 'tool', keys: ['pos', 'till', 'sell', 'checkout'], run: () => goToTab('shop') },
-  { icon: '<i class="kc-ic kc-ic-contacts" aria-hidden="true"></i>', label: 'Manage Phone Inventory', sub: 'tool', run: () => openOnTab('rentals', openManagePhonesModal) },
-  { icon: '<i class="kc-ic kc-ic-receipt" aria-hidden="true"></i>', label: 'Cash-up (Z-report)', sub: 'tool', keys: ['cashup', 'z report', 'eod', 'end of day', 'takings'], run: () => openCashupModal() },
-  { icon: '<i class="kc-ic kc-ic-keyboard" aria-hidden="true"></i>', label: 'Keyboard shortcuts', sub: 'help', run: () => openShortcuts() },
-  { icon: '<i class="kc-ic kc-ic-help" aria-hidden="true"></i>', label: 'How do I…?', sub: 'help', keys: ['how do i', 'help', 'guide', 'steps', 'teach', 'show me', 'training'], run: () => openHowToModal() },
+  { icon: 'trolley', label: 'Point of Sale (Till)', sub: 'tool', keys: ['pos', 'till', 'sell', 'checkout'], run: () => goToTab('shop') },
+  { icon: 'contacts', label: 'Manage Phone Inventory', sub: 'tool', run: () => openOnTab('rentals', openManagePhonesModal) },
+  { icon: 'receipt', label: 'Cash-up (Z-report)', sub: 'tool', keys: ['cashup', 'z report', 'eod', 'end of day', 'takings'], run: () => openCashupModal() },
+  { icon: 'keyboard', label: 'Keyboard shortcuts', sub: 'help', run: () => openShortcuts() },
+  { icon: 'help', label: 'How do I…?', sub: 'help', keys: ['how do i', 'help', 'guide', 'steps', 'teach', 'show me', 'training'], run: () => openHowToModal() },
   // The manual is a page, so the palette opens it in its own tab rather than
   // navigating away from whatever is half-finished on this one.
-  { icon: '<i class="kc-ic kc-ic-book" aria-hidden="true"></i>', label: 'The manual', sub: 'help', keys: ['manual', 'handbook', 'instructions', 'reference', 'every screen', 'print'], run: () => window.open('/manual', '_blank', 'noopener') },
-  { icon: '<i class="kc-ic kc-ic-clock" aria-hidden="true"></i>', label: 'New reminder', sub: 'tool', run: () => openRemindModal('note', '') },
-  { icon: '<i class="kc-ic kc-ic-key" aria-hidden="true"></i>', label: 'Change my password', sub: 'tool', run: () => openChangePasswordModal() },
-  { icon: '🌓', label: 'Toggle dark mode', sub: 'tool', run: () => toggleTheme() },
-  { icon: '<i class="kc-ic kc-ic-letters" aria-hidden="true"></i>', label: 'Text size (Simple Mode)', sub: 'tool', keys: ['text size', 'bigger', 'larger', 'font', 'simple mode', 'accessibility'], run: () => cycleTextSize() },
+  { icon: 'book', label: 'The manual', sub: 'help', keys: ['manual', 'handbook', 'instructions', 'reference', 'every screen', 'print'], run: () => window.open('/manual', '_blank', 'noopener') },
+  { icon: 'clock', label: 'New reminder', sub: 'tool', run: () => openRemindModal('note', '') },
+  { icon: 'key', label: 'Change my password', sub: 'tool', run: () => openChangePasswordModal() },
+  { icon: 'moon', label: 'Toggle dark mode', sub: 'tool', run: () => toggleTheme() },
+  { icon: 'letters', label: 'Text size (Simple Mode)', sub: 'tool', keys: ['text size', 'bigger', 'larger', 'font', 'simple mode', 'accessibility'], run: () => cycleTextSize() },
   // ── Find (saved-filter views) ──
-  { icon: '<i class="kc-ic kc-ic-clock" aria-hidden="true"></i>', label: 'Show overdue rentals', sub: 'view', run: () => filterView('rentals', () => { kcView('rentals').dims = { balance: 'all', status: 'overdue' }; }, renderRentalRows) },
-  { icon: '<i class="kc-ic kc-ic-pound" aria-hidden="true"></i>', label: 'Rentals with a balance owing', sub: 'view', run: () => filterView('rentals', () => { kcView('rentals').dims = { balance: 'debt', status: 'all' }; }, renderRentalRows) },
-  { icon: '<i class="kc-ic kc-ic-money" aria-hidden="true"></i>', label: 'Who owes money (arrears)', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'arrears'; }, renderTableRows) },
-  { icon: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i>', label: 'Customers flying soon', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'flight'; }, renderTableRows) },
-  { icon: '<i class="kc-ic kc-ic-passport" aria-hidden="true"></i>', label: 'Customers with passport on file', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'passport'; }, renderTableRows) },
-  { icon: '⚠', label: 'Customers with no way to reach them', sub: 'view', keys: ['unreachable', 'no number', 'no phone', 'missing number', 'cannot ring'], run: () => filterView('customers', () => { customerFilter = 'unreachable'; }, renderTableRows) },
-  { icon: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i>', label: 'SIMs that renew this week', sub: 'view', run: () => filterView('sim', () => { simFilterStatus = 'week'; simFilterPay = 'all'; }, renderSimRows) },
-  { icon: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i>', label: 'Repairs waiting for collection', sub: 'view', run: () => filterView('repairs', () => { kcView('repairs').filter = 'ready'; }) },
+  { icon: 'clock', label: 'Show overdue rentals', sub: 'view', run: () => filterView('rentals', () => { kcView('rentals').dims = { balance: 'all', status: 'overdue' }; }, renderRentalRows) },
+  { icon: 'pound', label: 'Rentals with a balance owing', sub: 'view', run: () => filterView('rentals', () => { kcView('rentals').dims = { balance: 'debt', status: 'all' }; }, renderRentalRows) },
+  { icon: 'money', label: 'Who owes money (arrears)', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'arrears'; }, renderTableRows) },
+  { icon: 'plane', label: 'Customers flying soon', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'flight'; }, renderTableRows) },
+  { icon: 'passport', label: 'Customers with passport on file', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'passport'; }, renderTableRows) },
+  { icon: 'alert', label: 'Customers with no way to reach them', sub: 'view', keys: ['unreachable', 'no number', 'no phone', 'missing number', 'cannot ring'], run: () => filterView('customers', () => { customerFilter = 'unreachable'; }, renderTableRows) },
+  { icon: 'signal', label: 'SIMs that renew this week', sub: 'view', run: () => filterView('sim', () => { simFilterStatus = 'week'; simFilterPay = 'all'; }, renderSimRows) },
+  { icon: 'wrench', label: 'Repairs waiting for collection', sub: 'view', run: () => filterView('repairs', () => { kcView('repairs').filter = 'ready'; }) },
   // (the old one-off 'Payment / top-up for open customer' entry is superseded
   // by paletteContextVerbs — every card verb now surfaces automatically)
   // ── Admin (hidden for helpers) ──
-  { icon: '<i class="kc-ic kc-ic-chart" aria-hidden="true"></i>', label: 'Business summary (revenue)', sub: 'admin', admin: true, run: () => openBusinessSummary() },
-  { icon: '<i class="kc-ic kc-ic-gear" aria-hidden="true"></i>', label: 'Run automations now', sub: 'admin', admin: true, run: () => runSweepsNow() },
-  { icon: '<i class="kc-ic kc-ic-upload" aria-hidden="true"></i>', label: 'Export CSV', sub: 'admin', admin: true, run: async () => { const r = await window.api.exportCSV(); toast(r?.success ? 'CSV exported.' : (r?.error || 'Export failed.'), r?.success ? 'success' : 'error'); } },
-  { icon: '<i class="kc-ic kc-ic-mail" aria-hidden="true"></i>', label: 'Add email address', sub: 'admin', admin: true, run: () => openOnTab('settings', openEmailAliasModal) },
-  { icon: '<i class="kc-ic kc-ic-bot" aria-hidden="true"></i>', label: 'New automation rule', sub: 'admin', admin: true, run: () => openOnTab('settings', openAutomationModal) },
-  { icon: '<i class="kc-ic kc-ic-link" aria-hidden="true"></i>', label: 'Match customers to ELID', sub: 'admin', admin: true, run: () => openElidMatchModal() },
-  { icon: '<i class="kc-ic kc-ic-download" aria-hidden="true"></i>', label: 'Import ELID accounts', sub: 'admin', admin: true, run: () => openElidImportModal() },
-  { icon: '<i class="kc-ic kc-ic-users" aria-hidden="true"></i>', label: 'Find duplicate customers', sub: 'admin', admin: true, run: () => openDupScanModal() },
-  { icon: '<i class="kc-ic kc-ic-brain" aria-hidden="true"></i>', label: 'AI plan my day (tasks)', sub: 'tasks', run: () => openTaskTriageModal() },
+  { icon: 'chart', label: 'Business summary (revenue)', sub: 'admin', admin: true, run: () => openBusinessSummary() },
+  { icon: 'gear', label: 'Run automations now', sub: 'admin', admin: true, run: () => runSweepsNow() },
+  { icon: 'upload', label: 'Export CSV', sub: 'admin', admin: true, run: async () => { const r = await window.api.exportCSV(); toast(r?.success ? 'CSV exported.' : (r?.error || 'Export failed.'), r?.success ? 'success' : 'error'); } },
+  { icon: 'mail', label: 'Add email address', sub: 'admin', admin: true, run: () => openOnTab('settings', openEmailAliasModal) },
+  { icon: 'bot', label: 'New automation rule', sub: 'admin', admin: true, run: () => openOnTab('settings', openAutomationModal) },
+  { icon: 'link', label: 'Match customers to ELID', sub: 'admin', admin: true, run: () => openElidMatchModal() },
+  { icon: 'download', label: 'Import ELID accounts', sub: 'admin', admin: true, run: () => openElidImportModal() },
+  { icon: 'users', label: 'Find duplicate customers', sub: 'admin', admin: true, run: () => openDupScanModal() },
+  { icon: 'brain', label: 'AI plan my day (tasks)', sub: 'tasks', run: () => openTaskTriageModal() },
   // The assistant's own door since 18 Aug, when its topbar button folded into
   // the ❓ Help panel. Searchable by the words someone would actually type.
-  { icon: '<i class="kc-ic kc-ic-bot" aria-hidden="true"></i>', label: 'Ask / do anything (AI assistant)', sub: 'AI',
+  { icon: 'bot', label: 'Ask / do anything (AI assistant)', sub: 'AI',
     keys: ['ask', 'assistant', 'ai', 'question', 'who owes', 'how much', 'robot'], run: () => openAssistantModal() },
   // ── Navigate ──
   // #49 — palette navigate entries read the same label map, so "Go to SIM
   // Plans" matches the sidebar and page title exactly (no more "Go to sim").
   ...Object.keys(TAB_META)
-    .map(t => ({ icon: '↪', label: `Go to ${TAB_META[t]?.label || t}`, sub: 'navigate', tab: t, run: () => goToTab(t) })),
+    .map(t => ({ icon: 'sign', label: `Go to ${TAB_META[t]?.label || t}`, sub: 'navigate', tab: t, run: () => goToTab(t) })),
 ];
 
 // Commands the current user may run — admin-only entries are hidden for
@@ -20216,7 +20242,7 @@ function paletteSearch(q) {
     const name = `${c.firstName} ${c.lastName}`;
     if (customerMatches(needle, c) ||
         (digits.length >= 4 && (c.phone || '').replace(/\D/g, '').includes(digits))) {
-      out.push({ icon: '<i class="kc-ic kc-ic-user" aria-hidden="true"></i>', label: name, sub: fmtPhone(c.phone || '') || c.email || 'customer',
+      out.push({ icon: 'user', label: name, sub: fmtPhone(c.phone || '') || c.email || 'customer',
         kind: 'customer', id: c.id, run: () => goToTab('customers', { customerId: c.id }) });
     }
   }
@@ -20228,7 +20254,7 @@ function paletteSearch(q) {
     const words = `${p.number || ''} ${p.model || ''} ${p.company || ''} ${p.pool || ''} ${p.country || ''}`.toLowerCase();
     if (words.includes(needle) ||
         (digits.length >= 5 && hay.includes(digits))) {
-      out.push({ icon: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i>', label: fmtPhone(p.number || '') || '(no number)',
+      out.push({ icon: 'phone', label: fmtPhone(p.number || '') || '(no number)',
         sub: `${[p.model, p.country, p.company].filter(Boolean).join(' · ')} · ${p.status}${p.maintenance ? ' · <i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> maintenance' : ''}${p.pool ? ' · pool ' + p.pool : ''}`,
         kind: 'phone', id: p.id, run: () => openEditPhoneModal(p.id) });
     }
@@ -20243,7 +20269,7 @@ function paletteSearch(q) {
     const hayStock = `${label} ${i.code || ''} ${i.barcode || ''} ${STOCK_CATEGORY_LABELS[i.category] || i.category || ''}`.toLowerCase();
     if (hayStock.includes(needle)) {
       const outOfStock = (i.quantity || 0) <= 0;
-      out.push({ icon: outOfStock ? '📭' : '📦', label: label || '(unnamed item)',
+      out.push({ icon: outOfStock ? 'postbox' : 'package', label: label || '(unnamed item)',
         sub: `${outOfStock ? 'OUT OF STOCK' : i.quantity + ' in stock'} · ${fmtGbp(i.sellingPrice || 0)}${i.code ? ' · ' + i.code : ''}`,
         kind: 'stock', id: i.id, run: () => goToTab('shop') || setTimeout(() => openStockItemModal(i.id), 120) });
     }
@@ -20256,7 +20282,7 @@ function paletteSearch(q) {
       // Opens the booking, not the tab. Searching a reference and landing on
       // the whole list is the app forgetting what you just typed — the SIM
       // result three loops down has always opened its own record.
-      out.push({ icon: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i>', label: `${b.route} — ${b.customerName || b.passenger || ''}`,
+      out.push({ icon: 'plane', label: `${b.route} — ${b.customerName || b.passenger || ''}`,
         sub: `flies ${fmtDate(b.travelDate)}`,
         kind: 'booking', id: b.id, run: () => openOnTab('bookings', () => openEditBookingModal(b.id)) });
     }
@@ -20268,7 +20294,7 @@ function paletteSearch(q) {
         (s.provider || '').toLowerCase().includes(needle) ||
         (s.simNumber || '').toLowerCase().includes(needle) ||
         (digits.length >= 4 && (s.simNumber || '').replace(/\D/g, '').includes(digits))) {
-      out.push({ icon: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i>', label: `SIM — ${s.customerName || ''}`, sub: `${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}`,
+      out.push({ icon: 'signal', label: `SIM — ${s.customerName || ''}`, sub: `${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}`,
         kind: 'sim', id: s.id, run: () => openManageSimModal(s.id) });
     }
   }
@@ -20277,7 +20303,7 @@ function paletteSearch(q) {
     if ((v.number || '').toLowerCase().includes(needle) ||
         (v.customerName || '').toLowerCase().includes(needle) ||
         (digits.length >= 4 && (v.number || '').replace(/\D/g, '').includes(digits))) {
-      out.push({ icon: '<i class="kc-ic kc-ic-digits" aria-hidden="true"></i>', label: `VN ${fmtPhone(v.number || '')} — ${v.customerName || ''}`, sub: v.status || 'virtual number',
+      out.push({ icon: 'digits', label: `VN ${fmtPhone(v.number || '')} — ${v.customerName || ''}`, sub: v.status || 'virtual number',
         run: () => goToTab('virtual') });
     }
   }
@@ -20288,7 +20314,7 @@ function paletteSearch(q) {
       // Left going to the tab, deliberately. A repair has no record of its own
       // to open and the repairs list has no search term to set — the only
       // honest options were the tab or inventing state that does not exist.
-      out.push({ icon: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i>', label: `Repair — ${r.customerName || ''}`, sub: `${r.device || ''} · ${r.status || ''}`,
+      out.push({ icon: 'wrench', label: `Repair — ${r.customerName || ''}`, sub: `${r.device || ''} · ${r.status || ''}`,
         run: () => goToTab('repairs') });
     }
   }
@@ -20296,14 +20322,14 @@ function paletteSearch(q) {
     if (out.length >= 12) break;
     if ((o.customerName || '').toLowerCase().includes(needle) ||
         (o.serviceName || '').toLowerCase().includes(needle)) {
-      out.push({ icon: '<i class="kc-ic kc-ic-printer" aria-hidden="true"></i>', label: `${o.serviceName || 'Service'} — ${o.customerName || ''}`, sub: o.createdAt ? fmtDate(o.createdAt) : 'service',
+      out.push({ icon: 'printer', label: `${o.serviceName || 'Service'} — ${o.customerName || ''}`, sub: o.createdAt ? fmtDate(o.createdAt) : 'service',
         run: () => goToTab('services') });
     }
   }
   for (const t of (tasksList || [])) {
     if (out.length >= 12) break;
     if (!t.done && (t.title || '').toLowerCase().includes(needle)) {
-      out.push({ icon: '<i class="kc-ic kc-ic-clock" aria-hidden="true"></i>', label: t.title || 'Task', sub: t.dueDate ? `due ${fmtDate(t.dueDate)}` : 'task',
+      out.push({ icon: 'clock', label: t.title || 'Task', sub: t.dueDate ? `due ${fmtDate(t.dueDate)}` : 'task',
         run: () => goToTab('tasks') });
     }
   }
@@ -20317,7 +20343,7 @@ function paletteRender() {
     ? `<div style="padding:14px;color:var(--muted);font-size:var(--fs-body);">No matches.</div>`
     : paletteResults.map((r, i) => `
       <div class="palette-item${i === paletteIndex ? ' active' : ''}" onclick="paletteRun(${i})">
-        <span style="width:22px;text-align:center;">${r.icon}</span>
+        <span style="width:22px;text-align:center;" class="${r.icon ? `kc-ic kc-ic-${r.icon}` : ''}" aria-hidden="true"></span>
         <span style="flex:1;">${escHtml(r.label)}</span>
         <span style="color:var(--muted);font-size:var(--fs-micro);">${escHtml(r.sub)}</span>
       </div>`).join('');
@@ -20404,13 +20430,13 @@ function paletteContextVerbs() {
   return {
     name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'this customer',
     verbs: [
-      { icon: '<i class="kc-ic kc-ic-money" aria-hidden="true"></i>', label: 'Record payment / credit', run: () => openWalletModal(id) },
-      { icon: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i>', label: 'New rental', run: () => openNewRentalModal(id) },
-      { icon: '<i class="kc-ic kc-ic-mail" aria-hidden="true"></i>', label: 'Draft reminder', run: () => openDraftReminderModal(id) },
-      { icon: '<i class="kc-ic kc-ic-call" aria-hidden="true"></i>', label: 'Log call / note', run: () => openLogCommModal(id) },
-      { icon: '<i class="kc-ic kc-ic-clock" aria-hidden="true"></i>', label: 'Remind me', run: () => openRemindModal('customer', id) },
-      { icon: '<i class="kc-ic kc-ic-pencil" aria-hidden="true"></i>', label: 'Edit details', run: () => openEditModal(id) },
-      ...(customerPageId === id ? [] : [{ icon: '<i class="kc-ic kc-ic-user" aria-hidden="true"></i>', label: 'Open full profile', run: () => openCustomerPage(id) }]),
+      { icon: 'money', label: 'Record payment / credit', run: () => openWalletModal(id) },
+      { icon: 'phone', label: 'New rental', run: () => openNewRentalModal(id) },
+      { icon: 'mail', label: 'Draft reminder', run: () => openDraftReminderModal(id) },
+      { icon: 'call', label: 'Log call / note', run: () => openLogCommModal(id) },
+      { icon: 'clock', label: 'Remind me', run: () => openRemindModal('customer', id) },
+      { icon: 'pencil', label: 'Edit details', run: () => openEditModal(id) },
+      ...(customerPageId === id ? [] : [{ icon: 'user', label: 'Open full profile', run: () => openCustomerPage(id) }]),
     ],
   };
 }
@@ -20432,7 +20458,7 @@ function fillPaletteQuick() {
   const navCard = (navCall, r, corner) =>
     `<div class="palette-quick-card" role="button" tabindex="0" title="${escHtml(r.sub || '')}"
         onclick="${navCall}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${navCall}}">
-      <span class="pq-icon">${r.icon}</span><span class="pq-label">${escHtml(r.label)}</span>${corner}
+      <span class="pq-icon${r.icon ? ` kc-ic kc-ic-${r.icon}` : ''}" aria-hidden="true"></span><span class="pq-label">${escHtml(r.label)}</span>${corner}
     </div>`;
   const pin = (call, on, title) =>
     `<span class="pq-pin${on ? ' on' : ''}" role="button" tabindex="0" aria-label="${title}" title="${title}"
@@ -20443,7 +20469,7 @@ function fillPaletteQuick() {
     html += `<div class="palette-quick-label">For ${escHtml(ctx.name)}</div><div class="palette-quick-row">` +
       ctx.verbs.map((v, i) =>
         `<button type="button" class="palette-quick-card" onclick="paletteCtxRun(${i})">
-          <span class="pq-icon">${v.icon}</span><span class="pq-label">${escHtml(v.label)}</span>
+          <span class="pq-icon${v.icon ? ` kc-ic kc-ic-${v.icon}` : ''}" aria-hidden="true"></span><span class="pq-label">${escHtml(v.label)}</span>
         </button>`).join('') + `</div>`;
   }
   if (pinnedNav.length) {
@@ -20459,7 +20485,7 @@ function fillPaletteQuick() {
   html += `<div class="palette-quick-label">Quick actions</div><div class="palette-quick-row">` +
     paletteQuickItems().map((c, i) =>
       `<button type="button" class="palette-quick-card" onclick="paletteQuickRun(${i})"${i < 9 ? ` title="Press ${i + 1}" aria-keyshortcuts="${i + 1}"` : ''}>
-        <span class="pq-icon">${c.icon}</span><span class="pq-label">${escHtml(c.label.replace(/^New /, ''))}</span>${i < 9 ? `<span class="pq-key" aria-hidden="true">${i + 1}</span>` : ''}
+        <span class="pq-icon${c.icon ? ` kc-ic kc-ic-${c.icon}` : ''}" aria-hidden="true"></span><span class="pq-label">${escHtml(c.label.replace(/^New /, ''))}</span>${i < 9 ? `<span class="pq-key" aria-hidden="true">${i + 1}</span>` : ''}
       </button>`).join('') + `</div>`;
   q.innerHTML = html;
 }
@@ -22619,17 +22645,17 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   // customer names with quotes can't break the HTML.
   const attention = [];
   const coming = [];   // happens by itself — worth seeing, not worth nagging about
-  overdue.forEach(r => attention.push(['📱',
+  overdue.forEach(r => attention.push(['phone',
     `<strong>${escName(r.customerName || '?')}</strong> — rental overdue since ${fmtDate(r.toDate)}`,
     () => goToTab('rentals', { rentalSearch: r.customerName || '' })]));
   // Every one of these lines counted something, so it opens the list already
   // narrowed to what it counted. Landing on the plain tab makes you do the
   // filtering a second time, by hand, having just been told the answer —
   // owner #15 raised it about the SIM line, and the same was true of these two.
-  readyRepairs.forEach(r => attention.push(['🔧',
+  readyRepairs.forEach(r => attention.push(['wrench',
     `<strong>${escName(r.customerName || '?')}</strong> — repair ready to collect (${fmtGbp((r.total || 0))})`,
     () => filterView('repairs', () => { kcView('repairs').filter = 'ready'; })]));
-  travel7.forEach(b => attention.push(['✈️',
+  travel7.forEach(b => attention.push(['plane',
     `<strong>${escName(b.customerName || '?')}</strong> — flies ${fmtDate(b.travelDate)} (${escHtml(b.route)})`,
     () => filterView('bookings', () => { kcView('bookings').filter = 'upcoming'; })]));
   // Straight to the plan that is renewing, not to the list of every plan.
@@ -22643,15 +22669,15 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   // genuine work off a ten-line feed. Upcoming renewals now sit under Coming
   // up; a renewal past its date still counts as attention, because that one
   // did NOT happen by itself.
-  renewals7.slice(0, 3).forEach(s => coming.push(['💳',
+  renewals7.slice(0, 3).forEach(s => coming.push(['card',
     `<strong>${escName(s.customerName || '?')}</strong> — SIM renews ${fmtDate(s.renewalDate)}`,
     () => openOnTab('sim', () => openManageSimModal(s.id))]));
-  if (renewals7.length > 3) coming.push(['💳',
+  if (renewals7.length > 3) coming.push(['card',
     `<strong>${renewals7.length - 3} more SIM plans</strong> renew in the next 7 days`,
     // 'week' is the SIM list's own "renewing in the next 7 days" — the same
     // set this line counted, so it opens on it rather than on all 797 plans.
     () => filterView('sim', () => { simFilterStatus = 'week'; }, renderSimRows)]);
-  if (renewalsLate.length) attention.push(['⏰',
+  if (renewalsLate.length) attention.push(['clock',
     `<strong>${renewalsLate.length} active SIM${renewalsLate.length === 1 ? '' : 's'}</strong> past the renewal date on record`,
     () => filterView('sim', () => { simFilterStatus = 'late'; }, renderSimRows)]);
   // Low-stock accessories/phones (display-only; the Shop tab holds the editable
@@ -22659,7 +22685,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   const lowStock = (shopList || []).filter(i => i.active && i.quantity <= i.lowStockAt);
   if (lowStock.length) {
     const names = lowStock.slice(0, 3).map(i => `${escHtml(i.model)} (${i.quantity})`).join(', ');
-    attention.push(['📦',
+    attention.push(['package',
       `<strong>${lowStock.length} item${lowStock.length === 1 ? '' : 's'} low on stock</strong> — ${names}${lowStock.length > 3 ? ` + ${lowStock.length - 3} more` : ''}`,
       () => goToTab('shop')]);
   }
@@ -22669,7 +22695,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   if (openRets.length) {
     const claim = openRets.reduce((s, r) => s + (r.claimedValue || 0), 0);
     const names = [...new Set(openRets.map(r => r.supplierName).filter(Boolean))].slice(0, 2).map(escHtml).join(', ');
-    attention.push(['📤',
+    attention.push(['upload',
       `<strong>${openRets.length} return${openRets.length === 1 ? '' : 's'} to supplier open</strong>${claim ? ` — ${fmtGbp(claim)} claimed` : ''}${names ? ` (${names})` : ''}`,
       () => goToTab('shop')]);
   }
@@ -22679,10 +22705,10 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   // than something that happened today.
   const unreachable = customers.filter(c =>
     !kcTail10(c.phone) && !kcTail10(c.altPhone) && customerSimsOf(c).length === 0);
-  if (unreachable.length) attention.push(['⚠',
+  if (unreachable.length) attention.push(['alert',
     `<strong>${unreachable.length} customer${unreachable.length === 1 ? '' : 's'} with no way to reach them</strong> — no number of theirs and no SIM of ours`,
     () => filterView('customers', () => { customerFilter = 'unreachable'; }, renderTableRows)]);
-  highTasks.slice(0, 5).forEach(t => attention.push(['❗', escHtml(t.title), () => goToTab('tasks')]));
+  highTasks.slice(0, 5).forEach(t => attention.push(['urgent', escHtml(t.title), () => goToTab('tasks')]));
 
   const shown = attention.slice(0, 10);
   const comingShown = coming.slice(0, 5);
@@ -22691,7 +22717,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
     ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">All clear.</div>`
     : shown.map(([icon, html], i) => `
         <div class="feed-item dash-link" onclick="dashFeedActions[${i}]()" title="Open">
-          <span class="feed-icon">${icon}</span><span>${html}</span>
+          <span class="feed-icon kc-ic kc-ic-${icon}" aria-hidden="true"></span><span>${html}</span>
           <span class="feed-go">›</span>
         </div>`).join('');
 
@@ -22699,7 +22725,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
     <div class="section-divider" style="margin-top:14px;">Coming up</div>
     ${comingShown.map(([icon, html], i) => `
       <div class="feed-item dash-link" onclick="dashFeedActions[${shown.length + i}]()" title="Open">
-        <span class="feed-icon">${icon}</span><span>${html}</span>
+        <span class="feed-icon kc-ic kc-ic-${icon}" aria-hidden="true"></span><span>${html}</span>
         <span class="feed-go">›</span>
       </div>`).join('')}`;
 
