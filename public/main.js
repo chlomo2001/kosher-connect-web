@@ -4665,7 +4665,7 @@ async function saveMultiPhoneRental(customerId, phoneIds, addAnother) {
   renderRentalsTab();
   if (addAnother) { openNewRentalModal(customerId); return; }
   showDonePanel({
-    title: isReservation ? '📅 Reserved' : '✔ Rentals saved',
+    title: isReservation ? 'Reserved' : 'Rentals saved', icon: isReservation ? 'calendar' : 'check',
     customerId,
     customerName: `${customer.firstName} ${customer.lastName}`,
     customerPhone: customer.phone || '',
@@ -4899,7 +4899,7 @@ async function saveNewRental(addAnother = false) {
       });
       if (!ok) return; // operator backs out to pick a covered phone
       await window.api.addTask({
-        title: `🔴 Activate pool “${gPhone.pool}” — ${fmtPhone(gPhone.number)} rented till ${fmtDate(to)}`,
+        title: `Activate pool “${gPhone.pool}” — ${fmtPhone(gPhone.number)} rented till ${fmtDate(to)}`,
         dueDate: actBy,
         priority: 'High',
         notes: `Pool ${exp ? 'expires ' + exp : 'has no window'}; rental runs ${from} → ${to}. Activate in 📶 Pools (or move the rental to a covered phone).`,
@@ -5073,7 +5073,7 @@ async function saveNewRental(addAnother = false) {
     return;
   }
   showDonePanel({
-    title: isReservation ? '📅 Reserved' : '✔ Rental saved',
+    title: isReservation ? 'Reserved' : 'Rental saved', icon: isReservation ? 'calendar' : 'check',
     customerId,
     customerName: `${customer.firstName} ${customer.lastName}`,
     customerPhone: customer.phone || '',
@@ -7028,7 +7028,10 @@ let kcConfirmResolve = null;
 // `blocking: true` renders a dialog with NO confirm button — used by the
 // booking gate, where the answer to "passport expires before the flight" is not
 // a decision the operator gets to make. It always resolves false.
-function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm charge', okIcon = null, amount = null, blocking = false, danger = false }) {
+// `icon` names the mark beside the title. It is a separate argument for the
+// same reason toast()'s is: the title goes through escHtml — it carries
+// customer names — so a glyph prefixed to the string could never become one.
+function kcConfirm({ title = 'Confirm charge', icon = null, body = '', okLabel = 'Confirm charge', okIcon = null, amount = null, blocking = false, danger = false }) {
   return new Promise(resolve => {
     kcConfirmResolve = resolve;
     kcSaveReturnFocus('kcConfirm');
@@ -7043,7 +7046,7 @@ function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm cha
     }
     el.innerHTML = `
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="kcConfirmTitle" style="width:430px;">
-        <div class="modal-title" id="kcConfirmTitle">${escHtml(title)}</div>
+        <div class="modal-title${icon ? ` kc-ic kc-ic-${icon}` : ''}" id="kcConfirmTitle">${escHtml(title)}</div>
         <div style="font-size:var(--fs-ui);line-height:1.65;margin:4px 0 10px;color:var(--text);">${body}</div>
         ${amount !== null ? `<div style="font-size:var(--fs-h1);font-weight:700;margin:0 0 16px;font-feature-settings:'tnum';">${fmtGbp(Number(amount))}</div>` : ''}
         <div class="modal-actions">
@@ -7642,7 +7645,7 @@ function renderTableRows() {
     return `
     <tr class="${selected}" data-id="${c.id}">
       <td>
-        <div class="customer-name">${customerNameCell(c, surnameFirst)}${customerHasPassport(c) ? ' <span title="Passport on file">🛂</span>' : ''}${unconfirmedChip(c)}</div>
+        <div class="customer-name">${customerNameCell(c, surnameFirst)}${customerHasPassport(c) ? ' <span class="kc-ic kc-ic-passport" title="Passport on file"></span>' : ''}${unconfirmedChip(c)}</div>
         ${/* The account email is the SHOP's carrier login, not the customer's
              address, and it was printed under 453 of 609 names — 452 of them
              with no contact email at all, so the only thing on that line was
@@ -8746,7 +8749,7 @@ function renderDocsSection(custId, docs) {
     <div id="doc-row-${escHtml(d.id)}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:var(--fs-body);">
       <span style="flex:1;">${escHtml(d.filename)}
         <span style="color:var(--muted);font-size:var(--fs-micro);"> · ${d.source === 'customer' ? 'from customer' : 'shared'}${d.status !== 'published' ? ` · ${escHtml(d.status)}` : ''}${d.status === 'rejected' && d.note ? ` — “${escHtml(d.note)}”` : ''}</span></span>
-      ${d.status === 'rejected' ? '' : `<button class="action-btn" title="Download" onclick="${dl(d.id)}">⬇︎</button>`}
+      ${d.status === 'rejected' ? '' : `<button class="action-btn kc-ic kc-ic-download" title="Download" onclick="${dl(d.id)}"></button>`}
       <button class="action-btn danger" title="Delete" onclick="deleteCustomerDoc('${custId}','${d.id}')">✕</button>
     </div>`;
   const pendingHtml = pending.length ? `
@@ -8755,7 +8758,7 @@ function renderDocsSection(custId, docs) {
       ${pending.map(d => `
         <div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:var(--fs-body);">
           <span style="flex:1;">${escHtml(d.filename)}</span>
-          <button class="action-btn" title="View" onclick="${dl(d.id)}">👁</button>
+          <button class="action-btn kc-ic kc-ic-eye" title="View" onclick="${dl(d.id)}"></button>
           <button class="btn btn-primary btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="reviewCustomerDoc('${custId}','${d.id}','approve')">✓ Approve</button>
           <button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="reviewCustomerDoc('${custId}','${d.id}','reject')">Reject</button>
         </div>`).join('')}
@@ -10529,7 +10532,7 @@ async function loadWalletSection(customerId) {
           <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--danger-ink)'};">
             ${e.amount >= 0 ? '+' : '−'}${fmtGbp(Math.abs(e.amount))}</div>
           ${RECEIPTABLE[e.type] && Math.abs(e.amount) >= 0.005 ? `<button class="btn btn-secondary" style="font-size:var(--fs-micro);padding:3px 8px;margin-left:10px;"
-            title="Email a receipt for this entry" onclick="emailLedgerReceipt(this, '${escHtml(customerId)}', ${i})">✉️</button>` : ''}
+            title="Email a receipt for this entry" onclick="emailLedgerReceipt(this, '${escHtml(customerId)}', ${i})"></button>` : ''}
           ${e.type === 'payment' && e.method === 'card' && typeof e.reference === 'string' && /^STRIPE-pi_/.test(e.reference) ? `<button class="btn btn-secondary kc-ic kc-ic-undo" style="font-size:var(--fs-micro);padding:3px 8px;margin-left:6px;"
             title="Refund this card payment back to the card" onclick="openRefundModal('${escHtml(customerId)}', ${i})">Refund</button>` : ''}
         </div>`).join('');
@@ -10575,7 +10578,7 @@ async function kcSendReceipt(btn, customerId, opts) {
   // than the customer's own address. Sending there mails the shop.
   const ours = to && isOwnAccountEmail(to);
   if (!(await kcConfirm({
-    title: opts.title || '✉️ Send this email?',
+    title: opts.title || 'Send this email?', icon: 'email',
     body: `Sends ${opts.what} to ${
       to ? `<strong>${escHtml(to)}</strong>` : 'the address on this customer’s record'
     }.${ours ? ' <strong style="color:var(--gold);">That is a shop account login, not the customer’s own address.</strong>' : ''} An email cannot be unsent.`,
@@ -10617,7 +10620,7 @@ async function emailRepairReady(btn, repairId) {
   const r = repairs.find(x => String(x.id) === String(repairId));
   if (!r) { toast('Reload the list and try again.', 'error'); return; }
   await kcSendReceipt(btn, r.customerId, {
-    title: '✉️ Tell them it is ready?',
+    title: 'Tell them it is ready?', icon: 'email',
     what: `the ready-to-collect email for <strong>${escHtml(r.device || 'their phone')}</strong>`,
     okLabel: 'Send it',
     amount: Number(r.total) || 0,
@@ -10648,7 +10651,7 @@ async function emailLedgerReceipt(btn, customerId, idx) {
   // The confirm, the own-alias warning, the HOLD/TEST branches and putting the
   // button back all live in kcSendReceipt — this only says what is being sent.
   await kcSendReceipt(btn, customerId, {
-    title: '✉️ Email this receipt?',
+    title: 'Email this receipt?', icon: 'email',
     what: `a receipt for <strong>${escHtml(e.description || e.type)}</strong>`,
     okLabel: 'Send receipt',
     amount: abs,
@@ -13135,7 +13138,7 @@ async function saveSimForm(editId) {
   const providerLabel = fieldText('simProvider');
   const renewal = fieldText('simRenewal');
   showDonePanel({
-    title: '💳 SIM plan added',
+    title: 'SIM plan added', icon: 'card',
     customerId,
     customerName: sc ? `${sc.firstName || ''} ${sc.lastName || ''}`.trim() : '',
     customerPhone: sc?.phone || '',
@@ -14141,12 +14144,12 @@ function tmCardHtml(t) {
           ? `<button class="btn btn-primary btn-sm" onclick="tmIsThisBooking(${t.id}, '${escJs(String(already.id))}')"
                title="File this email on the booking it belongs to">✓ It's this booking</button>
              <button class="btn btn-outline btn-sm" onclick="tmAttachTo(${t.id}, '${escJs(String(already.id))}')"
-               title="Another flight on the same booking">➕ Add as another flight</button>
+               title="Another flight on the same booking"><i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Add as another flight</button>
              <button class="btn btn-outline btn-sm" onclick="tmShowMail(${t.id})">Read the email</button>
              <button class="btn btn-outline btn-sm" onclick="tmDismiss(${t.id})">Dismiss</button>`
           : `<button class="btn btn-primary btn-sm kc-ic kc-ic-plane" onclick="tmBook(${t.id})">Confirm booking details</button>
              ${t.passengers.length > 1 ? `<button class="btn btn-outline btn-sm kc-ic kc-ic-users" onclick="tmSplit(${t.id})" title="Each passenger pays their own">Split across payers</button>` : ''}
-             <button class="btn btn-outline btn-sm" onclick="tmAttach(${t.id})" title="Another leg of a journey already booked">➕ Add to a booking</button>
+             <button class="btn btn-outline btn-sm" onclick="tmAttach(${t.id})" title="Another leg of a journey already booked"><i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Add to a booking</button>
              <button class="btn btn-outline btn-sm" onclick="tmShowMail(${t.id})">Read the email</button>
              <button class="btn btn-outline btn-sm" onclick="tmDismiss(${t.id})">Dismiss</button>`}
       </div>
@@ -14713,7 +14716,7 @@ function renderBookingsTab() {
             legs.length > 1 ? `<span class="bk-legs"> · ${legs.length} flights</span>` : ''}</div>`;
         })()}</td>
         <td class="kc-date">${b.travelDate ? fmtDateHeb(b.travelDate) : '—'}${
-          b.returnDate ? `<span title="Returns ${escHtml(fmtDate(b.returnDate))}"> ↩</span>` : ''}
+          b.returnDate ? `<span class="kc-ic kc-ic-undo" title="Returns ${escHtml(fmtDate(b.returnDate))}"></span>` : ''}
             <div class="customer-email">${b.returnDate
               ? `back ${escHtml(fmtDate(b.returnDate))}`
               : `${escHtml(b.departureTime || '')}${b.arrivalTime ? ' → ' + escHtml(b.arrivalTime) : ''}`}</div></td>
@@ -14723,10 +14726,10 @@ function renderBookingsTab() {
         <td style="cursor:pointer;" onclick="openCheckinModal('${escHtml(b.id)}')" title="Set check-in">${checkinChip(b)}</td>
         <td>
           <div class="row-actions">
-          <button class="action-btn" onclick="openCheckinModal('${escHtml(b.id)}')" title="Online check-in" aria-label="Online check-in">🛫</button>
-          <button class="action-btn" onclick="openPassengersModal('${escHtml(b.id)}')" title="Passengers (DOB, passport)" aria-label="Passengers">👥</button>
+          <button class="action-btn kc-ic kc-ic-takeoff" onclick="openCheckinModal('${escHtml(b.id)}')" title="Online check-in" aria-label="Online check-in"></button>
+          <button class="action-btn kc-ic kc-ic-users" onclick="openPassengersModal('${escHtml(b.id)}')" title="Passengers (DOB, passport)" aria-label="Passengers"></button>
           <button class="action-btn danger" onclick="deleteBookingRow('${escHtml(b.id)}')" title="Delete booking" aria-label="Delete booking">✕</button>
-          <button class="action-btn" onclick="openRemindModal('booking','${escHtml(b.id)}')" title="Remind me" aria-label="Set a reminder">⏰</button>
+          <button class="action-btn kc-ic kc-ic-clock" onclick="openRemindModal('booking','${escHtml(b.id)}')" title="Remind me" aria-label="Set a reminder"></button>
           <select class="form-input" style="width:110px;padding:5px 8px;font-size:var(--fs-small);"
             aria-label="Status for ${escHtml(b.customerName || b.bookingRef || 'this booking')}"
             onchange="changeBookingStatus('${escHtml(b.id)}', this.value)">
@@ -15299,7 +15302,7 @@ async function bookingGatePrompt(payload) {
         <span style="color:var(--muted);font-size:var(--fs-small);">${escHtml(c.detail)}</span></div>
     </div>`).join('');
   return await kcConfirm({
-    title: blocked ? '🛂 This booking cannot go ahead' : '🛂 Before you book',
+    title: blocked ? 'This booking cannot go ahead' : 'Before you book', icon: 'passport',
     body: rows + (blocked
       ? '<div style="margin-top:10px;color:var(--muted);font-size:var(--fs-small);">Fix the passport details and try again.</div>'
       : '<div style="margin-top:10px;color:var(--muted);font-size:var(--fs-small);">Booking anyway records that you checked.</div>'),
@@ -15400,7 +15403,7 @@ async function saveNewBooking() {
   const b = res.booking;
   const bc = customers.find(x => String(x.id) === String(b.customerId));
   showDonePanel({
-    title: '✈️ Booking saved',
+    title: 'Booking saved', icon: 'plane',
     customerId: b.customerId,
     customerName: bc ? `${bc.firstName || ''} ${bc.lastName || ''}`.trim() : (b.customerName || ''),
     customerPhone: bc?.phone || '',
@@ -15596,14 +15599,14 @@ function checkinChip(b) {
   const outDone = !!b.checkinDone;
   const backDone = !twoLegs || !!b.returnCheckinDone;
 
-  if (outDone && backDone) return `<span class="badge badge-active" title="Check-in done${twoLegs ? ', both ways' : ''}">✔ In${twoLegs ? ' ×2' : ''}</span>`;
+  if (outDone && backDone) return `<span class="badge badge-active kc-ic kc-ic-check" title="Check-in done${twoLegs ? ', both ways' : ''}">In${twoLegs ? ' ×2' : ''}</span>`;
   if (b.checkinBy === 'us') {
     const next = !outDone ? b.checkinDate : b.returnCheckinDate;
     const which = !outDone ? '' : ' back';
     return `<span class="badge badge-rental" title="We check in${next ? ' on ' + fmtDate(next) : ''}${twoLegs ? ` · out ${outDone ? 'done' : 'to do'}, back ${backDone ? 'done' : 'to do'}` : ''}">🛫 us${which}${next ? ' ' + fmtDate(next).slice(0, 5) : ''}</span>`;
   }
   if (b.checkinBy === 'customer') return `<span class="badge" style="background:rgba(148,163,184,0.15);color:var(--muted);" title="Customer checks in">👤 cust</span>`;
-  return `<span class="badge" style="background:rgba(234,179,8,0.15);color:var(--warning-ink);" title="Check-in not set">⚠ ?</span>`;
+  return `<span class="badge" style="background:rgba(234,179,8,0.15);color:var(--warning-ink);" title="Check-in not set">?</span>`;
 }
 
 async function changeBookingStatus(id, status) {
@@ -15982,9 +15985,9 @@ async function renderRepairsTab() {
         <td class="kc-date">${r.openedAt ? fmtDateHeb(r.openedAt) : '—'}</td>
         <td>${repairStatusBadge(r.status)}</td>
         <td style="white-space:nowrap;">
-          ${r.status === 'Ready' ? `<button class="action-btn" onclick="openRepairSmsModal('${escHtml(r.id)}')" title="Ready-to-collect message">💬</button>
-          <button class="action-btn" onclick="emailRepairReady(this, '${escHtml(r.id)}')" title="Email: ready to collect">✉️</button>` : ''}
-          <button class="action-btn" onclick="openRemindModal('repair','${escHtml(r.id)}')" title="Remind me">⏰</button>
+          ${r.status === 'Ready' ? `<button class="action-btn kc-ic kc-ic-chat" onclick="openRepairSmsModal('${escHtml(r.id)}')" title="Ready-to-collect message"></button>
+          <button class="action-btn kc-ic kc-ic-email" onclick="emailRepairReady(this, '${escHtml(r.id)}')" title="Email: ready to collect"></button>` : ''}
+          <button class="action-btn kc-ic kc-ic-clock" onclick="openRemindModal('repair','${escHtml(r.id)}')" title="Remind me"></button>
           <select class="form-input" style="width:120px;padding:5px 8px;font-size:var(--fs-small);"
             aria-label="Status for ${escHtml([r.customerName, r.device].filter(Boolean).join(' — ') || 'this repair')}"
             onchange="changeRepairStatus('${escHtml(r.id)}', this.value)">
@@ -16113,7 +16116,7 @@ async function saveNewRepair() {
   const rc = customers.find(x => String(x.id) === String(customerId));
   const rDevice = res.repair.device || 'the device';
   showDonePanel({
-    title: '🔧 Repair ticket opened',
+    title: 'Repair ticket opened', icon: 'wrench',
     customerId,
     customerName: rc ? `${rc.firstName || ''} ${rc.lastName || ''}`.trim() : (res.repair.customerName || ''),
     customerPhone: rc?.phone || '',
@@ -16411,8 +16414,8 @@ function svcTimerFloatFrame(t) {
     </div>
     <div class="svc-float-btns">
       ${paused
-        ? `<button class="svc-float-btn" title="Resume" onclick="event.stopPropagation();svcTimerResume()">▶</button>`
-        : `<button class="svc-float-btn" title="Pause" onclick="event.stopPropagation();svcTimerPause()">⏸</button>`}
+        ? `<button class="svc-float-btn kc-ic kc-ic-play" title="Resume" onclick="event.stopPropagation();svcTimerResume()"></button>`
+        : `<button class="svc-float-btn kc-ic kc-ic-pause" title="Pause" onclick="event.stopPropagation();svcTimerPause()"></button>`}
       ${svcPipSupported()
         ? `<button class="svc-float-btn" title="Float on top of everything" onclick="event.stopPropagation();svcTimerPopOut()">⧉</button>`
         : ''}
@@ -22850,8 +22853,8 @@ async function renderVirtualTab() {
           : 'background:rgba(148,163,184,0.15);color:var(--muted);'}">${escHtml(v.status)}</span></td>
         <td>${v.shortcutUrl ? `<a href="${escHtml(v.shortcutUrl)}" target="_blank" rel="noopener" style="color:var(--accent);font-size:var(--fs-small);">open</a>` : '—'}</td>
         <td style="white-space:nowrap;">
-          <button class="action-btn" style="font-size:var(--fs-micro);padding:4px 10px;"
-            onclick="openRemindModal('vn','${escHtml(v.id)}')" title="Remind me">⏰</button>
+          <button class="action-btn kc-ic kc-ic-clock" style="font-size:var(--fs-micro);padding:4px 10px;"
+            onclick="openRemindModal('vn','${escHtml(v.id)}')" title="Remind me"></button>
           <button class="action-btn kc-ic kc-ic-pound" style="font-size:var(--fs-micro);padding:4px 10px;"
             onclick="openVNBillingModal('${escHtml(v.id)}')">Billing</button>
           <button class="action-btn" style="font-size:var(--fs-micro);padding:4px 10px;"
@@ -23246,7 +23249,7 @@ async function renderSettingsTab() {
       <td>${num(`rr_vnw_${r.countryCode}`, r.vnWeekly ?? '')}</td>
       <td>${num(`rr_vnm_${r.countryCode}`, r.vnPer30Days ?? '')}</td>
       <td style="white-space:nowrap;"><button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 12px;"
-        aria-label="Save this rate" onclick="saveRentalRate('${escHtml(r.countryCode)}')">💾</button>
+        aria-label="Save this rate" onclick="saveRentalRate('${escHtml(r.countryCode)}')"></button>
         <button class="action-btn danger" style="font-size:var(--fs-micro);" title="Remove country"
         onclick="deleteRateRow('rental_rates','${escHtml(r.countryCode)}')">✕</button></td>
     </tr>`).join('') + `
@@ -23266,7 +23269,7 @@ async function renderSettingsTab() {
       <td>${num(`dr_charger_${d.countryCode}`, d.chargerMissing)}</td>
       <td>${num(`dr_sim_${d.countryCode}`, d.simMissing)}</td>
       <td style="white-space:nowrap;"><button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 12px;"
-        aria-label="Save this rate" onclick="saveDamageRate('${escHtml(d.countryCode)}')">💾</button>
+        aria-label="Save this rate" onclick="saveDamageRate('${escHtml(d.countryCode)}')"></button>
         <button class="action-btn danger" style="font-size:var(--fs-micro);" title="Remove country"
         onclick="deleteRateRow('damage_rates','${escHtml(d.countryCode)}')">✕</button></td>
     </tr>`).join('') + `

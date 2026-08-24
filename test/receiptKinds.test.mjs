@@ -218,8 +218,8 @@ test('the confirmation cards send their own kind, not a POS line', () => {
   // Anchored on the showDonePanel TITLE, not on the words: "SIM plan added"
   // also appears in a comment and a toast further up the same function, and
   // indexOf found the comment first.
-  for (const [kind, near] of [['sim', "title: '💳 SIM plan added'"],
-    ['booking', "title: '✈️ Booking saved'"], ['repair', "title: '🔧 Repair ticket opened'"]]) {
+  for (const [kind, near] of [['sim', "title: 'SIM plan added'"],
+    ['booking', "title: 'Booking saved'"], ['repair', "title: 'Repair ticket opened'"]]) {
     const i = SRC.indexOf(near)
     assert.ok(i > 0, `${near} card not found`)
     const card = SRC.slice(i, i + 2200)

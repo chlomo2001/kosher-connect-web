@@ -81,7 +81,7 @@ export default function ScanReader() {
             <button type="button" className="btn" style={{ display: 'block', width: '100%', textAlign: 'start',
               border: 0, borderRadius: 0, padding: '8px 10px', fontSize: 13 }}
               onClick={() => patchItem(idx, { saveTarget: 'new', pickOpen: false })}>
-              ➕ New customer from this passport
+              <span className="kc-ic kc-ic-plus">New customer from this passport</span>
             </button>
             {matches.map((c) => (
               <button type="button" key={c.id} className="btn" style={{ display: 'block', width: '100%',
@@ -98,8 +98,8 @@ export default function ScanReader() {
           </div>
         )}
         {it.saveTarget === 'new' && (
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
-            ➕ Will create the customer from the passport’s own name fields.
+          <div className="kc-ic kc-ic-plus" style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+            Will create the customer from the passport’s own name fields.
           </div>
         )}
       </div>
@@ -309,12 +309,12 @@ export default function ScanReader() {
           <div className="tool-card">
             <div className="tool-card-title">1 · Reading mode</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button className={`btn ${mode === 'device' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setMode('device')}>🔒 On this device (private)</button>
-              <button className={`btn ${mode === 'ai' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setMode('ai')}>✨ AI reading (higher accuracy)</button>
+              <button className={`btn ${mode === 'device' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setMode('device')}>On this device (private)</button>
+              <button className={`btn ${mode === 'ai' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setMode('ai')}>AI reading (higher accuracy)</button>
             </div>
             {mode === 'ai' && (
               <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, fontSize: 13, lineHeight: 1.5, background: 'rgba(234,179,8,0.12)', border: '1px solid #eab308' }}>
-                ⚠ AI reading <strong>uploads the document to Google</strong> to read it — far more accurate, especially for Hebrew and messy scans, but the file leaves this device.
+                <span className="kc-ic kc-ic-alert" />AI reading <strong>uploads the document to Google</strong> to read it — far more accurate, especially for Hebrew and messy scans, but the file leaves this device.
                 <strong> Don’t use it for passports, ID cards or other sensitive personal documents</strong> — use “On this device” for those.
               </div>
             )}
@@ -348,11 +348,11 @@ export default function ScanReader() {
                   {it.mrz && !it.dismissed && (
                     <div style={{ marginTop: 10, padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
                       {it.saved ? (
-                        <div style={{ fontSize: 14 }}>✔ Saved to <strong>{it.savedName || 'the customer'}</strong> — scan filed under their documents, passport details on their record.</div>
+                        <div className="kc-ic kc-ic-check" style={{ fontSize: 14 }}>Saved to <strong>{it.savedName || 'the customer'}</strong> — scan filed under their documents, passport details on their record.</div>
                       ) : (
                         <>
                           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>
-                            🛂 Passport detected — save it to a customer?
+                            <span className="kc-ic kc-ic-passport">Passport detected — save it to a customer?</span>
                             {!it.mrz.checksumOk && <span style={{ color: 'var(--muted)', fontWeight: 400 }}> (check the fields — the scan was hard to read)</span>}
                           </div>
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginBottom: 10 }}>
@@ -368,7 +368,7 @@ export default function ScanReader() {
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                             <CustomerPick it={it} idx={idx} />
                             <button className="btn btn-primary" disabled={!it.saveTarget || it.saving}
-                              onClick={() => savePassportTo(idx)}>{it.saving ? 'Saving…' : '💾 Save scan + details'}</button>
+                              onClick={() => savePassportTo(idx)}>{it.saving ? 'Saving…' : 'Save scan + details'}</button>
                             <button className="btn btn-outline" onClick={() => patchItem(idx, { dismissed: true })}>Not relevant</button>
                           </div>
                           {it.saveError && <div className="tool-msg" style={{ marginTop: 8 }}>{it.saveError}</div>}

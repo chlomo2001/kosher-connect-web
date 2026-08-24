@@ -226,7 +226,7 @@ export default function TransferWizard() {
                 )}
               </div>
               <button className="btn btn-primary" onClick={convert} disabled={busy}>
-                {busy ? 'Converting…' : smsFlow ? '⬇ Download FIG backup (messages.zip)' : source.kind === 'ib' ? '⬇ Download contacts .vcf' : '⬇ Download fixed .vcf'}
+                {busy ? 'Converting…' : smsFlow ? 'Download FIG backup (messages.zip)' : source.kind === 'ib' ? 'Download contacts .vcf' : 'Download fixed .vcf'}
               </button>
               <div role="status" aria-live="polite">{done && <div className="tool-msg tool-msg-ok">{done}</div>}</div>
             </div>

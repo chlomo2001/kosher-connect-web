@@ -52,7 +52,7 @@ const GUIDES = [
     go: 'Open Phone Rentals',
     steps: [
       'Open Phone Rentals and find the rental — or scan the phone\'s IMEI in the scan box, which finds it for you.',
-      'Press "⚙ Manage" on that row.',
+      'Press "Manage" on that row.',
       'Turn on "Returned". The app works out any late days and shows what they come to.',
       'If anything is missing or broken, tick it there — charger, SIM, damage — so the charge is on the record.',
       'Take the payment if there is one owing, then Save. The phone goes back into stock straight away.',
@@ -79,7 +79,7 @@ const GUIDES = [
       'If it is for a customer on the books, choose them at the top — otherwise it is a walk-in.',
       'Press the payment method — Cash, Card or Transfer — and take the money.',
       'Press Pay. The stock comes down and the sale is on the day\'s takings immediately.',
-      'If someone has to wait, "⏸ Park sale" puts the basket aside and clears the screen for the next person.',
+      'If someone has to wait, "Park sale" puts the basket aside and clears the screen for the next person.',
     ],
   },
   {
@@ -136,7 +136,7 @@ const GUIDES = [
     words: ['customer', 'new person', 'add someone', 'register', 'client'],
     go: 'Open Customers',
     steps: [
-      'You do not have to leave what you are doing: every place that asks for a customer offers "➕ Add … as a new customer" in the list.',
+      'You do not have to leave what you are doing: every place that asks for a customer offers "Add … as a new customer" in the list.',
       'A first name, a surname and a number is all that is needed — the rest can be filled in later.',
       'If the number is already on file, the app says whose it is and offers to use them instead of making a second record.',
       'For the full record — address, notes, house account — open Customers and press "+ New customer".',
@@ -161,7 +161,7 @@ const GUIDES = [
       'Open Virtual Numbers and press "+ New number".',
       'Choose the customer and the city prefix they want.',
       'Choose weekly or monthly — the price follows the choice.',
-      'Save. A virtual number can also be added to a rental as it is being written up, with the "🔢 Add Virtual Number" tick.',
+      'Save. A virtual number can also be added to a rental as it is being written up, with the "Add Virtual Number" tick.',
     ],
   },
   {
@@ -169,8 +169,8 @@ const GUIDES = [
     words: ['text', 'sms', 'message', 'remind', 'reminder', 'chase', 'whatsapp'],
     go: 'Open Phone Rentals',
     steps: [
-      'On a rental row, the ✉️ button drafts the message for you — it never sends without you reading it.',
-      'The ⏰ button sets a reminder for yourself instead, which lands in Tasks.',
+      'On a rental row, the draft-a-message button drafts it for you — it never sends without you reading it.',
+      'The reminder button sets one for yourself instead, which lands in Tasks.',
       'Texts are held until the shop turns sending on, so a draft is exactly that until then.',
       'Settings → Messaging shows every message the system built or sent, and whether the safety gate held it back.',
     ],
@@ -180,7 +180,7 @@ const GUIDES = [
     words: ['kol torah', 'cd', 'mp3', 'conversion', 'shiur', 'consignment', 'shul'],
     go: 'Open Kol Torah',
     steps: [
-      'Open Kol Torah. The "➕ New job" panel is at the top of the conversion list.',
+      'Open Kol Torah. The "New job" panel is at the top of the conversion list.',
       'Choose the customer, or leave it as walk-in and type a name.',
       'Choose the kind of job, the quantity and the price, and press "+ Add job".',
       'Move it along as it goes — Ready when it can be collected, Collected when it goes out, which is what charges it.',
@@ -194,7 +194,7 @@ const GUIDES = [
     steps: [
       'Tasks holds anything that needs doing that is not a rental, a repair or a sale.',
       'Add one with a due date, and it appears on the Dashboard when it is due.',
-      'The ⏰ button on any rental, SIM or repair makes a task about that record, so the link back is kept.',
+      'The reminder button on any rental, SIM or repair makes a task about that record, so the link back is kept.',
       'Say "remind me tomorrow" style dates in plain words — the date box understands them.',
     ],
   },
@@ -228,7 +228,7 @@ const GUIDES = [
       'Open Settings → Pricing. Every country has a row.',
       '"£/day" is the day rate, "Min £" the least a hire can cost, and "Cap £" the most it can cost in one 30-day period.',
       '"After-cap £/day" is what each day costs once a hire runs past that period.',
-      'Press 💾 on the row to save it.',
+      'Press Save on the row.',
       'Rentals already written up keep the price they were given — a rate change only affects new ones.',
     ],
   },
@@ -239,7 +239,7 @@ const GUIDES = [
     steps: [
       'The Dashboard shows the total outstanding across everyone.',
       'Wallet lists every customer in debt, largest first.',
-      'Or press ❓ Help and use "🤖 Ask about the shop\'s numbers" — typing "who owes money?" answers it directly.',
+      'Or press Help and use "Ask about the shop\'s numbers" — typing "who owes money?" answers it directly.',
       'From a customer\'s card you can take the payment or draft a reminder without leaving it.',
     ],
   },

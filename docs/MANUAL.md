@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
-*As of 24 Aug 2026 · m-9376b149 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 24 Aug 2026 · m-98c69f14 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -32,16 +32,16 @@ The menu, the top bar and the buttons that are there whatever tab you are on —
 - **A text waiting for an answer** — On the Dashboard this comes before everything else, ahead of the money. The rest of the list is the shop's own business going slowly; this one is a person holding their phone, and it is the shortest-lived — a rental overdue today is still overdue tomorrow, a text nobody answered by closing time is a customer who thinks they were ignored. It counts a message as answered only once a reply has actually gone to them, so a reply written while texting is on hold leaves it counted. Staff who cannot open Settings never see this line, because they cannot open the messages either.
 - **The search box** — Searches whatever the screen in front of you lists. It is not the whole-app search — that is the next button along.
 - **Search** — The one that looks everywhere: customers, rentals, phones, stock, and every screen and tool by name. Ctrl and K opens it from anywhere without touching the mouse.
-- **Help** — One door for every kind of help. It opens on the jobs that belong to the screen you are standing on, under "On this screen", with the rest of the library below — written by hand, the same answer every time. Inside it: Ask about the shop's numbers, and 📖 The full manual.
+- **Help** — One door for every kind of help. It opens on the jobs that belong to the screen you are standing on, under "On this screen", with the rest of the library below — written by hand, the same answer every time. Inside it: Ask about the shop's numbers, and The full manual.
 - **Ask about the shop's numbers** — Inside the Help panel, and on Ctrl and K. Questions about the shop's own data in plain words — who owes money, what is overdue. It proposes; nothing happens until you tap to confirm it. It is not the place to ask how to do a job: the steps above are written by a person and are right every time.
 - **The blue button on the right** — Whatever creating something means on this screen — a new customer on Customers, a new rental on Phone Rentals. It changes with the tab so the main action is always in the same place.
-- **🌙 · Aa** — Light or dark, and the size of every word in the app. Press Aa to step through Standard, Large and Largest — the button shows which is set with three pips filled to the level and an Aa that grows with it. Both are per device and remembered, so the screen on the counter can be set for whoever stands at it.
-- **📖 The manual, under Help in the menu** — This book, in its own tab: every screen described in order, and the copy to print for somebody starting on Sunday.
+- **· Aa** — Light or dark, and the size of every word in the app. Press Aa to step through Standard, Large and Largest — the button shows which is set with three pips filled to the level and an Aa that grows with it. Both are per device and remembered, so the screen on the counter can be set for whoever stands at it.
+- **The manual, under Help in the menu** — This book, in its own tab: every screen described in order, and the copy to print for somebody starting on Sunday.
 - **Your name at the bottom of the menu** — Who is signed in on this machine, and how to sign out. Worth checking before recording money.
 
 **Rules that bite here**
 
-- Two doors, and it is worth knowing which is which: 🔍 finds THINGS — a customer, a rental, a screen — and ❓ answers QUESTIONS, whether that is how to do a job or what the shop's numbers say. The steps in the Help panel are written by a person; the assistant inside it is not, which is why the steps come first. Asking the robot how to take a payment gets a confident answer from something that has never stood at the counter.
+- Two doors, and it is worth knowing which is which: Search finds THINGS — a customer, a rental, a screen — and Help answers QUESTIONS, whether that is how to do a job or what the shop's numbers say. The steps in the Help panel are written by a person; the assistant inside it is not, which is why the steps come first. Asking the robot how to take a payment gets a confident answer from something that has never stood at the counter.
 - The menu is what a helper is allowed to see. A screen missing from someone's menu is an access setting, not a fault.
 - Display choices — the width, the text size, light or dark — are per device, not per person. Setting them on the counter machine does not change the one in the back.
 - Ctrl and K reaches everything the app can do, including screens and tools that are several clicks deep. It is the fastest way in once the shape of the app is familiar.
@@ -82,7 +82,7 @@ The morning and evening screen: what the shop took today, what needs doing now, 
 **On the screen**
 
 - **The date line** — Today in English and in Hebrew, with a running clock. The greeting uses your own first name, so it is obvious whose sign-in the screen is on.
-- **↻ Refresh** — Re-reads today's money and tasks. The screen paints from what it already had and then updates, so an old figure for a moment is normal; this forces it.
+- **Refresh** — Re-reads today's money and tasks. The screen paints from what it already had and then updates, so an old figure for a moment is normal; this forces it.
 - **Summary** — Takings broken down by what earned them — rentals, tickets, the till — for the week and the month. Owner only: it is not on the screen for a helper.
 - **New rental · New booking · New repair · New customer** — The four jobs that start at the counter, opened from here without hunting for the right tab first.
 - **Money in today** — What has actually come in today — not what has been invoiced. Underneath: what was charged out, how the week compares with the last one, and progress against the month's target if one is set.
@@ -133,13 +133,13 @@ Everyone on the books: how to reach them, what they owe, and everything they hav
 - **What they have with us** — On the full page: every service this person has, one row each, and each row opens the thing itself — the SIM plan, the rental, the virtual number, the flight. Anything with a phone number is named by that number, because that is what anyone asking about it says first; the network or the country reads underneath. A flight has no number and is named by its route — nothing is given a number it does not have. A row also shows the date that matters for it — a rental's due-back day, a SIM's renewal, a flight's travel date — in the order they next need somebody, soonest first. A line above says what the person is to the shop in one sentence. Things that have finished — a returned rental, a cancelled plan, a flight already flown — are counted and folded underneath rather than dropped, because what somebody has HAD from the shop is half the record. Repairs and print jobs have no record of their own to open, so those rows go to their screen instead, and the row says so.
 - **New Service** — The other half of one-place service: every new thing starts from the card with the person already filled in — a rental, a SIM plan, a flight, a virtual number, a repair, a print job, and the till itself. “Sell at the till” opens the till with them attached, wallet credit and usual payment ready — and Exit till brings you straight back to their card, so a visit that wants a rental, a ticket and a few accessories starts and ends in the same place.
 - **Two cards at once** — Grip a card aside by its edge, then open another customer: the second opens BESIDE the first instead of replacing it, so two records can be read against each other. Both are fully editable, and each card's buttons only ever act on its own customer — a save on one cannot land on the other. The card with the keyboard in it is the brighter of the two. Escape closes the one on top first.
-- **✎ on a timeline entry** — Corrects a call or note that was logged wrongly. It never erases: the original stays on the row struck through, with who corrected it and when, so the timeline can still be read as evidence of what actually happened rather than as notes somebody has since tidied. Only logged calls and notes carry it — a rental or a payment is a record of a thing that happened, and is corrected by correcting the thing.
-- **💬 Contact** — Draft a reminder (written for you, and nothing is sent from here), draft a reply to a message they sent, or log a call or note so the next person knows what was said.
+- **on a timeline entry** — Corrects a call or note that was logged wrongly. It never erases: the original stays on the row struck through, with who corrected it and when, so the timeline can still be read as evidence of what actually happened rather than as notes somebody has since tidied. Only logged calls and notes carry it — a rental or a payment is a record of a thing that happened, and is corrected by correcting the thing.
+- **Contact** — Draft a reminder (written for you, and nothing is sent from here), draft a reply to a message they sent, or log a call or note so the next person knows what was said.
 - **Money** — Charge the card they have saved, save one for next time, or make a payment link to send them. The card number is entered on Stripe's own screen — the shop never sees it and never holds it.
 - **unconfirmed — confirm?** — On a record that came in from an import and nobody has checked, the marker under the name is the answer button. Pressing it vouches that what the app holds matches reality, and confirms the SIMs, bookings and virtual numbers that came in with them — the same as the Confirm Data screen, without leaving the person you are looking at. It asks first. In lists the same marker stays a plain label.
 - **Wallet** — The one place money is offered on the record. It says the balance in the same words as the rest of the app, lists what made it up, and carries a single button — which asks for the payment when they owe and offers to record one when they do not. The balance used to be stated three times on one screen with two buttons doing the same job; two controls of the same shape for one task is how the wrong one gets pressed.
 - **Manage** — Set yourself a reminder about them, edit their details, and — for the owner — look up what their line is doing with the carrier.
-- **📌 Pop-up note** — One line, set in Edit details, that shows loudly every time: a pinned banner across the top of their card and page, and a warning at the till the moment they are rung up. Only for what must not be missed — a passport about to expire, a payment that must be taken first. Everything else belongs in Notes, or the loud channel stops being loud.
+- **Pop-up note** — One line, set in Edit details, that shows loudly every time: a pinned banner across the top of their card and page, and a warning at the till the moment they are rung up. Only for what must not be missed — a passport about to expire, a payment that must be taken first. Everything else belongs in Notes, or the loud channel stops being loud.
 - **Credit limit** — Set in Edit details: how much this customer may run up on account before the till warns whoever is serving them. The sale still goes through when the counter says so — it is a line drawn, not a door locked. Left blank, there is no line.
 - **Documents** — Files shared with the customer, which they see in their own portal, and anything they have sent back. What they upload waits for you to approve or reject it, so nothing lands on the record unread. From four documents up they group into folders by what they are — passports and ID, tickets, receipts, forms, photos — so finding one is a glance rather than a read. The folders are worked out from the filename and are on this screen only; the customer's own portal is unchanged.
 
@@ -186,10 +186,10 @@ Every phone the shop hires out: what is out with whom, what is due back, and wha
 **On the screen**
 
 - **New rental** — Starts a hire. Customer, then dates, then handset — in that order, because the phone list only offers handsets that are actually free for those days.
-- **📷 Scan IMEI — out or back** — Scanning the phone finds its rental for you, whether it is going out or coming back. Faster than searching, and it cannot pick the wrong record.
+- **Scan IMEI — out or back** — Scanning the phone finds its rental for you, whether it is going out or coming back. Faster than searching, and it cannot pick the wrong record.
 - **Search rentals + inventory** — One box over both lists: a customer name finds the hire, a phone number or IMEI finds the handset.
 - **Active & Recent Rentals** — The working list. Filters sit above it, and Upcoming travel narrows it to customers who are away or about to be — a customer stays on that list until the day they land back, not the day they fly.
-- **⚙ Manage** — Everything that happens to a live hire: extend it, mark it returned, record damage or a missing charger, take the money owing.
+- **Manage** — Everything that happens to a live hire: extend it, mark it returned, record damage or a missing charger, take the money owing.
 - **Mark returned** — Tick several rows and close them together — the after-Yom-Tov queue, where a family brings four phones back at once.
 - **Phone Inventory** — The handsets themselves, not the hires: what each one is, whose it is, and whether it is out, free or retired.
 - **Manage phones** — Add a handset, retire one, correct a number or an IMEI.
@@ -202,7 +202,7 @@ Every phone the shop hires out: what is out with whom, what is due back, and wha
 1. New rental. Pick the customer, the country and the dates they are away. The price comes from Settings; it is never typed in here.
 2. Tick what actually leaves the shop with them — handset, SIM, charger. What you tick is what the return screen will ask for back, and on a USA phone an unticked SIM changes the rate.
 3. They pay now or it goes on their account. Either way it lands on their wallet, not in a note.
-4. Thursday: find the row, ⚙ Manage, turn on Returned. Do it on the day — late days are counted from the day you mark it, not the day they walked in.
+4. Thursday: find the row, Manage, turn on Returned. Do it on the day — late days are counted from the day you mark it, not the day they walked in.
 5. Every item you ticked has to be decided, back or lost. The rental does not close while something is unaccounted for, which is the whole point of ticking them.
 
 **Boxes that open on top of it**
@@ -223,7 +223,7 @@ Every phone the shop hires out: what is out with whom, what is due back, and wha
 
 - **The handset you want is not in the list** — It is on hire, or committed to another booking, over those dates. Availability shows who has it and until when.
 - **The price is not what you expected** — Open the price box in the form — it shows the day rate, the free days it has taken off and the cap it has applied. If the rate itself is wrong, that is Settings, not the rental.
-- **A phone came back but the rental still shows as out** — The return was never saved. Find it, ⚙ Manage, turn on Returned — late days are worked out from the day you mark it, so do it on the day.
+- **A phone came back but the rental still shows as out** — The return was never saved. Find it, Manage, turn on Returned — late days are worked out from the day you mark it, so do it on the day.
 
 ---
 
@@ -237,12 +237,12 @@ The UK SIM-only plans the shop manages for customers: whose number is on which n
 - **+ New SIM plan** — Puts a plan on the books: the customer, the network, the number, the SIM's own long number, the login email at the provider, what the plan is, and when it renews next.
 - **Filter and sort** — Renewal soonest is the working order — it is the list of what is about to cost money. There is also a filter for plans with no carrier account on file, which are the ones nobody can log in and manage, and one for plans the shop pays for with no way to collect the money back.
 - **The list** — Customer, network, number, plan, mailbox, renewal date, how it is paid and whether it is running. A plan whose renewal date has passed reads “Renewal due” — that happens by itself overnight, and clears by itself the moment the date is moved on. The line is still live while it says so; it is a nudge, not a stoppage.
-- **⚙ Manage** — Everything about one plan: the details, its service history, the letters and emails that have come in from the carrier about it, and adding a charge for it.
+- **Manage** — Everything about one plan: the details, its service history, the letters and emails that have come in from the carrier about it, and adding a charge for it.
 - **✉️ Email receipt** — On the confirmation after a plan is saved. The customer gets their number, the network, the plan and the day it renews — the things they need months later and cannot get from a till slip. A setup fee still owing says so, with a button to pay it, and there is a link to the page explaining how the plan works.
 - **Payment** — Whose card sits on the NETWORK account — not whose card the shop holds. A card saved with the shop is still the shop collecting, which is “through me”; it only becomes “customer pays directly” when their own card goes on to the network’s account and the shop bills nothing monthly.
 - **Nothing to collect from** — On a “through me” plan whose customer has neither a card on file nor a live Direct Debit mandate. The plan renews and the network takes its money regardless, so this is the shop paying somebody’s phone bill with no way to get it back. A mandate that is set up but not yet live reads as “DD setting up” instead — that one sorts itself out in about two working days. Neither marker appears until the payment details have loaded: an empty answer is not the same as nobody having a card.
 - **Mailbox** — The address the carrier writes to for this plan, which is what lets post about it find its way to the right customer.
-- **Receives mail at** — On ⚙ Manage, above the carrier post: every address whose post is filed on this plan. The first is the login email from the plan's own details and is changed there. A plan can be written to at more than one address, because it has a separate account at each network, and the rest of the list is those. Removing one stops future post to it being filed here; post already filed stays where it is.
+- **Receives mail at** — On Manage, above the carrier post: every address whose post is filed on this plan. The first is the login email from the plan's own details and is changed there. A plan can be written to at more than one address, because it has a separate account at each network, and the rest of the list is those. Removing one stops future post to it being filed here; post already filed stays where it is.
 - **+ address** — Records another address for this plan before any post has gone astray. The other way in is from Carrier Mail, but that only works once a message has already arrived at an unclaimed address and been missed by everybody — when a second network account is opened the address is known that day, so putting it in here means the FIRST message files itself instead of the second. One address belongs to one plan only: if another plan already claims it, this refuses and says whose. It is here rather than on the new-plan form because this list is kept apart from the plan's other details, and having it in two places would be two answers to one question.
 
 **Boxes that open on top of it**
@@ -261,7 +261,7 @@ The UK SIM-only plans the shop manages for customers: whose number is on which n
 **When it goes wrong**
 
 - **You set up a plan and it is not in the list** — It was not saved. The screen now says so and charges nothing when that happens — but a plan added before 20 August 2026 could show a receipt and save nothing, so a plan from that period may be missing while its setup fee is on the customer's wallet. Check the wallet before adding it again, or the fee lands twice.
-- **A plan renewed and nobody was charged** — The renewal date passed without a charge being added. Open ⚙ Manage, add the charge, and move the renewal date on — the dashboard is counting it as overdue until you do.
+- **A plan renewed and nobody was charged** — The renewal date passed without a charge being added. Open Manage, add the charge, and move the renewal date on — the dashboard is counting it as overdue until you do.
 - **Post has come from the network and it is not clear whose it is** — Carrier Mail matches letters to a plan and its customer. A plan with the mailbox missing is the usual reason it could not. The other reason is that the network wrote to a second address this plan has not claimed — Carrier Mail can be told, once, that this plan receives there too.
 - **A customer says they cancelled** — Set the plan's status rather than deleting it. The history of what was charged has to survive the plan ending.
 
@@ -372,7 +372,7 @@ Phones handed in to be fixed: what is wrong with each one, where it has got to, 
 - **✉️ Email receipt** — On the confirmation after a ticket is opened. It says ESTIMATE, not Total — nobody has started the work yet — and tells the customer nothing is charged that they have not agreed to first. When the phone is ready the same email goes out as a Total, payable on collection.
 - **Filter** — Open and in progress, waiting for collection, collected, or cancelled. Waiting-for-collection is the one to work through: those phones are done and the money is not in.
 - **The status box on each row** — Moves the ticket along without opening anything. The shop can add stages of its own in Settings — a phone parked on "waiting for a part" is still open work and still counts as open.
-- **💬 Ready-to-collect message** — Appears once a repair is marked ready: the message written for you, to open in WhatsApp or copy. It is a draft — you send it.
+- **Ready-to-collect message** — Appears once a repair is marked ready: the message written for you, to open in WhatsApp or copy. It is a draft — you send it.
 - **Remind me** — Sets yourself a reminder about this ticket. It becomes a task on your own list, not a message to them.
 - **The list** — Customer, device, the work, the total and where it has got to — enough to answer the phone from without opening the ticket.
 
@@ -385,7 +385,7 @@ Phones handed in to be fixed: what is wrong with each one, where it has got to, 
 
 **When it goes wrong**
 
-- **A phone is fixed but the customer has not been told** — Set the ticket to Ready — the 💬 button appears on the row, with the message written.
+- **A phone is fixed but the customer has not been told** — Set the ticket to Ready — the message button appears on the row, with the message written.
 - **The repair count on the dashboard looks too high** — It counts everything not finished, including anything parked on a stage the shop added. Filter to open and in progress here and the same tickets are in front of you.
 - **The work you did is not on the price list** — Ask the owner to add it in Settings rather than inventing a price. The list is also what the customer was quoted from.
 
@@ -398,11 +398,11 @@ The jobs done for someone at the counter — printing, forms, sorting something 
 **On the screen**
 
 - **+ Charge a service** — The straightforward way: the customer, the job from the price list, how many, the total, and whether they paid now or it goes on their account.
-- **▶ Start timer** — For help that has no fixed price. Say who you are helping and start it; the time banks while you work.
-- **Pause · ▶ Resume** — Stops the clock when you break off to serve somebody else, so the customer is charged for the help and not for the queue.
+- **Start timer** — For help that has no fixed price. Say who you are helping and start it; the time banks while you work.
+- **Pause · Resume** — Stops the clock when you break off to serve somebody else, so the customer is charged for the help and not for the queue.
 - **⧉ Float on top** — Keeps the running timer visible while you work on another screen — which is where the actual helping happens.
 - **Stop & charge** — Ends the session and takes you to the charge with the time already on it.
-- **✕ Discard** — Throws the session away without charging. For the times it turned out to be nothing.
+- **Discard** — Throws the session away without charging. For the times it turned out to be nothing.
 - **Price list** — What each job costs, with a lower price once someone wants several of the same thing. Both prices are set in Settings.
 - **Recent orders** — What has been charged, to whom, and for what — including the notes, which are usually the only record of what the job actually was.
 
@@ -430,7 +430,7 @@ Stock and the counter: what is on the shelf, what it cost and sells for, and the
 - **Open Till** — The counter screen. It takes over the page and opens on large colour-coded CATEGORY buttons — press one and that category’s items appear as tiles. Scanning a barcode or typing in the search box skips the categories entirely, so the fast path stays fast. Tap items into the basket, choose the customer if they are on the books, take the money, and the stock and the day's takings both move at once. A sale can be parked to serve the next person and picked up again.
 - **Charge · Park sale** — Both are greyed until something is in the basket, so neither invites a press that can only fail. They wake as soon as the first item is scanned. Ctrl and Enter from the scan box charges without reaching for the mouse — and it still refuses an empty basket, because the keyboard never touches the button.
 - **Cash up** — The same end-of-day count as on the Wallet screen, here because this is where the drawer is.
-- **➕ Add item** — Puts something new on the shelf: code, barcode, brand, name, what it cost, what it sells for, how many, and when to warn that it is running out.
+- **Add item** — Puts something new on the shelf: code, barcode, brand, name, what it cost, what it sells for, how many, and when to warn that it is running out.
 - **Return to supplier** — Records a bag of faulty stock going back, what it is worth, and where the claim has got to — so it nags until the supplier settles.
 - **Goods in** — Books a delivery in: supplier, date, the lines, the invoice reference and total. This is what makes the shelf count true again.
 - **Inventory** — Every item with its cost, price and margin. Filter to low or out of stock to build the reorder list.
@@ -473,8 +473,8 @@ The audio side of the business: conversion jobs brought in by customers, CDs lef
 **On the screen**
 
 - **+ New job (top of the screen) · + Add job (on the jobs list)** — The same drop-off form either way — the button at the top scrolls you to it and puts the cursor in the customer box. Whose it is, and what is wanted: CD to MP3, CD to an SD card, copying, or other audio work.
-- **Conversion jobs** — Each job from drop-off to collection: ✔ Ready when it is done, Collected when it goes out — which charges a priced job to the account of a job filed against a real customer — and ↩ to put a Ready or Cancelled job back. Collected is final: the money has moved.
-- **Consignment by shul** — What is out with each shul. Deliver adds to what they are holding, Sold moves it to what they owe for, ↩ Return brings unsold stock back, and Settle records the money coming in.
+- **Conversion jobs** — Each job from drop-off to collection: Ready when it is done, Collected when it goes out — which charges a priced job to the account of a job filed against a real customer — and ↩ to put a Ready or Cancelled job back. Collected is final: the money has moved.
+- **Consignment by shul** — What is out with each shul. Deliver adds to what they are holding, Sold moves it to what they owe for, Return brings unsold stock back, and Settle records the money coming in.
 - **Titles catalogue** — The recordings themselves — code, title, speaker and price. A title no longer sold is retired rather than deleted, so old sales still make sense.
 - **Takings — recent settlements** — What each shul sold and what was actually collected, with the method and any note.
 
@@ -488,7 +488,7 @@ The audio side of the business: conversion jobs brought in by customers, CDs lef
 **When it goes wrong**
 
 - **A shul's count is wrong** — Look at what has been recorded against them — a delivery entered twice, or stock sold and never marked. Deliver, Sold and Return are the three that move the count, and each one shows in their history.
-- **A job was marked collected too soon** — Collected is final — the money has moved, so the app will not quietly un-collect it. ↩ puts back a Ready or Cancelled job, not a collected one. Tell the owner, who corrects the charge on the account deliberately.
+- **A job was marked collected too soon** — Collected is final — the money has moved, so the app will not quietly un-collect it. Reopen puts back a Ready or Cancelled job, not a collected one. Tell the owner, who corrects the charge on the account deliberately.
 - **A settlement does not match what the shul says they sold** — Record what was actually collected and put the difference in the note. A settlement is the money that changed hands, not the money that should have.
 
 ---
@@ -503,7 +503,7 @@ Numbers rented to customers that ring through to somewhere else: who has which, 
 - **Filter and sort** — Active or not, and the ones with billing switched on — those are the ones that take money by themselves and are worth reading down.
 - **The list** — The number, whose it is, the platform, what it bills and when next, whether it is active, and a link straight into the platform where one is saved.
 - **Billing** — What this number charges and how often. Switching billing on is what makes it charge; it does not follow from the number merely existing.
-- **Deactivate · ▶ Activate** — Stops or restarts a number without losing it or its history.
+- **Deactivate · Activate** — Stops or restarts a number without losing it or its history.
 - **Remind me** — A reminder for you about this number — chasing the platform, or a customer who asked for it to end.
 
 **Boxes that open on top of it**
@@ -529,8 +529,8 @@ The shop's own to-do list, including the jobs the app files by itself when somet
 
 **On the screen**
 
-- **🔥 Now · Next · 💤 Snoozed · 💡 Suggestions** — Four lanes. Now is what today needs, Next is everything else, Snoozed is deliberately parked, and Suggestions are jobs the app thinks are worth doing and is waiting for you to agree to.
-- **✓ Accept** — Turns a suggestion into a real task. Until you accept it, it is the app's opinion and nothing more.
+- **Now · Next · Snoozed · Suggestions** — Four lanes. Now is what today needs, Next is everything else, Snoozed is deliberately parked, and Suggestions are jobs the app thinks are worth doing and is waiting for you to agree to.
+- **Accept** — Turns a suggestion into a real task. Until you accept it, it is the app's opinion and nothing more.
 - **Filter** — What you wrote yourself, what the app filed, tasks attached to a customer, and anything overdue.
 - **Sort: Smart** — The default. It puts what is due and what is urgent at the top instead of making you read the whole list to find them.
 - **The buttons on a task** — A task about a person carries the action with it: add them as a customer, confirm a booking's details, record a payment, or message them. The work happens from the task, not after hunting for the screen.
@@ -558,10 +558,10 @@ Records that came in from an import and are not yet trusted: read each one again
 
 - **The three counts** — How many records were imported, how many have been confirmed, and how many are still waiting on a person.
 - **A card per record** — The whole queue on one screen, a card each, with everything else that came in for that person beside it — so the decision is made on the whole person, not on a single row, and the list can be worked without a repaint between every answer.
-- **✓ Yes — confirm** — Accepts the record as it stands. Where other imported rows are attached to the same person, it accepts those too, which is what makes the queue finishable.
+- **Yes — confirm** — Accepts the record as it stands. Where other imported rows are attached to the same person, it accepts those too, which is what makes the queue finishable.
 - **Fix first** — Opens the record to correct it before it is trusted. Confirming something you know is wrong is worse than leaving it in the queue.
 - **Skip for now** — Leaves it for someone who knows. Skipping is a legitimate answer — guessing is not.
-- **✓ Confirm all shown** — Answers for every card on the screen at once, after saying so. It stops at the first record that will not save rather than reporting a finish it did not reach. It never reaches records you have not seen.
+- **Confirm all shown** — Answers for every card on the screen at once, after saying so. It stops at the first record that will not save rather than reporting a finish it did not reach. It never reaches records you have not seen.
 - **Load the next 500** — Only appears if the queue is somehow longer than five hundred people — the whole list loads at once otherwise.
 - **Not the only way in** — A record can also be confirmed from the customer card itself — the unconfirmed marker under the name is a button. Same effect, same attached records; this screen is for working through them in bulk.
 
@@ -586,14 +586,14 @@ Post arriving from the networks — renewals, ports, warnings, payment problems 
 
 **On the screen**
 
-- **📬 The live toast** — While the app is open, a small message appears within the minute when carrier post arrives — the sender and the subject, for a few seconds. A handful arriving together compress into one line. Post from before the app was opened does not toast; it is already on this screen.
+- **The live toast** — While the app is open, a small message appears within the minute when carrier post arrives — the sender and the subject, for a few seconds. A handful arriving together compress into one line. Post from before the app was opened does not toast; it is already on this screen.
 - **Needs a human** — The queue: messages the app could not confidently file. This is the whole job of the screen.
-- **↩ Undo match** — Puts a message that is filed on a SIM back into the queue for somebody to file by hand. Most matches are made automatically and nobody sees them being made, so this is how a wrong one gets corrected. The nightly sweep will not re-match it afterwards — you have said the automatic answer was wrong, and it should not argue with you.
+- **Undo match** — Puts a message that is filed on a SIM back into the queue for somebody to file by hand. Most matches are made automatically and nobody sees them being made, so this is how a wrong one gets corrected. The nightly sweep will not re-match it afterwards — you have said the automatic answer was wrong, and it should not argue with you.
 - **Forward to customers** — Owner only. Carrier mail worth sending on to the person whose line it is. The four everyday kinds — a renewal receipt, a payment that failed, a completed port, something about to expire — now forward THEMSELVES the moment they arrive, and a sign-in code goes too, fastest of all, when the app is certain beyond doubt whose it is. This queue is what remains: everything the automatic path was not certain enough to send, shown with what would go, to whom, and what is stopping it. Nothing anywhere decides whose a message is by guessing — a forward only ever follows what the message is already filed against, and a message covering more than one number goes to nobody at all.
 - **What the message means** — Every row says what it IS before it says whose it is — renewing soon, renewed, about to expire, port completed, PAC code, payment problem, payment method removed. The ports and the money ones are the ones that carry colour, because they are the ones that mean work; the renewals are the wallpaper.
 - **Payment method removed** — The shop’s own card gets a line going and then comes off the network account, so the shop is not left carrying somebody’s monthly bill. Between the card coming off and the customer’s own method going on the plan cannot pay for itself, and the network says nothing more about it until the day the line stops. So the confirmation raises a task at high priority the moment it arrives. It is not forwarded to the customer: it is the shop’s card, removed by the shop.
 - **Port completed** — A finished port is not post, it is the end of a job: the customer's number has moved onto our SIM, so the plan usually still shows the number it was set up with. Where the carrier names the new number, one press puts it on the plan. Where it does not — Lebara's confirmation names no number, it tells the customer to dial a code — the row says so and opens the plan to be corrected.
-- **↻ Check now** — Re-reads the mailbox without leaving the screen — for when somebody is standing there waiting for a message they know has been sent.
+- **Check now** — Re-reads the mailbox without leaving the screen — for when somebody is standing there waiting for a message they know has been sent.
 - **Tick the ones that are nothing** — Each message has a tick box and there is a select-all above the list, so a run of identical circulars can be cleared in one press. Pairing a message to a SIM stays one at a time — that answer is different on every row.
 - **Filed on a SIM** — What has been matched, so the letter about a plan is on the plan when someone asks about it.
 - **Messages received** — Everything that has ever arrived, matched or not — including the adverts, which are filed already marked as dealt with so they never reach the queue. They are kept rather than thrown away: an advert nobody reads costs nothing, and a real message wrongly taken for one would otherwise be gone without trace.
@@ -631,8 +631,8 @@ Everything the shop can change without anyone writing code: prices, people, what
 **On the screen**
 
 - **Shop** — The public-facing details — the shop's own information, the wording on receipts, and the phone guide customers read before choosing a handset. There is a link to view the public page as they see it.
-- **People & access** — Team is who works here, with a password reset. 🔓 What helpers can see ticks the screens a helper may open — the owner always sees everything.
-- **Prices & charges** — 🔎 Figures nobody has checked lists every price and whether a person has ever confirmed it against something — the public welcome page will not quote a rental price until the rental rates are confirmed, and editing a price clears its tick again. Then: rental rates per country with their minimum, cap and cap period; what a lost or broken phone, charger or SIM costs; the fees and rules; the service price menu behind Online & Print; extra charges; repair stages; void reasons; your own stock categories on top of the built-in ones; and the month's target that the dashboard measures against.
+- **People & access** — Team is who works here, with a password reset. What helpers can see ticks the screens a helper may open — the owner always sees everything.
+- **Prices & charges** — Figures nobody has checked lists every price and whether a person has ever confirmed it against something — the public welcome page will not quote a rental price until the rental rates are confirmed, and editing a price clears its tick again. Then: rental rates per country with their minimum, cap and cap period; what a lost or broken phone, charger or SIM costs; the fees and rules; the service price menu behind Online & Print; extra charges; repair stages; void reasons; your own stock categories on top of the built-in ones; and the month's target that the dashboard measures against.
 - **Communications** — Email and SMS, each with its safety gate, the addresses post arrives at, a test send, and the log of every message — sent and the replies customers text back, marked ↩ so the two directions read apart. A text that came in carries a Reply button, and one nobody has answered says so on its row.
 - **Travel** — Travel requirements: what each destination demands and how long a document must stay valid. This is what the booking screen checks against.
 - **Connectivity** — The providers behind virtual numbers and the phone lines.
@@ -660,8 +660,8 @@ Everything the shop can change without anyone writing code: prices, people, what
 - **A text still says it is waiting after somebody replied** — It is waiting until a reply actually goes. On hold, and in test mode, the reply is written and logged but the customer never receives it — so the count is right and the message really is unanswered. Turn live texting on, or ring them.
 - **There is no Reply button on a message** — Only a text that came IN can be replied to, and not one where they texted STOP — that person has asked not to be contacted, so the button is not there to be pressed.
 - **A price change did not apply to an existing rental** — It is not meant to. What was agreed at the counter stays agreed; the new price applies to what is booked next.
-- **The welcome page is not showing any prices** — That is deliberate, and the fix takes two minutes. The public page only quotes a rental price built from rates somebody has confirmed — open 🔎 Figures nobody has checked and confirm the rental rates, saying where you checked each one. Until then it drops the sentence rather than showing a figure nobody stands behind. Inside the app nothing is withheld: you are standing in front of the rate list and can see it.
-- **A dropdown somewhere in the app has the wrong choices in it** — Almost every list you choose from is edited here, and each one says where it shows up. Fees & Rules holds the void reasons, the repair stages, your own stock categories and the IVR providers. Service price menu is what Online & Print offers, ➕ Extra charges is what can be added to a bill, and Travel requirements is what the booking screen checks. A choice you remove stays on the records that already carry it — history is not rewritten to match a list.
+- **The welcome page is not showing any prices** — That is deliberate, and the fix takes two minutes. The public page only quotes a rental price built from rates somebody has confirmed — open Figures nobody has checked and confirm the rental rates, saying where you checked each one. Until then it drops the sentence rather than showing a figure nobody stands behind. Inside the app nothing is withheld: you are standing in front of the rate list and can see it.
+- **A dropdown somewhere in the app has the wrong choices in it** — Almost every list you choose from is edited here, and each one says where it shows up. Fees & Rules holds the void reasons, the repair stages, your own stock categories and the IVR providers. Service price menu is what Online & Print offers, Extra charges is what can be added to a bill, and Travel requirements is what the booking screen checks. A choice you remove stays on the records that already carry it — history is not rewritten to match a list.
 - **Something is asking for a key or a password** — Do not paste it into a message or into the app. Keys belong with the host, entered once by the owner.
 
 
@@ -860,7 +860,7 @@ Staff tool: gets the text out of a photograph or a scan, in English or Hebrew, r
 
 **Rules that bite here**
 
-- On this device — the normal way — the document never leaves the computer. These are usually somebody's private papers, and that is exactly why this is not a website that wants an upload. The one exception is the ⚠ AI reading option, which sends the picture away to be read; it is opt-in for that reason.
+- On this device — the normal way — the document never leaves the computer. These are usually somebody's private papers, and that is exactly why this is not a website that wants an upload. The one exception is the AI reading option, which sends the picture away to be read; it is opt-in for that reason.
 - What comes out is a machine reading a picture. Check it against the document before anything is acted on — a mis-read digit in a reference is worth nothing.
 
 **When it goes wrong**
@@ -896,12 +896,12 @@ This page: every screen in the system described in order, on one page that print
 
 **On the screen**
 
-- **Common jobs** — The jobs the app can walk you through. Press a question and its steps open right there — the same steps the ❓ button walks in the app, drawn live from the guides themselves, never a second copy. Hidden in print, because on paper it points at a button paper does not have.
-- **Find in the manual** — Type a word — a screen, a button, a problem — and only the screens that mention it stay, with a count of what matched. Printing then prints just what is showing, so filtering to one screen and pressing 🖨 gives you that screen’s sheets for the till. “Show everything” puts the whole manual back.
+- **Common jobs** — The jobs the app can walk you through. Press a question and its steps open right there — the same steps the Help button walks in the app, drawn live from the guides themselves, never a second copy. Hidden in print, because on paper it points at a button paper does not have.
+- **Find in the manual** — Type a word — a screen, a button, a problem — and only the screens that mention it stay, with a count of what matched. Printing then prints just what is showing, so filtering to one screen and pressing Print gives you that screen’s sheets for the till. “Show everything” puts the whole manual back.
 - **Contents** — Jumps to any screen. It follows the filter, and it is hidden when the page is printed, because a printed list of links is dead paper.
 - **Print** — Prints the whole manual, laid out so a screen's description is never split across two sheets. This is the copy to hand someone starting on Sunday.
-- **← Back to the app** — Returns to the app. The manual opens in its own tab from the help panel, so it can be read alongside the work rather than instead of it.
-- **↑ Top** — Floats in the corner once you are a screen or two down, and glides the page back to the start. On paper it does not print — paper scrolls by hand.
+- **Back to the app** — Returns to the app. The manual opens in its own tab from the help panel, so it can be read alongside the work rather than instead of it.
+- **Top** — Floats in the corner once you are a screen or two down, and glides the page back to the start. On paper it does not print — paper scrolls by hand.
 - **Press a picture** — Every screen’s photograph opens full size when pressed — a dimmed page behind, Escape or a press anywhere to come back. The pictures are the app itself, shot against example data, so what you zoom into is what the screen really looks like.
 - **How do I…?** — The other half, inside the app: the same knowledge as steps for the job in front of you. Ask it in your own words.
 - **As of … stamp** — The date the manual’s words last changed, with a short code, at the top of the page and at the foot of every printed sheet. Hold a printout against the screen: if the codes differ, the paper is old — bin it and print again.

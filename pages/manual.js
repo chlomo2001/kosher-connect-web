@@ -92,7 +92,7 @@ function Screen({ s, shots, onZoom }) {
                     <div style={{ fontSize: 'var(--fs-small)' }}>
                       {text}
                       <div style={{ marginTop: 6, fontSize: 'var(--fs-micro)', color: 'var(--muted)' }}>
-                        <a href={img} target="_blank" rel="noreferrer">See it full size ↗</a>
+                        <a href={img} target="_blank" rel="noreferrer">See it full size</a>
                       </div>
                     </div>
                   </div>
@@ -216,7 +216,7 @@ export default function Manual({ shots = {} }) {
           {/* A plain link, like every other page here: leaving the manual is a
               real navigation back into the app, not a client-side hop. */}
           <a href="/" className="btn btn-outline btn-sm">← Back to the app</a>
-          <button className="btn btn-outline btn-sm" onClick={() => window.print()}>🖨 Print</button>
+          <button className="btn btn-outline btn-sm kc-ic kc-ic-printer" onClick={() => window.print()}>Print</button>
           <div style={{ marginLeft: 'auto' }}><ThemeToggle /></div>
         </div>
 
@@ -225,7 +225,7 @@ export default function Manual({ shots = {} }) {
           Every screen in the system, what it is for, and what to do when it argues with you.
         </p>
         <p style={{ color: 'var(--muted)', fontSize: 'var(--fs-small)', margin: '0 0 20px' }}>
-          Step-by-step answers for a job in front of you live in the app — press <strong>❓ How do I…?</strong> on
+          Step-by-step answers for a job in front of you live in the app — press <strong>How do I…?</strong> on
           any screen. Prices, free days and caps are not repeated here: they live in Settings, so there is only
           ever one price list. {written} of {total} screens are written out in full
           {drafts > 0 && `; ${drafts} are still short entries`}.
@@ -261,7 +261,7 @@ export default function Manual({ shots = {} }) {
             the reference (its navigation map opens with "Common shortcuts",
             then the full key-by-key map). DERIVED from lib/guides.mjs at
             render, never a second copy of any question or step — the guides
-            answer these in the app under ❓, and this strip only says which
+            answer these in the app under Help, and this strip only says which
             jobs are already written out. Hidden in print for the same reason
             the contents is: on paper it points at a button paper doesn't
             have. */}
@@ -270,11 +270,11 @@ export default function Manual({ shots = {} }) {
           <Heading>Common jobs</Heading>
           <p style={{ margin: '0 0 8px', fontSize: 'var(--fs-small)', color: 'var(--muted)' }}>
             The {GUIDES.length} jobs the app can walk you through. <strong>Press a question to read
-            its steps right here</strong> — or press <strong>❓ How do I…?</strong> on any screen in
+            its steps right here</strong> — or press <strong>How do I…?</strong> on any screen in
             the app to be walked through it while you work.
           </p>
           {/* Each question OPENS — the steps render live from the same
-              lib/guides.mjs the ❓ button reads, so this is the one copy
+              lib/guides.mjs the Help button reads, so this is the one copy
               shown twice, never a second copy (owner, 23 Aug: "so many
               text, non of it clickable"). Native <details>: no JS, keyboard
               and screen-reader behaviour for free. */}
