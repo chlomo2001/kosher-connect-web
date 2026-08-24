@@ -150,8 +150,18 @@
   --on-success: #ffffff;
   --on-danger: #ffffff;
 
-  /* #77 — 4/8/12/16/24 spacing scale so paddings/gaps stop being re-typed */
-  --space-1: 4px;  --space-2: 8px;  --space-3: 12px;  --space-4: 16px;  --space-6: 24px;
+  /* No --space-* scale here, and that is the decision rather than an omission.
+     One shipped (4/8/12/16/24, "so paddings/gaps stop being re-typed") and
+     reached ZERO call sites in its whole life, because the grid does not
+     describe this app: of 877 padding/margin/gap values in the two
+     stylesheets, 550 are OFF that grid — 10px ×107, 6px ×79, 14px ×70,
+     18px ×45 — and many are off it on purpose, with the measurement in the
+     comment beside them ("20px above, 8px inside: the pair reads as one
+     phrase"). Adopting it would have meant either swapping the 327 on-grid
+     values for tokens and leaving 550 literals beside them, which reads as
+     LESS of a system, or flattening spacing that was argued for. A token set
+     with no call sites is not a system; it is a claim the code does not keep.
+     If a scale is wanted, derive it from what the app actually uses. */
   --warning: #b45309;
 
   /* ── Radius — rounded-md system, no pills ── */
