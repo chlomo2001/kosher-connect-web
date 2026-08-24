@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
-*As of 23 Aug 2026 · m-54e0a329 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 24 Aug 2026 · m-3bf08438 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -473,7 +473,7 @@ The audio side of the business: conversion jobs brought in by customers, CDs lef
 **On the screen**
 
 - **+ New job (top of the screen) · + Add job (on the jobs list)** — The same drop-off form either way — the button at the top scrolls you to it and puts the cursor in the customer box. Whose it is, and what is wanted: CD to MP3, CD to an SD card, copying, or other audio work.
-- **Conversion jobs** — Each job from drop-off to collection: ✅ Ready when it is done, 📤 Collected when it goes out — which charges a priced job to the account of a job filed against a real customer — and ↩ to put a Ready or Cancelled job back. Collected is final: the money has moved.
+- **Conversion jobs** — Each job from drop-off to collection: ✔ Ready when it is done, 📤 Collected when it goes out — which charges a priced job to the account of a job filed against a real customer — and ↩ to put a Ready or Cancelled job back. Collected is final: the money has moved.
 - **Consignment by shul** — What is out with each shul. 📦 Deliver adds to what they are holding, 💿 Sold moves it to what they owe for, ↩ Return brings unsold stock back, and 🧾 Settle records the money coming in.
 - **Titles catalogue** — The recordings themselves — code, title, speaker and price. A title no longer sold is retired rather than deleted, so old sales still make sense.
 - **Takings — recent settlements** — What each shul sold and what was actually collected, with the method and any note.

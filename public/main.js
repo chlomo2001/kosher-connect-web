@@ -588,7 +588,7 @@ function showReloadBanner(msg) {
   const b = document.createElement('div');
   b.id = 'kcReloadBanner';
   b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:6000;background:var(--danger-solid);color:#fff;padding:11px 18px;text-align:center;font-size:var(--fs-ui);font-weight:500;box-shadow:0 2px 8px rgba(0,0,0,.2);';
-  b.innerHTML = `⚠️ ${escHtml(msg)} <button onclick="location.reload()" style="margin-left:12px;background:#fff;color:var(--danger-solid);border:none;border-radius:7px;padding:5px 14px;cursor:pointer;font-weight:700;">↻ Reload</button>`;
+  b.innerHTML = `⚠ ${escHtml(msg)} <button onclick="location.reload()" style="margin-left:12px;background:#fff;color:var(--danger-solid);border:none;border-radius:7px;padding:5px 14px;cursor:pointer;font-weight:700;">↻ Reload</button>`;
   document.body.appendChild(b);
 }
 
@@ -2665,7 +2665,7 @@ function reportSave(label, promise) {
       } else if (res.conflicts && res.conflicts.length) {
         // #8 — the server caught a double-booking a racing tab slipped past.
         const c = res.conflicts[0];
-        toast(`⚠️ Double-booking: ${c.a?.customer || 'a rental'} and ${c.b?.customer || 'another'} overlap on the same phone. Check the rentals list.`, 'error');
+        toast(`⚠ Double-booking: ${c.a?.customer || 'a rental'} and ${c.b?.customer || 'another'} overlap on the same phone. Check the rentals list.`, 'error');
       }
       return res || { success: false };
     })
@@ -2880,7 +2880,7 @@ function renderRentalsTab() {
       { value: 'due_today', label: 'Due today', test: r => getComputedStatus(r, localISO()) === 'active' && r.toDate === localISO() },
       { value: 'overdue', label: 'Overdue', test: r => getComputedStatus(r, localISO()) === 'overdue' },
       { value: 'returned', label: 'Returned', test: r => getComputedStatus(r, localISO()) === 'returned' },
-      { value: 'returned_incomplete', label: 'Returned ⚠️', test: r => getComputedStatus(r, localISO()) === 'returned_incomplete' },
+      { value: 'returned_incomplete', label: 'Returned ⚠', test: r => getComputedStatus(r, localISO()) === 'returned_incomplete' },
     ] },
   ], [
     { value: 'default', label: 'Sort: Default' },
@@ -3271,7 +3271,7 @@ function getComputedStatus(r, today) {
   if (r.status !== 'returned') return r.toDate < today ? 'overdue' : 'active';
   const eq = r.equipmentGiven || { phone: true, sim: true, plug: true, cable: true };
   // Plug+cable are judged as ONE charger item (same merged semantics as the
-  // manage modal), so the ⚠️ badge can never point at a key the UI can't show.
+  // manage modal), so the ⚠ badge can never point at a key the UI can't show.
   const incomplete =
     ['phone', 'sim'].some(k => (eq[k] ?? true) && getItemStatus(r, k) === 'undecided') ||
     (((eq.plug ?? true) || (eq.cable ?? true)) && uiItemStatus(r, 'charger') === 'undecided');
@@ -3351,9 +3351,9 @@ function renderRentalRows() {
     else if (computedStatus === 'booked')               statusBadge = `<span class="badge" style="background:var(--canvas-cream);color:var(--gold);">📅 Reserved${r.fromDate <= today ? ' — pickup due' : ''}</span>`;
     else if (computedStatus === 'active' && r.toDate === today) statusBadge = `<span class="badge badge-sim">Due Today</span>`;
     else if (computedStatus === 'active')               statusBadge = `<span class="badge badge-rental">Active</span>`;
-    else if (computedStatus === 'overdue')              statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--danger-ink);">Overdue ⚠️</span>`;
+    else if (computedStatus === 'overdue')              statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--danger-ink);">Overdue ⚠</span>`;
     else if (computedStatus === 'returned')             statusBadge = `<span class="badge badge-active">Returned</span>`;
-    else                                                statusBadge = `<span class="badge" style="background:var(--canvas-cream);color:var(--gold);">Returned ⚠️</span>`;
+    else                                                statusBadge = `<span class="badge" style="background:var(--canvas-cream);color:var(--gold);">Returned ⚠</span>`;
 
     const paid = r.amountPaid || 0;
     const totalOwed = rentalGrandTotal(r) - paid;
@@ -4579,7 +4579,7 @@ async function saveMultiPhoneRental(customerId, phoneIds, addAnother) {
   renderRentalsTab();
   if (addAnother) { openNewRentalModal(customerId); return; }
   showDonePanel({
-    title: isReservation ? '📅 Reserved' : '✅ Rentals saved',
+    title: isReservation ? '📅 Reserved' : '✔ Rentals saved',
     customerId,
     customerName: `${customer.firstName} ${customer.lastName}`,
     customerPhone: customer.phone || '',
@@ -4703,11 +4703,11 @@ async function kcDoneEmail(btn) {
   if (res && res.success && res.held) { toast(res.note || 'Email is on hold — receipt not sent.', 'warning'); restore(); }
   else if (res && res.success && res.redirected) {
     toast(res.note || `Test mode — sent to ${res.sentTo}.`, 'warning');
-    if (btn) btn.innerHTML = '✅ Sent';
+    if (btn) btn.innerHTML = '✔ Sent';
   } else if (res && res.success) {
     toast(`Receipt emailed to ${res.sentTo}.`, 'success');
     recordComm(d.customerId, { type: 'email', text: `Receipt emailed — ${fmtGbp(d.total)}` });
-    if (btn) btn.innerHTML = '✅ Sent';
+    if (btn) btn.innerHTML = '✔ Sent';
   } else { toast(res?.error || 'Could not send the receipt.', 'error'); restore(); }
 }
 
@@ -4989,7 +4989,7 @@ async function saveNewRental(addAnother = false) {
     return;
   }
   showDonePanel({
-    title: isReservation ? '📅 Reserved' : '✅ Rental saved',
+    title: isReservation ? '📅 Reserved' : '✔ Rental saved',
     customerId,
     customerName: `${customer.firstName} ${customer.lastName}`,
     customerPhone: customer.phone || '',
@@ -5122,7 +5122,7 @@ function openVoidRentalModal(rentalId) {
     <div style="font-size:var(--fs-body);margin-bottom:12px;">
       ${escHtml(fmtPhone(r.phoneNumber || ''))} · ${fmtDate(r.fromDate)} → ${fmtDate(r.toDate)}<br>
       Every charge on this rental reverses to £0 (${fmtGbp(owed)} today).
-      ${(r.amountPaid || 0) > 0 ? `<br>⚠️ ${fmtGbp(r.amountPaid)} was already paid — it stays on the wallet as credit to refund or reuse.` : ''}
+      ${(r.amountPaid || 0) > 0 ? `<br>⚠ ${fmtGbp(r.amountPaid)} was already paid — it stays on the wallet as credit to refund or reuse.` : ''}
       <br>The rental stays on the books marked <strong>voided</strong>, with the reason on the customer's history.
     </div>
     <div class="form-grid">
@@ -5760,7 +5760,7 @@ function openPoolsModal() {
           <span style="font-size:var(--fs-small);color:var(--muted);">
             ${ps.length} phone${ps.length === 1 ? '' : 's'} · ${rented} out
             ${reg ? ` · window ${reg.from ? fmtDate(reg.from) + ' → ' : 'till '}${reg.till ? fmtDate(reg.till) : '—'}` : ' · not in the pool list yet'}
-            ${outOfSync ? ` · ⚠️ ${outOfSync} phone${outOfSync === 1 ? '' : 's'} out of sync — press Apply` : ''}
+            ${outOfSync ? ` · ⚠ ${outOfSync} phone${outOfSync === 1 ? '' : 's'} out of sync — press Apply` : ''}
           </span>
           ${!ps.length && reg ? `<button class="action-btn danger" style="margin-left:auto;" onclick="deleteRentalPool('${escJs(name)}')" aria-label="Remove this pool">✕ Remove</button>` : ''}
         </div>
@@ -5775,7 +5775,7 @@ function openPoolsModal() {
               <td style="font-size:var(--fs-small);">${escHtml(p.model || '—')}</td>
               <td>${p.status === 'rented' ? '<span class="badge badge-rental">Rented</span>' : p.maintenance ? '<span class="badge">🔧</span>' : '<span class="badge badge-active">Free</span>'}</td>
               <td class="kc-date" style="font-size:var(--fs-small);color:var(--muted);">${p.poolActiveFrom ? fmtDate(p.poolActiveFrom) : '—'}</td>
-              <td class="kc-date" style="font-size:var(--fs-small);${expired ? 'color:var(--danger-ink);font-weight:700;' : ''}">${p.poolExpiry ? fmtDate(p.poolExpiry) + (expired ? ' ⚠️ expired' : '') : '—'}</td>
+              <td class="kc-date" style="font-size:var(--fs-small);${expired ? 'color:var(--danger-ink);font-weight:700;' : ''}">${p.poolExpiry ? fmtDate(p.poolExpiry) + (expired ? ' ⚠ expired' : '') : '—'}</td>
             </tr>`;
           }).join('')}
           </tbody>
@@ -5947,7 +5947,7 @@ function openManageRentalModal(rentalId) {
             <div id="mgToggleKnob" style="position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transform:translateX(${r.status==='returned'?'22px':'0'});transition:transform 0.2s var(--ease-out);"></div>
           </div>
           <span id="mgReturnedLabel" style="font-size:var(--fs-ui);font-weight:600;color:${r.status==='returned'?'var(--success)':'var(--muted)'};">
-            ${r.status==='returned' ? 'Returned ✅' : 'Not returned yet'}
+            ${r.status==='returned' ? 'Returned ✔' : 'Not returned yet'}
           </span>
         </div>
         <input type="hidden" id="mgReturned" value="${r.status==='returned'?'1':'0'}">
@@ -6155,7 +6155,7 @@ function toggleReturned() {
   // rests at left:3px and travels 22px, so 25px - 3px.
   knob.style.transform = isNowReturned ? 'translateX(22px)' : 'translateX(0)';
   label.style.color = isNowReturned ? 'var(--success)' : 'var(--muted)';
-  label.textContent = isNowReturned ? 'Returned ✅' : 'Not returned yet';
+  label.textContent = isNowReturned ? 'Returned ✔' : 'Not returned yet';
   // The Charge Gate is about closing, so it appears with the toggle.
   if (typeof mgGateRentalId !== 'undefined' && mgGateRentalId) mgRenderGate(mgGateRentalId);
 }
@@ -6190,7 +6190,7 @@ async function saveManageRental(rentalId) {
   const { chargeableDays, totalDays } = calcRentalPrice(newFrom, newTo, r.country, r.ukPlan || 'standard');
 
   // The Charge Gate. This used to read "No hard block on undecided items —
-  // undecided items show ⚠️ badge", which is the whole reason the gate exists:
+  // undecided items show ⚠ badge", which is the whole reason the gate exists:
   // a rental could be closed with the charger neither returned nor written off,
   // and the ambiguity was recorded as a badge on a row nobody goes back to.
   //
@@ -7246,7 +7246,7 @@ function renderCustomersTab() {
           <option value="repair" ${customerFilter==='repair'?'selected':''}>🔧 Open repair</option>
           <option value="arrears" ${customerFilter==='arrears'?'selected':''}>💰 In arrears</option>
           <option value="passport" ${customerFilter==='passport'?'selected':''}>🛂 Passport on file</option>
-          <option value="unreachable" ${customerFilter==='unreachable'?'selected':''}>⚠️ No way to reach them</option>
+          <option value="unreachable" ${customerFilter==='unreachable'?'selected':''}>⚠ No way to reach them</option>
         </select>
         <select class="form-input kc-fs-sel" onchange="customerSort=this.value; renderTableRows()">
           <option value="surname" ${customerSort==='surname'?'selected':''}>Sort: Surname A–Z</option>
@@ -7775,7 +7775,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
     const vnCover = virtualNumbers.find(v => v.customerId === c.id && v.status === 'Active');
     const item = (ok, okLabel, missingLabel, fixHtml) => `
       <div style="display:flex;align-items:center;gap:8px;font-size:var(--fs-body);padding:4px 0;">
-        <span>${ok ? '✅' : '⚠️'}</span>
+        <span>${ok ? '✔' : '⚠'}</span>
         <span style="flex:1;">${ok ? okLabel : missingLabel}</span>
         ${!ok ? fixHtml : ''}
       </div>`;
@@ -7810,7 +7810,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         <span style="color:var(--muted);font-size:var(--fs-micro);display:block;margin-bottom:2px;">🛂 Passport on file</span>
         ${c.passportNumber ? `№ ····${escHtml(String(c.passportNumber).slice(-4))}` : ''}
         ${c.dob ? ` · born ${fmtDate(c.dob)}` : ''}
-        ${c.passportExpiry ? ` · expires <strong${c.passportExpiry < localISO() ? ' style="color:var(--danger-ink);"' : ''}>${fmtDate(c.passportExpiry)}</strong>${c.passportExpiry < localISO() ? ' ⚠️ expired' : ''}` : ''}
+        ${c.passportExpiry ? ` · expires <strong${c.passportExpiry < localISO() ? ' style="color:var(--danger-ink);"' : ''}>${fmtDate(c.passportExpiry)}</strong>${c.passportExpiry < localISO() ? ' ⚠ expired' : ''}` : ''}
       </div>` : '';
 
   // Owner #2 — house account strip: settles monthly on the saved card.
@@ -10423,13 +10423,13 @@ async function kcSendReceipt(btn, customerId, opts) {
   }
   if (res && res.success && res.redirected) {
     toast(res.note || `Test mode — sent to ${res.sentTo}.`, 'warning');
-    if (btn) btn.textContent = '✅';
+    if (btn) btn.textContent = '✔';
     return true;
   }
   if (res && res.success) {
     toast(`Emailed to ${res.sentTo}.`, 'success');
     if (opts.log) recordComm(customerId, { type: 'email', text: opts.log });
-    if (btn) btn.textContent = '✅';
+    if (btn) btn.textContent = '✔';
     return true;
   }
   toast(res?.error || 'Could not send it.', 'error');
@@ -12084,7 +12084,7 @@ function emailDupWhy(typed, existing) {
 function emailDupHtml(dup, typed) {
   const who = `${dup.firstName || ''} ${dup.lastName || ''}`.trim() || 'Another customer';
   const why = emailDupWhy(typed, dup.email);
-  return `⚠️ <b>${escHtml(who)}</b> already has this mailbox — <span class="warn-em">${escHtml(dup.email)}</span>.`
+  return `⚠ <b>${escHtml(who)}</b> already has this mailbox — <span class="warn-em">${escHtml(dup.email)}</span>.`
     + `<div class="warn-why">${why.map(l => `<div>${l}</div>`).join('')}`
     + '<div>One mailbox belongs to one customer, so this can’t be saved as a second person.</div></div>';
 }
@@ -12426,7 +12426,7 @@ function renderSimsTab() {
 
   const bannerHtml = renewing.length > 0 ? `
     <div class="renewal-banner">
-      <span style="font-size:var(--fs-title);">⚠️</span>
+      <span style="font-size:var(--fs-title);">⚠</span>
       <span><strong>${renewing.length} SIM${renewing.length > 1 ? 's' : ''} renewing ${renewing.some(s => s.renewalDate === today) ? 'TODAY' : 'TOMORROW'}:</strong>
       ${renewing.map(s => `<span style="margin-left:8px;">· ${escHtml(capName(s.customerName))} (${escHtml(s.simNumber)})</span>`).join('')}</span>
     </div>` : '';
@@ -12650,7 +12650,7 @@ function renderSimRows() {
     const isRenewingTomorrow = s.renewalDate === tomorrow;
     const renewalClass = isRenewingToday ? 'color:var(--danger-ink);font-weight:700;' :
                          isRenewingTomorrow ? 'color:var(--warning);font-weight:700;' : '';
-    const renewalLabel = isRenewingToday ? ' ⚠️ Today!' : isRenewingTomorrow ? ' ⚠️ Tomorrow' : '';
+    const renewalLabel = isRenewingToday ? ' ⚠ Today!' : isRenewingTomorrow ? ' ⚠ Tomorrow' : '';
 
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a,input'))openManageSimModal('${s.id}')" title="Open SIM">
       <td class="kc-stack-lead" onclick="event.stopPropagation()">
@@ -13296,7 +13296,7 @@ async function addSimCharge(simId) {
       }
     })
     .catch(() => toast('Charge saved, but not billed to the wallet.', 'error'));
-  toast(`Charge of ${fmtGbp(amount)} added${payMethod !== 'account' ? ` — settled by ${payLabel}` : ''} ✅`, 'success');
+  toast(`Charge of ${fmtGbp(amount)} added${payMethod !== 'account' ? ` — settled by ${payLabel}` : ''} ✔`, 'success');
   openManageSimModal(simId);
 }
 
@@ -13489,7 +13489,7 @@ function kcSkeleton(shape = 'stats') {
 // current tab.
 function errorHtml(label = 'Couldn’t load this') {
   return `<div style="text-align:center;padding:48px 30px;color:var(--muted);">
-    <div style="font-size:30px;margin-bottom:8px;">⚠️</div>
+    <div style="font-size:30px;margin-bottom:8px;">⚠</div>
     <div style="font-size:var(--fs-lead);color:var(--text);margin-bottom:4px;">${escHtml(label)}</div>
     <div style="font-size:var(--fs-body);margin-bottom:16px;">Couldn’t reach the server. Your data is safe — this is just the view.</div>
     <button class="btn btn-primary" onclick="renderTab(currentTab)">↻ Try again</button>
@@ -15308,7 +15308,7 @@ async function openCheckinModal(bookingId) {
             ${cell('Issued', p.passportIssueDate && fmtDate(p.passportIssueDate))}
             ${cell('Issuing country', p.issuingCountry)}
           </div>
-          ${(!p.passportNumber && !p.dob) ? '<div style="color:var(--warning);margin-top:4px;">⚠️ Missing details — open 👥 Passengers to fill them in.</div>' : ''}
+          ${(!p.passportNumber && !p.dob) ? '<div style="color:var(--warning);margin-top:4px;">⚠ Missing details — open 👥 Passengers to fill them in.</div>' : ''}
         </div>`).join('')}
     </div>` : `<div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">No passenger details yet — add them via the 👥 button.</div>`;
   // Stash the copy-all text keyed by index (avoids quoting a multi-line
@@ -15332,7 +15332,7 @@ async function openCheckinModal(bookingId) {
       <div class="form-group form-full">
         <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-ui);cursor:pointer;">
           <input type="checkbox" id="ciDone" ${b.checkinDone ? 'checked' : ''}>
-          ✅ ${b.returnDate ? 'Outbound check-in is done' : 'Check-in is done'}
+          ✔ ${b.returnDate ? 'Outbound check-in is done' : 'Check-in is done'}
         </label>
       </div>
       ${b.returnDate ? `
@@ -15343,7 +15343,7 @@ async function openCheckinModal(bookingId) {
       <div class="form-group form-full">
         <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-ui);cursor:pointer;">
           <input type="checkbox" id="ciRetDone" ${b.returnCheckinDone ? 'checked' : ''}>
-          ✅ Return check-in is done
+          ✔ Return check-in is done
         </label>
       </div>` : ''}
     </div>
@@ -15387,21 +15387,21 @@ async function saveCheckin(bookingId) {
 
 // Small status chip for a booking's check-in state.
 function checkinChip(b) {
-  // A round trip is two check-ins. "✅ In" on a booking with the flight home
+  // A round trip is two check-ins. "✔ In" on a booking with the flight home
   // still to do would be the app saying the job is finished when it is half
   // finished — so the return only disappears from the chip once it is done too.
   const twoLegs = !!b.returnDate;
   const outDone = !!b.checkinDone;
   const backDone = !twoLegs || !!b.returnCheckinDone;
 
-  if (outDone && backDone) return `<span class="badge badge-active" title="Check-in done${twoLegs ? ', both ways' : ''}">✅ In${twoLegs ? ' ×2' : ''}</span>`;
+  if (outDone && backDone) return `<span class="badge badge-active" title="Check-in done${twoLegs ? ', both ways' : ''}">✔ In${twoLegs ? ' ×2' : ''}</span>`;
   if (b.checkinBy === 'us') {
     const next = !outDone ? b.checkinDate : b.returnCheckinDate;
     const which = !outDone ? '' : ' back';
     return `<span class="badge badge-rental" title="We check in${next ? ' on ' + fmtDate(next) : ''}${twoLegs ? ` · out ${outDone ? 'done' : 'to do'}, back ${backDone ? 'done' : 'to do'}` : ''}">🛫 us${which}${next ? ' ' + fmtDate(next).slice(0, 5) : ''}</span>`;
   }
   if (b.checkinBy === 'customer') return `<span class="badge" style="background:rgba(148,163,184,0.15);color:var(--muted);" title="Customer checks in">👤 cust</span>`;
-  return `<span class="badge" style="background:rgba(234,179,8,0.15);color:var(--warning-ink);" title="Check-in not set">⚠️ ?</span>`;
+  return `<span class="badge" style="background:rgba(234,179,8,0.15);color:var(--warning-ink);" title="Check-in not set">⚠ ?</span>`;
 }
 
 async function changeBookingStatus(id, status) {
@@ -16014,7 +16014,7 @@ function openCollectRepairModal(id) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmCollectRepair('${escHtml(id)}')">✅ Collect</button>
+      <button class="btn btn-primary" onclick="confirmCollectRepair('${escHtml(id)}')">✔ Collect</button>
     </div>
   `);
 }
@@ -16709,7 +16709,7 @@ let supplierReturns = [];
 const SUPPLIER_RETURN_STATUS = {
   awaiting_send: { label: '📦 To send',     color: 'var(--danger-ink)' },
   sent:          { label: '📮 Sent',        color: 'var(--warning-ink)' },
-  credited:      { label: '✅ Credited',    color: 'var(--success-ink)' },
+  credited:      { label: '✔ Credited',    color: 'var(--success-ink)' },
   replaced:      { label: '🔁 Replaced',    color: 'var(--success-ink)' },
   written_off:   { label: '🗑 Written off', color: 'var(--muted)' },
 };
@@ -17071,12 +17071,12 @@ async function renderShopTab() {
 
   const lowBanner = low.length ? `
     <div class="banner-lowstock">
-      ⚠️ <strong>Low stock:</strong> ${low.map(i => `${escHtml(i.model)} (${i.quantity} left)`).join(' · ')}
+      ⚠ <strong>Low stock:</strong> ${low.map(i => `${escHtml(i.model)} (${i.quantity} left)`).join(' · ')}
     </div>` : '';
 
   const shopBar = kcFilterSort('shop', [
     { value: 'all', label: 'Filter: all stock' },
-    { value: 'low', label: '⚠️ Low / out of stock', test: i => i.quantity <= i.lowStockAt },
+    { value: 'low', label: '⚠ Low / out of stock', test: i => i.quantity <= i.lowStockAt },
     { value: 'instock', label: '📦 In stock', test: i => i.quantity > 0 },
   ], [
     { value: 'name', label: 'Sort: Name A–Z', cmp: kcCmpStr(i => [i.company, i.model].filter(Boolean).join(' ')) },
@@ -17129,7 +17129,7 @@ async function renderShopTab() {
         <div class="history-desc"><strong>${escHtml(d.supplierName || '?')}</strong>${d.invoiceRef ? ' — ' + escHtml(d.invoiceRef) : ''}
           — ${d.lines.map(l => `${l.qty}× ${escHtml(l.description)}`).join(', ')}</div>
         <div style="font-size:var(--fs-micro);color:var(--muted);">
-          ${fmtDate(d.deliveryDate)}${d.paid ? ` · <span style="color:var(--success-ink);font-weight:600;">✅ Paid${d.paidAt ? ' ' + fmtDate(d.paidAt) : ''}</span>` : d.invoiceTotal !== null ? ' · <span style="color:var(--warning-ink);font-weight:600;">⏳ Unpaid</span>' : ''}
+          ${fmtDate(d.deliveryDate)}${d.paid ? ` · <span style="color:var(--success-ink);font-weight:600;">✔ Paid${d.paidAt ? ' ' + fmtDate(d.paidAt) : ''}</span>` : d.invoiceTotal !== null ? ' · <span style="color:var(--warning-ink);font-weight:600;">⏳ Unpaid</span>' : ''}
           ${d.notes ? ' · ' + escHtml(d.notes) : ''}
         </div>
       </div>
@@ -18158,7 +18158,7 @@ function posShowLastSale() {
   const canEmail = !!posLastSale.customerId;
   el.innerHTML = `
     <div class="pos-done">
-      ✅ ${fmtGbp(posLastSale.total)} taken${posLastSale.change !== null
+      ✔ ${fmtGbp(posLastSale.total)} taken${posLastSale.change !== null
         ? ` — <strong>change ${fmtGbp(posLastSale.change)}</strong>` : ''}
       ${canEmail ? `<button class="btn btn-secondary" style="margin-top:8px;width:100%;"
         onclick="emailSaleReceipt(this)" ${posLastSale.emailed ? 'disabled' : ''}>
@@ -18685,7 +18685,7 @@ async function renderKolTorahTab() {
   // ── Jobs ────────────────────────────────────────────────────────────────
   const jobBtns = (j) => {
     const b = [];
-    if (j.status === 'open') b.push(['ready', '✅ Ready', 'btn btn-outline']);
+    if (j.status === 'open') b.push(['ready', '✔ Ready', 'btn btn-outline']);
     if (j.status === 'open' || j.status === 'ready') {
       b.push(['collected', '📤 Collected', 'btn btn-primary']);
       b.push(['cancelled', '✕', 'action-btn danger']);
@@ -19962,7 +19962,7 @@ const PALETTE_COMMANDS = [
   { icon: '💰', label: 'Who owes money (arrears)', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'arrears'; }, renderTableRows) },
   { icon: '✈️', label: 'Customers flying soon', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'flight'; }, renderTableRows) },
   { icon: '🛂', label: 'Customers with passport on file', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'passport'; }, renderTableRows) },
-  { icon: '⚠️', label: 'Customers with no way to reach them', sub: 'view', keys: ['unreachable', 'no number', 'no phone', 'missing number', 'cannot ring'], run: () => filterView('customers', () => { customerFilter = 'unreachable'; }, renderTableRows) },
+  { icon: '⚠', label: 'Customers with no way to reach them', sub: 'view', keys: ['unreachable', 'no number', 'no phone', 'missing number', 'cannot ring'], run: () => filterView('customers', () => { customerFilter = 'unreachable'; }, renderTableRows) },
   { icon: '📶', label: 'SIMs that renew this week', sub: 'view', run: () => filterView('sim', () => { simFilterStatus = 'week'; simFilterPay = 'all'; }, renderSimRows) },
   { icon: '🔧', label: 'Repairs waiting for collection', sub: 'view', run: () => filterView('repairs', () => { kcView('repairs').filter = 'ready'; }) },
   // (the old one-off 'Payment / top-up for open customer' entry is superseded
@@ -20893,7 +20893,7 @@ function paintCarrierMail() {
       onclick="cmSetFilter('${f}')" ${cmFilter === f ? 'aria-current="true"' : ''}>${label}</button>`;
 
   const rows = cmData.messages.length === 0
-    ? `<div class="empty-state"><div class="emoji">${cmFilter === 'pending' ? '✅' : '📭'}</div>
+    ? `<div class="empty-state"><div class="emoji">${cmFilter === 'pending' ? '✔' : '📭'}</div>
         <p>${cmFilter === 'pending'
           ? 'Nothing waiting — every message so far landed on a SIM or has been dealt with.'
           : 'No carrier mail here yet.'}</p>
@@ -21934,7 +21934,7 @@ async function renderTasksTab() {
     { value: 'manual', label: '✍️ Manual only', test: t => t.source === 'manual' },
     { value: 'auto', label: '🤖 Auto only', test: t => t.source !== 'manual' },
     { value: 'customer', label: '👤 With customer', test: t => !!t.customerId },
-    { value: 'overdue', label: '⚠️ Overdue', test: t => t.dueDate && t.dueDate < today && !t.done },
+    { value: 'overdue', label: '⚠ Overdue', test: t => t.dueDate && t.dueDate < today && !t.done },
   ], [
     { value: 'smart', label: 'Sort: Smart' },
     { value: 'due', label: 'Due date (soonest)', cmp: (a, b) => String(a.dueDate || '9999').localeCompare(String(b.dueDate || '9999')) },
@@ -22497,7 +22497,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   // than something that happened today.
   const unreachable = customers.filter(c =>
     !kcTail10(c.phone) && !kcTail10(c.altPhone) && customerSimsOf(c).length === 0);
-  if (unreachable.length) attention.push(['⚠️',
+  if (unreachable.length) attention.push(['⚠',
     `<strong>${unreachable.length} customer${unreachable.length === 1 ? '' : 's'} with no way to reach them</strong> — no number of theirs and no SIM of ours`,
     () => filterView('customers', () => { customerFilter = 'unreachable'; }, renderTableRows)]);
   highTasks.slice(0, 5).forEach(t => attention.push(['❗', escHtml(t.title), () => goToTab('tasks')]));
@@ -22597,7 +22597,7 @@ async function renderVirtualTab() {
   const active = virtualNumbers.filter(v => v.status === 'Active');
   const vnBar = kcFilterSort('virtual', [
     { value: 'all', label: 'Filter: all numbers' },
-    { value: 'active', label: '✅ Active', test: v => v.status === 'Active' },
+    { value: 'active', label: '✔ Active', test: v => v.status === 'Active' },
     { value: 'inactive', label: '⏸ Inactive', test: v => v.status !== 'Active' },
     { value: 'billing', label: '💷 Billing on', test: v => v.billingEnabled && v.monthlyPrice },
   ], [

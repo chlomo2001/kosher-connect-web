@@ -6,7 +6,20 @@ import { WHATSAPP_ENABLED } from '../lib/flags'
 
 /* Monochrome line icons (Feather-style, 20px, 1.6 stroke, currentColor) —
    they inherit the nav item's colour, so they light up on hover/active
-   like real product chrome. No emoji. */
+   like real product chrome.
+
+   This block used to end "No emoji." — a rule the rest of the app has never
+   followed, and does not intend to: roughly 1,500 emoji across ~145 distinct
+   glyphs carry meaning on every other screen, 235 of them inside lib/manual.mjs
+   because they are part of the button NAMES the manual has to spell correctly.
+   That is a deliberate voice for this audience, not an oversight, and a stated
+   rule the code breaks is worse than no rule.
+
+   So the policy, honestly: emoji in CONTENT and in labels; drawn icons in the
+   NAV RAIL only. The rail earns the exception — fifteen rows at 19px that must
+   stay crisp, sit on a navy ground in both themes, and recolour on hover and
+   active. currentColor does that and an OS emoji cannot. Anywhere the rail's
+   voice is wanted elsewhere, add to ICONS below rather than starting a third. */
 function I({ children }) {
   return (
     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
