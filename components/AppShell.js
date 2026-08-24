@@ -233,10 +233,10 @@ export default function AppShell({ initialTab = 'dashboard' }) {
                 every other [data-theme-btn] (palette, settings, till) stay in
                 sync. updateThemeBtns() sets the right icon once main.js loads. */}
             <button
-              className="theme-toggle" data-theme-btn suppressHydrationWarning
+              className="theme-toggle kc-ic kc-ic-moon" data-theme-btn suppressHydrationWarning
               onClick={() => window.toggleTheme && window.toggleTheme()}
               title="Light / dark mode" aria-label="Toggle light or dark mode"
-            >🌙</button>
+            ></button>
             {/* Simple Mode — cycles the whole type ramp through Standard /
                 Large / Largest. Sits beside the theme toggle because it is the
                 same kind of thing: a per-device display preference, set once by
@@ -262,7 +262,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
       <div className="modal-overlay hidden" id="customerModal">
         <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
           <button type="button" className="modal-x" id="btnCloseCustomerModal" aria-label="Close" title="Close (Esc)">✕</button>
-          <div className="modal-title" id="modalTitle">➕ Add New Customer</div>
+          <div className="modal-title kc-ic kc-ic-plus" id="modalTitle">Add New Customer</div>
           <input type="hidden" id="editId" />
 
           <div className="form-grid">
@@ -348,7 +348,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
                 />
               </div>
               <span className="form-error" id="errPhone">Required</span>
-              <div className="form-warning" id="warnPhone">⚠ This phone number already exists for another customer.</div>
+              <div className="form-warning kc-ic kc-ic-alert" id="warnPhone">This phone number already exists for another customer.</div>
               {/* Owner, 08-17: most customers have one number, so a second
                   empty box on every card is a field to skip 1,800 times over.
                   The offer stays; the box only appears when it is wanted. */}
@@ -356,7 +356,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
               {WHATSAPP_ENABLED && (
                 <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 6, fontWeight: 400 }}>
                   <input type="checkbox" id="fHasWhatsapp" style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
-                  💬 Has WhatsApp
+                  <span className="kc-ic kc-ic-chat">Has WhatsApp</span>
                 </label>
               )}
             </div>
@@ -377,9 +377,9 @@ export default function AppShell({ initialTab = 'dashboard' }) {
                   wrapped this label onto a second line, which dropped the input
                   below the Additional email box beside it — two fields on one
                   row sitting at different heights. */}
-              <label className="form-label" htmlFor="fEmail">✉️ Contact email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(their own)</span></label>
+              <label className="form-label kc-ic kc-ic-email" htmlFor="fEmail">Contact email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(their own)</span></label>
               <input className="form-input" id="fEmail" type="email" placeholder="customer@gmail.com" autoComplete="off" aria-describedby="warnEmail" />
-              <div className="form-warning" id="warnEmail">⚠ This email already exists for another customer.</div>
+              <div className="form-warning kc-ic kc-ic-alert" id="warnEmail">This email already exists for another customer.</div>
               <button type="button" className="kc-add-more" id="fAltEmailAdd">+ Add another email</button>
             </div>
 
@@ -394,7 +394,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
                 waiting. Kept on the edit form so the 200-odd already recorded
                 stay visible and editable. */}
             <div className="form-group" id="fAccountEmailGroup">
-              <label className="form-label" htmlFor="fAccountEmail">⚙️ Account email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(our login for Lebara etc.)</span></label>
+              <label className="form-label kc-ic kc-ic-gear" htmlFor="fAccountEmail">Account email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(our login for Lebara etc.)</span></label>
               <input className="form-input" id="fAccountEmail" type="email" placeholder="kosherconnect+levi@gmail.com" autoComplete="off" />
             </div>
 
@@ -403,7 +403,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
                 it just starts on the right one. "Ask each time" is the default
                 so nobody is silently assumed to pay by card. */}
             <div className="form-group">
-              <label className="form-label" htmlFor="fPayMethod">💷 Usual payment</label>
+              <label className="form-label kc-ic kc-ic-pound" htmlFor="fPayMethod">Usual payment</label>
               <select className="form-input" id="fPayMethod">
                 <option value="">Ask each time</option>
                 <option value="cash">💵 Cash</option>
@@ -418,7 +418,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
                 the till cannot — but the line is drawn here. Blank = no
                 limit, and nothing anywhere changes. */}
             <div className="form-group">
-              <label className="form-label" htmlFor="fCreditLimit">🧾 Credit limit £ <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(till warns past this on account)</span></label>
+              <label className="form-label kc-ic kc-ic-receipt" htmlFor="fCreditLimit">Credit limit £ <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(till warns past this on account)</span></label>
               <input className="form-input" id="fCreditLimit" type="number" min="0" step="1" placeholder="no limit" autoComplete="off" />
             </div>
 
@@ -428,7 +428,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
             </div>
 
             <div className="form-group form-full">
-              <label className="form-label" htmlFor="fNotes">📝 Notes <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(preferences, who they&apos;re related to, anything to remember)</span></label>
+              <label className="form-label kc-ic kc-ic-edit-note" htmlFor="fNotes">Notes <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(preferences, who they&apos;re related to, anything to remember)</span></label>
               <textarea className="form-input" id="fNotes" rows={2} placeholder="e.g. prefers the £20 US plan · pays end of month · brother of Yossi Adler" style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4 }}></textarea>
             </div>
 
@@ -439,14 +439,14 @@ export default function AppShell({ initialTab = 'dashboard' }) {
                 loud channel stays scarce: a popup that fires on everyone is a
                 popup everyone dismisses unread. */}
             <div className="form-group form-full">
-              <label className="form-label" htmlFor="fPopNote">📌 Pop-up note <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(shows loudly every time — only for what must not be missed)</span></label>
+              <label className="form-label kc-ic kc-ic-pin" htmlFor="fPopNote">Pop-up note <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(shows loudly every time — only for what must not be missed)</span></label>
               <input className="form-input" id="fPopNote" type="text" maxLength={140} placeholder="e.g. passport expires Oct — chase before any booking" autoComplete="off" />
             </div>
 
             <div className="form-group form-full">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                 <input type="checkbox" id="fPassportOnFile" style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
-                🛂 Passport photocopy held
+                <span className="kc-ic kc-ic-passport">Passport photocopy held</span>
               </label>
             </div>
 
@@ -460,7 +460,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
             <div className="form-group form-full" id="fHouseGroup">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                 <input type="checkbox" id="fHouseEnabled" style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
-                💳 House account — settle their wallet monthly on their saved card
+                <span className="kc-ic kc-ic-card">House account — settle their wallet monthly on their saved card</span>
               </label>
               <div id="fHouseFields" style={{ display: 'none', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 12, color: 'var(--muted)' }}>Day of month (1–28)
@@ -475,8 +475,8 @@ export default function AppShell({ initialTab = 'dashboard' }) {
               </div>
             </div>
 
-            <div className="form-warning form-full" id="warnName">
-              ⚠ A customer with this name already exists. Please verify this is a different person.
+            <div className="form-warning form-full kc-ic kc-ic-alert" id="warnName">
+              A customer with this name already exists. Please verify this is a different person.
             </div>
           </div>
 

@@ -2716,7 +2716,7 @@ function reportSave(label, promise) {
       } else if (res.conflicts && res.conflicts.length) {
         // #8 — the server caught a double-booking a racing tab slipped past.
         const c = res.conflicts[0];
-        toast(`⚠ Double-booking: ${c.a?.customer || 'a rental'} and ${c.b?.customer || 'another'} overlap on the same phone. Check the rentals list.`, 'error');
+        toast(`Double-booking: ${c.a?.customer || 'a rental'} and ${c.b?.customer || 'another'} overlap on the same phone. Check the rentals list.`, 'error');
       } else if (res.gateRefused && res.gateRefused.length) {
         // The server re-runs the Charge Gate on anything arriving CLOSED, and
         // when it is not satisfied it undoes the close alone rather than
@@ -4787,11 +4787,11 @@ async function kcDoneEmail(btn) {
   if (res && res.success && res.held) { toast(res.note || 'Email is on hold — receipt not sent.', 'warning'); restore(); }
   else if (res && res.success && res.redirected) {
     toast(res.note || `Test mode — sent to ${res.sentTo}.`, 'warning');
-    if (btn) btn.innerHTML = '✔ Sent';
+    if (btn) btn.innerHTML = '<i class="kc-ic kc-ic-check" aria-hidden="true"></i> Sent';
   } else if (res && res.success) {
     toast(`Receipt emailed to ${res.sentTo}.`, 'success');
     recordComm(d.customerId, { type: 'email', text: `Receipt emailed — ${fmtGbp(d.total)}` });
-    if (btn) btn.innerHTML = '✔ Sent';
+    if (btn) btn.innerHTML = '<i class="kc-ic kc-ic-check" aria-hidden="true"></i> Sent';
   } else { toast(res?.error || 'Could not send the receipt.', 'error'); restore(); }
 }
 
@@ -4801,14 +4801,14 @@ async function kcDoneEmail(btn) {
 function openTextReceiptModal(customerId, text) {
   const c = customers.find(x => String(x.id) === String(customerId));
   showDynamicModal(`
-    <div class="modal-title">💬 Text receipt</div>
+    <div class="modal-title"><i class="kc-ic kc-ic-chat" aria-hidden="true"></i> Text receipt</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
       ${c && c.phone ? `To <span class="copy-val">${escHtml(fmtPhone(c.phone))}</span>. ` : ''}Edit it, then send — or copy it into your own messaging app.</div>
     <textarea class="form-input" id="kcTrText" rows="5" style="font-family:inherit;">${escHtml(text || '')}</textarea>
     <div class="modal-actions">
       <span class="modal-actions-group">
         <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
-        ${waLink(c || {}, '') ? `<button class="btn btn-outline" onclick="kcTextReceiptWa('${escJs(String(customerId))}')">💬 WhatsApp</button>` : ''}
+        ${waLink(c || {}, '') ? `<button class="btn btn-outline kc-ic kc-ic-chat" onclick="kcTextReceiptWa('${escJs(String(customerId))}')">WhatsApp</button>` : ''}
         <button class="btn btn-outline kc-ic kc-ic-clipboard" onclick="kcTextReceiptCopy('${escJs(String(customerId))}')">Copy</button>
         <button class="btn btn-primary kc-ic kc-ic-upload" onclick="kcTextReceiptSend('${escJs(String(customerId))}')">Send</button>
       </span>
@@ -4825,7 +4825,7 @@ async function kcTextReceiptSend(customerId) {
   if (!res.success) { toast(res.error || 'Could not send.', 'error'); return; }
   if (res.held) toast(res.note, 'warning');
   else if (res.redirected) toast(res.note, 'warning');
-  else toast('Receipt texted ✔', 'success');
+  else toast('Receipt texted', 'success', 'check');
   recordComm(customerId, { type: 'message', text: res.held ? 'Text receipt built (HOLD, not sent)' : res.redirected ? 'Text receipt sent to the test number, not the customer' : 'Text receipt sent' });
   closeDynamicModal();
 }
@@ -5202,7 +5202,7 @@ function openVoidRentalModal(rentalId) {
   if (!r || r.voided) return;
   const owed = rentalGrandTotal(r);
   showDynamicModal(`
-    <div class="modal-title">↩ Void rental — ${escName(r.customerName || '')}</div>
+    <div class="modal-title"><i class="kc-ic kc-ic-undo" aria-hidden="true"></i> Void rental — ${escName(r.customerName || '')}</div>
     <div style="font-size:var(--fs-body);margin-bottom:12px;">
       ${escHtml(fmtPhone(r.phoneNumber || ''))} · ${fmtDate(r.fromDate)} → ${fmtDate(r.toDate)}<br>
       Every charge on this rental reverses to £0 (${fmtGbp(owed)} today).
@@ -5331,7 +5331,7 @@ function openManagePhonesModal() {
       </div>
     </div>
     <div style="margin-top:14px;">
-      <button class="btn btn-primary" onclick="saveNewPhone()">➕ Add phone</button>
+      <button class="btn btn-primary kc-ic kc-ic-plus" onclick="saveNewPhone()">Add phone</button>
     </div>
     <div class="section-divider" style="margin-top:20px;">Current Inventory
       <span id="mpInvCount" style="font-weight:400;color:var(--muted);margin-inline-start:6px;"></span></div>
@@ -6038,7 +6038,7 @@ function openManageRentalModal(rentalId) {
     ${/* The device gets its own line rather than an em dash, which dangled at
           the end of the title whenever the chip wrapped — which at 390px is
           every time. A deliberate second line reads the same at both widths. */''}
-    <div class="modal-title">⚙ Manage Rental<span class="kc-title-device">${rentalDeviceChip(r)}</span></div>
+    <div class="modal-title"><i class="kc-ic kc-ic-gear" aria-hidden="true"></i> Manage Rental<span class="kc-title-device">${rentalDeviceChip(r)}</span></div>
     <div style="color:var(--muted);font-size:var(--fs-body);margin-bottom:16px;">
       Customer: <strong style="color:var(--text);">${custNameLink(r.customerId, escName(r.customerName))}</strong>
     </div>
@@ -6082,8 +6082,8 @@ function openManageRentalModal(rentalId) {
             style="width:52px;height:28px;border-radius:14px;cursor:pointer;transition:background 0.2s;position:relative;background:${r.status==='returned'?'var(--success)':'var(--border)'};">
             <div id="mgToggleKnob" style="position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transform:translateX(${r.status==='returned'?'22px':'0'});transition:transform 0.2s var(--ease-out);"></div>
           </div>
-          <span id="mgReturnedLabel" style="font-size:var(--fs-ui);font-weight:600;color:${r.status==='returned'?'var(--success)':'var(--muted)'};">
-            ${r.status==='returned' ? 'Closed ✔' : 'Close this rental'}
+          <span id="mgReturnedLabel" class="${r.status==='returned' ? 'kc-ic kc-ic-check' : ''}" style="font-size:var(--fs-ui);font-weight:600;color:${r.status==='returned'?'var(--success)':'var(--muted)'};">
+            ${r.status==='returned' ? 'Closed' : 'Close this rental'}
           </span>
         </div>
         <input type="hidden" id="mgReturned" value="${r.status==='returned'?'1':'0'}">
@@ -6201,11 +6201,13 @@ function mgCheckConflict(rentalId) {
   }
   if (clash) {
     el.style.display = 'block';
-    el.textContent = `⚠ This phone is also booked ${fmtDate(clash.fromDate)} → ${fmtDate(clash.toDate)}`
+    el.classList.add('kc-ic', 'kc-ic-alert');
+    el.textContent = `This phone is also booked ${fmtDate(clash.fromDate)} → ${fmtDate(clash.toDate)}`
       + (clash.customerName ? ` for ${clash.customerName}` : '')
       + '. Saving these dates would double-book it.';
   } else {
     el.style.display = 'none';
+    el.classList.remove('kc-ic', 'kc-ic-alert');
     el.textContent = '';
   }
 }
@@ -6289,7 +6291,9 @@ function toggleReturned() {
   // rests at left:3px and travels 22px, so 25px - 3px.
   knob.style.transform = isNowReturned ? 'translateX(22px)' : 'translateX(0)';
   label.style.color = isNowReturned ? 'var(--success)' : 'var(--muted)';
-  label.textContent = isNowReturned ? 'Closed ✔' : 'Close this rental';
+  label.classList.toggle('kc-ic', isNowReturned);
+  label.classList.toggle('kc-ic-check', isNowReturned);
+  label.textContent = isNowReturned ? 'Closed' : 'Close this rental';
   // The Charge Gate is about closing, so it appears with the toggle.
   if (typeof mgGateRentalId !== 'undefined' && mgGateRentalId) mgRenderGate(mgGateRentalId);
 }
@@ -6305,10 +6309,12 @@ function mgUpdateDebt() {
     el.textContent = 'Remaining debt: ' + fmtGbp(diff);
   } else if (diff < -0.005) {
     el.style.color = 'var(--warning)';
-    el.textContent = '⚠ Paid ' + fmtGbp(Math.abs(diff)) + ' over total — reconcile manually';
+    el.className = 'kc-ic kc-ic-alert';
+    el.textContent = 'Paid ' + fmtGbp(Math.abs(diff)) + ' over total — reconcile manually';
   } else {
     el.style.color = 'var(--success)';
-    el.textContent = '✓ Fully paid';
+    el.className = 'kc-ic kc-ic-check';
+    el.textContent = 'Fully paid';
   }
 }
 
@@ -8778,7 +8784,7 @@ function renderDocsSection(custId, docs) {
   el.innerHTML = pendingHtml + listHtml + `
     <div style="margin-top:10px;" id="docStage-${custId}">
       <input type="file" id="docUpload-${custId}" accept="image/*,application/pdf" style="display:none;" onchange="stageCustomerDoc('${custId}', this)">
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('docUpload-${custId}').click()">⬆︎ Upload &amp; share</button>
+      <button class="btn btn-outline btn-sm kc-ic kc-ic-upload" onclick="document.getElementById('docUpload-${custId}').click()">Upload &amp; share</button>
       <span id="docMsg-${custId}" style="font-size:var(--fs-micro);color:var(--muted);margin-left:8px;"></span>
     </div>`;
 }
@@ -8819,7 +8825,7 @@ async function uploadCustomerDoc(custId) {
     });
     const d = await r.json();
     if (!d.success) { kcStagedDoc[custId] = file; if (msg) msg.textContent = d.error || 'Upload failed — ✓ tries again.'; toast(d.error || 'Upload failed.', 'error'); }
-    else { toast('Document shared ✔', 'success'); loadDocsSection(custId); }
+    else { toast('Document shared', 'success', 'check'); loadDocsSection(custId); }
   } catch { kcStagedDoc[custId] = file; if (msg) msg.textContent = 'Upload failed — ✓ tries again.'; }
 }
 async function reviewCustomerDoc(custId, id, action) {
@@ -8846,7 +8852,7 @@ async function reviewCustomerDoc(custId, id, action) {
       body: JSON.stringify({ id, action, ...(note ? { note } : {}) }),
     });
     const d = await r.json();
-    if (d.success) { toast(action === 'approve' ? 'Approved ✔' : 'Rejected — the customer sees this in their portal', 'success'); loadDocsSection(custId); }
+    if (d.success) { toast(action === 'approve' ? 'Approved' : 'Rejected — the customer sees this in their portal', 'success', action === 'approve' ? 'check' : null); loadDocsSection(custId); }
     else toast(d.error || 'Failed.', 'error');
   } catch { toast('Failed.', 'error'); }
 }
@@ -8964,7 +8970,7 @@ async function settleHouseAccount(custId) {
         text: `<i class="kc-ic kc-ic-card" aria-hidden="true"></i> House account settled for ${ym} — ${fmtGbp(amount)} charged to the saved card${d.status === 'succeeded' ? '' : ' (processing)'}.${invoiceNote}`,
       }).catch(() => null);
       toast(d.status === 'succeeded'
-        ? `House account settled — ${fmtGbp(amount)} charged ✔${invoiceNote ? ' · Stripe invoice ready' : ''}`
+        ? `House account settled — ${fmtGbp(amount)} charged${invoiceNote ? ' · Stripe invoice ready' : ''}`
         : 'Charge is processing — the wallet updates when the card issuer answers.', d.status === 'succeeded' ? 'success' : 'warning');
       closeDynamicModal();
       kcRepaintCards(custId);
@@ -9046,7 +9052,7 @@ async function chargeCardOnFile(custId) {
       // Confirmed charged — retire the token so a later, deliberate charge of the
       // same amount is a genuinely new operation with its own key.
       delete cardChargeRefs[refKey];
-      toast(`Charged £${amount.toFixed(2)} to card on file ✔`, 'success'); loadWalletSection(custId);
+      toast(`Charged £${amount.toFixed(2)} to card on file`, 'success', 'check'); loadWalletSection(custId);
     }
     // Processing or any failure: KEEP the token so a retry reuses it and Stripe
     // dedupes rather than double-charging.
@@ -9328,7 +9334,7 @@ function openPaymentLinkModal(custId) {
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
       <button class="btn btn-outline" id="plGo" onclick="createPaymentLink('${escHtml(String(custId))}')">Create link</button>
-      ${waLink(c, '') ? `<button class="btn btn-outline" id="plWa" style="display:none;" onclick="waPaymentLink('${escHtml(String(custId))}')">💬 Open in WhatsApp</button>` : ''}
+      ${waLink(c, '') ? `<button class="btn btn-outline kc-ic kc-ic-chat" id="plWa" style="display:none;" onclick="waPaymentLink('${escHtml(String(custId))}')">Open in WhatsApp</button>` : ''}
       <button class="btn btn-primary kc-ic kc-ic-clipboard" id="plCopy" style="display:none;" onclick="copyPaymentLink()">Copy link</button>
     </div>
   `);
@@ -10584,13 +10590,13 @@ async function kcSendReceipt(btn, customerId, opts) {
   }
   if (res && res.success && res.redirected) {
     toast(res.note || `Test mode — sent to ${res.sentTo}.`, 'warning');
-    if (btn) btn.textContent = '✔';
+    if (btn) btn.innerHTML = '<i class="kc-ic kc-ic-check" aria-hidden="true"></i>';
     return true;
   }
   if (res && res.success) {
     toast(`Emailed to ${res.sentTo}.`, 'success');
     if (opts.log) recordComm(customerId, { type: 'email', text: opts.log });
-    if (btn) btn.textContent = '✔';
+    if (btn) btn.innerHTML = '<i class="kc-ic kc-ic-check" aria-hidden="true"></i>';
     return true;
   }
   toast(res?.error || 'Could not send it.', 'error');
@@ -10902,7 +10908,7 @@ function openDraftReminderModal(customerId) {
     <textarea class="form-input" id="drText" rows="9" aria-label="Reminder message — edit before copying" style="font-family:inherit;">${escHtml(draft)}</textarea>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
-      ${waLink(c, '') ? `<button class="btn btn-outline" onclick="waReminderDraft('${escHtml(String(customerId))}')">💬 Open in WhatsApp</button>` : ''}
+      ${waLink(c, '') ? `<button class="btn btn-outline kc-ic kc-ic-chat" onclick="waReminderDraft('${escHtml(String(customerId))}')">Open in WhatsApp</button>` : ''}
       <button class="btn btn-primary kc-ic kc-ic-clipboard" onclick="copyReminderDraft('${escHtml(String(customerId))}')">Copy message</button>
     </div>
   `);
@@ -10968,7 +10974,7 @@ function openAiReplyModal(customerId) {
   const c = customers.find(x => x.id === customerId);
   if (!c) return;
   showDynamicModal(`
-    <div class="modal-title">💬 Draft a reply — ${escName(c.firstName)} ${escName(c.lastName)}</div>
+    <div class="modal-title"><i class="kc-ic kc-ic-chat" aria-hidden="true"></i> Draft a reply — ${escName(c.firstName)} ${escName(c.lastName)}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Paste what the customer wrote and the AI drafts a reply in the shop's voice, using their account facts. <strong>Nothing is sent</strong> — read it, edit it, then copy. Don't paste passport/ID numbers (the text goes to Google).</div>
     <div class="form-group form-full">
       <label class="form-label">Customer's message</label>
@@ -11032,7 +11038,7 @@ async function runAiReply(customerId) {
   } catch {
     toast('Could not reach the reply drafter.', 'error');
   } finally {
-    if (btn) { btn.disabled = false; if (btn.textContent === 'Drafting…') btn.textContent = '✨ Draft reply'; }
+    if (btn) { btn.disabled = false; if (btn.textContent === 'Drafting…') { btn.classList.add('kc-ic', 'kc-ic-sparkle'); btn.textContent = 'Draft reply'; } }
   }
 }
 async function copyAiReply(customerId) {
@@ -11083,7 +11089,7 @@ function openRentalSmsModal(rentalId) {
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
       <button class="btn btn-outline kc-ic kc-ic-upload" onclick="sendRentalSms('${escHtml(String(rentalId))}')">Send SMS</button>
-      ${waLink(waC, '') ? `<button class="btn btn-outline" onclick="waRentalSms('${escHtml(String(rentalId))}')">💬 Open in WhatsApp</button>` : ''}
+      ${waLink(waC, '') ? `<button class="btn btn-outline kc-ic kc-ic-chat" onclick="waRentalSms('${escHtml(String(rentalId))}')">Open in WhatsApp</button>` : ''}
       <button class="btn btn-primary kc-ic kc-ic-clipboard" onclick="copyRentalSms('${escHtml(String(rentalId))}')">Copy message</button>
     </div>
   `);
@@ -11099,7 +11105,7 @@ async function sendRentalSms(rentalId) {
   if (!res.success) { toast(res.error || 'Could not send.', 'error'); return; }
   if (res.held) { toast(res.note, 'warning'); }
   else if (res.redirected) { toast(res.note, 'warning'); }
-  else { toast(`SMS sent to ${r.customerName || 'the customer'} ✔`, 'success'); }
+  else { toast(`SMS sent to ${r.customerName || 'the customer'}`, 'success', 'check'); }
   if (r.customerId) recordComm(r.customerId, { type: 'message', text: res.held ? `Status SMS built (HOLD, not sent)` : res.redirected ? `Status SMS sent to test number` : `Status SMS sent (${getComputedStatus(r)})` });
   closeDynamicModal();
 }
@@ -11621,7 +11627,7 @@ function bankPaint() {
           <input class="form-input" id="bankCsvFile" type="file" accept=".csv,text/csv"
             style="min-height:0;padding:7px 12px;font-size:var(--fs-body);">
         </div>
-        <button class="btn btn-primary" id="bankUploadBtn" onclick="bankUpload()">⬆ Import</button>
+        <button class="btn btn-primary kc-ic kc-ic-upload" id="bankUploadBtn" onclick="bankUpload()">Import</button>
         <span style="font-size:var(--fs-small);color:var(--muted);flex-basis:100%;">Re-importing an overlapping window is safe — rows already seen are absorbed, never doubled. One label per bank account.</span>
       </div>
       <div id="bankUploadNote" style="font-size:var(--fs-small);margin-top:6px;"></div>
@@ -12054,7 +12060,8 @@ const KC_OPTIONAL_FIELDS = ['fAltPhone', 'fAltEmail'];
 
 function openAddModal() {
   clearModal();
-  document.getElementById('modalTitle').textContent = '➕ Add new customer';
+  document.getElementById('modalTitle').className = 'modal-title kc-ic kc-ic-plus';
+  document.getElementById('modalTitle').textContent = 'Add new customer';
   document.getElementById('editId').value = '';
   document.getElementById('btnSaveCustomer').textContent = 'Save Customer';
   // The carrier login (owner, 08-16) is not a counter field — it is set up
@@ -12086,7 +12093,8 @@ function openEditModal(id) {
   const c = customers.find(x => x.id === id);
   if (!c) return;
   clearModal();
-  document.getElementById('modalTitle').textContent = '✏️ Edit Customer';
+  document.getElementById('modalTitle').className = 'modal-title kc-ic kc-ic-pencil';
+  document.getElementById('modalTitle').textContent = 'Edit Customer';
   document.getElementById('editId').value = id;
   document.getElementById('btnSaveCustomer').textContent = 'Update Customer';
 
@@ -12918,7 +12926,7 @@ function openSimFormModal(id, preselectCustomerId = null, prefill = null) {
   const preselect = s && s.customerId ? s.customerId : preselectCustomerId;
 
   showDynamicModal(`
-    <div class="modal-title">${isEdit ? '<i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Edit SIM plan' : '➕ New SIM plan'}</div>
+    <div class="modal-title">${isEdit ? '<i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Edit SIM plan' : '<i class="kc-ic kc-ic-plus" aria-hidden="true"></i> New SIM plan'}</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
@@ -13466,7 +13474,7 @@ async function addSimCharge(simId) {
       }
     })
     .catch(() => toast('Charge saved, but not billed to the wallet.', 'error'));
-  toast(`Charge of ${fmtGbp(amount)} added${payMethod !== 'account' ? ` — settled by ${payLabel}` : ''} ✔`, 'success');
+  toast(`Charge of ${fmtGbp(amount)} added${payMethod !== 'account' ? ` — settled by ${payLabel}` : ''}`, 'success', 'check');
   openManageSimModal(simId);
 }
 
@@ -14442,7 +14450,7 @@ function tmAttach(id) {
     </button>`;
 
   showStackedModal(`
-    <div class="modal-title">➕ Add this flight to a booking</div>
+    <div class="modal-title"><i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Add this flight to a booking</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
       ${escHtml(t.airline || 'This flight')}${t.route ? ' · ' + escHtml(t.route) : ''}${
         t.travelDate ? ' · ' + escHtml(fmtDate(t.travelDate)) : ''}${
@@ -16157,7 +16165,7 @@ function openRepairSmsModal(repairId) {
     <textarea class="form-input" id="rpsmsText" rows="4" style="font-family:inherit;">${escHtml(buildRepairSms(r))}</textarea>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
-      ${c && waLink(c, '') ? `<button class="btn btn-outline" onclick="waRepairSms('${escHtml(String(repairId))}')">💬 Open in WhatsApp</button>` : ''}
+      ${c && waLink(c, '') ? `<button class="btn btn-outline kc-ic kc-ic-chat" onclick="waRepairSms('${escHtml(String(repairId))}')">Open in WhatsApp</button>` : ''}
       <button class="btn btn-primary kc-ic kc-ic-clipboard" onclick="copyRepairSms('${escHtml(String(repairId))}')">Copy message</button>
     </div>
   `);
@@ -16201,7 +16209,7 @@ function openCollectRepairModal(id) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmCollectRepair('${escHtml(id)}')">✔ Collect</button>
+      <button class="btn btn-primary kc-ic kc-ic-check" onclick="confirmCollectRepair('${escHtml(id)}')">Collect</button>
     </div>
   `);
 }
@@ -16558,9 +16566,10 @@ function svcPipTick() {
   // ▶ is monochrome text and stays; ⏸ was a colour emoji, so the pause face
   // becomes a class. Both states set BOTH classes so neither can stick.
   if (hold) {
-    hold.classList.toggle('kc-ic', !paused);
+    hold.classList.add('kc-ic');
     hold.classList.toggle('kc-ic-pause', !paused);
-    hold.textContent = paused ? '▶ Resume' : 'Pause';
+    hold.classList.toggle('kc-ic-play', paused);
+    hold.textContent = paused ? 'Resume' : 'Pause';
   }
 }
 
@@ -16710,7 +16719,7 @@ async function renderServicesTab() {
           <strong id="svcTimerElapsed" style="font-size:var(--fs-h1);font-feature-settings:'tnum';">0:00</strong>
           <span id="svcTimerProj" style="font-size:var(--fs-body);color:var(--muted);"></span>
           ${paused
-            ? `<button class="btn btn-outline" onclick="svcTimerResume()">▶ Resume</button>`
+            ? `<button class="btn btn-outline kc-ic kc-ic-play" onclick="svcTimerResume()">Resume</button>`
             : `<button class="btn btn-outline kc-ic kc-ic-pause" onclick="svcTimerPause()">Pause</button>`}
           <button class="btn btn-primary kc-ic kc-ic-stop" onclick="svcTimerStop()">Stop &amp; charge</button>
           ${svcPipSupported()
@@ -16731,7 +16740,7 @@ async function renderServicesTab() {
             placeholder: 'Who are you helping?', label: 'Who are you helping?',
             style: 'min-height:0;padding:8px 12px;',
           })}</div>
-          <button class="btn btn-primary" onclick="svcTimerStart()">▶ Start timer</button>
+          <button class="btn btn-primary kc-ic kc-ic-play" onclick="svcTimerStart()">Start timer</button>
         </div>`;
     })()}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
@@ -17368,7 +17377,7 @@ async function renderShopTab() {
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
       <button class="btn btn-primary kc-ic kc-ic-receipt" onclick="openSaleModal()">Open Till</button>
       <button class="btn btn-outline kc-ic kc-ic-money" onclick="openCashupModal()">Cash up</button>
-      <button class="btn btn-outline" onclick="openStockItemModal()">➕ Add item</button>
+      <button class="btn btn-outline kc-ic kc-ic-plus" onclick="openStockItemModal()">Add item</button>
       <button class="btn btn-outline kc-ic kc-ic-undo" onclick="openSupplierReturnModal()">Return to supplier</button>
       <button class="btn btn-outline kc-ic kc-ic-package" onclick="openGoodsInModal()">Goods in</button>
     </div>
@@ -17653,7 +17662,7 @@ function openGoodsInModal() {
       <div class="form-group form-full">
         <label class="form-label">Lines * <span style="color:var(--muted);font-weight:400;">(pick a stock item to update its quantity and cost, or free-type)</span></label>
         <div id="giLines">${giLineRowHtml(0)}</div>
-        <button type="button" class="btn btn-outline" style="padding:4px 10px;font-size:var(--fs-small);" onclick="giAddLine()">➕ Add line</button>
+        <button type="button" class="btn btn-outline" style="padding:4px 10px;font-size:var(--fs-small);" onclick="giAddLine()">Add line</button>
       </div>
       <div class="form-group">
         <label class="form-label">Invoice ref</label>
@@ -17730,7 +17739,7 @@ async function markGoodsInPaid(id, paid) {
 function openStockItemModal(itemId = null) {
   const i = itemId ? shopItems.find(x => x.id === itemId) : null;
   showDynamicModal(`
-    <div class="modal-title">${i ? '<i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Edit Item' : '➕ Add Stock Item'}</div>
+    <div class="modal-title">${i ? '<i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Edit Item' : '<i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Add Stock Item'}</div>
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">Category</label>
@@ -22936,7 +22945,7 @@ async function saveNewVN() {
   });
   if (!res.success) { toast(res.error || 'Could not save.', 'error'); return; }
   closeDynamicModal();
-  toast(`Virtual number ${number} saved ✔`, 'success');
+  toast(`Virtual number ${number} saved`, 'success', 'check');
   renderVirtualTab();
 }
 
@@ -23930,7 +23939,7 @@ async function sendTestSms() {
   if (!res || !res.success) { toast(res?.error || 'Test failed.', 'error'); return; }
   if (res.held) toast('Twilio is connected, but SMS is on HOLD — the test was built and logged, nothing sent. Set SMS_TEST_TO or SMS_LIVE to send for real.', 'success');
   else if (res.redirectedTo) toast(`Sent — redirected to the test number ${res.redirectedTo} (TEST mode).`, 'success');
-  else toast(`Sent to ${res.sentTo} ✔ The Twilio connection works.`, 'success');
+  else toast(`Sent to ${res.sentTo}. The Twilio connection works.`, 'success', 'check');
 }
 
 // Settings → Messaging: the message log. One table (email_log) records every
@@ -24288,7 +24297,7 @@ async function applySettingUpdate(payload) {
   const res = await window.api.updateSetting(payload);
   if (!res.success) { toast(res.error || 'Could not save.', 'error'); return false; }
   (res.warnings || []).forEach(w => toast(w, 'warning'));
-  toast('Saved ✔ New calculations use the updated value.', 'success');
+  toast('Saved. New calculations use the updated value.', 'success', 'check');
   pricingConfig = await window.api.getSettings().catch(() => pricingConfig);
   return true;
 }
@@ -24520,7 +24529,7 @@ async function saveBizAccount(id) {
     }),
   }).then(r => r.json()).catch(() => ({ success: false, error: 'Network error.' }));
   if (!res.success) { toast(res.error || 'Could not save.', 'error'); return; }
-  toast('Saved ✔', 'success');
+  toast('Saved', 'success', 'check');
   closeDynamicModal();
   renderSettingsTab();
 }
@@ -24554,7 +24563,7 @@ async function retireBizAccount(id, name) {
     body: JSON.stringify({ op: 'retire', id }),
   }).then(r => r.json()).catch(() => ({ success: false }));
   if (!res.success) { toast(res.error || 'Could not retire.', 'error'); return; }
-  toast('Retired ✔', 'success');
+  toast('Retired', 'success', 'check');
   renderSettingsTab();
 }
 
@@ -24633,7 +24642,7 @@ async function savePhoneModel(id) {
     }),
   }).then(r => r.json()).catch(() => ({ success: false, error: 'Network error.' }));
   if (!res.success) { toast(res.error || 'Could not save.', 'error'); return; }
-  toast('Saved ✔ The public guide updates within a few minutes.', 'success');
+  toast('Saved. The public guide updates within a few minutes.', 'success', 'check');
   closeDynamicModal();
   renderSettingsTab();
 }
@@ -24650,7 +24659,7 @@ async function retirePhoneModel(id, name) {
     body: JSON.stringify({ op: 'retire', id }),
   }).then(r => r.json()).catch(() => ({ success: false }));
   if (!res.success) { toast(res.error || 'Could not update.', 'error'); return; }
-  toast('Hidden from the guide ✔', 'success');
+  toast('Hidden from the guide', 'success', 'check');
   renderSettingsTab();
 }
 
@@ -24660,7 +24669,7 @@ async function restorePhoneModel(id) {
     body: JSON.stringify({ op: 'restore', id }),
   }).then(r => r.json()).catch(() => ({ success: false }));
   if (!res.success) { toast(res.error || 'Could not update.', 'error'); return; }
-  toast('Back on the guide ✔', 'success');
+  toast('Back on the guide', 'success', 'check');
   renderSettingsTab();
 }
 
@@ -24668,7 +24677,7 @@ async function restorePhoneModel(id) {
 async function applySettingAdd(payload) {
   const res = await window.api.addSetting(payload);
   if (!res.success) { toast(res.error || 'Could not add.', 'error'); return; }
-  toast('Added ✔', 'success');
+  toast('Added', 'success', 'check');
   pricingConfig = await window.api.getSettings().catch(() => pricingConfig);
   renderSettingsTab();
 }
@@ -24859,7 +24868,7 @@ async function saveEmailAlias(id) {
   }).then(r => r.json()).catch(() => null);
   if (!res || !res.success) { toast(res?.error || 'Could not save the address.', 'error'); return; }
   closeDynamicModal();
-  toast(id ? 'Address updated.' : `${res.alias.address} created ✔`, 'success');
+  toast(id ? 'Address updated.' : `${res.alias.address} created`, 'success', 'check');
   renderSettingsTab();
 }
 
@@ -25073,7 +25082,7 @@ async function saveNewTeamMember() {
     body: JSON.stringify(payload),
   }).then(r => r.json());
   if (!res.success) { toast(res.error || 'Could not add the member.', 'error'); return; }
-  toast(`${payload.email} added as ${payload.role} ✔ They can sign in right away.`, 'success');
+  toast(`${payload.email} added as ${payload.role}. They can sign in right away.`, 'success', 'check');
   renderSettingsTab();
 }
 
