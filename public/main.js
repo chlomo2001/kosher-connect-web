@@ -20352,6 +20352,10 @@ document.addEventListener('keydown', e => {
     const open = (id) => { const el = document.getElementById(id); return el && !el.classList.contains('hidden') ? el : null; };
     if (open('kcShortcuts')) { closeShortcuts(); return; }
     if (open('kcConfirm')) { kcConfirmDone(false); return; }
+    // Same layer as kcConfirm (3000). Without this line Escape fell THROUGH
+    // the open prompt and closed whichever dialog sat underneath it instead —
+    // the prompt stayed up, its parent vanished.
+    if (open('kcPrompt')) { kcPromptDone(null); return; }
     if (open('paletteOverlay')) { closePalette(); return; }
     if (open('stackedModal')) { closeStackedModal(); return; }
     if (open('dynamicModal')) { closeDynamicModal(); return; }
@@ -20554,7 +20558,15 @@ kcSyncScrollers();
 // can't wander into the dimmed page behind it. Stack order matches the Escape
 // handler: confirm > dynamic action modal > customer form.
 function kcTopModalOverlay() {
-  for (const id of ['kcShortcuts', 'kcConfirm', 'dynamicModal', 'customerModal', 'customerCard']) {
+  // Probe order IS the answer: the first open overlay here is taken as the
+  // topmost dialog, so the list must run in true z-order — kcConfirm/kcPrompt
+  // 3000, palette 2000, stackedModal 1000, the 100-layer, then the customer
+  // cards (secondary 91 above primary 90). Tab-trapping scopes to whatever
+  // this returns; an overlay missing from the list means Tab walks the page
+  // BEHIND its dialog, and one listed below its real layer means Tab is
+  // trapped inside a dialog the user cannot even see.
+  for (const id of ['kcConfirm', 'kcPrompt', 'paletteOverlay', 'stackedModal',
+    'kcShortcuts', 'dynamicModal', 'customerModal', 'customerCard2', 'customerCard']) {
     const el = document.getElementById(id);
     if (el && !el.classList.contains('hidden')) return el;
   }
