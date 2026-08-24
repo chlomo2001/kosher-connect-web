@@ -1,0 +1,26 @@
+import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+from kit import *
+from reportlab.pdfgen import canvas as rl
+import p01_04, p05_08, p09_12, p13, p14, p15
+OUT = os.path.join(HERE, '..', '..', 'docs', 'brand', 'KOSHER-CONNECT-BRAND-STANDARD.pdf')
+install_glyph_guard()
+c = rl.Canvas(OUT, pagesize=(W, H))
+c.setTitle('Kosher Connect — Brand Standard')
+p01_04.cover(c)
+p01_04.mark_page(c)
+p05_08.palette(c)
+p05_08.contrast(c)
+p09_12.blue_question(c)
+p09_12.typography(c)
+p13.voice(c)
+p13.application(c)
+p14.print_plate(c)
+p14.evidence(c)
+p15.in_code(c)
+p15.colophon(c)
+c.save()
+import sys as _s
+n = report_glyphs()
+print('written', OUT)
+_s.exit(1 if n else 0)

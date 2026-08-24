@@ -26,3 +26,6 @@ ops/harness/.css-snapshot/
 # Generated from styles/app.css by scripts/build-app-css.mjs (prebuild/predev).
 # The commented source is the one to edit and review.
 public/app.css
+
+# Derived from the repo by ops/brand/prepare.py — regenerate, do not commit.
+ops/brand/assets/
