@@ -1,9 +1,24 @@
 # Offline UI harness
 
 ```bash
-npm i --no-save playwright-core     # once per session; deliberately not a dependency
-bash ops/harness/audit-all.sh       # every check below, one summary line each
+npm i --no-save playwright-core       # once per session; deliberately not a dependency
+bash ops/harness/audit-all.sh --smoke # ~90s — run this before a ship
+bash ops/harness/audit-all.sh         # every check below; ~25-30 min, runs nightly
 ```
+
+**Two speeds, since 24 Aug.** The full sweep is 30 checks and 35 browser
+launches. It was being run inline in every session and before every ship, and
+half an hour is how a check that is worth having turns into a check people
+route around. It now runs **once a night** — the "KC nightly full audit"
+routine at 01:00 London, ahead of the 03:00 UX loop, so that loop starts the
+night with fresh findings — and a ship runs `--smoke`.
+
+`--smoke` is a strict subset: every tab renders and none overflows at 390px,
+every dialog still opens, every public page renders in both languages, every
+control has a name, dark contrast, and no half-written dark rule. Those are the
+six that have actually caught something on the way out of the door. It is a
+subset in the literal sense, so the full sweep does not re-run it — each line
+below already covers it at more widths and both themes.
 
 
 Renders the staff app with no server, no auth and no database, so a screen can

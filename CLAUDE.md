@@ -10,6 +10,10 @@ copy is British English and imagery/tone must fit the community.
 ## Deploy ritual
 - Develop on the session dev branch; never commit straight to `main`.
 - Before any ship: `bash ops/loops/green-keeper/gate.sh` must print `GATE: PASS — branch is shippable.`
+  Check its **exit code**, not the last line — a pipeline's status is `tail`'s, which is how
+  cc6f61d shipped red.
+- Anything visual also runs `bash ops/harness/audit-all.sh --smoke` (~90s). The **full** sweep
+  is 25-30 minutes and runs once a night, not per ship — see `ops/harness/README.md`.
 - Ship to production without waiting to be asked (owner, 2026-08-10: "dont ask before ff"):
   once the gate passes, `--ff-only` merge the dev branch into `main`, push, switch back.
   Vercel auto-deploys `main`. Exception: work the owner explicitly asked to judge first

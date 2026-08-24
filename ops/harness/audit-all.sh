@@ -3,7 +3,22 @@
 # anything it prints — two of these have limits worth knowing (widths on the
 # public pages are font-dependent; a finding is only as good as seed.json).
 #
-#   bash ops/harness/audit-all.sh
+#   bash ops/harness/audit-all.sh            the full sweep — nightly
+#   bash ops/harness/audit-all.sh --smoke    ~90 seconds, before a ship
+#
+# TWO SPEEDS, and the reason for them. The full sweep is 30 checks and 35
+# browser launches, 25-30 minutes. It was being run inline in every session and
+# before every ship, which is how a check that is worth having becomes a check
+# people route around. From 24 Aug it runs ONCE A NIGHT (the "KC nightly full
+# audit" routine, 01:00 London, ahead of the 03:00 UX loop so that loop starts
+# with the night's findings), and a ship runs --smoke instead.
+#
+# --smoke is not a lighter version of the same thing: it is the subset that has
+# actually caught regressions on the way out of the door — a tab that overflows,
+# a dialog that stopped opening, a control that lost its name, a public page
+# that broke, a dark rule written only once. It is a subset in the strict
+# sense, so the full sweep does not run it separately; every line below already
+# covers it at more widths and both themes.
 #
 # Needs playwright-core. It is not in package.json on purpose: this is a
 # development aid, not something the product builds against. Install it for a
@@ -17,6 +32,8 @@ if ! node -e "require('playwright-core')" 2>/dev/null; then
 fi
 
 fail=0
+smoke=0
+[ "${1:-}" = "--smoke" ] && smoke=1
 # Names the check that went red. "AUDIT: something needs a look — scroll up" is
 # no help when the thing to look for is an exit code rather than a printed ✗.
 run() {
@@ -39,6 +56,25 @@ run() {
 # and `-e` with it: several of these lines run four checks in a row, and without
 # it only the last one's status would survive. So every check below runs under
 # `bash -eo pipefail -c` — a red check now stops its group and fails the run.
+
+if [ "$smoke" = 1 ]; then
+  run "smoke · every tab renders and none overflows at 390px" \
+    bash -eo pipefail -c 'node ops/harness/render.mjs --audit --width 390 | tail -1'
+  run "smoke · every dialog still opens, and fits at 390px" \
+    bash -eo pipefail -c 'node ops/harness/modals.mjs --width 390 --theme light | tail -1'
+  run "smoke · every public page renders, en and he" \
+    bash -eo pipefail -c 'node ops/harness/public.mjs --width 390 | grep -v "^✓ "'
+  run "smoke · every control says what it is" \
+    bash -eo pipefail -c 'node ops/harness/names.mjs | tail -1'
+  run "smoke · contrast in dark" \
+    bash -eo pipefail -c 'node ops/harness/render.mjs --contrast --theme dark --width 1280 | tail -1'
+  run "smoke · dark rules written only once" \
+    node ops/harness/theme-pairs.mjs
+  echo
+  [ "$fail" = 0 ] && echo "SMOKE: clean — the full sweep still runs tonight." \
+                  || echo "SMOKE: something needs a look — scroll up."
+  exit "$fail"
+fi
 
 run "staff app · sideways overflow, every tab, every width" \
   bash -eo pipefail -c 'for w in 320 390 768 1280 1440; do node ops/harness/render.mjs --audit --width $w | tail -1; done'
