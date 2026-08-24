@@ -142,6 +142,13 @@
      light accent is a deep blue; on dark the accent lightens and white
      drops to 2.62:1, so that theme flips this to near-black. */
   --on-accent: #ffffff;
+  /* The same idea for the two status fills, and for the same reason: --success
+     and --danger are deep here and lighten on dark, so ink painted on them has
+     to flip with the theme. White measures 5.00:1 on --success and 4.80:1 on
+     --danger here; on dark those same fills take white down to 1.9:1 and
+     2.9:1, which is what these tokens exist to stop. */
+  --on-success: #ffffff;
+  --on-danger: #ffffff;
 
   /* #77 — 4/8/12/16/24 spacing scale so paddings/gaps stop being re-typed */
   --space-1: 4px;  --space-2: 8px;  --space-3: 12px;  --space-4: 16px;  --space-6: 24px;
@@ -265,6 +272,12 @@
      #57a6e6 and white text falls to 2.62:1. The public pages' pill, language
      switch and repair button each hardcoded #fff and failed exactly that way. */
   --on-accent: #101319;
+  /* Dark ink on the lightened status fills — 9.8:1 on --success (#34d399) and
+     6.5:1 on --danger (#ff5f80). White on those two measures 1.9:1 and 2.9:1,
+     the worst text contrast in the product: it was painting the "Returned" /
+     "Lost" labels inside the equipment switch and the "!" on an overdue day. */
+  --on-success: #101319;
+  --on-danger: #101319;
   --warning: #f0a04b;
 
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
