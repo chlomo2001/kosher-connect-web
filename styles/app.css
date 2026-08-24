@@ -1576,7 +1576,11 @@ body.pos-mode #kcNextAction { display: none; }
 
 .sms-quote {
   margin: 0 0 14px; padding: 8px 12px;
-  border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0;   /* was --primary: undefined, so no border painted at all */
+  /* A quotation's rule, so it stays — but neutral and thinner. At 3px in the
+     accent it read as the SaaS side-stripe card rather than as a quote. (It
+     was var(--primary) until 24 Aug, which is undefined, so no rule painted
+     at all — this is the first time it has been visible.) */
+  border-left: 2px solid var(--border); border-radius: 0 8px 8px 0;
   background: var(--bg-secondary); color: var(--text);
   font-size: var(--fs-body); white-space: pre-wrap; word-break: break-word;
 }
@@ -1697,7 +1701,11 @@ body.pos-mode #kcNextAction { display: none; }
 .nba-strip {
   display: flex; align-items: center; gap: 10px;
   background: var(--accent-wash); border: 1px solid var(--primary-subdued);
-  border-left: 3px solid var(--accent); border-radius: var(--radius-lg);
+  border-radius: var(--radius-lg);
+  /* No left stripe. The wash and the border already say "this is a suggestion,
+     not part of the page" — a third mark on the same edge was decoration, and
+     unlike .kc-next / .fwd-row / .chk-row / .kc-man-note this one has no
+     second state for a stripe colour to carry. */
   padding: 9px 14px; margin-bottom: 16px;
 }
 
@@ -4238,7 +4246,12 @@ td { border-top-color: color-mix(in srgb, var(--border) 55%, transparent); }
 .dup-band-low { background: var(--bg-secondary); color: var(--muted); border-color: var(--border); }
 
 .dup-sides { display: flex; gap: 8px; flex-wrap: wrap; align-items: stretch; }
-.dup-side { flex: 1; min-width: 200px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--surface); }
+/* No border on purpose. The stack here is modal → pair → side, and drawing a
+   box at all three made the reader parse three containers to compare two
+   records. The pair is the boundary worth drawing — it is one decision — and
+   inside it the two sides are already separated by a full surface step
+   (--surface on the pair's --surface2), which reads in both themes. */
+.dup-side { flex: 1; min-width: 200px; border-radius: 8px; padding: 8px 10px; background: var(--surface); }
 
 /* The hinge. Horizontal between two side-by-side records, and still between
    them once they stack — which is the case that needed it. */
@@ -4406,6 +4419,11 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
    colour; role="alert" carries it to a screen reader the same way. */
 .kc-popnote {
   border: 1px solid var(--warning, #b45309);
+  /* The thick edge STAYS. It looks like the decorative side-stripe the rest
+     of this sheet has just been cleared of, and it is not: it is the
+     colour-independent half of this banner's signal (WCAG 1.4.1), so the
+     pop-note still reads as urgent to someone who cannot see the warning
+     wash. test/popNote.test.mjs pins it, and caught the removal. */
   border-left-width: 4px;
   background: var(--warning-wash, #fdf6ec);
   color: var(--text);
