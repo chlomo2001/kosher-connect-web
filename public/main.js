@@ -4226,7 +4226,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <div class="eq-btn" tabindex="0" role="button" id="nrGiven_phone" data-given="0" onclick="nrToggleGiven('phone')"><i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Phone</div>
           <div class="eq-btn" tabindex="0" role="button" id="nrGiven_sim"   data-given="1" onclick="nrToggleGiven('sim')"><i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM</div>
-          <div class="eq-btn" tabindex="0" role="button" id="nrGiven_charger" data-given="0" onclick="nrToggleGiven('charger')">🔌 Charger</div>
+          <div class="eq-btn" tabindex="0" role="button" id="nrGiven_charger" data-given="0" onclick="nrToggleGiven('charger')"><i class="kc-ic kc-ic-plug" aria-hidden="true"></i> Charger</div>
         </div>
         <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;">Tap to toggle — bright = given</div>
       </div>
@@ -5948,7 +5948,14 @@ function openManageRentalModal(rentalId) {
 
   // Build per-item status rows — three-position sliding toggle (A2).
   // Charger is one UI row driving the stored plug+cable pair (see eqKeysFor).
-  const EQ_LABELS   = { phone: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Phone handset', sim: '<i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM card', charger: '🔌 Charger' };
+  // The NAME is plain text and the ICON is a class, deliberately kept apart:
+  // this label goes into an aria-label as well as onto the screen, and when
+  // the icon conversion put markup in here the first quote of class="kc-ic…"
+  // closed that attribute and dumped the rest of the tag on top of the
+  // toggles (owner screenshot, 24 Aug). Anything that is read out as well as
+  // drawn has to stay text.
+  const EQ_LABELS = { phone: 'Phone handset', sim: 'SIM card', charger: 'Charger' };
+  const EQ_ICONS  = { phone: 'phone', sim: 'card', charger: 'plug' };
   const EQ_DEFAULTS = { phone: false, sim: true, charger: false };
   const eqRows = MG_UI_ITEMS.map(item => {
     const given   = item === 'charger' ? chargerGiven(r) : (r.equipmentGiven?.[item] ?? EQ_DEFAULTS[item]);
@@ -5958,12 +5965,12 @@ function openManageRentalModal(rentalId) {
     return `
       <div id="mgEqRow_${item}" style="display:${given ? 'flex' : 'none'};align-items:center;gap:8px;flex-wrap:wrap;padding:3px 0;">
         <input type="hidden" id="mgItemStatus_${item}" value="${status}">
-        <span style="font-size:var(--fs-body);min-width:130px;">${EQ_LABELS[item]}</span>
+        <span class="kc-ic kc-ic-${EQ_ICONS[item]}" style="font-size:var(--fs-body);min-width:130px;display:inline-flex;align-items:center;gap:6px;">${escHtml(EQ_LABELS[item])}</span>
         <div class="eq-slide-track" id="mgSlide_${item}" data-status="${status}">
           <div class="eq-slide-zone eq-slide-zone-left"  onclick="mgSetItemStatus('${item}','returned')"
-            aria-label="${EQ_LABELS[item]} — mark returned"></div>
+            aria-label="${escHtml(EQ_LABELS[item])} — mark returned"></div>
           <div class="eq-slide-zone eq-slide-zone-right" onclick="mgSetItemStatus('${item}','lost')"
-            aria-label="${EQ_LABELS[item]} — mark lost"></div>
+            aria-label="${escHtml(EQ_LABELS[item])} — mark lost"></div>
           <span class="eq-slide-lbl eq-slide-lbl-n eq-slide-lbl-n-ret">Returned</span>
           <span class="eq-slide-lbl eq-slide-lbl-n eq-slide-lbl-n-lost">Lost</span>
           <span class="eq-slide-lbl eq-slide-lbl-a eq-slide-lbl-a-ret">✓ Returned</span>
@@ -6050,7 +6057,7 @@ function openManageRentalModal(rentalId) {
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
         <div class="eq-btn" tabindex="0" role="button" id="mgGivenPhone" data-given="${(r.equipmentGiven?.phone??false)?'1':'0'}" onclick="mgToggleGiven('phone')"><i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Phone</div>
         <div class="eq-btn" tabindex="0" role="button" id="mgGivenSim"   data-given="${(r.equipmentGiven?.sim??true)?'1':'0'}"   onclick="mgToggleGiven('sim')"><i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM</div>
-        <div class="eq-btn" tabindex="0" role="button" id="mgGivenCharger" data-given="${chargerGiven(r)?'1':'0'}" onclick="mgToggleGiven('charger')">🔌 Charger</div>
+        <div class="eq-btn" tabindex="0" role="button" id="mgGivenCharger" data-given="${chargerGiven(r)?'1':'0'}" onclick="mgToggleGiven('charger')"><i class="kc-ic kc-ic-plug" aria-hidden="true"></i> Charger</div>
       </div>
       <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:6px;">Item status — tap Returned or Lost for each item given</div>
       <div style="display:flex;flex-direction:column;gap:4px;">${eqRows}</div>
