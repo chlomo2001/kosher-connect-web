@@ -90,7 +90,7 @@ export const MODALS = [
   // overlay — the loop's "last modal-shaped box" rule picks it up), and the
   // business summary. Three surfaces staff meet daily that no sweep had seen.
   ['done-panel',    'rentals',   `showDonePanel({
-     title: '✅ Rental saved', customerId: window.__kc.customer,
+     title: '✔ Rental saved', customerId: window.__kc.customer,
      customerName: 'Menachem Adler', customerPhone: '+447911123456',
      summary: '+44 7911 123456 · 12 Aug 2026 → 26 Aug 2026 · 14 chargeable days',
      total: 140, payLine: '£60 paid, £80 on account', owed: 80, method: 'cash', paidNow: true,

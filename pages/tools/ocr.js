@@ -348,7 +348,7 @@ export default function ScanReader() {
                   {it.mrz && !it.dismissed && (
                     <div style={{ marginTop: 10, padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
                       {it.saved ? (
-                        <div style={{ fontSize: 14 }}>✅ Saved to <strong>{it.savedName || 'the customer'}</strong> — scan filed under their documents, passport details on their record.</div>
+                        <div style={{ fontSize: 14 }}>✔ Saved to <strong>{it.savedName || 'the customer'}</strong> — scan filed under their documents, passport details on their record.</div>
                       ) : (
                         <>
                           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>

@@ -348,7 +348,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
                 />
               </div>
               <span className="form-error" id="errPhone">Required</span>
-              <div className="form-warning" id="warnPhone">⚠️ This phone number already exists for another customer.</div>
+              <div className="form-warning" id="warnPhone">⚠ This phone number already exists for another customer.</div>
               {/* Owner, 08-17: most customers have one number, so a second
                   empty box on every card is a field to skip 1,800 times over.
                   The offer stays; the box only appears when it is wanted. */}
@@ -379,7 +379,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
                   row sitting at different heights. */}
               <label className="form-label" htmlFor="fEmail">✉️ Contact email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(their own)</span></label>
               <input className="form-input" id="fEmail" type="email" placeholder="customer@gmail.com" autoComplete="off" aria-describedby="warnEmail" />
-              <div className="form-warning" id="warnEmail">⚠️ This email already exists for another customer.</div>
+              <div className="form-warning" id="warnEmail">⚠ This email already exists for another customer.</div>
               <button type="button" className="kc-add-more" id="fAltEmailAdd">+ Add another email</button>
             </div>
 
@@ -476,7 +476,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
             </div>
 
             <div className="form-warning form-full" id="warnName">
-              ⚠️ A customer with this name already exists. Please verify this is a different person.
+              ⚠ A customer with this name already exists. Please verify this is a different person.
             </div>
           </div>
 

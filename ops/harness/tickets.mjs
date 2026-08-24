@@ -300,7 +300,7 @@ say(await p.evaluate(() => {
   const oneWayDone = checkinChip({ checkinDone: true })
   const halfDone = checkinChip({ checkinDone: true, returnDate: '2026-09-26', checkinBy: 'us', returnCheckinDate: '2026-09-25' })
   const bothDone = checkinChip({ checkinDone: true, returnDate: '2026-09-26', returnCheckinDone: true })
-  return /✅/.test(oneWayDone) && !/✅/.test(halfDone) && /✅/.test(bothDone) && /×2/.test(bothDone)
+  return /✔/.test(oneWayDone) && !/✔/.test(halfDone) && /✔/.test(bothDone) && /×2/.test(bothDone)
 }), 'the chip should only read done when BOTH legs are done')
 await p.evaluate(() => { try { closeDynamicModal() } catch {} })
 await p.waitForTimeout(200)
