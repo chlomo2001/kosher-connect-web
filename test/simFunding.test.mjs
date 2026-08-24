@@ -108,8 +108,14 @@ test('the browser mirror matches lib/simFunding.mjs', () => {
 test('the SIMs tab offers it as a filter and marks the row', () => {
   assert.match(SRC, /value: 'unfunded'[\s\S]{0,220}?simFundingState\(s, simMethodFor\(s\)\) === 'none'/,
     'the filter must use the same rule as the chip')
-  assert.match(SRC, /'🔄 Through me'\}\$\{fundingChip\(s\)\}/,
+  // The 🔄 became a drawn icon on 24 Aug, so this matches the label rather
+  // than the glyph. What it is actually holding is unchanged and is the point:
+  // fundingChip must sit in the Payment cell, immediately after the payment
+  // type it qualifies — not in a column of its own.
+  assert.match(SRC, /Through me<\/span>|Through me'\}\$\{fundingChip\(s\)\}|Through me\}\$\{fundingChip\(s\)\}/,
     'the chip belongs in the Payment cell, beside what it qualifies')
+  assert.match(SRC, /Through me[^\n]{0,40}\$\{fundingChip\(s\)\}/,
+    'fundingChip must follow the payment type in the same cell')
 })
 
 // The endpoint answers "is there one", never "which one". An id that is never

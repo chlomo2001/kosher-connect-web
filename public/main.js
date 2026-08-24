@@ -1438,7 +1438,7 @@ function mgRenderGate(rentalId) {
   box.innerHTML = `
     <div class="kc-gate-head">${gate.canClose
       ? '✓ Ready to close'
-      : gate.blockers.length ? '⛔ Not ready to close' : '✍️ Needs a sign-off'}</div>
+      : gate.blockers.length ? '<i class="kc-ic kc-ic-blocked" aria-hidden="true"></i> Not ready to close' : '<i class="kc-ic kc-ic-sign" aria-hidden="true"></i> Needs a sign-off'}</div>
     ${gate.checks.map(c => `
       <div class="kc-gate-row is-${c.state}">
         <span class="kc-gate-icon" aria-hidden="true">${GATE_ICON[c.state]}</span>
@@ -3239,7 +3239,7 @@ function availabilityCalendarHtml() {
               Gregorian, so this switches the COLUMNS, never the dates. */''}
         <button class="btn btn-outline btn-sm" onclick="calToggleSystem()"
           title="${heb ? 'Show a Gregorian month instead' : 'Show a Hebrew month instead — א׳ to כ״ט of one Hebrew month'}"
-          aria-pressed="${heb ? 'true' : 'false'}">${heb ? '📅 Gregorian months' : '🕎 Hebrew months'}</button>
+          aria-pressed="${heb ? 'true' : 'false'}">${heb ? '<i class="kc-ic kc-ic-calendar" aria-hidden="true"></i> Gregorian months' : '🕎 Hebrew months'}</button>
         <span class="cal-legend">
           <span style="white-space:nowrap;"><span class="cal-key cal-active"></span> out</span>
           <span style="white-space:nowrap;"><span class="cal-key cal-booked"></span> reserved (striped)</span>
@@ -3391,9 +3391,9 @@ function renderRentalRows() {
           ${computedStatus === 'booked' ? `<button class="action-btn" style="color:var(--success);font-weight:600;" onclick="startReservation('${r.id}')">▶ Start</button>` : ''}
           <button class="action-btn kc-ic kc-ic-gear" onclick="openManageRentalModal('${r.id}')">Manage</button>
           ${kcRowMenuHtml([
-            { label: '⏰ Remind me about this', onclick: `openRemindModal('rental','${r.id}')` },
-            { label: '✉️ Draft a status text', onclick: `openRentalSmsModal('${r.id}')` },
-            { label: '🗑 Delete this rental', onclick: `deleteRental('${r.id}')`, danger: true },
+            { label: 'Remind me about this', icon: 'clock', onclick: `openRemindModal('rental','${r.id}')` },
+            { label: 'Draft a status text', icon: 'mail', onclick: `openRentalSmsModal('${r.id}')` },
+            { label: 'Delete this rental', icon: 'trash', onclick: `deleteRental('${r.id}')`, danger: true },
           ], { label: 'More for this rental' })}
         </div>
       </td>
@@ -3511,7 +3511,7 @@ async function returnSelectedRentals() {
       closable.slice(0, 8).map(line).join('<br>') +
       (closable.length > 8 ? `<br>+${closable.length - 8} more` : '') +
       (gated.length ? `<br><br><i class="kc-ic kc-ic-blocked" aria-hidden="true"></i> ${gated.length} stay${gated.length === 1 ? 's' : ''} open — a lost item or unsettled charge; open each to finish.` : ''),
-    okLabel: `📥 Return ${closable.length}`,
+    okLabel: `Return ${closable.length}`, okIcon: 'download',
   }))) return;
   let phonesTouched = false;
   for (const d of closable) {
@@ -3706,7 +3706,7 @@ function renderPhoneRows() {
 
   if (phones.length === 0) {
     kcListCount('phoneCount', 0, 0);
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="emoji kc-ic kc-ic-clipboard"></div><p>No phones in inventory.</p><small>Click "⚙️ Manage phones" to add phones.</small></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="emoji kc-ic kc-ic-clipboard"></div><p>No phones in inventory.</p><small>Click "<i class="kc-ic kc-ic-gear" aria-hidden="true"></i> Manage phones" to add phones.</small></div></td></tr>`;
     return;
   }
 
@@ -3780,7 +3780,7 @@ async function markPhoneBack(phoneId) {
   if (!(await kcConfirm({
     title: 'Phone returned?',
     body: `<strong>${escHtml(fmtPhone(p.number))}</strong>${who ? ` — back from <strong>${escHtml(who)}</strong>` : ''}.<br>The line goes back to available${who ? '; the holder is kept as history on the phone' : ''}. No charges are made — this is for phones with no rental attached.`,
-    okLabel: '📥 It’s back',
+    okLabel: 'It’s back', okIcon: 'download',
   }))) return;
   p.lastHeldByNote = who || p.lastHeldByNote || '';
   p.heldByNote = '';
@@ -4600,7 +4600,7 @@ async function saveMultiPhoneRental(customerId, phoneIds, addAnother) {
       qty: 1, total: r.price,
     })),
     smsText: `Hi ${customer.firstName}, ${created.length} phones are booked ${fmtDate(from)} → ${fmtDate(to)}. Total ${fmtGbp(total)}. Kosher Connect, 0161 531 1386.`,
-    again: { label: '📱 Another phone', sub: `for ${customer.firstName}`, run: () => openNewRentalModal(customerId) },
+    again: { label: 'Another phone', icon: 'phone', sub: `for ${customer.firstName}`, run: () => openNewRentalModal(customerId) },
   });
 }
 
@@ -4699,7 +4699,7 @@ async function kcDoneEmail(btn) {
     body: JSON.stringify(body),
   }).then(r => r.json()).catch(() => null);
 
-  const restore = () => { if (btn) { btn.disabled = false; btn.innerHTML = '✉️ Email receipt'; } };
+  const restore = () => { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="kc-ic kc-ic-mail" aria-hidden="true"></i> Email receipt'; } };
   if (res && res.success && res.held) { toast(res.note || 'Email is on hold — receipt not sent.', 'warning'); restore(); }
   else if (res && res.success && res.redirected) {
     toast(res.note || `Test mode — sent to ${res.sentTo}.`, 'warning');
@@ -4811,7 +4811,7 @@ async function saveNewRental(addAnother = false) {
             ? `Covered instead: ${covered.map(p => `${escHtml(fmtPhone(p.number))} (till ${fmtDate(p.poolExpiry)})`).join(' · ')} — Cancel and pick one, or…`
             : 'No other covered phone is free for these dates, so…') +
           `<br>booking this one creates a 🔴 high-priority task to activate “${escHtml(gPhone.pool)}” by <strong>${fmtDate(actBy)}</strong>.`,
-        okLabel: '📝 Create the task & book anyway',
+        okLabel: 'Create the task & book anyway', okIcon: 'edit-note',
       });
       if (!ok) return; // operator backs out to pick a covered phone
       await window.api.addTask({
@@ -5025,7 +5025,7 @@ async function saveNewRental(addAnother = false) {
     },
     smsText: buildRentalSms(rental),
     again: {
-      label: '📱 Another phone', sub: `for ${customer.firstName}`,
+      label: 'Another phone', icon: 'phone', sub: `for ${customer.firstName}`,
       run: () => {
         openNewRentalModal(customerId);
         setTimeout(() => {
@@ -5230,7 +5230,7 @@ function openManagePhonesModal() {
           ${rentalPools().map(pl => `<option value="${escHtml(pl.name)}">${escHtml(pl.name)}${pl.till ? ' · till ' + fmtDate(pl.till) : ''}</option>`).join('')}
           <option value="__new__">＋ New pool…</option>
         </select>
-        <span style="font-size:var(--fs-micro);color:var(--muted);">Add pools in 📶 Pools — the phone adopts the pool's window.</span>
+        <span style="font-size:var(--fs-micro);color:var(--muted);">Add pools in <i class="kc-ic kc-ic-signal" aria-hidden="true"></i> Pools — the phone adopts the pool's window.</span>
       </div>
       </div>
       <div class="form-group">
@@ -5453,14 +5453,14 @@ function openEditPhoneModal(phoneId) {
   // must never disagree (a "🟢 Available" header over a Retired select did).
   const statusFace = {
     rented:      ['var(--accent)',     '<span class="kc-dot kc-dot-high"></span>Rented'],
-    permanent:   ['var(--accent)',     '🏠 Permanent'],
-    not_working: ['var(--danger-ink)', '⛔ Not working'],
-    retired:     ['var(--muted)',      '🗄️ Retired'],
-    suspended:   ['var(--gold)',       '⏸ Suspended'],
-    unknown:     ['var(--muted)',      '❓ Unknown'],
+    permanent:   ['var(--accent)',     '<i class="kc-ic kc-ic-home" aria-hidden="true"></i> Permanent'],
+    not_working: ['var(--danger-ink)', '<i class="kc-ic kc-ic-blocked" aria-hidden="true"></i> Not working'],
+    retired:     ['var(--muted)',      '<i class="kc-ic kc-ic-archive" aria-hidden="true"></i> Retired'],
+    suspended:   ['var(--gold)',       '<i class="kc-ic kc-ic-pause" aria-hidden="true"></i> Suspended'],
+    unknown:     ['var(--muted)',      '<i class="kc-ic kc-ic-help" aria-hidden="true"></i> Unknown'],
   }[p.status] || ['var(--success)', '<span class="kc-dot kc-dot-ok"></span>Available'];
   const statusColor = p.maintenance && p.status !== 'rented' ? 'var(--gold)' : statusFace[0];
-  const statusLabel = p.maintenance && p.status !== 'rented' ? '🔧 Maintenance' : statusFace[1];
+  const statusLabel = p.maintenance && p.status !== 'rented' ? '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> Maintenance' : statusFace[1];
   // Line state is editable only while the phone is not out on a rental — a
   // rented phone's status belongs to the rental cycle, not this dropdown.
   // 'rented' therefore never appears as a choice; 'unknown' (import couldn't
@@ -5496,7 +5496,7 @@ function openEditPhoneModal(phoneId) {
         <label class="form-label">Pool window</label>
         <div style="font-size:var(--fs-body);padding:8px 0;color:${p.poolExpiry ? 'var(--text)' : 'var(--muted)'};">
           ${p.poolExpiry ? `${p.poolActiveFrom ? fmtDate(p.poolActiveFrom) + ' → ' : 'till '}${fmtDate(p.poolExpiry)}` : '—'}
-          <div style="font-size:var(--fs-micro);color:var(--muted);">Set per pool in 📶 Pools — picking a pool adopts its window.</div>
+          <div style="font-size:var(--fs-micro);color:var(--muted);">Set per pool in <i class="kc-ic kc-ic-signal" aria-hidden="true"></i> Pools — picking a pool adopts its window.</div>
         </div>
       </div>` : ''}
       <div class="form-group">
@@ -5713,7 +5713,7 @@ async function createPoolFromPicker() {
   // saying so beats letting someone go looking for handsets that can't be there.
   toast(sel
     ? `Pool “${name}” created${till ? ` — active till ${fmtDate(till)}` : ''}.`
-    : `Pool “${name}” created — no phones in it yet; pick it in ✏️ Edit Phone.`, 'success');
+    : `Pool “${name}” created — no phones in it yet; pick it in <i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Edit Phone.`, 'success');
 }
 
 async function saveRentalPools(pools) {
@@ -5779,7 +5779,7 @@ function openPoolsModal() {
             </tr>`;
           }).join('')}
           </tbody>
-        </table>` : `<div style="padding:4px 14px 10px;font-size:var(--fs-small);color:var(--muted);">No phones assigned yet — pick this pool in ✏️ Edit Phone.</div>`}
+        </table>` : `<div style="padding:4px 14px 10px;font-size:var(--fs-small);color:var(--muted);">No phones assigned yet — pick this pool in <i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Edit Phone.</div>`}
         <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding:10px 14px 14px;border-top:1px solid var(--border);">
           <label style="display:flex;flex-direction:column;gap:2px;font-size:var(--fs-micro);color:var(--muted);">Activated from
             <input class="form-input" id="poolFrom_${key}" type="date" value="${escHtml(reg?.from || today)}" style="min-height:0;padding:6px 8px;"></label>
@@ -5794,7 +5794,7 @@ function openPoolsModal() {
     <div class="modal-title kc-ic kc-ic-signal">Pools</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
       One carrier plan shared by several lines. Add the pool here, pick it on each phone
-      (✏️ Edit Phone → Pool dropdown), and set the activation window once — every phone in the pool
+      (<i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Edit Phone → Pool dropdown), and set the activation window once — every phone in the pool
       carries it, New rental prefers already-active pool phones (no activation fee), and it warns
       when a pool would run out mid-trip.
     </div>
@@ -5811,7 +5811,7 @@ function openPoolsModal() {
     </div>
     ${names.length ? names.map(poolCard).join('')
       : `<div class="empty-state"><div class="emoji kc-ic kc-ic-signal"></div><p>No pools yet.</p><small>Add the first pool above, then pick it on each phone.</small></div>`}
-    ${unpooled ? `<div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">${unpooled} USA phone${unpooled === 1 ? '' : 's'} have no pool yet — open ✏️ Edit Phone to assign one.</div>` : ''}
+    ${unpooled ? `<div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">${unpooled} USA phone${unpooled === 1 ? '' : 's'} have no pool yet — open <i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Edit Phone to assign one.</div>` : ''}
   `);
 }
 
@@ -5878,7 +5878,7 @@ function openManageRentalModal(rentalId) {
 
   // Build per-item status rows — three-position sliding toggle (A2).
   // Charger is one UI row driving the stored plug+cable pair (see eqKeysFor).
-  const EQ_LABELS   = { phone: '📱 Phone handset', sim: '💳 SIM card', charger: '🔌 Charger' };
+  const EQ_LABELS   = { phone: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Phone handset', sim: '<i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM card', charger: '🔌 Charger' };
   const EQ_DEFAULTS = { phone: false, sim: true, charger: false };
   const eqRows = MG_UI_ITEMS.map(item => {
     const given   = item === 'charger' ? chargerGiven(r) : (r.equipmentGiven?.[item] ?? EQ_DEFAULTS[item]);
@@ -6868,7 +6868,7 @@ let kcConfirmResolve = null;
 // `blocking: true` renders a dialog with NO confirm button — used by the
 // booking gate, where the answer to "passport expires before the flight" is not
 // a decision the operator gets to make. It always resolves false.
-function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm charge', amount = null, blocking = false, danger = false }) {
+function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm charge', okIcon = null, amount = null, blocking = false, danger = false }) {
   return new Promise(resolve => {
     kcConfirmResolve = resolve;
     kcSaveReturnFocus('kcConfirm');
@@ -6888,7 +6888,7 @@ function kcConfirm({ title = 'Confirm charge', body = '', okLabel = 'Confirm cha
         ${amount !== null ? `<div style="font-size:var(--fs-h1);font-weight:700;margin:0 0 16px;font-feature-settings:'tnum';">${fmtGbp(Number(amount))}</div>` : ''}
         <div class="modal-actions">
           <button class="btn btn-outline" onclick="kcConfirmDone(false)">${blocking ? 'Close' : 'Cancel'}</button>
-          ${blocking ? '' : `<button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" onclick="kcConfirmDone(true)">✓ ${escHtml(okLabel)}</button>`}
+          ${blocking ? '' : `<button class="btn ${danger ? 'btn-danger' : 'btn-primary'}${okIcon ? ` kc-ic kc-ic-${okIcon}` : ''}" onclick="kcConfirmDone(true)">${okIcon ? '' : '✓ '}${escHtml(okLabel)}</button>`}
         </div>
       </div>`;
     el.classList.remove('hidden');
@@ -6914,7 +6914,7 @@ let kcPromptResolve = null;
 // `value` pre-fills the box. window.prompt took a second argument for this and
 // the snooze picker used it — offering a date a fortnight out beats an empty
 // field on a phone. Defaults to empty, so no existing caller changes.
-function kcPrompt({ title = '', body = '', label = '', placeholder = '', okLabel = 'Save', skipLabel = null,
+function kcPrompt({ title = '', body = '', label = '', placeholder = '', okLabel = 'Save', okIcon = null, skipLabel = null,
   type = 'tel', inputmode = 'tel', autocomplete = 'off', value = '' }) {
   return new Promise(resolve => {
     kcPromptResolve = resolve;
@@ -6942,7 +6942,7 @@ function kcPrompt({ title = '', body = '', label = '', placeholder = '', okLabel
           <span class="modal-actions-group">
             <button class="btn btn-outline" onclick="kcPromptDone(null)">Back</button>
             ${skipLabel ? `<button class="btn btn-outline" onclick="kcPromptDone('')">${escHtml(skipLabel)}</button>` : ''}
-            <button class="btn btn-primary" onclick="kcPromptDone(document.getElementById('kcPromptInput').value)">${escHtml(okLabel)}</button>
+            <button class="btn btn-primary${okIcon ? ` kc-ic kc-ic-${okIcon}` : ''}" onclick="kcPromptDone(document.getElementById('kcPromptInput').value)">${escHtml(okLabel)}</button>
           </span>
         </div>
       </div>`;
@@ -7515,8 +7515,8 @@ function renderTableRows() {
         <div class="row-actions">
           <button class="action-btn" data-action="details" data-id="${c.id}">Details</button>
           ${kcRowMenuHtml([
-            { label: '✏️ Edit their record', onclick: `kcCustomerRowAction('edit','${escJs(String(c.id))}')` },
-            { label: '🗑 Delete this customer', onclick: `kcCustomerRowAction('delete','${escJs(String(c.id))}')`, danger: true },
+            { label: 'Edit their record', icon: 'pencil', onclick: `kcCustomerRowAction('edit','${escJs(String(c.id))}')` },
+            { label: 'Delete this customer', icon: 'trash', onclick: `kcCustomerRowAction('delete','${escJs(String(c.id))}')`, danger: true },
           ], { label: 'More for this customer' })}
         </div>
       </td>
@@ -7570,35 +7570,35 @@ function buildCustomerTimeline(c) {
   // timeline is a way IN to each record (edit, delete), not just a listing —
   // before this, imported history was visible here but unreachable.
   for (const r of rentals.filter(x => x.customerId === cid)) {
-    ev.push({ date: r.fromDate || r.createdAt, icon: '📱', cat: 'Rental',
+    ev.push({ date: r.fromDate || r.createdAt, icon: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i>', cat: 'Rental',
       title: `Rental${r.phoneNumber ? ' — ' + r.phoneNumber : r.country ? ' — ' + r.country : ''}`,
       sub: `${r.status}${r.fromDate ? ' · ' + fmtDate(r.fromDate) + (r.toDate ? ' → ' + fmtDate(r.toDate) : '') : ''}`,
       amount: rentalGrandTotal(r), open: { fn: 'openManageRentalModal', id: r.id } });
   }
   for (const b of bookings.filter(x => x.customerId === cid)) {
-    ev.push({ date: b.travelDate || b.createdAt, icon: '✈️', cat: 'Flight',
+    ev.push({ date: b.travelDate || b.createdAt, icon: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i>', cat: 'Flight',
       title: `${b.route || 'Flight'}${b.passenger ? ' — ' + b.passenger : ''}`,
       sub: `${b.status || ''}${b.travelDate ? ' · ' + fmtDate(b.travelDate) : ''}`,
       amount: Number(b.price || b.total || 0), open: { fn: 'openEditBookingModal', id: b.id } });
   }
   for (const s of sims.filter(x => x.customerId === cid)) {
-    ev.push({ date: s.createdAt || s.renewalDate, icon: '📶', cat: 'SIM',
+    ev.push({ date: s.createdAt || s.renewalDate, icon: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i>', cat: 'SIM',
       title: `SIM — ${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}`,
       sub: `${s.status || ''}${s.renewalDate ? ' · renews ' + fmtDate(s.renewalDate) : ''}`,
       open: { fn: 'openManageSimModal', id: s.id } });
   }
   for (const v of virtualNumbers.filter(x => x.customerId === cid)) {
-    ev.push({ date: v.createdAt, icon: '🔢', cat: 'Virtual number',
+    ev.push({ date: v.createdAt, icon: '<i class="kc-ic kc-ic-digits" aria-hidden="true"></i>', cat: 'Virtual number',
       title: `VN ${fmtPhone(v.number || '')}`.trim(), sub: v.status || '',
       open: { fn: 'openVNBillingModal', id: v.id } });
   }
   for (const r of repairs.filter(x => x.customerId === cid)) {
-    ev.push({ date: r.openedAt || r.createdAt, icon: '🔧', cat: 'Repair',
+    ev.push({ date: r.openedAt || r.createdAt, icon: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i>', cat: 'Repair',
       title: `Repair${r.device ? ' — ' + r.device : ''}`, sub: r.status || '',
       amount: Number(r.total || 0), open: { fn: 'goToTab', id: 'repairs' } });
   }
   for (const o of serviceOrders.filter(x => x.customerId === cid)) {
-    ev.push({ date: o.createdAt, icon: '🖨️', cat: 'Service',
+    ev.push({ date: o.createdAt, icon: '<i class="kc-ic kc-ic-printer" aria-hidden="true"></i>', cat: 'Service',
       title: o.serviceName || 'Service', sub: o.createdAt ? fmtDate(o.createdAt) : '',
       amount: Number(o.total || 0) });
   }
@@ -7638,10 +7638,10 @@ function customerLifecycle(c) {
   const lastMs = timeline.length ? new Date(timeline[0].date || 0).getTime()
     : (c.createdAt ? new Date(c.createdAt).getTime() : 0);
   const daysSince = lastMs ? Math.floor((Date.now() - lastMs) / 86400000) : Infinity;
-  if (spend >= 500 || timeline.length >= 12) return { key: 'regular', label: 'Regular', emoji: '⭐', color: 'var(--accent2)' };
+  if (spend >= 500 || timeline.length >= 12) return { key: 'regular', label: 'Regular', emoji: '<i class="kc-ic kc-ic-star" aria-hidden="true"></i>', color: 'var(--accent2)' };
   if (hasLive) return { key: 'active', label: 'Active', emoji: '🟢', color: 'var(--success)' };
-  if (timeline.length <= 1 && daysSince < 60) return { key: 'new', label: 'New', emoji: '✨', color: 'var(--accent)' };
-  if (daysSince > 180) return { key: 'dormant', label: 'Dormant', emoji: '💤', color: 'var(--muted)' };
+  if (timeline.length <= 1 && daysSince < 60) return { key: 'new', label: 'New', emoji: '<i class="kc-ic kc-ic-sparkle" aria-hidden="true"></i>', color: 'var(--accent)' };
+  if (daysSince > 180) return { key: 'dormant', label: 'Dormant', emoji: '<i class="kc-ic kc-ic-snooze" aria-hidden="true"></i>', color: 'var(--muted)' };
   return { key: 'past', label: 'Past', emoji: '·', color: 'var(--muted)' };
 }
 
@@ -7669,7 +7669,7 @@ function customerNextBestAction(c) {
   // shelf, a trip with no phone cover, a passport about to expire.
   const ready = repairs.find(r => r.customerId === cid && r.status === 'Ready');
   if (ready) {
-    return { icon: '🔧', text: `Repair ready — ${escHtml(ready.device || 'device')} waiting for collection`,
+    return { icon: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i>', text: `Repair ready — ${escHtml(ready.device || 'device')} waiting for collection`,
       btn: `<button class="btn btn-outline btn-sm" onclick="openCollectRepairModal('${ready.id}')">Collect</button>` };
   }
   const trip = bookings.filter(b => b.customerId === cid && b.status !== 'Cancelled' && b.travelDate && b.travelDate >= today)
@@ -7680,13 +7680,13 @@ function customerNextBestAction(c) {
     const phoneCover = rentals.find(r => r.customerId === cid && r.status !== 'returned'
       && r.fromDate && r.toDate && r.fromDate <= trip.travelDate && r.toDate >= tripLastDay(trip));
     if (!phoneCover) {
-      return { icon: '✈️', text: `Flies ${fmtDate(trip.travelDate)} — no phone booked yet`,
+      return { icon: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i>', text: `Flies ${fmtDate(trip.travelDate)} — no phone booked yet`,
         btn: `<button class="btn btn-rental btn-sm" onclick="openNewRentalModal('${cid}')">Book a phone</button>` };
     }
   }
   const overdue = rentals.find(r => r.customerId === cid && r.status === 'overdue');
   if (overdue) {
-    return { icon: '⏰', text: `Rental overdue since ${fmtDate(overdue.toDate)}`, btn: '' };
+    return { icon: '<i class="kc-ic kc-ic-clock" aria-hidden="true"></i>', text: `Rental overdue since ${fmtDate(overdue.toDate)}`, btn: '' };
   }
   return null;
 }
@@ -7739,16 +7739,16 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   const cUpcoming = customerUpcomingBookings(c);
   const allActiveServices = [
     ...cActiveRentals.map(r => ({ type: 'rental', flag: countryFlag(r.country), label: `Rental${r.depositHeld > 0 ? ' · 🔒£' + Number(r.depositHeld).toFixed(0) : ''}${r.termsAck ? ' · ✍️' : ''}` })),
-    ...cUpcoming.map(b => ({ type: 'booking', label: `✈️ ${b.route}${b.travelDate ? ' · ' + fmtDate(b.travelDate) : ''}` })),
+    ...cUpcoming.map(b => ({ type: 'booking', label: `${b.route}${b.travelDate ? ' · ' + fmtDate(b.travelDate) : ''}`, icon: 'plane' })),
     ...cSims.map(s => ({ type: 'sim', simId: s.id, label: `SIM · ${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}` })),
     ...cVNs.map(v => ({ type: 'vn', label: `VN ${fmtPhone(v.number || '')}` })),
-    ...cOpenRepairs.map(r => ({ type: 'repair', label: `🔧 Repair — ${r.status}` })),
+    ...cOpenRepairs.map(r => ({ type: 'repair', label: `Repair — ${r.status}`, icon: 'wrench' })),
     // Recent one-off online/print services (last 90 days, newest first).
     ...serviceOrders
       .filter(o => o.customerId === c.id && o.createdAt
         && (Date.now() - new Date(o.createdAt).getTime()) < 90 * 86400000)
       .slice(0, 3)
-      .map(o => ({ type: 'sim', label: `🖨️ ${o.serviceName || 'Service'} · ${fmtDate(o.createdAt)}` })),
+      .map(o => ({ type: 'sim', label: `${o.serviceName || 'Service'} · ${fmtDate(o.createdAt)}`, icon: 'printer' })),
     ...otherServices,
   ];
   const servicesHTML = allActiveServices.length === 0
@@ -8409,7 +8409,7 @@ const KC_UNIT_OPENS_ITSELF = new Set(['sim', 'rental', 'vn', 'booking']);
 const KC_RECORD = (() => {
   const KINDS = {
     sim: {
-      label: 'SIM plan', icon: '💳', open: 'sim', one: 'SIM plan', many: 'SIM plans',
+      label: 'SIM plan', icon: '<i class="kc-ic kc-ic-card" aria-hidden="true"></i>', open: 'sim', one: 'SIM plan', many: 'SIM plans',
       ended: (s) => String(s.status || '').toLowerCase() === 'cancelled',
       when: (s) => s.renewalDate || s.expiryDate || '',
       number: (s) => s.simNumber || '',
@@ -8417,7 +8417,7 @@ const KC_RECORD = (() => {
       detail: () => '',
     },
     rental: {
-      label: 'Phone rental', icon: '📱', open: 'rental', one: 'phone rental', many: 'phone rentals',
+      label: 'Phone rental', icon: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i>', open: 'rental', one: 'phone rental', many: 'phone rentals',
       ended: (r) => ['returned', 'void', 'cancelled', 'lost'].includes(String(r.status || '').toLowerCase()),
       when: (r) => r.toDate || '',
       number: (r) => r.phoneNumber || '',
@@ -8425,7 +8425,7 @@ const KC_RECORD = (() => {
       detail: () => '',
     },
     vn: {
-      label: 'Virtual number', icon: '🔢', open: 'vn', one: 'virtual number', many: 'virtual numbers',
+      label: 'Virtual number', icon: '<i class="kc-ic kc-ic-digits" aria-hidden="true"></i>', open: 'vn', one: 'virtual number', many: 'virtual numbers',
       ended: (v) => String(v.status || '').toLowerCase() !== 'active',
       when: () => '',
       number: (v) => v.number || '',
@@ -8433,7 +8433,7 @@ const KC_RECORD = (() => {
       detail: () => '',
     },
     booking: {
-      label: 'Flight', icon: '✈️', open: 'booking', one: 'flight', many: 'flights',
+      label: 'Flight', icon: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i>', open: 'booking', one: 'flight', many: 'flights',
       // Flown counts as over. Nothing else in the app treated a past travel
       // date as finished, which is why flown flights sat under "Active".
       ended: (b, today) => String(b.status || '').toLowerCase().startsWith('cancel')
@@ -8446,7 +8446,7 @@ const KC_RECORD = (() => {
       detail: (b) => b.bookingRef || b.airline || '',
     },
     repair: {
-      label: 'Repair', icon: '🔧', open: 'repair', one: 'repair', many: 'repairs',
+      label: 'Repair', icon: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i>', open: 'repair', one: 'repair', many: 'repairs',
       ended: (r) => ['collected', 'cancelled'].includes(String(r.status || '').toLowerCase()),
       when: (r) => r.openedAt || '',
       number: () => '',
@@ -8454,7 +8454,7 @@ const KC_RECORD = (() => {
       detail: (r) => r.status || '',
     },
     service: {
-      label: 'Print / online job', icon: '🖨️', open: 'service', one: 'print job', many: 'print jobs',
+      label: 'Print / online job', icon: '<i class="kc-ic kc-ic-printer" aria-hidden="true"></i>', open: 'service', one: 'print job', many: 'print jobs',
       ended: () => true,
       when: (o) => o.createdAt || '',
       number: () => '',
@@ -8771,7 +8771,7 @@ async function settleHouseAccount(custId) {
     title: 'Charge the saved card?',
     body: `<strong>${escName(c.firstName)} ${escName(c.lastName || '')}</strong> — house account settlement for ${ym}.<br>Off-session charge to their card on file; the payment lands on the wallet via Stripe.`,
     amount,
-    okLabel: '💳 Charge now',
+    okLabel: 'Charge now', okIcon: 'card',
   }))) return;
   const guardKey = 'house:' + custId;
   if (!kcBeginWrite(guardKey)) return;
@@ -8807,7 +8807,7 @@ async function settleHouseAccount(custId) {
       await window.api.updateCustomer(c).catch(() => null);
       await recordComm(custId, {
         type: 'note',
-        text: `💳 House account settled for ${ym} — ${fmtGbp(amount)} charged to the saved card${d.status === 'succeeded' ? '' : ' (processing)'}.${invoiceNote}`,
+        text: `<i class="kc-ic kc-ic-card" aria-hidden="true"></i> House account settled for ${ym} — ${fmtGbp(amount)} charged to the saved card${d.status === 'succeeded' ? '' : ' (processing)'}.${invoiceNote}`,
       }).catch(() => null);
       toast(d.status === 'succeeded'
         ? `House account settled — ${fmtGbp(amount)} charged ✔${invoiceNote ? ' · Stripe invoice ready' : ''}`
@@ -8927,12 +8927,12 @@ function cardToolMenus(c, isPage) {
       ['🤖', 'AI reply', `openAiReplyModal('${id}')`, 'Draft a reply to their message'],
       ['📞', 'Log a call or note', `openLogCommModal('${id}')`, 'Goes on their record'],
     ]],
-    ['money', '💷 Money', [
+    ['money', '<i class="kc-ic kc-ic-pound" aria-hidden="true"></i> Money', [
       ['💳', 'Charge the card on file', `chargeCardOnFile('${id}')`, 'Their saved card, via Stripe'],
       ['➕', 'Save a card on file', `saveCardOnFile('${id}')`, 'Opens Stripe — we never see the number'],
       ['🔗', 'Create a payment link', `openPaymentLinkModal('${id}')`, 'Send it to them to pay'],
     ]],
-    ['manage', '⚙️ Manage', [
+    ['manage', '<i class="kc-ic kc-ic-gear" aria-hidden="true"></i> Manage', [
       ['⏰', 'Remind me about this customer', `openRemindModal('customer','${id}')`, 'A task for you, not for them'],
       ...(owner ? [['📡', 'ELID lookup', `openElidModal('${id}')`, 'Telecom balance & status']] : []),
       ['✏️', 'Edit customer', `openEditModal('${id}')`, ''],
@@ -9612,7 +9612,7 @@ function providerDatalist(id = 'kcProviderList') {
 // by passing `onPick`.
 //
 //   customerPicker('svcTimerCustomer', { placeholder: 'Who are you helping?' })
-//   customerPicker('posCustomer', { special: { value: 'walkin', label: '🚶 Walk-in' },
+//   customerPicker('posCustomer', { special: { value: 'walkin', label: 'Walk-in', icon: 'walk' },
 //                                   onPick: 'posCustomerChange()' })
 //
 // `special` is a real, choosable non-customer value (walk-in, unassigned, no
@@ -10301,14 +10301,14 @@ function dismissCustomerCard(slot) {
 const walletEntriesCache = {};
 
 const LEDGER_TYPE_LABELS = {
-  payment: '💷 Payment', top_up: '➕ Top-up', refund: '↩️ Refund',
-  refund_payout: '↩️ Refund paid out',
-  manual_adjustment: '✏️ Adjustment', booking: '✈️ Flight', rental: '📱 Rental',
-  rental_adjustment: '📱 Rental adj.', rental_loss: '📱 Loss', rental_void: '📱 Void credit',
-  repair: '🔧 Repair', online_service: '🖨️ Service', sim_annual: '💳 SIM annual',
-  sim_additional: '💳 SIM extra', sim_replacement: '💳 SIM replacement',
-  sim_service: '💳 SIM service', phone_sale: '📦 Phone sale', stock_sale: '📦 Sale',
-  virtual_number: '🔢 Virtual number', extra_charge: '➕ Extra charge',
+  payment: '<i class="kc-ic kc-ic-pound" aria-hidden="true"></i> Payment', top_up: '➕ Top-up', refund: '<i class="kc-ic kc-ic-undo" aria-hidden="true"></i> Refund',
+  refund_payout: '<i class="kc-ic kc-ic-undo" aria-hidden="true"></i> Refund paid out',
+  manual_adjustment: '<i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Adjustment', booking: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i> Flight', rental: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Rental',
+  rental_adjustment: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Rental adj.', rental_loss: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Loss', rental_void: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Void credit',
+  repair: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> Repair', online_service: '<i class="kc-ic kc-ic-printer" aria-hidden="true"></i> Service', sim_annual: '<i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM annual',
+  sim_additional: '<i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM extra', sim_replacement: '<i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM replacement',
+  sim_service: '<i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM service', phone_sale: '<i class="kc-ic kc-ic-package" aria-hidden="true"></i> Phone sale', stock_sale: '<i class="kc-ic kc-ic-package" aria-hidden="true"></i> Sale',
+  virtual_number: '<i class="kc-ic kc-ic-digits" aria-hidden="true"></i> Virtual number', extra_charge: '➕ Extra charge',
 };
 
 async function loadWalletSection(customerId) {
@@ -11192,8 +11192,8 @@ async function renderWalletTab() {
 // ── End-of-day cash-up (the Z-report) ────────────────────────────────────
 
 const METHOD_LABELS = {
-  cash: '💵 Cash', card: '💳 Card', bank_transfer: '🏦 Bank transfer',
-  voucher: '🎟️ Voucher', wallet: '👛 Wallet', other: 'Other', unspecified: '— no method recorded',
+  cash: '<i class="kc-ic kc-ic-cash" aria-hidden="true"></i> Cash', card: '<i class="kc-ic kc-ic-card" aria-hidden="true"></i> Card', bank_transfer: '<i class="kc-ic kc-ic-bank" aria-hidden="true"></i> Bank transfer',
+  voucher: '<i class="kc-ic kc-ic-ticket" aria-hidden="true"></i> Voucher', wallet: '<i class="kc-ic kc-ic-purse" aria-hidden="true"></i> Wallet', other: 'Other', unspecified: '— no method recorded',
 };
 
 async function openCashupModal(dateISO) {
@@ -12147,7 +12147,7 @@ async function saveCustomer() {
   const fullPhone = `${code} ${phoneNum}`;
   const phoneDup = customers.find(c => c.id !== editId && c.phone && c.phone.replace(/\s/g,'') === fullPhone.replace(/\s/g,''));
   if (phoneDup) {
-    setErr('errPhone', '❌ This phone number is already registered.');
+    setErr('errPhone', '<i class="kc-ic kc-ic-cross" aria-hidden="true"></i> This phone number is already registered.');
     setInputErr('fPhoneNumber', true);
     document.getElementById('warnPhone').classList.add('visible');
     return;
@@ -12448,14 +12448,14 @@ function renderSimsTab() {
     { value: 'all', label: 'All plans' },
     ...simMailboxes.map(m => ({
       value: `mb:${m.base}`,
-      label: `📮 ${m.base.replace('@gmail.com', '')} (${m.n})`,
+      label: `${m.base.replace('@gmail.com', '')} (${m.n})`, icon: 'postbox',
       test: s => simMailboxBase(s.email) === m.base,
     })),
-    { value: 'mb:none', label: '📭 No carrier account on file', test: s => !simMailboxBase(s.email) },
+    { value: 'mb:none', label: 'No carrier account on file', icon: 'inbox', test: s => !simMailboxBase(s.email) },
     // The shop's own money. A through-me plan renews whether or not the
     // customer has left us any way to collect — the network takes its payment
     // either way — so this is the list of lines the shop is funding.
-    { value: 'unfunded', label: '💸 Through me, nothing to collect from',
+    { value: 'unfunded', label: 'Through me, nothing to collect from', icon: 'refund',
       test: s => simFundingState(s, simMethodFor(s)) === 'none' },
   ], [
     { value: 'name', label: 'Sort: Customer A–Z', cmp: kcCmpStr(s => s.customerName) },
@@ -12664,14 +12664,14 @@ function renderSimRows() {
         title="${s.email ? escHtml(s.email) : 'No carrier account on file — this SIM can only ever be matched by its number'}">${
         simMailboxBase(s.email) ? escHtml(simMailboxBase(s.email).replace('@gmail.com', '')) : '—'}</td>
       <td class="kc-date" data-label="Renews" style="font-size:var(--fs-small);${renewalClass}">${fmtDateHeb(s.renewalDate)}${renewalLabel}</td>
-      <td data-label="Payment" style="font-size:var(--fs-small);">${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}${fundingChip(s)}</td>
+      <td data-label="Payment" style="font-size:var(--fs-small);">${s.paymentType === 'direct' ? '<i class="kc-ic kc-ic-user" aria-hidden="true"></i> Direct' : '<i class="kc-ic kc-ic-sync" aria-hidden="true"></i> Through me'}${fundingChip(s)}</td>
       <td>${statusBadge}</td>
       <td>
         <div class="row-actions">
           <button class="action-btn kc-ic kc-ic-gear" onclick="openManageSimModal('${s.id}')">Manage</button>
           ${kcRowMenuHtml([
-            { label: '⏰ Remind me about this', onclick: `openRemindModal('sim','${s.id}')` },
-            { label: '🗑 Delete this SIM plan', onclick: `deleteSim('${s.id}')`, danger: true },
+            { label: 'Remind me about this', icon: 'clock', onclick: `openRemindModal('sim','${s.id}')` },
+            { label: 'Delete this SIM plan', icon: 'trash', onclick: `deleteSim('${s.id}')`, danger: true },
           ], { label: 'More for this SIM plan' })}
         </div>
       </td>
@@ -12747,7 +12747,7 @@ function openSimFormModal(id, preselectCustomerId = null, prefill = null) {
   const preselect = s && s.customerId ? s.customerId : preselectCustomerId;
 
   showDynamicModal(`
-    <div class="modal-title">${isEdit ? '✏️ Edit SIM plan' : '➕ New SIM plan'}</div>
+    <div class="modal-title">${isEdit ? '<i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Edit SIM plan' : '➕ New SIM plan'}</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
@@ -12971,7 +12971,7 @@ async function saveSimForm(editId) {
       total: setupFee || 0, paidAmount: 0, method: null,
     },
     smsText: `Hi${sc?.firstName ? ' ' + sc.firstName : ''}, your SIM plan${simNo ? ' on ' + fmtPhone(simNo) : ''} is set up${renewal ? ` — renews ${fmtDate(renewal)}` : ''}. Kosher Connect, 0161 531 1386.`,
-    again: { label: '💳 Another SIM', sub: sc?.firstName ? `for ${sc.firstName}` : 'new plan', run: () => openAddSimModal(customerId) },
+    again: { label: 'Another SIM', icon: 'card', sub: sc?.firstName ? `for ${sc.firstName}` : 'new plan', run: () => openAddSimModal(customerId) },
   });
 }
 
@@ -13123,7 +13123,7 @@ function openManageSimModal(id) {
       <div style="color:var(--muted);">Email</div><div style="font-size:var(--fs-micro);">${escHtml(s.email||'—')}</div>
       <div style="color:var(--muted);">Plan</div><div>${escHtml(s.plan||'—')}</div>
       <div style="color:var(--muted);">Renewal</div><div>${fmtDate(s.renewalDate)}</div>
-      <div style="color:var(--muted);">Payment</div><div>${s.paymentType === 'direct' ? '👤 Direct' : '🔄 Through me'}</div>
+      <div style="color:var(--muted);">Payment</div><div>${s.paymentType === 'direct' ? '<i class="kc-ic kc-ic-user" aria-hidden="true"></i> Direct' : '<i class="kc-ic kc-ic-sync" aria-hidden="true"></i> Through me'}</div>
       ${s.paymentType !== 'direct' ? `
       <div style="color:var(--muted);">DD Day</div><div style="font-weight:600;">${s.ddDate ? `${s.ddDate}${s.ddDate===1?'st':s.ddDate===2?'nd':s.ddDate===3?'rd':'th'} of each month` : '—'}</div>
       <div style="color:var(--muted);">Next DD Amount</div><div style="font-weight:700;${s.simMonthlyCost ? 'color:var(--success);' : 'color:var(--muted);font-weight:400;'}">${s.simMonthlyCost ? fmtGbp(ddMonthlyAmount(s.simMonthlyCost)) : '—'}</div>
@@ -13714,7 +13714,7 @@ function bookingStatusBadge(status) {
     Cancelled: 'badge-cancelled',
   };
   // For flights, "Completed" reads more naturally as "Flown".
-  const label = status === 'Completed' ? '✈️ Flown' : status;
+  const label = status === 'Completed' ? '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i> Flown' : status;
   return `<span class="badge ${cls[status] || 'badge-booking'}">${escHtml(label)}</span>`;
 }
 
@@ -14482,7 +14482,7 @@ function renderBookingsTab() {
 
   const bkBar = kcFilterSort('bookings', [
     { value: 'all', label: 'Filter: all bookings' },
-    { value: 'upcoming', label: '✈️ Upcoming travel', test: b => b.status !== 'Cancelled' && b.status !== 'Completed' && (!b.travelDate || tripLastDay(b) >= today) },
+    { value: 'upcoming', label: 'Upcoming travel', icon: 'plane', test: b => b.status !== 'Cancelled' && b.status !== 'Completed' && (!b.travelDate || tripLastDay(b) >= today) },
     { value: 'completed', label: '✓ Completed', test: b => b.status === 'Completed' },
     { value: 'cancelled', label: '✕ Cancelled', test: b => b.status === 'Cancelled' },
   ], [
@@ -14506,7 +14506,7 @@ function renderBookingsTab() {
           <input type="checkbox" aria-label="Select this booking" ${bkSelected.has(String(b.id)) ? 'checked' : ''}
             onclick="toggleBkSel('${escHtml(String(b.id))}', this.checked)"></td>
         <td><div class="customer-name">${custNameLink(b.customerId, escName(b.customerName || '—'))}</div>
-            <div class="customer-email">${escName(b.passenger || '')}${(b.passengers || []).length ? ` · 👥 ${b.passengers.length}` : ''}</div></td>
+            <div class="customer-email">${escName(b.passenger || '')}${(b.passengers || []).length ? ` · <i class="kc-ic kc-ic-users" aria-hidden="true"></i> ${b.passengers.length}` : ''}</div></td>
         <td style="white-space:nowrap;">${escHtml(b.route)}</td>
         <td>${(() => {
           // A self-transfer journey is several airlines and several PNRs. The
@@ -15246,7 +15246,7 @@ async function saveNewBooking() {
       method: res.paidNow && bkPayment !== 'account' ? bkPayment : null,
     },
     smsText: `Hi${bc?.firstName ? ' ' + bc.firstName : ''}, your flight is booked: ${b.route || ''}${b.travelDate ? ', ' + fmtDate(b.travelDate) : ''}${b.bookingRef ? '. Ref ' + b.bookingRef : ''}. Kosher Connect, 0161 531 1386.`,
-    again: { label: '✈️ Another booking', sub: bc?.firstName ? `for ${bc.firstName}` : 'new flight', run: () => openNewBookingModal(b.customerId) },
+    again: { label: 'Another booking', icon: 'plane', sub: bc?.firstName ? `for ${bc.firstName}` : 'new flight', run: () => openNewBookingModal(b.customerId) },
   });
 }
 
@@ -15326,9 +15326,9 @@ async function openCheckinModal(bookingId) {
             ${cell('Issued', p.passportIssueDate && fmtDate(p.passportIssueDate))}
             ${cell('Issuing country', p.issuingCountry)}
           </div>
-          ${(!p.passportNumber && !p.dob) ? '<div style="color:var(--warning);margin-top:4px;">⚠ Missing details — open 👥 Passengers to fill them in.</div>' : ''}
+          ${(!p.passportNumber && !p.dob) ? '<div style="color:var(--warning);margin-top:4px;">⚠ Missing details — open <i class="kc-ic kc-ic-users" aria-hidden="true"></i> Passengers to fill them in.</div>' : ''}
         </div>`).join('')}
-    </div>` : `<div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">No passenger details yet — add them via the 👥 button.</div>`;
+    </div>` : `<div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">No passenger details yet — add them via the <i class="kc-ic kc-ic-users" aria-hidden="true"></i> button.</div>`;
   // Stash the copy-all text keyed by index (avoids quoting a multi-line
   // string into an inline handler).
   window.paxCopyBlocks = pax.map(paxAll);
@@ -15653,7 +15653,7 @@ async function openTravelReqModal(bookingId) {
       <select class="form-input" onchange="saveBookingDestination('${escHtml(bookingId)}', this.value)">${destSel}</select>
     </div>
     ${!res.destination ? `<div style="color:var(--muted);font-size:var(--fs-body);margin:6px 0 4px;">Choose the destination to see what each passenger needs.</div>` : ''}
-    ${res.destination && !paxHtml ? `<div style="color:var(--muted);font-size:var(--fs-body);margin:6px 0;">No passengers on this booking yet — add them under 👥 Passengers.</div>` : ''}
+    ${res.destination && !paxHtml ? `<div style="color:var(--muted);font-size:var(--fs-body);margin:6px 0;">No passengers on this booking yet — add them under <i class="kc-ic kc-ic-users" aria-hidden="true"></i> Passengers.</div>` : ''}
     <div style="margin-top:10px;">${paxHtml}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);background:var(--bg-secondary);border-radius:8px;padding:8px 10px;margin-top:4px;">
       ℹ️ Guidance based on the rules we've set for common routes — <strong>always confirm on the official site</strong> before travel. Requirements can change.
@@ -15772,8 +15772,8 @@ async function renderRepairsTab() {
 
   const repBar = kcFilterSort('repairs', [
     { value: 'all', label: 'Filter: all tickets' },
-    { value: 'active', label: '🔧 Open / in progress', test: r => r.status === 'Open' || r.status === 'In Progress' },
-    { value: 'ready', label: '📦 Waiting for collection', test: r => r.status === 'Ready' },
+    { value: 'active', label: 'Open / in progress', icon: 'wrench', test: r => r.status === 'Open' || r.status === 'In Progress' },
+    { value: 'ready', label: 'Waiting for collection', icon: 'package', test: r => r.status === 'Ready' },
     { value: 'collected', label: '✓ Collected', test: r => r.status === 'Collected' },
     { value: 'cancelled', label: '✕ Cancelled', test: r => r.status === 'Cancelled' },
   ], [
@@ -15949,7 +15949,7 @@ async function saveNewRepair() {
       total: res.repair.total || 0, paidAmount: 0, method: null,
     },
     smsText: `Hi${rc?.firstName ? ' ' + rc.firstName : ''}, we've booked in ${rDevice} for repair. Estimate ${fmtGbp(res.repair.total)}, payable on collection. We'll message you when it's ready. Kosher Connect, 0161 531 1386.`,
-    again: { label: '🔧 Another repair', sub: rc?.firstName ? `for ${rc.firstName}` : 'new ticket', run: () => openNewRepairModal(customerId) },
+    again: { label: 'Another repair', icon: 'wrench', sub: rc?.firstName ? `for ${rc.firstName}` : 'new ticket', run: () => openNewRepairModal(customerId) },
   });
 }
 
@@ -16488,8 +16488,8 @@ async function renderServicesTab() {
   const svcWeekAgo = localISO(new Date(Date.now() - 7 * 86400000));
   const svcBar = kcFilterSort('services', [
     { value: 'all', label: 'Filter: all orders' },
-    { value: 'today', label: '📅 Today', test: o => (o.createdAt || '').slice(0, 10) === today },
-    { value: 'week', label: '🗓️ Last 7 days', test: o => (o.createdAt || '').slice(0, 10) >= svcWeekAgo },
+    { value: 'today', label: 'Today', icon: 'calendar', test: o => (o.createdAt || '').slice(0, 10) === today },
+    { value: 'week', label: 'Last 7 days', icon: 'schedule', test: o => (o.createdAt || '').slice(0, 10) >= svcWeekAgo },
   ], [
     { value: 'recent', label: 'Sort: Most recent', cmp: kcCmpDate(o => o.createdAt || '', -1) },
     { value: 'oldest', label: 'Oldest first', cmp: kcCmpDate(o => o.createdAt || '', 1) },
@@ -16729,11 +16729,11 @@ let shopSales = [];
 let suppliers = [];
 let supplierReturns = [];
 const SUPPLIER_RETURN_STATUS = {
-  awaiting_send: { label: '📦 To send',     color: 'var(--danger-ink)' },
-  sent:          { label: '📮 Sent',        color: 'var(--warning-ink)' },
+  awaiting_send: { label: 'To send', icon: 'package',     color: 'var(--danger-ink)' },
+  sent:          { label: 'Sent', icon: 'postbox',        color: 'var(--warning-ink)' },
   credited:      { label: '✔ Credited',    color: 'var(--success-ink)' },
-  replaced:      { label: '🔁 Replaced',    color: 'var(--success-ink)' },
-  written_off:   { label: '🗑 Written off', color: 'var(--muted)' },
+  replaced:      { label: 'Replaced', icon: 'repeat',    color: 'var(--success-ink)' },
+  written_off:   { label: 'Written off', icon: 'trash', color: 'var(--muted)' },
 };
 const SUPPLIER_RETURN_OPEN = ['awaiting_send', 'sent'];
 // Goods-in v2 — deliveries + the lightweight per-supplier balance
@@ -16745,6 +16745,13 @@ let goodsInBalances = {};
 // cannot import. test/stockCategories.test.mjs holds the two to the same
 // keys, labels and order. Owner-editable categories (BACKLOG) will merge a
 // Settings list on top of these defaults.
+// These labels keep their emoji, and it is not an oversight. Three reasons,
+// any one of which is enough: they are DATA — a custom category's key IS its
+// label (see stockCategories below), so the render sites escape them and
+// markup would show as literal text, which is exactly what happened when this
+// map was converted on 24 Aug; they are mirrored in lib/stockCategories.mjs
+// with a test holding the two identical; and they fill the till's category
+// <select>, where an option element cannot carry an icon anyway.
 const STOCK_CATEGORY_LABELS = {
   phone: '📱 Phone', sim: '💳 SIM', charger: '🔌 Charger', cable: '🔗 Cable',
   earphones: '🎧 Earphones', case: '🛡️ Case & cover', powerbank: '🔋 Power bank',
@@ -17099,7 +17106,7 @@ async function renderShopTab() {
   const shopBar = kcFilterSort('shop', [
     { value: 'all', label: 'Filter: all stock' },
     { value: 'low', label: '⚠ Low / out of stock', test: i => i.quantity <= i.lowStockAt },
-    { value: 'instock', label: '📦 In stock', test: i => i.quantity > 0 },
+    { value: 'instock', label: 'In stock', icon: 'package', test: i => i.quantity > 0 },
   ], [
     { value: 'name', label: 'Sort: Name A–Z', cmp: kcCmpStr(i => [i.company, i.model].filter(Boolean).join(' ')) },
     { value: 'qty_asc', label: 'Qty (low→high)', cmp: (a, b) => (a.quantity || 0) - (b.quantity || 0) },
@@ -17157,7 +17164,7 @@ async function renderShopTab() {
       </div>
       <div class="history-amount" style="margin:0 10px;">${d.invoiceTotal === null ? '—' : fmtGbp(d.invoiceTotal)}</div>
       ${d.invoiceTotal !== null ? `<button class="action-btn" aria-label="Mark delivery from ${escHtml(d.supplierName || 'supplier')} ${d.paid ? 'unpaid' : 'paid'}"
-        onclick="markGoodsInPaid('${d.id}', ${d.paid ? 'false' : 'true'})">${d.paid ? '↩️' : '💷 Pay'}</button>` : ''}
+        onclick="markGoodsInPaid('${d.id}', ${d.paid ? 'false' : 'true'})">${d.paid ? '↩️' : '<i class="kc-ic kc-ic-pound" aria-hidden="true"></i> Pay'}</button>` : ''}
     </div>`;
   const goodsRows = goodsIn.length === 0
     ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">No deliveries recorded yet. When stock arrives from a wholesaler, record it here — quantities and cost prices update themselves.</div>`
@@ -17261,7 +17268,7 @@ function openSupplierReturnModal(retId = null) {
   const supplierOptions = suppliers.filter(s => s.active || (r && s.id === r.supplierId))
     .map(s => `<option value="${s.id}" ${r?.supplierId === s.id ? 'selected' : ''}>${escHtml(s.name)}</option>`).join('');
   showDynamicModal(`
-    <div class="modal-title">${r ? '📤 Manage Return' : '📤 Return to Supplier'}</div>
+    <div class="modal-title">${r ? '<i class="kc-ic kc-ic-upload" aria-hidden="true"></i> Manage Return' : '<i class="kc-ic kc-ic-upload" aria-hidden="true"></i> Return to Supplier'}</div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Supplier *</label>
@@ -17320,7 +17327,7 @@ function openSupplierReturnModal(retId = null) {
       </div>` : `
       <div class="form-group">
         <label class="form-label">&nbsp;</label>
-        <div style="font-size:var(--fs-small);color:var(--muted);padding-top:8px;">Starts as “📦 To send”.</div>
+        <div style="font-size:var(--fs-small);color:var(--muted);padding-top:8px;">Starts as “<i class="kc-ic kc-ic-package" aria-hidden="true"></i> To send”.</div>
       </div>`}
       <div class="form-group form-full">
         <label class="form-label">Notes</label>
@@ -17552,7 +17559,7 @@ async function markGoodsInPaid(id, paid) {
 function openStockItemModal(itemId = null) {
   const i = itemId ? shopItems.find(x => x.id === itemId) : null;
   showDynamicModal(`
-    <div class="modal-title">${i ? '✏️ Edit Item' : '➕ Add Stock Item'}</div>
+    <div class="modal-title">${i ? '<i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Edit Item' : '➕ Add Stock Item'}</div>
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">Category</label>
@@ -17777,7 +17784,7 @@ function renderPosView() {
         <div id="posBasket" class="pos-receipt"></div>
         <div class="pos-summary">
           ${customerPicker('posCustomer', {
-            special: { value: 'walkin', label: '🚶 Walk-in' }, label: 'Customer',
+            special: { value: 'walkin', label: 'Walk-in', icon: 'walk' }, label: 'Customer',
             onPick: 'posCustomerChange()', style: 'min-height:0;padding:8px 12px;',
           })}
           </select>
@@ -17810,7 +17817,7 @@ function renderPosView() {
 }
 
 function posMethodsHtml() {
-  const m = [['cash', '💵 Cash'], ['card', '💳 Card'], ['bank_transfer', '🏦 Transfer']];
+  const m = [['cash', '<i class="kc-ic kc-ic-cash" aria-hidden="true"></i> Cash'], ['card', '<i class="kc-ic kc-ic-card" aria-hidden="true"></i> Card'], ['bank_transfer', '<i class="kc-ic kc-ic-bank" aria-hidden="true"></i> Transfer']];
   return m.map(([k, label]) =>
     `<button class="pos-method${posMethod === k ? ' on' : ''}" onclick="posSetMethod('${k}')">${label}</button>`).join('');
 }
@@ -17928,7 +17935,7 @@ function posSplitText() {
   const rest = posCashDue();
   const paid = document.getElementById('posPaid')?.checked;
   const restLabel = rest <= 0 ? '' : ` · ${paid ? (METHOD_LABELS[posMethod] || posMethod) : 'On account'} ${fmtGbp(rest)}`;
-  return `👛 Wallet ${fmtGbp(w)}${restLabel}`;
+  return `<i class="kc-ic kc-ic-purse" aria-hidden="true"></i> Wallet ${fmtGbp(w)}${restLabel}`;
 }
 
 // One visit, one place (owner, 23 Aug: a customer wanted a rental, tickets
@@ -18184,7 +18191,7 @@ function posShowLastSale() {
         ? ` — <strong>change ${fmtGbp(posLastSale.change)}</strong>` : ''}
       ${canEmail ? `<button class="btn btn-secondary" style="margin-top:8px;width:100%;"
         onclick="emailSaleReceipt(this)" ${posLastSale.emailed ? 'disabled' : ''}>
-        ${posLastSale.emailed === 'test' ? '✉️ Sent to the test inbox' : posLastSale.emailed ? '✉️ Receipt sent' : '✉️ Email receipt'}</button>` : ''}
+        ${posLastSale.emailed === 'test' ? '<i class="kc-ic kc-ic-mail" aria-hidden="true"></i> Sent to the test inbox' : posLastSale.emailed ? '<i class="kc-ic kc-ic-mail" aria-hidden="true"></i> Receipt sent' : '<i class="kc-ic kc-ic-mail" aria-hidden="true"></i> Email receipt'}</button>` : ''}
     </div>`;
 }
 
@@ -18558,7 +18565,7 @@ async function saveSale() {
   try {
     if (paidNow && posMethod === 'card' && cashDue > 0 && kcTillAvailable()) {
       toast(`Take ${fmtGbp(cashDue)} on the card machine…`, 'info');
-      setCharging(true, '⏳ Waiting for the card machine…');
+      setCharging(true, '<i class="kc-ic kc-ic-hourglass" aria-hidden="true"></i> Waiting for the card machine…');
       tillResult = await kcTillCharge(Math.round(cashDue * 100), payRef);
       if (!tillResult) {
         toast('No answer from the card machine — nothing was recorded. Check the terminal and try again.', 'error');
@@ -18573,7 +18580,7 @@ async function saveSale() {
         return;
       }
     }
-    setCharging(true, '⏳ Recording the sale…');
+    setCharging(true, '<i class="kc-ic kc-ic-hourglass" aria-hidden="true"></i> Recording the sale…');
     res = await kcFetch('/api/shop', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -18709,7 +18716,7 @@ async function renderKolTorahTab() {
     const b = [];
     if (j.status === 'open') b.push(['ready', '✔ Ready', 'btn btn-outline']);
     if (j.status === 'open' || j.status === 'ready') {
-      b.push(['collected', '📤 Collected', 'btn btn-primary']);
+      b.push(['collected', '<i class="kc-ic kc-ic-upload" aria-hidden="true"></i> Collected', 'btn btn-primary']);
       b.push(['cancelled', '✕', 'action-btn danger']);
     }
     if (j.status === 'ready') b.push(['open', '↩', 'btn btn-outline']);
@@ -18828,7 +18835,7 @@ async function renderKolTorahTab() {
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px;padding:10px 12px;border:1px dashed var(--border);border-radius:8px;">
       <span style="font-size:var(--fs-small);font-weight:700;color:var(--accent);padding-bottom:7px;">➕ New job</span>
       <div style="min-width:150px;max-width:180px;">${customerPicker('ktJobCust', {
-        special: { value: 'walkin', label: '🚶 Walk-in' }, label: 'Customer for this job',
+        special: { value: 'walkin', label: 'Walk-in', icon: 'walk' }, label: 'Customer for this job',
         style: 'min-height:0;padding:6px 9px;font-size:var(--fs-small);',
       })}</div>
       <input class="form-input" id="ktJobName" placeholder="Name if walk-in" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:140px;max-width:180px;">
@@ -19223,22 +19230,22 @@ async function saveReminder(kind, id) {
   });
   if (!res.success) { toast(res.error || 'Could not set the reminder.', 'error'); return; }
   closeDynamicModal();
-  toast(time ? `⏰ Will pop up ${fmtDate(date)} at ${time}.` : `Reminder set for ${fmtDate(date)}.`, 'success');
+  toast(time ? `<i class="kc-ic kc-ic-clock" aria-hidden="true"></i> Will pop up ${fmtDate(date)} at ${time}.` : `Reminder set for ${fmtDate(date)}.`, 'success');
 }
 
 // ── Business summary ─────────────────────────────────────────────────────
 // Ledger entry_types collapsed into the services the owner thinks in.
 const REVENUE_CATS = {
-  rental: '📱 Rentals', rental_loss: '📱 Rentals', rental_adjustment: '📱 Rentals',
-  sim_charge: '📶 SIM plans', sim_annual: '📶 SIM plans', sim_additional: '📶 SIM plans',
-  sim_replacement: '📶 SIM plans', sim_service: '📶 SIM plans',
-  repair: '🔧 Repairs',
-  booking: '✈️ Flights & tickets',
-  online_service: '🖨️ Print & online',
-  phone_sale: '🛒 Shop', stock_sale: '🛒 Shop',
-  virtual_number: '🔢 Virtual numbers',
+  rental: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Rentals', rental_loss: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Rentals', rental_adjustment: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Rentals',
+  sim_charge: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i> SIM plans', sim_annual: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i> SIM plans', sim_additional: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i> SIM plans',
+  sim_replacement: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i> SIM plans', sim_service: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i> SIM plans',
+  repair: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> Repairs',
+  booking: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i> Flights & tickets',
+  online_service: '<i class="kc-ic kc-ic-printer" aria-hidden="true"></i> Print & online',
+  phone_sale: '<i class="kc-ic kc-ic-trolley" aria-hidden="true"></i> Shop', stock_sale: '<i class="kc-ic kc-ic-trolley" aria-hidden="true"></i> Shop',
+  virtual_number: '<i class="kc-ic kc-ic-digits" aria-hidden="true"></i> Virtual numbers',
   extra_charge: '➕ Extra charges',
-  manual_adjustment: '✏️ Adjustments',
+  manual_adjustment: '<i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Adjustments',
 };
 function groupRevenue(byType) {
   const groups = {};
@@ -19952,54 +19959,54 @@ async function assistantBuildAction(plan) {
 
 const PALETTE_COMMANDS = [
   // ── Create ──
-  { icon: '📱', label: 'New rental', sub: 'create', run: () => openNewRentalModal() },
-  { icon: '✈️', label: 'New booking', sub: 'create', run: () => openNewBookingModal() },
-  { icon: '🔧', label: 'New repair', sub: 'create', run: async () => { repairMenu = await window.api.getServiceMenu('repair'); openNewRepairModal(); } },
-  { icon: '👤', label: 'New customer', sub: 'create', run: () => goToTab('customers', {}) || setTimeout(() => document.getElementById('btnNewCustomer')?.click(), 120) },
-  { icon: '📶', label: 'New SIM plan', sub: 'create', run: () => openOnTab('sim', openSimFormModal) },
-  { icon: '☎️', label: 'New Virtual Number', sub: 'create', run: () => openOnTab('virtual', openNewVNModal) },
-  { icon: '🖨️', label: 'Charge a service', sub: 'create', run: () => openOnTab('services', openNewServiceModal) },
-  { icon: '📦', label: 'Add Stock Item', sub: 'create', run: () => openOnTab('shop', openStockItemModal) },
+  { icon: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i>', label: 'New rental', sub: 'create', run: () => openNewRentalModal() },
+  { icon: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i>', label: 'New booking', sub: 'create', run: () => openNewBookingModal() },
+  { icon: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i>', label: 'New repair', sub: 'create', run: async () => { repairMenu = await window.api.getServiceMenu('repair'); openNewRepairModal(); } },
+  { icon: '<i class="kc-ic kc-ic-user" aria-hidden="true"></i>', label: 'New customer', sub: 'create', run: () => goToTab('customers', {}) || setTimeout(() => document.getElementById('btnNewCustomer')?.click(), 120) },
+  { icon: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i>', label: 'New SIM plan', sub: 'create', run: () => openOnTab('sim', openSimFormModal) },
+  { icon: '<i class="kc-ic kc-ic-telephone" aria-hidden="true"></i>', label: 'New Virtual Number', sub: 'create', run: () => openOnTab('virtual', openNewVNModal) },
+  { icon: '<i class="kc-ic kc-ic-printer" aria-hidden="true"></i>', label: 'Charge a service', sub: 'create', run: () => openOnTab('services', openNewServiceModal) },
+  { icon: '<i class="kc-ic kc-ic-package" aria-hidden="true"></i>', label: 'Add Stock Item', sub: 'create', run: () => openOnTab('shop', openStockItemModal) },
   // ── Tools ──
-  { icon: '⏱', label: 'Start help timer', sub: 'tool', run: () => openOnTab('services', () => kcPickerFocus('svcTimerCustomer')) },
+  { icon: '<i class="kc-ic kc-ic-stopwatch" aria-hidden="true"></i>', label: 'Start help timer', sub: 'tool', run: () => openOnTab('services', () => kcPickerFocus('svcTimerCustomer')) },
   { icon: '⧉', label: 'Float the help timer on top', sub: 'tool', keys: ['float', 'pin', 'on top', 'timer', 'always on top', 'popout', 'pop out'],
     run: () => svcTimerPopOut() },
-  { icon: '🛒', label: 'Point of Sale (Till)', sub: 'tool', keys: ['pos', 'till', 'sell', 'checkout'], run: () => goToTab('shop') },
-  { icon: '📇', label: 'Manage Phone Inventory', sub: 'tool', run: () => openOnTab('rentals', openManagePhonesModal) },
-  { icon: '🧾', label: 'Cash-up (Z-report)', sub: 'tool', keys: ['cashup', 'z report', 'eod', 'end of day', 'takings'], run: () => openCashupModal() },
-  { icon: '⌨️', label: 'Keyboard shortcuts', sub: 'help', run: () => openShortcuts() },
-  { icon: '❓', label: 'How do I…?', sub: 'help', keys: ['how do i', 'help', 'guide', 'steps', 'teach', 'show me', 'training'], run: () => openHowToModal() },
+  { icon: '<i class="kc-ic kc-ic-trolley" aria-hidden="true"></i>', label: 'Point of Sale (Till)', sub: 'tool', keys: ['pos', 'till', 'sell', 'checkout'], run: () => goToTab('shop') },
+  { icon: '<i class="kc-ic kc-ic-contacts" aria-hidden="true"></i>', label: 'Manage Phone Inventory', sub: 'tool', run: () => openOnTab('rentals', openManagePhonesModal) },
+  { icon: '<i class="kc-ic kc-ic-receipt" aria-hidden="true"></i>', label: 'Cash-up (Z-report)', sub: 'tool', keys: ['cashup', 'z report', 'eod', 'end of day', 'takings'], run: () => openCashupModal() },
+  { icon: '<i class="kc-ic kc-ic-keyboard" aria-hidden="true"></i>', label: 'Keyboard shortcuts', sub: 'help', run: () => openShortcuts() },
+  { icon: '<i class="kc-ic kc-ic-help" aria-hidden="true"></i>', label: 'How do I…?', sub: 'help', keys: ['how do i', 'help', 'guide', 'steps', 'teach', 'show me', 'training'], run: () => openHowToModal() },
   // The manual is a page, so the palette opens it in its own tab rather than
   // navigating away from whatever is half-finished on this one.
-  { icon: '📖', label: 'The manual', sub: 'help', keys: ['manual', 'handbook', 'instructions', 'reference', 'every screen', 'print'], run: () => window.open('/manual', '_blank', 'noopener') },
-  { icon: '⏰', label: 'New reminder', sub: 'tool', run: () => openRemindModal('note', '') },
-  { icon: '🔑', label: 'Change my password', sub: 'tool', run: () => openChangePasswordModal() },
+  { icon: '<i class="kc-ic kc-ic-book" aria-hidden="true"></i>', label: 'The manual', sub: 'help', keys: ['manual', 'handbook', 'instructions', 'reference', 'every screen', 'print'], run: () => window.open('/manual', '_blank', 'noopener') },
+  { icon: '<i class="kc-ic kc-ic-clock" aria-hidden="true"></i>', label: 'New reminder', sub: 'tool', run: () => openRemindModal('note', '') },
+  { icon: '<i class="kc-ic kc-ic-key" aria-hidden="true"></i>', label: 'Change my password', sub: 'tool', run: () => openChangePasswordModal() },
   { icon: '🌓', label: 'Toggle dark mode', sub: 'tool', run: () => toggleTheme() },
-  { icon: '🔠', label: 'Text size (Simple Mode)', sub: 'tool', keys: ['text size', 'bigger', 'larger', 'font', 'simple mode', 'accessibility'], run: () => cycleTextSize() },
+  { icon: '<i class="kc-ic kc-ic-letters" aria-hidden="true"></i>', label: 'Text size (Simple Mode)', sub: 'tool', keys: ['text size', 'bigger', 'larger', 'font', 'simple mode', 'accessibility'], run: () => cycleTextSize() },
   // ── Find (saved-filter views) ──
-  { icon: '⏰', label: 'Show overdue rentals', sub: 'view', run: () => filterView('rentals', () => { kcView('rentals').dims = { balance: 'all', status: 'overdue' }; }, renderRentalRows) },
-  { icon: '💷', label: 'Rentals with a balance owing', sub: 'view', run: () => filterView('rentals', () => { kcView('rentals').dims = { balance: 'debt', status: 'all' }; }, renderRentalRows) },
-  { icon: '💰', label: 'Who owes money (arrears)', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'arrears'; }, renderTableRows) },
-  { icon: '✈️', label: 'Customers flying soon', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'flight'; }, renderTableRows) },
-  { icon: '🛂', label: 'Customers with passport on file', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'passport'; }, renderTableRows) },
+  { icon: '<i class="kc-ic kc-ic-clock" aria-hidden="true"></i>', label: 'Show overdue rentals', sub: 'view', run: () => filterView('rentals', () => { kcView('rentals').dims = { balance: 'all', status: 'overdue' }; }, renderRentalRows) },
+  { icon: '<i class="kc-ic kc-ic-pound" aria-hidden="true"></i>', label: 'Rentals with a balance owing', sub: 'view', run: () => filterView('rentals', () => { kcView('rentals').dims = { balance: 'debt', status: 'all' }; }, renderRentalRows) },
+  { icon: '<i class="kc-ic kc-ic-money" aria-hidden="true"></i>', label: 'Who owes money (arrears)', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'arrears'; }, renderTableRows) },
+  { icon: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i>', label: 'Customers flying soon', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'flight'; }, renderTableRows) },
+  { icon: '<i class="kc-ic kc-ic-passport" aria-hidden="true"></i>', label: 'Customers with passport on file', sub: 'view', run: () => filterView('customers', () => { customerFilter = 'passport'; }, renderTableRows) },
   { icon: '⚠', label: 'Customers with no way to reach them', sub: 'view', keys: ['unreachable', 'no number', 'no phone', 'missing number', 'cannot ring'], run: () => filterView('customers', () => { customerFilter = 'unreachable'; }, renderTableRows) },
-  { icon: '📶', label: 'SIMs that renew this week', sub: 'view', run: () => filterView('sim', () => { simFilterStatus = 'week'; simFilterPay = 'all'; }, renderSimRows) },
-  { icon: '🔧', label: 'Repairs waiting for collection', sub: 'view', run: () => filterView('repairs', () => { kcView('repairs').filter = 'ready'; }) },
+  { icon: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i>', label: 'SIMs that renew this week', sub: 'view', run: () => filterView('sim', () => { simFilterStatus = 'week'; simFilterPay = 'all'; }, renderSimRows) },
+  { icon: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i>', label: 'Repairs waiting for collection', sub: 'view', run: () => filterView('repairs', () => { kcView('repairs').filter = 'ready'; }) },
   // (the old one-off 'Payment / top-up for open customer' entry is superseded
   // by paletteContextVerbs — every card verb now surfaces automatically)
   // ── Admin (hidden for helpers) ──
-  { icon: '📊', label: 'Business summary (revenue)', sub: 'admin', admin: true, run: () => openBusinessSummary() },
-  { icon: '⚙️', label: 'Run automations now', sub: 'admin', admin: true, run: () => runSweepsNow() },
-  { icon: '📤', label: 'Export CSV', sub: 'admin', admin: true, run: async () => { const r = await window.api.exportCSV(); toast(r?.success ? 'CSV exported.' : (r?.error || 'Export failed.'), r?.success ? 'success' : 'error'); } },
-  { icon: '✉️', label: 'Add email address', sub: 'admin', admin: true, run: () => openOnTab('settings', openEmailAliasModal) },
-  { icon: '🤖', label: 'New automation rule', sub: 'admin', admin: true, run: () => openOnTab('settings', openAutomationModal) },
-  { icon: '🔗', label: 'Match customers to ELID', sub: 'admin', admin: true, run: () => openElidMatchModal() },
-  { icon: '📥', label: 'Import ELID accounts', sub: 'admin', admin: true, run: () => openElidImportModal() },
-  { icon: '👥', label: 'Find duplicate customers', sub: 'admin', admin: true, run: () => openDupScanModal() },
-  { icon: '🧠', label: 'AI plan my day (tasks)', sub: 'tasks', run: () => openTaskTriageModal() },
+  { icon: '<i class="kc-ic kc-ic-chart" aria-hidden="true"></i>', label: 'Business summary (revenue)', sub: 'admin', admin: true, run: () => openBusinessSummary() },
+  { icon: '<i class="kc-ic kc-ic-gear" aria-hidden="true"></i>', label: 'Run automations now', sub: 'admin', admin: true, run: () => runSweepsNow() },
+  { icon: '<i class="kc-ic kc-ic-upload" aria-hidden="true"></i>', label: 'Export CSV', sub: 'admin', admin: true, run: async () => { const r = await window.api.exportCSV(); toast(r?.success ? 'CSV exported.' : (r?.error || 'Export failed.'), r?.success ? 'success' : 'error'); } },
+  { icon: '<i class="kc-ic kc-ic-mail" aria-hidden="true"></i>', label: 'Add email address', sub: 'admin', admin: true, run: () => openOnTab('settings', openEmailAliasModal) },
+  { icon: '<i class="kc-ic kc-ic-bot" aria-hidden="true"></i>', label: 'New automation rule', sub: 'admin', admin: true, run: () => openOnTab('settings', openAutomationModal) },
+  { icon: '<i class="kc-ic kc-ic-link" aria-hidden="true"></i>', label: 'Match customers to ELID', sub: 'admin', admin: true, run: () => openElidMatchModal() },
+  { icon: '<i class="kc-ic kc-ic-download" aria-hidden="true"></i>', label: 'Import ELID accounts', sub: 'admin', admin: true, run: () => openElidImportModal() },
+  { icon: '<i class="kc-ic kc-ic-users" aria-hidden="true"></i>', label: 'Find duplicate customers', sub: 'admin', admin: true, run: () => openDupScanModal() },
+  { icon: '<i class="kc-ic kc-ic-brain" aria-hidden="true"></i>', label: 'AI plan my day (tasks)', sub: 'tasks', run: () => openTaskTriageModal() },
   // The assistant's own door since 18 Aug, when its topbar button folded into
   // the ❓ Help panel. Searchable by the words someone would actually type.
-  { icon: '🤖', label: 'Ask / do anything (AI assistant)', sub: 'AI',
+  { icon: '<i class="kc-ic kc-ic-bot" aria-hidden="true"></i>', label: 'Ask / do anything (AI assistant)', sub: 'AI',
     keys: ['ask', 'assistant', 'ai', 'question', 'who owes', 'how much', 'robot'], run: () => openAssistantModal() },
   // ── Navigate ──
   // #49 — palette navigate entries read the same label map, so "Go to SIM
@@ -20055,7 +20062,7 @@ function paletteSearch(q) {
     const name = `${c.firstName} ${c.lastName}`;
     if (customerMatches(needle, c) ||
         (digits.length >= 4 && (c.phone || '').replace(/\D/g, '').includes(digits))) {
-      out.push({ icon: '👤', label: name, sub: fmtPhone(c.phone || '') || c.email || 'customer',
+      out.push({ icon: '<i class="kc-ic kc-ic-user" aria-hidden="true"></i>', label: name, sub: fmtPhone(c.phone || '') || c.email || 'customer',
         kind: 'customer', id: c.id, run: () => goToTab('customers', { customerId: c.id }) });
     }
   }
@@ -20067,8 +20074,8 @@ function paletteSearch(q) {
     const words = `${p.number || ''} ${p.model || ''} ${p.company || ''} ${p.pool || ''} ${p.country || ''}`.toLowerCase();
     if (words.includes(needle) ||
         (digits.length >= 5 && hay.includes(digits))) {
-      out.push({ icon: '📱', label: fmtPhone(p.number || '') || '(no number)',
-        sub: `${[p.model, p.country, p.company].filter(Boolean).join(' · ')} · ${p.status}${p.maintenance ? ' · 🔧 maintenance' : ''}${p.pool ? ' · pool ' + p.pool : ''}`,
+      out.push({ icon: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i>', label: fmtPhone(p.number || '') || '(no number)',
+        sub: `${[p.model, p.country, p.company].filter(Boolean).join(' · ')} · ${p.status}${p.maintenance ? ' · <i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> maintenance' : ''}${p.pool ? ' · pool ' + p.pool : ''}`,
         kind: 'phone', id: p.id, run: () => openEditPhoneModal(p.id) });
     }
   }
@@ -20095,7 +20102,7 @@ function paletteSearch(q) {
       // Opens the booking, not the tab. Searching a reference and landing on
       // the whole list is the app forgetting what you just typed — the SIM
       // result three loops down has always opened its own record.
-      out.push({ icon: '✈️', label: `${b.route} — ${b.customerName || b.passenger || ''}`,
+      out.push({ icon: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i>', label: `${b.route} — ${b.customerName || b.passenger || ''}`,
         sub: `flies ${fmtDate(b.travelDate)}`,
         kind: 'booking', id: b.id, run: () => openOnTab('bookings', () => openEditBookingModal(b.id)) });
     }
@@ -20107,7 +20114,7 @@ function paletteSearch(q) {
         (s.provider || '').toLowerCase().includes(needle) ||
         (s.simNumber || '').toLowerCase().includes(needle) ||
         (digits.length >= 4 && (s.simNumber || '').replace(/\D/g, '').includes(digits))) {
-      out.push({ icon: '📶', label: `SIM — ${s.customerName || ''}`, sub: `${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}`,
+      out.push({ icon: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i>', label: `SIM — ${s.customerName || ''}`, sub: `${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}`,
         kind: 'sim', id: s.id, run: () => openManageSimModal(s.id) });
     }
   }
@@ -20116,7 +20123,7 @@ function paletteSearch(q) {
     if ((v.number || '').toLowerCase().includes(needle) ||
         (v.customerName || '').toLowerCase().includes(needle) ||
         (digits.length >= 4 && (v.number || '').replace(/\D/g, '').includes(digits))) {
-      out.push({ icon: '🔢', label: `VN ${fmtPhone(v.number || '')} — ${v.customerName || ''}`, sub: v.status || 'virtual number',
+      out.push({ icon: '<i class="kc-ic kc-ic-digits" aria-hidden="true"></i>', label: `VN ${fmtPhone(v.number || '')} — ${v.customerName || ''}`, sub: v.status || 'virtual number',
         run: () => goToTab('virtual') });
     }
   }
@@ -20127,7 +20134,7 @@ function paletteSearch(q) {
       // Left going to the tab, deliberately. A repair has no record of its own
       // to open and the repairs list has no search term to set — the only
       // honest options were the tab or inventing state that does not exist.
-      out.push({ icon: '🔧', label: `Repair — ${r.customerName || ''}`, sub: `${r.device || ''} · ${r.status || ''}`,
+      out.push({ icon: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i>', label: `Repair — ${r.customerName || ''}`, sub: `${r.device || ''} · ${r.status || ''}`,
         run: () => goToTab('repairs') });
     }
   }
@@ -20135,14 +20142,14 @@ function paletteSearch(q) {
     if (out.length >= 12) break;
     if ((o.customerName || '').toLowerCase().includes(needle) ||
         (o.serviceName || '').toLowerCase().includes(needle)) {
-      out.push({ icon: '🖨️', label: `${o.serviceName || 'Service'} — ${o.customerName || ''}`, sub: o.createdAt ? fmtDate(o.createdAt) : 'service',
+      out.push({ icon: '<i class="kc-ic kc-ic-printer" aria-hidden="true"></i>', label: `${o.serviceName || 'Service'} — ${o.customerName || ''}`, sub: o.createdAt ? fmtDate(o.createdAt) : 'service',
         run: () => goToTab('services') });
     }
   }
   for (const t of (tasksList || [])) {
     if (out.length >= 12) break;
     if (!t.done && (t.title || '').toLowerCase().includes(needle)) {
-      out.push({ icon: '⏰', label: t.title || 'Task', sub: t.dueDate ? `due ${fmtDate(t.dueDate)}` : 'task',
+      out.push({ icon: '<i class="kc-ic kc-ic-clock" aria-hidden="true"></i>', label: t.title || 'Task', sub: t.dueDate ? `due ${fmtDate(t.dueDate)}` : 'task',
         run: () => goToTab('tasks') });
     }
   }
@@ -20243,13 +20250,13 @@ function paletteContextVerbs() {
   return {
     name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'this customer',
     verbs: [
-      { icon: '💰', label: 'Record payment / credit', run: () => openWalletModal(id) },
-      { icon: '📱', label: 'New rental', run: () => openNewRentalModal(id) },
-      { icon: '✉️', label: 'Draft reminder', run: () => openDraftReminderModal(id) },
-      { icon: '📞', label: 'Log call / note', run: () => openLogCommModal(id) },
-      { icon: '⏰', label: 'Remind me', run: () => openRemindModal('customer', id) },
-      { icon: '✏️', label: 'Edit details', run: () => openEditModal(id) },
-      ...(customerPageId === id ? [] : [{ icon: '👤', label: 'Open full profile', run: () => openCustomerPage(id) }]),
+      { icon: '<i class="kc-ic kc-ic-money" aria-hidden="true"></i>', label: 'Record payment / credit', run: () => openWalletModal(id) },
+      { icon: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i>', label: 'New rental', run: () => openNewRentalModal(id) },
+      { icon: '<i class="kc-ic kc-ic-mail" aria-hidden="true"></i>', label: 'Draft reminder', run: () => openDraftReminderModal(id) },
+      { icon: '<i class="kc-ic kc-ic-call" aria-hidden="true"></i>', label: 'Log call / note', run: () => openLogCommModal(id) },
+      { icon: '<i class="kc-ic kc-ic-clock" aria-hidden="true"></i>', label: 'Remind me', run: () => openRemindModal('customer', id) },
+      { icon: '<i class="kc-ic kc-ic-pencil" aria-hidden="true"></i>', label: 'Edit details', run: () => openEditModal(id) },
+      ...(customerPageId === id ? [] : [{ icon: '<i class="kc-ic kc-ic-user" aria-hidden="true"></i>', label: 'Open full profile', run: () => openCustomerPage(id) }]),
     ],
   };
 }
@@ -20698,7 +20705,7 @@ async function openTaskTriageModal() {
 }
 function renderTaskTriage(j) {
   const buckets = [
-    { key: 'now', label: '🔴 Now', color: 'var(--danger-ink)' },
+    { key: 'now', label: '<span class="kc-dot kc-dot-high"></span>Now', color: 'var(--danger-ink)' },
     { key: 'today', label: '<span class="kc-dot kc-dot-medium"></span>Today', color: 'var(--warning,#b7791f)' },
     { key: 'soon', label: '<span class="kc-dot kc-dot-idle"></span>Soon', color: 'var(--muted)' },
   ];
@@ -21215,7 +21222,7 @@ async function approveForward(i) {
       `<strong>${escHtml(p.subject)}</strong><br>` +
       `<span style="color:var(--muted);">to ${escHtml(p.to.email)}</span><br><br>` +
       `Nothing here is rewritten — a paraphrase of a carrier's message would be a new claim made in the shop's name.`,
-    okLabel: '📤 Send it',
+    okLabel: 'Send it', okIcon: 'upload',
   }))) return;
   const res = await kcFetch('/api/mail-forward', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -21348,7 +21355,7 @@ async function cmLearnPick(simLegacyId) {
       `<strong>${escName(capName(sim.customerName || 'that line'))}</strong>` +
       `${sim.simNumber ? ` (${escHtml(fmtPhone(sim.simNumber))})` : ''} from now on.<br><br>` +
       `You can take the address off again from the line's own card if this turns out wrong.`,
-    okLabel: '🔗 Yes, it is theirs',
+    okLabel: 'Yes, it is theirs', okIcon: 'link',
   }))) return;
   if (cmBusy) return; cmBusy = true;
   try {
@@ -21549,13 +21556,15 @@ let kcRowMenuSeq = 0;
 let kcRowMenuOpen = null;   // the id of the button whose menu is open
 
 /**
- * items: [{ label, onclick, danger }] — `label` is HTML, `onclick` is the same
- * attribute string the inline button would have carried.
+ * items: [{ label, onclick, danger, icon }] — `label` is HTML, `onclick` is the
+ * same attribute string the inline button would have carried, and `icon` is a
+ * kc-ic shape name. The icon is a CLASS rather than a glyph in the label so it
+ * takes the row's colour, including the red of a danger row.
  */
 function kcRowMenuHtml(items, { label = 'More actions' } = {}) {
   const id = `kcrm${++kcRowMenuSeq}`;
   const rows = items.map(i =>
-    `<button type="button" role="menuitem" class="kc-rowmenu-item${i.danger ? ' danger' : ''}" onclick="${i.onclick}">${i.label}</button>`
+    `<button type="button" role="menuitem" class="kc-rowmenu-item${i.danger ? ' danger' : ''}${i.icon ? ` kc-ic kc-ic-${i.icon}` : ''}" onclick="${i.onclick}">${i.label}</button>`
   ).join('');
   return `<button type="button" class="action-btn kc-rowmenu-btn" id="${id}"
       aria-haspopup="menu" aria-expanded="false" aria-label="${escHtml(label)}" title="${escHtml(label)}"
@@ -21950,9 +21959,9 @@ async function renderTasksTab() {
   const today = localISO();
   const tkBar = kcFilterSort('tasks', [
     { value: 'all', label: 'Filter: all tasks' },
-    { value: 'manual', label: '✍️ Manual only', test: t => t.source === 'manual' },
-    { value: 'auto', label: '🤖 Auto only', test: t => t.source !== 'manual' },
-    { value: 'customer', label: '👤 With customer', test: t => !!t.customerId },
+    { value: 'manual', label: 'Manual only', icon: 'sign', test: t => t.source === 'manual' },
+    { value: 'auto', label: 'Auto only', icon: 'bot', test: t => t.source !== 'manual' },
+    { value: 'customer', label: 'With customer', icon: 'user', test: t => !!t.customerId },
     { value: 'overdue', label: '⚠ Overdue', test: t => t.dueDate && t.dueDate < today && !t.done },
   ], [
     { value: 'smart', label: 'Sort: Smart' },
@@ -21980,7 +21989,7 @@ async function renderTasksTab() {
       ? (t.customerId
           ? `<a class="dash-link kc-namelink" href="/customers/${encodeURIComponent(String(t.customerId))}" style="color:var(--accent);cursor:pointer;"
             onclick="event.stopPropagation();if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();kcOpenCustomerLink('${escJs(String(t.customerId))}')"><i class="kc-ic kc-ic-user" aria-hidden="true"></i> ${escName(t.customerName)}</a> · `
-          : '👤 ' + escName(t.customerName) + ' · ')
+          : '<i class="kc-ic kc-ic-user" aria-hidden="true"></i> ' + escName(t.customerName) + ' · ')
       : '';
     return `
     <div class="task-card${t.done ? ' task-done' : ''}">
@@ -21991,7 +22000,7 @@ async function renderTasksTab() {
         <div style="flex:1;min-width:0;">
           <div class="history-desc" style="${t.done ? 'text-decoration:line-through;' : ''}">${escHtml(t.title)}</div>
           <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:2px;">
-            ${custLabel}${t.source !== 'manual' ? '🤖 auto · ' : ''}${t.dueDate ? `<span style="${overdueDue && !t.done ? 'color:var(--danger-ink);font-weight:600;' : ''}">due ${fmtDate(t.dueDate)}</span>` : ''}
+            ${custLabel}${t.source !== 'manual' ? '<i class="kc-ic kc-ic-bot" aria-hidden="true"></i> auto · ' : ''}${t.dueDate ? `<span style="${overdueDue && !t.done ? 'color:var(--danger-ink);font-weight:600;' : ''}">due ${fmtDate(t.dueDate)}</span>` : ''}
           </div>
           ${t.notes ? `<div style="font-size:var(--fs-small);color:var(--text);margin-top:5px;white-space:pre-line;line-height:1.5;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:6px 10px;">${escHtml(t.notes)}</div>` : ''}
         </div>
@@ -22078,8 +22087,8 @@ async function renderTasksTab() {
       ${tkBar}
     </div>
     <div class="dash-cols">
-      ${lane('🔥 Now — do these first', nowLane, 'Nothing urgent.')}
-      ${lane('📋 Next — when the counter is quiet', nextLane, 'Nothing queued.')}
+      ${lane('<i class="kc-ic kc-ic-urgent" aria-hidden="true"></i> Now — do these first', nowLane, 'Nothing urgent.')}
+      ${lane('<i class="kc-ic kc-ic-clipboard" aria-hidden="true"></i> Next — when the counter is quiet', nextLane, 'Nothing queued.')}
     </div>
     ${snoozed.length ? `
     <div class="table-card" style="padding:8px 16px 12px;margin-top:16px;">
@@ -22617,8 +22626,8 @@ async function renderVirtualTab() {
   const vnBar = kcFilterSort('virtual', [
     { value: 'all', label: 'Filter: all numbers' },
     { value: 'active', label: '✔ Active', test: v => v.status === 'Active' },
-    { value: 'inactive', label: '⏸ Inactive', test: v => v.status !== 'Active' },
-    { value: 'billing', label: '💷 Billing on', test: v => v.billingEnabled && v.monthlyPrice },
+    { value: 'inactive', label: 'Inactive', icon: 'pause', test: v => v.status !== 'Active' },
+    { value: 'billing', label: 'Billing on', icon: 'pound', test: v => v.billingEnabled && v.monthlyPrice },
   ], [
     { value: 'number', label: 'Sort: Number', cmp: kcCmpStr(v => v.number) },
     { value: 'name', label: 'Customer A–Z', cmp: kcCmpStr(v => v.customerName) },
@@ -22653,7 +22662,7 @@ async function renderVirtualTab() {
             onclick="openVNBillingModal('${escHtml(v.id)}')">Billing</button>
           <button class="action-btn" style="font-size:var(--fs-micro);padding:4px 10px;"
             onclick="toggleVNStatus('${escHtml(v.id)}', '${v.status === 'Active' ? 'Inactive' : 'Active'}')">
-            ${v.status === 'Active' ? '⏸ Deactivate' : '▶ Activate'}</button>
+            ${v.status === 'Active' ? '<i class="kc-ic kc-ic-pause" aria-hidden="true"></i> Deactivate' : '▶ Activate'}</button>
           <button class="action-btn danger" style="font-size:var(--fs-micro);padding:4px 10px;"
             aria-label="Delete this number" onclick="deleteVN('${escHtml(v.id)}', '${escHtml(v.number)}')">✕</button>
         </td>
@@ -22931,7 +22940,7 @@ async function renderSettingsTab() {
   pricingConfig = cfg; // keep live pricing in sync with what's displayed
 
   // Team card — rendered only for the owner (helpers get a 403 from /api/team).
-  const teamHtml = team?.success ? settingsCard('team', '👥 Team', `${team.members.length} member${team.members.length === 1 ? '' : 's'} + helper access`, `
+  const teamHtml = team?.success ? settingsCard('team', '<i class="kc-ic kc-ic-users" aria-hidden="true"></i> Team', `${team.members.length} member${team.members.length === 1 ? '' : 's'} + helper access`, `
       <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
       <tbody>
         ${team.members.map(m => `
@@ -22980,7 +22989,7 @@ async function renderSettingsTab() {
   // ── Automations card (owner-only) — custom "when X, do Y" rules ──
   autoTriggers = autos?.triggers || autoTriggers;
   autoRulesCache = autos?.rules || [];
-  const automationsHtml = autos?.success ? settingsCard('automations', '🤖 Automations',
+  const automationsHtml = autos?.success ? settingsCard('automations', '<i class="kc-ic kc-ic-bot" aria-hidden="true"></i> Automations',
     `${autos.rules.length} rule${autos.rules.length === 1 ? '' : 's'} — run in the daily sweep`, `
       <table><thead><tr><th>Rule</th><th>When</th><th>Raises</th><th>On</th><th></th></tr></thead>
       <tbody>
@@ -23003,7 +23012,7 @@ async function renderSettingsTab() {
       </div>`) : '';
 
   // ── Email addresses card (owner-only) — Forward Email aliases ──
-  const aliasesHtml = aliases === null ? '' : (aliases.success ? settingsCard('emails', '📧 Email addresses',
+  const aliasesHtml = aliases === null ? '' : (aliases.success ? settingsCard('emails', '<i class="kc-ic kc-ic-email" aria-hidden="true"></i> Email addresses',
     `${aliases.aliases.length} @${escHtml(aliases.domain)} via Forward Email`, `
       <table><thead><tr><th>Address</th><th>Forwards to</th><th>Purpose</th><th>On</th><th></th></tr></thead>
       <tbody>
@@ -23026,7 +23035,7 @@ async function renderSettingsTab() {
       <div style="padding:8px 14px 14px;">
         <button class="btn btn-outline btn-sm" onclick="openEmailAliasModal()">+ New address</button>
         <span style="font-size:var(--fs-micro);color:var(--muted);margin-left:8px;"><i class="kc-ic kc-ic-key" aria-hidden="true"></i> makes an SMTP password so the app (or Gmail send-as) can send from that address.</span>
-      </div>`) : settingsCard('emails', '📧 Email addresses', 'not connected yet',
+      </div>`) : settingsCard('emails', '<i class="kc-ic kc-ic-email" aria-hidden="true"></i> Email addresses', 'not connected yet',
     `<div style="padding:8px 16px 14px;font-size:var(--fs-body);color:var(--muted);">${escHtml(aliases.error || 'Unavailable.')}</div>`));
 
   const num = (id, val, step = '0.01') =>
@@ -23131,11 +23140,11 @@ async function renderSettingsTab() {
   // ── Service price menu card (admin-editable price list) ──
   menuItemsCache = menu?.success ? menu.items : [];
   const isAdmin = !currentStaff || currentStaff.role === 'owner';
-  const catLabel = { repair: '🔧 Repairs', online: '🖨️ Online & print', tickets: '✈️ Tickets',
-    phone: '📱 Phones', sim: '💳 SIM', other: '📦 Other' };
+  const catLabel = { repair: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> Repairs', online: '<i class="kc-ic kc-ic-printer" aria-hidden="true"></i> Online & print', tickets: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i> Tickets',
+    phone: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Phones', sim: '<i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM', other: '<i class="kc-ic kc-ic-package" aria-hidden="true"></i> Other' };
   const menuNum = (id, val) =>
     `<input class="form-input" type="number" step="0.01" id="${id}" value="${val ?? ''}" placeholder="—" style="width:76px;padding:5px 7px;font-size:var(--fs-small);min-height:0;">`;
-  const menuHtml = !isAdmin || !menu?.success ? '' : settingsCard('pricemenu', '🧾 Service price menu',
+  const menuHtml = !isAdmin || !menu?.success ? '' : settingsCard('pricemenu', '<i class="kc-ic kc-ic-receipt" aria-hidden="true"></i> Service price menu',
     `${menuItemsCache.length} services — what the charging screens offer`, `
       <div class="table-wrap"><table><thead><tr><th>Service</th><th>Price</th><th>KC price</th><th>Repeat</th><th>Bulk (tickets 6th+)</th><th>On</th><th></th></tr></thead>
       <tbody>
@@ -23171,8 +23180,8 @@ async function renderSettingsTab() {
 
   // ── Extra charges card (owner-defined fees the engine applies for you) ──
   extraChargeCache = extra?.success ? extra.charges : [];
-  const TARGET_LABEL = { booking: '✈️ Every flight booking', service: '🖨️ Every online/print service',
-    sim: '💳 Every SIM setup', repair: '🔧 Every repair', rental: '📱 Every rental', any: '⭐ All of the above' };
+  const TARGET_LABEL = { booking: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i> Every flight booking', service: '<i class="kc-ic kc-ic-printer" aria-hidden="true"></i> Every online/print service',
+    sim: '<i class="kc-ic kc-ic-card" aria-hidden="true"></i> Every SIM setup', repair: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> Every repair', rental: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Every rental', any: '<i class="kc-ic kc-ic-star" aria-hidden="true"></i> All of the above' };
   const extraHtml = !isAdmin || !extra?.success ? '' : settingsCard('extras', '➕ Extra charges',
     `${extraChargeCache.length} auto-applied — the app bills these for you`, `
       <div style="padding:8px 16px 4px;font-size:var(--fs-small);color:var(--muted);line-height:1.5;">
@@ -23218,7 +23227,7 @@ async function renderSettingsTab() {
   // that populates the "Platform / IVR provider" dropdown on a virtual number
   // (feature #10). ──
   const ivrList = ivrPlatforms();
-  const ivrHtml = !isAdmin ? '' : settingsCard('ivr', '📞 IVR / phone providers',
+  const ivrHtml = !isAdmin ? '' : settingsCard('ivr', '<i class="kc-ic kc-ic-call" aria-hidden="true"></i> IVR / phone providers',
     `${ivrList.length} provider${ivrList.length === 1 ? '' : 's'} — options when adding a virtual number`, `
       <div style="padding:10px 16px 2px;display:flex;flex-wrap:wrap;gap:6px;">
         ${ivrList.map(p => `<span class="badge badge-vn">${escHtml(p)}</span>`).join('')}
@@ -23270,10 +23279,10 @@ async function renderSettingsTab() {
         <button class="btn btn-outline btn-sm kc-ic kc-ic-save" onclick="saveStockCategories()">Save categories</button>
       </div>
       <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
-        Your own stock types, added to the twelve built in (📱 Phone, 💳 SIM, 🔌 Charger, 🔗 Cable, 🎧 Earphones,
-        🛡️ Case &amp; cover, 🔋 Power bank, 💾 Memory card, 🚗 Car accessory, 🔧 Repair part, 🧩 Accessory, 📦 Other).
+        Your own stock types, added to the twelve built in (<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Phone, <i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM, 🔌 Charger, <i class="kc-ic kc-ic-link" aria-hidden="true"></i> Cable, 🎧 Earphones,
+        <i class="kc-ic kc-ic-shield" aria-hidden="true"></i> Case &amp; cover, <i class="kc-ic kc-ic-battery" aria-hidden="true"></i> Power bank, <i class="kc-ic kc-ic-save" aria-hidden="true"></i> Memory card, <i class="kc-ic kc-ic-car" aria-hidden="true"></i> Car accessory, <i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> Repair part, <i class="kc-ic kc-ic-piece" aria-hidden="true"></i> Accessory, <i class="kc-ic kc-ic-package" aria-hidden="true"></i> Other).
         Comma-separated; add an emoji at the front if you like. A name that repeats a built-in one is ignored, and
-        <strong>the built-in twelve cannot be removed here</strong> — 📱 Phone in particular carries money
+        <strong>the built-in twelve cannot be removed here</strong> — <i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Phone in particular carries money
         (it takes an IMEI at the till and books a phone sale). Removing one of your own leaves any item already
         filed under it exactly where it is.</div>`);
 
@@ -23282,7 +23291,7 @@ async function renderSettingsTab() {
   // this tells any helper which converter handles which handset, and where the
   // same job can be done in-app. The work itself is charged via the "Contact
   // Transfer / Phone Setup" line on the Online & Print menu.
-  const contactToolsHtml = settingsCard('contacttools', '🔧 Contact tools (phone migrations)',
+  const contactToolsHtml = settingsCard('contacttools', '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> Contact tools (phone migrations)',
     'which converter handles which handset', `
       <div style="padding:10px 16px 6px;">
         <div class="table-wrap"><table>
@@ -23312,13 +23321,13 @@ async function renderSettingsTab() {
     </div>`;
   const pricingCards = [
     menuHtml, extraHtml,
-    settingsCard('rates', '📱 Rental Rates', `${cfg.rentalRates.length} countries`, `
+    settingsCard('rates', '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Rental Rates', `${cfg.rentalRates.length} countries`, `
       <div class="table-wrap"><table><thead><tr><th>Country</th><th>£/day</th><th>Min £</th><th>Cap £</th><th>Cap period (days)</th><th title="Every day past the first cap period charges this instead of the full day rate. Each period is still capped.">After-cap £/day</th><th>VN £/wk</th><th>VN £/30d</th><th></th></tr></thead>
       <tbody>${rateRows}</tbody></table></div>`),
-    settingsCard('damage', '💥 Damage / Loss Charges', 'what a lost/broken item costs', `
+    settingsCard('damage', '<i class="kc-ic kc-ic-burst" aria-hidden="true"></i> Damage / Loss Charges', 'what a lost/broken item costs', `
       <div class="table-wrap"><table><thead><tr><th>Country</th><th>Phone £</th><th>Charger £</th><th>SIM £</th><th></th></tr></thead>
       <tbody>${damageRows}</tbody></table></div>`),
-    settingsCard('fees', '⚙️ Fees & Rules', 'late fees, SIM fees, discounts', `
+    settingsCard('fees', '<i class="kc-ic kc-ic-gear" aria-hidden="true"></i> Fees & Rules', 'late fees, SIM fees, discounts', `
       <div class="table-wrap"><table><thead><tr><th>What it is</th><th>Value</th><th></th></tr></thead>
       <tbody>${settingRows}</tbody></table></div>`),
   ].filter(Boolean).join('');
@@ -23327,12 +23336,12 @@ async function renderSettingsTab() {
   // account the business runs on: where to log in, what it costs, when it
   // renews. Credentials live encrypted server-side; reveal is on demand.
   bizAccountsCache = bizacc?.accounts || [];
-  const BIZ_CAT_LABELS = { infrastructure: '🏗 Infrastructure', telecom: '📶 Telecom', ivr: '📞 IVR / PBX', email: '📧 Email', finance: '💷 Finance', other: '📦 Other' };
+  const BIZ_CAT_LABELS = { infrastructure: '<i class="kc-ic kc-ic-build" aria-hidden="true"></i> Infrastructure', telecom: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i> Telecom', ivr: '<i class="kc-ic kc-ic-call" aria-hidden="true"></i> IVR / PBX', email: '<i class="kc-ic kc-ic-email" aria-hidden="true"></i> Email', finance: '<i class="kc-ic kc-ic-pound" aria-hidden="true"></i> Finance', other: '<i class="kc-ic kc-ic-package" aria-hidden="true"></i> Other' };
   const activeBiz = bizAccountsCache.filter(a => a.active);
   const bizTotal = activeBiz.reduce((s, a) => s + (a.monthlyCost || 0), 0);
   const today10 = new Date().toISOString().slice(0, 10);
   const soon10 = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
-  const bizAccHtml = bizacc?.success ? settingsCard('bizacc', '🗄 Accounts & subscriptions',
+  const bizAccHtml = bizacc?.success ? settingsCard('bizacc', '<i class="kc-ic kc-ic-archive" aria-hidden="true"></i> Accounts & subscriptions',
     `${activeBiz.length} account${activeBiz.length === 1 ? '' : 's'} · ~${fmtGbp(bizTotal)}/month`, `
       <table><thead><tr><th>Account</th><th>Login</th><th>£/month</th><th>Renews</th><th></th></tr></thead>
       <tbody>
@@ -23371,7 +23380,7 @@ async function renderSettingsTab() {
   phoneModelsCache = pguide?.models || [];
   const activeModels = phoneModelsCache.filter(m => m.active);
   const retiredModels = phoneModelsCache.filter(m => !m.active);
-  const phoneGuideHtml = pguide?.success ? settingsCard('phoneguide', '📱 Phone guide',
+  const phoneGuideHtml = pguide?.success ? settingsCard('phoneguide', '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Phone guide',
     `${activeModels.length} model${activeModels.length === 1 ? '' : 's'} on the public guide`, `
       <table><thead><tr><th>Phone</th><th>Price</th><th>Specs</th><th>Pros &amp; cons</th><th></th></tr></thead>
       <tbody>
@@ -23381,7 +23390,7 @@ async function renderSettingsTab() {
             <td><strong>${escHtml(m.name)}</strong><div style="font-size:var(--fs-micro);color:var(--muted);">order ${m.sortOrder}${m.notes ? ' · ' + escHtml(m.notes.slice(0, 50)) : ''}</div></td>
             <td style="font-feature-settings:'tnum';">${m.price != null ? fmtGbp(m.price) : '—'}</td>
             <td style="font-size:var(--fs-small);color:var(--muted);max-width:260px;">${escHtml(['Dual SIM: ' + (m.dualSim || '—'), 'Hebrew: ' + (m.yiddishText || '—'), 'Touch: ' + (m.touchScreen || '—'), 'Text: ' + (m.texting || '—')].join(' · '))}</td>
-            <td style="font-size:var(--fs-small);">${m.pros || m.cons ? '✍️ written' : '<span style="color:var(--muted);">not written yet</span>'}</td>
+            <td style="font-size:var(--fs-small);">${m.pros || m.cons ? '<i class="kc-ic kc-ic-sign" aria-hidden="true"></i> written' : '<span style="color:var(--muted);">not written yet</span>'}</td>
             <td style="white-space:nowrap;">
               <button class="action-btn" aria-label="Edit ${escHtml(m.name || 'model')}" onclick="openPhoneModelModal('${escHtml(m.id)}')">✏️</button>
               <button class="action-btn danger" aria-label="Retire ${escHtml(m.name || 'model')}" onclick="retirePhoneModel('${escHtml(m.id)}', '${escJs(m.name)}')">✕</button>
@@ -23404,7 +23413,7 @@ async function renderSettingsTab() {
     const style = mode === 'live' ? 'badge-active' : mode === 'test' ? 'badge-sim' : 'badge-rental';
     return `<span class="badge ${style}">${escHtml(mode.toUpperCase())}</span>`;
   };
-  const msgHtml = settingsCard('messaging', '📨 Messaging (email & SMS)',
+  const msgHtml = settingsCard('messaging', '<i class="kc-ic kc-ic-email" aria-hidden="true"></i> Messaging (email & SMS)',
     `email ${health?.email?.configured ? health.email.mode : 'not connected'} · SMS ${health?.sms?.configured ? health.sms.mode : 'not connected'}`, `
       <table><thead><tr><th>Channel</th><th>Provider</th><th>Status</th><th>What the status means</th></tr></thead>
       <tbody>
@@ -23445,7 +23454,7 @@ async function renderSettingsTab() {
   // checked" was a list with nothing to press and every figure stayed
   // provisional for ever. This is the thing to press.
   const unconfirmedHtml = (currentStaff && currentStaff.role !== 'owner') ? '' :
-    settingsCard('unchecked', '🔎 Figures nobody has checked',
+    settingsCard('unchecked', '<i class="kc-ic kc-ic-search" aria-hidden="true"></i> Figures nobody has checked',
       'prices the public page will not quote', `
       <div id="uncheckedBody" style="padding:12px 14px 14px;font-size:var(--fs-body);color:var(--muted);">
         <button class="btn btn-outline btn-sm" onclick="loadUncheckedRates()">↻ Show me</button>
@@ -23455,7 +23464,7 @@ async function renderSettingsTab() {
   // Shop details — public-facing facts the owner should be able to change
   // without a code change (they show on the welcome page within minutes).
   const openingHours = cfg.settings.find(s => s.key === 'opening_hours')?.textValue || 'Sunday–Thursday, 2:00–6:30pm';
-  const shopHtml = settingsCard('shop-details', '🏪 Shop details', 'what the public site shows', `
+  const shopHtml = settingsCard('shop-details', '<i class="kc-ic kc-ic-shop" aria-hidden="true"></i> Shop details', 'what the public site shows', `
       <div style="padding:12px 14px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
         <label style="font-size:var(--fs-body);color:var(--muted);">Opening hours</label>
         <input class="form-input" id="stOpeningHours" value="${escHtml(openingHours)}"
@@ -23470,7 +23479,7 @@ async function renderSettingsTab() {
   // sends, so what you see here is the email — not a second rendering that can
   // drift away from it.
   const copyOf = (k, d) => cfg.settings.find(x => x.key === k)?.textValue || d;
-  const emailCopyHtml = settingsCard('email-copy', '✉️ Receipt wording',
+  const emailCopyHtml = settingsCard('email-copy', '<i class="kc-ic kc-ic-mail" aria-hidden="true"></i> Receipt wording',
     'what customers read', `
       <div style="padding:12px 14px 14px;display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;">
         <div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:10px;">
@@ -23507,7 +23516,7 @@ async function renderSettingsTab() {
 
   // Travel requirements matrix (owner-only) — filled lazily after render.
   const travelRulesHtml = (currentStaff && currentStaff.role !== 'owner') ? '' :
-    settingsCard('travel-rules', '🛂 Travel requirements',
+    settingsCard('travel-rules', '<i class="kc-ic kc-ic-passport" aria-hidden="true"></i> Travel requirements',
       'what each passport needs, per destination', `
       <div id="travelRulesBody" style="padding:12px 14px 14px;"><div style="color:var(--muted);font-size:var(--fs-body);">Loading…</div></div>`);
 
@@ -23519,7 +23528,7 @@ async function renderSettingsTab() {
   const elidBal = Number(elidSummary?.balance);
   const elidHasBal = Number.isFinite(elidBal);
   const elidCard = (!elidSummary || /not configured/i.test(elidSummary.error || '')) ? '' :
-    settingsCard('elid', '📞 ELID (telecom upstream)',
+    settingsCard('elid', '<i class="kc-ic kc-ic-call" aria-hidden="true"></i> ELID (telecom upstream)',
       elidSummary.success ? (elidHasBal ? `credit ${fmtGbp(elidBal)}` : 'connected') : 'connection issue', `
       <div style="padding:12px 14px 14px;font-size:var(--fs-body);">
         ${elidSummary.success
@@ -23548,7 +23557,7 @@ async function renderSettingsTab() {
       <strong style="font-feature-settings:'tnum';">${fmtGbp(f.gbp)}</strong>
     </div>`;
   const aiCard = !aiUsed ? '' :
-    settingsCard('aiusage', '🤖 AI usage (Gemini)',
+    settingsCard('aiusage', '<i class="kc-ic kc-ic-bot" aria-hidden="true"></i> AI usage (Gemini)',
       `${fmtGbp(aiUsed.thisMonth.gbp)} this month · est.`, `
       <div style="padding:12px 14px 14px;font-size:var(--fs-body);">
         ${!aiUsed.enabled ? `<div style="color:var(--muted);margin-bottom:10px;">Gemini isn’t switched on — nothing is being spent.</div>` : ''}
@@ -23704,7 +23713,7 @@ async function loadTravelRulesCard() {
     </div>`;
   }).join('');
   el.innerHTML = `<div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
-    Change what each passport needs for each destination — used by the 🛂 panel on bookings and the reminders. New booking views pick up changes within a minute. Guidance only; always confirm on the official site.</div>${blocks}`;
+    Change what each passport needs for each destination — used by the <i class="kc-ic kc-ic-passport" aria-hidden="true"></i> panel on bookings and the reminders. New booking views pick up changes within a minute. Guidance only; always confirm on the official site.</div>${blocks}`;
 }
 
 async function saveTravelRule(btn) {
@@ -23783,7 +23792,7 @@ async function loadMessageLog() {
     const when = new Date(e.at);
     return `<tr>
       <td style="white-space:nowrap;font-size:var(--fs-small);color:var(--muted);">${when.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} ${when.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</td>
-      <td>${e.channel === 'sms' ? '💬 SMS' : '📧 Email'}${
+      <td>${e.channel === 'sms' ? '💬 SMS' : '<i class="kc-ic kc-ic-email" aria-hidden="true"></i> Email'}${
         // 'sms_in' is a column value, not a phrase. Printed raw it sat under
         // the channel looking like a fault code; the direction is the thing a
         // reader actually wants from it.
@@ -24271,7 +24280,7 @@ function openBizAccountModal(id = null) {
   const a = id ? bizAccountsCache.find(x => x.id === id) : null;
   const cats = [['infrastructure', 'Infrastructure'], ['telecom', 'Telecom'], ['ivr', 'IVR / PBX'], ['email', 'Email'], ['finance', 'Finance'], ['other', 'Other']];
   showDynamicModal(`
-    <div class="modal-title">${a ? '✏️ Edit account' : '➕ Add account'}</div>
+    <div class="modal-title">${a ? '<i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Edit account' : '➕ Add account'}</div>
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">Name *</label>
