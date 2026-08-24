@@ -96,7 +96,7 @@
 
 .eq-btn[data-given="0"] { opacity: 0.35; }
 
-.eq-btn:hover { opacity: 0.7; }
+.eq-btn:not(:disabled):hover { opacity: 0.7; }
 
 
 
@@ -1129,7 +1129,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   font: inherit; font-size: var(--fs-body); color: var(--text);
   cursor: pointer; white-space: normal;
 }
-.kc-rowmenu-item:hover { background: var(--accent-wash); color: var(--accent); }
+.kc-rowmenu-item:not(:disabled):hover { background: var(--accent-wash); color: var(--accent); }
 .kc-rowmenu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 /* The destructive one is set apart as well as coloured — a hairline above it
@@ -1235,7 +1235,7 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   border-radius: 999px; padding: 5px 12px; font: inherit; font-size: var(--fs-small);
   cursor: pointer; white-space: nowrap;
 }
-.cm-chip:hover { border-color: var(--accent); }
+.cm-chip:not(:disabled):hover { border-color: var(--accent); }
 .cm-chip.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .cm-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
@@ -1759,7 +1759,7 @@ body.pos-mode #kcNextAction { display: none; }
   font-family: inherit;
 }
 
-.action-btn:hover { border-color: var(--accent); color: var(--accent); }
+.action-btn:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
 
 .action-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
 
@@ -2568,7 +2568,7 @@ body.kc-win-dragging .kc-wgrip::after { opacity: 0.55; }
   border-radius: var(--radius); cursor: pointer; white-space: nowrap;
   transition: border-color 0.12s, background 0.12s, color 0.12s;
 }
-.card-menu-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-wash); }
+.card-menu-btn:not(:disabled):hover { border-color: var(--accent); color: var(--accent); background: var(--accent-wash); }
 .card-menu-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .card-menu-chev { font-size: 9px; opacity: .7; }
 .card-menu-btn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-wash); }
@@ -2612,7 +2612,7 @@ body.kc-win-dragging .kc-wgrip::after { opacity: 0.55; }
   transition: border-color 0.12s, background 0.12s;
 }
 
-.card-tool:hover { border-color: var(--accent); background: var(--accent-wash); }
+.card-tool:not(:disabled):hover { border-color: var(--accent); background: var(--accent-wash); }
 
 .card-tool:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
@@ -3227,7 +3227,7 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
   border-radius: 999px; padding: 6px 14px; min-height: 30px;
   font: inherit; font-size: var(--fs-small); cursor: pointer;
 }
-.biz-tab:hover { border-color: var(--accent); color: var(--accent); }
+.biz-tab:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
 .biz-tab.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
 
 /* 200px, not 140: at 140 four tiles need 590px in a 504px modal and the fourth
@@ -3539,7 +3539,7 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
   color: var(--text);
 }
 
-.pos-note:hover { border-color: var(--accent); }
+.pos-note:not(:disabled):hover { border-color: var(--accent); }
 
 .pos-total-row {
   display: flex; justify-content: space-between; align-items: baseline;
@@ -4174,7 +4174,7 @@ td { border-top-color: color-mix(in srgb, var(--border) 55%, transparent); }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-.rail-item:hover { background: var(--accent-wash); }
+.rail-item:not(:disabled):hover { background: var(--accent-wash); }
 
 .rail-item.active { background: var(--accent-wash); color: var(--accent); font-weight: 600; }
 
@@ -4712,4 +4712,26 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 .kc-dh-heb {
   font-size: var(--fs-micro); color: var(--gold); line-height: 1.3;
   white-space: nowrap;
+}
+
+/* ── Disabled, for the controls that are not .btn ────────────────────────
+   globals.css disables .btn and its variants; this sheet had NO :disabled
+   rule at all, so every hand-rolled control in the app looked pressable
+   while inert. The case that names the problem: the till's wallet "Max"
+   button (.pos-note) carries `disabled` whenever there is no credit to
+   apply, and painted identically to a live one — press it, nothing happens,
+   and the only reading available is "the till is broken".
+
+   Two channels here, matching .btn: dimmed (seen) and not-allowed (felt).
+   The third — no hover response — is done at each hover rule instead of by
+   overriding it back. These hovers change border-color, color AND background,
+   in different combinations per control, so a blanket reset would have to
+   re-state every control's resting value and would rot the moment one
+   changed. :not(:disabled) on the hover itself cannot drift. */
+:is(.action-btn, .card-tool, .pos-note, .pos-method, .pos-cat, .biz-tab,
+    .cm-chip, .rail-item, .task-mini, .eq-btn, .cs-btn, .card-menu-btn,
+    .kc-rowmenu-item, .rd-act):disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
 }
