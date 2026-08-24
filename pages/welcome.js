@@ -1318,4 +1318,66 @@ const SKY_CSS = `
     .sk-mobnav a.sk-mobnav-cta.on{color:#fff;border-color:var(--sk-sky)}
   }
   @media (max-width:820px){ .sk-grid{grid-template-columns:1fr} .sk-visit-grid{grid-template-columns:1fr} .sk-map-card{min-height:300px} .sk-map-card iframe{min-height:300px} }
+
+  /* ── PROTOTYPE, off unless :root[data-sk="calm"] ────────────────────────
+     The four findings from the 24 Aug design audit that survived a second
+     look. Inert by default — exactly like the light-rail prototype — so the
+     page a customer sees is unchanged until the owner has judged these.
+     If adopted, each one becomes a real edit (markup deleted, base values
+     changed) rather than an override; display:none is how you AUDITION a
+     removal, not how you ship one.
+
+     1. NINE EYEBROWS. Uppercase letter-spaced labels above nine of the page's
+        sections. As a device they mark a chapter; used on every section they
+        mark nothing — and four of them restate the heading directly beneath
+        ("Message us" over "Send us a message", "Common questions" over "The
+        things people ring up and ask", "Visit us" over "Come and see us",
+        "The Kosher Connect app" over "Your account online"). Those four go.
+        The other five stay and the reason is in each: the hero's carries the
+        town, the three band labels are the words the nav links use — with a
+        scrollspy lighting them, the label confirms you arrived where you
+        clicked — and "Why people send their friends" has no heading under
+        it, so it IS the heading. */
+  :root[data-sk="calm"] .sk-faq .sk-eyebrow,
+  :root[data-sk="calm"] .sk-appinfo .sk-eyebrow,
+  :root[data-sk="calm"] .sk-contact .sk-eyebrow,
+  :root[data-sk="calm"] .sk-visit .sk-eyebrow{display:none}
+
+  /*  2. ONE RHYTHM FOR EVERY SECTION. Eight sections at 70–76px top and
+        bottom, so the page scrolls at a metronome tick and nothing is
+        louder than anything else. Padding is the cheapest way to say what
+        matters. The pitch (the three bands) gets air; the list of extras
+        gets tightened because it is a list; the one-line "why people send
+        their friends" gets least, because a single sentence between two
+        big sections is punctuation, not a chapter. */
+  :root[data-sk="calm"] .sk-band{padding:84px 0}
+  :root[data-sk="calm"] .sk-also{padding:56px 0}
+  :root[data-sk="calm"] .sk-friends{padding:44px 0}
+  :root[data-sk="calm"] .sk-faq{padding:62px 0}
+  :root[data-sk="calm"] .sk-contact{padding:66px 0}
+  :root[data-sk="calm"] .sk-visit{padding:62px 0 68px}
+  /* The phone already tightens the FAQ (74→54 in the max-width:560px block).
+     A flat calm value out-specifies that and made the section BIGGER on a
+     phone than it is today — the opposite of the finding. Keep the same
+     ratio the phone rule chose, against the new desktop number. */
+  @media (max-width:560px){ :root[data-sk="calm"] .sk-faq{padding:46px 0} }
+
+  /*  3. EVERYTHING FADES UP. Nine blocks carry .sk-reveal, so the page never
+        settles: something is always arriving. Keep the entrance where it is
+        an entrance — the three feature bands, which are the argument, read
+        as one orchestrated run — and let the practical half of the page
+        simply BE there when the reader arrives at it. Someone scrolling to
+        find the phone number should not have to wait for it to animate. */
+  :root[data-sk="calm"] .js-on .sk-also .sk-reveal:not(.in),
+  :root[data-sk="calm"] .js-on .sk-friends .sk-reveal:not(.in),
+  :root[data-sk="calm"] .js-on .sk-faq .sk-reveal:not(.in),
+  :root[data-sk="calm"] .js-on .sk-contact .sk-reveal:not(.in),
+  :root[data-sk="calm"] .js-on .sk-visit .sk-reveal:not(.in){opacity:1;transform:none}
+
+  /*  4. THE ITALIC SUBLINE. Tier three of every band heading is italic. An
+        italicised line inside an otherwise upright heading stack is one of
+        the most reliable generated-page tells, and this one does not need
+        it: the line is already gold and already 600, which is two signals
+        of difference before the slant. Roman, and nothing else changes. */
+  :root[data-sk="calm"] .sk-subline{font-style:normal}
 `
