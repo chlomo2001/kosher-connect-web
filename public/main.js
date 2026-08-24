@@ -588,7 +588,7 @@ function showReloadBanner(msg) {
   const b = document.createElement('div');
   b.id = 'kcReloadBanner';
   b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:6000;background:var(--danger-solid);color:#fff;padding:11px 18px;text-align:center;font-size:var(--fs-ui);font-weight:500;box-shadow:0 2px 8px rgba(0,0,0,.2);';
-  b.innerHTML = `⚠ ${escHtml(msg)} <button onclick="location.reload()" style="margin-left:12px;background:#fff;color:var(--danger-solid);border:none;border-radius:7px;padding:5px 14px;cursor:pointer;font-weight:700;">↻ Reload</button>`;
+  b.innerHTML = `<i class="kc-ic kc-ic-alert" aria-hidden="true"></i> ${escHtml(msg)} <button onclick="location.reload()" style="margin-left:12px;background:#fff;color:var(--danger-solid);border:none;border-radius:7px;padding:5px 14px;cursor:pointer;font-weight:700;">↻ Reload</button>`;
   document.body.appendChild(b);
 }
 
@@ -3321,7 +3321,7 @@ function availabilityCalendarHtml() {
               Gregorian, so this switches the COLUMNS, never the dates. */''}
         <button class="btn btn-outline btn-sm" onclick="calToggleSystem()"
           title="${heb ? 'Show a Gregorian month instead' : 'Show a Hebrew month instead — א׳ to כ״ט of one Hebrew month'}"
-          aria-pressed="${heb ? 'true' : 'false'}">${heb ? '<i class="kc-ic kc-ic-calendar" aria-hidden="true"></i> Gregorian months' : '🕎 Hebrew months'}</button>
+          aria-pressed="${heb ? 'true' : 'false'}">${heb ? '<i class="kc-ic kc-ic-calendar" aria-hidden="true"></i> Gregorian months' : '<i class="kc-ic kc-ic-scroll" aria-hidden="true"></i> Hebrew months'}</button>
         <span class="cal-legend">
           <span style="white-space:nowrap;"><span class="cal-key cal-active"></span> out</span>
           <span style="white-space:nowrap;"><span class="cal-key cal-booked"></span> reserved (striped)</span>
@@ -3438,9 +3438,9 @@ function renderRentalRows() {
     else if (computedStatus === 'booked')               statusBadge = `<span class="badge" style="background:var(--canvas-cream);color:var(--gold);"><i class="kc-ic kc-ic-calendar" aria-hidden="true"></i> Reserved${r.fromDate <= today ? ' — pickup due' : ''}</span>`;
     else if (computedStatus === 'active' && r.toDate === today) statusBadge = `<span class="badge badge-sim">Due Today</span>`;
     else if (computedStatus === 'active')               statusBadge = `<span class="badge badge-rental">Active</span>`;
-    else if (computedStatus === 'overdue')              statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--danger-ink);">Overdue ⚠</span>`;
+    else if (computedStatus === 'overdue')              statusBadge = `<span class="badge kc-ic kc-ic-alert" style="background:rgba(239,68,68,0.15);color:var(--danger-ink);">Overdue</span>`;
     else if (computedStatus === 'returned')             statusBadge = `<span class="badge badge-active">Closed</span>`;
-    else                                                statusBadge = `<span class="badge" style="background:var(--canvas-cream);color:var(--gold);">Returned ⚠</span>`;
+    else                                                statusBadge = `<span class="badge kc-ic kc-ic-alert" style="background:var(--canvas-cream);color:var(--gold);">Returned</span>`;
 
     const paid = r.amountPaid || 0;
     const totalOwed = rentalGrandTotal(r) - paid;
@@ -3452,7 +3452,7 @@ function renderRentalRows() {
       </td>
       <td>
         <div class="customer-name">${custNameLink(r.customerId, nameHtml(r.customerName || '—'))}</div>
-        <div class="customer-email" style="font-size:var(--fs-micro);">${r.vn ? '🔢 +'+escHtml(r.vnPrefix || '') : ''}</div>
+        <div class="customer-email" style="font-size:var(--fs-micro);">${r.vn ? '<i class="kc-ic kc-ic-digits" aria-hidden="true"></i> +'+escHtml(r.vnPrefix || '') : ''}</div>
       </td>
       <td class="kc-phone">${rentalDeviceChip(r, { stacked: true })}</td>
       ${/* Hebrew under the RETURN date only. The cell already stacks two dates, so
@@ -3472,7 +3472,7 @@ function renderRentalRows() {
           title="Every item is accounted for — this hire just needs closing">All items in</span>` : ''}</td>
       <td>
         <div class="row-actions">
-          ${computedStatus === 'booked' ? `<button class="action-btn" style="color:var(--success);font-weight:600;" onclick="startReservation('${r.id}')">▶ Start</button>` : ''}
+          ${computedStatus === 'booked' ? `<button class="action-btn kc-ic kc-ic-play" style="color:var(--success);font-weight:600;" onclick="startReservation('${r.id}')">Start</button>` : ''}
           <button class="action-btn kc-ic kc-ic-gear" onclick="openManageRentalModal('${r.id}')">Manage</button>
           ${kcRowMenuHtml([
             { label: 'Remind me about this', icon: 'clock', onclick: `openRemindModal('rental','${r.id}')` },
@@ -4722,7 +4722,7 @@ function showDonePanel(d) {
     : `<button class="btn btn-outline rd-act kc-ic kc-ic-mail" disabled title="${ours ? 'That address is a shop account login, not the customer\u2019s own' : 'No email address on this customer'}">Email receipt<span class="rd-sub">${ours ? 'shop login, not theirs' : 'no address on file'}</span></button>`;
   const smsBtn = phone && d.smsText
     ? `<button class="btn btn-outline rd-act" onclick="kcDoneText()">
-         💬 Text receipt<span class="rd-sub">${escHtml(fmtPhone(phone))}</span></button>`
+         <i class="kc-ic kc-ic-chat" aria-hidden="true"></i> Text receipt<span class="rd-sub">${escHtml(fmtPhone(phone))}</span></button>`
     : '';
   const againBtn = d.again
     ? `<button class="btn btn-outline rd-act" onclick="kcDoneAgain()">
@@ -4894,7 +4894,7 @@ async function saveNewRental(addAnother = false) {
           (covered.length
             ? `Covered instead: ${covered.map(p => `${escHtml(fmtPhone(p.number))} (till ${fmtDate(p.poolExpiry)})`).join(' · ')} — Cancel and pick one, or…`
             : 'No other covered phone is free for these dates, so…') +
-          `<br>booking this one creates a 🔴 high-priority task to activate “${escHtml(gPhone.pool)}” by <strong>${fmtDate(actBy)}</strong>.`,
+          `<br>booking this one creates a high-priority task to activate “${escHtml(gPhone.pool)}” by <strong>${fmtDate(actBy)}</strong>.`,
         okLabel: 'Create the task & book anyway', okIcon: 'edit-note',
       });
       if (!ok) return; // operator backs out to pick a covered phone
@@ -5169,7 +5169,7 @@ async function startReservation(rentalId) {
     body: `<strong>${escName(r.customerName || '')}</strong> takes ${escHtml(fmtPhone(r.phoneNumber || ''))} today.<br>
       Charged window: <strong>${fmtDate(pickup)} → ${fmtDate(r.toDate)}</strong> · ${newDays} chargeable days.${priceNote ? '<br>' + priceNote : ''}`,
     amount: newPrice,
-    okLabel: '▶ Start & charge',
+    okLabel: 'Start & charge',
   }))) return;
   r.pickupDate = pickup;
   r.chargeableDays = newDays;
@@ -5206,7 +5206,7 @@ function openVoidRentalModal(rentalId) {
     <div style="font-size:var(--fs-body);margin-bottom:12px;">
       ${escHtml(fmtPhone(r.phoneNumber || ''))} · ${fmtDate(r.fromDate)} → ${fmtDate(r.toDate)}<br>
       Every charge on this rental reverses to £0 (${fmtGbp(owed)} today).
-      ${(r.amountPaid || 0) > 0 ? `<br>⚠ ${fmtGbp(r.amountPaid)} was already paid — it stays on the wallet as credit to refund or reuse.` : ''}
+      ${(r.amountPaid || 0) > 0 ? `<br><i class="kc-ic kc-ic-alert" aria-hidden="true"></i> ${fmtGbp(r.amountPaid)} was already paid — it stays on the wallet as credit to refund or reuse.` : ''}
       <br>The rental stays on the books marked <strong>voided</strong>, with the reason on the customer's history.
     </div>
     <div class="form-grid">
@@ -5878,7 +5878,7 @@ function openPoolsModal() {
           <span style="font-size:var(--fs-small);color:var(--muted);">
             ${ps.length} phone${ps.length === 1 ? '' : 's'} · ${rented} out
             ${reg ? ` · window ${reg.from ? fmtDate(reg.from) + ' → ' : 'till '}${reg.till ? fmtDate(reg.till) : '—'}` : ' · not in the pool list yet'}
-            ${outOfSync ? ` · ⚠ ${outOfSync} phone${outOfSync === 1 ? '' : 's'} out of sync — press Apply` : ''}
+            ${outOfSync ? ` · <i class="kc-ic kc-ic-alert" aria-hidden="true"></i> ${outOfSync} phone${outOfSync === 1 ? '' : 's'} out of sync — press Apply` : ''}
           </span>
           ${!ps.length && reg ? `<button class="action-btn danger" style="margin-left:auto;" onclick="deleteRentalPool('${escJs(name)}')" aria-label="Remove this pool">✕ Remove</button>` : ''}
         </div>
@@ -5891,7 +5891,7 @@ function openPoolsModal() {
             return `<tr style="cursor:pointer;" onclick="closeDynamicModal();openEditPhoneModal('${p.id}')" title="Edit this phone">
               <td class="kc-phone">${escHtml(fmtPhone(p.number))}</td>
               <td style="font-size:var(--fs-small);">${escHtml(p.model || '—')}</td>
-              <td>${p.status === 'rented' ? '<span class="badge badge-rental">Rented</span>' : p.maintenance ? '<span class="badge">🔧</span>' : '<span class="badge badge-active">Free</span>'}</td>
+              <td>${p.status === 'rented' ? '<span class="badge badge-rental">Rented</span>' : p.maintenance ? '<span class="badge kc-ic kc-ic-wrench" title="In maintenance"></span>' : '<span class="badge badge-active">Free</span>'}</td>
               <td class="kc-date" style="font-size:var(--fs-small);color:var(--muted);">${p.poolActiveFrom ? fmtDate(p.poolActiveFrom) : '—'}</td>
               <td class="kc-date" style="font-size:var(--fs-small);${expired ? 'color:var(--danger-ink);font-weight:700;' : ''}">${p.poolExpiry ? fmtDate(p.poolExpiry) + (expired ? ' ⚠ expired' : '') : '—'}</td>
             </tr>`;
@@ -6167,7 +6167,7 @@ function openManageRentalModal(rentalId) {
     <div id="mgGateBox" class="kc-gate" style="display:none;"></div>
     <div class="modal-actions" style="justify-content:space-between;">
       ${r.voided
-        ? `<span style="font-size:var(--fs-small);color:var(--muted);">↩ Voided ${fmtDate(r.voided.at)} — ${escHtml(r.voided.reason)}</span>`
+        ? `<span class="kc-ic kc-ic-undo" style="font-size:var(--fs-small);color:var(--muted);">Voided ${fmtDate(r.voided.at)} — ${escHtml(r.voided.reason)}</span>`
         : `<button class="btn btn-outline kc-ic kc-ic-undo" style="color:var(--danger-ink);border-color:var(--danger-ink);"
             onclick="openVoidRentalModal('${rentalId}')" title="Undo this rental — wrong person, didn't fly…">Void</button>`}
       <span class="modal-actions-group">
@@ -7798,11 +7798,14 @@ function customerLifecycle(c) {
   const lastMs = timeline.length ? new Date(timeline[0].date || 0).getTime()
     : (c.createdAt ? new Date(c.createdAt).getTime() : 0);
   const daysSince = lastMs ? Math.floor((Date.now() - lastMs) / 86400000) : Infinity;
-  if (spend >= 500 || timeline.length >= 12) return { key: 'regular', label: 'Regular', emoji: '<i class="kc-ic kc-ic-star" aria-hidden="true"></i>', color: 'var(--accent2)' };
-  if (hasLive) return { key: 'active', label: 'Active', emoji: '🟢', color: 'var(--success)' };
-  if (timeline.length <= 1 && daysSince < 60) return { key: 'new', label: 'New', emoji: '<i class="kc-ic kc-ic-sparkle" aria-hidden="true"></i>', color: 'var(--accent)' };
-  if (daysSince > 180) return { key: 'dormant', label: 'Dormant', emoji: '<i class="kc-ic kc-ic-snooze" aria-hidden="true"></i>', color: 'var(--muted)' };
-  return { key: 'past', label: 'Past', emoji: '·', color: 'var(--muted)' };
+  // `mark` is a CLASS, not markup: 'kc-ic kc-ic-star' or the status dot. Active
+  // is genuinely a status — a live rental, SIM or repair — so it gets the dot
+  // the rest of the app uses for one, rather than a drawing of a green circle.
+  if (spend >= 500 || timeline.length >= 12) return { key: 'regular', label: 'Regular', mark: 'kc-ic kc-ic-star', color: 'var(--accent2)' };
+  if (hasLive) return { key: 'active', label: 'Active', mark: 'kc-dot kc-dot-ok', color: 'var(--success)' };
+  if (timeline.length <= 1 && daysSince < 60) return { key: 'new', label: 'New', mark: 'kc-ic kc-ic-sparkle', color: 'var(--accent)' };
+  if (daysSince > 180) return { key: 'dormant', label: 'Dormant', mark: 'kc-ic kc-ic-snooze', color: 'var(--muted)' };
+  return { key: 'past', label: 'Past', mark: '', color: 'var(--muted)' };
 }
 
 // #82 — Next best action, generalized past flights. The single most pressing
@@ -7933,7 +7936,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
     const vnCover = virtualNumbers.find(v => v.customerId === c.id && v.status === 'Active');
     const item = (ok, okLabel, missingLabel, fixHtml) => `
       <div style="display:flex;align-items:center;gap:8px;font-size:var(--fs-body);padding:4px 0;">
-        <span>${ok ? '✔' : '⚠'}</span>
+        <span class="kc-ic ${ok ? 'kc-ic-check' : 'kc-ic-alert'}" aria-hidden="true"></span>
         <span style="flex:1;">${ok ? okLabel : missingLabel}</span>
         ${!ok ? fixHtml : ''}
       </div>`;
@@ -7980,7 +7983,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
           <span style="color:var(--muted);font-size:var(--fs-micro);display:block;margin-bottom:2px;"><i class="kc-ic kc-ic-card" aria-hidden="true"></i> House account</span>
           Settles day <strong>${ha.day || 1}</strong> monthly on the saved card
           ${ha.min ? ` · min ${fmtGbp(ha.min)}` : ''}${ha.max ? ` · max ${fmtGbp(ha.max)}` : ''}
-          · ${ha.lastSettled === thisYm ? `<span style="color:var(--success);">this month settled ✔</span>` : ha.lastSettled ? `last settled ${escHtml(ha.lastSettled)}` : 'never settled yet'}
+          · ${ha.lastSettled === thisYm ? `<span class="kc-ic kc-ic-check" style="color:var(--success);">this month settled</span>` : ha.lastSettled ? `last settled ${escHtml(ha.lastSettled)}` : 'never settled yet'}
           ${ha.lastInvoiceUrl ? ` · <a href="${escHtml(ha.lastInvoiceUrl)}" target="_blank" rel="noopener" style="color:var(--accent);"><i class="kc-ic kc-ic-receipt" aria-hidden="true"></i> last invoice${ha.lastInvoiceNumber ? ' ' + escHtml(ha.lastInvoiceNumber) : ''} ↗</a>` : ''}
         </span>
         <button class="btn btn-outline btn-sm kc-ic kc-ic-card" style="margin-left:auto;" onclick="openHouseSettleModal('${c.id}')">Settle month</button>
@@ -8000,7 +8003,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
       <div style="margin-bottom:16px;">
         ${custTasks.slice(0, 6).map(t => `
           <div style="display:flex;align-items:center;gap:8px;font-size:var(--fs-body);padding:5px 0;border-bottom:1px solid var(--border);">
-            <span>${t.priority === 'High' ? '🔴' : t.priority === 'Medium' ? '🟡' : '⚪'}</span>
+            <span class="kc-dot ${t.priority === 'High' ? 'kc-dot-high' : t.priority === 'Medium' ? 'kc-dot-medium' : 'kc-dot-idle'}" aria-hidden="true"></span>
             <span style="flex:1;min-width:0;">${escHtml(t.title || '')}</span>
             ${t.dueDate ? `<span style="color:var(--muted);font-size:var(--fs-micro);white-space:nowrap;">${fmtDate(t.dueDate)}</span>` : ''}
           </div>`).join('')}
@@ -8039,7 +8042,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
       <div class="detail-header">
         <div class="avatar">${initials}</div>
         <div class="detail-headline">
-          <div class="detail-name">${c.title ? `<span class="cust-title">${escHtml(capName(c.title))}</span> ` : ''}${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span title="Passport on file" style="font-size:var(--fs-lead);">🛂</span>' : ''} <span class="lifecycle-chip" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${lifecycle.emoji} ${lifecycle.label}</span></div>
+          <div class="detail-name">${c.title ? `<span class="cust-title">${escHtml(capName(c.title))}</span> ` : ''}${nameHtml(`${c.firstName || ''} ${c.lastName || ''}`.trim())}${customerHasPassport(c) ? ' <span class="kc-ic kc-ic-passport" title="Passport on file" style="font-size:var(--fs-lead);"></span>' : ''} <span class="lifecycle-chip ${lifecycle.mark}" title="Relationship stage (auto)" style="color:${lifecycle.color};border:1px solid ${lifecycle.color};">${escHtml(lifecycle.label)}</span></div>
           ${/* One fact per unit. The owner's screenshot had "+44" ending a line
                 and "7311 492 097" starting the next — which is not a phone
                 number, it is two pieces of one — and "no contact email" split
@@ -8498,7 +8501,7 @@ function renderCustomerPage(id) {
     customerPageId = null;
     main.innerHTML = `${crumb}
       <div class="detail-panel" style="text-align:center;padding:40px 20px;">
-        <div style="font-size:var(--fs-hero);margin-bottom:8px;">👤</div>
+        <div class="kc-ic kc-ic-user" style="font-size:var(--fs-hero);margin-bottom:8px;"></div>
         <div style="font-weight:500;margin-bottom:4px;">Customer not found</div>
         <div style="color:var(--muted);font-size:var(--fs-body);">This link may be old, or the record was merged or deleted.</div>
       </div>`;
@@ -8680,20 +8683,22 @@ const KC_RECORD = (() => {
 // of that item was deliberately not taken, and nothing here reaches the portal.
 const KC_DOCFOLDERS = (() => {
   const FOLDERS = [
-    ['passport', '🛂 Passports & ID', /passport|\bid\b|identity|driving|licen[cs]e|birth ?cert/i],
-    ['travel', '✈️ Tickets & itineraries', /ticket|boarding|itiner|e-?ticket|flight|booking ?ref|pnr/i],
-    ['money', '🧾 Receipts & invoices', /receipt|invoice|\bbill\b|statement|payment|refund/i],
-    ['forms', '📄 Forms & agreements', /contract|agreement|\bform\b|terms|mandate|direct ?debit|\bdd\b|authoris/i],
-    ['photos', '📷 Photos & scans', /\.(jpe?g|png|heic|heif|webp|tiff?)$/i],
-    ['other', '📁 Everything else', null],
+    ['passport', 'Passports & ID', /passport|\bid\b|identity|driving|licen[cs]e|birth ?cert/i, 'passport'],
+    ['travel', 'Tickets & itineraries', /ticket|boarding|itiner|e-?ticket|flight|booking ?ref|pnr/i, 'plane'],
+    ['money', 'Receipts & invoices', /receipt|invoice|\bbill\b|statement|payment|refund/i, 'receipt'],
+    ['forms', 'Forms & agreements', /contract|agreement|\bform\b|terms|mandate|direct ?debit|\bdd\b|authoris/i, 'file'],
+    ['photos', 'Photos & scans', /\.(jpe?g|png|heic|heif|webp|tiff?)$/i, 'camera'],
+    ['other', 'Everything else', null, 'folder'],
   ];
   const LABELS = Object.fromEntries(FOLDERS.map(([key, label]) => [key, label]));
+  const ICONS = Object.fromEntries(FOLDERS.map(([key, , , icon]) => [key, icon]));
   function documentFolder(doc) {
     const name = String((doc && doc.filename) || '');
     for (const [key, , pattern] of FOLDERS) if (pattern && pattern.test(name)) return key;
     return 'other';
   }
   const folderLabel = (key) => LABELS[key] || LABELS.other;
+  const folderIcon = (key) => ICONS[key] || ICONS.other;
   function groupDocuments(docs = []) {
     const bucket = new Map();
     for (const doc of docs) {
@@ -8705,7 +8710,7 @@ const KC_DOCFOLDERS = (() => {
     return FOLDERS.filter(([key]) => bucket.has(key))
       .map(([key, label]) => ({ key, label, docs: bucket.get(key), count: bucket.get(key).length }));
   }
-  return { FOLDERS, documentFolder, folderLabel, groupDocuments };
+  return { FOLDERS, documentFolder, folderLabel, folderIcon, groupDocuments };
 })();
 // ── KC_DOCFOLDERS mirror end ──
 
@@ -8771,9 +8776,9 @@ function renderDocsSection(custId, docs) {
               <div class="doc-folder-head" onclick="toggleDocFolder('${escJs(String(custId))}','${escJs(g.key)}')"
                 role="button" tabindex="0"
                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDocFolder('${escJs(String(custId))}','${escJs(g.key)}')}">
-                <span id="docChev-${escHtml(String(custId))}-${escHtml(g.key)}" class="doc-chev"
-                  style="${open ? 'transform:rotate(90deg);' : ''}">▶</span>
-                <strong>${escHtml(g.label)}</strong>
+                <span id="docChev-${escHtml(String(custId))}-${escHtml(g.key)}" class="doc-chev kc-ic kc-ic-play"
+                  style="${open ? 'transform:rotate(90deg);' : ''}"></span>
+                <strong class="kc-ic kc-ic-${KC_DOCFOLDERS.folderIcon(g.key)}">${escHtml(g.label)}</strong>
                 <span class="doc-count">${g.count}</span>
               </div>
               <div id="docFolder-${escHtml(String(custId))}-${escHtml(g.key)}" style="${open ? '' : 'display:none;'}">
@@ -9933,7 +9938,7 @@ function kcPickerFilter(valueId, typed = true) {
   const addRow = q
     ? `<div class="customer-dropdown-item kc-combo-add" role="option"
         onmousedown="event.preventDefault();kcPickerAddNew('${escJs(valueId)}')">
-        ➕ Add <strong>${escName(raw)}</strong> as a new customer</div>`
+        <i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Add <strong>${escName(raw)}</strong> as a new customer</div>`
     : '';
 
   dd.innerHTML = specialRow + head + list
@@ -10079,7 +10084,7 @@ function kcPickerAddNew(valueId) {
   panel.id = valueId + '_qa';
   panel.className = 'kc-quickadd';
   panel.innerHTML = `
-    <div class="kc-quickadd-head">➕ New customer</div>
+    <div class="kc-quickadd-head kc-ic kc-ic-plus">New customer</div>
     <div class="kc-quickadd-grid">
       <input class="form-input" id="${valueId}_qaFirst" placeholder="First name" value="${escHtml(first)}" autocomplete="off">
       <input class="form-input" id="${valueId}_qaLast" placeholder="Surname" value="${escHtml(last)}" autocomplete="off">
@@ -10471,14 +10476,14 @@ function dismissCustomerCard(slot) {
 const walletEntriesCache = {};
 
 const LEDGER_TYPE_LABELS = {
-  payment: '<i class="kc-ic kc-ic-pound" aria-hidden="true"></i> Payment', top_up: '➕ Top-up', refund: '<i class="kc-ic kc-ic-undo" aria-hidden="true"></i> Refund',
+  payment: '<i class="kc-ic kc-ic-pound" aria-hidden="true"></i> Payment', top_up: '<i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Top-up', refund: '<i class="kc-ic kc-ic-undo" aria-hidden="true"></i> Refund',
   refund_payout: '<i class="kc-ic kc-ic-undo" aria-hidden="true"></i> Refund paid out',
   manual_adjustment: '<i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Adjustment', booking: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i> Flight', rental: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Rental',
   rental_adjustment: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Rental adj.', rental_loss: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Loss', rental_void: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Void credit',
   repair: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> Repair', online_service: '<i class="kc-ic kc-ic-printer" aria-hidden="true"></i> Service', sim_annual: '<i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM annual',
   sim_additional: '<i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM extra', sim_replacement: '<i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM replacement',
   sim_service: '<i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM service', phone_sale: '<i class="kc-ic kc-ic-package" aria-hidden="true"></i> Phone sale', stock_sale: '<i class="kc-ic kc-ic-package" aria-hidden="true"></i> Sale',
-  virtual_number: '<i class="kc-ic kc-ic-digits" aria-hidden="true"></i> Virtual number', extra_charge: '➕ Extra charge',
+  virtual_number: '<i class="kc-ic kc-ic-digits" aria-hidden="true"></i> Virtual number', extra_charge: '<i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Extra charge',
 };
 
 async function loadWalletSection(customerId) {
@@ -11083,7 +11088,7 @@ function openRentalSmsModal(rentalId) {
   showDynamicModal(`
     <div class="modal-title kc-ic kc-ic-mail">Status SMS — ${custNameLink(r.customerId, escName(r.customerName || ''))}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">
-      Drafted from the rental's current status${r.customerPhone ? ` · 📞 <span class="copy-val">${escHtml(fmtPhone(r.customerPhone))}</span>` : ''}.
+      Drafted from the rental's current status${r.customerPhone ? ` · <i class="kc-ic kc-ic-telephone" aria-hidden="true"></i> <span class="copy-val">${escHtml(fmtPhone(r.customerPhone))}</span>` : ''}.
       Edit it, then copy — or send it directly once Twilio is connected.</div>
     <textarea class="form-input" id="rsmsText" rows="5" style="font-family:inherit;">${escHtml(buildRentalSms(r))}</textarea>
     <div class="modal-actions">
@@ -11570,7 +11575,7 @@ function bankPaint() {
       best ? `
         <div class="bank-proposal">
           ${t.match.ambiguous
-            ? `<div style="font-size:var(--fs-small);color:var(--warning,#b07d10);margin-bottom:4px;">⚠ ${all.length > 1 ? 'These score alike' : 'Two candidates score alike'} — compare the reasons before confirming.</div>`
+            ? `<div style="font-size:var(--fs-small);color:var(--warning,#b07d10);margin-bottom:4px;"><i class="kc-ic kc-ic-alert" aria-hidden="true"></i> ${all.length > 1 ? 'These score alike' : 'Two candidates score alike'} — compare the reasons before confirming.</div>`
             : ''}
           ${all.map((c, i) => line(c, i === 0)).join('')}
           ${best.confidence === 'weak' ? `<div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;">
@@ -11718,11 +11723,11 @@ async function bankUpload() {
     }).then(r => r.json()).catch(() => null);
     if (!res || !res.success) {
       toast(res?.error || 'Import failed.', 'error');
-      if (note && res?.warnings?.length) note.innerHTML = res.warnings.map(w => `⚠ ${escHtml(w)}`).join('<br>');
+      if (note && res?.warnings?.length) note.innerHTML = res.warnings.map(w => `<i class="kc-ic kc-ic-alert" aria-hidden="true"></i> ${escHtml(w)}`).join('<br>');
       return;
     }
     toast(`Imported ${res.inserted} new row${res.inserted === 1 ? '' : 's'}${res.duplicates ? ` (${res.duplicates} already known)` : ''}.`, 'success');
-    if (note) note.innerHTML = (res.warnings || []).map(w => `⚠ ${escHtml(w)}`).join('<br>');
+    if (note) note.innerHTML = (res.warnings || []).map(w => `<i class="kc-ic kc-ic-alert" aria-hidden="true"></i> ${escHtml(w)}`).join('<br>');
     bankAccountFilter = '';
     await renderBankRecon();
   } finally { btn.disabled = false; }
@@ -11815,7 +11820,7 @@ function bankPickList(txnId) {
           <div style="color:var(--muted);font-size:var(--fs-body);">No customer matches “${escHtml(q)}”.</div>
           <button class="btn btn-primary btn-sm" style="margin-top:10px;white-space:normal;text-align:left;line-height:1.35;"
             onclick="bankPickCreate('${escHtml(txnId)}')">
-            ➕ Add “${escHtml(document.getElementById('bankPickSearch')?.value.trim() || q)}” as a new customer
+            <i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Add “${escHtml(document.getElementById('bankPickSearch')?.value.trim() || q)}” as a new customer
           </button>
           <div style="font-size:var(--fs-small);color:var(--muted);margin-top:6px;">
             …and match this payment to them. You can fill in their phone and address later.</div>
@@ -12262,7 +12267,7 @@ function emailDupWhy(typed, existing) {
 function emailDupHtml(dup, typed) {
   const who = `${dup.firstName || ''} ${dup.lastName || ''}`.trim() || 'Another customer';
   const why = emailDupWhy(typed, dup.email);
-  return `⚠ <b>${escHtml(who)}</b> already has this mailbox — <span class="warn-em">${escHtml(dup.email)}</span>.`
+  return `<i class="kc-ic kc-ic-alert" aria-hidden="true"></i> <b>${escHtml(who)}</b> already has this mailbox — <span class="warn-em">${escHtml(dup.email)}</span>.`
     + `<div class="warn-why">${why.map(l => `<div>${l}</div>`).join('')}`
     + '<div>One mailbox belongs to one customer, so this can’t be saved as a second person.</div></div>';
 }
@@ -12604,7 +12609,7 @@ function renderSimsTab() {
 
   const bannerHtml = renewing.length > 0 ? `
     <div class="renewal-banner">
-      <span style="font-size:var(--fs-title);">⚠</span>
+      <span class="kc-ic kc-ic-alert" style="font-size:var(--fs-title);"></span>
       <span><strong>${renewing.length} SIM${renewing.length > 1 ? 's' : ''} renewing ${renewing.some(s => s.renewalDate === today) ? 'TODAY' : 'TOMORROW'}:</strong>
       ${renewing.map(s => `<span style="margin-left:8px;">· ${escHtml(capName(s.customerName))} (${escHtml(s.simNumber)})</span>`).join('')}</span>
     </div>` : '';
@@ -12828,7 +12833,7 @@ function renderSimRows() {
     const isRenewingTomorrow = s.renewalDate === tomorrow;
     const renewalClass = isRenewingToday ? 'color:var(--danger-ink);font-weight:700;' :
                          isRenewingTomorrow ? 'color:var(--warning);font-weight:700;' : '';
-    const renewalLabel = isRenewingToday ? ' ⚠ Today!' : isRenewingTomorrow ? ' ⚠ Tomorrow' : '';
+    const renewalLabel = isRenewingToday ? ` ${'<i class="kc-ic kc-ic-alert" aria-hidden="true"></i>'} Today!` : isRenewingTomorrow ? ` ${'<i class="kc-ic kc-ic-alert" aria-hidden="true"></i>'} Tomorrow` : '';
 
     return `<tr style="cursor:pointer;" onclick="if(!event.target.closest('button,select,a,input'))openManageSimModal('${s.id}')" title="Open SIM">
       <td class="kc-stack-lead" onclick="event.stopPropagation()">
@@ -12837,7 +12842,7 @@ function renderSimRows() {
       </td>
       <td><div class="customer-name">${custNameLink(s.customerId, escHtml(capName(s.customerName) || '—'))}${unconfirmedChip(s)}</div></td>
       <td>${providerBadge(s.provider)}</td>
-      <td data-label="SIM" style="font-weight:600;font-size:var(--fs-small);">${escHtml(s.simNumber || '—')}${simIsTheirContact(s) ? ' <span class="kc-contact-ours" title="This is also the number we ring the customer on.">☎️ contact</span>' : ''}</td>
+      <td data-label="SIM" style="font-weight:600;font-size:var(--fs-small);">${escHtml(s.simNumber || '—')}${simIsTheirContact(s) ? ' <span class="kc-contact-ours kc-ic kc-ic-telephone" title="This is also the number we ring the customer on.">contact</span>' : ''}</td>
       <td class="kc-cell-clip" data-label="Plan" style="font-size:var(--fs-small);">${escHtml(s.plan || '—')}</td>
       <td class="kc-drop-sm" data-label="Mailbox" style="font-size:var(--fs-micro);color:var(--muted);white-space:nowrap;"
         title="${s.email ? escHtml(s.email) : 'No carrier account on file — this SIM can only ever be matched by its number'}">${
@@ -13667,7 +13672,7 @@ function kcSkeleton(shape = 'stats') {
 // current tab.
 function errorHtml(label = 'Couldn’t load this') {
   return `<div style="text-align:center;padding:48px 30px;color:var(--muted);">
-    <div style="font-size:30px;margin-bottom:8px;">⚠</div>
+    <div class="kc-ic kc-ic-alert" style="font-size:30px;margin-bottom:8px;"></div>
     <div style="font-size:var(--fs-lead);color:var(--text);margin-bottom:4px;">${escHtml(label)}</div>
     <div style="font-size:var(--fs-body);margin-bottom:16px;">Couldn’t reach the server. Your data is safe — this is just the view.</div>
     <button class="btn btn-primary" onclick="renderTab(currentTab)">↻ Try again</button>
@@ -14096,7 +14101,7 @@ function tmCardHtml(t) {
         <div class="tm-pax">${t.passengers.length
           ? t.passengers.map(p => escName(p)).join(' · ')
           : '<span class="tm-gap">no passenger name in the mail</span>'}</div>
-        ${t.returnDate ? `<div class="tm-pax">↩ Returns ${escHtml(fmtDate(t.returnDate))} — carried onto the booking.</div>` : ''}
+        ${t.returnDate ? `<div class="tm-pax kc-ic kc-ic-undo">Returns ${escHtml(fmtDate(t.returnDate))} — carried onto the booking.</div>` : ''}
         <div class="tm-cust">${who}</div>`}
         ${t.kind === 'payment_due' ? `<div class="tm-missing">Not paid yet — the airline is holding the seats and will cancel them if payment is not completed. Deal with the payment before booking it in.</div>` : ''}
         ${t.kind === 'checkin_open' ? `<div class="tm-note">Check-in is open for this flight. This is a reminder about a trip, not a new booking — find it in the register if it needs checking in.</div>` : ''}
@@ -15023,7 +15028,7 @@ async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
       (prefill.passengers || []).length > 1
         ? `<br><strong>${(prefill.passengers || []).length} passengers</strong> read from the email — pick the service below and the fee prices for all ${(prefill.passengers || []).length}.`
         : ''
-    }${prefill.returnDate ? `<br>↩ Round trip — returning ${escHtml(fmtDate(prefill.returnDate))}.` : ''}</div>` : ''}
+    }${prefill.returnDate ? `<br><i class="kc-ic kc-ic-undo" aria-hidden="true"></i> Round trip — returning ${escHtml(fmtDate(prefill.returnDate))}.` : ''}</div>` : ''}
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
@@ -15128,7 +15133,7 @@ async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
             <input class="form-input" type="date" id="bkCheckinDate" style="width:150px;">
           </span>
           <span id="bkRetCheckinWrap" style="display:none;align-items:center;gap:6px;">
-            <span style="font-size:var(--fs-small);color:var(--muted);">↩ back on</span>
+            <span class="kc-ic kc-ic-undo" style="font-size:var(--fs-small);color:var(--muted);">back on</span>
             <input class="form-input" type="date" id="bkRetCheckinDate" style="width:150px;">
           </span>
         </div>
@@ -15505,7 +15510,7 @@ async function openCheckinModal(bookingId) {
             ${cell('Issued', p.passportIssueDate && fmtDate(p.passportIssueDate))}
             ${cell('Issuing country', p.issuingCountry)}
           </div>
-          ${(!p.passportNumber && !p.dob) ? '<div style="color:var(--warning);margin-top:4px;">⚠ Missing details — open <i class="kc-ic kc-ic-users" aria-hidden="true"></i> Passengers to fill them in.</div>' : ''}
+          ${(!p.passportNumber && !p.dob) ? '<div class="kc-ic kc-ic-alert" style="color:var(--warning);margin-top:4px;">Missing details — open <i class="kc-ic kc-ic-users" aria-hidden="true"></i> Passengers to fill them in.</div>' : ''}
         </div>`).join('')}
     </div>` : `<div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">No passenger details yet — add them via the <i class="kc-ic kc-ic-users" aria-hidden="true"></i> button.</div>`;
   // Stash the copy-all text keyed by index (avoids quoting a multi-line
@@ -15529,18 +15534,18 @@ async function openCheckinModal(bookingId) {
       <div class="form-group form-full">
         <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-ui);cursor:pointer;">
           <input type="checkbox" id="ciDone" ${b.checkinDone ? 'checked' : ''}>
-          ✔ ${b.returnDate ? 'Outbound check-in is done' : 'Check-in is done'}
+          <i class="kc-ic kc-ic-check" aria-hidden="true"></i> ${b.returnDate ? 'Outbound check-in is done' : 'Check-in is done'}
         </label>
       </div>
       ${b.returnDate ? `
       <div class="form-group" id="ciRetDateWrap" style="display:${b.checkinBy === 'us' ? 'block' : 'none'};">
-        <label class="form-label">↩ Way back (${escHtml(fmtDate(b.returnDate))}) — do it on</label>
+        <label class="form-label kc-ic kc-ic-undo">Way back (${escHtml(fmtDate(b.returnDate))}) — do it on</label>
         <input class="form-input" type="date" id="ciRetDate" value="${escHtml(b.returnCheckinDate || '')}">
       </div>
       <div class="form-group form-full">
         <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-ui);cursor:pointer;">
           <input type="checkbox" id="ciRetDone" ${b.returnCheckinDone ? 'checked' : ''}>
-          ✔ Return check-in is done
+          <i class="kc-ic kc-ic-check" aria-hidden="true"></i> Return check-in is done
         </label>
       </div>` : ''}
     </div>
@@ -15778,13 +15783,13 @@ async function openTravelReqModal(bookingId) {
     // passport readiness line
     let pass = '';
     if (p.passport.ok === true) pass = `<span style="color:var(--success);">✓ Passport valid long enough</span>`;
-    else if (p.passport.ok === false) pass = `<span style="color:var(--danger-ink);">⚠ ${escHtml(p.passport.note)}</span>`;
+    else if (p.passport.ok === false) pass = `<span class="kc-ic kc-ic-alert" style="color:var(--danger-ink);">${escHtml(p.passport.note)}</span>`;
     else pass = `<span style="color:var(--muted);">Passport expiry not on file</span>`;
 
     // coverage + actions
     let cover = '';
     const validity = r.validityMonths ? ` · valid ~${Math.round(r.validityMonths / 12)} yr${r.validityMonths >= 24 ? 's' : ''}` : '';
-    const link = r.url ? `<a href="${escHtml(r.url)}" target="_blank" rel="noopener">Open official site ↗</a>` : '';
+    const link = r.url ? `<a href="${escHtml(r.url)}" target="_blank" rel="noopener">Open official site</a>` : '';
     const draftBtn = r.code !== 'NONE'
       ? `<a href="#" onclick="copyTravelDraft(${JSON.stringify(destName)},${JSON.stringify(r.label)},${JSON.stringify(r.url || '')});return false;"><i class="kc-ic kc-ic-mail" aria-hidden="true"></i> Copy draft for customer</a>` : '';
 
@@ -15796,7 +15801,7 @@ async function openTravelReqModal(bookingId) {
       const covLine = cov.status === 'covered'
         ? `<span style="color:var(--success);">✓ ${escHtml(r.label)} on file — valid until ${escHtml(cov.validUntil || '')}</span>`
         : cov.status === 'expiring'
-          ? `<span style="color:var(--gold);">⚠ ${escHtml(r.label)} ${cov.expiresDuringTrip ? 'runs out WHILE THEY ARE AWAY' : cov.expiresBeforeTravel ? 'expires BEFORE this trip' : 'expiring soon'} — valid until ${escHtml(cov.validUntil || '')}</span>`
+          ? `<span class="kc-ic kc-ic-alert" style="color:var(--gold);">${escHtml(r.label)} ${cov.expiresDuringTrip ? 'runs out WHILE THEY ARE AWAY' : cov.expiresBeforeTravel ? 'expires BEFORE this trip' : 'expiring soon'} — valid until ${escHtml(cov.validUntil || '')}</span>`
           : `<span style="color:var(--danger-ink);">Not recorded yet — ${escHtml(r.label)} needed${validity}</span>`;
       cover = `
         <div style="font-size:var(--fs-body);margin-bottom:6px;">${covLine}</div>
@@ -15835,7 +15840,7 @@ async function openTravelReqModal(bookingId) {
     ${res.destination && !paxHtml ? `<div style="color:var(--muted);font-size:var(--fs-body);margin:6px 0;">No passengers on this booking yet — add them under <i class="kc-ic kc-ic-users" aria-hidden="true"></i> Passengers.</div>` : ''}
     <div style="margin-top:10px;">${paxHtml}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);background:var(--bg-secondary);border-radius:8px;padding:8px 10px;margin-top:4px;">
-      ℹ️ Guidance based on the rules we've set for common routes — <strong>always confirm on the official site</strong> before travel. Requirements can change.
+      <i class="kc-ic kc-ic-help" aria-hidden="true"></i> Guidance based on the rules we've set for common routes — <strong>always confirm on the official site</strong> before travel. Requirements can change.
     </div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="closeDynamicModal();openEditBookingModal('${escHtml(bookingId)}')">← Back to booking</button>
@@ -16339,7 +16344,7 @@ function svTimedBreakdown(minutes) {
   if (!bd) return;
   bd.innerHTML = `
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-      <span>⏱</span>
+      <span class="kc-ic kc-ic-stopwatch" aria-hidden="true"></span>
       <input class="form-input kc-inline-num" id="svMins" type="number" min="1" step="1"
         value="${minutes}" aria-label="Minutes to charge for" oninput="svTimedRecalc()">
       <span>min at £${settingNum('online_hourly_rate', 45)}/hr =</span>
@@ -16398,7 +16403,7 @@ function svcTimerFloatFrame(t) {
   const paused = !t.runningSince;
   return `
     <div class="svc-float-main" onclick="if(!document.getElementById('svcTimerFloat')?.dataset.dragged)goToTab('services')" title="Open Services (drag to move)">
-      <span class="svc-float-icon">${paused ? '⏸' : '⏱'}</span>
+      <span class="svc-float-icon kc-ic ${paused ? 'kc-ic-pause' : 'kc-ic-stopwatch'}" aria-hidden="true"></span>
       <div class="svc-float-info">
         <div class="svc-float-name">${escName(t.customerName || 'customer')}</div>
         <div class="svc-float-time"><b id="svcFloatElapsed">0:00</b><span id="svcFloatProj" class="svc-float-proj"></span></div>
@@ -16711,7 +16716,7 @@ async function renderServicesTab() {
         const paused = !t.runningSince;
         return `
         <div class="table-card" style="margin-bottom:14px;padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;${paused ? 'border-color:var(--gold);' : ''}">
-          <span style="font-size:20px;">${paused ? '⏸' : '⏱'}</span>
+          <span class="kc-ic ${paused ? 'kc-ic-pause' : 'kc-ic-stopwatch'}" style="font-size:20px;" aria-hidden="true"></span>
           <div style="flex:1;min-width:180px;">
             <div style="font-weight:600;">Helping ${escName(t.customerName || 'customer')}</div>
             <div style="font-size:var(--fs-small);color:${paused ? 'var(--gold)' : 'var(--muted)'};">${paused ? 'paused — resume to keep counting' : 'running'}</div>
@@ -16730,7 +16735,7 @@ async function renderServicesTab() {
       }
       return `
         <div class="table-card" style="margin-bottom:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-          <span style="font-size:20px;">⏱</span>
+          <span class="kc-ic kc-ic-stopwatch" style="font-size:20px;" aria-hidden="true"></span>
           <span style="font-size:var(--fs-body);color:var(--muted);">Hourly help timer (£${settingNum('online_hourly_rate', 45)}/hr, 10-min minimum)</span>
           <!-- 230px is what "Who are you helping?" needs in this type. Below
                that the row squeezed it to 189px and truncated its own prompt to
@@ -17280,7 +17285,7 @@ async function renderShopTab() {
 
   const lowBanner = low.length ? `
     <div class="banner-lowstock">
-      ⚠ <strong>Low stock:</strong> ${low.map(i => `${escHtml(i.model)} (${i.quantity} left)`).join(' · ')}
+      <i class="kc-ic kc-ic-alert" aria-hidden="true"></i> <strong>Low stock:</strong> ${low.map(i => `${escHtml(i.model)} (${i.quantity} left)`).join(' · ')}
     </div>` : '';
 
   const shopBar = kcFilterSort('shop', [
@@ -17315,7 +17320,7 @@ async function renderShopTab() {
         </div>
         <div class="history-amount" style="margin:0 10px;">${r.claimedValue === null ? '—' : fmtGbp(r.claimedValue)}</div>
         <button class="action-btn" aria-label="Manage return to ${escHtml(r.supplierName || 'supplier')}"
-          onclick="openSupplierReturnModal('${r.id}')">✏️</button>
+          onclick="openSupplierReturnModal('${r.id}')" title="Edit this return"></button>
       </div>`;
   };
   const returnRows = supplierReturns.length === 0
@@ -17338,13 +17343,13 @@ async function renderShopTab() {
         <div class="history-desc"><strong>${escHtml(d.supplierName || '?')}</strong>${d.invoiceRef ? ' — ' + escHtml(d.invoiceRef) : ''}
           — ${d.lines.map(l => `${l.qty}× ${escHtml(l.description)}`).join(', ')}</div>
         <div style="font-size:var(--fs-micro);color:var(--muted);">
-          ${fmtDate(d.deliveryDate)}${d.paid ? ` · <span style="color:var(--success-ink);font-weight:600;">✔ Paid${d.paidAt ? ' ' + fmtDate(d.paidAt) : ''}</span>` : d.invoiceTotal !== null ? ' · <span style="color:var(--warning-ink);font-weight:600;"><i class="kc-ic kc-ic-hourglass" aria-hidden="true"></i> Unpaid</span>' : ''}
+          ${fmtDate(d.deliveryDate)}${d.paid ? ` · <span class="kc-ic kc-ic-check" style="color:var(--success-ink);font-weight:600;">Paid${d.paidAt ? ' ' + fmtDate(d.paidAt) : ''}</span>` : d.invoiceTotal !== null ? ' · <span style="color:var(--warning-ink);font-weight:600;"><i class="kc-ic kc-ic-hourglass" aria-hidden="true"></i> Unpaid</span>' : ''}
           ${d.notes ? ' · ' + escHtml(d.notes) : ''}
         </div>
       </div>
       <div class="history-amount" style="margin:0 10px;">${d.invoiceTotal === null ? '—' : fmtGbp(d.invoiceTotal)}</div>
       ${d.invoiceTotal !== null ? `<button class="action-btn" aria-label="Mark delivery from ${escHtml(d.supplierName || 'supplier')} ${d.paid ? 'unpaid' : 'paid'}"
-        onclick="markGoodsInPaid('${d.id}', ${d.paid ? 'false' : 'true'})">${d.paid ? '↩️' : '<i class="kc-ic kc-ic-pound" aria-hidden="true"></i> Pay'}</button>` : ''}
+        onclick="markGoodsInPaid('${d.id}', ${d.paid ? 'false' : 'true'})">${d.paid ? '<i class="kc-ic kc-ic-undo" aria-hidden="true"></i>' : '<i class="kc-ic kc-ic-pound" aria-hidden="true"></i> Pay'}</button>` : ''}
     </div>`;
   const goodsRows = goodsIn.length === 0
     ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:8px 0;">No deliveries recorded yet. When stock arrives from a wholesaler, record it here — quantities and cost prices update themselves.</div>`
@@ -18367,7 +18372,7 @@ function posShowLastSale() {
   const canEmail = !!posLastSale.customerId;
   el.innerHTML = `
     <div class="pos-done">
-      ✔ ${fmtGbp(posLastSale.total)} taken${posLastSale.change !== null
+      <i class="kc-ic kc-ic-check" aria-hidden="true"></i> ${fmtGbp(posLastSale.total)} taken${posLastSale.change !== null
         ? ` — <strong>change ${fmtGbp(posLastSale.change)}</strong>` : ''}
       ${canEmail ? `<button class="btn btn-secondary" style="margin-top:8px;width:100%;"
         onclick="emailSaleReceipt(this)" ${posLastSale.emailed ? 'disabled' : ''}>
@@ -18894,18 +18899,18 @@ async function renderKolTorahTab() {
   // ── Jobs ────────────────────────────────────────────────────────────────
   const jobBtns = (j) => {
     const b = [];
-    if (j.status === 'open') b.push(['ready', '✔ Ready', 'btn btn-outline']);
+    if (j.status === 'open') b.push(['ready', 'Ready', 'btn btn-outline kc-ic kc-ic-check']);
     if (j.status === 'open' || j.status === 'ready') {
       b.push(['collected', '<i class="kc-ic kc-ic-upload" aria-hidden="true"></i> Collected', 'btn btn-primary']);
       b.push(['cancelled', '✕', 'action-btn danger']);
     }
-    if (j.status === 'ready') b.push(['open', '↩', 'btn btn-outline']);
-    if (j.status === 'cancelled') b.push(['open', '↩ Reopen', 'btn btn-outline']);
+    if (j.status === 'ready') b.push(['open', '', 'btn btn-outline kc-ic kc-ic-undo']);
+    if (j.status === 'cancelled') b.push(['open', 'Reopen', 'btn btn-outline kc-ic kc-ic-undo']);
     return b.map(([to, label, cls]) =>
       `<button class="${cls}" style="font-size:var(--fs-micro);padding:4px 8px;" onclick="ktJobStatus('${j.id}','${to}')">${label}</button>`).join(' ');
   };
   const jobRows = d.jobs.length === 0
-    ? `<tr><td colspan="6"><div class="empty-state"><div class="emoji">🎧</div><p>No conversion jobs yet — add the first drop-off above.</p></div></td></tr>`
+    ? `<tr><td colspan="6"><div class="empty-state"><div class="emoji kc-ic kc-ic-headphones" aria-hidden="true"></div><p>No conversion jobs yet — add the first drop-off above.</p></div></td></tr>`
     : d.jobs.map(j => `
       <tr>
         <td><div class="customer-name">${escName(j.customerName)}</div>
@@ -18995,11 +19000,11 @@ async function renderKolTorahTab() {
   content.innerHTML = `
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
       ${[
-        ['💿', `${activeTitles.length}`, 'titles in the catalogue'],
-        ['🏛️', `${d.shuls.filter(s => s.active).length}`, 'shuls stocked'],
-        ['📦', `${outQty}`, 'CDs out on consignment'],
-        ['🎧', `${openJobs.length}`, 'open jobs'],
-        ['💷', fmtGbp(received30), 'collected, last 30 days'],
+        ['disc', `${activeTitles.length}`, 'titles in the catalogue'],
+        ['institution', `${d.shuls.filter(s => s.active).length}`, 'shuls stocked'],
+        ['package', `${outQty}`, 'CDs out on consignment'],
+        ['headphones', `${openJobs.length}`, 'open jobs'],
+        ['pound', fmtGbp(received30), 'collected, last 30 days'],
       ].map(([ico, big, label]) => `
         <div style="flex:1;min-width:140px;border:1px solid var(--border);border-radius:8px;padding:10px 14px;background:var(--surface);">
           <div style="font-size:var(--fs-title);font-weight:800;">${ico} ${big}</div>
@@ -19013,7 +19018,7 @@ async function renderKolTorahTab() {
           Same panel pattern as "Add a shul": the controls wrap instead. Ids
           unchanged — ktAddJob() reads the same fields. */}
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px;padding:10px 12px;border:1px dashed var(--border);border-radius:8px;">
-      <span style="font-size:var(--fs-small);font-weight:700;color:var(--accent);padding-bottom:7px;">➕ New job</span>
+      <span style="font-size:var(--fs-small);font-weight:700;color:var(--accent);padding-bottom:7px;" class="kc-ic kc-ic-plus">New job</span>
       <div style="min-width:150px;max-width:180px;">${customerPicker('ktJobCust', {
         special: { value: 'walkin', label: 'Walk-in', icon: 'walk' }, label: 'Customer for this job',
         style: 'min-height:0;padding:6px 9px;font-size:var(--fs-small);',
@@ -19050,7 +19055,7 @@ async function renderKolTorahTab() {
       ${shulCards || '<div class="empty-state" style="grid-column:1/-1;"><div class="emoji kc-ic kc-ic-institution"></div><p>No shuls yet — add the first one below.</p></div>'}
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px;padding:10px 12px;border:1px dashed var(--border);border-radius:8px;">
-      <span style="font-size:var(--fs-small);font-weight:700;color:var(--accent);">➕ Add a shul</span>
+      <span style="font-size:var(--fs-small);font-weight:700;color:var(--accent);" class="kc-ic kc-ic-plus">Add a shul</span>
       <input class="form-input" id="ktNewShulName" placeholder="Shul name" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:170px;">
       <input class="form-input" id="ktNewShulContact" placeholder="Contact / gabbai (optional)" style="min-height:0;padding:6px 9px;font-size:var(--fs-small);min-width:170px;">
       <div style="max-width:210px;" title="Link a customer record so settlements hit the ledger">${
@@ -19071,7 +19076,7 @@ async function renderKolTorahTab() {
           sideways scrolling on a phone. Ids unchanged — ktSaveTitle() reads
           the same fields. */}
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px;padding:10px 12px;border:1px dashed var(--border);border-radius:8px;">
-      <span style="font-size:var(--fs-small);font-weight:700;color:var(--accent);">➕ Add a title</span>
+      <span style="font-size:var(--fs-small);font-weight:700;color:var(--accent);" class="kc-ic kc-ic-plus">Add a title</span>
       <input class="form-input" id="ktNewT_code" placeholder="KT-…" style="width:74px;min-height:0;padding:5px 8px;font-size:var(--fs-small);">
       <input class="form-input" id="ktNewT_name" placeholder="Title" style="flex:1;min-width:150px;min-height:0;padding:5px 8px;font-size:var(--fs-small);">
       <input class="form-input" id="ktNewT_speaker" placeholder="Speaker" style="min-width:130px;min-height:0;padding:5px 8px;font-size:var(--fs-small);">
@@ -19807,7 +19812,7 @@ function renderBizSummary() {
     </div>
     ${emptyPeriod ? `
     <div class="biz-blank">
-      <div class="biz-blank-mark" aria-hidden="true">📭</div>
+      <div class="biz-blank-mark kc-ic kc-ic-postbox" aria-hidden="true"></div>
       <div>
         <div class="biz-blank-title">Nothing billed or received ${escHtml(P.label.toLowerCase())}</div>
         <div class="biz-blank-sub">No charge and no payment has landed in this period yet.</div>
@@ -21109,7 +21114,7 @@ function paintCarrierMail() {
       onclick="cmSetFilter('${f}')" ${cmFilter === f ? 'aria-current="true"' : ''}>${label}</button>`;
 
   const rows = cmData.messages.length === 0
-    ? `<div class="empty-state"><div class="emoji">${cmFilter === 'pending' ? '✔' : '📭'}</div>
+    ? `<div class="empty-state"><div class="emoji kc-ic ${cmFilter === 'pending' ? 'kc-ic-check' : 'kc-ic-postbox'}" aria-hidden="true"></div>
         <p>${cmFilter === 'pending'
           ? 'Nothing waiting — every message so far landed on a SIM or has been dealt with.'
           : 'No carrier mail here yet.'}</p>
@@ -21227,7 +21232,7 @@ function cmPortHtml(m) {
       ${named
         ? `<span class="cm-port-note">The number moved — the record still says ${escHtml(fmtPhone(m.sim.number) || '—')}.</span>
            <button class="btn btn-primary btn-sm" onclick="cmPortSetNumber('${escJs(String(m.sim.id))}', '0${escJs(named)}')">
-             ↔ Set this plan's number to ${escHtml(fmtPhone('0' + named))}</button>`
+             <i class="kc-ic kc-ic-sync" aria-hidden="true"></i> Set this plan's number to ${escHtml(fmtPhone('0' + named))}</button>`
         : `<span class="cm-port-note">Port completed. This carrier does not name the number —
              check the plan holds the right one.</span>`}
       <button class="btn btn-outline btn-sm" onclick="cmOpenSim('${escJs(String(m.sim.legacyId || m.sim.id))}')">
@@ -21303,7 +21308,7 @@ function cmRowHtml(m) {
           <div class="cm-pick">
             ${m.numbers.length ? `<button class="btn btn-primary btn-sm"
                 onclick="cmAddSim(${m.id}, '${escHtml('0' + m.numbers[0])}', '${escHtml(m.carrier || '')}')">
-                ➕ Add as a new SIM</button>` : ''}
+                <i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Add as a new SIM</button>` : ''}
             ${/* The other half of "nothing matched": not a line we have never
                  heard of, but one we know under a DIFFERENT address. The shop
                  gives a SIM a tagged address per carrier account, so the same
@@ -21442,7 +21447,7 @@ async function cmUnpair(id) {
     body: `This message is filed on <strong>${escName(who)}</strong>.<br><br>` +
       `It goes back to the queue for someone to file by hand, and the nightly sweep will not ` +
       `match it again by itself — you have said the automatic answer was wrong, and it should not argue.`,
-    okLabel: '↩ Undo the match',
+    okLabel: 'Undo the match',
   }))) return;
   if (cmBusy) return; cmBusy = true;
   try {
@@ -21979,7 +21984,7 @@ function paintConfirm() {
     content.innerHTML = `
       <div class="stats-row">${confirmStatsHtml()}</div>
       <div class="card"><div class="empty-state">
-        <div class="emoji">${remaining ? '☕' : ''}</div>
+        <div class="emoji${remaining ? ' kc-ic kc-ic-check' : ''}" aria-hidden="true"></div>
         <p>${remaining
           ? `${remaining} more to go — beyond what one screen can carry at once.`
           : 'Every imported record has been confirmed by a human.'}</p>
@@ -22214,7 +22219,7 @@ async function renderTasksTab() {
       </div>` : ''}
       ${s && !t.done ? `
       <div class="task-suggest">
-        <span><i class="kc-ic kc-ic-idea" aria-hidden="true"></i> Suggests <strong>${s.priority === 'High' ? '🔥 Now' : s.priority === 'Normal' ? '📋 Next' : '🌙 Later'}</strong> — ${escHtml(s.reason)}</span>
+        <span><i class="kc-ic kc-ic-idea" aria-hidden="true"></i> Suggests <strong>${s.priority === 'High' ? 'Now' : s.priority === 'Normal' ? 'Next' : 'Later'}</strong> — ${escHtml(s.reason)}</span>
         <span class="task-suggest-actions">
           <button class="btn btn-primary btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;"
             onclick="acceptSuggestion('${escHtml(t.id)}', '${s.priority}')">✓ Accept</button>
@@ -22228,7 +22233,7 @@ async function renderTasksTab() {
   const snoozeCard = (t) => `
     <div class="task-card" style="opacity:0.75;">
       <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-size:15px;">💤</span>
+        <span class="kc-ic kc-ic-snooze" style="font-size:15px;" aria-hidden="true"></span>
         <div style="flex:1;min-width:0;">
           <div class="history-desc">${escHtml(t.title)}</div>
           <div style="font-size:var(--fs-micro);color:var(--muted);">wakes ${fmtDate(t.snoozedUntil)}</div>
@@ -22843,7 +22848,7 @@ async function renderVirtualTab() {
         <td><span class="badge" style="${v.status === 'Active'
           ? 'background:rgba(34,197,94,0.15);color:var(--success-ink);'
           : 'background:rgba(148,163,184,0.15);color:var(--muted);'}">${escHtml(v.status)}</span></td>
-        <td>${v.shortcutUrl ? `<a href="${escHtml(v.shortcutUrl)}" target="_blank" rel="noopener" style="color:var(--accent);font-size:var(--fs-small);">open ↗</a>` : '—'}</td>
+        <td>${v.shortcutUrl ? `<a href="${escHtml(v.shortcutUrl)}" target="_blank" rel="noopener" style="color:var(--accent);font-size:var(--fs-small);">open</a>` : '—'}</td>
         <td style="white-space:nowrap;">
           <button class="action-btn" style="font-size:var(--fs-micro);padding:4px 10px;"
             onclick="openRemindModal('vn','${escHtml(v.id)}')" title="Remind me">⏰</button>
@@ -22851,7 +22856,7 @@ async function renderVirtualTab() {
             onclick="openVNBillingModal('${escHtml(v.id)}')">Billing</button>
           <button class="action-btn" style="font-size:var(--fs-micro);padding:4px 10px;"
             onclick="toggleVNStatus('${escHtml(v.id)}', '${v.status === 'Active' ? 'Inactive' : 'Active'}')">
-            ${v.status === 'Active' ? '<i class="kc-ic kc-ic-pause" aria-hidden="true"></i> Deactivate' : '▶ Activate'}</button>
+            ${v.status === 'Active' ? '<i class="kc-ic kc-ic-pause" aria-hidden="true"></i> Deactivate' : '<i class="kc-ic kc-ic-play" aria-hidden="true"></i> Activate'}</button>
           <button class="action-btn danger" style="font-size:var(--fs-micro);padding:4px 10px;"
             aria-label="Delete this number" onclick="deleteVN('${escHtml(v.id)}', '${escHtml(v.number)}')">✕</button>
         </td>
@@ -22985,7 +22990,7 @@ function openVNBillingModal(id) {
     <div class="modal-title kc-ic kc-ic-pound">Monthly Billing — ${escHtml(fmtPhone(v.number))}</div>
     <div style="color:var(--muted);font-size:var(--fs-body);margin-bottom:14px;">
       ${v.customerName ? `Customer: <strong style="color:var(--text);">${escName(v.customerName)}</strong>` :
-        '<span style="color:var(--danger-ink);">⚠ No customer assigned — billing needs one.</span>'}
+        '<span class="kc-ic kc-ic-alert" style="color:var(--danger-ink);">No customer assigned — billing needs one.</span>'}
     </div>
     <div class="form-grid">
       <div class="form-group">
@@ -23122,7 +23127,7 @@ async function renderSettingsTab() {
     kcFetch('/api/ai-usage').then(r => r.status === 403 ? null : r.json()).catch(() => null),
   ]);
   if (!cfg || !cfg.success) {
-    content.innerHTML = `<div class="tab-placeholder"><div class="big">⚙️</div>
+    content.innerHTML = `<div class="tab-placeholder"><div class="big kc-ic kc-ic-gear" aria-hidden="true"></div>
       <h2>Settings</h2><p style="color:var(--muted)">${escHtml(cfg?.error || 'Settings unavailable.')}</p></div>`;
     return;
   }
@@ -23216,7 +23221,7 @@ async function renderSettingsTab() {
             <td style="white-space:nowrap;">
               <button class="action-btn" title="Edit forwarding / purpose" onclick="openEmailAliasModal('${escHtml(a.id)}')">✏️</button>
               <button class="action-btn" title="Generate SMTP password (for sending as this address)"
-                onclick="generateAliasPassword('${escHtml(a.id)}', '${escHtml(a.address)}')">🔑</button>
+                onclick="generateAliasPassword('${escHtml(a.id)}', '${escHtml(a.address)}')" title="Generate a password"></button>
               <button class="action-btn danger" aria-label="Delete ${escHtml(a.address)}" onclick="deleteEmailAlias('${escHtml(a.id)}', '${escHtml(a.address)}')">✕</button>
             </td>
           </tr>`).join('')}
@@ -23246,7 +23251,7 @@ async function renderSettingsTab() {
         onclick="deleteRateRow('rental_rates','${escHtml(r.countryCode)}')">✕</button></td>
     </tr>`).join('') + `
     <tr style="background:var(--bg-secondary);">
-      <td><div style="font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a country</div>
+      <td><div style="font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;"><i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Add a country</div>
         <input class="form-input" id="rrNew_code" placeholder="FR" style="width:70px;padding:5px 7px;font-size:var(--fs-small);min-height:0;text-transform:uppercase;">
         <input class="form-input" id="rrNew_name" placeholder="France" style="width:100px;padding:5px 7px;font-size:var(--fs-small);min-height:0;margin-top:3px;"></td>
       <td>${num('rrNew_rate', '')}</td><td>${num('rrNew_min', '')}</td><td>${num('rrNew_cap', '')}</td>
@@ -23266,7 +23271,7 @@ async function renderSettingsTab() {
         onclick="deleteRateRow('damage_rates','${escHtml(d.countryCode)}')">✕</button></td>
     </tr>`).join('') + `
     <tr style="background:var(--bg-secondary);">
-      <td><div style="font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a country</div>
+      <td><div style="font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;"><i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Add a country</div>
         <input class="form-input" id="drNew_code" placeholder="FR" style="width:70px;padding:5px 7px;font-size:var(--fs-small);min-height:0;text-transform:uppercase;"></td>
       <td>${num('drNew_phone', '')}</td><td>${num('drNew_charger', '')}</td><td>${num('drNew_sim', '')}</td>
       <td><button class="btn btn-primary btn-sm" onclick="addDamageRate()">+ Add</button></td>
@@ -23274,44 +23279,51 @@ async function renderSettingsTab() {
 
   // Plain-language names, sentences and clear units for each fee, grouped so
   // a non-technical owner reads what it means, not the raw database key.
-  const FEE_META = {
-    late_fee_per_day:          { group: '📱 Rentals', label: 'Late return fee', help: 'Charged for each day a phone is returned past its due date (Shabbos & Yom Tov not counted).', unit: '£ / day' },
-    rental_pay_days:           { group: '📱 Rentals', label: 'Days to pay a rental', help: 'The least time a receipt gives to settle. The due date itself is the day the phone comes back \u2014 or this many days, whichever is later.', unit: 'days' },
-    multi_phone_discount_pct:  { group: '📱 Rentals', label: 'Multi-phone discount', help: 'The discount when a customer rents several phones at once.', unit: '% off' },
-    multi_phone_discount_from: { group: '📱 Rentals', label: 'Multi-phone discount starts at', help: 'Which phone the discount kicks in on — 3 means the 3rd phone and up. Change to 4 to start at the 4th.', unit: 'th phone' },
-    multi_sim_discount_from:   { group: '💳 SIM plans', label: 'Multi-SIM discount starts at', help: 'Which plan the discount kicks in on — 3 means 3 or more plans.', unit: 'th plan' },
-    sim_dd_surcharge_pct:      { group: '💳 SIM plans', label: 'SIM monthly surcharge', help: 'Service fee for running a through-me SIM’s monthly direct debit.', unit: '% extra' },
-    sim_dd_surcharge_min:      { group: '💳 SIM plans', label: 'SIM monthly surcharge minimum', help: 'The smallest SIM monthly surcharge, even on cheap plans.', unit: '£ minimum' },
-    sim_activation_fee:        { group: '💳 SIM plans', label: 'SIM setup fee', help: 'One-off charge to set up a new SIM.', unit: '£' },
-    sim_annual_fee:            { group: '💳 SIM plans', label: 'SIM yearly fee', help: 'Charged once a year per active SIM.', unit: '£' },
-    sim_additional_fee:        { group: '💳 SIM plans', label: 'Extra SIM fee', help: 'For an additional SIM on the same customer.', unit: '£' },
-    sim_service_fee:           { group: '💳 SIM plans', label: 'SIM service fee', help: 'General servicing / support charge.', unit: '£' },
-    sim_replacement_fee:       { group: '💳 SIM plans', label: 'SIM replacement fee', help: 'For a replacement SIM after the free allowance is used.', unit: '£' },
-    free_replacements_default: { group: '💳 SIM plans', label: 'Free SIM replacements', help: 'How many replacements a customer gets before being charged.', unit: 'free' },
-    multi_sim_discount_pct:    { group: '💳 SIM plans', label: 'Multi-SIM discount', help: 'Discount when a customer has 3 or more SIM plans.', unit: '% off' },
-    vn_weekly:                 { group: '🔢 Virtual numbers', label: 'Virtual number — weekly', help: 'Price per week (minimum one week).', unit: '£ / week' },
-    vn_per_30_days:            { group: '🔢 Virtual numbers', label: 'Virtual number — monthly', help: 'Flat price for a 30-day rental.', unit: '£ / 30 days' },
-    online_hourly_rate:        { group: '🖨️ Online & print', label: 'Help / online rate', help: 'Charged per hour for hands-on help (10-minute minimum).', unit: '£ / hour' },
-    online_min_charge:         { group: '🖨️ Online & print', label: 'Minimum online charge', help: 'The smallest charge for any online service.', unit: '£' },
-    online_repeat_from:        { group: '🖨️ Online & print', label: 'Bulk discount starts at', help: 'From this many applications, the cheaper "repeat" price applies (your price list says 4).', unit: 'th one' },
+  // group name → icon. The group is the KEY these rows are bucketed by and the
+// heading they are printed under, so it holds words; the drawing is looked up
+// from them. The same split as REVENUE_CATS, and for the same reason.
+const FEE_GROUP_ICONS = {
+  'Rentals': 'phone', 'SIM plans': 'card', 'Virtual numbers': 'digits',
+  'Online & print': 'printer', 'Dashboard colours': 'chart', 'Other': 'gear',
+};
+const FEE_META = {
+    late_fee_per_day:          { group: 'Rentals', label: 'Late return fee', help: 'Charged for each day a phone is returned past its due date (Shabbos & Yom Tov not counted).', unit: '£ / day' },
+    rental_pay_days:           { group: 'Rentals', label: 'Days to pay a rental', help: 'The least time a receipt gives to settle. The due date itself is the day the phone comes back \u2014 or this many days, whichever is later.', unit: 'days' },
+    multi_phone_discount_pct:  { group: 'Rentals', label: 'Multi-phone discount', help: 'The discount when a customer rents several phones at once.', unit: '% off' },
+    multi_phone_discount_from: { group: 'Rentals', label: 'Multi-phone discount starts at', help: 'Which phone the discount kicks in on — 3 means the 3rd phone and up. Change to 4 to start at the 4th.', unit: 'th phone' },
+    multi_sim_discount_from:   { group: 'SIM plans', label: 'Multi-SIM discount starts at', help: 'Which plan the discount kicks in on — 3 means 3 or more plans.', unit: 'th plan' },
+    sim_dd_surcharge_pct:      { group: 'SIM plans', label: 'SIM monthly surcharge', help: 'Service fee for running a through-me SIM’s monthly direct debit.', unit: '% extra' },
+    sim_dd_surcharge_min:      { group: 'SIM plans', label: 'SIM monthly surcharge minimum', help: 'The smallest SIM monthly surcharge, even on cheap plans.', unit: '£ minimum' },
+    sim_activation_fee:        { group: 'SIM plans', label: 'SIM setup fee', help: 'One-off charge to set up a new SIM.', unit: '£' },
+    sim_annual_fee:            { group: 'SIM plans', label: 'SIM yearly fee', help: 'Charged once a year per active SIM.', unit: '£' },
+    sim_additional_fee:        { group: 'SIM plans', label: 'Extra SIM fee', help: 'For an additional SIM on the same customer.', unit: '£' },
+    sim_service_fee:           { group: 'SIM plans', label: 'SIM service fee', help: 'General servicing / support charge.', unit: '£' },
+    sim_replacement_fee:       { group: 'SIM plans', label: 'SIM replacement fee', help: 'For a replacement SIM after the free allowance is used.', unit: '£' },
+    free_replacements_default: { group: 'SIM plans', label: 'Free SIM replacements', help: 'How many replacements a customer gets before being charged.', unit: 'free' },
+    multi_sim_discount_pct:    { group: 'SIM plans', label: 'Multi-SIM discount', help: 'Discount when a customer has 3 or more SIM plans.', unit: '% off' },
+    vn_weekly:                 { group: 'Virtual numbers', label: 'Virtual number — weekly', help: 'Price per week (minimum one week).', unit: '£ / week' },
+    vn_per_30_days:            { group: 'Virtual numbers', label: 'Virtual number — monthly', help: 'Flat price for a 30-day rental.', unit: '£ / 30 days' },
+    online_hourly_rate:        { group: 'Online & print', label: 'Help / online rate', help: 'Charged per hour for hands-on help (10-minute minimum).', unit: '£ / hour' },
+    online_min_charge:         { group: 'Online & print', label: 'Minimum online charge', help: 'The smallest charge for any online service.', unit: '£' },
+    online_repeat_from:        { group: 'Online & print', label: 'Bulk discount starts at', help: 'From this many applications, the cheaper "repeat" price applies (your price list says 4).', unit: 'th one' },
     // These change nothing about what anybody is charged — they decide when a
     // number on the dashboard turns amber, and when it turns red. Worth saying
     // so in the help text, since they sit in a table of fees.
-    dash_arrears_amber:        { group: '📊 Dashboard colours', label: 'Outstanding — amber above', help: 'Total owed across all customers. Below this the figure shows green when it is zero, and plain otherwise. Nothing here changes a charge.', unit: '£ owed' },
-    dash_arrears_red:          { group: '📊 Dashboard colours', label: 'Outstanding — red above', help: 'The point at which the money owed is a problem rather than the ordinary flow of the week.', unit: '£ owed' },
-    dash_overdue_amber:        { group: '📊 Dashboard colours', label: 'Overdue rentals — amber above', help: 'Phones still out past their return date.', unit: 'rentals' },
-    dash_overdue_red:          { group: '📊 Dashboard colours', label: 'Overdue rentals — red above', help: 'How many overdue phones means somebody should be chasing today.', unit: 'rentals' },
-    dash_tasks_amber:          { group: '📊 Dashboard colours', label: 'High-priority tasks — amber above', help: 'Open tasks marked 🔥 Now.', unit: 'tasks' },
-    dash_tasks_red:            { group: '📊 Dashboard colours', label: 'High-priority tasks — red above', help: 'The backlog size that counts as behind.', unit: 'tasks' },
-    dash_phones_amber:         { group: '📊 Dashboard colours', label: 'Phones left — amber at or below', help: 'Rental phones on the shelf and ready to go out. This one counts DOWN: fewer is worse.', unit: 'phones' },
-    dash_phones_red:           { group: '📊 Dashboard colours', label: 'Phones left — red at or below', help: 'The point at which the next customer through the door may go away empty-handed.', unit: 'phones' },
-    dash_returning_amber:      { group: '📊 Dashboard colours', label: 'Returning today — amber above', help: 'Phones expected back today, so the counter knows what kind of day it is.', unit: 'returns' },
-    dash_returning_red:        { group: '📊 Dashboard colours', label: 'Returning today — red above', help: 'A busy enough return day to need a second pair of hands.', unit: 'returns' },
+    dash_arrears_amber:        { group: 'Dashboard colours', label: 'Outstanding — amber above', help: 'Total owed across all customers. Below this the figure shows green when it is zero, and plain otherwise. Nothing here changes a charge.', unit: '£ owed' },
+    dash_arrears_red:          { group: 'Dashboard colours', label: 'Outstanding — red above', help: 'The point at which the money owed is a problem rather than the ordinary flow of the week.', unit: '£ owed' },
+    dash_overdue_amber:        { group: 'Dashboard colours', label: 'Overdue rentals — amber above', help: 'Phones still out past their return date.', unit: 'rentals' },
+    dash_overdue_red:          { group: 'Dashboard colours', label: 'Overdue rentals — red above', help: 'How many overdue phones means somebody should be chasing today.', unit: 'rentals' },
+    dash_tasks_amber:          { group: 'Dashboard colours', label: 'High-priority tasks — amber above', help: 'Open tasks marked Now.', unit: 'tasks' },
+    dash_tasks_red:            { group: 'Dashboard colours', label: 'High-priority tasks — red above', help: 'The backlog size that counts as behind.', unit: 'tasks' },
+    dash_phones_amber:         { group: 'Dashboard colours', label: 'Phones left — amber at or below', help: 'Rental phones on the shelf and ready to go out. This one counts DOWN: fewer is worse.', unit: 'phones' },
+    dash_phones_red:           { group: 'Dashboard colours', label: 'Phones left — red at or below', help: 'The point at which the next customer through the door may go away empty-handed.', unit: 'phones' },
+    dash_returning_amber:      { group: 'Dashboard colours', label: 'Returning today — amber above', help: 'Phones expected back today, so the counter knows what kind of day it is.', unit: 'returns' },
+    dash_returning_red:        { group: 'Dashboard colours', label: 'Returning today — red above', help: 'A busy enough return day to need a second pair of hands.', unit: 'returns' },
   };
   const editable = cfg.settings.filter(s => s.numValue !== null && s.editable && !s.custom);
   const feeGroups = {};
   editable.forEach(s => {
-    const m = FEE_META[s.key] || { group: '⚙️ Other', label: s.description || s.key, help: '', unit: s.unit };
+    const m = FEE_META[s.key] || { group: 'Other', label: s.description || s.key, help: '', unit: s.unit };
     (feeGroups[m.group] = feeGroups[m.group] || []).push({ s, m });
   });
   const feeRow = ({ s, m }) => `
@@ -23321,7 +23333,7 @@ async function renderSettingsTab() {
       <td><button class="btn btn-outline kc-ic kc-ic-save" style="font-size:var(--fs-small);padding:5px 12px;" onclick="saveSettingKey('${escHtml(s.key)}')">Save</button></td>
     </tr>`;
   const settingRows = Object.entries(feeGroups).map(([group, items]) =>
-    `<tr><td colspan="3" style="background:var(--bg-secondary);font-size:var(--fs-micro);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);padding:6px 16px;">${group}</td></tr>` +
+    `<tr><td colspan="3" class="kc-ic kc-ic-${FEE_GROUP_ICONS[group] || 'gear'}" style="background:var(--bg-secondary);font-size:var(--fs-micro);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);padding:6px 16px;">${escHtml(group)}</td></tr>` +
     items.map(feeRow).join('')).join('');
 
   emailAliasCache = aliases?.success ? aliases.aliases : [];
@@ -23353,7 +23365,7 @@ async function renderSettingsTab() {
             </tr>`).join('');
         }).join('')}
         <tr style="background:var(--bg-secondary);">
-          <td><div style="font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a service</div>
+          <td><div style="font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;"><i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Add a service</div>
             <input class="form-input" id="miNewName" placeholder="New service name" style="min-height:0;padding:5px 8px;font-size:var(--fs-small);min-width:170px;"></td>
           <td>${menuNum('miNewPrice', '')}</td>
           <td colspan="3">
@@ -23371,7 +23383,7 @@ async function renderSettingsTab() {
   extraChargeCache = extra?.success ? extra.charges : [];
   const TARGET_LABEL = { booking: '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i> Every flight booking', service: '<i class="kc-ic kc-ic-printer" aria-hidden="true"></i> Every online/print service',
     sim: '<i class="kc-ic kc-ic-card" aria-hidden="true"></i> Every SIM setup', repair: '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> Every repair', rental: '<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Every rental', any: '<i class="kc-ic kc-ic-star" aria-hidden="true"></i> All of the above' };
-  const extraHtml = !isAdmin || !extra?.success ? '' : settingsCard('extras', '➕ Extra charges',
+  const extraHtml = !isAdmin || !extra?.success ? '' : settingsCard('extras', '<i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Extra charges',
     `${extraChargeCache.length} auto-applied — the app bills these for you`, `
       <div style="padding:8px 16px 4px;font-size:var(--fs-small);color:var(--muted);line-height:1.5;">
         Define a fee once and the app adds it <strong>automatically</strong> every time you make that kind of charge —
@@ -23398,7 +23410,7 @@ async function renderSettingsTab() {
             </td>
           </tr>`).join('')}
         <tr style="background:var(--bg-secondary);">
-          <td><div style="font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;">➕ Add a charge</div>
+          <td><div style="font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:4px;"><i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Add a charge</div>
             <input class="form-input" id="ecNew_label" placeholder="e.g. Handling fee" style="min-height:0;padding:5px 8px;font-size:var(--fs-small);min-width:150px;"></td>
           <td>${num('ecNew_amount', '')}</td>
           <td><select class="form-input" id="ecNew_target" style="min-height:0;padding:5px 8px;font-size:var(--fs-small);">
@@ -23436,7 +23448,7 @@ async function renderSettingsTab() {
         <button class="btn btn-outline btn-sm kc-ic kc-ic-save" onclick="saveVoidReasons()">Save reasons</button>
       </div>
       <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
-        Comma-separated. Offered when a rental is <strong>voided</strong> (↩ in Manage Rental) — every undo keeps its why.</div>
+        Comma-separated. Offered when a rental is <strong>voided</strong> (the undo button in Manage Rental) — every undo keeps its why.</div>
 
       <div style="padding:10px 16px 2px;border-top:1px solid var(--border);font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;"><i class="kc-ic kc-ic-target" aria-hidden="true"></i> Monthly target</div>
       <div style="padding:8px 16px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -23545,7 +23557,7 @@ async function renderSettingsTab() {
                   gap and their own weights. */''}
             <td style="font-size:var(--fs-small);">
               <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
-                ${a.url ? `<a href="${escHtml(a.url)}" target="_blank" rel="noopener" style="color:var(--accent);white-space:nowrap;">open ↗</a>` : ''}
+                ${a.url ? `<a href="${escHtml(a.url)}" target="_blank" rel="noopener" style="color:var(--accent);white-space:nowrap;">open</a>` : ''}
                 <span style="color:var(--muted);">${escHtml(a.loginEmail || '—')}</span>
               </div>
             </td>
@@ -23613,7 +23625,7 @@ async function renderSettingsTab() {
           <td style="font-size:var(--fs-small);color:var(--muted);">HOLD builds &amp; logs but sends nothing · TEST sends everything to your own address · LIVE emails real customers (MAIL_LIVE).</td>
         </tr>
         <tr>
-          <td><strong>💬 SMS</strong></td>
+          <td><strong class="kc-ic kc-ic-chat">SMS</strong></td>
           <td style="font-size:var(--fs-small);">${escHtml(health?.sms?.provider || 'Twilio (not connected)')}</td>
           <td>${chanBadge(health?.sms)}</td>
           <td style="font-size:var(--fs-small);color:var(--muted);">${health?.sms?.configured
@@ -23956,8 +23968,8 @@ const MSG_STATUS_LABEL = {
   complained: ['SPAM', '', 'the recipient marked it as spam'],
   // Inbound — a customer texting the shop back. Same log, so one screen holds
   // the whole conversation rather than an inbox per direction.
-  received: ['↩ REPLY', 'badge-sim', 'a customer texted this to the shop'],
-  opt_out: ['↩ STOP', '', 'they asked to stop receiving texts — Twilio blocks further sends'],
+  received: ['REPLY', 'badge-sim', 'a customer texted this to the shop'],
+  opt_out: ['STOP', '', 'they asked to stop receiving texts — Twilio blocks further sends'],
   invalid: ['NOT A NUMBER', '', 'refused before sending: the destination could not be a phone number'],
 };
 async function loadMessageLog() {
@@ -23981,7 +23993,7 @@ async function loadMessageLog() {
     const when = new Date(e.at);
     return `<tr>
       <td style="white-space:nowrap;font-size:var(--fs-small);color:var(--muted);">${when.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} ${when.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</td>
-      <td>${e.channel === 'sms' ? '💬 SMS' : '<i class="kc-ic kc-ic-email" aria-hidden="true"></i> Email'}${
+      <td>${e.channel === 'sms' ? '<i class="kc-ic kc-ic-chat" aria-hidden="true"></i> SMS' : '<i class="kc-ic kc-ic-email" aria-hidden="true"></i> Email'}${
         // 'sms_in' is a column value, not a phrase. Printed raw it sat under
         // the channel looking like a fault code; the direction is the thing a
         // reader actually wants from it.
@@ -24036,7 +24048,7 @@ function msgLogReply(id) {
   if (!e) { toast('Reload the log and try again.', 'warning'); return; }
   const who = e.customerName ? escName(e.customerName) : `<span dir="ltr">${escHtml(e.to)}</span>`;
   showDynamicModal(`
-    <div class="modal-title">↩ Reply to ${who}</div>
+    <div class="modal-title"><i class="kc-ic kc-ic-undo" aria-hidden="true"></i> Reply to ${who}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:4px;">They wrote</div>
     <blockquote class="sms-quote">${escHtml(e.subject || '(no text)')}</blockquote>
     <label class="form-label" for="smsReplyText">Your reply</label>
@@ -24097,7 +24109,7 @@ async function sendSmsReply(id) {
     const j = await r.json().catch(() => ({}));
     if (!r.ok || !j.success) {
       toast(j.error || 'Could not send that reply.', 'error');
-      if (btn) { btn.disabled = false; btn.textContent = '📤 Send reply'; }
+      if (btn) { btn.disabled = false; btn.classList.add('kc-ic', 'kc-ic-upload'); btn.textContent = 'Send reply'; }
       return;
     }
     closeDynamicModal();
@@ -24114,7 +24126,7 @@ async function sendSmsReply(id) {
     loadMessageLog();
   } catch {
     toast('Could not reach the server.', 'error');
-    if (btn) { btn.disabled = false; btn.textContent = '📤 Send reply'; }
+    if (btn) { btn.disabled = false; btn.classList.add('kc-ic', 'kc-ic-upload'); btn.textContent = 'Send reply'; }
   }
 }
 
@@ -24189,7 +24201,7 @@ async function kcTaskFromHereSave(customerId, notes, customerUuid) {
     if (currentTab === 'tasks') renderTasksTab();
   } catch {
     toast('Could not add that task.', 'error');
-    if (btn) { btn.disabled = false; btn.textContent = '📝 Add the task'; }
+    if (btn) { btn.disabled = false; btn.classList.add('kc-ic', 'kc-ic-edit-note'); btn.textContent = 'Add the task'; }
   }
 }
 
@@ -24274,7 +24286,7 @@ function settingsCard(key, title, subtitle, bodyHtml) {
   return `
     <div class="table-card settings-card" style="margin-bottom:12px;">
       <div class="sc-head" onclick="toggleSettingsCard('${key}')">
-        <span id="scChev_${key}" class="sc-chev-i" style="${open ? 'transform:rotate(90deg);' : ''}">▶</span>
+        <span id="scChev_${key}" class="sc-chev-i kc-ic kc-ic-play" style="${open ? 'transform:rotate(90deg);' : ''}" aria-hidden="true"></span>
         <strong class="sc-title">${title}</strong>
         ${subtitle ? `<span class="sc-sub">${subtitle}</span>` : ''}
       </div>
@@ -24469,7 +24481,7 @@ function openBizAccountModal(id = null) {
   const a = id ? bizAccountsCache.find(x => x.id === id) : null;
   const cats = [['infrastructure', 'Infrastructure'], ['telecom', 'Telecom'], ['ivr', 'IVR / PBX'], ['email', 'Email'], ['finance', 'Finance'], ['other', 'Other']];
   showDynamicModal(`
-    <div class="modal-title">${a ? '<i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Edit account' : '➕ Add account'}</div>
+    <div class="modal-title">${a ? '<i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Edit account' : '<i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Add account'}</div>
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">Name *</label>
@@ -24573,7 +24585,7 @@ let phoneModelsCache = [];
 function openPhoneModelModal(id = null) {
   const m = id ? phoneModelsCache.find(x => x.id === id) : null;
   showDynamicModal(`
-    <div class="modal-title">${m ? '✏️ Edit ' + escHtml(m.name) : '➕ Add phone'}</div>
+    <div class="modal-title">${m ? '<i class="kc-ic kc-ic-pencil" aria-hidden="true"></i> Edit ' + escHtml(m.name) : '<i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Add phone'}</div>
     <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Everything here shows on the public phone guide, except the internal notes. Pros and cons: one point per line.</div>
     <div class="form-grid">
       <div class="form-group">
