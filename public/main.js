@@ -20287,6 +20287,7 @@ const KC_SHORTCUTS = [
   ['⌘B / Ctrl B', 'Collapse or expand the sidebar (menu drawer on a phone)'],
   ['?', 'Show this shortcuts help'],
   ['Esc', 'Close the open dialog, palette, or customer card'],
+  ['A–Z / א–ת', 'On Customers: show only that initial — same letter again or Esc shows all'],
   ['Enter / Space', 'Open the focused row, card, or dashboard drill-down'],
   ['Tab / ⇧ Tab', 'Move between fields — stays inside an open dialog'],
   ['↑ ↓ then Enter', 'In the palette: pick a result and open it'],
