@@ -100,12 +100,15 @@ export default function AppShell({ initialTab = 'dashboard' }) {
             still be listed from links alone, with no way to remove it. */}
         <meta name="robots" content="noindex, nofollow" />
         <title>Kosher Connect – Customer Management</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
+        {/* No webfont link here on purpose. Every face this app actually
+            uses is self-hosted from /fonts via @font-face in globals.css —
+            David Libre KC and Heebo KC, both Hebrew-only subsets. Until
+            24 Aug 2026 this head fetched Inter in five weights from Google
+            Fonts, render-blocking, on every staff page; "Inter" appeared in
+            no font-family declaration anywhere in the repo. A stylesheet
+            link is render-blocking whether or not anything wants it. If a
+            webfont is ever genuinely needed, add it to the token block in
+            globals.css first, so the request and the user arrive together. */}
       </Head>
 
       <AppStyles />
