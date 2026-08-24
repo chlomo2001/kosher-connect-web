@@ -1996,6 +1996,32 @@ DISCOVERY: rendering real screens in the harness in states nobody had looked at
 - Loading states, focus visibility, contrast in both themes, dark-rule pairing,
   and touch targets at 390 — all already green.
 
+## The design audit's three bugs — 24 Aug 2026 (owner: "fix the 3 bugs")
+
+A second pair of eyes ran over the staff app: the `hallmark` skill's audit verb
+(installed 24 Aug, `89743c1`) against app.css, globals.css, AppShell.js and the
+markup regions of main.js. It reported 3 critical, 10 major, 13 minor — and the
+useful half of that is that **all three criticals were bugs, not taste**. Each
+was verified by hand before it was believed, and again in a browser after the
+fix. The design opinions among the majors are NOT adopted; they are a shortlist.
+
+| Shipped | Bug | Evidence |
+|---------|-----|----------|
+| `aef1ed8` | Every staff page render-blocked on a Google Fonts request for **Inter in five weights** — a face that appears in **zero** font-family declarations in the repo. The real faces are self-hosted @font-face. | request listener on the rendered app: 3 → **0** requests to fonts.googleapis/gstatic |
+| `c4e5d4b` | A literal white painted on `--success` / `--danger`, which **lighten** in dark exactly as `--accent` does. The Returned label measured **1.92:1**, Lost **2.92:1**, and the "!" on an overdue day **2.92:1** — the worst text contrast in the product, on the control that records whether a phone came back. Fixed with `--on-success` / `--on-danger`, the siblings `--on-accent` already implied. | measured on the real painted colours: dark **9.67 / 6.38 / 6.38**, light unchanged at 5.00 / 4.80 / 4.80 |
+| `1afe61f` | `var(--primary)` has never existed here (only `--primary-deep`). An undefined custom property is invalid at computed-value time — it kills the whole declaration — so `outline: 2px solid var(--primary)` computed to `outline-style:none` and links in a read carrier email had **no keyboard focus indicator at all** (WCAG 2.4.7). The same scan found `--ink` ×2, `--fs-h2`, `--radius-md` and `--bg-primary` ×2: six live faults from one typo class. | ring now paints 2px solid accent in both themes; `test/cssTokens.test.mjs` names file+line for any undefined token, proven to fail on a reintroduced `--radius-md` |
+
+The `--ink` one had done this before: app.css still carries the tombstone
+*"audit U13 — was var(--ink), undefined → invisible in dark mode"*. A class of
+bug that recurs is a missing test, not six missing fixes — hence the ratchet.
+Comments are stripped before scanning, or that very tombstone reports itself.
+
+**Not adopted, held as a shortlist** (owner's call, not the loop's): the unused
+`--space-*` scale against 429 hand-typed values, the sidebar's "No emoji" rule
+that the rest of the app breaks, seven decorative side-stripes, missing
+`:disabled` styling on ~13 non-`.btn` controls, seven success toasts announcing
+a change already visible on screen, and a hand-rolled toggle animating `left`.
+
 ## UX/UI night — 24 Aug 2026 (03:07–04:00)
 
 Ground: full `audit-all.sh` clean (exit 0, run unpiped). The discovery lane was
