@@ -18688,7 +18688,7 @@ async function renderKolTorahTab() {
       : '<span style="font-size:var(--fs-small);color:var(--muted);">nothing on consignment</span>';
     const editing = ktEditShuls.has(s.id);
     return `
-      <div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:var(--bg-primary);">
+      <div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:var(--surface);">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <strong>${escHtml(s.name)}</strong>
           ${s.contact ? `<span style="font-size:var(--fs-small);color:var(--muted);">${escHtml(s.contact)}</span>` : ''}
@@ -18754,7 +18754,7 @@ async function renderKolTorahTab() {
         ['🎧', `${openJobs.length}`, 'open jobs'],
         ['💷', fmtGbp(received30), 'collected, last 30 days'],
       ].map(([ico, big, label]) => `
-        <div style="flex:1;min-width:140px;border:1px solid var(--border);border-radius:8px;padding:10px 14px;background:var(--bg-primary);">
+        <div style="flex:1;min-width:140px;border:1px solid var(--border);border-radius:8px;padding:10px 14px;background:var(--surface);">
           <div style="font-size:var(--fs-title);font-weight:800;">${ico} ${big}</div>
           <div style="font-size:var(--fs-micro);color:var(--muted);">${label}</div>
         </div>`).join('')}
