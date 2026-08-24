@@ -5285,7 +5285,7 @@ function saveNewPhone() {
   };
   phones.push(phone);
   savePhones(phones);
-  toast(`Phone ${number} added! ✅`, 'success');
+  toast(`Phone ${number} added.`, 'success');
   closeDynamicModal();
   renderRentalsTab();
 }
@@ -5585,7 +5585,8 @@ function saveEditPhone(phoneId) {
     }
   }
   savePhones(phones);
-  toast('Phone updated!', 'success');
+  // Silent: closeDynamicModal() reveals the row, and renderRentalsTab()
+  // below repaints it with the new values. The change IS the confirmation.
   closeDynamicModal();
   renderRentalsTab();
 }
@@ -6309,7 +6310,7 @@ async function saveManageRental(rentalId) {
   }
 
   closeDynamicModal();
-  toast('Rental updated! ✅', 'success');
+  // Silent — renderRentalsTab() below repaints the row you just edited.
   renderRentalsTab();
 }
 
@@ -7288,7 +7289,7 @@ function renderCustomersTab() {
 
   document.getElementById('btnExportCSV').addEventListener('click', async () => {
     const res = await window.api.exportCSV();
-    if (res.success) toast('CSV exported successfully!', 'success');
+    if (res.success) toast('Customer list exported.', 'success');
   });
 }
 
@@ -12233,7 +12234,7 @@ async function saveCustomer() {
       const idx = customers.findIndex(c => c.id === editId);
       if (idx !== -1) customers[idx] = res.customer;
       sortCustomersAZ();  // a rename may change where they sit in A–Z
-      toast('Customer updated!', 'success');
+      // Silent — closeModal() + renderTableRows() below show the new values.
 
       const updated = customers.find(c => c.id === editId);
       if (updated) {
@@ -12262,7 +12263,7 @@ async function saveCustomer() {
     if (res && res.success) {
       customers.push(res.customer);
       sortCustomersAZ();
-      toast('Customer added!', 'success');
+      toast('Customer added.', 'success');
     } else { saveFailed(res); return; }
   }
 
@@ -12926,10 +12927,16 @@ async function saveSimForm(editId) {
   let extraMsg = '';
   if (newSimId) extraMsg = await applyExtraCharges('sim', newSimId, customerId, false);
   renderSimsTab();
-  // An EDIT is a correction, not a counter job — it keeps the toast. A new plan
-  // is money changing hands with the customer in front of you, so it finishes
-  // on the card like everything else.
-  if (editId) { toast(`SIM plan updated ✅${extraMsg}`, 'success'); return; }
+  // A new plan is money changing hands with the customer in front of you, so
+  // it finishes on the card, like everything else. An EDIT is now silent:
+  // renderSimsTab() above has already repainted the row with the correction,
+  // and a toast that says what the screen says is noise. (That supersedes an
+  // earlier note here which kept a toast to mark an edit apart from a new
+  // plan — the distinction is real, but it is carried by WHERE each one
+  // finishes, not by an extra announcement. extraMsg is always empty on this
+  // branch, since it is only filled when a NEW sim id exists, so nothing
+  // invisible is being dropped.)
+  if (editId) return;
   if (extraMsg) toast(`SIM plan added.${extraMsg}`, 'success');
   const sc = customers.find(x => String(x.id) === String(customerId));
   // Read the labels off the form's own selects rather than re-deriving them,
