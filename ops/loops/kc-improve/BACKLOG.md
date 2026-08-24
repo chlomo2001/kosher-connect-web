@@ -1996,6 +1996,28 @@ DISCOVERY: rendering real screens in the harness in states nobody had looked at
 - Loading states, focus visibility, contrast in both themes, dark-rule pairing,
   and touch targets at 390 — all already green.
 
+## UX/UI night — 24 Aug 2026 (03:07–04:00)
+
+Ground: full `audit-all.sh` clean (exit 0, run unpiped). The discovery lane was
+FRESH EYES ON THE DAY'S OWN SHIPMENTS — the 37px rail, the calmed card header,
+the letter-jump and the till bounce all landed within 24 hours, and the day's
+surfaces in states nobody rendered is where the 22 Aug night found its three.
+
+| # | Shipped | What it was | Found by |
+|---|---------|-------------|----------|
+| 1 | `2a184e5` | `kcTopModalOverlay` — the one answer to "which dialog is on top?", feeding the Tab trap and the letter-jump guard — listed five overlays out of nine. Tab in the house prompt walked the page BEHIND the dialog; Tab in a stacked modal was trapped inside the dialog underneath the one on screen; the second customer card and the palette were invisible to it. The global Escape walk had the same hole one layer wide: `kcPrompt` missing, so Escape on a prompt closed its PARENT and left the prompt standing. Both walks now run all nine layers in true z-order (3000→2000→1000→100→91→90); `test/topOverlay.test.mjs` pins membership, order, agreement between the walks, and ratchets a new modal-overlay id into the list before it can ship | reading the letter-jump guard's own dependency with fresh eyes |
+| 2 | `34172ce` | Yesterday's phone-book jump was missing from the one place that lists the keyboard — the "?" help. One row (A–Z / א–ת, toggle-off spelled out); verified at 390px largest with zero overflow | asking "how would anyone learn this exists?" |
+| 3 | `34fd15c` | The rail scrolls on short screens now (641d862, the right trade) — but Chromium's overlay scrollbar paints NOTHING at rest, and at 1280×640 eight rows (Settings among them) hid behind a fold that ends on a clean border and reads as the end of the menu. Even 1050px tall left 67px unannounced. A 26px sticky-pseudo fade now sits at whichever edge still hides rows — the same trailing-fade promise the welcome chip strip makes — painted from `var(--brand-dark)` so dark theme and the light-rail prototype recolour it free. Driven at 640/1050/1200 light+dark, collapsed 66px rail, phone drawer, light rail: fade present exactly when rows hide, gone when they don't | screenshotting the new rail one height shorter than anyone's desk |
+
+Also drive-verified clean (13 behavioural checks, so nobody re-checks): the
+prompt-over-dialog Escape/Tab flow end to end; letter-jump chip + honest empty
+state + a letter pressed over an open customer card ignored; nav rows holding
+37px at 640; the new help row at 390 largest.
+
+GitHub tracker: both open issues (#5 print-shop quotes, #9 ownership) are
+blocked on people, unchanged by the night — no comment noise added, nothing
+found-not-fixed to file.
+
 ## UX/UI night — 23 Aug 2026 (03:07–04:00) — a short one, on purpose
 
 Ground checked: CI green through `f11ec6e` (the Saturday-afternoon check-in
