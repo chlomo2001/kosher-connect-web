@@ -1996,6 +1996,42 @@ DISCOVERY: rendering real screens in the harness in states nobody had looked at
 - Loading states, focus visibility, contrast in both themes, dark-rule pairing,
   and touch targets at 390 — all already green.
 
+## The rest of the emoji — 24 Aug 2026 (owner: "now do the rest of the emoji too")
+
+Shipped `9056be4`. Icon set grew 46 → **95 shapes**; converted **154 more
+sites**: 53 modal titles, 19 empty states, 72 element-text glyphs, 5 toasts,
+4 text-assigned labels, and the charge-gate icon map.
+
+### Three that needed more than a class
+
+- **`toast()` now takes an icon name** as a third argument and appends its own
+  `<i>`. The message stays `textContent` deliberately — a toast carries
+  customer names and free-typed notes, and the day it parses HTML is the day
+  one of those becomes markup.
+- **🔴 🟡 🟢 ⚪ became CSS dots, not masks.** They are the one place in this app
+  where the *colour* was the information (priority, availability). A monochrome
+  mask would have deleted the signal. They now take `--danger-ink` /
+  `--warning-ink` / `--success-ink` / `--muted` — which is what the code beside
+  them already did: `['var(--accent)', '🔴 Rented']` named the colour twice.
+- **🎉 ×11 was deleted, not drawn.** "Nothing left to review." already says it.
+
+### The floor, and why it is a floor
+
+| Left | Reason |
+|------|--------|
+| 63 | `<option>` text — an option cannot hold markup or a pseudo-element. Short of replacing every `<select>` with a custom listbox, there is nothing to do, and that is a worse trade than an emoji |
+| 51 | labels that **also** appear in an `<option>` — the priority set (Now / Next / Soon) among them. Converting only the non-option copies would make the app spell one priority two ways, which is worse than either spelling alone |
+| 48 | `title=""` and `aria-label` — plain text by definition |
+| — | outbound SMS and email keep theirs: no app CSS travels with them |
+
+`simMenuIcon()` is the clearest case: its whole output goes into `<option>`
+text, so its four glyphs stay and its existing comment already explains why.
+
+**Residue:** ~321 occurrences the classifier still calls convertible, most of
+them feeding those same option-bound labels or sitting mid-sentence in prose.
+Worth a further pass only if the owner wants it; the surfaces a member of
+staff actually looks at are done.
+
 ## Drawn icons on buttons and toolbars — 24 Aug 2026 (owner: "first do the buttons and toolbars")
 
 The owner saw the one-row before/after and chose the scoped conversion over the
