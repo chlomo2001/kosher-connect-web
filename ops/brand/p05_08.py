@@ -27,10 +27,12 @@ def palette(c):
     SW = [
         ('#0a2540', 'kc-navy', 'INK', 'Body copy, headings, the sidebar track, deep button states. '
                                       'The default. If a colour has no reason, it is this one.'),
-        ('#07639e', 'logo blue', 'THE MARK', 'The blue in the logo file itself. See plate 05 — the '
-                                             'product does not currently use this value.'),
-        ('#0060a8', 'kc-blue', 'ACTION', 'Links, primary buttons, eyebrows, the one thing on a '
-                                         'screen you are meant to press. Spend it sparingly.'),
+        ('#07639e', 'kc-blue', 'ACTION', 'Links, primary buttons, eyebrows, the one thing on a '
+                                         'screen you are meant to press. Spend it sparingly. This '
+                                         'is the logo’s own blue — see plate 05.'),
+        ('#57a6e6', 'kc-blue-bright', 'ON DARK', 'The same blue lifted until it clears AA on a '
+                                                 'near-black card. Dark mode is a second set of '
+                                                 'values, not a filter over the first.'),
         ('#c19161', 'kc-gold', 'WARMTH', 'DECORATION ONLY. Rules, the second word of the lockup, '
                                          'a band edge. Never text: it measures 2.80:1 on white.'),
         ('#8d612b', 'kc-gold-ink', 'GOLD INK', 'The same gold darkened until 17 px copy clears AA. '
@@ -139,9 +141,9 @@ def contrast(c):
     rows = [
         ('#0a2540', '#f7f3ea', 'Navy on paper', 'body copy, headings — the default pairing'),
         ('#0a2540', '#fffdf8', 'Navy on card', 'anything set on a card'),
-        ('#0060a8', '#f7f3ea', 'Blue on paper', 'links and primary labels'),
-        ('#07639e', '#f7f3ea', 'Logo blue on paper', 'if plate 05 is decided the other way'),
-        ('#ffffff', '#0060a8', 'White on blue', 'primary button'),
+        ('#07639e', '#f7f3ea', 'Blue on paper', 'links and primary labels — the logo’s own blue'),
+        ('#57a6e6', '#0b0d11', 'Bright blue on dark', 'the same role, on the dark canvas'),
+        ('#ffffff', '#07639e', 'White on blue', 'primary button'),
         ('#ffffff', '#0a2540', 'White on navy', 'the sidebar, the dark lockup panel'),
         ('#8d612b', '#f7f3ea', 'Gold ink on paper', 'the readable gold — warnings, hebrew dates'),
         ('#c19161', '#f7f3ea', 'Gold on paper', 'DECORATION ONLY — fails, and is meant to'),

@@ -6,72 +6,75 @@ from reportlab.lib.utils import ImageReader
 MARK = ImageReader(ASSET('mark.png'))
 LOCKUP = ImageReader(ASSET('lockup.png'))
 
-# ══ PLATE 05 — the blue question ═════════════════════════════════════════
+# ══ PLATE 05 — the blue, settled ═════════════════════════════════════════
 def blue_question(c):
-    p = Plate(c, '05', 'One blue, or two?',
-              'A finding, not a rule. The blue the product paints is not the blue in the logo file, '
-              'and this plate exists so the difference is settled once rather than re-discovered.')
+    p = Plate(c, '05', 'The blue, settled',
+              'For a while the product painted a blue the logo did not contain. This plate is the '
+              'record: what was found, what it would have cost, and what the owner decided.')
     top = H - MT - 100
-    bw = (CW - 30) / 2; bh = 150
+    bw = (CW - 30) / 2; bh = 142
     for i, (hexv, who, note) in enumerate([
         ('#07639e', 'THE LOGO', 'Sampled from logo-full.png — 19,915 pixels of it, the largest single '
                                 'colour in the file. This is what is on the shopfront, the van, the '
                                 'business card and every printed thing already out in the world.'),
-        ('#0060a8', 'THE PRODUCT', 'Declared as --kc-blue in styles/globals.css and painted on every '
-                                   'screen: buttons, links, eyebrows, the sidebar’s active row. This '
-                                   'is what a customer sees on the website and in the portal.')]):
+        ('#0060a8', 'WHAT THE PRODUCT PAINTED', 'Declared as --kc-blue and painted on every screen: '
+                                                'buttons, links, eyebrows, the sidebar’s active row. '
+                                                'Close enough to pass unnoticed for months, and not '
+                                                'close enough to match a printed sign.')]):
         x = ML + i * (bw + 30)
         c.setFillColor(HexColor(hexv)); c.rect(x, top - bh, bw, bh, stroke=0, fill=1)
-        c.setFillColor(tint(HexColor('#ffffff'), 0.85)); c.setFont('Plate', 20)
-        c.drawString(x + 14, top - 30, who)
+        c.setFillColor(tint(HexColor('#ffffff'), 0.85)); c.setFont('Plate', 17)
+        c.drawString(x + 14, top - 26, who)
         c.setFillColor(HexColor('#ffffff')); c.setFont('MonoB', 13)
         c.drawString(x + 14, top - bh + 18, hexv.upper())
+        if i == 1:
+            c.setFillColor(tint(HexColor('#ffffff'), 0.75)); c.setFont('MonoB', 7)
+            c.drawRightString(x + bw - 14, top - bh + 20, 'RETIRED 24 AUG 2026')
         p.para(note, x, top - bh - 16, bw, 10.6, 'Sans', 7.8, tint(INK, 0.8))
 
-    # the two, adjacent, which is the only honest way to show a small difference
-    my_ = top - bh - 96
-    c.setFillColor(HexColor('#07639e')); c.rect(ML, my_ - 54, CW / 2, 54, stroke=0, fill=1)
-    c.setFillColor(HexColor('#0060a8')); c.rect(ML + CW / 2, my_ - 54, CW / 2, 54, stroke=0, fill=1)
+    my_ = top - bh - 92
+    c.setFillColor(HexColor('#07639e')); c.rect(ML, my_ - 50, CW / 2, 50, stroke=0, fill=1)
+    c.setFillColor(HexColor('#0060a8')); c.rect(ML + CW / 2, my_ - 50, CW / 2, 50, stroke=0, fill=1)
     c.setFillColor(tint(HexColor('#ffffff'), 0.8)); c.setFont('Mono', 6.2)
-    c.drawString(ML + 10, my_ - 44, '#07639E  THE LOGO')
-    c.drawString(ML + CW / 2 + 10, my_ - 44, '#0060A8  --KC-BLUE')
+    c.drawString(ML + 10, my_ - 40, '#07639E  KEPT')
+    c.drawString(ML + CW / 2 + 10, my_ - 40, '#0060A8  RETIRED')
     c.setStrokeColor(PAPER); c.setLineWidth(1.2)
-    c.line(ML + CW / 2, my_ - 54, ML + CW / 2, my_)
+    c.line(ML + CW / 2, my_ - 50, ML + CW / 2, my_)
     p.label('DELTA-E ≈ 8.7  ·  SIDE BY SIDE IN FLAT COLOUR THIS IS A VISIBLE STEP, NOT A ROUNDING ERROR',
-            ML, my_ - 66, tint(INK, 0.55), 6.4, 'MonoB')
+            ML, my_ - 62, tint(INK, 0.55), 6.4, 'MonoB')
 
-    yy = my_ - 96
+    yy = my_ - 92
     p.hair(ML, yy + 16, CW)
-    cols = [
-        ('WHY IT MATTERS NOW', 'On a screen, nobody sees the two together. On a carrier bag printed to '
-                               '--kc-blue, carried into a shop whose sign is matched to the logo file, '
-                               'somebody does. Print is where a near-miss becomes a mistake, and the '
-                               'bags are the next thing to be ordered.'),
-        ('THE COMMENT IS BACKWARDS', 'styles/globals.css calls #07639e a "near-miss copy" the public '
-                                     'pages used to carry. It is the other way round: #07639e is the '
-                                     'logo. Whatever is decided, that comment needs correcting — it '
-                                     'currently teaches the next person the wrong thing.'),
-        ('WHAT IS NOT AT STAKE', 'Contrast. #07639e measures 5.77:1 on paper and #0060a8 measures 5.86:1 '
-                                 '— both clear AA for body copy and both clear it for large text. This '
-                                 'is a question of matching, not of legibility.'),
+    cols_ = [
+        ('WHY IT MATTERED', 'On a screen nobody sees the two together. On a carrier bag printed to '
+                            'the old value, carried into a shop whose sign is matched to the '
+                            'artwork, somebody does. Print is where a near-miss becomes a mistake, '
+                            'and the bags were the next thing to be ordered.'),
+        ('HOW IT SURVIVED SO LONG', 'The comment in styles/globals.css had it exactly backwards — it '
+                                    'called #07639e a "near-miss copy" the public pages used to '
+                                    'carry. Anyone who checked would have been told the wrong thing '
+                                    'by the file itself. That comment is corrected.'),
+        ('WHAT WAS NOT AT STAKE', 'Contrast. #07639e measures 5.77:1 on paper against the old '
+                                  '5.86:1 — both clear AA for body copy and both clear it for large '
+                                  'text. Nothing on plate 04 moved by more than a hundredth.'),
     ]
-    for i, (h, body) in enumerate(cols):
+    for i, (h, body) in enumerate(cols_):
         x, w = col(i * 4, 4)
         p.label(h, x, yy, BLUE, 6.4, 'MonoB')
         p.para(body, x, yy - 12, w, 9.8, 'Sans', 7.2, tint(INK, 0.78))
 
-    # the recommendation, stated plainly and marked as a recommendation
-    ry = MB + 92
-    c.setFillColor(CARD); c.rect(ML, ry - 8, CW, 78, stroke=0, fill=1)
-    c.setStrokeColor(GOLD); c.setLineWidth(1.4); c.line(ML, ry - 8, ML, ry + 70)
-    p.label('RECOMMENDED  ·  OWNER DECISION', ML + 16, ry + 56, GOLD_INK, 6.6, 'MonoB')
-    p.para('Move --kc-blue to #07639e and let the logo be the authority. The mark is the fixed asset — '
-           'it is already printed, already on the sign, already in every customer’s memory — and a '
-           'stylesheet is the cheap thing to change. Nothing is lost: contrast holds, dark mode is '
-           'unaffected, and one value in one file moves the whole product. The alternative, '
-           're-cutting the logo to #0060a8, means re-issuing every printed thing that already exists.',
-           ML + 16, ry + 42, CW - 32, 10.4, 'Sans', 8, tint(INK, 0.85))
-    p.foot('PLATE 05  ·  ONE BLUE, OR TWO  ·  UNRESOLVED UNTIL THE OWNER SAYS')
+    ry = MB + 96
+    c.setFillColor(CARD); c.rect(ML, ry - 8, CW, 84, stroke=0, fill=1)
+    c.setStrokeColor(HexColor('#0a6e3f')); c.setLineWidth(1.6); c.line(ML, ry - 8, ML, ry + 76)
+    p.label('DECIDED  ·  OWNER, 24 AUGUST 2026', ML + 16, ry + 62, HexColor('#0a6e3f'), 6.6, 'MonoB')
+    p.para('--kc-blue is #07639e. The logo is the authority, because the mark is the fixed asset — '
+           'already printed, already on the sign, already in every customer’s memory — and a '
+           'stylesheet is the cheap thing to change. The alternative, re-cutting the logo to the '
+           'old token, meant re-issuing every printed thing that already exists. One value moved in '
+           'one file and the whole product followed, which is the entire argument for keeping the '
+           'brand in a token layer rather than in people’s memories.',
+           ML + 16, ry + 48, CW - 32, 10.4, 'Sans', 8, tint(INK, 0.85))
+    p.foot('PLATE 05  ·  THE BLUE  ·  SETTLED 24 AUG 2026  ·  styles/globals.css')
     c.showPage()
 
 # ══ PLATE 06 — type ══════════════════════════════════════════════════════

@@ -37,9 +37,17 @@ formula; the type ramp and the tokens are read from `styles/globals.css` and
 `docs/DESIGN.md`. If a value in the product changes, this document is wrong
 until it is rebuilt — which is the intended relationship.
 
-## The open question
+## The question that was open, and is not any more
 
-Plate 05 records a finding rather than a rule: the logo's blue is `#07639e` and
-the product paints `#0060a8`. That is a visible step in flat colour and it is
-the owner's to settle. When it is settled, fix the value, fix the misleading
-comment in `styles/globals.css`, and re-cut this document.
+Plate 05 recorded a finding: the logo's blue is `#07639e` and the product was
+painting `#0060a8` — a visible step in flat colour, and the comment in
+`styles/globals.css` had it backwards, calling the logo's own value a "near-miss
+copy". The owner settled it on 24 August 2026: `--kc-blue` moved to `#07639e`,
+the comment was corrected, and the plate now reads as a record rather than a
+question. Contrast moved by less than a hundredth and nothing else changed,
+which is what a token layer is for.
+
+The general lesson is on plate 11 and is worth keeping: nothing in the harness
+compares the brand tokens to the LOGO FILE. That check is a human looking at a
+picture, and it is exactly the one nobody had made. When a rule here turns out
+to matter, ask what would notice if it stopped being true.

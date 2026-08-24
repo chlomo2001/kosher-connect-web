@@ -2883,7 +2883,7 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
   cursor: pointer; color: var(--accent); font-weight: 500;
   border-bottom: 1px dashed var(--accent);
   border-radius: 4px; padding: 1px 19px 1px 5px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%230060a8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2307639e' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 3px center; background-size: 11px;
   transition: background-color 0.12s, border-color 0.12s;
   white-space: nowrap;
@@ -3039,7 +3039,9 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 .modal-title .kc-prov { vertical-align: 4px; margin-inline-start: 6px; }
 .kc-prov-0 { --kc-prov-tint: #0d9488; } /* teal — Lebara */
 .kc-prov-1 { --kc-prov-tint: #b45309; } /* amber — 1pMobile */
-.kc-prov-2 { --kc-prov-tint: #0060a8; } /* blue — O2 */
+.kc-prov-2 { --kc-prov-tint: #0060a8; } /* blue — O2. NOT --kc-blue: this is
+   one slot in a six-way categorical wheel for providers, and it merely shared
+   the old brand value. It stays put now the brand blue has moved to #07639e. */
 .kc-prov-3 { --kc-prov-tint: #be185d; } /* raspberry — Vodafone */
 .kc-prov-4 { --kc-prov-tint: #4f46e5; } /* indigo — EE */
 .kc-prov-5 { --kc-prov-tint: #475569; } /* slate — Three */

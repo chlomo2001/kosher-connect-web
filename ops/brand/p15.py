@@ -135,8 +135,9 @@ def colophon(c):
         ('MEASURED WITH', 'Colours sampled pixel-by-pixel from logo-full.png. Contrast computed by the '
                           'WCAG 2.2 sRGB formula. Nothing on these plates was taken from memory or '
                           'from a previous document.'),
-        ('OPEN QUESTION', 'Plate 05 — one blue or two — is unresolved and is the owner’s to settle. '
-                          'Until it is, the product and the printed world disagree by a visible step.'),
+        ('SETTLED', 'Plate 05 — the blue — was decided by the owner on 24 August 2026 and the token '
+                    'moved the same day. The product and the printed world now agree. No plate in '
+                    'this issue is left open.'),
     ]
     for i, (h, body) in enumerate(blocks):
         x, w = col(i * 3, 3)

@@ -2,7 +2,7 @@
    KosherConnect UI — logo-led design system
    Navy ink (#0A2540) on a WARM IVORY paper canvas (#F7F3EA — a
    whisper of the logo's gold, calmer than white for long sessions) ·
-   logo azure blue (#0060A8) accent + gold highlights · system sans, light weights
+   logo azure blue (#07639E) accent + gold highlights · system sans, light weights
    display with tight tracking · tabular figures on money · warm
    hairline borders · flat cards (rounded-md, crisp micro-shadow) ·
    dark-navy sidebar. No gradients, glassmorphic blur, or glow rings.
@@ -63,10 +63,23 @@
      the public site, sign-in, the customer portal, repair and the phone guide.
      They are taken from the logo itself, so "same site" is enforced by the
      token layer rather than by remembering to keep two palettes in step.
-     The public pages used to carry their own near-miss copies (#07639e blue,
-     #0d1526 ink) which is precisely why the product read as two products.
+     The public pages used to carry their own copies (#0d1526 ink among them),
+     which is precisely why the product read as two products.
+
+     --kc-blue WAS #0060a8 until 24 Aug 2026, and the comment here used to call
+     #07639e a "near-miss copy" the public pages carried. That was backwards.
+     #07639e is the logo: 19,915 pixels of it, sampled straight out of
+     public/logo-full.png, the largest single colour in the file. #0060a8 was
+     the near-miss, and at a delta-E of about 8.7 it is a visible step in flat
+     colour — invisible on a screen, where the two never appear together, and
+     not invisible at all on a carrier bag carried into a shop whose sign is
+     matched to the artwork. The owner settled it on 24 Aug: the mark is the
+     fixed asset, already printed and already on the sign, so the stylesheet
+     moves to it rather than the other way round. Contrast is unaffected —
+     5.77:1 on paper against the old 5.86:1, both clear of AA.
+     The full argument is plate 05 of docs/brand/KOSHER-CONNECT-BRAND-STANDARD.pdf.
      Change a value here and it moves everywhere — do not re-declare them. */
-  --kc-blue: #0060a8;           /* logo azure — primary action, links, eyebrows */
+  --kc-blue: #07639e;           /* THE LOGO'S OWN BLUE — primary action, links, eyebrows */
   --kc-blue-bright: #57a6e6;    /* its dark-theme voice (AA on dark surfaces) */
   --kc-navy: #0a2540;           /* ink / display / deep button states */
   --kc-gold: #c19161;           /* the logo's warm tan — DECORATION only */
