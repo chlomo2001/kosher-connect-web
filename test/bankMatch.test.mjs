@@ -53,10 +53,14 @@ test('scoreCandidate — money moving the wrong way is penalised, not ignored', 
   assert.equal(r.score, 0)  // the exact-amount credit does not rescue it
 })
 
+// The reason WORDING changed on 24 Aug when the name signal was graded
+// (a shared surname and a full name no longer say the same thing). What
+// this test is actually holding — Taitelbaum on file still finds
+// Teitelbaum on the statement — is unchanged.
 test('scoreCandidate — transliterated surnames still match', () => {
   const txn = { amount: 90, counterpartyName: 'TEITELBAUM' }
   const r = scoreCandidate(txn, { customerId: 'c1', name: 'Taitelbaum', expectedAmount: 90 })
-  assert.match(r.reasons.join(' '), /resembles/)
+  assert.match(r.reasons.join(' '), /shares a name with|forename and surname/)
 })
 
 test('proposeMatches — two customers owing the same amount is flagged ambiguous', () => {
