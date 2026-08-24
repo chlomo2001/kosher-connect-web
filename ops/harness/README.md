@@ -310,3 +310,31 @@ second answer. (1) *is* theme-dependent — the icon takes the button's ink, and
 the dark palette is a different set of tokens rather than a filter over the
 light one — so that half runs in both. Same coverage, half the time, which is
 what lets it run in `--smoke` rather than only overnight.
+
+### What is deliberately still an emoji
+
+The conversion is finished, and 137 lines of `public/main.js` still carry one.
+That is not a backlog — it is the set of places a CSS mask icon cannot go, and
+each was checked rather than assumed:
+
+- **`<option>` text (65 lines).** An option element renders no child markup, so
+  a filter view's label, a status dropdown or the till's category list can only
+  ever say what it says in characters. This is the biggest group by far.
+- **`title` / `aria-label` / `placeholder` attributes (14).** An attribute holds
+  text. Putting markup in one is the bug that tore the equipment rows apart and
+  the bug that had the customer-card menus reading `class="kc-ic…"` aloud.
+- **Persisted data (a handful).** A comm-log entry, a task title and a void
+  reason are written to the database and read back months later. `KC_LEGACY_ICONS`
+  exists precisely because rows written before 24 Aug hold glyphs, and history is
+  not rewritten to suit a stylesheet.
+- **Escaped sinks that are also data.** `STOCK_CATEGORY_LABELS` is the standing
+  example: a custom category's key IS its label, so every render site escapes it.
+  The settings help text that lists those twelve keeps its emoji too — it is a
+  legend for a list that shows emoji, and half-and-half in one sentence names
+  things that look like that nowhere.
+- **Comments (35).** Prose explaining what was measured and when. Rewriting a
+  note that says `"💾 Save changes" sat 53px off a 390px screen` would falsify
+  the record of a measurement.
+
+Everything else — every button, title, badge, warning line, empty state, feed
+row, menu item and label whose sink takes markup or takes a class — is an icon.

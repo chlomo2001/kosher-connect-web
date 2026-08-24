@@ -5713,7 +5713,7 @@ function saveEditPhone(phoneId) {
 // A pool is one carrier plan shared by several USA lines, activated for a
 // window. Pools are REAL entities: the registry lives in the settings key
 // rental_pools ([{name, from, till}]) and this modal is where they're added
-// and managed. Phones pick a pool from a dropdown (✏️ Edit Phone); applying
+// and managed. Phones pick a pool from a dropdown (Edit Phone); applying
 // a window here mirrors it onto every member phone's poolExpiry — the field
 // the New-Rental ranking, activation-fee logic and expiry warnings already
 // read — so one update drives all the downstream logic.
@@ -5893,7 +5893,7 @@ function openPoolsModal() {
               <td style="font-size:var(--fs-small);">${escHtml(p.model || '—')}</td>
               <td>${p.status === 'rented' ? '<span class="badge badge-rental">Rented</span>' : p.maintenance ? '<span class="badge kc-ic kc-ic-wrench" title="In maintenance"></span>' : '<span class="badge badge-active">Free</span>'}</td>
               <td class="kc-date" style="font-size:var(--fs-small);color:var(--muted);">${p.poolActiveFrom ? fmtDate(p.poolActiveFrom) : '—'}</td>
-              <td class="kc-date" style="font-size:var(--fs-small);${expired ? 'color:var(--danger-ink);font-weight:700;' : ''}">${p.poolExpiry ? fmtDate(p.poolExpiry) + (expired ? ' ⚠ expired' : '') : '—'}</td>
+              <td class="kc-date" style="font-size:var(--fs-small);${expired ? 'color:var(--danger-ink);font-weight:700;' : ''}">${p.poolExpiry ? fmtDate(p.poolExpiry) + (expired ? ' <i class="kc-ic kc-ic-alert" aria-hidden="true"></i> expired' : '') : '—'}</td>
             </tr>`;
           }).join('')}
           </tbody>
@@ -7974,7 +7974,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
         <span style="color:var(--muted);font-size:var(--fs-micro);display:block;margin-bottom:2px;"><i class="kc-ic kc-ic-passport" aria-hidden="true"></i> Passport on file</span>
         ${c.passportNumber ? `№ ····${escHtml(String(c.passportNumber).slice(-4))}` : ''}
         ${c.dob ? ` · born ${fmtDate(c.dob)}` : ''}
-        ${c.passportExpiry ? ` · expires <strong${c.passportExpiry < localISO() ? ' style="color:var(--danger-ink);"' : ''}>${fmtDate(c.passportExpiry)}</strong>${c.passportExpiry < localISO() ? ' ⚠ expired' : ''}` : ''}
+        ${c.passportExpiry ? ` · expires <strong${c.passportExpiry < localISO() ? ' style="color:var(--danger-ink);"' : ''}>${fmtDate(c.passportExpiry)}</strong>${c.passportExpiry < localISO() ? ' <i class="kc-ic kc-ic-alert" aria-hidden="true"></i> expired' : ''}` : ''}
       </div>` : '';
 
   // Owner #2 — house account strip: settles monthly on the saved card.
@@ -16419,7 +16419,7 @@ function svcTimerFloatFrame(t) {
       ${svcPipSupported()
         ? `<button class="svc-float-btn" title="Float on top of everything" onclick="event.stopPropagation();svcTimerPopOut()">⧉</button>`
         : ''}
-      <button class="svc-float-btn svc-float-stop" title="Stop &amp; charge" onclick="event.stopPropagation();svcTimerStop()">⏹</button>
+      <button class="svc-float-btn svc-float-stop kc-ic kc-ic-stop" title="Stop &amp; charge" onclick="event.stopPropagation();svcTimerStop()"></button>
     </div>`;
 }
 
@@ -17055,7 +17055,7 @@ function shopRowsHtml() {
         <td style="font-weight:700;${i.quantity <= i.lowStockAt ? 'color:var(--danger-ink);' : ''}">${i.quantity}</td>
         <td style="white-space:nowrap;">
           <button class="action-btn kc-ic kc-ic-pound" onclick="openSaleModal('${i.id}')">Sell</button>
-          <button class="action-btn" aria-label="Edit ${escHtml(i.name || 'item')}" onclick="openStockItemModal('${i.id}')">✏️</button>
+          <button class="action-btn kc-ic kc-ic-pencil" aria-label="Edit ${escHtml(i.name || 'item')}" onclick="openStockItemModal('${i.id}')"></button>
         </td>
       </tr>`).join('');
 }
@@ -17958,7 +17958,7 @@ function renderPosView() {
             autocomplete="off" oninput="posRenderTiles()"
             onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();saveSale();}else if(event.key==='Enter'){event.preventDefault();posScanEnter();}">
           <button class="theme-toggle" data-theme-btn onclick="toggleTheme()" title="Light / dark mode"
-            aria-label="Toggle light or dark mode">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙'}</button>
+            aria-label="Toggle light or dark mode" class="kc-ic ${document.documentElement.getAttribute('data-theme') === 'dark' ? 'kc-ic-sun' : 'kc-ic-moon'}"></button>
           <button class="theme-toggle kc-textsize" data-textsize-btn onclick="cycleTextSize()"
             data-size="${escHtml(currentTextSize().key)}" title="Text size: ${escHtml(currentTextSize().label)}"
             aria-label="Text size: ${escHtml(currentTextSize().label)}. Press to change.">${textSizeBtnInner()}</button>
@@ -18997,7 +18997,7 @@ async function renderKolTorahTab() {
       <td data-label="Speaker"><input class="form-input" id="ktT_speaker_${t.id}" value="${escHtml(t.speaker || '')}" style="min-width:130px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
       <td data-label="£"><input class="form-input" id="ktT_price_${t.id}" type="number" min="0" step="0.01" value="${t.price.toFixed(2)}" style="width:84px;min-height:0;padding:5px 8px;font-size:var(--fs-small);"></td>
       <td data-label="Active"><input type="checkbox" id="ktT_active_${t.id}" ${t.active ? 'checked' : ''} style="accent-color:var(--accent);cursor:pointer;"></td>
-      <td><button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 10px;" aria-label="Save title" onclick="ktSaveTitle('${t.id}')">💾</button></td>
+      <td><button class="btn btn-outline kc-ic kc-ic-save" style="font-size:var(--fs-small);padding:5px 10px;" aria-label="Save title" onclick="ktSaveTitle('${t.id}')"></button></td>
     </tr>`).join('');
 
   content.innerHTML = `
@@ -20478,8 +20478,8 @@ function fillPaletteQuick() {
       <span class="pq-icon${r.icon ? ` kc-ic kc-ic-${r.icon}` : ''}" aria-hidden="true"></span><span class="pq-label">${escHtml(r.label)}</span>${corner}
     </div>`;
   const pin = (call, on, title) =>
-    `<span class="pq-pin${on ? ' on' : ''}" role="button" tabindex="0" aria-label="${title}" title="${title}"
-        onclick="event.stopPropagation();${call}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();${call}}">📌</span>`;
+    `<span class="pq-pin kc-ic kc-ic-pin${on ? ' on' : ''}" role="button" tabindex="0" aria-label="${title}" title="${title}"
+        onclick="event.stopPropagation();${call}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();${call}}"></span>`;
   let html = '';
   const ctx = paletteContextVerbs();
   if (ctx) {
@@ -21871,7 +21871,7 @@ function contactChip(c) {
   }
   if (kind === 'ours') {
     const hit = customerSimsOf(c).find(s => kcTail10(s.simNumber) === kcTail10(c.phone));
-    return ` <span class="kc-contact-ours" title="The number we ring them on is also a SIM we provide and bill them for.">📶 our ${escHtml(hit && hit.provider ? hit.provider : '')} SIM</span>`;
+    return ` <span class="kc-contact-ours kc-ic kc-ic-signal" title="The number we ring them on is also a SIM we provide and bill them for.">our ${escHtml(hit && hit.provider ? hit.provider : '')} SIM</span>`;
   }
   return ' <span class="kc-contact-outside" title="They answer a line we do not provide.">outside line</span>';
 }
@@ -22205,7 +22205,7 @@ async function renderTasksTab() {
       </div>
       ${!t.done ? `
       <div class="task-actions">
-        ${/^New signup:/i.test(t.title || '') && !t.customerId ? `<button class="btn btn-primary btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="addCustomerFromTask('${escHtml(t.id)}')">➕ Add as customer</button>` : ''}
+        ${/^New signup:/i.test(t.title || '') && !t.customerId ? `<button class="btn btn-primary btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="addCustomerFromTask('${escHtml(t.id)}')"><i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Add as customer</button>` : ''}
         ${/^TICKET-/.test(t.reference || '') ? `<button class="btn btn-primary btn-sm kc-ic kc-ic-plane" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="tmOpenFromTask('${escHtml(t.reference)}')">Confirm booking details</button>` : ''}
         ${isMoneyTask ? `<button class="btn btn-outline btn-sm kc-ic kc-ic-money" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="openWalletModal('${escHtml(String(t.customerId))}')">Record</button>` : ''}
         ${chaseCust && waLink(chaseCust, '') ? `<button class="btn btn-outline btn-sm" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="waChaseCustomer('${escHtml(String(t.customerId))}')" title="Open a chase message in WhatsApp">💬 WhatsApp</button>` : ''}
@@ -23198,7 +23198,7 @@ async function renderSettingsTab() {
             <td style="font-size:var(--fs-small);"><i class="kc-ic kc-ic-clipboard" aria-hidden="true"></i> task <span class="badge badge-${r.priority === 'high' ? 'rental' : 'sim'}" style="font-size:var(--fs-micro);">${escHtml(r.priority)}</span></td>
             <td><label style="font-size:var(--fs-small);cursor:pointer;"><input type="checkbox" ${r.enabled ? 'checked' : ''} onchange="toggleAutomation('${escHtml(r.id)}', this.checked)" style="accent-color:var(--accent);"> on</label></td>
             <td style="white-space:nowrap;">
-              <button class="action-btn" aria-label="Edit this rule" onclick="openAutomationModal('${escHtml(r.id)}')">✏️</button>
+              <button class="action-btn kc-ic kc-ic-pencil" aria-label="Edit this rule" onclick="openAutomationModal('${escHtml(r.id)}')"></button>
               <button class="action-btn danger" aria-label="Delete this rule" onclick="deleteAutomation('${escHtml(r.id)}')">✕</button>
             </td>
           </tr>`).join('')}
@@ -23222,7 +23222,7 @@ async function renderSettingsTab() {
             <td><label style="font-size:var(--fs-small);cursor:pointer;"><input type="checkbox" ${a.enabled ? 'checked' : ''}
               onchange="toggleEmailAlias('${escHtml(a.id)}', this.checked)" style="accent-color:var(--accent);"> on</label></td>
             <td style="white-space:nowrap;">
-              <button class="action-btn" title="Edit forwarding / purpose" onclick="openEmailAliasModal('${escHtml(a.id)}')">✏️</button>
+              <button class="action-btn kc-ic kc-ic-pencil" title="Edit forwarding / purpose" onclick="openEmailAliasModal('${escHtml(a.id)}')"></button>
               <button class="action-btn" title="Generate SMTP password (for sending as this address)"
                 onclick="generateAliasPassword('${escHtml(a.id)}', '${escHtml(a.address)}')" title="Generate a password"></button>
               <button class="action-btn danger" aria-label="Delete ${escHtml(a.address)}" onclick="deleteEmailAlias('${escHtml(a.id)}', '${escHtml(a.address)}')">✕</button>
@@ -23408,7 +23408,7 @@ const FEE_META = {
             </select></td>
             <td><input type="checkbox" id="ec_active_${c.id}" ${c.active ? 'checked' : ''} style="accent-color:var(--accent);cursor:pointer;"></td>
             <td style="white-space:nowrap;">
-              <button class="btn btn-outline" style="font-size:var(--fs-small);padding:5px 10px;" aria-label="Save this charge" onclick="saveExtraCharge('${escHtml(c.id)}')">💾</button>
+              <button class="btn btn-outline kc-ic kc-ic-save" style="font-size:var(--fs-small);padding:5px 10px;" aria-label="Save this charge" onclick="saveExtraCharge('${escHtml(c.id)}')"></button>
               <button class="action-btn danger" style="font-size:var(--fs-micro);" aria-label="Delete this charge" onclick="deleteExtraCharge('${escHtml(c.id)}')">✕</button>
             </td>
           </tr>`).join('')}
@@ -23444,7 +23444,7 @@ const FEE_META = {
       <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
         Comma-separated. These appear in the <strong>Platform / IVR provider</strong> dropdown when you add a virtual number.
         Existing numbers keep their provider even if you remove it here.</div>
-      <div style="padding:10px 16px 2px;border-top:1px solid var(--border);font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;">↩ Void reasons</div>
+      <div style="padding:10px 16px 2px;border-top:1px solid var(--border);font-size:var(--fs-overline);font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.3px;"><i class="kc-ic kc-ic-undo" aria-hidden="true"></i> Void reasons</div>
       <div style="padding:8px 16px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <input class="form-input" id="voidReasonsInput" value="${escHtml(voidReasons().join(', '))}"
           placeholder="Mistake, Didn’t fly, Other…" style="flex:1;min-width:240px;min-height:0;padding:8px 12px;font-size:var(--fs-body);">
@@ -23483,10 +23483,10 @@ const FEE_META = {
         <button class="btn btn-outline btn-sm kc-ic kc-ic-save" onclick="saveStockCategories()">Save categories</button>
       </div>
       <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
-        Your own stock types, added to the twelve built in (<i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Phone, <i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM, 🔌 Charger, <i class="kc-ic kc-ic-link" aria-hidden="true"></i> Cable, 🎧 Earphones,
-        <i class="kc-ic kc-ic-shield" aria-hidden="true"></i> Case &amp; cover, <i class="kc-ic kc-ic-battery" aria-hidden="true"></i> Power bank, <i class="kc-ic kc-ic-save" aria-hidden="true"></i> Memory card, <i class="kc-ic kc-ic-car" aria-hidden="true"></i> Car accessory, <i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> Repair part, <i class="kc-ic kc-ic-piece" aria-hidden="true"></i> Accessory, <i class="kc-ic kc-ic-package" aria-hidden="true"></i> Other).
+        Your own stock types, added to the twelve built in (📱 Phone, 💳 SIM, 🔌 Charger, 🔗 Cable, 🎧 Earphones,
+        🛡️ Case &amp; cover, 🔋 Power bank, 💾 Memory card, 🚗 Car accessory, 🔧 Repair part, 🧩 Accessory, 📦 Other).
         Comma-separated; add an emoji at the front if you like. A name that repeats a built-in one is ignored, and
-        <strong>the built-in twelve cannot be removed here</strong> — <i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Phone in particular carries money
+        <strong>the built-in twelve cannot be removed here</strong> — 📱 Phone in particular carries money
         (it takes an IMEI at the till and books a phone sale). Removing one of your own leaves any item already
         filed under it exactly where it is.</div>`);
 
@@ -23565,10 +23565,10 @@ const FEE_META = {
               </div>
             </td>
             <td style="font-feature-settings:'tnum';">${a.monthlyCost != null ? fmtGbp(a.monthlyCost) : '—'}</td>
-            <td class="kc-date">${a.renewalDate ? `<span style="${a.renewalDate <= soon10 ? 'color:var(--danger-ink);font-weight:600;' : ''}">${fmtDate(a.renewalDate)}${a.renewalDate < today10 ? ' ⚠' : ''}</span>` : '—'}</td>
+            <td class="kc-date">${a.renewalDate ? `<span style="${a.renewalDate <= soon10 ? 'color:var(--danger-ink);font-weight:600;' : ''}">${fmtDate(a.renewalDate)}${a.renewalDate < today10 ? ' <i class="kc-ic kc-ic-alert" aria-hidden="true"></i>' : ''}</span>` : '—'}</td>
             <td style="white-space:nowrap;">
               ${a.hasCred ? `<button class="action-btn kc-ic kc-ic-key" style="font-size:var(--fs-micro);" onclick="revealBizAccount('${escHtml(a.id)}')">Reveal</button>` : ''}
-              <button class="action-btn" aria-label="Edit ${escHtml(a.name || 'account')}" onclick="openBizAccountModal('${escHtml(a.id)}')">✏️</button>
+              <button class="action-btn kc-ic kc-ic-pencil" aria-label="Edit ${escHtml(a.name || 'account')}" onclick="openBizAccountModal('${escHtml(a.id)}')"></button>
               <button class="action-btn danger" aria-label="Retire ${escHtml(a.name || 'account')}" onclick="retireBizAccount('${escHtml(a.id)}', '${escJs(a.name)}')">✕</button>
             </td>
           </tr>`).join('')}
@@ -23596,7 +23596,7 @@ const FEE_META = {
             <td style="font-size:var(--fs-small);color:var(--muted);max-width:260px;">${escHtml(['Dual SIM: ' + (m.dualSim || '—'), 'Hebrew: ' + (m.yiddishText || '—'), 'Touch: ' + (m.touchScreen || '—'), 'Text: ' + (m.texting || '—')].join(' · '))}</td>
             <td style="font-size:var(--fs-small);">${m.pros || m.cons ? '<i class="kc-ic kc-ic-sign" aria-hidden="true"></i> written' : '<span style="color:var(--muted);">not written yet</span>'}</td>
             <td style="white-space:nowrap;">
-              <button class="action-btn" aria-label="Edit ${escHtml(m.name || 'model')}" onclick="openPhoneModelModal('${escHtml(m.id)}')">✏️</button>
+              <button class="action-btn kc-ic kc-ic-pencil" aria-label="Edit ${escHtml(m.name || 'model')}" onclick="openPhoneModelModal('${escHtml(m.id)}')"></button>
               <button class="action-btn danger" aria-label="Retire ${escHtml(m.name || 'model')}" onclick="retirePhoneModel('${escHtml(m.id)}', '${escJs(m.name)}')">✕</button>
             </td>
           </tr>`).join('')}
@@ -24929,9 +24929,9 @@ async function generateAliasPassword(id, address) {
       <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:var(--fs-body);">
         <span style="color:var(--muted);">Server</span><strong>smtp.forwardemail.net : 465 (SSL)</strong>
         <span style="color:var(--muted);">Username</span>
-        <strong style="cursor:pointer;" onclick="copyText('${escHtml(res.username)}')" title="Click to copy">${escHtml(res.username)} 📋</strong>
+        <strong style="cursor:pointer;" onclick="copyText('${escHtml(res.username)}')" title="Click to copy">${escHtml(res.username)} <i class="kc-ic kc-ic-clipboard" aria-hidden="true"></i></strong>
         <span style="color:var(--muted);">Password</span>
-        <strong style="cursor:pointer;font-family:monospace;" onclick="copyText('${escHtml(res.password)}')" title="Click to copy">${escHtml(res.password)} 📋</strong>
+        <strong style="cursor:pointer;font-family:monospace;" onclick="copyText('${escHtml(res.password)}')" title="Click to copy">${escHtml(res.password)} <i class="kc-ic kc-ic-clipboard" aria-hidden="true"></i></strong>
       </div>
     </div>
     <div class="modal-actions">
