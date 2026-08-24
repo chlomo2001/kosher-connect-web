@@ -5943,7 +5943,7 @@ function openManageRentalModal(rentalId) {
           <div class="toggle-wrap" onclick="toggleReturned()" id="mgReturnedToggle"
             role="switch" aria-checked="${r.status === 'returned'}" aria-label="Phone returned"
             style="width:52px;height:28px;border-radius:14px;cursor:pointer;transition:background 0.2s;position:relative;background:${r.status==='returned'?'var(--success)':'var(--border)'};">
-            <div id="mgToggleKnob" style="position:absolute;top:3px;left:${r.status==='returned'?'25px':'3px'};width:22px;height:22px;border-radius:50%;background:#fff;transition:left 0.2s;"></div>
+            <div id="mgToggleKnob" style="position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transform:translateX(${r.status==='returned'?'22px':'0'});transition:transform 0.2s var(--ease-out);"></div>
           </div>
           <span id="mgReturnedLabel" style="font-size:var(--fs-ui);font-weight:600;color:${r.status==='returned'?'var(--success)':'var(--muted)'};">
             ${r.status==='returned' ? 'Returned ✅' : 'Not returned yet'}
@@ -6149,7 +6149,10 @@ function toggleReturned() {
   toggle.style.background = isNowReturned ? 'var(--success)' : 'var(--border)';
   // The switch announces its state, so the state has to follow the knob.
   toggle.setAttribute('aria-checked', String(isNowReturned));
-  knob.style.left = isNowReturned ? '25px' : '3px';
+  // transform, not left: animating a layout property reflows every frame, and
+  // the app's own .eq-slide-knob already says so in styles/app.css. The knob
+  // rests at left:3px and travels 22px, so 25px - 3px.
+  knob.style.transform = isNowReturned ? 'translateX(22px)' : 'translateX(0)';
   label.style.color = isNowReturned ? 'var(--success)' : 'var(--muted)';
   label.textContent = isNowReturned ? 'Returned ✅' : 'Not returned yet';
   // The Charge Gate is about closing, so it appears with the toggle.
@@ -16238,27 +16241,43 @@ function svcPipSupported() {
   return typeof window !== 'undefined' && 'documentPictureInPicture' in window;
 }
 
-// The PiP document starts blank — no app stylesheet, no variables — so it
-// carries its own. Small enough to read at a glance from across the counter.
+// The PiP document starts blank — no app stylesheet, no variables — so the
+// tokens have to be carried across. They are COPIED from the live app rather
+// than re-typed: this block used to declare its own palette, and what it had
+// drifted to was Tailwind slate on a pure white ground (#ffffff, the one
+// background globals.css argues at length against) — a near-miss of the brand
+// that only --go ever matched. A second palette is a second thing to keep in
+// step, and it was already out of step.
+const SVC_PIP_TOKENS = ['--text', '--muted', '--surface', '--border', '--accent',
+  '--warning-ink', '--on-accent'];
+
+/** The app's own computed token values, as a :root block for another document. */
+function svcPipTokenCss() {
+  const cs = getComputedStyle(document.documentElement);
+  const decls = SVC_PIP_TOKENS
+    .map((name) => [name, cs.getPropertyValue(name).trim()])
+    .filter(([, value]) => value)
+    .map(([name, value]) => `${name}:${value}`);
+  return `:root{${decls.join(';')}}`;
+}
+
 const SVC_PIP_CSS = `
-  :root { --ink:#0f172a; --sub:#64748b; --bg:#ffffff; --line:#e2e8f0; --go:#0060a8; --stop:#b91c1c; --hold:#a16207; }
-  :root[data-theme="dark"] { --ink:#f1f5f9; --sub:#94a3b8; --bg:#0f172a; --line:#1e293b; --go:#60a5fa; --stop:#f87171; --hold:#fbbf24; }
   * { box-sizing: border-box; }
   body { margin:0; font:13px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-         background:var(--bg); color:var(--ink); user-select:none; -webkit-user-select:none; }
+         background:var(--surface); color:var(--text); user-select:none; -webkit-user-select:none; }
   .w { padding:10px 12px; display:flex; flex-direction:column; gap:6px; height:100vh; }
   .who { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .who small { font-weight:400; color:var(--sub); }
+  .who small { font-weight:400; color:var(--muted); }
   .clock { font-size:30px; font-weight:700; font-feature-settings:'tnum'; line-height:1; letter-spacing:-0.5px; }
-  .paused .clock { color:var(--hold); }
-  .sub { color:var(--sub); font-size:12px; }
+  .paused .clock { color:var(--warning-ink); }
+  .sub { color:var(--muted); font-size:12px; }
   .btns { display:flex; gap:6px; margin-top:auto; }
   button { flex:1; font:inherit; font-weight:600; padding:7px 6px; border-radius:7px; cursor:pointer;
-           border:1px solid var(--line); background:transparent; color:var(--ink); min-height:32px; }
-  button:hover { border-color:var(--go); color:var(--go); }
-  button.stop { background:var(--go); border-color:var(--go); color:#fff; }
-  button.stop:hover { filter:brightness(1.08); color:#fff; }
-  button:focus-visible { outline:2px solid var(--go); outline-offset:2px; }
+           border:1px solid var(--border); background:transparent; color:var(--text); min-height:32px; }
+  button:hover { border-color:var(--accent); color:var(--accent); }
+  button.stop { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
+  button.stop:hover { filter:brightness(1.08); }
+  button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 `;
 
 async function svcTimerPopOut() {
@@ -16277,6 +16296,10 @@ async function svcTimerPopOut() {
   const d = svcPipWin.document;
   d.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme') || 'light');
   d.title = 'Kosher Connect — help timer';
+  const tokens = d.createElement('style');
+  tokens.id = 'pipTokens';
+  tokens.textContent = svcPipTokenCss();
+  d.head.appendChild(tokens);
   const style = d.createElement('style');
   style.textContent = SVC_PIP_CSS;
   d.head.appendChild(style);
@@ -16319,6 +16342,14 @@ function svcPipTick() {
   const t = svcTimerState();
   if (!t) return svcPipClose();          // stopped or discarded from the app
   const d = svcPipWin.document;
+  // Copied tokens are a snapshot, so the theme toggle has to re-take it —
+  // otherwise a window opened in light stays light on a switched-to-dark app.
+  const theme = document.documentElement.getAttribute('data-theme') || 'light';
+  if (d.documentElement.getAttribute('data-theme') !== theme) {
+    d.documentElement.setAttribute('data-theme', theme);
+    const tk = d.getElementById('pipTokens');
+    if (tk) tk.textContent = svcPipTokenCss();
+  }
   const paused = !t.runningSince;
   const secs = Math.floor(svcTimerElapsedMs(t) / 1000);
   const { minutes, amount } = svcTimerCharge(t);
