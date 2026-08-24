@@ -105,6 +105,8 @@ export async function run({ width = 1280 } = {}) {
     if (new Set(follows.map((f) => f.btn)).size < 2) problems.push(`${theme}: the button variants share one ink, so "icon matches button" proves nothing`)
 
     // (b) + (c), over every tab and every dialog.
+    await page.evaluate((names) => { window.__kcIconNames = names }, ICON_NAMES)
+
     const scan = async (where) => {
       const r = await page.evaluate(() => {
         const txt = document.body.innerText
@@ -124,6 +126,29 @@ export async function run({ width = 1280 } = {}) {
         //   class="kc-ic kc-ic-pound" aria-hidden="true"></i> Money
         // to a screen reader. The attribute parses; names.mjs sees a name and
         // passes. Only reading what the name SAYS finds it.
+        // (e) THE NAME IS PRINTED INSTEAD OF DRAWN. Moving an icon from markup
+        // to a name means every render site has to build the element; miss one
+        // and the name renders as a word. Kol Torah's five stat tiles read
+        // "disc 1 · institution 1 · package 12 · pound £0.00" on 24 Aug — no
+        // leak, no broken attribute, nothing for the checks above to see. It
+        // was caught by looking at a screenshot, which is not a way to find
+        // things.
+        //
+        // Narrow on purpose: an icon name followed by a VALUE. Plenty of icon
+        // names are ordinary words — a settings row legitimately says "shop"
+        // and "mail" — so flagging every text node that happens to be one
+        // produces noise, and a check that cries wolf gets switched off. "A
+        // name with a number after it" is the shape this bug actually has.
+        const printed = []
+        const NAMES = new Set(window.__kcIconNames || [])
+        for (const el of document.querySelectorAll('body *')) {
+          for (const n of el.childNodes) {
+            if (n.nodeType !== 3) continue
+            const t = n.textContent.trim()
+            const m = t.match(/^([a-z][a-z0-9-]*)\s+(?=[£$€]|\d)/)
+            if (m && NAMES.has(m[1])) printed.push(`<${el.tagName.toLowerCase()}> "${t.slice(0, 30)}"`)
+          }
+        }
         const named = []
         for (const el of document.querySelectorAll('[aria-label],[title],[alt]')) {
           for (const a of ['aria-label', 'title', 'alt']) {
@@ -138,12 +163,14 @@ export async function run({ width = 1280 } = {}) {
           literal, sample: literal ? (txt.match(/.{0,40}(kc-ic|<i class).{0,40}/) || [''])[0] : '',
           n: all.length, unresolved, junk: [...new Set(junk)].slice(0, 4), tail,
           named: [...new Set(named)].slice(0, 4),
+          printed: [...new Set(printed)].slice(0, 4),
         }
       })
       iconsSeen += r.n
       if (r.literal) problems.push(`${where}: markup in an escaped sink → ${r.sample.trim()}`)
       if (r.junk.length) problems.push(`${where}: BROKEN ATTRIBUTE → ${r.junk.join(' ')}`)
       if (r.tail) problems.push(`${where}: stray attribute tail → ${r.tail.trim()}`)
+      if (r.printed.length) problems.push(`${where}: icon NAME printed as text → ${r.printed.join(' ')}`)
       if (r.named.length) problems.push(`${where}: markup read out as a NAME → ${r.named.join(' ')}`)
       if (r.unresolved.length) problems.push(`${where}: unresolved mask on ${r.unresolved.join(', ')}`)
     }

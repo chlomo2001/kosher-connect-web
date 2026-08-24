@@ -19010,7 +19010,7 @@ async function renderKolTorahTab() {
         ['pound', fmtGbp(received30), 'collected, last 30 days'],
       ].map(([ico, big, label]) => `
         <div style="flex:1;min-width:140px;border:1px solid var(--border);border-radius:8px;padding:10px 14px;background:var(--surface);">
-          <div style="font-size:var(--fs-title);font-weight:800;">${ico} ${big}</div>
+          <div class="kc-ic kc-ic-${ico}" style="font-size:var(--fs-title);font-weight:800;">${big}</div>
           <div style="font-size:var(--fs-micro);color:var(--muted);">${label}</div>
         </div>`).join('')}
     </div>
