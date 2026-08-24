@@ -1996,6 +1996,50 @@ DISCOVERY: rendering real screens in the harness in states nobody had looked at
 - Loading states, focus visibility, contrast in both themes, dark-rule pairing,
   and touch targets at 390 — all already green.
 
+## Drawn icons on buttons and toolbars — 24 Aug 2026 (owner: "first do the buttons and toolbars")
+
+The owner saw the one-row before/after and chose the scoped conversion over the
+whole-app one. Shipped `7ca64d3`: **137 buttons + 3 topbar controls**, emoji
+kept in content.
+
+**The scope was measured.** Of the 60 glyphs that opened a button label, 42
+painted in colour when rendered with pure black ink on a white canvas; 18
+(`✕ ✓ ↻ ← → ▶ ⬆` …) were already monochrome text following `currentColor`.
+Only the 42 moved — the rest never had the fault, and converting them would
+have been change for its own sake.
+
+**Why a CSS mask and not inline SVG:** one rule per shape instead of ~200
+characters of markup at 137 call sites, and `background: currentColor` through
+a mask means the icon inherits the button's ink in *every* state — hover,
+active, and the 0.5 that `13f0bd2` just gave `:disabled`. `.btn` was already
+`inline-flex … gap: 6px`, so `::before` becomes the first flex item for free.
+
+### Three traps, each found by measuring rather than reasoning
+
+| Trap | Symptom | Fix |
+|------|---------|-----|
+| `mask:` **shorthand** carrying a `var()` | `--kc-ic` resolved correctly on the button and `mask-image` still computed to `none`. A shorthand cannot be validated at parse time; when substitution does not satisfy it the whole declaration is dropped | longhands (`mask-image`, `-repeat`, `-position`, `-size`) |
+| double quotes inside the icon SVG | the SVG sits inside `url("…")`, so the first `cx="12"` ended the URL and the declaration was rejected outright — again silently | single quotes in every inner attribute |
+| `[^>]*` to match the button tag | `onclick="(async()=>{…})()"` contains `>`, so the tag match stopped early and **three buttons were skipped — two of them in the very row the change was demoed on** | quote-aware tag pattern |
+
+### The manual follows the buttons
+
+60 references that named a converted button by its glyph now name it by its
+words, and `docs/MANUAL.md` is regenerated (stamp `m-9376b149`). Two earlier
+attempts at this were reverted rather than shipped:
+
+- the first searched **all** of main.js instead of button tags, so it stripped
+  `📌 Pop-up note` — a banner, never converted, still on screen;
+- the second collapsed the variation selector, which conflated `↩️` (converted)
+  with bare `↩` (monochrome, kept) and `⚙️` with `⚙`, stripping glyphs the app
+  still shows.
+
+The rule that worked: strip only where the exact glyph is one that was
+converted **and** no button still opens with that glyph before that word.
+
+**Still open for the owner:** the remaining ~1,350 emoji in content. Unchanged
+by design, and the recommendation stands that they should stay.
+
 ## The design audit's ten majors — 24 Aug 2026 (owner: "do them all")
 
 Nine remaining (the tenth, undefined tokens, was fixed with the criticals).
