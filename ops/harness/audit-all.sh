@@ -70,6 +70,12 @@ if [ "$smoke" = 1 ]; then
     bash -eo pipefail -c 'node ops/harness/render.mjs --contrast --theme dark --width 1280 | tail -1'
   run "smoke · dark rules written only once" \
     node ops/harness/theme-pairs.mjs
+  # The icon set, and the three ways converting 96 emoji to CSS masks actually
+  # broke: a mask that resolves to none, markup landing in an escaped sink and
+  # showing as literal text, and markup landing in an ATTRIBUTE and tearing the
+  # row apart — which is the one that reached the owner's screen on 24 Aug.
+  run "smoke · icons paint, and nothing leaked into a sink" \
+    bash -eo pipefail -c 'node ops/harness/icons.mjs | tail -1'
   echo
   [ "$fail" = 0 ] && echo "SMOKE: clean — the full sweep still runs tonight." \
                   || echo "SMOKE: something needs a look — scroll up."
@@ -257,6 +263,9 @@ run "public pages · contrast, every theme state" \
 
 run "dark rules written only once" \
   node ops/harness/theme-pairs.mjs
+
+run "icons · every mask paints in both themes, and nothing leaked into a sink" \
+  bash -eo pipefail -c 'node ops/harness/icons.mjs | tail -1'
 
 echo
 [ "$fail" = 0 ] && echo "AUDIT: all checks reported clean." || echo "AUDIT: something needs a look — scroll up."

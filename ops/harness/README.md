@@ -15,8 +15,9 @@ night with fresh findings — and a ship runs `--smoke`.
 
 `--smoke` is a strict subset: every tab renders and none overflows at 390px,
 every dialog still opens, every public page renders in both languages, every
-control has a name, dark contrast, and no half-written dark rule. Those are the
-six that have actually caught something on the way out of the door. It is a
+control has a name, dark contrast, no half-written dark rule, and the icon set
+intact. Those are the seven that have actually caught something on the way out
+of the door. It is a
 subset in the literal sense, so the full sweep does not re-run it — each line
 below already covers it at more widths and both themes.
 
@@ -272,3 +273,40 @@ two left the iOS zoom guard — `@media (max-width:768px)` bumping small inputs
 to 16px, written to sit last in the file — being overridden by the staff sheet
 that now loaded after it. 730 elements, the zoom trap back on every phone at
 the counter, and `audit-all.sh` passed the whole thing clean.
+
+
+## `icons.mjs` — the icon set, checked the three ways it has broken
+
+```bash
+node ops/harness/icons.mjs
+```
+
+96 CSS-mask icons replaced the emoji through 23-24 August and the conversion
+went wrong three separate times. Each failure is now a check, and each check has
+been proved in both directions — clean as shipped, red when the bug is put back:
+
+1. **The mask does not resolve.** `mask: var(--kc-ic)` — the shorthand — computes
+   to `none` even when the variable is set on the element, and a double quote
+   inside `url("…")` ends the data URI at the first `cx="12"`. Both painted
+   nothing, and both looked like a missing icon rather than a broken rule.
+2. **The markup reached an escaped sink.** `STOCK_CATEGORY_LABELS` is *data* — a
+   custom category's key is its label — so the render sites escape it and
+   `<i class="kc-ic…">` showed as literal text on the Shop tab and in five
+   dialogs. Negative control: putting markup back in that map turns up 24
+   problems, naming `goods-in` and `supplier-return-manage` among others.
+3. **The markup reached an attribute and broke it.** `EQ_LABELS` interpolated
+   into `aria-label="…"`; the first quote of `class="` closed the attribute and
+   the parser turned the rest into junk attributes plus loose text spilled over
+   the toggles. **This is the one that reached the owner's screen**, and the
+   reason the first version of this scan was worthless: the leaked text carries
+   no `kc-ic` at all — it reads `— mark returned/lost">` — so `innerText` could
+   never find it. It reads the attribute NAMES instead. Negative control:
+   `✗ modal:rental-manage: BROKEN ATTRIBUTE → <div kc-ic> <div kc-ic-phone">`.
+
+The tab-and-dialog walk runs in one theme on purpose. (2) and (3) are parse
+failures, decided by the string and not by the palette, so walking 15 tabs and
+40 dialogs twice costs 25 seconds to re-answer a question that cannot have a
+second answer. (1) *is* theme-dependent — the icon takes the button's ink, and
+the dark palette is a different set of tokens rather than a filter over the
+light one — so that half runs in both. Same coverage, half the time, which is
+what lets it run in `--smoke` rather than only overnight.
