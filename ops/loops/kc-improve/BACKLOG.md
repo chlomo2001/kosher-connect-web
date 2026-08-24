@@ -1996,6 +1996,40 @@ DISCOVERY: rendering real screens in the harness in states nobody had looked at
 - Loading states, focus visibility, contrast in both themes, dark-rule pairing,
   and touch targets at 390 — all already green.
 
+## The design audit's ten majors — 24 Aug 2026 (owner: "do them all")
+
+Nine remaining (the tenth, undefined tokens, was fixed with the criticals).
+Worked one at a time, gate green per commit, full `audit-all.sh` clean before
+the ship. **Seven adopted, one rejected on evidence, one resolved the other
+way** — an outside audit does not know this codebase's decisions, and three of
+the nine turned on facts it did not have.
+
+| Shipped | Major | What actually happened |
+|---------|-------|------------------------|
+| `13f0bd2` | No `:disabled` styling outside `.btn` | Fourteen control classes now dim to 0.5 with `not-allowed`. The third channel — no hover response — is done by scoping the nine hover rules `:not(:disabled)` rather than overriding them back, because those hovers change border, colour AND background in different combinations and a blanket reset would rot. Verified: all 14 report 0.5 + not-allowed disabled, 1.0 live |
+| `b04a581` | Toggle animating `left`; PiP window's second palette | The rental toggle reflowed every frame of its slide; now `transform`, like the app's own `.eq-slide-knob`. The floating timer had drifted to Tailwind slate on `#ffffff` with only its blue matching the brand — tokens are now **copied** from the live app's computed root and re-copied on theme change |
+| `19a2a1e` | Celebratory success toasts | Four **update** toasts silenced (the row repaints behind them). Two **creates** kept, de-celebrated — a new row lands alphabetically in a list of hundreds, usually below the fold. **The CSV export is NOT a fault and keeps its toast**: its effect is a downloaded file, nothing on screen changes. The SIM-edit silence supersedes a documented choice, and says so |
+| `b2fdeb2` | Card-in-card; seven side-stripes | Duplicate review drew three boxes to compare two records; `.dup-side` loses its border and keeps its surface step (measured: bordered ancestors 3 → 2). **Four of the seven stripes encode status through their COLOUR and are untouched** — `.fwd-row`, `.chk-row`, `.kc-next`, `.kc-man-note` each have a second state the audit missed. `.nba-strip` stripe dropped, `.sms-quote` rule kept but neutral (a quotation's rule is a convention, not a SaaS stripe) |
+| `960b1cc` | `--space-*` declared, never used | **Deleted rather than adopted.** 877 spacing values in the two sheets; **550 are off that 4/8/12/16/24 grid** — 10px ×107, 6px ×79, 14px ×70 — many with the measurement argued in the comment beside them. Tokenising the 327 on-grid values would leave 550 literals next to them, reading as less of a system; forcing all 877 on-grid would flatten decisions. A token set with no call sites is a claim the code does not keep |
+| `d83b2e4` `def1760` | Two icon voices | Measured first: **~1,500 emoji, ~145 distinct, 235 of them in `lib/manual.mjs`** because they are part of button NAMES the manual must spell exactly. So the contradiction is closed the other way — the sidebar's "No emoji" comment now states the real policy and why the rail earns its exception. The **real** defect was inside that voice: `✅`+`✔` both meant "done" and `⚠️`+`⚠` both meant warning. Now one each, monochrome, theme-following; swept through main.js, AppShell.js, tools/ocr.js, the manual and two harness files |
+
+### Rejected on evidence — settings section heads
+
+`.sh-label` was called an 11px eyebrow at the top of its own hierarchy. It is
+not an eyebrow: nothing beneath it restates it, it deliberately mirrors
+`.nav-group-label` in the sidebar, and **its text is reused verbatim as the
+settings rail's `.rail-group` headings** (`main.js:23610`). Making it a large
+heading would break the rhyme with both. Reported, not changed.
+
+### What the gate caught, and why it matters
+
+Removing `.kc-popnote`'s 4px left edge as decoration turned the gate red on
+`test/popNote.test.mjs`, which records that the thick edge is that banner's
+**colour-independent** signal (WCAG 1.4.1). It looks exactly like the stripes
+that were just cleared and is doing real work. Restored, with a comment so the
+next sweep does not try again. The tickets harness also pinned `/✅/`; the
+behaviour was unchanged, only the assertion was behind.
+
 ## The design audit's three bugs — 24 Aug 2026 (owner: "fix the 3 bugs")
 
 A second pair of eyes ran over the staff app: the `hallmark` skill's audit verb
