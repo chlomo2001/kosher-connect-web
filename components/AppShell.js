@@ -227,7 +227,15 @@ export default function AppShell({ initialTab = 'dashboard' }) {
           </button>
           <div className="page-title" id="pageTitle" role="heading" aria-level="1">Customer <span>Management</span></div>
           <div className="topbar-actions">
-            <input className="search-box" id="searchBox" type="text" placeholder="Search by name, phone, email…" />
+            {/* Parked here, rendered THERE. This filters the customer list, so
+                it lives in the customer list's own header — renderCustomersTab
+                moves the node into it. It stays in the topbar's markup because
+                every tab render wipes #mainContent, and a node inside that
+                would be destroyed with its listener on the first tab switch;
+                renderTab parks it back here before the wipe. */}
+            <div id="searchPark" hidden>
+              <input className="search-box" id="searchBox" type="text" placeholder="Name, phone, email…" />
+            </div>
             <button className="btn btn-primary" id="btnNewCustomer">+ New Customer</button>
             {/* Persistent theme toggle — uses the app's toggleTheme() so it and
                 every other [data-theme-btn] (palette, settings, till) stay in

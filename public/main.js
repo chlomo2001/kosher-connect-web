@@ -948,6 +948,13 @@ function renderTab(tab) {
   const meta = TAB_META[tab] || TAB_META.customers; // unknown ids fall back to Customers
 
   document.getElementById('pageTitle').innerHTML = meta.title;
+  // The customer-list filter lives IN the customer list now, not in the topbar
+  // beside the find field — two search controls in one bar is a choice nobody
+  // should have to make, and at 1280px both were squeezed to an ellipsis.
+  // renderCustomersTab() moves this node into its section header; every other
+  // tab is about to wipe #mainContent, so park it first or the wipe takes the
+  // node and the listener setupSearch() bound to it.
+  if (searchBox && !meta.search) kcParkSearch();
   if (searchBox) searchBox.style.display = meta.search ? '' : 'none';
   // #58 — the one topbar primary button becomes this tab's create action
   // instead of hiding on every tab but Customers.
@@ -7428,8 +7435,9 @@ function renderCustomersTab() {
     <div class="section-header">
       <div class="section-title">Customer List
         <span id="custCount" style="font-size:var(--fs-small);color:var(--muted);font-weight:400;margin-left:8px;"></span></div>
-      <div style="display:flex;gap:8px;align-items:center;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span id="custInitialChip"></span>
+        <span id="searchHere"></span>
         <select class="form-input kc-fs-sel" onchange="customerFilter=this.value; renderTableRows()">
           <option value="all" ${customerFilter==='all'?'selected':''}>Filter: everyone</option>
           <option value="rental" ${customerFilter==='rental'?'selected':''}>📱 Active rental</option>
@@ -7477,6 +7485,12 @@ function renderCustomersTab() {
     </div>
     <div id="detailPanelContainer"></div>
   `;
+
+  // Move — do not clone — so the input keeps the listener setupSearch() bound
+  // to it, and keeps whatever the operator had already typed.
+  const slot = document.getElementById('searchHere');
+  const box = document.getElementById('searchBox');
+  if (slot && box) { box.style.display = ''; slot.appendChild(box); }
 
   renderTableRows();
 
@@ -8524,6 +8538,7 @@ function renderCustomerPage(id) {
   closeCustomerCard(); // the page replaces the overlay, never sits under it
   // Topbar chrome: profile title, no list search, no create button.
   document.getElementById('pageTitle').innerHTML = 'Customer <span>Profile</span>';
+  kcParkSearch(); // the profile replaces the list; the filter goes home first
   const searchBox = document.getElementById('searchBox');
   if (searchBox) searchBox.style.display = 'none';
   const btnNew = document.getElementById('btnNewCustomer');
@@ -12035,6 +12050,14 @@ async function addPayment(id) {
 // Empty the topbar search and show the whole list again — reached from the
 // "no matches" state, which otherwise leaves the operator to find the box and
 // clear it by hand.
+// Put the filter back in its hidden topbar holder. Idempotent, and safe to
+// call when it is already there.
+function kcParkSearch() {
+  const box = document.getElementById('searchBox');
+  const park = document.getElementById('searchPark');
+  if (box && park && box.parentElement !== park) park.appendChild(box);
+}
+
 function clearCustomerSearch() {
   const box = document.getElementById('searchBox');
   if (box) box.value = '';
@@ -12070,19 +12093,36 @@ function setupTopbarButtons() {
   // #58 — dispatches to the current tab's create action (set by renderTab),
   // falling back to New Customer before any tab has rendered.
   document.getElementById('btnNewCustomer').addEventListener('click', () => (tabPrimaryAction || openAddModal)());
-  // Discoverable entry to the command palette (Ctrl/Cmd+K also opens it).
+  // THE FRONT DOOR. Owner, 25 Aug: "as guessable and simple as it gets — not
+  // to need to think too much what do I need to press."
+  //
+  // This was a 128x40 button labelled "Search", dressed exactly like Help and
+  // the theme toggle beside it, so it read as a utility you might press rather
+  // than the way in. It is the same openPalette() underneath — nothing new can
+  // be found that could not be found before — but a field is self-describing
+  // and a button is not: you do not decide to press a field, you just type.
+  //
+  // The hint is the umbrella, and the full list of what it searches lives in
+  // the label a screen reader and a tooltip get. Naming the three things
+  // (a name, a number, an IMEI) is better copy and did not fit: on the four
+  // tabs that also carry a primary button the field is 241px at 1280, and a
+  // sentence cut to "Find a customer, a…" teaches nobody anything. One string
+  // that always shows in full beats a better string that sometimes does.
+  // It is a <button>, not an <input>, because the real
+  // input lives in the palette; making it a text field would mean two places
+  // to type and a hand-off between them.
   const btnNew = document.getElementById('btnNewCustomer');
   if (btnNew && !document.getElementById('btnPalette')) {
     const b = document.createElement('button');
     b.id = 'btnPalette';
-    b.className = 'btn btn-outline';
-    b.style.cssText = 'font-size:var(--fs-small);padding:8px 12px;margin-right:8px;';
-    b.title = 'Search everything (Ctrl+K)';
-    b.setAttribute('aria-label', 'Search everything');
-    // The word is in a span so phones can drop it and keep the icon — the
-    // topbar was wrapping to three rows at 390px just to say "Ask"/"Search".
-    b.classList.add('kc-ic', 'kc-ic-search');
-    b.innerHTML = '<span class="kc-btn-label">Search</span><span class="kc-chord">Ctrl K</span>';
+    b.type = 'button';
+    b.className = 'kc-findbar';
+    b.title = 'Find anyone or anything (Ctrl+K)';
+    b.setAttribute('aria-label', 'Find a customer, a number or an IMEI');
+    b.innerHTML =
+      '<span class="kc-ic kc-ic-search kc-findbar-ic" aria-hidden="true"></span>'
+      + '<span class="kc-findbar-hint">Find anyone or anything</span>'
+      + '<span class="kc-chord">Ctrl K</span>';
     b.addEventListener('click', openPalette);
     btnNew.parentElement.insertBefore(b, btnNew);
   }
@@ -22874,14 +22914,9 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
         <div class="dash-date"><span class="dash-clock" id="dashClock" title="Current time"><b>${clockHM}</b><span class="dash-secs" id="dashSecs">${clockSS}</span><span class="dash-pulse" aria-hidden="true"></span></span>&nbsp;&nbsp;${enDate}${hebDate ? ` &nbsp;·&nbsp; <span class="heb">${hebDate}</span>` : ''}</div>
         <div class="dash-greeting">${greeting}${staffFirstName ? ', ' + nameHtml(staffFirstName) : ''}.</div>
       </div>
-      <div class="dash-actions">
-        <button class="btn btn-outline" onclick="renderDashboardTab()" title="Reload today's money & tasks">↻ Refresh</button>
-        ${(!currentStaff || currentStaff.role === 'owner') ? `<button class="btn btn-outline kc-ic kc-ic-chart" onclick="openBusinessSummary()" title="Revenue by service — this week & month">Summary</button>` : ''}
-        <button class="btn btn-outline kc-ic kc-ic-phone" onclick="openNewRentalModal()">New rental</button>
-        <button class="btn btn-outline kc-ic kc-ic-plane" onclick="openNewBookingModal()">New booking</button>
-        <button class="btn btn-outline kc-ic kc-ic-wrench" onclick="(async()=>{repairMenu=await window.api.getServiceMenu('repair');openNewRepairModal()})()">New repair</button>
-        <button class="btn btn-outline kc-ic kc-ic-user" onclick="document.querySelector('[data-tab=customers]').click();setTimeout(()=>document.getElementById('btnNewCustomer')?.click(),100)">New customer</button>
-      </div>
+      ${(!currentStaff || currentStaff.role === 'owner') ? `<div class="dash-actions">
+        <button class="btn btn-outline kc-ic kc-ic-chart" onclick="openBusinessSummary()" title="Revenue by service — this week &amp; month">Summary</button>
+      </div>` : ''}
     </div>
 
     <div class="dash-grid">

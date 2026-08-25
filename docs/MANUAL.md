@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
-*As of 25 Aug 2026 · m-b5f16d74 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 25 Aug 2026 · m-60a24b19 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -30,8 +30,8 @@ The menu, the top bar and the buttons that are there whatever tab you are on —
 - **Hebrew dates** — On the counter screens — SIM renewals, a rental's due-back day, a flight's travel date and the day a repair came in — the Hebrew date sits under the English one in gold. Only those four: they are the dates said out loud to somebody standing at the counter. Money screens, admin lists and anything texted or emailed to a customer stay in English alone, so nothing sent out and nothing being reconciled grows a second date. It follows the ordinary day, the same as the one on the Dashboard, so it does not turn over at nightfall.
 - **The line under the title** — What this screen needs from you next, said as a thing to do — and one button that goes straight to it, already narrowed to the ones it counted. When there is nothing outstanding it says so and there is no button: an empty queue is an answer, not a blank space. It reads the same numbers the screen's own headline figures come from, so the two can never disagree.
 - **A text waiting for an answer** — On the Dashboard this comes before everything else, ahead of the money. The rest of the list is the shop's own business going slowly; this one is a person holding their phone, and it is the shortest-lived — a rental overdue today is still overdue tomorrow, a text nobody answered by closing time is a customer who thinks they were ignored. It counts a message as answered only once a reply has actually gone to them, so a reply written while texting is on hold leaves it counted. Staff who cannot open Settings never see this line, because they cannot open the messages either.
-- **The search box** — Searches whatever the screen in front of you lists. It is not the whole-app search — that is the next button along.
-- **Search** — The one that looks everywhere: customers, rentals, phones, stock, and every screen and tool by name. Ctrl and K opens it from anywhere without touching the mouse.
+- **Find anyone or anything** — The long field at the top, on every screen. It looks everywhere: customers, rentals, phones, stock, and every screen and tool by name. Type a name, a phone number or an IMEI. Ctrl and K opens it from anywhere without touching the mouse. It is the way in when you do not already know which tab a thing lives on — which is most of the time.
+- **The filter above a list** — Separate, and it sits with the list it belongs to rather than at the top of the screen. It narrows the rows in front of you and nothing else. On Customers it is beside Filter and Sort, above the table.
 - **Help** — One door for every kind of help. It opens on the jobs that belong to the screen you are standing on, under "On this screen", with the rest of the library below — written by hand, the same answer every time. Inside it: Ask about the shop's numbers, and The full manual.
 - **Ask about the shop's numbers** — Inside the Help panel, and on Ctrl and K. Questions about the shop's own data in plain words — who owes money, what is overdue. It proposes; nothing happens until you tap to confirm it. It is not the place to ask how to do a job: the steps above are written by a person and are right every time.
 - **The blue button on the right** — Whatever creating something means on this screen — a new customer on Customers, a new rental on Phone Rentals. It changes with the tab so the main action is always in the same place.
@@ -41,7 +41,7 @@ The menu, the top bar and the buttons that are there whatever tab you are on —
 
 **Rules that bite here**
 
-- Two doors, and it is worth knowing which is which: Search finds THINGS — a customer, a rental, a screen — and Help answers QUESTIONS, whether that is how to do a job or what the shop's numbers say. The steps in the Help panel are written by a person; the assistant inside it is not, which is why the steps come first. Asking the robot how to take a payment gets a confident answer from something that has never stood at the counter.
+- Two doors, and it is worth knowing which is which: the find field finds THINGS — a customer, a rental, a screen — and Help answers QUESTIONS, whether that is how to do a job or what the shop's numbers say. The steps in the Help panel are written by a person; the assistant inside it is not, which is why the steps come first. Asking the robot how to take a payment gets a confident answer from something that has never stood at the counter.
 - The menu is what a helper is allowed to see. A screen missing from someone's menu is an access setting, not a fault.
 - Display choices — the width, the text size, light or dark — are per device, not per person. Setting them on the counter machine does not change the one in the back.
 - Ctrl and K reaches everything the app can do, including screens and tools that are several clicks deep. It is the fastest way in once the shape of the app is familiar.
@@ -51,7 +51,7 @@ The menu, the top bar and the buttons that are there whatever tab you are on —
 - **A screen you were told about is not in the menu** — It has not been granted to you. The owner ticks it under what helpers can see, in Settings.
 - **The menu is a column of icons with no words** — It is shrunk. Press ☰ to bring the words back, or hover an icon to read its label.
 - **The menu is too narrow and labels look cut off** — Drag its right-hand edge wider, or double-click that edge to put it back to normal.
-- **The search box finds nothing you expected** — That box only searches the screen you are on. Use Search — or Ctrl and K — to look across the whole app.
+- **The filter above a list finds nothing you expected** — That box only narrows the list under it. Use the find field at the top — or Ctrl and K — to look across the whole app.
 - **Somebody else's name is at the bottom of the menu** — They are still signed in on this machine. Sign out and back in as yourself before recording anything — the history of who did what depends on it.
 
 
@@ -82,9 +82,7 @@ The morning and evening screen: what the shop took today, what needs doing now, 
 **On the screen**
 
 - **The date line** — Today in English and in Hebrew, with a running clock. The greeting uses your own first name, so it is obvious whose sign-in the screen is on.
-- **Refresh** — Re-reads today's money and tasks. The screen paints from what it already had and then updates, so an old figure for a moment is normal; this forces it.
-- **Summary** — Takings broken down by what earned them — rentals, tickets, the till — for the week and the month. Owner only: it is not on the screen for a helper.
-- **New rental · New booking · New repair · New customer** — The four jobs that start at the counter, opened from here without hunting for the right tab first.
+- **Summary** — Takings broken down by what earned them — rentals, tickets, the till — for the week and the month. Owner only: it is not on the screen for a helper. It is the only button on this screen that is not a line of the report itself.
 - **Money in today** — What has actually come in today — not what has been invoiced. Underneath: what was charged out, how the week compares with the last one, and progress against the month's target if one is set.
 - **Outstanding** — What the shop is owed, then the customers who owe it, biggest first. Press a name to open that customer. A walk-in has no name to open, so it is marked as one.
 - **The row of counts** — Active rentals, open repairs, flights, SIM renewals and open tasks. Each is a button: it opens the tab it counts, already on the right list.
@@ -104,7 +102,8 @@ The morning and evening screen: what the shop took today, what needs doing now, 
 
 **When it goes wrong**
 
-- **The figures look wrong or stale** — Press ↻ Refresh. The screen shows what it last read while the new numbers arrive, so a figure can lag a change made seconds ago on another screen.
+- **The figures look wrong or stale** — Press Dashboard in the menu again — the screen re-reads everything. It paints from what it last read while the new numbers arrive, so a figure can lag a change made seconds ago on another screen.
+- **Starting a new rental, booking or repair from here** — This screen no longer carries those four buttons. Ctrl and K, then type the job — or open the tab that owns it and use the blue button, which is where the same job is done every other time. The dashboard is the report; the tabs are the work.
 - **"All clear" but you know something is outstanding** — The feed only knows what has been recorded. A rental never marked returned, a repair left on the wrong stage or a payment taken but not entered are all invisible here — and all fixable on their own tab.
 - **Money in today looks too low** — It counts money RECEIVED today. Work done today and charged to an account is money owed, not money in — it shows under Outstanding until they pay.
 - **Summary is not on the screen** — It is owner-only. A helper signed in sees the rest of the dashboard without it.

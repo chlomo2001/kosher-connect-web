@@ -448,7 +448,11 @@
 
 .page-title span { color: var(--accent); }
 
-.topbar-actions { display: flex; gap: 10px; align-items: center; }
+/* flex: 1 1 auto so the find field inside can take the bar's slack. The row
+   still ends hard against the right edge — justify-content keeps the theme and
+   text-size controls where they have always been; it is the field in front of
+   them that grows. */
+.topbar-actions { display: flex; gap: 10px; align-items: center; flex: 1 1 auto; justify-content: flex-end; min-width: 0; }
 
 
 /* One magnifier, named once. Two boxes draw it and a third nearly didn't —
@@ -627,11 +631,18 @@ body.kc-resizing-x .sidebar { transition: none; }
   .topbar-actions { flex: 1 1 100%; flex-wrap: wrap; }
 
   .search-box { flex: 1 1 100%; min-width: 0; width: auto; }
+
+  /* On a handset the field takes a row of its own, ABOVE the buttons. Without
+     the order it kept its 300px and wrapped mid-row, leaving Help stranded
+     alone on the line above it — a single orphaned button reads as a mistake.
+     Two clean rows: find, then the things you press. */
+  .kc-findbar { flex: 1 1 100%; min-width: 0; max-width: none; margin-inline-end: 0; order: -1; }
 }
 
-/* ≤430px: the five topbar controls (Ask, Search, primary action, theme, Aa)
-   fit ONE row — tighter gaps and paddings instead of Aa wrapping alone onto
-   a second line, which read as a stray button. */
+/* ≤430px: the topbar buttons (Help, primary action, theme, Aa) fit ONE row —
+   tighter gaps and paddings instead of Aa wrapping alone onto a second line,
+   which read as a stray button. The find field is not among them; it takes the
+   row above, and the customer-list filter moved into the list itself. */
 @media (max-width: 430px) {
   .topbar-actions { gap: 6px; }
   .topbar-actions .btn { padding: 8px 10px; font-size: var(--fs-small); }
@@ -2529,10 +2540,12 @@ body.kc-win-dragging .kc-wgrip::after { opacity: 0.55; }
   /* Two-column forms are unusable in a ~95vw modal on a handset — collapse to
      a single column so every field gets full width. */
   .form-grid { grid-template-columns: minmax(0, 1fr); }
-  /* Topbar on a handset: the Ask/Search buttons drop their words and keep
-     their icons (aria-labels carry the names), so the bar stops wrapping to
-     three rows just to say "Ask" and "Search". */
-  .kc-btn-label, #btnPalette .kc-chord { display: none; }
+  /* Topbar on a handset: the remaining buttons drop their words and keep their
+     icons (aria-labels carry the names), so the bar stops wrapping to three
+     rows just to say "Help". The find field is the exception — it keeps its
+     hint, because the hint IS the field: shrink it to an icon and it becomes
+     the button this stopped being. */
+  .kc-btn-label { display: none; }
 }
 
 .card-action {
@@ -2678,6 +2691,43 @@ body.kc-win-dragging .kc-wgrip::after { opacity: 0.55; }
 .kc-chord {
   margin-inline-start: 6px; font-size: var(--fs-micro); font-weight: 500;
   color: var(--muted); white-space: nowrap;
+}
+
+/* THE FRONT DOOR — the promoted command palette (owner, 25 Aug: "as guessable
+   and simple as it gets"). It is a <button> wearing a field's clothes, because
+   the place you actually type is the palette; two text inputs and a hand-off
+   between them would be worse than one that opens the other.
+
+   cursor: text and text-align: start are the whole trick. A centred label with
+   a pointer cursor reads "press me and something will happen"; a left-aligned
+   hint with an I-beam reads "type here", which is the instruction. */
+.kc-findbar {
+  display: flex; align-items: center; gap: 8px;
+  /* 300px, not 180: the hint IS the field. Below ~300 it ellipsises, and a
+     truncated instruction is worse than no instruction — the four tabs that
+     carry a primary button squeezed it to "Find a customer, a…" at 1280.
+     The page title beside it wraps; this does not shrink. */
+  flex: 1 1 auto; min-width: 300px; max-width: 420px;
+  margin-inline-end: 12px;
+  height: 40px; padding: 0 12px;
+  font-family: inherit; font-size: var(--fs-ui);
+  background: var(--surface); color: var(--muted);
+  border: 1px solid var(--border-input); border-radius: var(--radius);
+  cursor: text; text-align: start;
+  transition: border-color var(--dur-2) ease, box-shadow var(--dur-2) ease;
+}
+
+.kc-findbar:hover { border-color: var(--accent); }
+.kc-findbar:focus-visible { border-color: var(--accent); box-shadow: var(--ring); outline: none; }
+
+/* The icon carries the --muted ink of the hint beside it, not the --text of a
+   button label: together they are one quiet field, not an icon plus a word. */
+.kc-findbar-ic { flex: none; }
+.kc-findbar-ic::before { background-color: var(--muted); }
+
+.kc-findbar-hint {
+  flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
 /* Inside a filled button the chord sits on the button's ground, not the page's,
