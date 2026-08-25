@@ -850,6 +850,49 @@ body.pos-mode .content { padding: 14px 18px; }
 }
 
 
+/* The other panel shape: one that carries its own heading, where .table-card
+   is a bare surface with a .section-header ABOVE it. Same surface either way —
+   same token, same hairline, same radius, same resting shadow — and the only
+   difference is where the title sits.
+ 
+   These three names were used in four places and defined in none, so Carrier
+   Mail, Confirm Data and the ticket queue drew their lists straight onto the
+   page ground while every other tab had a card under its list. Unstyled is not
+   broken: nothing overflowed, nothing failed contrast, every control still had
+   a name — which is exactly how it survived every sweep the project runs.
+   Found on 25 Aug because the Messages inbox copied the pattern and its first
+   render looked wrong. Issue #22. */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  padding: 14px 18px 16px;
+}
+
+.card-head {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+  margin-bottom: 12px;
+}
+
+/* The last control goes to the far edge whatever sits between it and the
+   title. NOT justify-content: space-between, which these heads cannot use: the
+   ticket queue's carries a title, then a line of explanation, then a button,
+   and space-between would have spread all three evenly across the row. */
+.card-head > :last-child:not(.card-title) { margin-inline-start: auto; }
+
+/* An <h2> in every call site, so the browser's own heading margin and size
+   have to be answered — matched to .section-title, which is the same words
+   doing the same job eight pixels higher up. */
+.card-title {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0; font-size: var(--fs-title); font-weight: 300; letter-spacing: -0.18px;
+}
+
+/* An empty state brings its own generous padding; the card's would double it. */
+.card > .empty-state:only-child { margin: -14px -18px -16px; }
+
+
 /* Wide tables scroll inside their card instead of being clipped, so no
    screen ever overflows horizontally. */
 

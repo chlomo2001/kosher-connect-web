@@ -22497,7 +22497,7 @@ function paintConfirm() {
   if (!confirmQueue.length) {
     content.innerHTML = `
       <div class="stats-row">${confirmStatsHtml()}</div>
-      <div class="card"><div class="empty-state">
+      <div class="table-card"><div class="empty-state">
         <div class="emoji${remaining ? ' kc-ic kc-ic-check' : ''}" aria-hidden="true"></div>
         <p>${remaining
           ? `${remaining} more to go — beyond what one screen can carry at once.`
@@ -22509,11 +22509,16 @@ function paintConfirm() {
 
   content.innerHTML = `
     <div class="stats-row">${confirmStatsHtml()}</div>
-    <div class="card">
-      <div class="card-head">
-        <h2 class="card-title">Does this look right?</h2>
-        <span class="badge" style="background:rgba(148,163,184,0.15);color:var(--muted);">${pct}% confirmed</span>
-      </div>
+    <div class="section-header">
+      <div class="section-title">Does this look right?</div>
+      <span class="badge" style="background:rgba(148,163,184,0.15);color:var(--muted);">${pct}% confirmed</span>
+    </div>
+    ${/* Deliberately NOT a .card here, unlike Carrier Mail and the ticket
+         queue. Those hold rows; this holds a card per record, and a card round
+         a stack of cards is the containment layer this project already took
+         out once (DESIGN.md, Major E). A heading over the stack says the same
+         thing with one less box. */''}
+    <div>
       <p class="rv-hint">Confirming records who checked it and when. It changes nothing else —
         nothing is blocked anywhere in the app while data is unconfirmed.</p>
       <div class="rv-batch" id="rvBatch">${confirmQueue.map(confirmCardHtml).join('')}</div>
