@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
-*As of 25 Aug 2026 · m-60a24b19 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 25 Aug 2026 · m-df04727d — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -632,7 +632,7 @@ Everything the shop can change without anyone writing code: prices, people, what
 - **Shop** — The public-facing details — the shop's own information, the wording on receipts, and the phone guide customers read before choosing a handset. There is a link to view the public page as they see it.
 - **People & access** — Team is who works here, with a password reset. What helpers can see ticks the screens a helper may open — the owner always sees everything.
 - **Prices & charges** — Figures nobody has checked lists every price and whether a person has ever confirmed it against something — the public welcome page will not quote a rental price until the rental rates are confirmed, and editing a price clears its tick again. Then: rental rates per country with their minimum, cap and cap period; what a lost or broken phone, charger or SIM costs; the fees and rules; the service price menu behind Online & Print; extra charges; repair stages; void reasons; your own stock categories on top of the built-in ones; and the month's target that the dashboard measures against.
-- **Communications** — Email and SMS, each with its safety gate, the addresses post arrives at, a test send, and the log of every message — sent and the replies customers text back, marked ↩ so the two directions read apart. A text that came in carries a Reply button, and one nobody has answered says so on its row.
+- **Communications** — The card is called Messaging (email & SMS) on the screen — email and SMS, each with its safety gate, the addresses post arrives at, a test send, and the log of every message: sent, and the replies customers text back, marked ↩ so the two directions read apart. A text that came in carries a Reply button, and one nobody has answered says so on its row. The log does not load itself; press Load the log. Quicker than finding it: Ctrl and K, then "text" or "reply" — that opens the log with the log already in it, and the Dashboard's own line does the same.
 - **Travel** — Travel requirements: what each destination demands and how long a document must stay valid. This is what the booking screen checks against.
 - **Connectivity** — The providers behind virtual numbers and the phone lines.
 - **Workbench** — The tools for moving a customer from one handset to another, and the converters behind them.

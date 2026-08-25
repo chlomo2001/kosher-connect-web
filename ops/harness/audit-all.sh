@@ -108,6 +108,13 @@ run "staff app · contrast, both themes" \
 run "staff app · touch targets (coarse pointer)" \
   bash -eo pipefail -c 'node ops/harness/render.mjs --targets --width 390 | tail -1'
 
+# Every everyday job still reachable by navigating AND by the palette. This sat
+# unwired until 25 Aug and printed a broken route nobody read — the break was in
+# its own route table, which is what an unrun check earns you. Sixteen browser
+# runs, so it is a nightly line and not a smoke one.
+run "staff app · every job still reachable, navigate and palette" \
+  bash -eo pipefail -c 'node ops/harness/paths.mjs | tail -1'
+
 # Day one. Every collection empty is a real state — a new shop, and any search
 # that matched nothing — and the seed is deliberately full, so no sweep could
 # reach it. An empty tab must still render (the audit fails a tab that painted

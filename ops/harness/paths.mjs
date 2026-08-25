@@ -79,8 +79,16 @@ const JOBS = [
   { job: 'Book a repair',
     navigate: [tab('repairs'), click('New repair')],
     fast:     [palette(), paletteQuick('repair')] },
+  // The route is this long because the destination really is this deep: an
+  // inbound customer text is answered from the message log, which lives inside
+  // the Messaging card in Settings — eleventh of eighteen cards — and does not
+  // load itself. An earlier version of this file walked a "COMMUNICATIONS"
+  // heading that does not exist anywhere in the app; it reported a break in the
+  // product when the fault was in the route I had written. A harness that
+  // invents a screen is worse than no harness: it spends the one thing it is
+  // for, which is being believed.
   { job: 'Answer a text a customer sent',
-    navigate: [tab('settings'), click('COMMUNICATIONS', { exact: true }), click('Reply')],
+    navigate: [tab('settings'), click('Messaging (email & SMS)'), click('Load the log'), click('Reply')],
     fast:     [palette(), typeSearch('message'), paletteQuick('message')] },
 ]
 
@@ -115,3 +123,13 @@ console.log('─'.repeat(78))
 console.log(`${'TOTAL'.padEnd(28)} ${String(navTotal).padStart(5)}   ${String(fastTotal).padStart(6)}`)
 if (broken.length) { console.log('\nCould not be completed by navigating:'); broken.forEach(b => console.log('  ·', b)) }
 await browser.close()
+
+// Exit non-zero on a break, so this can go in the nightly sweep and be believed.
+// It printed a broken route for a day before anyone looked, because nothing ran
+// it but a person remembering to. A check nobody runs is a check that does not
+// exist — and the break it printed turned out to be in this file, which is the
+// other half of the lesson: an unrun check also never gets corrected.
+console.log(broken.length
+  ? `\npaths: ${broken.length} job(s) cannot be reached by navigating`
+  : `\npaths: every job reachable — ${navTotal} steps navigating, ${fastTotal} by palette`)
+process.exit(broken.length ? 1 : 0)

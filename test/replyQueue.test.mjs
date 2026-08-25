@@ -131,11 +131,36 @@ test('the count is taken over the whole log, not the page on screen', () => {
 test('the dashboard row exists, is urgent, and leads somewhere that loads', () => {
   assert.match(MAIN, /f\.smsWaiting/, 'the dashboard must read the waiting count')
   assert.match(MAIN, /do: 'messages\.waiting'/)
-  assert.match(MAIN, /'messages\.waiting':\s*\(\) => \{[^}]*loadMessageLog\(\)/,
+  // Follows one hop on purpose. The row's handler and the command palette both
+  // open this screen, so the body lives in a shared function rather than inline
+  // — but the guarantee is unchanged and still checked: whatever the row calls
+  // must end up loading the log, or Settings lands on "press Load the log", a
+  // button that promised to show you something and asked you to press another.
+  const target = MAIN.match(/'messages\.waiting':\s*\(\) => ([A-Za-z0-9_$]+)\(\)/)
+  assert.ok(target, 'the row must route to a named opener')
+  const opener = MAIN.match(new RegExp(`function ${target[1]}\\(\\)[\\s\\S]*?\\n\\}`))
+  assert.ok(opener, `${target[1]}() is missing`)
+  assert.match(opener[0], /loadMessageLog\(\)/,
     'the action must LOAD the log — Settings otherwise shows "press Load the log"')
   const row = MAIN.match(/if \(f\.smsWaiting\)[^;]*;/)
   assert.ok(row, 'the row is missing')
   assert.match(row[0], /tone: 'urgent'/, 'a person waiting on an answer is urgent')
+})
+
+test('the palette reaches the log by the words somebody would type', () => {
+  // From 25 Aug the command palette is the app's front door, so a job it cannot
+  // reach is a job that is hidden. This one was: Ctrl+K for "text", "sms" or
+  // "reply" returned nothing, and the only route was knowing that inbound texts
+  // live in Settings, eleventh card down, behind a button that loads them.
+  const cmd = MAIN.match(/\{[^{}]*label: 'Answer a text a customer sent'[\s\S]*?\n  \},/)
+  assert.ok(cmd, 'the palette needs an entry for answering a text')
+  for (const word of ['text', 'sms', 'reply', 'inbox', 'message']) {
+    assert.ok(cmd[0].includes(`'${word}`) || cmd[0].includes(word),
+      `the palette entry must match "${word}" — it is what the job is called`)
+  }
+  assert.match(cmd[0], /tab: 'settings'/,
+    'gate it on the screen it opens, so it hides from anyone who could not open it')
+  assert.match(cmd[0], /openMessageLog\(\)/, 'it must open the log loaded, like the dashboard row')
 })
 
 test('the reply toasts agree with the count', () => {

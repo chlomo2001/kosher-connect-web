@@ -1102,8 +1102,25 @@ const KC_NEXT_DO = {
   // The log lives on Settings and does not load itself, so going there without
   // loading it would land on "press Load the log" — a button that promised to
   // show you something and then asked you to press another button.
-  'messages.waiting':      () => { goToTab('settings'); setTimeout(() => { loadMessageLog(); focusPanel('msgLogWrap'); }, 160); },
+  'messages.waiting':      () => openMessageLog(),
 };
+
+/**
+ * Open the message log with the log actually in it.
+ *
+ * Two callers, one behaviour: the dashboard's "Read them" row, and the command
+ * palette. They used to be one caller, and the palette could not reach this
+ * screen at all — Ctrl+K for "message", "text" or "reply" returned nothing,
+ * so the only way to answer a customer was to know that inbound texts live in
+ * Settings, eleventh card down, behind a button that loads them.
+ *
+ * That mattered more from 25 Aug, when the palette became the front door of
+ * the app: a job the front door cannot reach is a job that is hidden.
+ */
+function openMessageLog() {
+  goToTab('settings');
+  setTimeout(() => { loadMessageLog(); focusPanel('msgLogWrap'); }, 160);
+}
 
 /**
  * Go to a panel, and mean it.
@@ -20336,6 +20353,14 @@ const PALETTE_COMMANDS = [
   { icon: 'download', label: 'Import ELID accounts', sub: 'admin', admin: true, run: () => openElidImportModal() },
   { icon: 'users', label: 'Find duplicate customers', sub: 'admin', admin: true, run: () => openDupScanModal() },
   { icon: 'brain', label: 'AI plan my day (tasks)', sub: 'tasks', run: () => openTaskTriageModal() },
+  // Aliased on the words somebody would actually type at the counter. "Message
+  // log" is what the panel is called; "text", "sms", "reply" and "inbox" are
+  // what the job is called by the person doing it, and none of them appear in
+  // the panel's own name. tab: 'settings' rather than admin: true, so it is
+  // hidden from exactly the people who could not open the screen anyway.
+  { icon: 'chat', label: 'Answer a text a customer sent', sub: 'messages', tab: 'settings',
+    keys: ['message log', 'messages', 'text', 'sms', 'reply', 'replies', 'inbox', 'answer'],
+    run: () => openMessageLog() },
   // The assistant's own door since 18 Aug, when its topbar button folded into
   // the ❓ Help panel. Searchable by the words someone would actually type.
   { icon: 'bot', label: 'Ask / do anything (AI assistant)', sub: 'AI',
