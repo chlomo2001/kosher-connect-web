@@ -24289,7 +24289,9 @@ const FEE_META = {
         <input class="form-input" id="smsTestTo" type="tel" dir="ltr" placeholder="+44 7…  (your own number)"
           style="min-height:0;padding:7px 10px;font-size:var(--fs-body);width:220px;">
         <button class="btn btn-outline btn-sm kc-ic kc-ic-upload" onclick="sendTestSms()">Send test SMS</button>
-        <span style="font-size:var(--fs-micro);color:var(--muted);">Safe in every mode — on HOLD it only logs; on TEST it goes to the test number whatever you type.</span>
+        <span style="font-size:var(--fs-micro);color:var(--muted);">${health?.sms?.mode === 'live'
+          ? 'SMS is LIVE — this really texts the number you type, and costs a message. Use your own.'
+          : 'Safe right now — on HOLD it only logs; on TEST it goes to the test number whatever you type.'}</span>
       </div>
       <div style="padding:0 14px 14px;border-top:1px solid var(--border);">
         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 0 4px;">

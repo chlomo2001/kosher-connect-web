@@ -74,7 +74,15 @@ hexLines.length ? fail(`plate 03 · literal hex that cannot flip for dark mode (
 // ── PLATE 08 · a text message is only its words ──────────────────────────
 const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u
 const smsBad = []
-for (const f of ['lib/smsFormats.mjs', 'pages/api/sms.js']) {
+// Every file that composes an SMS BODY. It began as two and missed
+// pages/api/sms-test.js, which had a 👍 in its message from the day it was
+// written — one non-GSM character drops a segment from 160 characters to 70,
+// so an emoji in a text is a bill, not a decoration.
+//
+// Files that merely CONTAIN emoji are not the target and must stay out: adding
+// sweep.js caught two task titles, which are read in the app and texted to
+// nobody. A check that flags the wrong thing gets ignored for the right one.
+for (const f of ['lib/smsFormats.mjs', 'pages/api/sms.js', 'pages/api/sms-test.js']) {
   let src; try { src = read(f) } catch { continue }
   src.split('\n').forEach((l, i) => {
     if (l.trim().startsWith('//')) return
