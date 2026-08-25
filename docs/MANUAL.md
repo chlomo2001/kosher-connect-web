@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
-*As of 24 Aug 2026 · m-98c69f14 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 25 Aug 2026 · m-4f00d44b — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -638,7 +638,7 @@ Everything the shop can change without anyone writing code: prices, people, what
 - **Connectivity** — The providers behind virtual numbers and the phone lines.
 - **Workbench** — The tools for moving a customer from one handset to another, and the converters behind them.
 - **Automation** — The jobs the nightly sweep runs for you, and what each one is allowed to do.
-- **Business** — The accounts and subscriptions the shop pays for, the telecom upstream, and what the AI features have cost this month.
+- **Business** — The accounts and subscriptions the shop itself runs on — grouped by what they are for, with the ones that keep the site up first and the rest in name order under each heading. Each one records where to log in, what it costs and how often it bills, when it next renews, and — the part that matters if anyone ever asks — whose account it sits under and what pays for it. A row with nobody recorded against it says so rather than looking finished. The heading counts what is missing out loud: how many have no cost and how many have no renewal date, because a register that reads as complete when it is not is worse than no register. Also here: the telecom upstream, and what the AI features have cost this month.
 
 **Boxes that open on top of it**
 
@@ -651,6 +651,7 @@ Everything the shop can change without anyone writing code: prices, people, what
 - Messaging has three modes and they mean exactly what they say: hold builds the message and sends nothing, test sends everything to the shop's own address or number whatever you type, and live reaches real customers. It stays on hold until the owner deliberately changes it.
 - What helpers can see is an access list, and it fails closed: if it is empty or broken, helpers are stopped from making changes rather than quietly promoted to full access.
 - Secrets — keys, tokens, passwords for other services — are never kept in this app or in the code. They live with the host, and nobody should ever be asked to paste one into a message.
+- The shop's own subscriptions are watched the same way a customer's renewal is: once one has a renewal date on it, a job appears a week before it falls due. A week rather than the few days a customer's SIM gets, because a card that fails on the hosting needs a working week to sort out, not a weekend. Until the dates are filled in there is one job on the list saying how many are still blind — that job is the register asking to be finished.
 - A price changed here changes what the shop charges from that moment. It does not rewrite what was already agreed on an existing rental or ticket.
 
 **When it goes wrong**

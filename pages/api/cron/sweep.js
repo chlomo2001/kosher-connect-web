@@ -15,6 +15,9 @@
 //      sim_mail rows /api/inbound/mail could not pair with certainty
 //   7. SMS that never arrived → rolling SMSFAIL task from the delivery results
 //      /api/sms-status writes back onto email_log
+//   8. KC's OWN subscriptions → SUBDUE-<account> when one renews within 7 days,
+//      plus a rolling SUBGAPS task counting the ones with no renewal date at all
+//      (business_accounts — Vercel, Twilio, Supabase, Gemini and the rest)
 //
 // Callers: Vercel Cron (Authorization: Bearer CRON_SECRET — note crons fire
 // only on PRODUCTION deployments), or a signed-in staff member (the "Run
@@ -730,6 +733,76 @@ async function handler(req, res) {
     }
     counts.houseAccountTasks = haCreated
     counts.houseAccountClosed = haClosed
+    })
+
+    await section('own-subscriptions', async () => {
+    // ── 8. KC's own subscriptions ──
+    // Owner, 25 Aug 2026. Every other sweep here watches a CUSTOMER's dates —
+    // their rental back, their SIM renewing, their passport expiring. Nothing
+    // watched the shop's own bills, and those are the ones that take the shop
+    // off the air: Vercel or Supabase lapsing is the site down, Twilio lapsing
+    // is no SMS. A register that lists what the shop uses without ever telling
+    // anyone it is about to renew is a spreadsheet, not an alarm.
+    //
+    // Seven days rather than the SIM sweep's three, because a failed card on an
+    // infrastructure account needs a working week to fix, not a weekend.
+    const OWN_SUB_DAYS = 7
+    const subs = await db.select('business_accounts',
+      `select=id,name,category,monthly_cost,billing_period,renewal_date,held_by` +
+      `&active=is.true&renewal_date=not.is.null` +
+      `&renewal_date=gte.${today}&renewal_date=lte.${localDate(OWN_SUB_DAYS)}`)
+    let subTasks = 0
+    for (const a of subs) {
+      // Cost is only quotable with its period attached — "£20" against an
+      // annual bill read as monthly overstates the run rate by twelve.
+      const cost = a.monthly_cost != null && a.billing_period
+        ? ` — £${Number(a.monthly_cost).toFixed(2)}/${a.billing_period === 'annual' ? 'yr' : 'mo'}`
+        : ''
+      await upsertOpenTask({
+        reference: `SUBDUE-${a.id}`,
+        title: `${a.name} renews ${displayDate(a.renewal_date)}${cost}`,
+        priority: 'high',
+        notes: `The shop's own subscription${a.held_by ? ` — held by ${a.held_by}` : ''}. `
+             + 'Check the card on file is live and the plan is still the one you want.',
+        dueDate: a.renewal_date,
+      })
+      subTasks++
+    }
+    counts.ownSubscriptionTasks = subTasks
+
+    // Close the ones that renewed, were switched off, or had their date cleared.
+    const openSub = await db.select('tasks', 'select=id,reference&done=is.false&reference=like.SUBDUE-*')
+    let subClosed = 0
+    for (const t of openSub) {
+      const id = t.reference.slice('SUBDUE-'.length)
+      const row = await db.select('business_accounts', `select=active,renewal_date&id=eq.${enc(id)}`)
+      const stale = !row.length || !row[0].active || !row[0].renewal_date ||
+        row[0].renewal_date > localDate(OWN_SUB_DAYS) || row[0].renewal_date < today
+      if (stale) subClosed += await closeOpenTask(t.reference)
+    }
+    counts.ownSubscriptionClosed = subClosed
+
+    // ── the gap itself, as ONE task rather than fifteen ──
+    // On 25 Aug 2026 fifteen of sixteen active accounts had no renewal date, so
+    // the sweep above could not see a single one. Raising a task per account
+    // would bury the morning list under the very problem it is reporting; one
+    // rolling task states the number and closes itself when it reaches zero.
+    const blind = await db.select('business_accounts',
+      'select=id,name&active=is.true&renewal_date=is.null&order=category.asc,name.asc')
+    if (blind.length) {
+      const names = blind.slice(0, 6).map(a => a.name).join(', ')
+      await upsertOpenTask({
+        reference: 'SUBGAPS',
+        title: `${blind.length} of the shop's own subscriptions have no renewal date`,
+        priority: 'medium',
+        notes: `Nothing can warn you before these renew: ${names}`
+             + `${blind.length > 6 ? `, and ${blind.length - 6} more` : ''}. `
+             + 'Settings → Accounts & subscriptions. The dates are on the invoices.',
+      })
+    } else {
+      await closeOpenTask('SUBGAPS')
+    }
+    counts.ownSubscriptionsBlind = blind.length
     })
 
     await section('sim-mail', async () => {

@@ -28,9 +28,21 @@ const shape = (r) => ({
   hasCred: !!r.cred_cipher,
   monthlyCost: r.monthly_cost === null ? null : Number(r.monthly_cost),
   renewalDate: r.renewal_date || null,
+  // Who holds it and what pays it — the ownership question from the money
+  // side (issue #9). Separate on purpose: an account can sit under one login
+  // while a different card pays it, and that gap is where a subscription
+  // quietly becomes somebody else's leverage.
+  heldBy: r.held_by || '',
+  paidBy: r.paid_by || '',
+  // monthly_cost cannot be totalled honestly without this — an annual bill
+  // read as monthly overstates the run rate by twelve.
+  billingPeriod: r.billing_period || '',
   notes: r.notes || '',
   active: r.active,
 })
+
+// The register's own vocabulary, so the UI and the API cannot drift apart.
+export const BILLING_PERIODS = ['monthly', 'annual', 'usage', 'free']
 
 async function handler(req, res) {
   if (!tablesMode) return res.status(503).json({ success: false, error: 'Needs the relational data layer.' })
@@ -78,6 +90,9 @@ async function handler(req, res) {
         login_email: String(b.loginEmail || '').trim().slice(0, 200) || null,
         monthly_cost: cost,
         renewal_date: /^\d{4}-\d{2}-\d{2}$/.test(renewal) ? renewal : null,
+        held_by: String(b.heldBy || '').trim().slice(0, 200) || null,
+        paid_by: String(b.paidBy || '').trim().slice(0, 200) || null,
+        billing_period: BILLING_PERIODS.includes(b.billingPeriod) ? b.billingPeriod : null,
         notes: String(b.notes || '').trim().slice(0, 1000) || null,
         updated_at: new Date().toISOString(),
       }

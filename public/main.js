@@ -23580,18 +23580,70 @@ const FEE_META = {
   // renews. Credentials live encrypted server-side; reveal is on demand.
   bizAccountsCache = bizacc?.accounts || [];
   const BIZ_CAT_LABELS = { infrastructure: '<i class="kc-ic kc-ic-build" aria-hidden="true"></i> Infrastructure', telecom: '<i class="kc-ic kc-ic-signal" aria-hidden="true"></i> Telecom', ivr: '<i class="kc-ic kc-ic-call" aria-hidden="true"></i> IVR / PBX', email: '<i class="kc-ic kc-ic-email" aria-hidden="true"></i> Email', finance: '<i class="kc-ic kc-ic-pound" aria-hidden="true"></i> Finance', other: '<i class="kc-ic kc-ic-package" aria-hidden="true"></i> Other' };
+  // The order the shop would name them in if asked what it runs on: the things
+  // that keep the site up, then the things it talks to customers through, then
+  // the things it gets paid by. The server sorts category.asc, which is
+  // ALPHABETICAL — email, finance, infrastructure, ivr, other, telecom — an
+  // order that means nothing to anybody (owner, 25 Aug: "arrange the accounts
+  // in a logical manner").
+  const BIZ_CAT_ORDER = ['infrastructure', 'telecom', 'email', 'finance', 'ivr', 'other'];
   const activeBiz = bizAccountsCache.filter(a => a.active);
-  const bizTotal = activeBiz.reduce((s, a) => s + (a.monthlyCost || 0), 0);
+
+  // A monthly total has to divide the annual ones, or it overstates the run
+  // rate by twelve. Anything whose period is unknown is EXCLUDED and counted
+  // out loud rather than silently added at face value — a wrong total is worse
+  // than an incomplete one, because nobody checks a number that looks finished.
+  const bizMonthly = a => {
+    if (a.monthlyCost == null) return null;
+    if (a.billingPeriod === 'monthly') return a.monthlyCost;
+    if (a.billingPeriod === 'annual') return a.monthlyCost / 12;
+    if (a.billingPeriod === 'usage' || a.billingPeriod === 'free') return 0;
+    return null;  // period not set — cannot be totalled honestly
+  };
+  const bizTotal = activeBiz.reduce((s2, a) => s2 + (bizMonthly(a) || 0), 0);
+  const bizUncosted = activeBiz.filter(a => bizMonthly(a) === null).length;
+  const bizNoDate = activeBiz.filter(a => !a.renewalDate).length;
   const today10 = new Date().toISOString().slice(0, 10);
   const soon10 = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+
+  // A–Z within the group (owner, 25 Aug). A register is a place you come to
+  // LOOKING for something — "where's the Twilio login" — so it is sorted to be
+  // found, not to be triaged. An earlier pass put the soonest renewal first,
+  // which is the right order for a to-do list and the wrong one for a
+  // reference: it moves rows around as dates pass, so the thing you looked up
+  // last week is somewhere else this week. Urgency is carried by the red date
+  // and by the morning task, neither of which needs to disturb this order.
+  const bizSorted = arr => [...arr].sort((x, y) =>
+    String(x.name || '').localeCompare(String(y.name || ''), 'en-GB', { sensitivity: 'base' }));
+
+  const bizGroups = BIZ_CAT_ORDER
+    .map(cat => [cat, bizSorted(activeBiz.filter(a => a.category === cat))])
+    .filter(([, rows]) => rows.length)
+    // anything on a category the list above does not know about still shows
+    .concat(bizSorted(activeBiz.filter(a => !BIZ_CAT_ORDER.includes(a.category))).length
+      ? [['other', bizSorted(activeBiz.filter(a => !BIZ_CAT_ORDER.includes(a.category)))]] : []);
+
+  const bizCostCell = a => {
+    if (a.monthlyCost == null) return a.billingPeriod === 'free' ? '<span style="color:var(--muted);">free</span>' : '—';
+    const per = a.billingPeriod === 'annual' ? '/yr' : a.billingPeriod === 'monthly' ? '/mo'
+              : a.billingPeriod === 'usage' ? ' usage' : '';
+    return `${fmtGbp(a.monthlyCost)}<span style="color:var(--muted);font-size:var(--fs-micro);">${escHtml(per)}</span>`;
+  };
+
+  const bizSub = `${activeBiz.length} account${activeBiz.length === 1 ? '' : 's'} · ~${fmtGbp(bizTotal)}/month`
+    + `${bizUncosted ? ` · ${bizUncosted} not costed` : ''}`
+    + `${bizNoDate ? ` · ${bizNoDate} with no renewal date` : ''}`;
+
   const bizAccHtml = bizacc?.success ? settingsCard('bizacc', '<i class="kc-ic kc-ic-archive" aria-hidden="true"></i> Accounts & subscriptions',
-    `${activeBiz.length} account${activeBiz.length === 1 ? '' : 's'} · ~${fmtGbp(bizTotal)}/month`, `
-      <table><thead><tr><th>Account</th><th>Login</th><th>£/month</th><th>Renews</th><th></th></tr></thead>
+    bizSub, `
+      <table><thead><tr><th>Account</th><th>Login</th><th>Cost</th><th>Renews</th><th></th></tr></thead>
       <tbody>
         ${activeBiz.length === 0 ? `<tr><td colspan="5" style="color:var(--muted);font-size:var(--fs-body);padding:12px 16px;">Nothing registered yet — add Vercel, Supabase, Resend, Twilio, elid, the carrier logins… so nothing lives only in someone's head.</td></tr>` : ''}
-        ${activeBiz.map(a => `
+        ${bizGroups.map(([cat, rows]) => `
+          <tr class="kc-biz-head"><td colspan="5">${BIZ_CAT_LABELS[cat] || escHtml(cat)}<span style="color:var(--muted);font-weight:400;"> · ${rows.length}</span></td></tr>
+          ${rows.map(a => `
           <tr>
-            <td><strong>${escHtml(a.name)}</strong><div style="font-size:var(--fs-micro);color:var(--muted);">${BIZ_CAT_LABELS[a.category] || escHtml(a.category)}${a.notes ? ' · ' + escHtml(a.notes.slice(0, 60)) : ''}</div></td>
+            <td><strong>${escHtml(a.name)}</strong>${a.heldBy || a.paidBy ? `<div style="font-size:var(--fs-micro);color:var(--muted);">${a.heldBy ? `held by ${escHtml(a.heldBy)}` : ''}${a.heldBy && a.paidBy ? ' · ' : ''}${a.paidBy ? `paid by ${escHtml(a.paidBy)}` : ''}</div>` : '<div style="font-size:var(--fs-micro);color:var(--warning-ink,#a94e08);">no owner recorded</div>'}</td>
             ${/* The link and the login sat one space apart and read as one
                   run-on string (owner, 19 Aug: "open and login details is too
                   near - not proportional"). They are two different things —
@@ -23603,14 +23655,14 @@ const FEE_META = {
                 <span style="color:var(--muted);">${escHtml(a.loginEmail || '—')}</span>
               </div>
             </td>
-            <td style="font-feature-settings:'tnum';">${a.monthlyCost != null ? fmtGbp(a.monthlyCost) : '—'}</td>
-            <td class="kc-date">${a.renewalDate ? `<span style="${a.renewalDate <= soon10 ? 'color:var(--danger-ink);font-weight:600;' : ''}">${fmtDate(a.renewalDate)}${a.renewalDate < today10 ? ' <i class="kc-ic kc-ic-alert" aria-hidden="true"></i>' : ''}</span>` : '—'}</td>
+            <td style="font-feature-settings:'tnum';white-space:nowrap;">${bizCostCell(a)}</td>
+            <td class="kc-date">${a.renewalDate ? `<span style="${a.renewalDate <= soon10 ? 'color:var(--danger-ink);font-weight:600;' : ''}">${fmtDate(a.renewalDate)}${a.renewalDate < today10 ? ' <i class="kc-ic kc-ic-alert" aria-hidden="true"></i>' : ''}</span>` : '<span style="color:var(--muted);">not set</span>'}</td>
             <td style="white-space:nowrap;">
               ${a.hasCred ? `<button class="action-btn kc-ic kc-ic-key" style="font-size:var(--fs-micro);" onclick="revealBizAccount('${escHtml(a.id)}')">Reveal</button>` : ''}
               <button class="action-btn kc-ic kc-ic-pencil" aria-label="Edit ${escHtml(a.name || 'account')}" onclick="openBizAccountModal('${escHtml(a.id)}')"></button>
-              <button class="action-btn danger" aria-label="Retire ${escHtml(a.name || 'account')}" onclick="retireBizAccount('${escHtml(a.id)}', '${escJs(a.name)}')">✕</button>
+              <button class="action-btn danger" aria-label="Retire ${escHtml(a.name || 'account')}" onclick="retireBizAccount('${escHtml(a.id)}', '${escJs(a.name)}')"><i class="kc-ic kc-ic-cross" aria-hidden="true"></i></button>
             </td>
-          </tr>`).join('')}
+          </tr>`).join('')}`).join('')}
       </tbody></table>
       <div style="padding:8px 14px 14px;">
         <button class="btn btn-outline btn-sm" onclick="openBizAccountModal()">+ Add account</button>
@@ -24548,12 +24600,35 @@ function openBizAccountModal(id = null) {
         <input class="form-input" id="baCred" type="password" autocomplete="new-password" placeholder="${a?.hasCred ? '••••••••' : ''}">
       </div>
       <div class="form-group">
-        <label class="form-label">Cost £/month</label>
+        <label class="form-label">Cost £</label>
         <input class="form-input" type="number" step="0.01" min="0" id="baCost" value="${a?.monthlyCost ?? ''}">
+      </div>
+      ${/* The cost is meaningless without its period: Vercel and a domain
+            registrar bill annually, and totalling those as monthly overstates
+            the run rate by twelve. */''}
+      <div class="form-group">
+        <label class="form-label">Billed</label>
+        <select class="form-input" id="baPeriod">
+          ${[['', '— not set —'], ['monthly', 'Monthly'], ['annual', 'Annually'], ['usage', 'On usage'], ['free', 'Free']]
+            .map(([k, l]) => `<option value="${k}" ${(a?.billingPeriod || '') === k ? 'selected' : ''}>${l}</option>`).join('')}
+        </select>
       </div>
       <div class="form-group">
         <label class="form-label">Next renewal</label>
         <input class="form-input" type="date" id="baRenewal" value="${escHtml(a?.renewalDate || '')}">
+      </div>
+      ${/* Two fields, not one. An account can sit under one login while a
+            different card pays it, and that gap is exactly where a
+            subscription quietly becomes somebody else's leverage. Until now
+            both answers were going into Notes, whose placeholder said "who
+            pays" — a free-text field nothing can sweep, sort or total. */''}
+      <div class="form-group">
+        <label class="form-label">Held by <span style="color:var(--muted);font-weight:400;">(whose account)</span></label>
+        <input class="form-input" id="baHeldBy" value="${escHtml(a?.heldBy || '')}" placeholder="e.g. office@kosher-connect.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Paid by <span style="color:var(--muted);font-weight:400;">(what the money comes off)</span></label>
+        <input class="form-input" id="baPaidBy" value="${escHtml(a?.paidBy || '')}" placeholder="e.g. Hatsluche Ltd card ••4321">
       </div>
       <div class="form-group form-full">
         <label class="form-label">Notes</label>
@@ -24578,7 +24653,10 @@ async function saveBizAccount(id) {
       loginEmail: document.getElementById('baLogin').value,
       credential: document.getElementById('baCred').value,
       monthlyCost: document.getElementById('baCost').value,
+      billingPeriod: document.getElementById('baPeriod').value,
       renewalDate: document.getElementById('baRenewal').value,
+      heldBy: document.getElementById('baHeldBy').value,
+      paidBy: document.getElementById('baPaidBy').value,
       notes: document.getElementById('baNotes').value,
     }),
   }).then(r => r.json()).catch(() => ({ success: false, error: 'Network error.' }));
