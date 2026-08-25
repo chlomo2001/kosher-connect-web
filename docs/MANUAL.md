@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **29 of 29 screens written out in full.**
-*As of 25 Aug 2026 · m-4f00d44b — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 25 Aug 2026 · m-b5f16d74 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -134,7 +134,7 @@ Everyone on the books: how to reach them, what they owe, and everything they hav
 - **New Service** — The other half of one-place service: every new thing starts from the card with the person already filled in — a rental, a SIM plan, a flight, a virtual number, a repair, a print job, and the till itself. “Sell at the till” opens the till with them attached, wallet credit and usual payment ready — and Exit till brings you straight back to their card, so a visit that wants a rental, a ticket and a few accessories starts and ends in the same place.
 - **Two cards at once** — Grip a card aside by its edge, then open another customer: the second opens BESIDE the first instead of replacing it, so two records can be read against each other. Both are fully editable, and each card's buttons only ever act on its own customer — a save on one cannot land on the other. The card with the keyboard in it is the brighter of the two. Escape closes the one on top first.
 - **on a timeline entry** — Corrects a call or note that was logged wrongly. It never erases: the original stays on the row struck through, with who corrected it and when, so the timeline can still be read as evidence of what actually happened rather than as notes somebody has since tidied. Only logged calls and notes carry it — a rental or a payment is a record of a thing that happened, and is corrected by correcting the thing.
-- **Contact** — Draft a reminder (written for you, and nothing is sent from here), draft a reply to a message they sent, or log a call or note so the next person knows what was said.
+- **Contact** — Draft a reminder — written for you from what they owe and what is coming up — then copy it, open it in WhatsApp, or send it as a text straight from here. The box counts the characters and tells you when the message becomes two texts, because a text is billed by the part. The number is never typed: it is read off their record, so a message cannot go to the wrong person. Also here: draft a reply to a message they sent, and log a call or note so the next person knows what was said.
 - **Money** — Charge the card they have saved, save one for next time, or make a payment link to send them. The card number is entered on Stripe's own screen — the shop never sees it and never holds it.
 - **unconfirmed — confirm?** — On a record that came in from an import and nobody has checked, the marker under the name is the answer button. Pressing it vouches that what the app holds matches reality, and confirms the SIMs, bookings and virtual numbers that came in with them — the same as the Confirm Data screen, without leaving the person you are looking at. It asks first. In lists the same marker stays a plain label.
 - **Wallet** — The one place money is offered on the record. It says the balance in the same words as the rest of the app, lists what made it up, and carries a single button — which asks for the payment when they owe and offers to record one when they do not. The balance used to be stated three times on one screen with two buttons doing the same job; two controls of the same shape for one task is how the wrong one gets pressed.

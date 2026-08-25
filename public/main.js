@@ -10956,16 +10956,65 @@ function openDraftReminderModal(customerId) {
   const c = customers.find(x => x.id === customerId);
   if (!c) return;
   const draft = buildReminderDraft(c);
+  // Until SMS went live (25 Aug) this modal could only offer the clipboard, and
+  // said so: "nothing is sent" was the honest description of a HOLD-gated app.
+  // The send path existed the whole time — POST /api/sms { customerId, text },
+  // which resolves the number server-side from the record so the browser can
+  // never aim a message at a different one — it simply had no button.
+  const canText = !!(c.phone && String(c.phone).replace(/\D/g, '').length >= 7);
   showDynamicModal(`
     <div class="modal-title kc-ic kc-ic-mail">Draft reminder — ${escName(c.firstName)} ${escName(c.lastName)}</div>
-    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Built from what this customer currently owes / has coming up. Edit it, then copy — <strong>nothing is sent</strong>.</div>
-    <textarea class="form-input" id="drText" rows="9" aria-label="Reminder message — edit before copying" style="font-family:inherit;">${escHtml(draft)}</textarea>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Built from what this customer currently owes / has coming up. Edit it before it goes.</div>
+    <textarea class="form-input" id="drText" rows="9" aria-label="Reminder message — edit before sending" style="font-family:inherit;">${escHtml(draft)}</textarea>
+    <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;" id="drCount" aria-live="polite"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
-      ${waLink(c, '') ? `<button class="btn btn-outline kc-ic kc-ic-chat" onclick="waReminderDraft('${escHtml(String(customerId))}')">Open in WhatsApp</button>` : ''}
-      <button class="btn btn-primary kc-ic kc-ic-clipboard" onclick="copyReminderDraft('${escHtml(String(customerId))}')">Copy message</button>
+      <button class="btn btn-outline kc-ic kc-ic-clipboard" onclick="copyReminderDraft('${escHtml(String(customerId))}')">Copy</button>
+      ${waLink(c, '') ? `<button class="btn btn-outline kc-ic kc-ic-chat" onclick="waReminderDraft('${escHtml(String(customerId))}')">WhatsApp</button>` : ''}
+      ${canText ? `<button class="btn btn-primary kc-ic kc-ic-chat" onclick="sendReminderText('${escHtml(String(customerId))}')">Send by text</button>` : ''}
     </div>
   `);
+  // A text is billed by the segment, so the count is shown rather than
+  // discovered on the bill. 160 GSM-7 characters is one; beyond that a message
+  // is split and charged per part.
+  const ta = document.getElementById('drText'), out = document.getElementById('drCount');
+  const tick = () => {
+    if (!ta || !out) return;
+    const n = ta.value.length, parts = n <= 160 ? 1 : Math.ceil(n / 153);
+    out.textContent = canText
+      ? `${n} characters · ${parts} text${parts === 1 ? '' : 's'}`
+      : `${n} characters · no mobile number on file, so this one can only be copied`;
+  };
+  ta?.addEventListener('input', tick); tick();
+}
+
+// Send the drafted reminder as a text. SMS is live, so this reaches a real
+// person: the confirm names the number out loud rather than saying "are you
+// sure", because the number is the thing worth checking.
+async function sendReminderText(customerId) {
+  const c = customers.find(x => x.id === customerId);
+  const text = document.getElementById('drText')?.value.trim() || '';
+  if (!c || !text) { toast('Nothing to send.', 'warning'); return; }
+  const ok = await kcConfirm({
+    title: 'Text this customer?',
+    icon: 'chat',
+    body: `<p>To <strong>${escName(c.firstName)} ${escName(c.lastName)}</strong> on <strong>${escHtml(c.phone || '')}</strong>.</p>`
+        + `<p style="color:var(--muted);font-size:var(--fs-small);white-space:pre-wrap;">${escHtml(text.slice(0, 320))}</p>`,
+    okLabel: 'Send the text', okIcon: 'chat',
+  });
+  if (!ok) { toast('Not sent.', 'warning', 'blocked'); return; }
+  const res = await kcFetch('/api/sms', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ customerId, text }),
+  }).then(r => r.json()).catch(() => ({ success: false, error: 'Network error.' }));
+  if (!res.success) { toast(res.error || 'Could not send.', 'error'); return; }
+  // Report what the gate actually did. "Sent" over a held or redirected message
+  // is the lie that makes an operator stop believing the app.
+  if (res.held) toast(res.note || 'Built but not sent — texting is on hold.', 'warning', 'blocked');
+  else if (res.redirected) toast(res.note || 'Test mode — sent to the tester, not the customer.', 'warning');
+  else toast(`Text sent to ${res.sentTo || c.phone}`, 'success', 'check');
+  recordComm(customerId, { type: 'message', text: `Reminder texted: ${text.slice(0, 120)}` });
+  closeDynamicModal();
 }
 async function copyReminderDraft(customerId) {
   const text = document.getElementById('drText')?.value || '';
