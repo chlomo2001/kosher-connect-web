@@ -2834,10 +2834,25 @@ body.kc-win-dragging .kc-wgrip::after { opacity: 0.55; }
    most convincing "it was sent" a UI can draw. Said in words on the bubble. */
 .msg-b-warn { font-weight: 600; color: color-mix(in srgb, var(--on-accent, #fff) 92%, transparent); }
 
-.msg-closed {
+/* One inline notice for the whole app: a sentence in a quiet box, where a
+   toast would vanish and a dialog would be too much. Shipped as .msg-closed on
+   25 Aug for the message thread; generalised the same day rather than letting
+   the rental modal grow a second box that looked identical. */
+.kc-note {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius);
   background: var(--surface2); color: var(--ink-secondary); font-size: var(--fs-small);
+}
+
+/* For a notice that changes what you were about to do. The tint is the warning
+   hue at low strength and the ink is the warning's OWN dark ink, not --muted:
+   secondary grey on a tinted ground is the contrast failure this project keeps
+   catching. */
+.kc-note-warn {
+  margin-bottom: 14px;
+  border-color: color-mix(in srgb, var(--warning) 40%, var(--border));
+  background: color-mix(in srgb, var(--warning) 10%, var(--surface));
+  color: var(--warning-ink, var(--text));
 }
 
 /* The count on the sidebar row. The whole reason Messages has a home is being

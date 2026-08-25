@@ -61,6 +61,15 @@ export const MODALS = [
   ['customer-edit', 'customers', `openEditModal(window.__kc.customer)`],
   ['customer-card', 'customers', `openCustomerById(window.__kc.customer)`],
   ['rental-new',    'rentals',   `openNewRentalModal()`],
+  // The empty-shelf state (issue #21). A notice that only appears when nothing
+  // is free is a notice nothing ever looks at: the seed always has a handset
+  // going spare, so this scenario takes them all out of service first. The
+  // shop was one hire from zero when this was written, which is the whole
+  // reason the state is worth a picture.
+  ['rental-none-free', 'rentals', `(() => {
+     for (const ph of phones) { ph.maintenance = false; if (ph.status === 'available') ph.status = 'rented'; }
+     openNewRentalModal();
+   })()`],
   ['rental-manage', 'rentals',   `openManageRentalModal(window.__kc.rental)`],
   ['booking-new',   'bookings',  `openNewBookingModal()`],
   ['wallet',        'wallet',    `openWalletModal(window.__kc.customer)`],

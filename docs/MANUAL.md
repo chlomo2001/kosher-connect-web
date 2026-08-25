@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **30 of 30 screens written out in full.**
-*As of 25 Aug 2026 · m-a949b456 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 25 Aug 2026 · m-f33cb905 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -185,7 +185,7 @@ Every phone the shop hires out: what is out with whom, what is due back, and wha
 
 **On the screen**
 
-- **New rental** — Starts a hire. Customer, then dates, then handset — in that order, because the phone list only offers handsets that are actually free for those days.
+- **New rental** — Starts a hire. Customer, then dates, then handset — in that order, because the phone list only offers handsets that are actually free for those days. The dates start filled in, so the form knows from the moment it opens how many are free: it says so beside the phone box, and if the answer is none it says that across the top before you have typed anything, along with the first date that would work. It does not stop you — a hire booked for a later date is a normal thing to take when the shelf is empty today.
 - **Scan IMEI — out or back** — Scanning the phone finds its rental for you, whether it is going out or coming back. Faster than searching, and it cannot pick the wrong record.
 - **Search rentals + inventory** — One box over both lists: a customer name finds the hire, a phone number or IMEI finds the handset.
 - **Active & Recent Rentals** — The working list. Filters sit above it, and Upcoming travel narrows it to customers who are away or about to be — a customer stays on that list until the day they land back, not the day they fly.
@@ -207,7 +207,8 @@ Every phone the shop hires out: what is out with whom, what is due back, and wha
 
 **Boxes that open on top of it**
 
-- **rental-new** — The hire itself: who, which dates, which handset, and what you handed over — phone, SIM, charger.
+- **rental-new** — The hire itself: who, which dates, which handset, and what you handed over — phone, SIM, charger. A handset is only offered if it is genuinely free for those dates and genuinely in service: one that is out, broken, unread or living permanently with somebody is never offered, however the form is reached.
+- **rental-none-free** — The same form when nothing is free for the dates in it. A line across the top says so before you have typed anything, and names the first date that would work. Nothing is disabled: booking a hire for a later date is a normal thing to do when the shelf is empty today, and changing the dates makes the line go away by itself.
 - **rental-manage** — The live hire. Returning, extending, damage, missing items, and what is owed.
 - **pool-new** — Creates a pool of interchangeable handsets.
 - **done-panel** — The confirmation after a rental is saved — what was agreed and what to hand over, so it can be read back to the customer. ✉️ Email receipt sends the customer the rental in full.

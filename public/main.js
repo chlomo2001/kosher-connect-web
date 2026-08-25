@@ -2673,10 +2673,26 @@ function poolReason(overlap, alreadyActive) {
 }
 
 // Rank USA pooled phones that are free for [from,to]; best first.
+/**
+ * "Not rented" is not the same as "rentable" — the one rule, in one place.
+ *
+ * A permanent line is in a customer's pocket by arrangement, a not_working one
+ * is broken, an unknown one has not been read yet. None of the three has a
+ * rental record behind it, so a conflict check ALONE happily offers all of
+ * them out. phonesOfferableFor had this written in a comment and
+ * poolPhoneSuggestions did not follow it: on 25 Aug the USA pool suggestion
+ * offered a handset — with a one-click "Use" — under every one of those
+ * statuses, not_working included, while the picker three fields above it
+ * correctly offered none. Issue #21.
+ *
+ * Shared rather than repeated, so the two can never drift apart again.
+ */
+function phoneInService(p) { return !!p && !p.maintenance && p.status === 'available'; }
+
 function poolPhoneSuggestions(phones, rentals, from, to, todayISO) {
   const today = todayISO || localISO();
   return phones
-    .filter(p => (p.country || '').toUpperCase() === 'USA' && p.pool && !p.maintenance &&
+    .filter(p => phoneInService(p) && (p.country || '').toUpperCase() === 'USA' && p.pool &&
       phoneConflicts(rentals, p.id, from, to, today).length === 0)
     .map(p => {
       const alreadyActive = !!(p.poolExpiry && p.poolExpiry >= today);
@@ -3958,12 +3974,9 @@ async function markPhoneBack(phoneId) {
 // needs is the LIST; the option markup below is just a rendering of it.
 function phonesOfferableFor(from, to, customerId, term = '') {
   const today = localISO();
-  // A phone under maintenance is never offerable, whatever the dates say.
-  // "Not rented" is not the same as "rentable". A permanent line is in a
-  // customer's pocket by arrangement, a not_working one is broken, and an
-  // unknown one hasn't been read yet — none of them have a rental record, so
-  // the conflict check alone would happily offer all three out.
-  const inService = phones.filter(p => !p.maintenance && p.status === 'available');
+  // What counts as rentable is phoneInService — shared with the pool
+  // suggestion, which used to disagree with this list.
+  const inService = phones.filter(phoneInService);
   const list = (from && to && to >= from)
     ? inService.filter(p => phoneConflicts(rentals, p.id, from, to, today).length === 0)
     : inService;
@@ -4019,6 +4032,28 @@ function customerPastPhoneDates(customerId) {
 // for the customer picker, so everything downstream still reads .value.
 let nrPhoneShown = [];
 
+/**
+ * The first date this window's length could actually be hired from.
+ *
+ * Asked of phonesOfferableFor rather than worked out from rental end dates,
+ * because the rule is subtler than "the day after it is due": an OVERDUE hire
+ * stops blocking from today, a booked-but-not-started one blocks from its own
+ * start, and duplicating any of that here would give the counter a date the
+ * picker then refuses. One source of truth, thirty cheap tries.
+ */
+function nrNextFreeFrom(from, to, customerId) {
+  const day = 86400000;
+  const a = new Date(from), b = new Date(to);
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return null;
+  const len = Math.round((b - a) / day);
+  for (let i = 1; i <= 30; i++) {
+    const f = localISO(new Date(a.getTime() + i * day));
+    const t = localISO(new Date(a.getTime() + (i + len) * day));
+    if (phonesOfferableFor(f, t, customerId).length) return f;
+  }
+  return null;
+}
+
 // Dates or customer changed → rebuild the offer for that window, keeping the
 // current pick if it is still free.
 function refreshRentalPhoneOptions() {
@@ -4052,6 +4087,28 @@ function refreshRentalPhoneOptions() {
     hint.textContent = `(↺ ${hadCount} number${hadCount === 1 ? '' : 's'} this customer had before — listed first)`;
   } else if (hint) {
     hint.textContent = '(pick dates to see availability)';
+  }
+
+  // Nothing free for this window — said at the TOP of the form, not left to be
+  // discovered at the phone field below the customer picker. Owner's case in
+  // issue #21: the shop is one hire from zero, and "+ New rental" is a
+  // full-strength button whatever the shelf holds.
+  //
+  // It is a notice and not a block. A hire booked for a future date is exactly
+  // what the 'booked' status is for, so the form stays usable and the notice
+  // names the first date that would work — which turns "you cannot" into
+  // "try these dates", the only version of this worth interrupting for.
+  const note = document.getElementById('rNoneFree');
+  if (note) {
+    const datesOk = from && to && to >= from;
+    const none = datesOk && !term && all.length === 0;
+    note.hidden = !none;
+    if (none) {
+      const next = nrNextFreeFrom(from, to, customerId);
+      note.textContent = next
+        ? `No handset is free ${fmtDate(from)} → ${fmtDate(to)}. The first date that works is ${fmtDate(next)} — change the dates to book it now, or take the hire when one comes back.`
+        : `No handset is free ${fmtDate(from)} → ${fmtDate(to)}, and none comes free in the next month. Check Phone Rentals for what is out.`;
+    }
   }
   renderPhoneDropdown();
 }
@@ -4260,6 +4317,11 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
 
   showDynamicModal(`
     <div class="modal-title kc-ic kc-ic-phone">New rental</div>
+    ${/* Above the first field on purpose: below the customer picker it would
+         be found after the work of choosing somebody, which is the order that
+         made this worth an issue. Hidden until refreshRentalPhoneOptions has
+         something to say, and it re-decides on every date change. */''}
+    <div class="kc-note kc-note-warn" id="rNoneFree" role="status" hidden></div>
     <div class="form-grid">
       <div class="form-group form-full">
         <label class="form-label">Customer *</label>
@@ -4416,6 +4478,18 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
   const next7 = localISO(new Date(Date.now() + 7*86400000));
   document.getElementById('rFrom').value = today;
   document.getElementById('rTo').value   = next7;
+  // Those dates are REAL — the money line below computes "Total days: 8 ·
+  // £35.00" from them — so the phone field has to be built for them too.
+  // refreshRentalPhoneOptions was wired only to the date inputs' onchange, so
+  // on open it had never run, and two things followed:
+  //
+  //   · the hint read "(pick dates to see availability)" over dates already
+  //     picked — the app asking for something it had already done itself;
+  //   · the scan path below tests nrPhoneShown, which had never been built for
+  //     these dates. Scanning a genuinely FREE handset on the first rental of
+  //     a session was refused with "not free for these dates". Verified in the
+  //     harness on 25 Aug against untouched seed data. Issue #21.
+  refreshRentalPhoneOptions();
   // Arrived by scan: the handset is in the operator's hand, so pick it. Only if
   // the date-filtered picker actually offers it — a phone booked out over these
   // dates must stay unpickable, scan or no scan.
@@ -21443,10 +21517,10 @@ function openThread(key) {
   // Three reasons there is no reply box, each said plainly rather than by a
   // greyed button somebody presses twice before reading.
   const composer = t.optedOut
-    ? `<div class="msg-closed"><i class="kc-ic kc-ic-blocked" aria-hidden="true"></i>
+    ? `<div class="kc-note"><i class="kc-ic kc-ic-blocked" aria-hidden="true"></i>
          They texted STOP, so the network blocks anything further. Ring them instead.</div>`
     : !t.replyTo
-      ? `<div class="msg-closed">Nothing to reply to — every text here went out from the shop. Text them from their
+      ? `<div class="kc-note">Nothing to reply to — every text here went out from the shop. Text them from their
            customer card, where the number is read off the record.</div>`
       : `<label class="form-label" for="smsReplyText">Your reply</label>
          <textarea class="form-input" id="smsReplyText" rows="3" maxlength="640"
