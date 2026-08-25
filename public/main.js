@@ -519,6 +519,11 @@ async function initApp() {
   // page load: mail from before you opened the app is the Mail tab's job.
   kcMailSeenAt = new Date().toISOString();
   setInterval(kcMailPulse, 60000);
+  // The same for texts a customer sends (owner, 25 Aug). The first poll runs
+  // straight away to set the watermark and paint the badge, so the rail is
+  // right before anybody has looked at the dashboard.
+  kcTextPulse();
+  setInterval(kcTextPulse, 60000);
 }
 
 // ── Live carrier-post pulse (issue #16) ─────────────────────────────────────
@@ -21320,6 +21325,7 @@ async function renderMessagesTab() {
   // dashboard claiming somebody is waiting after you have just answered them.
   msgLogEntries = res.entries;
   msgWaiting = { count: res.waiting || 0, since: res.waitingSince || null };
+  kcTextSeen = msgWaiting.count; // this IS a poll — keep the watermark honest
   msgThreads = msgBuildThreads(res.entries);
   paintMessages();
   kcPaintMsgBadge();
@@ -21470,6 +21476,89 @@ function openThread(key) {
     if (w) w.scrollTop = w.scrollHeight;
     document.getElementById('smsReplyText')?.focus();
   }, 30);
+}
+
+// ── Live text pulse ──────────────────────────────────────────────────────
+//
+// Texts did not arrive by themselves: the count refreshed when the dashboard
+// painted, and the list when somebody pressed "Check now". That is fine for
+// somebody sitting on the Messages screen and useless for the case it exists
+// for — a customer texts while the counter is on Rentals with a queue.
+//
+// Same shape as kcMailPulse, on purpose: one cheap poll a minute, skipped
+// while the tab is hidden, one toast per arrival. countOnly=1 exists for
+// precisely this — it answers "how many are waiting" without reading three
+// hundred log entries and their customer joins.
+let kcTextSeen = null;      // null until the first answer: boot must not toast
+let kcTextPulseBusy = false;
+let kcTextPulseOff = false; // a 403 means this account cannot see them at all
+
+async function kcTextPulse() {
+  if (document.hidden || kcTextPulseBusy || kcTextPulseOff) return;
+  kcTextPulseBusy = true;
+  try {
+    const r = await kcFetch('/api/message-log?countOnly=1').catch(() => null);
+    if (!r) return;
+    // Not allowed to read them — stop asking. A helper without the grant would
+    // otherwise 403 once a minute for the whole shift.
+    if (r.status === 403) { kcTextPulseOff = true; return; }
+    const d = await r.json().catch(() => null);
+    if (!d?.success) return;
+
+    const now = Number(d.waiting) || 0;
+    const before = kcTextSeen;
+    kcTextSeen = now;
+    msgWaiting = { count: now, since: d.waitingSince || null };
+    kcPaintMsgBadge();
+    if (currentTab === 'dashboard') kcPaintNextAction('dashboard');
+
+    // First answer of the session sets the watermark and says nothing: texts
+    // that were already waiting when you opened the app are the screen's job,
+    // not a pop-up's.
+    if (before === null || now <= before) {
+      // A count that FELL still has to reach an open list — somebody else in
+      // the shop answered it, and a row still saying "Waiting" is a second
+      // person about to answer it again.
+      if (now !== before && currentTab === 'messages' && !kcDialogOpen()) renderMessagesTab();
+      return;
+    }
+
+    const fresh = now - before;
+    // Never repaint under a dialog: the reply box is a dialog, and throwing
+    // away half a typed answer to show a fresher list is not a trade anybody
+    // would take.
+    if (currentTab === 'messages' && !kcDialogOpen()) renderMessagesTab();
+    toast(await kcTextArrivalWords(fresh), 'success', 'chat');
+  } finally { kcTextPulseBusy = false; }
+}
+
+/** Is a dialog on screen? Both layers count — either can hold a half-typed reply. */
+function kcDialogOpen() {
+  return ['dynamicModal', 'stackedModal'].some(id => {
+    const el = document.getElementById(id);
+    return el && !el.classList.contains('hidden');
+  });
+}
+
+/**
+ * Name the person if one small extra read can.
+ *
+ * "1 text waiting" is a number; "Menachem Adler has texted the shop" is a
+ * thing to do. The extra request happens only on the rare minute a text
+ * actually lands, and it degrades to the count if it fails or the newest
+ * waiting message belongs to somebody not on file.
+ */
+async function kcTextArrivalWords(fresh) {
+  const fallback = fresh === 1
+    ? 'A customer has texted the shop'
+    : `${fresh} customers have texted the shop`;
+  if (fresh !== 1) return fallback;
+  try {
+    const d = await kcFetch('/api/message-log?limit=5').then(r => r.json());
+    const e = (d?.entries || []).find(x => x.awaitingAnswer);
+    const who = e && (e.customerName || fmtPhone(e.to) || e.to);
+    return who ? `${who} has texted the shop` : fallback;
+  } catch { return fallback; }
 }
 
 /**
@@ -22944,6 +23033,7 @@ async function renderDashboardTab() {
   msgWaiting = waiting?.success
     ? { count: waiting.waiting || 0, since: waiting.waitingSince || null }
     : msgWaiting;
+  if (waiting?.success) kcTextSeen = msgWaiting.count;
   // The dashboard is where most mornings start, and it already asks for this
   // count. Painting the badge here is what makes it true from any screen
   // rather than only on the one screen that shows the queue anyway.
@@ -24466,6 +24556,7 @@ async function loadMessageLog() {
   // refreshes the row — otherwise answering the last one leaves the dashboard
   // still claiming somebody is waiting until the next reload.
   msgWaiting = { count: res.waiting || 0, since: res.waitingSince || null };
+  kcTextSeen = msgWaiting.count;
   kcPaintMsgBadge();
   if (currentTab === 'dashboard') kcPaintNextAction('dashboard');
   if (!res.entries.length) { wrap.innerHTML = '<span style="color:var(--muted);">Nothing yet — no email or SMS has been built.</span>'; return; }

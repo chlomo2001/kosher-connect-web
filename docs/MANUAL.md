@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **30 of 30 screens written out in full.**
-*As of 25 Aug 2026 · m-57b7f486 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 25 Aug 2026 · m-a949b456 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -636,7 +636,8 @@ The texts customers have sent the shop, as conversations — and the place they 
 - **The conversation** — Their texts and the shop's in the order they happened, theirs on the left and the shop's on the right. Under each of the shop's messages, whether it actually reached them.
 - **Your reply** — Type it and send. The number is never typed here — it is read off the message they sent, so a reply cannot go to the wrong person. The counter beside the box warns before the reply becomes two texts, because a text is billed by the part.
 - **Make it a task** — For a text that needs something DOING before it can be answered — a phone to come back from repair, a price to check. It joins the task list named after the reply it needs, with their words underneath.
-- **Check now** — Re-reads the log. Texts do not appear by themselves while the screen is open.
+- **Texts arrive by themselves** — The app checks once a minute, wherever you are in it. A text landing pops up for a few seconds naming who sent it, the red number goes up, and if you are looking at this screen the list refreshes underneath. It never refreshes while a reply is open — a half-typed answer is not worth losing for a fresher list. Nothing pops up for texts that were already waiting when you signed in: those are the list's job, not an interruption's.
+- **Check now** — Asks straight away rather than waiting for the next minute. Worth pressing if somebody is standing there saying they have just texted.
 
 **Boxes that open on top of it**
 
@@ -652,6 +653,7 @@ The texts customers have sent the shop, as conversations — and the place they 
 **When it goes wrong**
 
 - **Somebody says they texted and there is nothing here** — The shop only receives texts sent to its own number, and only since texting was connected. Check the number they used.
+- **A text arrived but nothing popped up** — Pop-ups are skipped while the browser tab is in the background — the check still runs when you come back, and the red number will be right. They are also skipped for anything already waiting when you signed in.
 - **A conversation has no reply box** — Either every text in it went OUT from the shop — there is nothing to reply to, so text them from their customer card — or they have texted STOP.
 - **The reply said it was sent but they never got it** — Read the bubble: if it says HELD or TEST, it did not go. Texting is not live yet, or it is pointed at the shop's own test number. Settings → Messaging says which.
 - **A name is missing and it is just a number** — They are not on file. The number is still answerable — add them as a customer if they are going to be a regular.

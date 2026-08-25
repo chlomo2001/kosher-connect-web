@@ -190,6 +190,20 @@ test('there is one composer, and the log points at it', () => {
     'the reply box must exist in exactly one place')
 })
 
+test('the pulse never interrupts a reply being typed, and never replays', () => {
+  const fn = MAIN.match(/async function kcTextPulse\(\) \{[\s\S]*?\n\}/)
+  assert.ok(fn, 'kcTextPulse is missing')
+  // Three things this must never do, each of which turns a useful pop-up into
+  // a reason to stop trusting them.
+  assert.match(fn[0], /document\.hidden/, 'a parked tab must not poll')
+  assert.match(fn[0], /before === null/,
+    'the first answer sets the watermark and says nothing — texts already waiting at sign-in are the list\'s job')
+  assert.match(fn[0], /!kcDialogOpen\(\)/,
+    'never repaint under a dialog: the reply box IS a dialog, and it holds typing')
+  assert.match(fn[0], /status === 403/,
+    'stop polling for an account that may not read them, rather than 403 once a minute all shift')
+})
+
 test('the reply toasts agree with the count', () => {
   const fn = MAIN.match(/async function sendSmsReply\(id\) \{[\s\S]*?\n\}/)
   assert.ok(fn, 'sendSmsReply is missing')
