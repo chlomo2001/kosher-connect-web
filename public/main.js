@@ -7406,9 +7406,12 @@ function renderCustomersTab() {
         <div class="stat-sub">Registered</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Active Rentals</div>
-        <div class="stat-value green">${rentals.filter(r => r.status === 'active').length}</div>
-        <div class="stat-sub">Currently out</div>
+        <div class="stat-label">Phones Out</div>
+        <div class="stat-value green">${rentals.filter(r => {
+          const st = getComputedStatus(r, localISO());
+          return st === 'active' || st === 'overdue';
+        }).length}</div>
+        <div class="stat-sub">With customers now</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Active SIM Plans</div>
@@ -8106,7 +8109,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
           <div class="detail-stat-value" id="cardBalanceStat" style="color:var(--muted);">…</div>
         </div>
         <div class="detail-stat">
-          <div class="detail-stat-label">Active Rentals</div>
+          <div class="detail-stat-label">Phones Out</div>
           <div class="detail-stat-value" style="color:var(--accent);">${cActiveRentals.length}</div>
         </div>
         <div class="detail-stat">
@@ -22665,7 +22668,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
 
   const metricsHtml = `
     <div class="dash-metrics">
-      ${metric('Active Rentals', activeRentals.length,
+      ${metric('Phones Out', activeRentals.length,
         [overdue.length ? `<span style="${statBandStyle('overdue', overdue.length) || 'color:var(--danger-ink);'}">${overdue.length} overdue</span>` : '',
          dueToday.length ? `${dueToday.length} due today` : ''].filter(Boolean).join(' · ') || 'all on schedule', 'rentals')}
       ${metric('Open Repairs', openRepairs.length,
@@ -22673,7 +22676,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
       ${/* Just 'Flights': its own sub-line already says 'N flights this week',
            and the qualifier was the only stat label long enough to wrap — two
            lines at 390px, which left the card 16px taller than the one beside
-           it. Matches Active Rentals / Open Repairs / Open Tasks. */''}
+           it. Matches Phones Out / Open Repairs / Open Tasks. */''}
       ${metric('Flights', travel7.length,
         `${travel7.length === 1 ? '1 flight' : travel7.length + ' flights'} this week`,
         'bookings')}
