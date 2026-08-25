@@ -2187,5 +2187,37 @@
         "snippet": ""
       }
     ]
+  },
+  "/api/health": {
+    "ok": true,
+    "mode": "tables",
+    "email": {
+      "configured": true,
+      "provider": "resend",
+      "mode": "live",
+      "webhook": "armed"
+    },
+    "sms": {
+      "configured": true,
+      "provider": "twilio",
+      "mode": "live",
+      "sender": "messaging-service",
+      "senderRef": "MG…000000",
+      "deliveryTracking": "on"
+    },
+    "stripe": {
+      "configured": true,
+      "mode": "live",
+      "secretKey": "live",
+      "publishableKey": "live",
+      "keysMatch": true,
+      "webhook": true
+    },
+    "ai": {
+      "configured": true
+    },
+    "vault": "on",
+    "env": "production",
+    "project": "app.kosher-connect.com"
   }
 }

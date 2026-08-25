@@ -24285,6 +24285,14 @@ const FEE_META = {
             : 'Connect the Twilio console: paste TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM (or TWILIO_MESSAGING_SERVICE_SID) into Vercel env vars, redeploy, and this flips to HOLD.'}</td>
         </tr>
       </tbody></table>
+      <div style="padding:8px 14px 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <input class="form-input" id="mailTestTo" type="email" dir="ltr" placeholder="you@example.com  (your own address)"
+          style="min-height:0;padding:7px 10px;font-size:var(--fs-body);width:220px;">
+        <button class="btn btn-outline btn-sm kc-ic kc-ic-upload" onclick="sendTestEmail()">Send test email</button>
+        <span style="font-size:var(--fs-micro);color:var(--muted);">${health?.email?.mode === 'live'
+          ? 'Email is LIVE — this really emails the address you type. Use your own.'
+          : 'Safe right now — on HOLD it only logs; on TEST it goes to your own address whatever you type.'}</span>
+      </div>
       <div style="padding:8px 14px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
         <input class="form-input" id="smsTestTo" type="tel" dir="ltr" placeholder="+44 7…  (your own number)"
           style="min-height:0;padding:7px 10px;font-size:var(--fs-body);width:220px;">
@@ -24590,6 +24598,32 @@ async function saveTravelRule(btn) {
 
 // Settings → Messaging: prove the Twilio connection end-to-end. The server
 // gate still applies, so this is safe to press in any mode.
+/**
+ * Prove the mail connection without touching a customer.
+ *
+ * The SMS twin below has existed since Twilio was wired up; email had no
+ * equivalent until 25 Aug, so the only way to prove it was to send a real
+ * receipt to a real customer — which is a poor way to discover that the
+ * sending domain is unverified.
+ *
+ * Every outcome is named for what it IS. "Sent" is reserved for a message
+ * that actually left: held, redirected and suppressed each say so, because
+ * the point of a test is to be believed.
+ */
+async function sendTestEmail() {
+  const to = document.getElementById('mailTestTo')?.value?.trim();
+  if (!to) { toast('Type the address to email first (your own).', 'warning'); return; }
+  const res = await kcFetch('/api/email-test', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to }),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || !res.success) { toast(res?.error || 'Test failed.', 'error'); return; }
+  if (res.held) toast('Email is connected, but on HOLD — the test was built and logged, nothing sent. Set MAIL_LIVE to send for real.', 'success');
+  else if (res.redirectedTo) toast(`Sent — redirected to ${res.redirectedTo} (TEST mode), not to what you typed.`, 'success');
+  else toast(`Sent to ${res.sentTo}. Delivery is confirmed separately — the log row turns from SENT to DELIVERED when the provider says so.`, 'success', 'check');
+}
+
 async function sendTestSms() {
   const to = document.getElementById('smsTestTo')?.value?.trim();
   if (!to) { toast('Type the number to text first (your own).', 'warning'); return; }
