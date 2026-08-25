@@ -32,6 +32,61 @@ const Heading = ({ children }) => (
     letterSpacing: '.04em', color: 'var(--muted)', margin: '0 0 6px' }}>{children}</div>
 )
 
+/**
+ * The section rail — the manual's own index, always there.
+ *
+ * Owner, 25 Aug: "the manual is too long for just a long scroll down. maybe a
+ * side bar for sections?" Twenty-nine screens in one column meant the Contents
+ * block at the top was the only way to aim at anything, and it scrolls away
+ * the moment you start reading.
+ *
+ * Deliberately the same shape as the Settings rail (.settings-rail): a sticky
+ * grouped list that marks where you are. Two rails that behave the same way is
+ * one thing to learn; a second invention would be two.
+ *
+ * Wide screens only. On a phone there is no room beside the text, and the
+ * Contents block below already does this job there — which is why that block
+ * stays and simply steps aside where the rail can be shown.
+ */
+function ManualRail({ groups }) {
+  const [here, setHere] = useState('')
+  const ids = useMemo(
+    () => groups.flatMap(([, g]) => g.map((s) => s.id)), [groups])
+
+  useEffect(() => {
+    if (!ids.length || typeof IntersectionObserver === 'undefined') return
+    // rootMargin pulls the trip-line up to just under the top of the reading
+    // area: without it a section counts as "here" while it is still at the
+    // bottom of the window, and the rail marks the NEXT screen the whole way
+    // down. -55% keeps the mark on whatever is actually being read.
+    const io = new IntersectionObserver((entries) => {
+      const seen = entries.filter((e) => e.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
+      if (seen) setHere(seen.target.id)
+    }, { rootMargin: '-12% 0px -55% 0px', threshold: 0 })
+    for (const id of ids) {
+      const el = document.getElementById(id)
+      if (el) io.observe(el)
+    }
+    return () => io.disconnect()
+  }, [ids])
+
+  return (
+    <nav className="kc-man-rail" aria-label="Sections of the manual">
+      {groups.filter(([, g]) => g.length).map(([label, group]) => (
+        <div key={label}>
+          <div className="kc-man-rail-group">{label}</div>
+          {group.map((s) => (
+            <a key={s.id} href={`#${s.id}`}
+              className={'kc-man-rail-item' + (here === s.id ? ' active' : '')}
+              aria-current={here === s.id ? 'true' : undefined}>{s.name}</a>
+          ))}
+        </div>
+      ))}
+    </nav>
+  )
+}
+
 function Screen({ s, shots, onZoom }) {
   const screenShot = shots[`screen-${s.id}`]
   return (
@@ -211,7 +266,11 @@ export default function Manual({ shots = {} }) {
           screen below the first one unreachable. /welcome shipped that bug
           once; this page shipped it again on 18 Aug. */}
       <div className="kc-man-shell" ref={shellRef}>
-      <div style={{ maxWidth: 820, margin: '0 auto', padding: '24px 18px 60px' }}>
+      <div className="kc-man-layout">
+        <ManualRail groups={[['The frame around every screen', frame],
+                             ['The staff app', staff],
+                             ['Pages with their own address', pages]]} />
+      <div className="kc-man-col">
         <div className="kc-man-chrome" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
           {/* A plain link, like every other page here: leaving the manual is a
               real navigation back into the app, not a client-side hop. */}
@@ -283,6 +342,22 @@ export default function Manual({ shots = {} }) {
               <details key={g.id} className="kc-man-job">
                 <summary>{g.q}</summary>
                 <ol>{g.steps.map((st, i) => <li key={i}>{st}</li>)}</ol>
+                {/* The screen the job happens on. Owner, 25 Aug: "why arent
+                    there real screen shots for the examples?" — every SCREEN
+                    below had a picture from the day the shots were built, and
+                    these twenty-one jobs, the part a person actually reads
+                    before doing something, had none. The picture already
+                    existed; nothing had ever put the two together. Same shot
+                    the screen's own section uses, so there is one picture per
+                    screen and it cannot drift between the two places. */}
+                {shots[`screen-${g.tab}`] && (
+                  <figure className="kc-man-shot kc-man-job-shot">
+                    <img src={shots[`screen-${g.tab}`]} alt={`The ${g.tab} screen`} loading="lazy"
+                      style={{ cursor: 'zoom-in' }} title="Press to see it full size"
+                      onClick={() => setZoom({ src: shots[`screen-${g.tab}`], alt: `The ${g.tab} screen` })} />
+                    <figcaption>Where this happens. Press the picture to zoom.</figcaption>
+                  </figure>
+                )}
               </details>
             ))}
           </div>
@@ -324,6 +399,7 @@ export default function Manual({ shots = {} }) {
           <h2 style={{ margin: '26px 0 12px' }}>Pages with their own address</h2>
           {pages.map((s) => <Screen key={s.id} s={s} shots={shots} onZoom={setZoom} />)}
         </>}
+      </div>
       </div>
       {showTop && (
         <button className="kc-man-top" aria-label="Back to the top"

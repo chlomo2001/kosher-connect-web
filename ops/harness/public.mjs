@@ -17,7 +17,7 @@
 // always English and the RTL half of the product is invisible to it. So this
 // one ships React + ReactDOM as UMD from node_modules, transpiles the page to
 // a browser script, sets `kcLang` before mounting, and lets React do the work.
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -30,6 +30,29 @@ const require = createRequire(import.meta.url)
 const babel = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/core'))
 const presetReact = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/preset-react'))
 const cjs = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/plugin-transform-modules-commonjs'))
+
+// What each page would have been handed by getStaticProps, which does not run
+// here. /manual reads its picture list off the filesystem at build time, so
+// without this the harness audited that page with every image missing — the one
+// element most likely to break a layout, never once looked at. Module scope on
+// purpose: bundle() calls it, and nesting it in the run-directly block below
+// put it out of scope, which is how the first attempt failed.
+function pageProps(entry) {
+  if (!String(entry).endsWith('manual.js')) return {}
+  try {
+    const dir = path.join(ROOT, 'public/manual')
+    const shots = {}
+    for (const f of readdirSync(dir)) {
+      // A file:// path, not the site-absolute /manual/… the real page uses:
+      // the harness opens its HTML off the disk, where a leading slash is the
+      // filesystem root. Absolute paths gave every picture a broken-image box,
+      // which measures nothing like a real screenshot — and measuring is the
+      // whole point of rendering it.
+      if (f.endsWith('.png')) shots[f.slice(0, -4)] = path.relative(HERE, path.join(dir, f))
+    }
+    return { shots }
+  } catch { return {} }
+}
 
 export const PAGES = { welcome: 'pages/welcome.js', portal: 'pages/portal.js', 'phone-guide': 'pages/phone-guide.js', repair: 'pages/repair.js', login: 'pages/login.js',
   // The four staff TOOLS pages. They are ordinary Next pages behind a
@@ -122,6 +145,12 @@ function __join(a, b){
   return out.join('/');
 }
 window.__page = __req('', ${JSON.stringify(entry)}).default;
+// Props a page would get from getStaticProps/getServerSideProps, which do not
+// run here. /manual reads the picture list off the filesystem at build time, so
+// without this the harness has always audited that page with every image
+// missing — the one element most likely to break its layout, never once looked
+// at. Supplied from the real files in public/manual.
+window.__props = ${JSON.stringify(pageProps(entry))};
 `
 }
 
@@ -224,13 +253,13 @@ window.fetch = function (url) {
 <script>${reactDom}</script>
 </head><body><div id="__next"></div>
 <script>${script}</script>
-<script>ReactDOM.createRoot(document.getElementById('__next')).render(React.createElement(window.__page));</script>
+<script>ReactDOM.createRoot(document.getElementById('__next')).render(React.createElement(window.__page, window.__props || {}));</script>
 </body></html>`))
   return file
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? process.argv[i + 1] : d }
+const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? process.argv[i + 1] : d }
   const { chromium } = require(path.join(ROOT, 'node_modules/playwright-core'))
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', env: BROWSER_ENV })
   const widths = (arg('--width', '390,1280')).split(',').map(Number)
