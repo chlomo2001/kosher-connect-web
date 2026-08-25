@@ -1556,6 +1556,29 @@ whatever was not looked at.
 
 **Found, not fixed — for the next night**
 
+- **New rental gives no early signal when nothing is free** (issue #21). Live
+  today rather than hypothetical: the inventory wipe left production with ONE
+  available handset, so the shop is one hire from zero. The tile handles that
+  state well — red **0**, "none left to rent" — but `+ New rental` beside it
+  stays a full-strength primary action, and the handset field inside the modal
+  is gated behind the dates ("PHONE * (PICK DATES TO SEE AVAILABILITY)"). The
+  gating is RIGHT and should stay: availability is genuinely date-dependent, a
+  phone due back Thursday can go out Friday. But the dates arrive prefilled —
+  the modal computes "Total days: 8 · Chargeable days: 7 · £35.00" before a
+  phone is picked — so the answer is knowable the moment it opens.
+  **What was NOT established, and where to start:** whether the phone field,
+  once reached in the zero state, already says something useful. The recent-
+  customers dropdown auto-opens over that part of the modal and two attempts to
+  dismiss it programmatically failed, so the field was never actually seen. If
+  it already says it clearly the remaining fix is about saying it EARLIER, not
+  about saying it at all. Do not disable the button outright — a booking for a
+  future date is legitimate when nothing is free today, and that is what the
+  `booked` status is for.
+  Reaching this state needs care: `reconcilePhoneStatuses()` correctly frees any
+  phone marked `rented` with no open rental behind it, so a naive "set every
+  phone to rented" seed self-heals to available. Seed only handsets that a real
+  open hire holds.
+
 - ~~The tightest corner of the grid, 390px × largest text, has six controls that
   still cannot hold their own label.~~ **Three of the six fixed the same night**
   (see the row above). For the record, the original set was: Measured with the new sweep:
