@@ -51,3 +51,32 @@ The general lesson is on plate 11 and is worth keeping: nothing in the harness
 compares the brand tokens to the LOGO FILE. That check is a human looking at a
 picture, and it is exactly the one nobody had made. When a rule here turns out
 to matter, ask what would notice if it stopped being true.
+
+## The enforcement half
+
+`ops/harness/brand.mjs` checks the standard's claims against the code and runs
+in `--smoke`. Plate 11 argues that a standard nobody enforces drifts within a
+month; it would be a poor document if that did not apply to itself.
+
+What it holds today, and what it found on its first run:
+
+| Claim | Plate | First run |
+| --- | --- | --- |
+| Sentence case on stat labels and buttons | 06 | **25 stat labels in Title Case** |
+| `--kc-gold` is decoration, never text ink | 03 | clean |
+| No literal hex outside flags, print and `var()` fallbacks | 03 | one — an iframe background |
+| An outbound SMS carries no emoji | 08 | clean |
+
+The sentence-case drift is worth understanding rather than just fixing: it was
+invisible, because `.stat-label` carries `text-transform: uppercase`, so the
+source could say "Money In Today" for months while every screen showed
+"MONEY IN TODAY". A rule that cannot be seen breaking is a rule that breaks.
+
+**Deliberately out of scope:** nav and tab names. "Kol Torah", "SIM Plans",
+"Phone Rentals" are feature names rather than sentences, `lib/manual.mjs` names
+them, and `test/manual.test.mjs` already guards them.
+
+**Not covered here, and covered elsewhere:** contrast (the nightly
+`--contrast` sweep measures what is actually painted), focus states
+(`focus.mjs`), touch targets (`--targets`), and the icon rules (`icons.mjs`).
+The claims this file checks are the ones nothing else was watching.

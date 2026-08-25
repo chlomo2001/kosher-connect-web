@@ -84,6 +84,15 @@ if [ "$smoke" = 1 ]; then
   # with customers". Four seconds, and green on arrival, so it goes in.
   run "smoke · every headline matches the list it opens" \
     bash -eo pipefail -c 'node ops/harness/counts.mjs | tail -1'
+
+  # The brand standard, checked against the code rather than admired. Plate 11
+  # of the PDF argues that a standard nobody enforces drifts within a month; it
+  # would be a poor document if that did not apply to itself. Static, well under
+  # a second. First run found 25 stat labels in Title Case against plate 06's
+  # sentence-case rule — invisible on screen because .stat-label is uppercased,
+  # which is exactly how it drifted.
+  run "smoke · the brand standard still describes this app" \
+    bash -eo pipefail -c 'node ops/harness/brand.mjs | tail -1'
   echo
   [ "$fail" = 0 ] && echo "SMOKE: clean — the full sweep still runs tonight." \
                   || echo "SMOKE: something needs a look — scroll up."

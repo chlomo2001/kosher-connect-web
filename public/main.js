@@ -3011,21 +3011,21 @@ function renderRentalsTab() {
       <div class="stat-card" role="button" tabindex="0" style="cursor:pointer;"
         onclick="rentalsStatFilter('status','out')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();rentalsStatFilter('status','out')}"
         title="Show the hires that are out — active and overdue">
-        <div class="stat-label">Phones Out</div>
+        <div class="stat-label">Phones out</div>
         <div class="stat-value green">${outNow}</div>
         <div class="stat-sub">With customers now</div>
       </div>
       <div class="stat-card" role="button" tabindex="0" style="cursor:pointer;"
         onclick="openManagePhonesModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openManagePhonesModal()}"
         title="Open Manage phones — see which handsets are free">
-        <div class="stat-label">Available Phones</div>
+        <div class="stat-label">Available phones</div>
         <div class="stat-value" style="${phonesFreeCard(availablePhones, phones.length).style}">${availablePhones}</div>
         <div class="stat-sub">${escHtml(phonesFreeCard(availablePhones, phones.length).note)}</div>
       </div>
       <div class="stat-card" role="button" tabindex="0" style="cursor:pointer;"
         onclick="rentalsStatFilter('status','due_today')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();rentalsStatFilter('status','due_today')}"
         title="Show only rentals due back today">
-        <div class="stat-label">Returning Today</div>
+        <div class="stat-label">Returning today</div>
         <div class="stat-value" style="${statBandStyle('returning', returningToday)}">${returningToday}</div>
         <div class="stat-sub">${escHtml(statBandNote('returning', returningToday, 'Expected back'))}</div>
       </div>
@@ -3040,7 +3040,7 @@ function renderRentalsTab() {
       <div class="stat-card" role="button" tabindex="0" style="cursor:pointer;"
         onclick="rentalsStatFilter('balance','debt')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();rentalsStatFilter('balance','debt')}"
         title="Show only rentals with an unpaid balance">
-        <div class="stat-label">Outstanding Debt</div>
+        <div class="stat-label">Outstanding debt</div>
         <div class="stat-value" style="${statBandStyle('arrears', outstandingDebt)}">${fmtGbp(outstandingDebt)}</div>
         <div class="stat-sub">${escHtml(statBandNote('arrears', outstandingDebt, 'Unpaid balances'))}</div>
       </div>
@@ -7401,12 +7401,12 @@ function renderCustomersTab() {
   content.innerHTML = `
     <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-label">Total Customers</div>
+        <div class="stat-label">Total customers</div>
         <div class="stat-value blue" id="statTotal">${customers.length}</div>
         <div class="stat-sub">Registered</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Phones Out</div>
+        <div class="stat-label">Phones out</div>
         <div class="stat-value green">${rentals.filter(r => {
           const st = getComputedStatus(r, localISO());
           return st === 'active' || st === 'overdue';
@@ -7414,12 +7414,12 @@ function renderCustomersTab() {
         <div class="stat-sub">With customers now</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Active SIM Plans</div>
+        <div class="stat-label">Active SIM plans</div>
         <div class="stat-value sim">${sims.filter(simLive).length}</div>
         <div class="stat-sub">Running now</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Total Revenue</div>
+        <div class="stat-label">Total revenue</div>
         <div class="stat-value purple">${fmtGbp(totalPaid)}</div>
         <div class="stat-sub">All time</div>
       </div>
@@ -8109,11 +8109,11 @@ function buildCustomerPanelHtml(c, mode = 'card') {
           <div class="detail-stat-value" id="cardBalanceStat" style="color:var(--muted);">…</div>
         </div>
         <div class="detail-stat">
-          <div class="detail-stat-label">Phones Out</div>
+          <div class="detail-stat-label">Phones out</div>
           <div class="detail-stat-value" style="color:var(--accent);">${cActiveRentals.length}</div>
         </div>
         <div class="detail-stat">
-          <div class="detail-stat-label">Virtual Numbers</div>
+          <div class="detail-stat-label">Virtual numbers</div>
           <div class="detail-stat-value" style="color:var(--vn);">${activeVNs}</div>
         </div>
       </div>`;
@@ -11361,7 +11361,7 @@ async function renderWalletTab() {
 
   content.innerHTML = `
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-label">Money In Today</div>
+      <div class="stat-card"><div class="stat-label">Money in today</div>
         <div class="stat-value" style="color:var(--success);">${fmtGbp((data.todayIn || 0))}</div></div>
       ${/* 'Charged & paid out', because it is BOTH (clarity-scan Tier 1 #6;
            owner said rename, 23 Aug): most of this figure is invoicing that
@@ -11374,7 +11374,7 @@ async function renderWalletTab() {
       <div class="stat-card"><div class="stat-label">Outstanding</div>
         <div class="stat-value" style="${statBandStyle('arrears', arrearsTotal)}">${fmtGbp(arrearsTotal)}</div>
         <div class="stat-sub">${arrears.length} customer${arrears.length === 1 ? '' : 's'} in arrears</div></div>
-      <div class="stat-card"><div class="stat-label">Credit Held</div>
+      <div class="stat-card"><div class="stat-label">Credit held</div>
         <div class="stat-value">${fmtGbp(creditsTotal)}</div>
         <div class="stat-sub">${credits.length} customer${credits.length === 1 ? '' : 's'} in credit</div></div>
     </div>
@@ -11548,7 +11548,7 @@ async function renderBankRecon() {
   if (!data || !data.success) {
     content.innerHTML = `<div class="empty-state"><div class="emoji kc-ic kc-ic-bank"></div>
       <p>${escHtml(data?.error || 'Bank reconciliation is unavailable.')}</p>
-      <button class="btn btn-outline" onclick="renderTab('wallet')">← Back to Wallet</button></div>`;
+      <button class="btn btn-outline" onclick="renderTab('wallet')">← Back to wallet</button></div>`;
     return;
   }
   bankData = data;
@@ -12698,12 +12698,12 @@ function renderSimsTab() {
         <div class="stat-sub">Running now</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Renewing Soon</div>
+        <div class="stat-label">Renewing soon</div>
         <div class="stat-value ${renewing.length > 0 ? 'gold' : 'purple'}">${renewing.length}</div>
         <div class="stat-sub">Today / Tomorrow</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Total Revenue</div>
+        <div class="stat-label">Total revenue</div>
         <div class="stat-value purple">${fmtGbp(totalRev)}</div>
         <div class="stat-sub">All charges</div>
       </div>
@@ -14773,10 +14773,10 @@ function renderBookingsTab() {
 
   content.innerHTML = `
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-label">Total Bookings</div><div class="stat-value">${bookings.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Upcoming Travel</div><div class="stat-value">${upcoming}</div></div>
-      <div class="stat-card"><div class="stat-label">Booking Fees</div><div class="stat-value">${fmtGbp(feesEarned)}</div></div>
-      <div class="stat-card"><div class="stat-label">Total Charged</div><div class="stat-value">${fmtGbp(totalCharged)}</div></div>
+      <div class="stat-card"><div class="stat-label">Total bookings</div><div class="stat-value">${bookings.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Upcoming travel</div><div class="stat-value">${upcoming}</div></div>
+      <div class="stat-card"><div class="stat-label">Booking fees</div><div class="stat-value">${fmtGbp(feesEarned)}</div></div>
+      <div class="stat-card"><div class="stat-label">Total charged</div><div class="stat-value">${fmtGbp(totalCharged)}</div></div>
     </div>
     ${tmQueueHtml()}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
@@ -16030,10 +16030,10 @@ async function renderRepairsTab() {
 
   content.innerHTML = `
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-label">Open Tickets</div><div class="stat-value">${open.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Ready to Collect</div><div class="stat-value">${ready.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Repairs Revenue</div><div class="stat-value">${fmtGbp(revenue)}</div></div>
-      <div class="stat-card"><div class="stat-label">Total Tickets</div><div class="stat-value">${repairs.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Open tickets</div><div class="stat-value">${open.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Ready to collect</div><div class="stat-value">${ready.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Repairs revenue</div><div class="stat-value">${fmtGbp(revenue)}</div></div>
+      <div class="stat-card"><div class="stat-label">Total tickets</div><div class="stat-value">${repairs.length}</div></div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
       ${repBar}
@@ -16089,7 +16089,7 @@ function openNewRepairModal(preselectCustomerId = null) {
         <span style="color:var(--muted);font-size:var(--fs-micro);">— charged to wallet on collection</span></div>
       <div class="modal-actions" style="margin:0;">
         <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-        <button class="btn btn-primary kc-ic kc-ic-wrench" onclick="saveNewRepair()">Open Ticket</button>
+        <button class="btn btn-primary kc-ic kc-ic-wrench" onclick="saveNewRepair()">Open ticket</button>
       </div>
     </div>
   `);
@@ -16738,10 +16738,10 @@ async function renderServicesTab() {
 
   content.innerHTML = `
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-label">Charged Today</div>
+      <div class="stat-card"><div class="stat-label">Charged today</div>
         <div class="stat-value">${fmtGbp(todays.reduce((s, o) => s + (o.total || 0), 0))}</div>
         <div class="stat-sub">${todays.length} service${todays.length === 1 ? '' : 's'}</div></div>
-      <div class="stat-card"><div class="stat-label">All-Time Revenue</div>
+      <div class="stat-card"><div class="stat-label">All-time revenue</div>
         <div class="stat-value">${fmtGbp(revenue)}</div></div>
       <div class="stat-card"><div class="stat-label">Orders</div><div class="stat-value">${serviceOrders.length}</div></div>
     </div>
@@ -17405,17 +17405,17 @@ async function renderShopTab() {
 
   content.innerHTML = `
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-label">Units In Stock</div><div class="stat-value">${inStock}</div></div>
-      <div class="stat-card"><div class="stat-label">Low Stock</div>
+      <div class="stat-card"><div class="stat-label">Units in stock</div><div class="stat-value">${inStock}</div></div>
+      <div class="stat-card"><div class="stat-label">Low stock</div>
         <div class="stat-value" style="color:${low.length ? 'var(--danger-ink)' : 'var(--success)'};">${low.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Sold Today</div>
+      <div class="stat-card"><div class="stat-label">Sold today</div>
         <div class="stat-value">${fmtGbp(todaySales.reduce((s, x) => s + x.total, 0))}</div>
         <div class="stat-sub">${todaySales.length} sale${todaySales.length === 1 ? '' : 's'}</div></div>
-      <div class="stat-card"><div class="stat-label">All-Time Sales</div><div class="stat-value">${fmtGbp(revenue)}</div></div>
+      <div class="stat-card"><div class="stat-label">All-time sales</div><div class="stat-value">${fmtGbp(revenue)}</div></div>
     </div>
     ${lowBanner}
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-      <button class="btn btn-primary kc-ic kc-ic-receipt" onclick="openSaleModal()">Open Till</button>
+      <button class="btn btn-primary kc-ic kc-ic-receipt" onclick="openSaleModal()">Open till</button>
       <button class="btn btn-outline kc-ic kc-ic-money" onclick="openCashupModal()">Cash up</button>
       <button class="btn btn-outline kc-ic kc-ic-plus" onclick="openStockItemModal()">Add item</button>
       <button class="btn btn-outline kc-ic kc-ic-undo" onclick="openSupplierReturnModal()">Return to supplier</button>
@@ -22906,7 +22906,7 @@ async function renderVirtualTab() {
 
   content.innerHTML = `
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-label">Total Numbers</div><div class="stat-value">${virtualNumbers.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Total numbers</div><div class="stat-value">${virtualNumbers.length}</div></div>
       <div class="stat-card"><div class="stat-label">Active</div><div class="stat-value" style="color:var(--success);">${active.length}</div></div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
@@ -23753,7 +23753,7 @@ const FEE_META = {
         <div style="flex:1;min-width:300px;">
           <div style="font-size:var(--fs-micro);color:var(--muted);margin-bottom:4px;" id="emailPreviewSubject">Press Preview to see the email.</div>
           <iframe id="emailPreviewFrame" title="Email preview" sandbox=""
-            style="width:100%;height:520px;border:1px solid var(--border);border-radius:10px;background:#f2f4f7;"></iframe>
+            style="width:100%;height:520px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);"></iframe>
         </div>
       </div>`);
 
