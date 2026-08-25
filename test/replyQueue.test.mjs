@@ -173,9 +173,15 @@ test('the inbox never draws a held reply as delivered', () => {
   // least printed the status in a column.
   const fn = MAIN.match(/function openThread\(key\) \{[\s\S]*?\n\}/)
   assert.ok(fn, 'openThread is missing')
-  assert.match(fn[0], /const undelivered = mine && !\['sent', 'delivered'\]\.includes\(m\.status\)/,
-    'an outbound bubble must decide delivery from the status, not assume it')
-  assert.match(fn[0], /not delivered/, 'and say so on the bubble, in words')
+  // Two ways a message fails to arrive, and the bubble must see both. When
+  // this was written it saw only the gate; the carrier half was added the same
+  // day, after the first live text proved status alone says nothing about
+  // whether a handset got it.
+  assert.match(fn[0], /const gateHeld = mine && !\['sent', 'delivered'\]\.includes\(m\.status\)/,
+    'the gate half: held or redirected means we never sent it')
+  assert.match(fn[0], /const carrierFailed = mine && \['undelivered', 'failed'\]/,
+    'the carrier half: sent is not received')
+  assert.match(fn[0], /Did not arrive/, 'and say so on the bubble, in words')
 })
 
 test('there is one composer, and the log points at it', () => {
@@ -240,4 +246,32 @@ test('the cutoff is the migration that added the link, not an arbitrary date', (
   const migration = readFileSync(
     new URL('../supabase/migrations/20260819140000_sms_reply_link.sql', import.meta.url), 'utf8')
   assert.match(migration, /replies_to/, 'the migration this date refers to must exist')
+})
+
+test('a reply the carrier refused leaves the customer waiting', () => {
+  // The worst of the three blind spots found by sending the first live text.
+  // status is set when Twilio ACCEPTS a message and never changes; the carrier
+  // reports minutes later on /api/sms-status. Reading only status meant a reply
+  // that never arrived cleared the customer off the queue: the red count went
+  // down, the dashboard row went quiet, and nobody chased.
+  const asked = { id: '9', kind: 'sms_in', status: 'received', at: '2026-08-25T10:00:00.000Z' }
+  const refused = [{ repliesTo: '9', status: 'sent', deliveryStatus: 'undelivered' }]
+  assert.equal(isAnswered(asked, refused), false, 'a refused reply is not an answer')
+  assert.equal(unanswered([asked], refused).length, 1, 'and they stay in the queue')
+
+  const arrived = [{ repliesTo: '9', status: 'sent', deliveryStatus: 'delivered' }]
+  assert.equal(isAnswered(asked, arrived), true)
+
+  // Silence is not failure. A null result means the callback has not come back
+  // yet — or delivery tracking is off entirely, with no PUBLIC_BASE_URL set —
+  // and demoting on silence would strand every reply in the queue for ever.
+  const unknown = [{ repliesTo: '9', status: 'sent', deliveryStatus: null }]
+  assert.equal(isAnswered(asked, unknown), true, 'demote on evidence, never on silence')
+})
+
+test('the thread bubble reads the carrier, not just the gate', () => {
+  const fn = MAIN.match(/function openThread\(key\) \{[\s\S]*?\n\}/)
+  assert.ok(fn, 'openThread is missing')
+  assert.match(fn[0], /carrierFailed/, 'a text the network refused must not draw a clean bubble')
+  assert.match(fn[0], /deliveryStatus/, 'and the verdict comes from the delivery result')
 })

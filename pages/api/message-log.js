@@ -30,11 +30,13 @@ async function handler(req, res) {
     if (countOnly) {
       const [inb, rep] = await Promise.all([
         db.select('email_log', 'select=id,kind,status,created_at&kind=eq.sms_in&limit=2000').catch(() => []),
-        db.select('email_log', 'select=replies_to,status&replies_to=not.is.null&limit=2000').catch(() => []),
+        db.select('email_log', 'select=replies_to,status,delivery_status&replies_to=not.is.null&limit=2000').catch(() => []),
       ])
       const waiting = unanswered(
         inb.map((r) => ({ id: r.id, kind: r.kind, status: r.status, at: r.created_at })),
-        rep.map((r) => ({ repliesTo: r.replies_to, status: r.status })),
+        // delivery_status too: a reply the carrier refused leaves the customer
+        // waiting, and without it the count says they were answered.
+        rep.map((r) => ({ repliesTo: r.replies_to, status: r.status, deliveryStatus: r.delivery_status })),
       )
       return res.json({
         success: true,
@@ -43,7 +45,8 @@ async function handler(req, res) {
       })
     }
     const rows = await db.select('email_log',
-      `select=id,created_at,kind,to_email,actual_to,subject,status,provider,error,replies_to,customers(first_name,last_name)`
+      `select=id,created_at,kind,to_email,actual_to,subject,status,provider,error,replies_to,`
+      + `delivery_status,delivered_at,delivery_error,customers(first_name,last_name)`
       + `&order=created_at.desc&limit=${limit}`)
 
     // Every reply ever recorded, not just the ones on this page. The log is
@@ -52,8 +55,9 @@ async function handler(req, res) {
     // screen would report an answered question as waiting, on a screen whose
     // whole job is to be trusted about that.
     const replyRows = await db.select('email_log',
-      'select=id,replies_to,status&replies_to=not.is.null&limit=2000').catch(() => [])
-    const replies = replyRows.map((r) => ({ repliesTo: r.replies_to, status: r.status }))
+      'select=id,replies_to,status,delivery_status&replies_to=not.is.null&limit=2000').catch(() => [])
+    const replies = replyRows.map((r) => ({
+      repliesTo: r.replies_to, status: r.status, deliveryStatus: r.delivery_status }))
 
     const entries = rows.map((r) => ({
       id: r.id,
@@ -64,6 +68,13 @@ async function handler(req, res) {
       actualTo: r.actual_to || null,
       subject: r.subject || '',
       status: r.status,
+      // Two different stories about one message, kept apart on purpose: status
+      // is what WE did (built it, held it, handed it to Twilio) and delivery is
+      // what the CARRIER did with it afterwards. Collapsing them would lose the
+      // distinction the whole /api/sms-status callback exists to record.
+      deliveryStatus: r.delivery_status || null,
+      deliveredAt: r.delivered_at || null,
+      deliveryError: r.delivery_error || null,
       error: r.error || null,
       repliesTo: r.replies_to || null,
       customerName: r.customers

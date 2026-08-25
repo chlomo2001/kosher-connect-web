@@ -244,6 +244,11 @@ function phoneProblem(raw) {
   if (!d) return { code: 'missing', message: 'No number.' };
   if (d.length < 7) return { code: 'short', message: `Too short to be a phone number — ${d.length} digit${d.length === 1 ? '' : 's'}.` };
   if (d.length > 15) return { code: 'long', message: `Too long to be a phone number — ${d.length} digits, the most any number has is 15.` };
+  // The country code that got dropped — see lib/phoneNumber.mjs for why this
+  // shape and only this shape. A UK mobile typed with + for the leading 0.
+  if (d.length === 10 && d.startsWith('7')) {
+    return { code: 'nocc', message: 'That looks like a UK mobile with the 44 missing — try 07\u2026 or +447\u2026' };
+  }
   return null;
 }
 
@@ -21501,15 +21506,33 @@ function openThread(key) {
   const bubbles = t.msgs.map(m => {
     const mine = m.kind !== 'sms_in';
     const [label, , meaning] = MSG_STATUS_LABEL[m.status] || [String(m.status || '').toUpperCase(), '', ''];
-    // Only say what happened to OUR messages, and only when it is not the
-    // ordinary case. "SENT" on every bubble is noise; "HELD" on one is the
-    // whole story.
-    const undelivered = mine && !['sent', 'delivered'].includes(m.status);
+    // Two ways a message fails to arrive, and this used to see only the first.
+    //
+    //   the gate    HELD, or redirected to the test number — we never sent it;
+    //   the carrier we sent it and the network could not deliver it.
+    //
+    // Until the first real live text was sent and read back, this decided from
+    // m.status alone. For SMS that status is 'sent' the moment Twilio ACCEPTS
+    // the message and never changes again — the carrier's verdict lands in
+    // deliveryStatus seconds later. So a text to a dead number, a handset
+    // switched off, or one the carrier blocked drew a clean blue bubble, which
+    // is the exact lie this bubble was built to prevent.
+    const gateHeld = mine && !['sent', 'delivered'].includes(m.status);
+    const carrierFailed = mine && ['undelivered', 'failed'].includes(String(m.deliveryStatus || ''));
+    const undelivered = gateHeld || carrierFailed;
+    // A sentence per case rather than one tag glued to a fixed suffix: the
+    // carrier branch was reading "UNDELIVERED — not delivered", which says the
+    // same thing twice and buries the part that differs. What a person needs
+    // is WHO stopped it — our own safety gate, or the network.
+    const why = carrierFailed
+      ? (m.deliveryError || 'the network could not deliver it')
+      : meaning;
+    const said = carrierFailed ? 'Did not arrive' : `${label} — not delivered`;
     return `
       <div class="msg-b ${mine ? 'mine' : 'theirs'}">
         <div class="msg-b-text">${escHtml(m.subject || '(no text)')}</div>
         <div class="msg-b-meta">${msgWhen(m.at)}${
-          undelivered ? ` · <span class="msg-b-warn" title="${escHtml(meaning)}">${escHtml(label)} — not delivered</span>` : ''
+          undelivered ? ` · <span class="msg-b-warn" title="${escHtml(why)}">${escHtml(said)}</span>` : ''
         }</div>
       </div>`;
   }).join('');
@@ -24660,6 +24683,36 @@ const MSG_STATUS_LABEL = {
   opt_out: ['STOP', '', 'they asked to stop receiving texts — Twilio blocks further sends'],
   invalid: ['NOT A NUMBER', '', 'refused before sending: the destination could not be a phone number'],
 };
+/**
+ * What the CARRIER said, under what we did.
+ *
+ * The badge above it is our half — built, held, handed to Twilio. For an SMS
+ * that badge reads SENT from the instant Twilio accepts the message and never
+ * changes, so until 25 Aug this screen showed SENT for a text the network had
+ * confirmed seconds later, and the identical SENT for one it had refused. The
+ * /api/sms-status callback has been recording the difference the whole time and
+ * nothing displayed it.
+ *
+ * Silence stays silent: no delivery result means the callback has not come back
+ * yet, or tracking is off. Printing "unknown" on every row would bury the two
+ * that matter.
+ */
+function deliveryHtml(e) {
+  const d = String(e.deliveryStatus || '');
+  if (!d) return '';
+  if (d === 'delivered') {
+    return `<div style="font-size:var(--fs-micro);color:var(--success-ink);" title="${
+      e.deliveredAt ? escHtml(fmtWhen(e.deliveredAt)) : ''}">the handset received it</div>`;
+  }
+  if (['undelivered', 'failed'].includes(d)) {
+    return `<div style="font-size:var(--fs-micro);color:var(--danger-ink);font-weight:600;max-width:220px;">did not arrive${
+      e.deliveryError ? ` — ${escHtml(String(e.deliveryError).slice(0, 90))}` : ''}</div>`;
+  }
+  // queued / sending / accepted — in flight, and worth saying so rather than
+  // leaving a row that looks finished.
+  return `<div style="font-size:var(--fs-micro);color:var(--muted);">${escHtml(d)}</div>`;
+}
+
 async function loadMessageLog() {
   const wrap = document.getElementById('msgLogWrap');
   if (!wrap) return;
@@ -24695,7 +24748,7 @@ async function loadMessageLog() {
           : e.kind && e.kind !== 'sms' ? `<div style="font-size:var(--fs-micro);color:var(--muted);">${escHtml(e.kind)}</div>` : ''}</td>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${e.customerName ? `<strong>${escHtml(e.customerName)}</strong><div style="font-size:var(--fs-micro);color:var(--muted);" dir="ltr">${escHtml(e.to)}</div>` : `<span dir="ltr">${escHtml(e.to)}</span>`}</td>
       <td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;font-size:var(--fs-small);" title="${escHtml(e.subject)}">${escHtml(e.subject || '—')}</td>
-      <td>${badge}${e.actualTo && e.actualTo !== e.to ? `<div style="font-size:var(--fs-micro);color:var(--muted);" dir="ltr">→ ${escHtml(e.actualTo)}</div>` : ''}${e.error ? `<div style="font-size:var(--fs-micro);color:var(--danger-ink);max-width:220px;">${escHtml(e.error.slice(0, 120))}</div>` : ''}${
+      <td>${badge}${deliveryHtml(e)}${e.actualTo && e.actualTo !== e.to ? `<div style="font-size:var(--fs-micro);color:var(--muted);" dir="ltr">→ ${escHtml(e.actualTo)}</div>` : ''}${e.error ? `<div style="font-size:var(--fs-micro);color:var(--danger-ink);max-width:220px;">${escHtml(e.error.slice(0, 120))}</div>` : ''}${
         // Inbound only, and never to someone who texted STOP. Answering a
         // person who has just asked to be left alone is the one message this
         // shop must not send, so the control is not there to be pressed.

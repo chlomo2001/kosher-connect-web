@@ -1337,7 +1337,27 @@
         "error": null,
         "customerName": "Yossi Taitelbaum",
         "repliesTo": null,
-        "awaitingAnswer": true
+        "awaitingAnswer": true,
+        "deliveryStatus": null,
+        "deliveredAt": null,
+        "deliveryError": null
+      },
+      {
+        "id": "7",
+        "at": "2026-08-24T11:05:00Z",
+        "channel": "sms",
+        "kind": "sms",
+        "to": "+447700900321",
+        "actualTo": null,
+        "subject": "Your phone is ready to collect.",
+        "status": "sent",
+        "error": null,
+        "customerName": "Yossi Taitelbaum",
+        "repliesTo": null,
+        "awaitingAnswer": false,
+        "deliveryStatus": "undelivered",
+        "deliveredAt": null,
+        "deliveryError": "Handset unreachable — switched off or out of coverage."
       },
       {
         "id": "6",
@@ -1351,7 +1371,10 @@
         "error": null,
         "customerName": null,
         "repliesTo": null,
-        "awaitingAnswer": false
+        "awaitingAnswer": false,
+        "deliveryStatus": null,
+        "deliveredAt": null,
+        "deliveryError": null
       },
       {
         "id": "1",
@@ -1365,7 +1388,10 @@
         "error": null,
         "customerName": "Moishe Berger",
         "repliesTo": null,
-        "awaitingAnswer": false
+        "awaitingAnswer": false,
+        "deliveryStatus": null,
+        "deliveredAt": null,
+        "deliveryError": null
       },
       {
         "id": "2",
@@ -1379,7 +1405,10 @@
         "error": null,
         "customerName": "Toibe Klein",
         "repliesTo": null,
-        "awaitingAnswer": false
+        "awaitingAnswer": false,
+        "deliveryStatus": null,
+        "deliveredAt": null,
+        "deliveryError": null
       },
       {
         "id": "3",
@@ -1393,7 +1422,10 @@
         "error": "[resend] domain is not verified",
         "customerName": null,
         "repliesTo": null,
-        "awaitingAnswer": false
+        "awaitingAnswer": false,
+        "deliveryStatus": null,
+        "deliveredAt": null,
+        "deliveryError": null
       },
       {
         "id": "4",
@@ -1407,7 +1439,10 @@
         "error": null,
         "customerName": "Pesha Eger",
         "repliesTo": null,
-        "awaitingAnswer": false
+        "awaitingAnswer": false,
+        "deliveryStatus": null,
+        "deliveredAt": null,
+        "deliveryError": null
       }
     ],
     "waiting": 1,

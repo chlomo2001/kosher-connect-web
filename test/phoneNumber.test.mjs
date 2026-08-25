@@ -57,3 +57,31 @@ test('7 digits is the floor, 6 is below it', () => {
   assert.equal(phoneProblem('1234567'), null)
   assert.equal(phoneProblem('123456')?.code, 'short')
 })
+
+test('a UK mobile that lost its country code is caught before the provider', () => {
+  // 25 Aug: the first live test SMS went out as a 10-digit number starting 7 —
+  // a UK mobile typed with + in place of the leading 0. This guard passed it as
+  // "plausible length" and Twilio rejected it: HTTP 400, not a valid phone
+  // number. The failure was honest but it cost a round trip and left a red row
+  // in the audit log for a typo.
+  const bad = phoneProblem('+7776654321')
+  assert.equal(bad?.code, 'nocc')
+  assert.match(bad.message, /44/)
+  assert.equal(isSendableNumber('+7776654321'), false)
+})
+
+test('and the guard is narrow enough to refuse nothing real', () => {
+  // Country code 7 is Russia and Kazakhstan, and those numbers are 11 digits —
+  // which is why a 10-digit one starting 7 can be refused without refusing a
+  // real number anywhere in the world.
+  for (const good of [
+    '+7 916 123 45 67',      // a real Russian mobile: 11 digits
+    '07776 654321',          // the same UK number typed properly
+    '+447776654321',
+    '+972 54 400 0111',
+    '+1 845 304 7204',
+    '7654321',               // seven digits, not ten
+  ]) {
+    assert.equal(phoneProblem(good), null, `${good} must not be refused`)
+  }
+})
