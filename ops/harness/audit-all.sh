@@ -76,6 +76,14 @@ if [ "$smoke" = 1 ]; then
   # row apart — which is the one that reached the owner's screen on 24 Aug.
   run "smoke · icons paint, and nothing leaked into a sink" \
     bash -eo pipefail -c 'node ops/harness/icons.mjs | tail -1'
+
+  # A headline number that is also a filter button must equal the list it opens.
+  # On 25 Aug the Rentals tile counted rentals stored as 'active' while the list
+  # filtered on COMPUTED status, and the banner counted uncollected reservations
+  # as "phones overdue back" — one screen, three answers to "how many phones are
+  # with customers". Four seconds, and green on arrival, so it goes in.
+  run "smoke · every headline matches the list it opens" \
+    bash -eo pipefail -c 'node ops/harness/counts.mjs | tail -1'
   echo
   [ "$fail" = 0 ] && echo "SMOKE: clean — the full sweep still runs tonight." \
                   || echo "SMOKE: something needs a look — scroll up."

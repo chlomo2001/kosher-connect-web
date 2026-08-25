@@ -1139,11 +1139,21 @@ function simLive(s) { return !!s && (s.status === 'active' || s.status === 'rene
 function kcNextFacts() {
   const today = localISO();
   const soon = localISO(new Date(Date.now() + 2 * 86400000));
-  const activeRentals = (rentals || []).filter(r => r.status !== 'returned');
+  // "Overdue BACK" is a sentence about a handset somebody is holding. A booked
+  // rental is a reservation nobody collected — its date can pass without any
+  // phone having left the shop, and counting it here told the Rentals screen
+  // "3 phones overdue back" while the tile beside it counted 2 phones out.
+  // Same computed status the tile and the list use, so all three agree; the
+  // uncollected reservation is a real problem, but it is a different one and
+  // it needs a different sentence than "chase the phone".
+  const outRentals = (rentals || []).filter(r => {
+    const st = getComputedStatus(r, today);
+    return st === 'active' || st === 'overdue';
+  });
   const tks = tasksList || [];
   return {
-    overdueRentals: activeRentals.filter(r => r.toDate && r.toDate < today).length,
-    dueTodayRentals: activeRentals.filter(r => r.toDate === today).length,
+    overdueRentals: outRentals.filter(r => r.toDate && r.toDate < today).length,
+    dueTodayRentals: outRentals.filter(r => r.toDate === today).length,
     readyRepairs: (repairs || []).filter(r => r.status === 'Ready').length,
     lateRenewals: (sims || []).filter(s => simLive(s) && s.renewalDate && s.renewalDate < today).length,
     dueTasks: tks.filter(t => !t.done && t.dueDate && t.dueDate <= today).length,
@@ -2945,9 +2955,24 @@ function rentalsStatFilter(dim, value) {
 function renderRentalsTab() {
   const content = document.getElementById('mainContent');
   const today0  = localISO();
-  const activeRentals   = rentals.filter(r => r.status === 'active').length;
+  // "Currently out" means a handset is with a customer, and an OVERDUE hire is
+  // the most out a phone can be. Counting only status==='active' told the shop
+  // 1 phone was out while the banner four lines above said 3 were overdue back
+  // — on the same screen, at the same moment. reconcilePhoneStatuses() has
+  // always had this right (it holds a phone 'rented' for active OR overdue),
+  // so the tile was the only place in the app that disagreed with itself.
+  //
+  // Computed status, not the stored one, for the same reason the list below
+  // uses it: a rental saved as 'active' whose end date has passed IS overdue,
+  // and counting the raw field made the tile disagree with the rows the tile
+  // opens. Count what the filter will show, or the number is decoration.
+  const outNow = rentals.filter(r => {
+    const st = getComputedStatus(r, today0);
+    return st === 'active' || st === 'overdue';
+  }).length;
   const availablePhones = phones.filter(p => p.status === 'available' && !p.maintenance).length;
-  const returningToday  = rentals.filter(r => r.status === 'active' && r.toDate === today0).length;
+  const returningToday  = rentals.filter(r =>
+    getComputedStatus(r, today0) === 'active' && r.toDate === today0).length;
   const outstandingDebt = rentals.reduce((s, r) => s + rentalDebt(r), 0);
   // Only shown once there is something to review, so the card doesn't sit at
   // zero forever after the import is worked through.
@@ -2963,6 +2988,10 @@ function renderRentalsTab() {
     ] },
     { dim: 'status', title: 'Status', options: [
       { value: 'all', label: 'Status: all' },
+      // What the "Phones Out" tile counts. Active and overdue together, because
+      // both mean a handset is with a customer; booked is deliberately out of it
+      // (reserved, not collected). The tile opens this, so count and list agree.
+      { value: 'out', label: 'Out now', test: r => ['active', 'overdue'].includes(getComputedStatus(r, localISO())) },
       { value: 'active', label: 'Active', test: r => getComputedStatus(r, localISO()) === 'active' },
       { value: 'due_today', label: 'Due today', test: r => getComputedStatus(r, localISO()) === 'active' && r.toDate === localISO() },
       { value: 'overdue', label: 'Overdue', test: r => getComputedStatus(r, localISO()) === 'overdue' },
@@ -2980,11 +3009,11 @@ function renderRentalsTab() {
   content.innerHTML = `
     <div class="stats-row">
       <div class="stat-card" role="button" tabindex="0" style="cursor:pointer;"
-        onclick="rentalsStatFilter('status','active')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();rentalsStatFilter('status','active')}"
-        title="Show only active rentals">
-        <div class="stat-label">Active Rentals</div>
-        <div class="stat-value green">${activeRentals}</div>
-        <div class="stat-sub">Currently out</div>
+        onclick="rentalsStatFilter('status','out')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();rentalsStatFilter('status','out')}"
+        title="Show the hires that are out — active and overdue">
+        <div class="stat-label">Phones Out</div>
+        <div class="stat-value green">${outNow}</div>
+        <div class="stat-sub">With customers now</div>
       </div>
       <div class="stat-card" role="button" tabindex="0" style="cursor:pointer;"
         onclick="openManagePhonesModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openManagePhonesModal()}"
@@ -22544,7 +22573,14 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   const reps = repairs;
   const tks = tasksList2 || [];
 
-  const activeRentals = rentals.filter(r => r.status !== 'returned');
+  // Same rule as the Rentals tile and the attention banner: a hire is counted
+  // when a handset is actually with a customer. 'Not returned' also caught
+  // reservations nobody collected, which inflated this summary's headline and
+  // its "N overdue" sub-line — the two numbers the owner reads first.
+  const activeRentals = rentals.filter(r => {
+    const st = getComputedStatus(r, today);
+    return st === 'active' || st === 'overdue';
+  });
   const overdue = activeRentals.filter(r => r.toDate && r.toDate < today);
   const dueToday = activeRentals.filter(r => r.toDate === today);
   // NOT a positive match on two names: the owner can add their own stages
