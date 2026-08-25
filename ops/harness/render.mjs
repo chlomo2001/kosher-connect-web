@@ -169,7 +169,12 @@ window.fetch = function (url) {
   return out
 }
 
-export const TABS = ['dashboard', 'customers', 'rentals', 'sim', 'bookings', 'wallet',
+// Every screen the sweep visits. A hand-kept copy of lib/auth.js ALL_TABS,
+// and test/tabs.test.mjs holds the two together — 'messages' shipped on 25 Aug
+// and this list did not move, so the overflow, contrast and touch-target
+// checks all skipped the new screen while reporting "all 15 tabs" as if that
+// were the whole app. A list that silently omits is worse than a short one.
+export const TABS = ['dashboard', 'customers', 'messages', 'rentals', 'sim', 'bookings', 'wallet',
   'repairs', 'services', 'shop', 'koltorah', 'virtual', 'tasks', 'review', 'mail', 'settings']
 
 // A page must never scroll sideways, and nothing may sit outside the content

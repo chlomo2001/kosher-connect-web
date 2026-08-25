@@ -131,36 +131,63 @@ test('the count is taken over the whole log, not the page on screen', () => {
 test('the dashboard row exists, is urgent, and leads somewhere that loads', () => {
   assert.match(MAIN, /f\.smsWaiting/, 'the dashboard must read the waiting count')
   assert.match(MAIN, /do: 'messages\.waiting'/)
-  // Follows one hop on purpose. The row's handler and the command palette both
-  // open this screen, so the body lives in a shared function rather than inline
-  // — but the guarantee is unchanged and still checked: whatever the row calls
-  // must end up loading the log, or Settings lands on "press Load the log", a
-  // button that promised to show you something and asked you to press another.
-  const target = MAIN.match(/'messages\.waiting':\s*\(\) => ([A-Za-z0-9_$]+)\(\)/)
-  assert.ok(target, 'the row must route to a named opener')
-  const opener = MAIN.match(new RegExp(`function ${target[1]}\\(\\)[\\s\\S]*?\\n\\}`))
-  assert.ok(opener, `${target[1]}() is missing`)
-  assert.match(opener[0], /loadMessageLog\(\)/,
-    'the action must LOAD the log — Settings otherwise shows "press Load the log"')
+  // The guarantee, unchanged through two rewrites of how it is met: the row
+  // must land somewhere the waiting texts are actually ON SCREEN. It used to
+  // have to load the Settings log by hand, or you arrived at "press Load the
+  // log" — a button that promised to show you something and asked you to press
+  // another. Now it opens the inbox, which loads itself, narrowed to the ones
+  // waiting so the screen you land on is the list the row was counting.
+  const act = MAIN.match(/'messages\.waiting':\s*(?:\(\) =>\s*)?\{[\s\S]*?\n  \},/)
+  assert.ok(act, 'the messages.waiting action is missing')
+  assert.match(act[0], /'messages'/, 'the row must land on the inbox')
+  assert.match(act[0], /msgFilter = 'waiting'/,
+    'and narrowed to the ones waiting — that is what the row counted')
   const row = MAIN.match(/if \(f\.smsWaiting\)[^;]*;/)
   assert.ok(row, 'the row is missing')
   assert.match(row[0], /tone: 'urgent'/, 'a person waiting on an answer is urgent')
 })
 
-test('the palette reaches the log by the words somebody would type', () => {
+test('the palette reaches the inbox by the words somebody would type', () => {
   // From 25 Aug the command palette is the app's front door, so a job it cannot
   // reach is a job that is hidden. This one was: Ctrl+K for "text", "sms" or
   // "reply" returned nothing, and the only route was knowing that inbound texts
-  // live in Settings, eleventh card down, behind a button that loads them.
+  // lived in Settings, eleventh card down, behind a button that loads them.
+  // They have a screen of their own now; the aliases still matter, because
+  // none of the words people use for this job is the word on the tab.
   const cmd = MAIN.match(/\{[^{}]*label: 'Answer a text a customer sent'[\s\S]*?\n  \},/)
   assert.ok(cmd, 'the palette needs an entry for answering a text')
   for (const word of ['text', 'sms', 'reply', 'inbox', 'message']) {
     assert.ok(cmd[0].includes(`'${word}`) || cmd[0].includes(word),
       `the palette entry must match "${word}" — it is what the job is called`)
   }
-  assert.match(cmd[0], /tab: 'settings'/,
+  assert.match(cmd[0], /tab: 'messages'/,
     'gate it on the screen it opens, so it hides from anyone who could not open it')
-  assert.match(cmd[0], /openMessageLog\(\)/, 'it must open the log loaded, like the dashboard row')
+  assert.match(cmd[0], /goToTab\('messages'\)/, 'it must open the inbox, like the dashboard row')
+})
+
+test('the inbox never draws a held reply as delivered', () => {
+  // A chat bubble is the most convincing "it was sent" a UI can draw, and a
+  // reply the safety gate held reached nobody. If this screen ever lets one
+  // look delivered, somebody closes it believing a customer was answered —
+  // which is worse than the Settings log this replaced, because that one at
+  // least printed the status in a column.
+  const fn = MAIN.match(/function openThread\(key\) \{[\s\S]*?\n\}/)
+  assert.ok(fn, 'openThread is missing')
+  assert.match(fn[0], /const undelivered = mine && !\['sent', 'delivered'\]\.includes\(m\.status\)/,
+    'an outbound bubble must decide delivery from the status, not assume it')
+  assert.match(fn[0], /not delivered/, 'and say so on the bubble, in words')
+})
+
+test('there is one composer, and the log points at it', () => {
+  // Two ways to answer the same text is the complication the owner asked to be
+  // rid of. The Settings log keeps its Reply button — it is the audit trail and
+  // people land there — but it hands off rather than opening a second box.
+  const fn = MAIN.match(/function msgLogReply\(id\) \{[\s\S]*?\n\}/)
+  assert.ok(fn, 'msgLogReply is missing')
+  assert.match(fn[0], /openThread\(/, 'the log must hand off to the conversation')
+  assert.doesNotMatch(fn[0], /showDynamicModal/, 'it must not open a composer of its own')
+  assert.equal(MAIN.match(/id="smsReplyText"/g)?.length, 1,
+    'the reply box must exist in exactly one place')
 })
 
 test('the reply toasts agree with the count', () => {

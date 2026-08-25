@@ -900,6 +900,7 @@ function kcNavFades() {
 const TAB_META = {
   dashboard: { label: 'Dashboard',         title: 'Business <span>Dashboard</span>',    render: () => renderDashboardTab(), search: false },
   customers: { label: 'Customers',         title: 'Customer <span>Management</span>',   render: () => renderCustomersTab(), search: true,  primary: { label: '+ New customer', run: () => openAddModal() } },
+  messages:  { label: 'Messages',           title: 'Customer <span>Messages</span>',     render: () => renderMessagesTab(), search: false },
   rentals:   { label: 'Phone Rentals',     title: 'Phone <span>Rentals</span>',         render: () => renderRentalsTab(),   search: false, primary: { label: '+ New rental',   run: () => openNewRentalModal() } },
   sim:       { label: 'SIM Plans',         title: 'SIM <span>Plans</span>',             render: () => renderSimsTab(),      search: false, primary: { label: '+ New SIM plan', run: () => openAddSimModal() } },
   bookings:  { label: 'Tickets & Flights', title: 'Tickets <span>&amp; Flights</span>', render: () => renderBookingsTab(),  search: false, primary: { label: '+ New booking',  run: () => openNewBookingModal() } },
@@ -1024,6 +1025,10 @@ const KC_NEXT = (() => {
       if (f.mailPending) return { text: `${plural(f.mailPending, 'carrier email')} nobody has dealt with`, label: 'Open the mail', do: 'mail.pending', count: f.mailPending };
       return { clear: true };
     },
+    messages(f) {
+      if (f.smsWaiting) return { text: `${plural(f.smsWaiting, 'text')} waiting for an answer`, label: 'Show them', do: 'messages.waiting', count: f.smsWaiting, tone: 'urgent' };
+      return { clear: true };
+    },
     customers(f) {
       if (f.unreachable) return { text: `${plural(f.unreachable, 'customer')} with no way to reach them`, label: 'Show them', do: 'customers.unreachable', count: f.unreachable };
       return { clear: true };
@@ -1102,7 +1107,12 @@ const KC_NEXT_DO = {
   // The log lives on Settings and does not load itself, so going there without
   // loading it would land on "press Load the log" — a button that promised to
   // show you something and then asked you to press another button.
-  'messages.waiting':      () => openMessageLog(),
+  // Works from both ends: from the dashboard it opens the inbox already
+  // narrowed; on the inbox it narrows the list you are looking at.
+  'messages.waiting':      () => {
+    msgFilter = 'waiting';
+    if (currentTab === 'messages') paintMessages(); else goToTab('messages');
+  },
 };
 
 /**
@@ -1118,8 +1128,7 @@ const KC_NEXT_DO = {
  * the app: a job the front door cannot reach is a job that is hidden.
  */
 function openMessageLog() {
-  goToTab('settings');
-  setTimeout(() => { loadMessageLog(); focusPanel('msgLogWrap'); }, 160);
+  goToTab('messages');
 }
 
 /**
@@ -20358,9 +20367,9 @@ const PALETTE_COMMANDS = [
   // what the job is called by the person doing it, and none of them appear in
   // the panel's own name. tab: 'settings' rather than admin: true, so it is
   // hidden from exactly the people who could not open the screen anyway.
-  { icon: 'chat', label: 'Answer a text a customer sent', sub: 'messages', tab: 'settings',
+  { icon: 'chat', label: 'Answer a text a customer sent', sub: 'messages', tab: 'messages',
     keys: ['message log', 'messages', 'text', 'sms', 'reply', 'replies', 'inbox', 'answer'],
-    run: () => openMessageLog() },
+    run: () => goToTab('messages') },
   // The assistant's own door since 18 Aug, when its topbar button folded into
   // the ❓ Help panel. Searchable by the words someone would actually type.
   { icon: 'bot', label: 'Ask / do anything (AI assistant)', sub: 'AI',
@@ -21230,6 +21239,259 @@ async function snoozeTask(id, choice) {
     toast(until ? `Snoozed until ${fmtDate(until)}.` : 'Task is back in the list.', 'success');
     renderTasksTab();
   }
+}
+
+// ══ MESSAGES — the customer texts, as conversations ══════════════════════
+//
+// Owner, 25 Aug: "do the inbox".
+//
+// Before this, answering a customer's text was Settings → the Messaging card,
+// eleventh of eighteen → Load the log → find the row → Reply. Counter work
+// filed under configuration, behind a log that did not load itself. The
+// dashboard has always said an unanswered text outranks the money — "a person
+// holding their phone" — and the thing it was shouting about had no home.
+//
+// This is that home, and it is deliberately NOT the log. The log is an audit
+// trail: every email and SMS the system built, newest first, one row each,
+// still in Settings where an audit trail belongs. This screen answers a
+// different question — "who is waiting on me, and what did they say?" — so it
+// groups by PERSON and shows a conversation, which is the shape the question
+// has.
+//
+// Built entirely on /api/message-log and /api/sms. No new endpoint, no new
+// table: email_log already records both directions, which is what makes one
+// thread possible at all.
+
+let msgFilter = 'waiting';
+let msgThreads = [];
+
+// Last ten digits. UK numbers reach the shop written half a dozen ways
+// (+447700900321, 07700900321, 44 7700 900321) and a thread that splits on
+// formatting is not a thread.
+function msgKey(n) { return String(n || '').replace(/\D/g, '').slice(-10); }
+
+/**
+ * Group the log into conversations.
+ *
+ * SMS only. Email belongs to the audit trail, not to a chat: a receipt is not
+ * a thing anybody texts back, and mixing the two would make a "conversation"
+ * out of one side talking.
+ */
+function msgBuildThreads(entries) {
+  const by = new Map();
+  for (const e of entries || []) {
+    if (e.channel !== 'sms') continue;
+    const k = msgKey(e.to);
+    if (!k) continue;
+    if (!by.has(k)) by.set(k, { key: k, number: e.to, name: null, msgs: [] });
+    const t = by.get(k);
+    if (!t.name && e.customerName) t.name = e.customerName;
+    t.msgs.push(e);
+  }
+  const out = [...by.values()];
+  for (const t of out) {
+    t.msgs.sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    t.last = t.msgs[t.msgs.length - 1];
+    t.waiting = t.msgs.some(m => m.awaitingAnswer);
+    // A reply answers the NEWEST inbound, not the oldest: that is the message
+    // still on their screen. Nothing to reply to means nothing to reply to —
+    // the box says so rather than offering a send that cannot work.
+    t.replyTo = [...t.msgs].reverse().find(m => m.kind === 'sms_in' && m.status === 'received') || null;
+    t.optedOut = t.msgs.some(m => m.status === 'opt_out');
+  }
+  // Waiting first — this screen is a queue before it is a history. Then newest,
+  // because within the queue the oldest wait is already flagged and what you
+  // want next is what just arrived.
+  out.sort((a, b) => (b.waiting ? 1 : 0) - (a.waiting ? 1 : 0)
+    || String(b.last.at).localeCompare(String(a.last.at)));
+  return out;
+}
+
+async function renderMessagesTab() {
+  const content = document.getElementById('mainContent');
+  kcSkeleton('tasks');
+  const res = await kcFetch('/api/message-log?limit=300').then(r => r.json()).catch(() => null);
+  if (!res || !res.success) {
+    content.innerHTML = errorHtml(res?.error || 'Couldn’t load messages');
+    return;
+  }
+  // The reply modal reads this, and the dashboard row reads the count — so
+  // opening this screen brings both up to date rather than leaving the
+  // dashboard claiming somebody is waiting after you have just answered them.
+  msgLogEntries = res.entries;
+  msgWaiting = { count: res.waiting || 0, since: res.waitingSince || null };
+  msgThreads = msgBuildThreads(res.entries);
+  paintMessages();
+  kcPaintMsgBadge();
+}
+
+function msgSetFilter(f) { msgFilter = f; paintMessages(); }
+
+function paintMessages() {
+  const content = document.getElementById('mainContent');
+  if (!content) return;
+  const waiting = msgThreads.filter(t => t.waiting);
+  const shown = msgFilter === 'waiting' ? waiting : msgThreads;
+
+  // Two chips, not three. "Waiting" is the work and "All" is everything;
+  // a middle option would be a third thing to read before doing either.
+  const chip = (f, label) => `<button class="cm-chip ${msgFilter === f ? 'on' : ''}"
+      onclick="msgSetFilter('${f}')" ${msgFilter === f ? 'aria-current="true"' : ''}>${label}</button>`;
+
+  const empty = msgFilter === 'waiting'
+    ? `<div class="empty-state"><div class="emoji kc-ic kc-ic-check" aria-hidden="true"></div>
+        <p>Nobody is waiting on an answer.</p>
+        ${msgThreads.length ? '<small>Press All to read the earlier conversations.</small>' : ''}</div>`
+    : `<div class="empty-state"><div class="emoji kc-ic kc-ic-chat" aria-hidden="true"></div>
+        <p>No texts yet.</p>
+        <small>A customer texting the shop appears here the moment it arrives.</small></div>`;
+
+  // .section-header + .table-card, the pattern Customers uses — NOT the
+  // .card/.card-head Carrier Mail reaches for, which turns out to have no CSS
+  // behind it at all and renders as bare text on the page ground.
+  content.innerHTML = `
+    <div class="section-header">
+      <div class="section-title">Messages</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        ${chip('waiting', `Waiting${waiting.length ? ` (${waiting.length})` : ''}`)}${chip('all', 'All')}
+        <button class="btn btn-outline btn-sm" onclick="renderMessagesTab()"
+          title="Check for texts that have just arrived">↻ Check now</button>
+      </div>
+    </div>
+    <div class="table-card"><div class="msg-list">${shown.length ? shown.map(msgThreadRowHtml).join('') : empty}</div></div>`;
+}
+
+/**
+ * When, said the way somebody standing at a counter would say it.
+ *
+ * fmtWhen prints "18 Aug 2026 21:14" everywhere, which is right for a ledger
+ * and wrong here: on this screen the answer is nearly always today, yesterday
+ * or this week, and the year is four characters of noise on every row. The
+ * year comes back the moment it is genuinely a different year, because then it
+ * is the load-bearing part.
+ */
+function msgWhen(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return fmtWhen(iso);
+  const now = new Date();
+  const hm = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const sameDay = (a, b) => a.toDateString() === b.toDateString();
+  if (sameDay(d, now)) return hm;
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  if (sameDay(d, yesterday)) return `Yesterday ${hm}`;
+  const dm = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return d.getFullYear() === now.getFullYear() ? `${dm} ${hm}` : `${dm} ${d.getFullYear()}`;
+}
+
+function msgThreadRowHtml(t) {
+  const who = t.name ? escName(t.name) : `<span dir="ltr">${escHtml(fmtPhone(t.number) || t.number)}</span>`;
+  const sub = t.name ? `<span dir="ltr">${escHtml(fmtPhone(t.number) || t.number)}</span>` : 'not a customer on file';
+  // Their words, or ours prefixed — you need to know at a glance whether the
+  // last thing said was theirs or yours, and who spoke last is most of that.
+  const mine = t.last.kind !== 'sms_in';
+  const preview = escHtml(String(t.last.subject || '').slice(0, 120));
+  return `
+    <button class="msg-row${t.waiting ? ' waiting' : ''}" onclick="openThread('${escHtml(t.key)}')"
+      aria-label="Conversation with ${escHtml(t.name || fmtPhone(t.number) || t.number)}${t.waiting ? ', waiting for an answer' : ''}">
+      <span class="msg-row-who">
+        <strong>${who}</strong>
+        <span class="msg-row-sub">${sub}</span>
+      </span>
+      <span class="msg-row-last">${mine ? '<span class="msg-row-mine">You:</span> ' : ''}${preview}</span>
+      <span class="msg-row-when">${msgWhen(t.last.at)}</span>
+      ${t.waiting ? '<span class="msg-row-flag">Waiting</span>' : '<span class="msg-row-flag-none" aria-hidden="true"></span>'}
+    </button>`;
+}
+
+/**
+ * One conversation.
+ *
+ * The honesty that matters most on this screen lives here. A reply the safety
+ * gate HELD, or redirected to the test number, has not reached the customer —
+ * and a chat bubble is the most persuasive "it was sent" a UI can draw. So an
+ * outbound message that did not actually arrive says so on the bubble, in
+ * words, and the thread still counts the customer as waiting. Anything else
+ * would let somebody close this screen believing they had answered.
+ */
+function openThread(key) {
+  const t = msgThreads.find(x => x.key === key);
+  if (!t) { toast('Check now, then try again.', 'warning'); return; }
+  const who = t.name ? escName(t.name) : `<span dir="ltr">${escHtml(fmtPhone(t.number) || t.number)}</span>`;
+
+  const bubbles = t.msgs.map(m => {
+    const mine = m.kind !== 'sms_in';
+    const [label, , meaning] = MSG_STATUS_LABEL[m.status] || [String(m.status || '').toUpperCase(), '', ''];
+    // Only say what happened to OUR messages, and only when it is not the
+    // ordinary case. "SENT" on every bubble is noise; "HELD" on one is the
+    // whole story.
+    const undelivered = mine && !['sent', 'delivered'].includes(m.status);
+    return `
+      <div class="msg-b ${mine ? 'mine' : 'theirs'}">
+        <div class="msg-b-text">${escHtml(m.subject || '(no text)')}</div>
+        <div class="msg-b-meta">${msgWhen(m.at)}${
+          undelivered ? ` · <span class="msg-b-warn" title="${escHtml(meaning)}">${escHtml(label)} — not delivered</span>` : ''
+        }</div>
+      </div>`;
+  }).join('');
+
+  // Three reasons there is no reply box, each said plainly rather than by a
+  // greyed button somebody presses twice before reading.
+  const composer = t.optedOut
+    ? `<div class="msg-closed"><i class="kc-ic kc-ic-blocked" aria-hidden="true"></i>
+         They texted STOP, so the network blocks anything further. Ring them instead.</div>`
+    : !t.replyTo
+      ? `<div class="msg-closed">Nothing to reply to — every text here went out from the shop. Text them from their
+           customer card, where the number is read off the record.</div>`
+      : `<label class="form-label" for="smsReplyText">Your reply</label>
+         <textarea class="form-input" id="smsReplyText" rows="3" maxlength="640"
+           style="font-family:inherit;" oninput="smsReplyCount()"
+           placeholder="Type the answer you would give at the counter."></textarea>
+         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;">
+           <button class="btn btn-primary kc-ic kc-ic-upload" id="smsReplySend"
+             onclick="sendSmsReply('${escHtml(String(t.replyTo.id))}')">Send reply</button>
+           <button class="btn btn-outline kc-ic kc-ic-check" onclick="msgLogTask('${escHtml(String(t.replyTo.id))}')"
+             title="For a text that needs doing before it can be answered">Make it a task</button>
+           <span id="smsReplyCount" style="font-size:var(--fs-micro);color:var(--muted);margin-left:auto;">0 / 640</span>
+         </div>`;
+
+  showDynamicModal(`
+    <div class="modal-title"><i class="kc-ic kc-ic-chat" aria-hidden="true"></i> ${who}</div>
+    <div class="msg-thread-sub">
+      <span dir="ltr">${escHtml(fmtPhone(t.number) || t.number)}</span>
+      ${t.name ? '' : ' · not a customer on file'}
+    </div>
+    <div class="msg-thread" id="msgThread">${bubbles}</div>
+    ${composer}
+  `);
+  // Open on the newest message, the way every messaging app does — the top of
+  // a long thread is the least useful place to start reading.
+  setTimeout(() => {
+    const w = document.getElementById('msgThread');
+    if (w) w.scrollTop = w.scrollHeight;
+    document.getElementById('smsReplyText')?.focus();
+  }, 30);
+}
+
+/**
+ * The count on the sidebar row.
+ *
+ * The point of giving Messages a home is being able to see from any screen
+ * that somebody is waiting. A tab you have to open to discover it is empty is
+ * a tab that gets opened out of anxiety, and then stops being opened at all.
+ */
+function kcPaintMsgBadge() {
+  const item = document.querySelector('.nav-item[data-tab="messages"]');
+  if (!item) return;
+  let b = item.querySelector('.nav-badge');
+  const n = msgWaiting.count || 0;
+  if (!n) { b?.remove(); item.removeAttribute('aria-description'); return; }
+  if (!b) {
+    b = document.createElement('span');
+    b.className = 'nav-badge';
+    item.appendChild(b);
+  }
+  b.textContent = n > 99 ? '99+' : String(n);
+  b.title = `${n} ${n === 1 ? 'text is' : 'texts are'} waiting for an answer`;
 }
 
 // ---------- Carrier mail ----------
@@ -22682,6 +22944,10 @@ async function renderDashboardTab() {
   msgWaiting = waiting?.success
     ? { count: waiting.waiting || 0, since: waiting.waitingSince || null }
     : msgWaiting;
+  // The dashboard is where most mornings start, and it already asks for this
+  // count. Painting the badge here is what makes it true from any screen
+  // rather than only on the one screen that shows the queue anyway.
+  kcPaintMsgBadge();
   dashCache = {
     money: ledgerSummary?.success ? ledgerSummary : dashCache.money,
     series: series?.success ? series.days : dashCache.series,
@@ -23336,7 +23602,7 @@ async function renderSettingsTab() {
       </tbody></table>
       <div class="section-divider" style="margin:14px 14px 4px;"><i class="kc-ic kc-ic-unlock" aria-hidden="true"></i> What helpers can see</div>
       <div style="padding:4px 14px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
-        ${['dashboard', 'customers', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'shop', 'koltorah', 'virtual', 'tasks', 'review', 'mail', 'settings'].map(t => `
+        ${['dashboard', 'customers', 'messages', 'rentals', 'sim', 'wallet', 'bookings', 'repairs', 'services', 'shop', 'koltorah', 'virtual', 'tasks', 'review', 'mail', 'settings'].map(t => `
           <label style="display:flex;align-items:center;gap:5px;font-size:var(--fs-small);cursor:pointer;">
             <input type="checkbox" class="htTab" value="${t}" style="accent-color:var(--accent);cursor:pointer;"
               ${(cfg.settings.find(s => s.key === 'helper_tabs')?.textValue || '').split(',').includes(t) ? 'checked' : ''}>
@@ -24200,6 +24466,7 @@ async function loadMessageLog() {
   // refreshes the row — otherwise answering the last one leaves the dashboard
   // still claiming somebody is waiting until the next reload.
   msgWaiting = { count: res.waiting || 0, since: res.waitingSince || null };
+  kcPaintMsgBadge();
   if (currentTab === 'dashboard') kcPaintNextAction('dashboard');
   if (!res.entries.length) { wrap.innerHTML = '<span style="color:var(--muted);">Nothing yet — no email or SMS has been built.</span>'; return; }
   const rows = res.entries.map(e => {
@@ -24260,29 +24527,22 @@ async function loadMessageLog() {
  * number from a console.
  */
 let msgLogEntries = [];
+/**
+ * The Settings log's Reply button — a door to the inbox, not a second composer.
+ *
+ * There were briefly two ways to answer a text: this modal, and the thread on
+ * the Messages screen. Two composers for one job is the thing the owner asked
+ * to be rid of on 25 Aug, and the log's version is the worse of the two: it
+ * quotes ONE message with no conversation around it, which is how you answer a
+ * question that was already answered an hour ago.
+ */
 function msgLogReply(id) {
   const e = msgLogEntries.find(x => String(x.id) === String(id));
   if (!e) { toast('Reload the log and try again.', 'warning'); return; }
-  const who = e.customerName ? escName(e.customerName) : `<span dir="ltr">${escHtml(e.to)}</span>`;
-  showDynamicModal(`
-    <div class="modal-title"><i class="kc-ic kc-ic-undo" aria-hidden="true"></i> Reply to ${who}</div>
-    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:4px;">They wrote</div>
-    <blockquote class="sms-quote">${escHtml(e.subject || '(no text)')}</blockquote>
-    <label class="form-label" for="smsReplyText">Your reply</label>
-    <textarea class="form-input" id="smsReplyText" rows="4" maxlength="640"
-      style="font-family:inherit;" oninput="smsReplyCount()"
-      placeholder="Type the answer you would give at the counter."></textarea>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;">
-      <button class="btn btn-primary kc-ic kc-ic-upload" id="smsReplySend" onclick="sendSmsReply('${escHtml(String(e.id))}')">Send reply</button>
-      <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <span id="smsReplyCount" style="font-size:var(--fs-micro);color:var(--muted);margin-left:auto;">0 / 640</span>
-    </div>
-    <p style="font-size:var(--fs-micro);color:var(--muted);margin-top:8px;">
-      The safety gate still decides what happens: on HOLD the reply is written to this log and
-      nothing leaves the building. It goes to the number that texted us, read from the log entry —
-      not from anything typed here.</p>
-  `);
-  setTimeout(() => document.getElementById('smsReplyText')?.focus(), 30);
+  const key = msgKey(e.to);
+  goToTab('messages');
+  // renderMessagesTab is async — the threads do not exist until it lands.
+  setTimeout(() => { msgFilter = 'all'; paintMessages(); openThread(key); }, 400);
 }
 
 // One text is 160 characters; past that a carrier bills for two. Staff should

@@ -87,9 +87,13 @@ const JOBS = [
   // product when the fault was in the route I had written. A harness that
   // invents a screen is worse than no harness: it spends the one thing it is
   // for, which is being believed.
+  // Four steps down to two, and the two are the ordinary ones: open the screen,
+  // press the person. It used to be Settings → the Messaging card, eleventh of
+  // eighteen → Load the log → Reply, which is counter work filed under
+  // configuration behind a log that did not load itself.
   { job: 'Answer a text a customer sent',
-    navigate: [tab('settings'), click('Messaging (email & SMS)'), click('Load the log'), click('Reply')],
-    fast:     [palette(), typeSearch('message'), paletteQuick('message')] },
+    navigate: [tab('messages'), click('Yossi')],
+    fast:     [palette(), typeSearch('text'), paletteQuick('Answer a text')] },
 ]
 
 const run = async (steps) => {

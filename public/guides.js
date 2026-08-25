@@ -132,6 +132,18 @@ const GUIDES = [
     ],
   },
   {
+    id: 'answer-a-text', tab: 'messages', q: 'A customer has texted the shop. How do I answer?',
+    words: ['text', 'texted', 'sms', 'reply', 'answer', 'message', 'wrote to us', 'inbox'],
+    go: 'Open Messages',
+    steps: [
+      'Open Messages. It is under People in the menu, and it carries a red number when somebody is waiting.',
+      'The list opens on the ones waiting for an answer, newest first. Press the person to read the whole conversation.',
+      'Type the answer and press "Send reply". The number is read off the message they sent, so it cannot go to the wrong person.',
+      'If the answer needs something doing first — a phone to come back from repair, a price to check — press "Make it a task" instead, and it joins the task list with their words on it.',
+      'A reply only counts once it has actually gone. While texting is on hold or in test mode the reply is written and logged but the customer never gets it, so the message stays in the waiting list and the bubble says it was not delivered.',
+    ],
+  },
+  {
     id: 'add-customer', tab: 'customers', q: 'How do I add a new customer?',
     words: ['customer', 'new person', 'add someone', 'register', 'client'],
     go: 'Open Customers',

@@ -105,3 +105,21 @@ test('review — the tab that shipped hidden — is in all four', () => {
   assert.ok(metaTabs().includes('review'))
   assert.ok(helperCheckboxTabs().includes('review'))
 })
+
+// The visual harness keeps its own copy of the tab list, and a copy that drifts
+// does not fail — it quietly stops looking. 'messages' shipped on 25 Aug and
+// ops/harness/render.mjs still listed fifteen screens, so the overflow,
+// contrast and touch-target sweeps skipped the new one and said "all 15 tabs"
+// as though that were the app.
+test('the visual harness sweeps every tab the app has', () => {
+  const src = read('ops/harness/render.mjs')
+  const m = src.match(/export const TABS = \[([\s\S]*?)\]/)
+  assert.ok(m, 'TABS not found in ops/harness/render.mjs')
+  const swept = [...m[1].matchAll(/'([a-z]+)'/g)].map((x) => x[1])
+  for (const tab of allTabs()) {
+    assert.ok(swept.includes(tab), `the harness never renders '${tab}' — it is in ALL_TABS`)
+  }
+  for (const tab of swept) {
+    assert.ok(allTabs().includes(tab), `the harness renders '${tab}', which is not a tab`)
+  }
+})

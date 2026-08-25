@@ -10,8 +10,8 @@ do I…?** on any screen — and the numbers (rates, free days, caps) live in
 BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
-**29 of 29 screens written out in full.**
-*As of 25 Aug 2026 · m-df04727d — the code changes whenever the words do, so a printout can be checked against this line.*
+**30 of 30 screens written out in full.**
+*As of 25 Aug 2026 · m-57b7f486 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -73,6 +73,7 @@ The menu, the top bar and the buttons that are there whatever tab you are on —
 - Tasks — The shop's own to-do list, including the jobs the app files by itself when something it noticed needs a person.
 - Confirm Data — Records that came in from an import and are not yet trusted: read each one against what you know, and confirm it into the books or fix it first.
 - Carrier Mail — Post arriving from the networks — renewals, ports, warnings, payment problems — matched to the SIM plan it belongs to, and labelled with what it means.
+- Messages — The texts customers have sent the shop, as conversations — and the place they get answered.
 - Settings — Everything the shop can change without anyone writing code: prices, people, what helpers can see, the public pages, and the safety gates on messaging.
 
 ### Dashboard
@@ -623,6 +624,40 @@ Post arriving from the networks — renewals, ports, warnings, payment problems 
 
 ---
 
+### Messages
+
+The texts customers have sent the shop, as conversations — and the place they get answered.
+
+**On the screen**
+
+- **The red number in the menu** — How many people are waiting on an answer. It is on the Messages row from every screen, so an unanswered text cannot sit quietly while somebody works on a different tab. No number means nobody is waiting.
+- **Waiting · All** — Two views and no third. Waiting is the work — the texts nobody has answered, and what the screen opens on. All is every conversation the shop has ever had by text, for looking something up.
+- **A row** — One person, not one message: their name if they are on file, their number, the last thing said and when. "You:" in front of it means the last word was the shop's. Press it to read the whole conversation.
+- **The conversation** — Their texts and the shop's in the order they happened, theirs on the left and the shop's on the right. Under each of the shop's messages, whether it actually reached them.
+- **Your reply** — Type it and send. The number is never typed here — it is read off the message they sent, so a reply cannot go to the wrong person. The counter beside the box warns before the reply becomes two texts, because a text is billed by the part.
+- **Make it a task** — For a text that needs something DOING before it can be answered — a phone to come back from repair, a price to check. It joins the task list named after the reply it needs, with their words underneath.
+- **Check now** — Re-reads the log. Texts do not appear by themselves while the screen is open.
+
+**Boxes that open on top of it**
+
+- **sms-reply** — One conversation, and the box to answer it.
+
+**Rules that bite here**
+
+- A message is answered only once a reply has actually GONE to them. While texting is on hold, or pointed at the test number, the reply is written and logged and the customer receives nothing — so it stays in the waiting list and the message says it was not delivered. This is the one place the screen deliberately disagrees with what you just did, and it is right to.
+- Only a text that came IN can be answered here, and not one where they texted STOP — that person has asked not to be contacted, and the network blocks it. Ring them instead.
+- This is the inbox, not the audit trail. Every email and SMS the system ever built — receipts, reminders, the lot — is still listed in Settings under Messaging, which is where to look for what went out rather than who is waiting.
+- It shows customer numbers in bulk, so a helper sees it only if the owner has ticked Messages under what helpers can see.
+
+**When it goes wrong**
+
+- **Somebody says they texted and there is nothing here** — The shop only receives texts sent to its own number, and only since texting was connected. Check the number they used.
+- **A conversation has no reply box** — Either every text in it went OUT from the shop — there is nothing to reply to, so text them from their customer card — or they have texted STOP.
+- **The reply said it was sent but they never got it** — Read the bubble: if it says HELD or TEST, it did not go. Texting is not live yet, or it is pointed at the shop's own test number. Settings → Messaging says which.
+- **A name is missing and it is just a number** — They are not on file. The number is still answerable — add them as a customer if they are going to be a regular.
+
+---
+
 ### Settings
 
 Everything the shop can change without anyone writing code: prices, people, what helpers can see, the public pages, and the safety gates on messaging.
@@ -632,7 +667,7 @@ Everything the shop can change without anyone writing code: prices, people, what
 - **Shop** — The public-facing details — the shop's own information, the wording on receipts, and the phone guide customers read before choosing a handset. There is a link to view the public page as they see it.
 - **People & access** — Team is who works here, with a password reset. What helpers can see ticks the screens a helper may open — the owner always sees everything.
 - **Prices & charges** — Figures nobody has checked lists every price and whether a person has ever confirmed it against something — the public welcome page will not quote a rental price until the rental rates are confirmed, and editing a price clears its tick again. Then: rental rates per country with their minimum, cap and cap period; what a lost or broken phone, charger or SIM costs; the fees and rules; the service price menu behind Online & Print; extra charges; repair stages; void reasons; your own stock categories on top of the built-in ones; and the month's target that the dashboard measures against.
-- **Communications** — The card is called Messaging (email & SMS) on the screen — email and SMS, each with its safety gate, the addresses post arrives at, a test send, and the log of every message: sent, and the replies customers text back, marked ↩ so the two directions read apart. A text that came in carries a Reply button, and one nobody has answered says so on its row. The log does not load itself; press Load the log. Quicker than finding it: Ctrl and K, then "text" or "reply" — that opens the log with the log already in it, and the Dashboard's own line does the same.
+- **Communications** — The card is called Messaging (email & SMS) on the screen — email and SMS, each with its safety gate, the addresses post arrives at, a test send, and the log of every message: sent, and the replies customers text back, marked ↩ so the two directions read apart. A text that came in carries a Reply button, and one nobody has answered says so on its row. The log does not load itself; press Load the log. Answering one happens on Messages, not here: the Reply button on a row takes you to that conversation, because a question is answered in the context of the ones around it. This screen is the audit trail — what went out, on every channel — and Messages is the inbox.
 - **Travel** — Travel requirements: what each destination demands and how long a document must stay valid. This is what the booking screen checks against.
 - **Connectivity** — The providers behind virtual numbers and the phone lines.
 - **Workbench** — The tools for moving a customer from one handset to another, and the converters behind them.
@@ -641,7 +676,6 @@ Everything the shop can change without anyone writing code: prices, people, what
 
 **Boxes that open on top of it**
 
-- **sms-reply** — Reply to a text a customer sent in: their message quoted above, a box for the answer, and a count that warns before the reply becomes two texts. It goes to the number that texted, read from the log entry — the reply cannot be pointed at any other number. The safety gate still decides what happens to it, and while texting is on hold the message stays counted as waiting, because the customer has not had it.
 - **task-from-here** — Turn what you are reading into a task. The box opens with the words already in it and the cursor in them, so a message can become a job to do without retyping. The same box appears on a carrier email and on an airline email — anywhere something arrives.
 
 **Rules that bite here**

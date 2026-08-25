@@ -2,8 +2,8 @@
 // to it (held by the safety gate, redirected to the test inbox, sent live,
 // failed, bounced…). Read-only over email_log, which both lib/email.js and
 // lib/sms.js write to, so this is the one audit trail for every channel.
-// Settings-tab gated: it shows customer contact details in bulk, so it follows
-// the same permission as the rest of the Settings screen.
+// Read by the Messages inbox and by the Settings log; either tab grant opens
+// it. It shows customer contact details in bulk, so it is never ungated.
 import { withStaff, tabAllowedFor } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 import { needsAnswer, isAnswered, unanswered } from '../../lib/replyQueue.mjs'
@@ -11,7 +11,13 @@ import { needsAnswer, isAnswered, unanswered } from '../../lib/replyQueue.mjs'
 async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
   if (!tablesMode) return res.status(503).json({ success: false, error: 'Needs the relational data layer.' })
-  if (!(await tabAllowedFor(req.staff, 'settings'))) {
+  // Two screens read this: the Messages inbox, where answering a customer is
+  // counter work, and the Settings log, which is the audit trail for every
+  // channel. Either grant is enough — gating the inbox on Settings would mean
+  // a helper trusted to answer the phone could not read the texts.
+  const mayRead = (await tabAllowedFor(req.staff, 'messages'))
+    || (await tabAllowedFor(req.staff, 'settings'))
+  if (!mayRead) {
     return res.status(403).json({ success: false, error: 'Not permitted.' })
   }
 

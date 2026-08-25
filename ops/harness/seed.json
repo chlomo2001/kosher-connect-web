@@ -1327,7 +1327,7 @@
     "entries": [
       {
         "id": "5",
-        "at": "2026-08-18T21:14:00Z",
+        "at": "2026-08-24T16:40:00Z",
         "channel": "sms",
         "kind": "sms_in",
         "to": "+447700900321",
@@ -1337,7 +1337,7 @@
         "error": null,
         "customerName": "Yossi Taitelbaum",
         "repliesTo": null,
-        "awaitingAnswer": false
+        "awaitingAnswer": true
       },
       {
         "id": "6",
@@ -1410,8 +1410,8 @@
         "awaitingAnswer": false
       }
     ],
-    "waiting": 0,
-    "waitingSince": null
+    "waiting": 1,
+    "waitingSince": "2026-08-24T16:40:00Z"
   },
   "/api/customers/duplicates": {
     "success": true,

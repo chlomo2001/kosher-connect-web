@@ -106,13 +106,15 @@ export const MODALS = [
      // kind of ghost that makes a sweep report defects the app does not have.
      s.remove()`],
   ['business-summary', 'dashboard', `openBusinessSummary()`],
-  // Answering a text a customer sent in (owner item 21). The log has to be
-  // loaded first — the composer quotes the message it is replying to, and the
-  // seed carries one answerable text and one from somebody who texted STOP so
-  // the Reply control can be checked for being ABSENT as well as present.
-  ['sms-reply',     'settings',  `(async () => {
-     await loadMessageLog();
-     msgLogReply('5');
+  // Answering a text a customer sent in (owner item 21). From 25 Aug this is
+  // the conversation on the Messages screen rather than a composer in the
+  // Settings log — the seed carries one answerable thread and one from
+  // somebody who texted STOP, so the reply box can be checked for being ABSENT
+  // as well as present.
+  ['sms-reply',     'messages',  `(async () => {
+     msgFilter = 'all';
+     paintMessages();
+     openThread(msgThreads.find(t => t.replyTo).key);
    })()`],
   // "Make this a task", the one affordance wherever something arrives (owner
   // items 2 and 6). Opened from the message log because that is one of the
