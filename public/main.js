@@ -9177,6 +9177,20 @@ function toggleCardMenu(e, key) {
   if (wasOpen) return;                 // pressing the open one closes it
   menu.classList.add('open');
   if (btn) btn.setAttribute('aria-expanded', 'true');
+
+  // Which way it opens is measured, not assumed. The menu is 248px wide and the
+  // three buttons sit in a row, so a fixed direction is wrong at one end or the
+  // other: pinned to the end edge, Contact's menu hung off the card's LEFT and
+  // was clipped (owner, 25 Aug); pinned to the start edge, Manage's would hang
+  // off the RIGHT. Open it start-aligned, ask whether it fits inside the card,
+  // and flip only if it does not.
+  menu.classList.remove('card-menu--flip');
+  const bounds = menu.closest('.modal, .customer-card, .detail-card, .card') || document.documentElement;
+  const m = menu.getBoundingClientRect();
+  const b = bounds.getBoundingClientRect();
+  // A little slack so the menu never sits flush against the card's own edge.
+  if (m.right > b.right - 8) menu.classList.add('card-menu--flip');
+
   menu.querySelector('.card-menu-item')?.focus();
 }
 // Anywhere else, and Escape, put them away.

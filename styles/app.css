@@ -2581,15 +2581,24 @@ body.kc-win-dragging .kc-wgrip::after { opacity: 0.55; }
 .card-menu-chev { font-size: 9px; opacity: .7; }
 .card-menu-btn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-wash); }
 
-/* Above the card's own stacking context, and pinned to the button's end edge
-   so a menu opened by the last button cannot hang off the card. */
+/* Above the card's own stacking context. Opens from the button's START edge —
+   the reading direction — and flips to the END edge only when it would not
+   otherwise fit, which toggleCardMenu() measures on open.
+   It used to be pinned to the END edge unconditionally, with the comment "so a
+   menu opened by the last button cannot hang off the card". That fixed the last
+   button and broke the first: a 248px menu hanging leftward off a Contact
+   button sitting at the card's left edge, clipped by the card, which is what
+   the owner hit on 25 Aug. Both edges are the same bug; only measuring solves
+   it, and it solves it at any width and in either direction. */
 .card-menu {
-  display: none; position: absolute; top: calc(100% + 5px); inset-inline-end: 0; z-index: 20;
+  display: none; position: absolute; top: calc(100% + 5px); inset-inline-start: 0; z-index: 20;
   min-width: 248px; max-width: min(300px, 86vw); padding: 5px;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 10px; box-shadow: var(--shadow-2);
 }
 .card-menu.open { display: block; }
+/* Set by toggleCardMenu() when start-alignment would overflow the card. */
+.card-menu.card-menu--flip { inset-inline-start: auto; inset-inline-end: 0; }
 
 .card-menu-item {
   display: flex; align-items: flex-start; gap: 9px; width: 100%;
