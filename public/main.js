@@ -9264,7 +9264,6 @@ function cardToolMenus(c, isPage) {
   const GROUPS = [
     ['contact', 'chat', 'Contact', [
       ['email', 'Draft a reminder', `openDraftReminderModal('${id}')`, 'Written for you — nothing is sent'],
-      ['bot', 'AI reply', `openAiReplyModal('${id}')`, 'Draft a reply to their message'],
       ['telephone', 'Log a call or note', `openLogCommModal('${id}')`, 'Goes on their record'],
     ]],
     ['money', 'pound', 'Money', [
@@ -11172,115 +11171,6 @@ function waChaseCustomer(customerId) {
   if (!url) { toast('No usable phone number for WhatsApp.', 'warning'); return; }
   window.open(url, '_blank');
   recordComm(customerId, { type: 'message', text: 'Chase message opened in WhatsApp' });
-}
-
-// AI reply drafter — staff paste what a customer wrote; Gemini drafts a reply in
-// the shop's voice, informed by the same live account facts the reminder builder
-// uses. Nothing is sent — the draft is for staff to read, edit and copy. The
-// message text goes to Google (same privacy note as the AI Scan Reader).
-function customerContextForAi(c) {
-  const today = localISO();
-  const soon = localISO(new Date(Date.now() + 7 * 86400000));
-  const lines = [];
-  const owed = customerOwed(c);
-  if (owed > 0.005) lines.push(`Outstanding balance owed to the shop: ${fmtGbp(owed)}.`);
-  else if (owed < -0.005) lines.push(`Customer is in credit: ${fmtGbp(-owed)}.`);
-  for (const r of rentals.filter(r => r.customerId === c.id && r.status === 'overdue')) {
-    lines.push(`Rental phone ${r.phoneNumber || ''} is OVERDUE (was due back ${fmtDate(r.toDate)}).`);
-  }
-  // 'active' is the stored status for a phone that is with the customer right
-  // now — 'out' is the word the SCREEN shows, and it is not in the enum
-  // ('booked','active','overdue','returned'). Filtering on it matched nothing,
-  // so the AI drafter was told a customer holding a phone had no rental.
-  for (const r of rentals.filter(r => r.customerId === c.id && (r.status === 'active' || r.status === 'booked'))) {
-    lines.push(`Has a rental phone ${r.phoneNumber || ''} (${getComputedStatus(r)}) due back ${fmtDate(r.toDate)}.`);
-  }
-  for (const s of sims.filter(s => s.customerId === c.id && simLive(s) && s.renewalDate && s.renewalDate >= today && s.renewalDate <= soon)) {
-    lines.push(`SIM plan${s.provider ? ' (' + s.provider + ')' : ''} renews ${fmtDate(s.renewalDate)}.`);
-  }
-  for (const b of customerUpcomingBookings(c).filter(b => b.travelDate && b.travelDate >= today && b.travelDate <= soon)) {
-    lines.push(`Upcoming flight ${b.route || ''} on ${fmtDate(b.travelDate)}.`);
-  }
-  return lines.join('\n');
-}
-function openAiReplyModal(customerId) {
-  const c = customers.find(x => x.id === customerId);
-  if (!c) return;
-  showDynamicModal(`
-    <div class="modal-title"><i class="kc-ic kc-ic-chat" aria-hidden="true"></i> Draft a reply — ${escName(c.firstName)} ${escName(c.lastName)}</div>
-    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:10px;">Paste what the customer wrote and the AI drafts a reply in the shop's voice, using their account facts. <strong>Nothing is sent</strong> — read it, edit it, then copy. Don't paste passport/ID numbers (the text goes to Google).</div>
-    <div class="form-group form-full">
-      <label class="form-label">Customer's message</label>
-      <textarea class="form-input" id="airIn" rows="4" placeholder="Paste the ${WHATSAPP_ENABLED ? 'WhatsApp / ' : ''}SMS or email the customer sent…"></textarea>
-    </div>
-    <div class="form-grid" style="margin:4px 0 2px;">
-      <div class="form-group">
-        <label class="form-label">Tone</label>
-        <select class="form-input" id="airTone">
-          <option value="friendly">Friendly</option>
-          <option value="formal">Formal</option>
-          <option value="brief">Brief</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Language</label>
-        <select class="form-input" id="airLang">
-          <option value="auto">Match the customer</option>
-          <option value="en">English</option>
-          <option value="he">Hebrew</option>
-          <option value="yi">Yiddish</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group form-full" id="airOutWrap" style="display:none;">
-      <label class="form-label">Drafted reply <span style="color:var(--muted);font-weight:400;">— edit before copying</span></label>
-      <textarea class="form-input" id="airOut" rows="7" style="font-family:inherit;"></textarea>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-outline" onclick="closeDynamicModal()">Close</button>
-      <button class="btn btn-outline kc-ic kc-ic-sparkle" id="airGoBtn" onclick="runAiReply('${escHtml(String(customerId))}')">Draft reply</button>
-      <button class="btn btn-primary kc-ic kc-ic-clipboard" id="airCopyBtn" style="display:none;" onclick="copyAiReply('${escHtml(String(customerId))}')">Copy reply</button>
-    </div>
-  `);
-}
-async function runAiReply(customerId) {
-  const c = customers.find(x => x.id === customerId);
-  const incoming = document.getElementById('airIn')?.value.trim();
-  if (!c || !incoming) { toast('Paste the customer’s message first.', 'error'); return; }
-  const btn = document.getElementById('airGoBtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Drafting…'; }
-  try {
-    const r = await kcFetch('/api/ai-reply', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        incoming,
-        context: customerContextForAi(c),
-        customerName: `${c.firstName || ''} ${c.lastName || ''}`.trim(),
-        tone: document.getElementById('airTone')?.value || 'friendly',
-        lang: document.getElementById('airLang')?.value || 'auto',
-      }),
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.success) { toast(j.error || 'Could not draft a reply.', 'error'); return; }
-    const out = document.getElementById('airOut');
-    if (out) out.value = j.draft || '';
-    const wrap = document.getElementById('airOutWrap'); if (wrap) wrap.style.display = '';
-    const copyBtn = document.getElementById('airCopyBtn'); if (copyBtn) copyBtn.style.display = '';
-    if (btn) { btn.classList.add('kc-ic', 'kc-ic-sparkle'); btn.textContent = 'Redraft'; }
-  } catch {
-    toast('Could not reach the reply drafter.', 'error');
-  } finally {
-    if (btn) { btn.disabled = false; if (btn.textContent === 'Drafting…') { btn.classList.add('kc-ic', 'kc-ic-sparkle'); btn.textContent = 'Draft reply'; } }
-  }
-}
-async function copyAiReply(customerId) {
-  const text = document.getElementById('airOut')?.value || '';
-  if (!text.trim()) { toast('Nothing to copy yet.', 'warning'); return; }
-  try { await navigator.clipboard.writeText(text); toast('Reply copied — paste it wherever you message this customer.', 'success'); }
-  catch { toast('Select the text and copy it manually.', 'warning'); return; }
-  recordComm(customerId, { type: 'message', text: 'AI reply drafted & copied' });
-  closeDynamicModal();
 }
 
 // Status SMS for a single rental, drafted not sent (same HOLD as reminders:

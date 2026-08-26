@@ -59,8 +59,15 @@ test('a parked line is still a live line everywhere the app asks', () => {
   // The checks that used to hardcode 'active' now go through the helper. Count
   // stays a floor, not an exact number, so adding a new simLive call never
   // breaks this test — removing them is what it guards against.
+  //
+  // Floor moved 18 → 17 on 26 Aug, and only for the right reason. The AI reply
+  // drafter was removed at the owner's request, and its customerContextForAi()
+  // helper held one of the eighteen — it summarised a customer's live SIMs to
+  // send to Gemini. The CALLER went, not the check: no site that asks whether a
+  // line is live stopped asking. Verified before moving the number, by counting
+  // simLive in the removed block (exactly one) rather than by assuming.
   const uses = (MAIN_CODE.match(/simLive\(/g) || []).length
-  assert.ok(uses >= 18, `only ${uses} simLive uses — the liveness sweep has been unwound somewhere`)
+  assert.ok(uses >= 17, `only ${uses} simLive uses — the liveness sweep has been unwound somewhere`)
   assert.match(MAIN_CODE, /badge-renewal">Renewal due/)
 })
 
