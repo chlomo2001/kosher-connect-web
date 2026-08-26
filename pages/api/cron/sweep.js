@@ -32,6 +32,8 @@ import { requirementFor, coverageStatus, KNOWN_DESTINATIONS } from '../../../lib
 import { loadTravelRules } from '../../../lib/travelRulesDb.js'
 import { buildSimIndex, matchSimForMail, simMatchRow } from '../../../lib/simMailMatch.mjs'
 import { customerDrift, simDrift, rentalDrift, lineDrift } from '../../../lib/mappers.js'
+import { sendSms } from '../../../lib/sms.js'
+import { autoSmsGate, autoSmsBody, autoSmsKey, SMS_TRIGGERS } from '../../../lib/autoSms.mjs'
 
 const DEST_NAME = Object.fromEntries(KNOWN_DESTINATIONS.map(d => [d.code, d.name]))
 const RECORDABLE = new Set(['ESTA', 'ETA_CA', 'ETA_IL', 'ETIAS', 'ETA_UK'])
@@ -100,16 +102,64 @@ function fillTitle(tpl, fallback, name, n) {
   return base.replace(/\{name\}/g, name || '?').replace(/\{n\}/g, String(n))
 }
 
-// Evaluate every enabled automation rule. Returns the number of tasks raised.
+// Evaluate every enabled automation rule. Returns what it raised and, for the
+// rules that text, what it sent or would have sent.
+//
+// A rule's `action` decides which. 'create_task' is what every rule did until
+// 26 Aug and what all but two triggers can still do. 'send_sms' texts the
+// customer — and gets there through four locks, three of which are outside this
+// function: the rule has to carry the action, AUTO_SMS_LIVE has to be set, and
+// SMS_LIVE governs sendSms underneath as it does for a receipt. The fourth,
+// the quiet-day check, is here. See lib/autoSms.mjs.
 async function runCustomRules({ today, names, debtors = [] }) {
   const rules = await db.select('automation_rules', 'enabled=is.true')
   let raised = 0
+  const texts = { sent: 0, wouldSend: 0, skipped: 0, why: autoSmsGate(today).why, samples: [] }
   const keep = new Set() // references that should stay open after this run
 
   for (const rule of rules) {
     const n = Number(rule.threshold) || 0
     const priority = rule.priority || 'high'
-    const raise = async (entityId, title, customerUuid, dueDate) => {
+    const textsCustomer = rule.action === 'send_sms' && SMS_TRIGGERS.includes(rule.trigger)
+
+    // The SMS half. `fields` is what the message needs; the caller already has
+    // the row in hand, so nothing is re-read.
+    const text = async (entityId, customerUuid, fields) => {
+      const body = autoSmsBody(rule.trigger, fields)
+      if (!body) { texts.skipped++; return }
+      const gate = autoSmsGate(today)
+      if (!gate.send) {
+        // NOT armed, or a quiet day. Compose it anyway and keep a sample: a
+        // feature nobody has seen run is a feature nobody trusts, and the whole
+        // point of the dry run is that the owner can read a week of what it
+        // WOULD have said before switching it on.
+        texts.wouldSend++
+        if (texts.samples.length < 3) texts.samples.push(body)
+        return
+      }
+      // One text per customer per event, for ever — claimed BEFORE the send, so
+      // a retry or a second sweep in the same day cannot text twice. The key
+      // outlives the task: a closed and re-raised PASSPORT does not re-text.
+      const fresh = await db.claimKey(autoSmsKey(rule.id, entityId), { scope: 'auto-sms', customerId: customerUuid })
+      if (!fresh) { texts.skipped++; return }
+      const to = fields.phone
+      if (!to) { texts.skipped++; return }
+      // Through sendSms, never a provider: HOLD, TEST and the suppression list
+      // all behave exactly as they do for any other message the shop sends.
+      const r = await sendSms({ to, body, customerId: customerUuid }).catch(() => null)
+      if (r && r.success) texts.sent++
+      else {
+        texts.skipped++
+        // Release the key so a failed send can be retried tomorrow rather than
+        // being remembered as done.
+        await db.releaseKey(autoSmsKey(rule.id, entityId)).catch(() => {})
+      }
+    }
+
+    const raise = async (entityId, title, customerUuid, dueDate, fields = null) => {
+      // A texting rule does not also raise a task. The task exists to make a
+      // person do the thing; if the customer has been told, the thing is done.
+      if (textsCustomer && fields) { await text(entityId, customerUuid, fields); return }
       const reference = `RULE-${rule.id}-${entityId}`
       keep.add(reference)
       await upsertOpenTask({ reference, title, customerUuid, priority, dueDate,
@@ -144,18 +194,33 @@ async function runCustomRules({ today, names, debtors = [] }) {
         await raise(b.id, fillTitle(rule.task_title, `Flight in {n}d — {name} (${b.route})`, nm, n), b.customer_id, b.travel_date)
       }
     } else if (rule.trigger === 'passport_in_days') {
+      // travel_date and the phone come along only because a texting rule needs
+      // them; the task path ignores both. Asking for two more columns costs
+      // nothing and saves a second read per booking.
       const rows = await db.select('bookings',
-        `select=id,passenger,passport_expiry,customer_id,customers(first_name,last_name)&status=neq.Cancelled&passport_expiry=gte.${today}&passport_expiry=lte.${localDate(n)}`)
+        `select=id,passenger,passport_expiry,travel_date,customer_id,customers(first_name,last_name,phone_number)&status=neq.Cancelled&passport_expiry=gte.${today}&passport_expiry=lte.${localDate(n)}`)
       for (const b of rows) {
         const nm = b.passenger || (b.customers ? `${b.customers.first_name || ''} ${b.customers.last_name || ''}`.trim() : '?')
-        await raise(b.id, fillTitle(rule.task_title, `Passport expires in {n}d — {name}`, nm, n), b.customer_id, b.passport_expiry)
+        await raise(b.id, fillTitle(rule.task_title, `Passport expires in {n}d — {name}`, nm, n), b.customer_id, b.passport_expiry, {
+          // The customer's own name, not the passenger's: the text goes to the
+          // person whose phone it is, and on a family booking those differ.
+          name: b.customers ? `${b.customers.first_name || ''} ${b.customers.last_name || ''}`.trim() : nm,
+          when: displayDate(b.passport_expiry),
+          travel: b.travel_date ? displayDate(b.travel_date) : '',
+          phone: b.customers?.phone_number || '',
+        })
       }
     } else if (rule.trigger === 'sim_renewal_in_days') {
       const rows = await db.select('sims',
-        `select=id,provider,next_renewal_date,customer_id,customers(first_name,last_name)&status=eq.active&next_renewal_date=gte.${today}&next_renewal_date=lte.${localDate(n)}`)
+        `select=id,provider,next_renewal_date,customer_id,customers(first_name,last_name,phone_number)&status=eq.active&next_renewal_date=gte.${today}&next_renewal_date=lte.${localDate(n)}`)
       for (const s of rows) {
         const nm = s.customers ? `${s.customers.first_name || ''} ${s.customers.last_name || ''}`.trim() : '?'
-        await raise(s.id, fillTitle(rule.task_title, `SIM renews in {n}d — {name} (${s.provider || 'SIM'})`, nm, n), s.customer_id, s.next_renewal_date)
+        await raise(s.id, fillTitle(rule.task_title, `SIM renews in {n}d — {name} (${s.provider || 'SIM'})`, nm, n), s.customer_id, s.next_renewal_date, {
+          name: nm,
+          when: displayDate(s.next_renewal_date),
+          provider: s.provider || '',
+          phone: s.customers?.phone_number || '',
+        })
       }
     } else if (rule.trigger === 'checkin_due') {
       const rows = await db.select('bookings',
@@ -175,7 +240,7 @@ async function runCustomRules({ today, names, debtors = [] }) {
   // them and their tasks stayed open forever. audit C11.
   const open = await db.select('tasks', 'select=id,reference&done=is.false&reference=like.RULE-*')
   for (const t of open) if (!keep.has(t.reference)) await closeOpenTask(t.reference)
-  return raised
+  return { raised, texts }
 }
 
 async function handler(req, res) {
@@ -1001,7 +1066,14 @@ async function handler(req, res) {
     // Each enabled rule raises RULE-<ruleId>-<entityId> tasks for matching
     // records; keys not re-raised this run are closed. Built on the same
     // idempotent upsert as the fixed sweeps above.
-    counts.ruleTasks = await runCustomRules({ today, names, debtors })
+    const ruleRun = await runCustomRules({ today, names, debtors })
+    counts.ruleTasks = ruleRun.raised
+    // Reported, not swallowed. `texts.why` says which lock is shut — 'not-armed'
+    // until AUTO_SMS_LIVE is set, 'quiet-day' on Shabbos and yom tov — and
+    // `wouldSend` with its samples is the dry run: what the shop's customers
+    // WOULD have received. A feature that has never been seen run is a feature
+    // nobody trusts, which is the lesson the morning digest cost us.
+    counts.autoSms = ruleRun.texts
     })
 
     // If any section failed, return non-2xx so Vercel's cron dashboard/monitoring

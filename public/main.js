@@ -23776,9 +23776,12 @@ async function renderSettingsTab() {
   // ── Automations card (owner-only) — custom "when X, do Y" rules ──
   autoTriggers = autos?.triggers || autoTriggers;
   autoRulesCache = autos?.rules || [];
+  // Which triggers may text, straight from the server, so the form and the API
+  // can never disagree about which rules are allowed to message a customer.
+  if (autos?.success) window.__kcSmsTriggers = autos.smsTriggers || [];
   const automationsHtml = autos?.success ? settingsCard('automations', '<i class="kc-ic kc-ic-bot" aria-hidden="true"></i> Automations',
     `${autos.rules.length} rule${autos.rules.length === 1 ? '' : 's'} — run in the daily sweep`, `
-      <table><thead><tr><th>Rule</th><th>When</th><th>Raises</th><th>On</th><th></th></tr></thead>
+      <table><thead><tr><th>Rule</th><th>When</th><th>Does</th><th>On</th><th></th></tr></thead>
       <tbody>
         ${autos.rules.length === 0 ? `<tr><td colspan="5" style="color:var(--muted);font-size:var(--fs-body);padding:12px 16px;">No custom rules yet. The built-in sweeps (overdue, arrears, flights, passports, SIM renewals, VN billing) always run.</td></tr>` : ''}
         ${autos.rules.map(r => `
@@ -25917,13 +25920,51 @@ function openAutomationModal(id = null) {
         <label class="form-label">Task title <span style="color:var(--muted);font-weight:400;">(optional — {name} = customer, {n} = the number)</span></label>
         <input class="form-input" id="auTitle" value="${escHtml(r?.taskTitle || '')}" placeholder="Chase {name} — owes £{n}">
       </div>
+      ${/* Offered only where it is allowed. The server refuses the pairing too
+           (a debt rule may never text), but a control that appears and then
+           fails on save teaches people the app is unreliable. */''}
+      <div class="form-group form-full" id="auActionWrap" style="display:none;">
+        <label class="form-label">What it does</label>
+        <select class="form-input" id="auAction" onchange="auActionNote()">
+          <option value="create_task">Raise a task for us</option>
+          <option value="send_sms">Text the customer directly</option>
+        </select>
+      </div>
     </div>
-    <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;">The rule raises a task in the daily sweep for every matching customer, and closes it automatically when the condition clears.</div>
+    <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;" id="auNote">The rule raises a task in the daily sweep for every matching customer, and closes it automatically when the condition clears.</div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
       <button class="btn btn-primary kc-ic kc-ic-save" onclick="saveAutomation(${r ? `'${escHtml(r.id)}'` : 'null'})">Save rule</button>
     </div>
   `);
+  const act = document.getElementById('auAction');
+  if (act) act.value = r?.action || 'create_task';
+  const trig = document.getElementById('auTrigger');
+  if (trig) trig.addEventListener('change', auActionSync);
+  auActionSync();
+}
+
+// Only two triggers may text a customer — a passport expiring before a trip
+// and a SIM about to renew. Both were chosen because the fact is objective and
+// the customer is glad to hear it. The list comes from the server
+// (SMS_TRIGGERS in lib/autoSms.mjs) rather than being repeated here, so the
+// two can never disagree about which rules are allowed to message somebody.
+function auActionSync() {
+  const wrap = document.getElementById('auActionWrap');
+  const trig = document.getElementById('auTrigger');
+  if (!wrap || !trig) return;
+  const allowed = (window.__kcSmsTriggers || []).includes(trig.value);
+  wrap.style.display = allowed ? '' : 'none';
+  if (!allowed) { const a = document.getElementById('auAction'); if (a) a.value = 'create_task'; }
+  auActionNote();
+}
+function auActionNote() {
+  const note = document.getElementById('auNote');
+  const act = document.getElementById('auAction');
+  if (!note) return;
+  note.innerHTML = act && act.value === 'send_sms'
+    ? 'The daily sweep <strong>texts the customer</strong> — once each, never twice, and never on Shabbos or yom tov. It stays switched off until AUTO_SMS_LIVE is set on the server: until then the sweep writes down what it would have sent so you can read it first.'
+    : 'The rule raises a task in the daily sweep for every matching customer, and closes it automatically when the condition clears.';
 }
 
 async function saveAutomation(id) {
@@ -25934,6 +25975,7 @@ async function saveAutomation(id) {
     threshold: parseFloat(document.getElementById('auThreshold').value),
     priority: document.getElementById('auPriority').value,
     taskTitle: document.getElementById('auTitle').value.trim(),
+    action: document.getElementById('auAction')?.value || 'create_task',
   };
   if (!payload.name) { toast('Give the rule a name.', 'error'); return; }
   if (!Number.isFinite(payload.threshold)) { toast('Enter a threshold.', 'error'); return; }
