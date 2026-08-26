@@ -1235,26 +1235,47 @@ const SKY_CSS = `
     .sk-reveal,.js-on .sk-reveal:not(.in){opacity:1;transform:none;transition:none}
   }
 
-  /* WCAG 2.5.8 — 24×24. The footer's link columns are seven stacked standalone
-     links (Mobile & SIM, Questions, Privacy…) at a 22px line box with a 9px
-     gap: a list of thumb targets on the page most visitors meet on a phone.
-     The exception 2.5.8 grants to a link inside a sentence does not cover a
-     nav list. Scoped to a coarse pointer, matching the staff-side rule — the
-     case that matters is a touch device, not a narrow window. min-height only,
-     so the type and spacing are unchanged; each link grows by 2px. */
+  /* WCAG 2.5.5 — 44×44 on a coarse pointer. This block was written to 2.5.8's
+     24 and moved to 2.5.5's 44 on 26 Aug; the reasoning below is unchanged,
+     because every line of it was already an argument for a comfortable target
+     rather than a legal one.
+
+     The footer's link columns are seven stacked standalone links (Mobile & SIM,
+     Questions, Privacy…) at a 22px line box with a 9px gap: a list of thumb
+     targets on the page most visitors meet on a phone. The exception granted to
+     a link inside a sentence does not cover a nav list. Scoped to a coarse
+     pointer, matching the staff-side rule — the case that matters is a touch
+     device, not a narrow window. min-height only, so the type and spacing are
+     unchanged. */
   @media (pointer:coarse){
-    .sk-foot-col a{display:flex;align-items:center;min-height:24px}
-    .sk-brand{min-height:24px}
+    .sk-foot-col a{display:flex;align-items:center;min-height:44px}
+    .sk-brand{display:inline-flex;align-items:center;min-height:44px}
     /* The two standalone links under the services grid ("Choosing a handset?
        See the phone guide", "Something broken? Book a repair") are their own
        centred rows, not links inside a paragraph, so the exception does not
        reach them either. */
-    .sk-guide a{display:inline-flex;align-items:center;min-height:24px}
+    .sk-guide a{display:inline-flex;align-items:center;min-height:44px}
     /* The phone number and support address, in the "Visit us" block and again
        in the footer's brand column. Each stands alone in its own <p>, so the
        inline-in-a-sentence exemption does not reach them — and these two are
        what a customer taps when something has gone wrong. */
-    .sk-visit-row a, .sk-foot-brand a{display:inline-flex;align-items:center;min-height:24px}
+    .sk-visit-row a, .sk-foot-brand a{display:inline-flex;align-items:center;min-height:44px}
+    /* The rest of the front page's chrome, none of which a 24px floor ever
+       reached: the EN/HE switch (39×24), the phone-width nav strip under the
+       header (30px), the "how would you like us to reach you" chips on the
+       contact form (34px), and the two links under the app blurb (25px).
+       Every one of them is pressed by a customer on a handset — this page is
+       the shop's front door and barely anybody meets it on a desk. */
+    .sk-lang button{min-width:44px;min-height:44px}
+    .sk-mobnav a{display:inline-flex;align-items:center;min-height:44px}
+    .sk-reach-chip{min-height:44px}
+    .sk-appinfo-links a{display:inline-flex;align-items:center;min-height:44px}
+    /* Above 900px the phone strip is replaced by the desktop header — a
+       different set of elements, which is why measuring only at 390 said this
+       page was done. A 1280px touch screen is an iPad in landscape, not a
+       hypothetical. */
+    .sk-navlink{display:inline-flex;align-items:center;min-height:44px}
+    .sk-btn-sm{min-height:44px}
   }
   @media (max-width:960px){ .sk-foot-grid{grid-template-columns:1fr 1fr} }
   /* One column on phones. Two 130px-ish tracks made "International numbers"

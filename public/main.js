@@ -4371,7 +4371,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
       </div>
 
       <div class="form-group form-full" style="flex-direction:row;align-items:center;gap:10px;">
-        <input type="checkbox" id="rAddVN" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent);"
+        <input type="checkbox" id="rAddVN" style="cursor:pointer;accent-color:var(--accent);"
           onchange="document.getElementById('rVNSection').style.display=this.checked?'contents':'none'">
         <label for="rAddVN" style="font-size:var(--fs-ui);cursor:pointer;"><i class="kc-ic kc-ic-digits" aria-hidden="true"></i> Add Virtual Number</label>
       </div>
@@ -16196,7 +16196,7 @@ function openNewRepairModal(preselectCustomerId = null) {
       </div>
       <div class="form-group form-full" style="flex-direction:row;align-items:center;gap:10px;">
         <input type="checkbox" id="rpKC" onchange="rpKCToggle()"
-          style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent);">
+          style="cursor:pointer;accent-color:var(--accent);">
         <label for="rpKC" style="font-size:var(--fs-body);cursor:pointer;"><i class="kc-ic kc-ic-tag" aria-hidden="true"></i> Phone purchased at Kosher Connect — discounted prices
         </label>
       </div>

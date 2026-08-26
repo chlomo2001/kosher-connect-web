@@ -272,6 +272,8 @@ const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? proce
   const contrastAll = []
   const targetsBad = []
   const wantTargets = process.argv.includes('--targets')
+  // 24 is WCAG 2.5.8 (AA); --min 44 is 2.5.5 (AAA).
+  const minTarget = Number(arg('--min', 24))
 
   const theme = arg('--theme', 'light')
   if (!THEMES[theme]) throw new Error(`unknown --theme "${theme}" — one of ${Object.keys(THEMES).join(', ')}`)
@@ -373,12 +375,12 @@ const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? proce
         // rendering, page errors and RTL do. Widths are printed to be looked at
         // with that in mind, not treated as defects.
         if (wantTargets) {
-          const small = await p.evaluate(() => {
+          const small = await p.evaluate((need) => {
             const out = []
             document.querySelectorAll('a,button,input,select,textarea,[role="button"]').forEach((el) => {
               if (el.closest('[aria-hidden="true"]') || el.tabIndex < 0) return
               const r = el.getBoundingClientRect()
-              if (!r.width || !r.height || r.width >= 24 && r.height >= 24) return
+              if (!r.width || !r.height || r.width >= need && r.height >= need) return
               // WCAG 2.5.8 exempts a target that sits inline in a sentence.
               // Test that by looking at the ADJACENT TEXT NODES, not the whole
               // parent: a block parent almost always holds more text, which
@@ -398,12 +400,12 @@ const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? proce
               const lab = el.closest('label')
               if (lab && lab !== el) {
                 const lr = lab.getBoundingClientRect()
-                if (lr.width >= 24 && lr.height >= 24) return
+                if (lr.width >= need && lr.height >= need) return
               }
               out.push(`${Math.round(r.width)}x${Math.round(r.height)} ${el.textContent.trim().slice(0, 24) || el.className}`)
             })
             return [...new Set(out)]
-          })
+          }, minTarget)
           if (small.length) { targetsBad.push(`${page}/${lang}/${w}: ${small.join(' · ')}`) }
         }
         if (process.argv.includes('--contrast')) {
@@ -436,7 +438,7 @@ const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? proce
   if (process.argv.includes('--contrast')) bad += report(contrastAll, `the public pages (${arg('--theme', 'light')})`)
   if (wantTargets) {
     if (targetsBad.length) { bad += targetsBad.length; targetsBad.forEach((t) => console.log('✗ ' + t)) }
-    else console.log('no public target under 24x24 on a coarse pointer')
+    else console.log(`no public target under ${minTarget}x${minTarget} on a coarse pointer`)
   }
   console.log(bad ? `\n${bad} public-page check(s) failed` : '\nevery public page renders clean in both languages')
   await browser.close()

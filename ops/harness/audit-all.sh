@@ -6,7 +6,7 @@
 #   bash ops/harness/audit-all.sh            the full sweep — nightly
 #   bash ops/harness/audit-all.sh --smoke    ~90 seconds, before a ship
 #
-# TWO SPEEDS, and the reason for them. The full sweep is 31 checks and 37
+# TWO SPEEDS, and the reason for them. The full sweep is 32 checks and 45
 # browser launches, 25-30 minutes. It was being run inline in every session and
 # before every ship, which is how a check that is worth having becomes a check
 # people route around. From 24 Aug it runs ONCE A NIGHT (the "KC nightly full
@@ -105,8 +105,31 @@ run "staff app · sideways overflow, every tab, every width" \
 run "staff app · contrast, both themes" \
   bash -eo pipefail -c 'for t in light dark; do node ops/harness/render.mjs --contrast --theme $t --width 1280 | tail -1; done'
 
-run "staff app · touch targets (coarse pointer)" \
-  bash -eo pipefail -c 'node ops/harness/render.mjs --targets --width 390 | tail -1'
+# Touch targets, now at WCAG 2.5.5's 44×44 (AAA) rather than 2.5.8's 24 (AA).
+# Not a stricter version of the same line — a different question. 24 asks
+# whether a target can be hit; 44 is the width of an adult fingertip, which is
+# what somebody serving a customer with a phone in the other hand is working
+# with. The 24 run is dropped rather than kept beside it: everything it could
+# find, this finds.
+#
+# Four widths, because a viewport hides as much as it shows: at 390 the manual
+# is a contents block and the settings rail is collapsed; at 1280 the contents
+# block is a 30-row side rail and the rail is a column of 34px rows. Each half
+# hid the other from every sweep that had only ever run at one width, and a
+# 1280px touch screen is an iPad in landscape, not a hypothesis.
+run "staff app · touch targets, 44×44 (coarse pointer)" \
+  bash -eo pipefail -c 'for w in 320 390 1280 1750; do node ops/harness/render.mjs --targets --width $w --min 44 | tail -1; done
+           node ops/harness/render.mjs --targets --width 390 --fs largest --min 44 | tail -1'
+
+# …and inside the dialogs, which is where most of this app's controls actually
+# live and which nothing had ever measured for size. The page sweep renders a
+# static page, so all thirty-odd of them were invisible to it. The first run
+# found the close ✕ at 34×34 on EVERY dialog and the till's payment-method
+# buttons at 28px tall — the till being the one surface used standing up, on a
+# tablet, with somebody waiting.
+run "dialogs · touch targets, 44×44 (coarse pointer)" \
+  bash -eo pipefail -c 'for w in 320 390; do node ops/harness/modals.mjs --width $w --targets --min 44 | grep -v "^✓ "; done
+           node ops/harness/modals.mjs --width 390 --fs largest --targets --min 44 | grep -v "^✓ "'
 
 # Every everyday job still reachable by navigating AND by the palette. This sat
 # unwired until 25 Aug and printed a broken route nobody read — the break was in
@@ -265,7 +288,6 @@ run "tickets from email · into the booking form" \
 run "staff app · Simple Mode text sizes, every tab" \
   bash -eo pipefail -c 'for f in large largest; do node ops/harness/render.mjs --audit --width 390 --fs $f | tail -1; done
            node ops/harness/render.mjs --audit --width 320 --fs largest | tail -1
-           node ops/harness/render.mjs --targets --width 390 --fs largest | tail -1
            node ops/harness/render.mjs --audit --width 1750 --fs largest | tail -1
            node ops/harness/render.mjs --contrast --theme dark --width 1280 --fs largest | tail -1'
 
@@ -282,8 +304,8 @@ run "staff app · Simple Mode text sizes, every tab" \
 run "public pages · render + RTL, en and he" \
   bash -eo pipefail -c 'node ops/harness/public.mjs --width 320,390,1280 | grep -v "^✓ "'
 
-run "public pages · touch targets (coarse pointer)" \
-  bash -eo pipefail -c 'node ops/harness/public.mjs --targets --width 390 | grep -v "^✓ "'
+run "public pages · touch targets, 44×44 (coarse pointer)" \
+  bash -eo pipefail -c 'node ops/harness/public.mjs --targets --width 320,390,1280 --min 44 | grep -v "^✓ "'
 
 # All three states a public page can be painted in. dark-os is not a duplicate
 # of dark: /welcome and the legal shell carry their own prefers-color-scheme

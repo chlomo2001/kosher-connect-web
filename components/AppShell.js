@@ -364,7 +364,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
               <button type="button" className="kc-add-more" id="fAltPhoneAdd">+ Add another number</button>
               {WHATSAPP_ENABLED && (
                 <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 6, fontWeight: 400 }}>
-                  <input type="checkbox" id="fHasWhatsapp" style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+                  <input type="checkbox" id="fHasWhatsapp" style={{ accentColor: 'var(--accent)' }} />
                   <span className="kc-ic kc-ic-chat">Has WhatsApp</span>
                 </label>
               )}
@@ -454,7 +454,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
 
             <div className="form-group form-full">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                <input type="checkbox" id="fPassportOnFile" style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+                <input type="checkbox" id="fPassportOnFile" style={{ accentColor: 'var(--accent)' }} />
                 <span className="kc-ic kc-ic-passport">Passport photocopy held</span>
               </label>
             </div>
@@ -468,7 +468,7 @@ export default function AppShell({ initialTab = 'dashboard' }) {
                 yet, so it is set up later rather than asked for now. */}
             <div className="form-group form-full" id="fHouseGroup">
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                <input type="checkbox" id="fHouseEnabled" style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+                <input type="checkbox" id="fHouseEnabled" style={{ accentColor: 'var(--accent)' }} />
                 <span className="kc-ic kc-ic-card">House account — settle their wallet monthly on their saved card</span>
               </label>
               <div id="fHouseFields" style={{ display: 'none', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>

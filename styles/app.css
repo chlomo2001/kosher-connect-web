@@ -4888,7 +4888,15 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
    full-width rule rather than something hugging the text, so dropping it a
    pixel does not show. */
 @media (pointer: coarse) {
-  .kc-man-toc a { display: flex; align-items: center; min-height: 24px; }
+  /* 44, not 24 — WCAG 2.5.5. The manual's contents is a column of 27 links a
+     person scrolls with a thumb looking for one screen's name; 24px rows are
+     where the wrong one gets opened. */
+  .kc-man-toc a { display: flex; align-items: center; min-height: 44px; }
+  /* The side rail is the SAME list at a wider viewport, and measuring only at
+     390 never saw it: below 900px the rail is hidden and the contents block
+     shows, so each half hides the other from a single-width sweep. Thirty
+     34px rows on an iPad in landscape. */
+  .kc-man-rail-item { min-height: 44px; }
 }
 
 /* Pictures of the real app, built by scripts/build-manual-shots.mjs.
@@ -4930,12 +4938,15 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 }
 @media (max-width: 760px) { .kc-man-dialog { grid-template-columns: 1fr; } }
 .kc-man-dialog a:has(img) { display: block; }
-/* "See it full size" sits alone under the description, so WCAG 2.5.8's
+/* "See it full size" sits alone under the description, so the
    inline-in-a-sentence exemption does not cover it — it is a target on its own
    line and has to be one you can press. The micro type stays; the box around
-   it grows to a finger. */
+   it grows to a finger. 44 rather than 24 from 26 Aug: 2.5.5 (AAA) rather than
+   2.5.8 (AA), and this is the one link under a picture on a phone. It is set
+   unconditionally, not under `pointer: coarse`, because unlike a table row
+   there is nothing here that a taller box costs. */
 .kc-man-fullsize {
-  display: inline-flex; align-items: center; min-height: 24px;
+  display: inline-flex; align-items: center; min-height: 44px;
   font-size: var(--fs-micro); color: var(--muted);
 }
 .kc-man-dialog a img:hover { border-color: var(--primary, var(--text)); }
@@ -5370,3 +5381,154 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 /* The first group sits directly under the table head, which already draws its
    own rule — two hairlines together read as a mistake. */
 .kc-biz-head:first-child td { border-top: 0; }
+
+/* ── The counter tablet: WCAG 2.5.5 (AAA), 44×44 ─────────────────────────
+   globals.css already declares this floor — `.btn, .form-input, select {
+   min-height: 44px }` under (pointer: coarse), written when the touch audit
+   went in. It has never applied to a small button or a filter select, because
+   `.btn-sm` (34px), `.btn-sm.btn-primary` (26px) and `.kc-fs-sel`
+   (min-height: 0) sit in THIS sheet, which loads second — the same tie decided
+   by file order that `.tm-pick-col input` carries a note about 3,000 lines up.
+   Nothing went red over it: at 34px they cleared 2.5.8's 24px floor
+   comfortably, and 24 was all the sweep asked for.
+
+   So this block is not a new policy. It is the policy already written, stated
+   where it can win, and now measured: `node ops/harness/render.mjs --targets
+   --width 390 --min 44`.
+
+   Scoped to `pointer: coarse` and nothing else. On a desk with a mouse the
+   sizes above are deliberate and stay — a 44px floor on every row action would
+   double the height of every table, and the owner asked for dense tables. The
+   case this serves is the counter tablet: a thumb, one-handed, while somebody
+   is standing at the till waiting. 44 is the figure Apple and Google both
+   publish and it is the width of an adult fingertip; 24 only ever meant "you
+   can hit it if you are careful", which is not the state anybody serving a
+   customer is in. */
+@media (pointer: coarse) {
+  /* Buttons. The two-class primary/danger rules need two classes back, or
+     they keep their 26px on specificity rather than on merit. */
+  .btn-sm { min-height: 44px; }
+  .btn-sm.btn-primary, .btn-primary.btn-sm,
+  .btn-sm.btn-danger, .btn-danger.btn-sm { min-height: 44px; }
+  /* Row actions and the chips beside them. These were 40 — close enough to
+     pass at AA and not close enough to be comfortable. */
+  .action-btn, .card-tool, .task-mini, .cm-chip, .kc-view-save,
+  .kc-view-chip, .kc-view-chip button { min-height: 44px; }
+  .action-btn, .card-tool { min-width: 44px; }
+  /* Filter and sort selects. `min-height: 0` is there so the control can
+     shrink to its label at 320px — a WIDTH argument, which is why it may keep
+     the width half and give the height back. */
+  .kc-fs-sel { min-height: 44px; }
+  /* A name in a table cell is not a link in a sentence, so 2.5.5's inline
+     exception does not reach it — and on this app it is the main way a person
+     opens a customer. The row grows; on a tablet that is the right trade. */
+  .kc-namelink, a.dash-link, span.dash-link { display: inline-flex; align-items: center; min-height: 44px; }
+  /* Whole rows that are one big button: the dashboard's headline row and each
+     line of the activity feed. */
+  .dash-hero-row, .feed-item.dash-link { min-height: 44px; }
+  /* Settings' section rail and the wallet history rows. Both only appear on a
+     wide screen — the rail collapses below 1100px and the history list is a
+     two-column layout — so neither had ever been in front of a sweep run at
+     390. A 1280px touch screen is an iPad in landscape. */
+  .rail-item, .history-item { min-height: 44px; }
+  /* The panel resize grip keeps its 13px mark and gets a fingertip around it —
+     the drawn corner is a ::after, so the box can grow without the screen
+     changing. */
+  .kc-grip { width: 44px; height: 44px; }
+  /* An icon-only button is 44 tall and 35 wide, which is a target 20% short in
+     the direction nobody looked. A floor on the other axis costs nothing:
+     every button with a word in it is already wider than this. */
+  .btn, .cm-chip { min-width: 44px; }
+
+  /* ── inside the dialogs ──
+     `node ops/harness/modals.mjs --targets --min 44` is new tonight, and it
+     answers a question nothing here had ever asked: the page sweep renders a
+     static page, so the thirty-odd dialogs — which is where most of this app's
+     controls actually live — had never been measured for size at all.
+
+     The first run found the close ✕ at 34×34 on EVERY dialog, and the till's
+     payment-method and note buttons at 28px tall. The till is the counter
+     surface: it is used standing up, on a tablet, with a customer waiting, and
+     its buttons were the smallest things in the app. */
+  .modal-x { min-width: 44px; min-height: 44px; }
+  .pos-method, .pos-note, .pos-cat, .pos-tile { min-height: 44px; }
+  .biz-tab, .kc-subtab, .card-menu-btn, .kc-cat-chip, .dup-name,
+  .kc-undo-btn, .palette-item, .rd-act, .cs-btn, .eq-btn, .kc-rowmenu-item,
+  .kc-add-more, .card-action {
+    min-height: 44px;
+  }
+  .pos-note { min-width: 44px; }
+  /* The customer's phone and email, on the card and again on the full page.
+     They are facts on their own line, not links in a sentence — and they are
+     what somebody presses to ring a customer back. 20px and 16px. */
+  .detail-meta a, .kc-id-value a { display: inline-flex; align-items: center; min-height: 44px; }
+  /* The returned/not-returned slider. Its two halves are absolutely positioned
+     to fill the track, so the track is what has to grow — sizing the halves
+     would leave them hanging out of it. */
+  .eq-slide-track { min-height: 44px; }
+  /* The customer search box was never in the floor's selector list at all. */
+  .search-box { min-height: 44px; }
+  /* …and the 71 inline `min-height:0` in the Kol Torah tables, the till and
+     the carrier lists. An inline style cannot be outranked, only overridden —
+     the same lever `.kc-stack-sm td` needs 4,000 lines up, and for the same
+     reason. They were written to keep a table row compact on a desk, which is
+     a fine thing to want and not a thing to want under a thumb. */
+  .form-input { min-height: 44px !important; }
+
+  /* Checkboxes and radios, the last thing standing between this app and 2.5.5.
+     They were 24×24 — the AA floor, and the one control on the counter tablet
+     that is genuinely fiddly: the row-select boxes down the side of Rentals,
+     SIMs, Bookings, Virtual Numbers and the two mail lists, and the tick that
+     marks a task done.
+
+     Simply setting them to 44×44 was tried first and looks wrong — a native
+     checkbox does not scale its tick with its box, so what you get beside a
+     15px label is a large empty square that reads as an unfilled text field.
+     The screenshot is what settled it.
+
+     So the BOX grows to 44 and the CONTROL stays 24, drawn here. That is what
+     the criterion actually asks for: 2.5.5 measures the target — the region
+     that accepts the pointer — not the ink. `appearance: none` is the price,
+     and it is confined to `pointer: coarse`, so every mouse keeps the browser's
+     own checkbox and this paint has one device to be right on.
+
+     :indeterminate is not decoration — two select-all boxes (rentals, SIMs)
+     set it from JS when some rows in view are picked. Under `appearance: none`
+     the browser stops drawing that state, so it is drawn here or it is gone. */
+  input[type="checkbox"], input[type="radio"] {
+    appearance: none; -webkit-appearance: none;
+    width: 44px; height: 44px; margin: 0; padding: 0; border: 0;
+    background: none; position: relative; cursor: pointer; flex: none;
+  }
+  input[type="checkbox"]::before, input[type="radio"]::before {
+    content: ''; position: absolute; inset: 10px; box-sizing: border-box;
+    border: 1.5px solid var(--border-input); border-radius: 5px;
+    background: var(--surface);
+  }
+  input[type="radio"]::before { border-radius: 50%; }
+  input[type="checkbox"]:checked::before,
+  input[type="checkbox"]:indeterminate::before,
+  input[type="radio"]:checked::before {
+    background: var(--accent); border-color: var(--accent);
+  }
+  /* The tick: two borders of a rotated box, so it follows currentColor-ish
+     tokens rather than shipping an image that cannot follow the theme. */
+  input[type="checkbox"]:checked::after {
+    content: ''; position: absolute; left: 17px; top: 19px;
+    width: 10px; height: 5px;
+    border: 2px solid var(--on-accent); border-top: 0; border-right: 0;
+    transform: rotate(-45deg);
+  }
+  input[type="checkbox"]:indeterminate::after {
+    content: ''; position: absolute; left: 16px; top: 21px;
+    width: 12px; height: 2px; background: var(--on-accent);
+  }
+  input[type="radio"]:checked::after {
+    content: ''; position: absolute; inset: 17px;
+    border-radius: 50%; background: var(--on-accent);
+  }
+  input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: -6px; border-radius: 8px;
+  }
+  input[type="checkbox"]:disabled, input[type="radio"]:disabled { cursor: not-allowed; opacity: .5; }
+}

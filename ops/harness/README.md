@@ -6,7 +6,7 @@ bash ops/harness/audit-all.sh --smoke # ~90s — run this before a ship
 bash ops/harness/audit-all.sh         # every check below; ~25-30 min, runs nightly
 ```
 
-**Two speeds, since 24 Aug.** The full sweep is 31 checks and 37 browser
+**Two speeds, since 24 Aug.** The full sweep is 32 checks and 45 browser
 launches. It was being run inline in every session and before every ship, and
 half an hour is how a check that is worth having turns into a check people
 route around. It now runs **once a night** — the "KC nightly full audit"
@@ -53,9 +53,32 @@ wash over a card is where this goes wrong, and `getComputedStyle` alone will not
 tell you. It applies the 4.5:1 threshold, or 3:1 for large text.
 
 `--targets` runs the page with a coarse pointer and lists anything interactive
-under WCAG 2.5.8's 24×24 CSS px. Coarse on purpose: the rules that enlarge these
-are scoped to `pointer: coarse`, because the case that matters is the counter
+under a minimum target size. Coarse on purpose: the rules that enlarge these are
+scoped to `pointer: coarse`, because the case that matters is the counter
 tablet, not a narrow window.
+
+`--min` sets that size. The default 24 is **WCAG 2.5.8 (AA)**; `--min 44` is
+**2.5.5 (AAA)**, and the nightly sweep runs 44 — the whole app cleared it on
+26 Aug. `modals.mjs` and `public.mjs` take the same two flags, and between them
+that is every surface: the tabs, the thirty-odd dialogs, and the thirteen public
+pages in both languages.
+
+The difference between 24 and 44 is one of kind, not degree. 24 is the size
+below which a target *fails*; 44 is the width of an adult fingertip and is what
+somebody serving a customer with a phone in the other hand is actually working
+with. Getting there found things a 24px floor could never have: a 44px floor had
+been *written* for `pointer: coarse` since the touch audit went in and had never
+applied to a small button or a filter select, because `.btn-sm` (34px) and
+`.kc-fs-sel` (`min-height: 0`) sit in the sheet that loads second. Nothing went
+red over it — at 34px they cleared 24 comfortably. Below that were 71 inline
+`min-height: 0` in the Kol Torah tables and the till, which no stylesheet can
+outrank at all.
+
+Run the three widths. A viewport hides as much as it shows: at 390 the manual
+is a contents block and Settings' section rail is collapsed; at 1280 the
+contents block *is* a 30-row side rail. Each half hid the other from every sweep
+that had only ever run at one width — and a 1280px touch screen is an iPad in
+landscape, not a hypothesis.
 
 Two traps, both already paid for:
 

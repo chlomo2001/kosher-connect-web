@@ -289,15 +289,21 @@ export async function contrast(page, tabs = TABS) {
   return findings
 }
 
-// Interactive things smaller than WCAG 2.5.8's 24×24 CSS px. Run the page with
-// a coarse pointer, since that is the counter tablet and the rules that bump
+// Interactive things smaller than a minimum target size. Run the page with a
+// coarse pointer, since that is the counter tablet and the rules that bump
 // these are scoped to `pointer: coarse`.
-export async function targets(page, tabs = TABS) {
+//
+// The default 24 is WCAG 2.5.8 (AA). Pass 44 for 2.5.5 (AAA), which is a
+// difference in kind rather than degree: 24 says you can hit it, 44 is the
+// width of an adult fingertip and is what somebody serving a customer with a
+// phone in the other hand actually needs. `--min 44` is how the counter
+// surfaces are measured.
+export async function targets(page, tabs = TABS, minSize = 24) {
   const found = []
   for (const tab of tabs) {
     await page.evaluate((t) => window.renderTab(t), tab).catch(() => {})
     await page.waitForTimeout(280)
-    found.push(...await page.evaluate((tab) => {
+    found.push(...await page.evaluate(([tab, need]) => {
       const out = []
       document.querySelectorAll('#mainContent button, #mainContent a[href], #mainContent input, #mainContent select, #mainContent [role="button"]').forEach((el) => {
         const cs = getComputedStyle(el)
@@ -305,13 +311,13 @@ export async function targets(page, tabs = TABS) {
         const r = el.getBoundingClientRect()
         if (!r.width || !r.height) return
         const min = Math.min(Math.round(r.width), Math.round(r.height))
-        if (min >= 24) return
+        if (min >= need) return
         out.push({ tab, min, w: Math.round(r.width), h: Math.round(r.height),
           sel: el.tagName.toLowerCase() + (el.className ? '.' + String(el.className).trim().split(/\s+/)[0] : ''),
           text: (el.textContent || el.value || el.getAttribute('aria-label') || '').trim().slice(0, 22) })
       })
       return out
-    }, tab))
+    }, [tab, minSize]))
   }
   return found
 }
@@ -327,6 +333,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', env: BROWSER_ENV })
     const width = Number(arg('--width', process.argv.includes('--audit') ? 390 : 1280))
     const theme = arg('--theme', 'light')
+    // 24 is WCAG 2.5.8 (AA); --min 44 is 2.5.5 (AAA).
+    const minTarget = Number(arg('--min', 24))
     const ctx = await browser.newContext({ locale: 'en-GB', viewport: { width, height: 900 }, colorScheme: theme, hasTouch: process.argv.includes('--targets') })
     // Simple Mode's text-size steps (docs/DESIGN.md §Type). The third dimension
     // beside width and theme, and the one most likely to break a layout: every
@@ -355,7 +363,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
     if (process.argv.includes('--targets')) {
       const seen = new Map()
-      for (const f of await targets(page)) {
+      for (const f of await targets(page, TABS, minTarget)) {
         const k = `${f.sel}|${f.min}`
         if (!seen.has(k)) seen.set(k, { ...f, tabs: new Set() })
         seen.get(k).tabs.add(f.tab)
@@ -364,7 +372,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       for (const r of rows) {
         console.log(`✗ ${String(r.min).padStart(3)}px min  ${(r.w + '×' + r.h).padEnd(9)} ${r.sel.padEnd(22)} "${r.text}"  [${[...r.tabs].slice(0, 4).join(' ')}]`)
       }
-      console.log(rows.length ? `\n${rows.length} distinct target(s) under 24×24 at ${width}px${fsNote}` : `\nno target under 24×24 at ${width}px${fsNote}`)
+      const box = `${minTarget}×${minTarget}`
+      console.log(rows.length ? `\n${rows.length} distinct target(s) under ${box} at ${width}px${fsNote}` : `\nno target under ${box} at ${width}px${fsNote}`)
       findings = rows.length
     } else if (process.argv.includes('--contrast')) {
       const found = await contrast(page)

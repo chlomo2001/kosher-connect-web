@@ -220,7 +220,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const file = buildAppHtml()
   const chromium = loadChromium()
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', env: BROWSER_ENV })
-  const ctx = await browser.newContext({ locale: 'en-GB', viewport: { width, height: 844 }, colorScheme: theme })
+  // --targets needs a touch device: every rule that enlarges a control is
+  // scoped to `pointer: coarse`, so a fine-pointer run measures the desk sizes
+  // and reports the tablet as broken.
+  const ctx = await browser.newContext({ locale: 'en-GB', viewport: { width, height: 844 }, colorScheme: theme,
+    hasTouch: process.argv.includes('--targets') })
   const page = await ctx.newPage()
   page.on('pageerror', (e) => console.log('  pageerror:', String(e).split('\n')[0]))
   await page.goto('file://' + file, { waitUntil: 'load' })
@@ -245,6 +249,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   let bad = 0
   const contrastAll = []
   const wantContrast = process.argv.includes('--contrast')
+  // Touch targets INSIDE a dialog. The page-level sweep renders a static page,
+  // so the thirty-odd dialogs — which is where most of this app's form controls
+  // actually live, the till included — had never been measured for size at all.
+  // Same shape as the contrast check beside it, and for the same reason.
+  // 24 is WCAG 2.5.8 (AA), --min 44 is 2.5.5 (AAA).
+  const wantTargets = process.argv.includes('--targets')
+  const minTarget = Number(arg('--min', 24))
+  const targetsAll = []
   for (const [name, tab, js, root, closer] of [...MODALS, ...TRANSIENTS]) {
     if (only && name !== only) continue
     await page.evaluate((t) => window.renderTab(t), tab).catch(() => {})
@@ -283,6 +295,29 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         .map((f) => ({ ...f, where: `${name}/${theme}` }))
       contrastAll.push(...found)
     }
+    if (wantTargets) {
+      const small = await page.evaluate(([sel, need]) => {
+        const cards = [...document.querySelectorAll(sel || '.modal-content, .modal-card, .modal, [role="dialog"], .kc-cpage')]
+          .filter((el) => el.getBoundingClientRect().width && !el.closest('.hidden'))
+        const el = cards[cards.length - 1]
+        if (!el) return []
+        const out = []
+        el.querySelectorAll('a[href],button,input,select,textarea,[role="button"]').forEach((k) => {
+          if (k.type === 'hidden' || k.getAttribute('aria-hidden') === 'true' || k.tabIndex < 0) return
+          const r = k.getBoundingClientRect()
+          if (!r.width || !r.height || (r.width >= need && r.height >= need)) return
+          // Pressed through its label, the way public.mjs already allows.
+          const lab = k.closest('label')
+          if (lab && lab !== k) {
+            const lr = lab.getBoundingClientRect()
+            if (lr.width >= need && lr.height >= need) return
+          }
+          out.push(`${Math.round(r.width)}×${Math.round(r.height)} ${k.tagName.toLowerCase()}${k.className ? '.' + String(k.className).trim().split(/\s+/)[0] : ''}`)
+        })
+        return [...new Set(out)]
+      }, [root, minTarget])
+      if (small.length) targetsAll.push(`${name}: ${small.slice(0, 6).join(' · ')}`)
+    }
     await page.screenshot({ path: path.join(HERE, `modal_${name}_${theme}_${width}${fsSize === 'standard' ? '' : '_' + fsSize}.png`), fullPage: false })
     const flags = []
     if (geo.offRight || geo.offLeft) flags.push(`off-screen L${geo.offLeft}/R${geo.offRight}`)
@@ -315,6 +350,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // failure(s)". Two numbers for one answer, and the louder one was wrong.
   // (public.mjs had the mirror image of this bug: it threw the return away.)
   if (wantContrast) { bad += report(contrastAll, `the modals (${theme})`) }
+  if (wantTargets) {
+    if (targetsAll.length) { bad += targetsAll.length; targetsAll.forEach((t) => console.log('✗ ' + t)) }
+    else console.log(`no target in any dialog under ${minTarget}×${minTarget} on a coarse pointer`)
+  }
   await browser.close()
   // "modal(s)" was wrong too once contrast joined the count: a contrast failure
   // is a finding inside a dialog, not a dialog.

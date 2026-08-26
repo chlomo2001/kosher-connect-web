@@ -75,12 +75,18 @@ export const LEGAL_CSS = `
   .legal-foot a{color:var(--muted);text-decoration:none;margin:0 2px}
   .legal-foot a:hover{color:var(--link);text-decoration:underline}
   .legal-legal{font-size:12.5px;margin-top:10px;line-height:1.6}
-  /* WCAG 2.5.8 — 24x24 on a coarse pointer. These six stand alone on their own
+  /* WCAG 2.5.5 — 44x44 on a coarse pointer. These six stand alone on their own
      line (the footer's separator is a middot, not prose), so the inline
      exemption the in-sentence tel:/mailto: links get does not reach them.
      Coarse pointer and min-height only: type, colour and spacing unchanged,
-     and the desktop layout is untouched. */
+     and the desktop layout is untouched.
+     It was 24 — the AA floor — until 26 Aug. globals.css sets 44 for this same
+     list now, and loses: this sheet is a styled-jsx block, which the framework
+     emits after the stylesheets. Restated here, where it can win. */
   @media (pointer:coarse){
-    .legal-home,.legal-foot a{display:inline-block;min-height:24px;line-height:24px}
+    .legal-home,.legal-foot a{display:inline-flex;align-items:center;justify-content:center;min-height:44px}
+    /* "Terms" and "Home" are 41px wide at this type size — a target short in
+       the direction the height fix never looked at. */
+    .legal-foot a{min-width:44px}
   }
 `

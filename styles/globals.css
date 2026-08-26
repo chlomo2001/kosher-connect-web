@@ -597,7 +597,10 @@ input[type="checkbox"], input[type="radio"] {
   }
   .action-btn, .card-tool, .task-mini { min-height: 40px; }
   .action-btn, .card-tool { min-width: 40px; }
-  /* A 13px checkbox is the browser default and is genuinely hard to hit. */
+  /* A 13px checkbox is the browser default and is genuinely hard to hit.
+     app.css raises these to a 44×44 target with a 24px control drawn inside —
+     see the 2.5.5 block at the end of that sheet for why the box and the ink
+     had to come apart. */
   input[type="checkbox"], input[type="radio"] { width: 24px; height: 24px; }
   /* Inline clickable spans (task cards' 👤 customer link rides an 11px meta
      line) — grow the line box to a hittable height on touch only. */
@@ -628,6 +631,36 @@ input[type="checkbox"], input[type="radio"] {
      shape 2.5.8's inline exemption does not cover. Measured 76×13 / 89×13 by
      `node ops/harness/public.mjs --targets`. */
   .login-legal a { display: inline-flex; align-items: center; min-height: 24px; }
+
+  /* ── 2.5.5 (AAA), 26 Aug ────────────────────────────────────────────────
+     Every floor above was set to 24 — WCAG 2.5.8, Level AA. Measured against
+     2.5.5's 44 (`node ops/harness/public.mjs --targets --min 44`) the same
+     links come back, and the reasoning each of them carries above is an
+     argument for 44 rather than for 24: a standalone call to action, the only
+     way out of a page, the thing somebody taps when it has gone wrong. None of
+     those get easier at 24px on a phone. So the floor moves, in one place, and
+     the notes above stay true.
+
+     `min-height` still, not `height`: nothing here is stretched wider than its
+     label, and a link that already clears 44 is untouched. */
+  span.dash-link, .pg-call, .tool-back, .pd-foot a, .w-footer-bottom a,
+  .login-legal a, .legal-home, .legal-foot a {
+    display: inline-flex; align-items: center; min-height: 44px;
+  }
+  /* The theme toggle is a 38×38 square on every public page and on the app's
+     own top bar — six pixels short in both directions, which is exactly the
+     kind of near-miss that survives a 24px floor forever. */
+  .theme-toggle { min-width: 44px; min-height: 44px; }
+  /* The shared public top bar (/phone-guide, /repair) and the portal's own.
+     The brand link measured 109×26, the EN/HE pill 43×29 and "My account"
+     98×36 — the whole strip of chrome a customer meets first, and every part
+     of it short. `.w-lang` is a segmented pill with a divider between the two
+     halves, so the min-width goes on the buttons rather than the group, or the
+     divider stops falling between them. */
+  .w-brand-link, .w-pills a { display: inline-flex; align-items: center; min-height: 44px; }
+  .w-lang button { min-width: 44px; min-height: 44px; }
+  /* The portal's language switch, the same control in a different hand. */
+  .pd-chip { min-width: 44px; min-height: 44px; }
 }
 
 /* ─── TOAST ─── */
