@@ -86,7 +86,11 @@ export default function Login({ supabaseUrl, googleEnabled }) {
         <form className="login-card" onSubmit={ticket ? submitCode : submit}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <img src="/logo-full-tight.png" alt="Kosher Connect" style={{ height: 44, marginBottom: 12 }} />
-            <div className="login-title">Welcome back</div>
+            {/* An h1, not a div. The page had no heading at all, so heading
+                navigation found nothing and a screen-reader user arrived with
+                no way to orient. The class carries the look; the tag carries
+                the meaning. */}
+            <h1 className="login-title">Welcome back</h1>
             <div className="login-sub">{ticket ? 'Check your email for your code' : 'Sign in to Kosher Connect'}</div>
             <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8, letterSpacing: '0.02em', lineHeight: 1.5 }}>
               {/* Deliberate two-line lockup: the full list never fits the card

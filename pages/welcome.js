@@ -662,7 +662,7 @@ export default function Welcome() {
                             : undefined,
                         } : {})}>
                         <div className="sk-tile-ico" aria-hidden="true"><Icon /></div>
-                        <h4>{m.title}</h4>
+                        <h3>{m.title}</h3>
                         <p>{m.body}</p>
                         {m.linkLabel && <span className="sk-tile-cta">{m.linkLabel}</span>}
                       </Tag>
@@ -906,7 +906,7 @@ const SKY_CSS = `
     font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
   .sk a{color:inherit;text-decoration:none}
   .sk-wrap{max-width:var(--sk-maxw);margin:0 auto;padding:0 24px}
-  .sk h1,.sk h2,.sk h4{font-family:var(--sk-fdisp);font-weight:800;letter-spacing:-.028em;margin:0;line-height:1.05}
+  .sk h1,.sk h2,.sk h3{font-family:var(--sk-fdisp);font-weight:800;letter-spacing:-.028em;margin:0;line-height:1.05}
   .sk-eyebrow{font-family:var(--sk-fbody);font-weight:700;font-size:12.5px;letter-spacing:.14em;
     text-transform:uppercase;color:var(--sk-sky);display:block;margin-bottom:14px}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-eyebrow{color:var(--sk-sky-bright)}}
@@ -1093,7 +1093,7 @@ const SKY_CSS = `
   :root[data-theme="dark"] .sk-tile-ico{color:var(--sk-sky-bright)}
   @media (prefers-color-scheme:dark){:root:not([data-theme]) .sk-tile-ico{color:var(--sk-sky-bright)}}
   .sk-tile-ico svg{width:100%;height:100%}
-  .sk-tile h4{font-size:18px;margin:0 0 8px}
+  .sk-tile h3{font-size:18px;margin:0 0 8px}
   .sk-tile p{color:var(--sk-muted);font-size:14.5px;margin:0}
   .sk-guide{text-align:center;margin-top:30px}
   .sk-guide a{color:var(--sk-sky);font-weight:700}

@@ -179,7 +179,7 @@ export default function PhoneGuide() {
                     <header className="pg-row-head">
                       <div className="pg-name">
                         <span className="w-icon" aria-hidden="true"><FlipPhoneIcon /></span>
-                        <h3><bdi dir="ltr">{m.name}</bdi></h3>
+                        <h2><bdi dir="ltr">{m.name}</bdi></h2>
                       </div>
                       <div className="pg-price">{m.price != null ? `£${Number(m.price) % 1 === 0 ? Number(m.price) : Number(m.price).toFixed(2)}` : t.askInShop}</div>
                     </header>

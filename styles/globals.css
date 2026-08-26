@@ -708,7 +708,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
      (the shell clips overflow for the mesh). Let the card scroll itself. audit U14. */
   max-height: calc(100vh - 48px); overflow-y: auto;
 }
-.login-title { font-size: var(--fs-display-3); font-weight: 300; letter-spacing: -0.5px; color: var(--text); }
+.login-title { font-size: var(--fs-display-3); font-weight: 300; letter-spacing: -0.5px; color: var(--text); margin: 0; }
 .login-sub { font-size: var(--fs-body); font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); margin-top: 6px; }
 @keyframes dashPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.28; transform: scale(0.66); } }
 @keyframes svcFloatIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -972,7 +972,12 @@ html { scroll-behavior: smooth; }
 .pg-row { padding: 20px 22px; }
 .pg-row-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .pg-name { display: flex; align-items: center; gap: 12px; }
-.pg-name h4 { margin: 0; font-size: 17px; }
+/* h2, and it matters that it matches: this said `h4` while the markup said
+   `h3`, so the rule had never applied and the handset name rendered at the
+   browser's default heading size. Found 26 Aug fixing the heading order —
+   the name is an h2 now (it sits directly under the page h1) and the rule
+   reaches it for the first time. */
+.pg-name h2 { margin: 0; font-size: 17px; }
 .pg-price {
   font-size: 19px; font-weight: 300; letter-spacing: -0.3px; color: var(--text);
   font-variant-numeric: tabular-nums; white-space: nowrap;
