@@ -148,8 +148,25 @@ The failure mode is that `main` silently stops deploying. Prepare the
 destination before moving anything.
 
 1. **Install the GitHub Apps on the destination account first**: Vercel, and
-   Claude. github.com → destination account → Settings → Applications →
-   Installed GitHub Apps.
+   Claude. github.com → destination account → Settings → Applications.
+
+   **"Authorized" is not "Installed", and the difference is the whole step.**
+   Checked on 26 Aug, `earothbart-ai` had Claude under *Installed GitHub Apps*
+   and Vercel only under *Authorized GitHub Apps*, marked "Never used" — a
+   leftover from signing in to Vercel with GitHub once. An authorization is
+   account-level OAuth and grants nothing over repositories; an installation is
+   what lets the app reach them. Transferring with Vercel merely authorised
+   produces exactly the failure this step exists to prevent: `main` stops
+   deploying, the site keeps serving the last good build, and nothing says why.
+
+   Install Vercel from `github.com/apps/vercel` → **Install** → the destination
+   account. An installation is per-account, so the one on `psic770-ai` — the
+   one deploying the shop today — does not travel with the repo.
+
+   Then press **Configure** on each and check **Repository access**. "Only
+   select repositories" is the same silent failure by a different route: the
+   transferred repo will not be in scope until it is added by hand. Either set
+   All repositories, or add `kosher-connect-web` once the transfer has landed.
 2. Repo → **Settings → Danger Zone → Transfer ownership**. Type the repo name,
    name the destination.
 3. **Log in as the destination account and accept the invitation.** A
