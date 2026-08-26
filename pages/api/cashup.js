@@ -24,14 +24,28 @@ async function dayLedger(date) {
 }
 
 // Cash the till started the day with (owner-set in Settings, defaults to 0).
+//
+// NOT set and UNREADABLE are different answers, and this used to give the same
+// one to both. A failed read returned 0, which is a number the rest of this
+// file believes: expectedCash comes out short by the float, the variance comes
+// out wrong by the float, and the POST path WRITES that expected and that
+// variance into till_counts. A silently wrong variance is the worst possible
+// output of a cash-up — the whole screen exists to produce that one figure,
+// and the owner is meant to act on it.
+//
+// So a read that fails now throws, and the handler's own catch turns it into
+// the 500 it always should have been. No row is still a legitimate 0: the
+// owner has simply never set a float. A row holding something that is not a
+// non-negative number is a fault, not a zero, and says so rather than quietly
+// costing the day's count that much cash.
 async function openingFloat() {
-  try {
-    const rows = await db.select('settings', 'select=num_value&key=eq.till_opening_float')
-    const v = rows.length ? Number(rows[0].num_value) : 0
-    return Number.isFinite(v) && v >= 0 ? v : 0
-  } catch {
-    return 0
+  const rows = await db.select('settings', 'select=num_value&key=eq.till_opening_float')
+  if (!rows.length) return 0
+  const v = Number(rows[0].num_value)
+  if (!Number.isFinite(v) || v < 0) {
+    throw new Error(`till_opening_float is "${rows[0].num_value}" — set it to a number of pounds, 0 or more, in Settings`)
   }
+  return v
 }
 
 function summarize(rows, float = 0) {

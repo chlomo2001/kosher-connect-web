@@ -2,7 +2,7 @@
 // GET returns the current matrix plus the pickers the UI needs; PUT upserts one
 // cell (destination × nationality → auth_type + note + active). Owner-only.
 import { withStaff } from '../../lib/auth.js'
-import { db, tablesMode } from '../../lib/db.js'
+import { db, tablesMode, STORAGE_ERROR } from '../../lib/db.js'
 import { AUTH, KNOWN_DESTINATIONS, KNOWN_NATIONALITIES } from '../../lib/travelRules.mjs'
 import { clearTravelRulesCache } from '../../lib/travelRulesDb.js'
 
@@ -14,11 +14,21 @@ async function handler(req, res) {
   if (req.staff?.role !== 'owner') return res.status(403).json({ success: false, error: 'Owner only.' })
 
   if (req.method === 'GET') {
-    let rules = []
+    // A failed read used to become `rules = []`, and an empty matrix on this
+    // screen does not read as "could not load" — it reads as "no rules are
+    // set", which is an invitation to type them all in again over rules that
+    // are still there. The card already knows how to say it could not load;
+    // it just was never told. (The booking passport gate does not come through
+    // here — it reads lib/travelRulesDb.js — so this is the editor's honesty,
+    // not the gate's.)
+    let rules
     try {
       rules = await db.select('travel_requirement_rules',
         'select=id,destination,nationality,auth_type,note,active&order=destination.asc,nationality.asc')
-    } catch { rules = [] }
+    } catch (e) {
+      console.error('[api/travel-rules] could not read the rules:', e)
+      return res.status(503).json({ success: false, error: STORAGE_ERROR })
+    }
     return res.json({
       success: true,
       rules: rules.map((r) => ({
