@@ -2,10 +2,19 @@
 
 ## Business
 Hatsluche Ltd t/a Kosher Connect — kosher telecom shop at 421 Bury New Road, Salford M7 4ED
-(0161 531 1386). Owner contact: e.a.rothbart@gmail.com. Services: international phone rentals,
+(0161 531 1386). Services: international phone rentals,
 UK SIM-only plan management, virtual numbers, flight bookings, phone repairs, accessories/POS,
 online tech services, Kol Torah consignment. Audience is the orthodox Jewish community —
 copy is British English and imagery/tone must fit the community.
+
+**Two different people, and this file used to conflate them.** The business
+belongs to **Shloime**; e.a.rothbart@gmail.com is the **developer**, and is who
+"the owner" means everywhere else in this file and in the commit history — the
+person directing the work, not the person who owns the shop. It said "Owner
+contact: e.a.rothbart@gmail.com" under a heading about Hatsluche Ltd until
+26 Aug 2026, which read as though the developer owned the company. He does not,
+and the ownership handover in `docs/OWNERSHIP-MIGRATION.md` turns on it: the
+accounts are moving to the business, with the developer staying on as a member.
 
 ## Deploy ritual
 - Develop on the session dev branch; never commit straight to `main`.

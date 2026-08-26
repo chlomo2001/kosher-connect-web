@@ -3,38 +3,78 @@
 Written 17 Aug 2026, after the owner asked whether everything could live under
 the `earothbart-ai` GitHub account instead of `psic770-ai`.
 
-**Decided 26 Aug 2026** (issue #9). §7 held four open questions for nine days;
-three are answered and written into §4 as an ordered plan, and the fourth does
-not block this handover. Nothing in here has been DONE yet — every remaining
-step needs a browser session as the owning account, which is why they are
-written out rather than executed.
+**Rewritten 26 Aug 2026, evening**, on one fact that had been wrong in every
+draft of this file: **Hatsluche Ltd is Shloime's. It is not the developer's.**
 
-Read §1 and §2 before doing anything in §4 — the order matters, and two of the
-steps have a way of going quietly wrong.
+Everything before this — including the plan written earlier the same day — read
+"the owner" as one person who was both the shop and the developer, and pointed
+the handover at `earothbart-ai`. That would have moved the shop's software from
+one third party to a different third party, and left the business still not
+owning the thing it runs on. §3 of this file had the right answer written down
+since 17 August; it was filed under *future clients*, so nobody applied it to
+this one.
 
-**The decisions, in one place:**
+### Who's who
+
+| | Who | What they hold today |
+| --- | --- | --- |
+| **The business** | Hatsluche Ltd t/a Kosher Connect — **Shloime** | Nothing. That is the problem this file exists to fix. |
+| **The developer** | `earothbart-ai` / e.a.rothbart@gmail.com | Supabase org `kosher-connect`, and the Claude/GitHub side of the build |
+| **A third party** | **Psic** — `psic770-ai` on GitHub, `touchdesigns.studio@gmail.com` on Vercel | The repository, and the Vercel **team** the production project sits inside |
+
+### The decisions, in one place
+
+Settled 26 Aug (issue #9). End state chosen: **the business owns everything,
+and the developer stays on with full access as a member.** That is §3's
+recommendation for a client, applied to this client.
 
 | | Decision | Why |
 | --- | --- | --- |
-| Code | **Transfer** `psic770-ai/kosher-connect-web` → `earothbart-ai` | A duplicate carries no issues and is fiction the moment it stops being pushed to. A transfer carries history, issues, webhooks and deploy keys, and old clone URLs redirect. |
-| Hosting | **Keep the team, move its ownership** to the owner's account | Fewest moving parts: the project, its env vars and the domain never move, so there is no integration to re-add. Stays on Hobby — see the constraint below. |
+| Code | **Transfer** `psic770-ai/kosher-connect-web` → a new GitHub **organisation** owned by the business | A duplicate carries no issues and is fiction the moment it stops being pushed to. An org, not a personal account: an org can have more than one owner, so it survives any individual — and psic and the developer both stay members, so nobody is cut out. |
+| Hosting | **Transfer the PROJECT** into a new Vercel team owned by the business | Not team ownership. The project sits inside *Touch Design projects*, which is Psic's studio team and holds Psic's other work — handing that over would hand over Psic's business, not the shop's. See §4c: a project transfer copies env vars but **drops integrations**, so the GitHub link must be remade after. |
+| Database | **Transfer the Supabase org** to the business | Kc-Live is 609 customers — their numbers, addresses and passport records. That data belongs to Hatsluche Ltd, not to its developer. This is the one with actual GDPR weight behind it. |
 | Kc-staging | **Delete it** | Paused since it was created in May, nothing points at it, and it may hold a copy of real customer rows. Rule 2: copy the code freely, never the data. |
-| Future clients | Not decided, and does not block | The recommendation in §3 stands: one account per client, owned by the client, with you as a member. |
 
-**The constraint that comes with staying on Hobby**, accepted knowingly on
-26 Aug so it is not rediscovered later:
+### What "the business owns it" needs, practically
 
-- Vercel's Hobby plan is for **personal, non-commercial** use. Hatsluche Ltd is
-  a trading company. This is a terms question, not a technical one, and the
-  answer to it is Pro whenever it is worth £20 a month.
-- **Two cron jobs is the ceiling, and both are spent** — `/api/cron/sweep` at
+Shloime needs three logins, all under **his own email** — the developer is
+creating the GitHub one on his behalf on 26 Aug:
+
+1. **GitHub** — an account, then an organisation owned by it.
+2. **Vercel** — an account, then a team for the project to move into.
+3. **Supabase** — an account, added to the `kosher-connect` org as a member
+   before the org can be transferred to him.
+
+The developer is a member of all three afterwards, with full access. That is
+the whole point of the shape: **an exit becomes removing a member, not
+surgery.**
+
+### The Hobby constraint, and who it now belongs to
+
+Vercel's current plan is **Hobby**, and this now reads differently than it did
+this morning — the plan question belongs to Shloime, because it is his company
+and his £20 a month:
+
+- Hobby is for **personal, non-commercial** use. Hatsluche Ltd is a trading
+  company. That is a terms question, not a technical one.
+- **Two cron jobs is the ceiling and both are spent** — `/api/cron/sweep` at
   06:00 and `/api/cron/digest` at 06:30. A third scheduled job of any kind
   needs Pro first.
-- **Runtime logs do not reliably capture cron invocations.** That is not a
-  footnote: on 26 Aug the morning digest had been failing silently for five
-  days and the logs could not show it, so the cause had to be found by
-  elimination against the database. Whoever maintains this next should know
-  the logs will not answer that class of question.
+- **Runtime logs do not reliably capture cron invocations.** Not a footnote: on
+  26 Aug the morning digest had been failing silently for five days and the
+  logs could not show it, so it had to be diagnosed by elimination against the
+  database. Whoever maintains this should know the logs will not answer that
+  class of question.
+
+A new team created for the business starts on Hobby and can be upgraded when
+Shloime decides. Nothing in the move requires Pro; the terms question does.
+
+---
+
+Read §1 and §2 before doing anything in §4 — the order matters, and several of
+the steps have a way of going quietly wrong. Nothing in here has been DONE:
+every remaining step needs a browser session as the account that owns the thing
+being moved, which is why they are written out rather than executed.
 
 ---
 
@@ -46,10 +86,10 @@ now written down: **Hobby**.
 
 | Thing | Where it is | Identifier |
 | --- | --- | --- |
-| Code | GitHub, user **psic770-ai** | `psic770-ai/kosher-connect-web`, repo id `1237931094`, private |
+| Code | GitHub, user **psic770-ai** — **Psic's** | `psic770-ai/kosher-connect-web`, repo id `1237931094`, private |
 | Hosting | Vercel team **Touch Design projects** (slug `touchdesigns-studio`, plan **hobby**) | project `kosher-connect-web` (`prj_Hmsj…q9DVg9K5`), team `team_Ulw6…AISLr` |
-| Vercel login | `touchdesigns.studio@gmail.com` | the account that owns the team |
-| Database | Supabase org **kosher-connect** (`bwksxzmfsjwzqehceskw`) | project **Kc-Live** `xsrtdwwzxdmnjdtjcdzd`, eu-west-2, `ACTIVE_HEALTHY`, Postgres 17.6 |
+| Vercel login | `touchdesigns.studio@gmail.com` — **Psic's**, confirmed 26 Aug | owns the team, which also holds Psic's other work — hence a project transfer, not a team handover |
+| Database | Supabase org **kosher-connect** (`bwksxzmfsjwzqehceskw`) — in the **developer's** account | project **Kc-Live** `xsrtdwwzxdmnjdtjcdzd`, eu-west-2, `ACTIVE_HEALTHY`, Postgres 17.6 |
 | Second database | same org | **Kc-staging** `rcpqgujtutvpfzfsgzql`, `INACTIVE` since it was created 11 May — **to be deleted**, §4e |
 | Domain | `app.kosher-connect.com` → the Vercel project | |
 | Secrets | Vercel env vars only — never in the repo | Supabase, Twilio, Stripe, Resend, Gemini |
@@ -97,8 +137,12 @@ Not a technical question. Who should own the shop's software and hosting?
 - **A third party** — this is where it partly sits now, and it is the one
   answer to move away from.
 
-For future clients, the same question with a different answer: **one
-account per client, owned by the client, with you as a member.** Not for
+**This is that question, and Kosher Connect is that client.** Written on 17 Aug
+as advice for *future* clients, because everyone — including the file — assumed
+the developer and the shop were the same person. They are not: Hatsluche Ltd is
+Shloime's. So the paragraph below is not future advice, it is the decision:
+
+**one account per client, owned by the client, with you as a member.** Not for
 tidiness — for *exit* (a client who leaves gets handed an account, rather than
 needing surgery on a shared one) and for *blast radius* (a mistake in one
 client's project cannot reach another's). Both Vercel and Supabase bill per
@@ -142,7 +186,18 @@ removed from `psic770-ai`.
 
 </details>
 
-### 4b · Transfer the GitHub repo — do the destination FIRST
+### 4b · Transfer the GitHub repo to the business's ORGANISATION — destination FIRST
+
+Destination is a GitHub **organisation** owned by Shloime's account, not
+`earothbart-ai` and not a personal account of any kind. Create it first:
+`github.com/organizations/plan` → **Free** → owned by Shloime's GitHub account.
+Then invite the developer and psic as members.
+
+Why an org rather than a personal account, in one line each: it can have more
+than one owner, so the business is not one person's bus factor; membership is
+how access is granted and removed, so an exit is a click rather than another
+transfer; and it matches the Supabase side, which has been an org called
+`kosher-connect` all along.
 
 The failure mode is that `main` silently stops deploying. Prepare the
 destination before moving anything.
@@ -168,9 +223,10 @@ destination before moving anything.
    transferred repo will not be in scope until it is added by hand. Either set
    All repositories, or add `kosher-connect-web` once the transfer has landed.
 2. Repo → **Settings → Danger Zone → Transfer ownership**. Type the repo name,
-   name the destination.
-3. **Log in as the destination account and accept the invitation.** A
-   user-to-user transfer is not complete until the recipient accepts.
+   name the **organisation**.
+3. **Accept it as the destination.** A transfer into an org needs someone with
+   permission there to accept — so Shloime's account, or the developer once he
+   is an org owner. It is not complete until accepted.
 4. Per GitHub's documentation, issues, pull requests, wiki, stars, watchers,
    commit history, webhooks, repo-level secrets, deploy keys and LFS objects
    all come with it, and links to the old address redirect — so an existing
@@ -181,23 +237,34 @@ destination before moving anything.
 
 ### 4c · Vercel — after the repo has moved
 
-**The chosen route is ownership of the existing team, not a project move.** The
-project, its environment variables and `app.kosher-connect.com` all stay
-exactly where they are, so there is no integration to re-add and §4c.2 below
-does not apply. Do this AFTER §4b, and expect §4c.1 to be the only thing that
-needs attention.
+**The chosen route is a PROJECT transfer, not a team handover.** An earlier
+draft of this file said to move ownership of *Touch Design projects* to the
+business. That was written believing the team existed for this project. It does
+not: it is **Psic's studio team**, and handing it over would hand over Psic's
+own business along with the shop's site.
 
-To hand the team over: Vercel → **Touch Design projects** → Settings → Members.
-Invite the owner's account, then promote it to **Owner**. Vercel requires the
-new owner to accept before the old one can step down, so both accounts must be
-signed in at some point. The old account can then be removed, or left as a
-member — leaving it as a member is the safer default until §5 has passed.
+So the project moves out, into a team the business owns.
 
-Note the team is on **Hobby**, which means it has no seats for real team
-members. If adding the owner's account is refused for that reason, that is the
-plan telling you it wants Pro; see the constraint at the top of this file.
+1. **Create the destination first.** Shloime signs up to Vercel with his own
+   email and creates a team for the business. A new team starts on Hobby; see
+   the constraint at the top of this file for when that stops being the right
+   answer.
+2. **Vercel → project `kosher-connect-web` → Settings → General → Transfer
+   Project.** Seconds to minutes. Do not deploy or edit settings while it runs.
+3. **Expect the GitHub connection to be gone afterwards.** Vercel's own docs
+   say env vars are copied but **integrations must be added again**, and for
+   this project the integration *is* the GitHub connection. This is the step
+   that silently stops `main` deploying, so treat §4c.1 below as required
+   rather than a check.
+4. **Check `app.kosher-connect.com`** still resolves to the project. A domain
+   follows a project transfer, but verify rather than assume — the shop's
+   address is the one thing customers see.
+5. Add the developer to the new team as a member.
 
-#### The original notes on relinking, still true
+Do this **after** §4b, so the repo is already at its final address when the
+GitHub connection is remade — otherwise it gets remade twice.
+
+#### Relinking: how to do §4c.3, and the last time it was needed
 
 1. Vercel → project **kosher-connect-web** → **Settings → Git**.
    - Shows the repo at its new address → nothing to do.
@@ -212,9 +279,31 @@ plan telling you it wants Pro; see the constraint at the top of this file.
    connection. Expect to redo §4c.1 after a project transfer.
 3. Check the domain `app.kosher-connect.com` still points at the project.
 
-### 4d · Supabase — last, and only if the org itself must move
+### 4d · Supabase — the org moves, and this is the one with weight behind it
 
-The org is already `kosher-connect`, so this may never be needed.
+Decided 26 Aug. `kosher-connect` is named as though the business owns it; it
+sits in the **developer's** Supabase account. Kc-Live holds 609 customers —
+their numbers, addresses and passport records. That is Hatsluche Ltd's data,
+and a data-protection question rather than a tidiness one: the controller
+should be the business, not its contractor.
+
+1. **Shloime signs up to Supabase** with his own email.
+2. **Add him to `kosher-connect` as an Owner** (Organization → Team → Invite).
+   A transfer needs the recipient to already be a member of the target org, so
+   membership comes before the move whichever direction it runs.
+3. **Transfer.** Supabase's org transfer is self-serve: you must own the source
+   and be at least a member of the target. Do §4e first — deleting Kc-staging
+   means one less thing to carry.
+4. **Billing follows the org** — the old org is invoiced up to the transfer,
+   the new one after it. The plan is set per organisation, and one org cannot
+   mix paid and unpaid projects.
+5. **Verify `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are unchanged.** A
+   transfer should not rotate them. Check rather than assume — `/api/health`
+   answering `mode: tables` is the proof, because the probe reaches the
+   database to say it.
+
+Do this **last**. It is the step with the most to lose and the least to gain
+from being early.
 
 Project transfer between organisations is self-serve: you must own the source
 org and be at least a member of the target. Billing follows the org — the old
@@ -291,32 +380,45 @@ reports them.
 
 ## 7 · Decided, 26 Aug 2026
 
-- [x] **Who owns the Vercel team** — the owner's account. The team and project
-      stay put; ownership moves within them (§4c). Remains on Hobby, with the
-      constraint written at the top of this file.
-- [x] **Does the code move** — yes, a transfer to `earothbart-ai`, not a
-      duplicate (§4b). The tracker was the deciding factor.
-- [x] **Is Kc-staging worth keeping** — no. Delete (§4e).
-- [ ] **Future clients: their account or yours** — still open, and it does not
-      block this handover. §3's recommendation stands: one account per client,
-      owned by the client, with you as a member, for exit and for blast radius.
+- [x] **Who owns it** — **Hatsluche Ltd (Shloime)**, across GitHub, Vercel and
+      Supabase. The developer stays on as a member with full access. This
+      replaces the earlier same-day answer of `earothbart-ai`, which was wrong
+      for one reason: the business is not the developer's.
+- [x] **Code** — transfer into a business-owned GitHub **organisation** (§4b).
+      Not a duplicate; the tracker decided that. Not a personal account; an org
+      can have more than one owner and outlives any of them.
+- [x] **Hosting** — transfer the **project** into a business-owned Vercel team
+      (§4c). Not the team: that team is Psic's studio.
+- [x] **Database** — transfer the Supabase org to the business (§4d).
+- [x] **Kc-staging** — delete (§4e).
+- [ ] **Vercel plan** — Hobby today; Pro is the honest answer for a trading
+      company. Shloime's call, and it does not block any step here.
 
-### The order to do them in
+### The order, and why
 
-Separate sittings where possible, verifying between, so a broken deploy has one
-possible cause rather than three.
+Each step needs the one before it to exist. Verify between them, so a broken
+deploy has one possible cause instead of four.
 
-1. **§4e — delete Kc-staging.** Touches nothing else; do it whenever.
-2. **§4b — install the Vercel and Claude GitHub Apps on `earothbart-ai`
-   FIRST**, then transfer the repo, then accept the invitation as the
-   destination account. The transfer is not complete until it is accepted.
-3. **§4c.1 — check Vercel → project → Settings → Git.** New address shown means
-   nothing to do; "Project Link not found" means relink, and the dialog itself
-   confirms env vars, domains and deployments are preserved.
-4. **§5 — prove it with a real deploy**, not a green settings page.
-5. **§4c — hand over the Vercel team**, once the deploy has proved itself from
-   the new repo home. Last on purpose: it is the step with the least to verify
-   and the most to undo if something earlier went wrong.
+| # | Step | Needs first | Who does it |
+| --- | --- | --- | --- |
+| 1 | Shloime gets a **GitHub** account, then creates the **organisation** | — | developer, on his behalf |
+| 2 | Install the **Vercel** and **Claude** GitHub Apps **on the org** (§4b.1) | 1 | developer |
+| 3 | **Delete Kc-staging** (§4e) | — | developer |
+| 4 | **Transfer the repo** into the org, and accept it (§4b) | 1, 2 | developer + org owner |
+| 5 | Shloime gets a **Vercel** account and creates a **team** | — | developer, on his behalf |
+| 6 | **Transfer the project** into that team (§4c) | 4, 5 | Psic — it is his team it leaves |
+| 7 | **Remake the GitHub connection** (§4c.1) — expect to need it | 6 | developer |
+| 8 | **Prove it with a real deploy** (§5) | 7 | developer |
+| 9 | Shloime gets a **Supabase** account, joins the org, then the org transfers (§4d) | 8 | developer + Shloime |
+
+**Step 6 is the one that needs somebody else.** Psic owns the Vercel team, so
+Psic has to run the project transfer. Everything else can be done by the
+developer with the accounts he is creating. Worth asking him early rather than
+discovering it at step 6.
+
+**Nothing here is urgent enough to rush.** The shop keeps running throughout —
+none of these steps takes the site down, and §6 says how to get back from each
+one that can go wrong.
 
 ## 8 · What runs on a schedule — and what was switched off
 
