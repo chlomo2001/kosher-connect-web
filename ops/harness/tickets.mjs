@@ -313,8 +313,11 @@ say(readsDone(chips.oneWayDone), 'a one-way booking that is checked in should re
 say(!readsDone(chips.halfDone), 'the chip should not read done while the flight home is outstanding')
 say(readsDone(chips.bothDone) && /×2/.test(chips.bothDone),
   'a round trip checked in both ways should read done, and say it was two')
-say(!/✔/.test(Object.values(chips).join('')),
-  'the chip is drawing a ✔ glyph again — the app draws its ticks with the kc-ic-check mask')
+// Not just the ✔: the "we check in" and "customer checks in" states still drew
+// 🛫 and 👤 until 26 Aug, so one control was speaking in two alphabets and no
+// sweep was looking. Every state of this chip, glyph-free.
+const glyphs = Object.values(chips).join('').match(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu)
+say(!glyphs, `the chip is drawing ${glyphs ? glyphs.join(' ') : ''} — the app draws these with kc-ic-* masks`)
 await p.evaluate(() => { try { closeDynamicModal() } catch {} })
 await p.waitForTimeout(200)
 

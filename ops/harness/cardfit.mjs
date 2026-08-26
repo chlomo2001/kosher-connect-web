@@ -77,6 +77,40 @@ for (const tab of TABS) {
         }
       })
     })
+    // ── A split that did not leave room ─────────────────────────────────
+    // The exemption above is right in general: a wide table in an overflow-x
+    // wrapper is reachable, and reachable is the wrapper doing its job. It is
+    // wrong in one case, and that case cost the owner a working Sell button on
+    // 26 Aug.
+    //
+    // When a grid puts its children in MORE THAN ONE COLUMN it has asserted
+    // there is room for them side by side. Shop asserts exactly that above
+    // 1750px — and the assertion was measured at Standard with two pixels to
+    // spare, so at `largest` the inventory table needed 776px of a 710px track
+    // and every row ended 49px past the card. It scrolled, so eight sweeps
+    // called it fine; on a 2560px monitor, with no scrollbar in sight, the
+    // reader just cannot press Sell.
+    //
+    // So: a table inside a multi-column grid must fit its own track. A single
+    // column is not a claim about room and is not checked — which is why this
+    // stays silent at 390px, where everything stacks and side-scrolling a
+    // table is the honest answer.
+    document.querySelectorAll('#mainContent [class*="dash-cols"], #mainContent .settings-grid').forEach((grid) => {
+      const cols = getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean)
+      if (cols.length < 2) return
+      grid.querySelectorAll('table').forEach((t) => {
+        // The element that would do the scrolling — the table itself or the
+        // nearest ancestor inside the grid that is set up to scroll.
+        let box = t
+        for (let par = t; par && par !== grid; par = par.parentElement) {
+          if (scrolly(getComputedStyle(par))) { box = par; break }
+        }
+        const short = t.scrollWidth - box.clientWidth
+        if (short > 2) {
+          out.push(`table needs ${t.scrollWidth}px of a ${box.clientWidth}px column — the grid split into ${cols.length} and left it ${short}px short`)
+        }
+      })
+    })
     return [...new Set(out)]
   })
   if (bad.length) {

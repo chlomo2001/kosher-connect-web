@@ -112,10 +112,17 @@ function Screen({ s, shots, onZoom }) {
         <figure className="kc-man-shot">
           {/* Pressable (owner, 23 Aug: zoom "first") — opens the picture full
               size in a lightbox rather than a tab, so a glance costs nothing
-              and Escape puts you straight back where you were reading. */}
-          <img src={screenShot.src} alt={`The ${s.name} screen`} loading="lazy" {...shotAttrs(screenShot)}
-            style={{ cursor: 'zoom-in' }} title="Press to see it full size"
-            onClick={() => onZoom && onZoom({ src: screenShot.src, alt: `The ${s.name} screen` })} />
+              and Escape puts you straight back where you were reading.
+              A real <button>, not an onClick on the <img>: the picture used to
+              be reachable only with a mouse, which on a page whose whole job is
+              explaining the app left keyboard readers with no way in at all.
+              A button also carries the name — "See the Wallet screen full
+              size" — rather than making a screen reader guess from a cursor. */}
+          <button type="button" className="kc-man-zoom-btn"
+            aria-label={`See the ${s.name} screen full size`}
+            onClick={(e) => onZoom && onZoom({ src: screenShot.src, alt: `The ${s.name} screen`, from: e.currentTarget })}>
+            <img src={screenShot.src} alt={`The ${s.name} screen`} loading="lazy" {...shotAttrs(screenShot)} />
+          </button>
           <figcaption>{s.name} — the screen as it opens, with example data. Press the picture to zoom.</figcaption>
         </figure>
       )}
@@ -225,8 +232,15 @@ export default function Manual({ shots = {} }) {
   const [showTop, setShowTop] = useState(false)
   // The lightbox: one zoomed picture at a time; click anywhere or Escape closes.
   const [zoom, setZoom] = useState(null)
+  const zoomRef = useRef(null)
+  // Where the reader was before it opened, so Escape puts them back on the
+  // picture rather than at the top of a very long document. `from` is the
+  // button that opened it, handed over by whichever shot was pressed.
+  const cameFrom = useRef(null)
   useEffect(() => {
-    if (!zoom) return
+    if (!zoom) { cameFrom.current?.focus?.(); cameFrom.current = null; return }
+    cameFrom.current = zoom.from || null
+    zoomRef.current?.focus?.()
     const onKey = (e) => { if (e.key === 'Escape') setZoom(null) }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
@@ -362,10 +376,12 @@ export default function Manual({ shots = {} }) {
                     screen and it cannot drift between the two places. */}
                 {shots[`screen-${g.tab}`] && (
                   <figure className="kc-man-shot kc-man-job-shot">
-                    <img src={shots[`screen-${g.tab}`].src} alt={`The ${g.tab} screen`} loading="lazy"
-                      {...shotAttrs(shots[`screen-${g.tab}`])}
-                      style={{ cursor: 'zoom-in' }} title="Press to see it full size"
-                      onClick={() => setZoom({ src: shots[`screen-${g.tab}`].src, alt: `The ${g.tab} screen` })} />
+                    <button type="button" className="kc-man-zoom-btn"
+                      aria-label={`See the ${g.tab} screen full size`}
+                      onClick={(e) => setZoom({ src: shots[`screen-${g.tab}`].src, alt: `The ${g.tab} screen`, from: e.currentTarget })}>
+                      <img src={shots[`screen-${g.tab}`].src} alt={`The ${g.tab} screen`} loading="lazy"
+                        {...shotAttrs(shots[`screen-${g.tab}`])} />
+                    </button>
                     <figcaption>Where this happens. Press the picture to zoom.</figcaption>
                   </figure>
                 )}
@@ -419,7 +435,8 @@ export default function Manual({ shots = {} }) {
         </button>
       )}
       {zoom && (
-        <div className="kc-man-zoom" role="dialog" aria-label={zoom.alt} onClick={() => setZoom(null)}>
+        <div className="kc-man-zoom" role="dialog" aria-modal="true" aria-label={zoom.alt}
+          ref={zoomRef} tabIndex={-1} onClick={() => setZoom(null)}>
           <img src={zoom.src} alt={zoom.alt} />
           <div className="kc-man-zoom-hint">Press anywhere, or Escape, to close</div>
         </div>

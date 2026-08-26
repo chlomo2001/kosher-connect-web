@@ -3647,6 +3647,24 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
      the scroll fade. The table column takes the lion's share; the side panels
      are lists and read fine at ~470px. */
   .dash-cols-table { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); }
+
+  /* …and that was measured at Standard, at Standard only, with two pixels to
+     spare: the seven columns need 708px of a 710px track. Simple Mode's steps
+     grow the table faster than its track can answer — `large` needs 722px and
+     `largest` 776px, which put the Sell button 49px past the right edge of the
+     card on every row. Owner reported it on 26 Aug.
+
+     A wider monitor does not help and never did: the content is capped at
+     1220px, so the track is 710px at 2560px exactly as it is at 1750px. And
+     the person who turned the text up is precisely the person who cannot read
+     a row that ends off the edge of the card.
+
+     So the split belongs to Standard. The larger steps keep the full-width
+     table and let the panels stack underneath — which is what .dash-cols-table
+     was invented to do in the first place, and what happens at every width
+     below 1750px anyway. */
+  :root[data-fs="large"] .dash-cols-table,
+  :root[data-fs="largest"] .dash-cols-table { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Wraps rather than overflows. The wallet arrears row carries four things —
@@ -4883,6 +4901,17 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
   display: block; width: 100%; height: auto;
   border: 1px solid var(--border); border-radius: 10px;
   background: var(--bg-secondary);
+}
+/* The picture is a button — it opens the lightbox — so it must look like the
+   image and behave like a control: no chrome of its own, the full width of the
+   figure, and a focus ring, because until 26 Aug the zoom was reachable with a
+   mouse and by nothing else. */
+.kc-man-zoom-btn {
+  display: block; width: 100%; padding: 0; border: 0; margin: 0;
+  background: none; cursor: zoom-in; border-radius: 10px;
+}
+.kc-man-zoom-btn:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px;
 }
 .kc-man-shot figcaption {
   margin-top: 6px; font-size: var(--fs-micro); color: var(--muted);

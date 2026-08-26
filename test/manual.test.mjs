@@ -16,7 +16,7 @@
 // test. They are plain literals, so a regex is honest here.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { SCREENS, screen, screensOf, draftScreens, manualDialogs } from '../lib/manual.mjs'
 import { manualMarkdown } from '../scripts/build-manual.mjs'
 import { ALL_TABS } from '../lib/auth.js'
@@ -299,4 +299,31 @@ test('the manual builds its shot list with sizes, not bare paths', () => {
     const src = readFileSync(new URL(file, import.meta.url), 'utf8')
     assert.match(src, /pngSize\(/, `${where} builds its shot list without measuring the files`)
   }
+})
+
+// A picture you can only press with a mouse is a picture half the readers
+// cannot open. The manual's screenshots carried onClick and cursor:zoom-in on a
+// bare <img> — no role, no tabindex, nothing in the tab order — so on the one
+// page whose whole job is explaining the app, the zoom was unreachable from the
+// keyboard. The touch-target sweep never saw it: a bare <img> is not in its
+// selector list. They are <button>s now.
+test('nothing on a public page is clickable by mouse alone', () => {
+  const bad = []
+  for (const f of readdirSync(new URL('../pages', import.meta.url))) {
+    if (!f.endsWith('.js')) continue
+    const src = readFileSync(new URL(`../pages/${f}`, import.meta.url), 'utf8')
+    // Each JSX element that carries an onClick, taken back to its own tag.
+    for (const m of src.matchAll(/<([a-z][\w-]*)\b([^>]*?)onClick=/g)) {
+      const [, tag, attrs] = m
+      if (['button', 'a', 'input', 'select', 'textarea', 'label'].includes(tag)) continue
+      // A backdrop that closes on a press is not the only way out — Escape is,
+      // and it is bound. It carries role="dialog", not role="button".
+      const whole = src.slice(m.index, src.indexOf('>', m.index) + 1)
+      if (/role="dialog"/.test(whole)) continue
+      if (/role="button"/.test(whole) && /tabIndex=\{0\}/.test(whole)) continue
+      bad.push(`${f}: <${tag}${attrs.trim() ? ' ' + attrs.trim().slice(0, 40) : ''}… onClick>`)
+    }
+  }
+  assert.deepEqual(bad, [],
+    'a press handler on something that is not a control — make it a <button>, or give it role="button" and tabIndex={0}')
 })

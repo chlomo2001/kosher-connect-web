@@ -166,8 +166,13 @@ run "staff app · no control hides its own label" \
 # measures the BOX. A settings heading ran 7px past its own card at 320 in
 # Simple Mode and eight sweeps had passed over it, because the page did not
 # scroll and the control was readable — it just looked broken (owner, 19 Aug).
+# 1750 because that is where Shop splits into two columns, and until 26 Aug no
+# sweep here had ever run above 1280 — so the only layout in the app that needs
+# a wide monitor to appear at all had never been measured. It was wrong: the
+# split was sized at Standard with 2px to spare, and at `largest` the Sell
+# button on every stock row sat 49px past the edge of its card.
 run "staff app · nothing painted outside its card" \
-  bash -eo pipefail -c 'for w in 320 390 1280; do node ops/harness/cardfit.mjs --width $w --fs largest | tail -1; done
+  bash -eo pipefail -c 'for w in 320 390 1280 1750; do node ops/harness/cardfit.mjs --width $w --fs largest | tail -1; done
            node ops/harness/cardfit.mjs --width 390 --fs standard | tail -1'
 
 run "staff app · modals open + geometry, 390px both themes" \
@@ -261,6 +266,7 @@ run "staff app · Simple Mode text sizes, every tab" \
   bash -eo pipefail -c 'for f in large largest; do node ops/harness/render.mjs --audit --width 390 --fs $f | tail -1; done
            node ops/harness/render.mjs --audit --width 320 --fs largest | tail -1
            node ops/harness/render.mjs --targets --width 390 --fs largest | tail -1
+           node ops/harness/render.mjs --audit --width 1750 --fs largest | tail -1
            node ops/harness/render.mjs --contrast --theme dark --width 1280 --fs largest | tail -1'
 
 # 320 as well as the default 390/1280: the portal's top bar was overflowing at

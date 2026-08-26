@@ -15848,7 +15848,13 @@ async function saveCheckin(bookingId) {
 
 // Small status chip for a booking's check-in state.
 function checkinChip(b) {
-  // A round trip is two check-ins. "✔ In" on a booking with the flight home
+  // Icons, not glyphs — the chip's three states are drawn with the same masks
+  // as the rest of the app (26 Aug: the done state had been converted, these
+  // two had not, so one control was speaking in two alphabets). The task
+  // maybeCheckinTask() raises keeps its 🛫: that string is a tasks.title in the
+  // database, and a CSS class in a text column paints nothing.
+  //
+  // A round trip is two check-ins. "In" on a booking with the flight home
   // still to do would be the app saying the job is finished when it is half
   // finished — so the return only disappears from the chip once it is done too.
   const twoLegs = !!b.returnDate;
@@ -15859,9 +15865,9 @@ function checkinChip(b) {
   if (b.checkinBy === 'us') {
     const next = !outDone ? b.checkinDate : b.returnCheckinDate;
     const which = !outDone ? '' : ' back';
-    return `<span class="badge badge-rental" title="We check in${next ? ' on ' + fmtDate(next) : ''}${twoLegs ? ` · out ${outDone ? 'done' : 'to do'}, back ${backDone ? 'done' : 'to do'}` : ''}">🛫 us${which}${next ? ' ' + fmtDate(next).slice(0, 5) : ''}</span>`;
+    return `<span class="badge badge-rental kc-ic kc-ic-takeoff" title="We check in${next ? ' on ' + fmtDate(next) : ''}${twoLegs ? ` · out ${outDone ? 'done' : 'to do'}, back ${backDone ? 'done' : 'to do'}` : ''}">us${which}${next ? ' ' + fmtDate(next).slice(0, 5) : ''}</span>`;
   }
-  if (b.checkinBy === 'customer') return `<span class="badge" style="background:rgba(148,163,184,0.15);color:var(--muted);" title="Customer checks in">👤 cust</span>`;
+  if (b.checkinBy === 'customer') return `<span class="badge kc-ic kc-ic-user" style="background:rgba(148,163,184,0.15);color:var(--muted);" title="Customer checks in">cust</span>`;
   return `<span class="badge" style="background:rgba(234,179,8,0.15);color:var(--warning-ink);" title="Check-in not set">?</span>`;
 }
 
