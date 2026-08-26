@@ -6,7 +6,7 @@
 #   bash ops/harness/audit-all.sh            the full sweep — nightly
 #   bash ops/harness/audit-all.sh --smoke    ~90 seconds, before a ship
 #
-# TWO SPEEDS, and the reason for them. The full sweep is 30 checks and 35
+# TWO SPEEDS, and the reason for them. The full sweep is 31 checks and 37
 # browser launches, 25-30 minutes. It was being run inline in every session and
 # before every ship, which is how a check that is worth having becomes a check
 # people route around. From 24 Aug it runs ONCE A NIGHT (the "KC nightly full
@@ -290,6 +290,24 @@ run "public pages · touch targets (coarse pointer)" \
 # palettes, so it exercises a different set of rules entirely.
 run "public pages · contrast, every theme state" \
   bash -eo pipefail -c 'for t in light dark dark-os; do node ops/harness/public.mjs --contrast --theme $t | grep -v "^✓ "; done'
+
+# The structure a screen reader navigates by — landmarks, heading order,
+# accessible names, alt text, and the skip link. Every other line here measures
+# what a sighted mouse user meets; this measures what is left when the screen is
+# not being looked at. Written 26 Aug after auditing it by hand once, and that
+# pass found the app's only Level A failure (2.4.1: no skip link anywhere, nine
+# of thirteen public pages with no <main>), two heading-level skips — each of
+# them hiding a CSS rule that had never matched anything — and /login with no
+# <h1> at all. None of it was visible to a check already running here.
+#
+# Both languages: the Hebrew pages are a different tree, not a filter over the
+# English one, and the skip link is a separate string in each.
+#
+# Nightly and not smoke, on this file's own rule: --smoke is the subset that has
+# actually caught something on the way out of the door, and this has never yet
+# run before a ship. It moves up if it earns it.
+run "every surface · landmarks, heading order, names, alt text, skip link" \
+  bash -eo pipefail -c 'for l in en he; do node ops/harness/a11y.mjs --lang $l | tail -1; done'
 
 run "dark rules written only once" \
   node ops/harness/theme-pairs.mjs

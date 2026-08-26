@@ -6,7 +6,7 @@ bash ops/harness/audit-all.sh --smoke # ~90s — run this before a ship
 bash ops/harness/audit-all.sh         # every check below; ~25-30 min, runs nightly
 ```
 
-**Two speeds, since 24 Aug.** The full sweep is 30 checks and 35 browser
+**Two speeds, since 24 Aug.** The full sweep is 31 checks and 37 browser
 launches. It was being run inline in every session and before every ship, and
 half an hour is how a check that is worth having turns into a check people
 route around. It now runs **once a night** — the "KC nightly full audit"
@@ -338,3 +338,53 @@ each was checked rather than assumed:
 
 Everything else — every button, title, badge, warning line, empty state, feed
 row, menu item and label whose sink takes markup or takes a class — is an icon.
+
+## `a11y.mjs` — the structure a screen reader navigates by
+
+```bash
+node ops/harness/a11y.mjs                 # staff app + every public page, en
+node ops/harness/a11y.mjs --lang he
+node ops/harness/a11y.mjs --only welcome
+```
+
+Every other sweep in here measures what a sighted mouse user meets: colour,
+geometry, overflow, focus rings. This one measures what is left when the screen
+is not being looked at — landmarks, heading order, accessible names, alt text,
+and the skip link that lets somebody past the navigation.
+
+It exists because on 26 Aug the whole thing was audited by hand once, and that
+pass found the app's only **Level A** failure: WCAG 2.4.1, no skip link
+anywhere and nine of thirteen public pages with no `<main>`. It also found two
+heading-level skips, each of them hiding a CSS rule that had never matched
+anything (`.pg-name h4` against markup that said `h3`), and `/login` with no
+`<h1>` at all — "Welcome back" was a `div`. Nothing already running here could
+see any of it, and a structure nobody measures is a structure that rots.
+
+Four rules, one per thing that pass caught:
+
+1. Exactly one `<h1>` per page, and no skipped heading levels.
+2. Every image carries an `alt` attribute. Empty is fine and means decorative;
+   **absent** is not.
+3. Every visible interactive control has an accessible name, computed the way a
+   browser computes one: `aria-label`, `aria-labelledby`, `<label for>`, a
+   wrapping `<label>`, its own text, `title`, `placeholder`, then a named child
+   — a link wrapping `<span role="img" aria-label="…">` is announced by that
+   label, and the first draft reported every one of those as nameless.
+4. Every page has a content landmark, and wherever navigation repeats there is
+   a skip link that is **first in the tab order** and lands on it.
+
+Rule 4 is *driven*, not read. The check presses a real `Tab` and then `Enter`,
+because the first version of it passed on source order while three pages were
+putting a `position: fixed` theme toggle ahead of the link — the markup was in
+the right order and the keyboard still went somewhere else.
+
+A page that autofocuses a field is exempt from the tab-order half: focus starts
+in the field, so the first Tab necessarily moves away from the link. The sign-in
+pages do that deliberately and have no navigation to bypass.
+
+Both languages in the nightly sweep. The Hebrew pages are a different tree, not
+a filter over the English one, and the skip link is a separate string in each.
+
+One thing it is **not**: a substitute for reading. It checks structure, not
+sense — an `alt` of "image" passes rule 2, and a button named "Click here"
+passes rule 3. It catches rot, not bad writing.
