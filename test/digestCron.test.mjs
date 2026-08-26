@@ -34,9 +34,62 @@ test('the send goes through the gate, and only the gate', () => {
 test('no recipient configured means nothing at all happens', () => {
   // DIGEST_TO is checked BEFORE the database is read: an endpoint with nowhere
   // to send has no reason to touch anything.
-  const gate = CODE.indexOf("process.env.DIGEST_TO")
-  const read = CODE.indexOf(".from('tasks')")
-  assert.ok(gate > -1 && read > -1 && gate < read, 'DIGEST_TO gate must come before the tasks read')
+  //
+  // This test used to look for `.from('tasks')` as the read. It found it, and
+  // passed, every day for five days — while that exact call threw TypeError on
+  // every real invocation, because the client has no `from`. A test can only
+  // check that one string sits before another; it cannot check that either one
+  // runs. That is test/dbApi.test.mjs's job now, and this one names the helper
+  // that actually exists so the two cannot drift apart again.
+  const gate = CODE.indexOf('digestStatus()')
+  const read = CODE.indexOf("selectAllPaged('tasks'")
+  assert.ok(gate > -1 && read > -1 && gate < read, 'the DIGEST_TO gate must come before the tasks read')
+})
+
+test('the probe and the run answer from the same gate', () => {
+  // The whole point of 26 Aug: /api/health said everything was fine while the
+  // digest sent nothing. Two copies of "is the digest on?" is how that stays
+  // possible, so there is one function and both sides import it.
+  const HEALTH = readFileSync(path.join(ROOT, 'pages/api/health.js'), 'utf8')
+  assert.match(HEALTH, /import \{ digestStatus \} from '\.\.\/\.\.\/lib\/digestGate\.mjs'/,
+    '/api/health must report the digest')
+  assert.match(HEALTH, /digest: digestStatus\(\)/, 'the probe must call the shared gate, not re-derive it')
+  assert.match(CODE, /digestStatus\(\)/, 'the endpoint must call the shared gate, not re-derive it')
+  assert.ok(!CODE.includes('process.env.DIGEST_TO'),
+    'the endpoint must not read DIGEST_TO itself — digestGate.mjs owns that question')
+})
+
+test('the probe says whether a recipient exists, never who it is', () => {
+  // /api/health is public and unauthenticated. `digest` is on/off in the same
+  // sense `vault` is: an address is somebody's contact detail.
+  const GATE = readFileSync(path.join(ROOT, 'lib/digestGate.mjs'), 'utf8')
+  const statusFn = GATE.slice(GATE.indexOf('export function digestStatus'))
+  assert.ok(!/return digestRecipient\(\)/.test(statusFn) && !/\$\{/.test(statusFn),
+    'digestStatus must return a fixed word, never the address')
+  // Comment lines dropped: health.js explains in prose why the field exists,
+  // and that explanation names the env var. Naming it is not reading it.
+  const HEALTH_CODE = readFileSync(path.join(ROOT, 'pages/api/health.js'), 'utf8')
+    .split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n')
+  assert.ok(!HEALTH_CODE.includes('digestRecipient') && !HEALTH_CODE.includes('DIGEST_TO'),
+    'the public probe must never touch the address')
+})
+
+test('the three words the gate can say are the words the endpoint reports', async () => {
+  const { digestStatus } = await import('../lib/digestGate.mjs')
+  const had = process.env.DIGEST_TO
+  try {
+    delete process.env.DIGEST_TO
+    assert.equal(digestStatus(), 'no-recipient')
+    process.env.DIGEST_TO = '   '
+    assert.equal(digestStatus(), 'no-recipient', 'whitespace is not a recipient')
+    process.env.DIGEST_TO = 'someone@example.com'
+    // No mail provider is configured under test, so this is the second gate.
+    assert.equal(digestStatus(), 'email-not-configured')
+  } finally {
+    if (had === undefined) delete process.env.DIGEST_TO; else process.env.DIGEST_TO = had
+  }
+  // Whatever it says, the endpoint reports it verbatim as `skipped`.
+  assert.match(CODE, /skipped: gate/, 'the endpoint must report the gate\'s own word')
 })
 
 test('a quiet morning returns before anything is sent', () => {

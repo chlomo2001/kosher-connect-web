@@ -4,6 +4,7 @@
 import { db, tablesMode } from '../../lib/db.js'
 import { emailStatus } from '../../lib/email.js'
 import { smsStatus } from '../../lib/sms.js'
+import { digestStatus } from '../../lib/digestGate.mjs'
 import { stripeStatus } from '../../lib/stripe.js'
 import { secretsEnabled } from '../../lib/secretbox.js'
 import { geminiEnabled } from '../../lib/gemini.js'
@@ -21,6 +22,11 @@ export default async function handler(req, res) {
     email: emailStatus(),
     sms: smsStatus(),
     stripe: stripeStatus(),
+    // The 06:30 morning digest. It is scheduled, it returns 200 whatever
+    // happens, and until 26 Aug it had reported success every day for a week
+    // without ever sending anything — DIGEST_TO was never set, and nothing
+    // said so. 'no-recipient' is that state, named where it can be seen.
+    digest: digestStatus(),
     // Four features share this one key (assistant, prioritiser, AI reply,
     // OCR) — the probe must say whether the AI layer is armed at all.
     ai: { configured: geminiEnabled },

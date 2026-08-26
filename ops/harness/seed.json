@@ -2248,6 +2248,7 @@
       "keysMatch": true,
       "webhook": true
     },
+    "digest": "on",
     "ai": {
       "configured": true
     },

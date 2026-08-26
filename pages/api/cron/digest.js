@@ -24,9 +24,10 @@
 // morning's tasks (overdue rentals, renewals, passports), and a digest that ran
 // first would describe yesterday.
 import crypto from 'node:crypto'
-import { db } from '../../../lib/db.js'
+import { selectAllPaged } from '../../../lib/db.js'
 import { resolveStaff } from '../../../lib/auth.js'
-import { sendEmail, emailEnabled } from '../../../lib/email.js'
+import { sendEmail } from '../../../lib/email.js'
+import { digestRecipient, digestStatus } from '../../../lib/digestGate.mjs'
 import { buildDigest } from '../../../lib/dailyDigest.mjs'
 import { digestEmail } from '../../../lib/digestEmail.mjs'
 import { displayDate } from '../../../lib/localDay.mjs'
@@ -52,17 +53,40 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, error: 'Not authorised.' })
   }
 
-  const to = (process.env.DIGEST_TO || '').trim()
-  if (!to) return res.status(200).json({ success: true, skipped: 'no-recipient', hint: 'set DIGEST_TO in Vercel env' })
-  if (!emailEnabled) return res.status(200).json({ success: true, skipped: 'email-not-configured' })
+  // The same two gates /api/health reports as `digest`, read from the same
+  // function so a green probe cannot disagree with a silent morning.
+  const gate = digestStatus()
+  if (gate !== 'on') {
+    return res.status(200).json({
+      success: true,
+      skipped: gate,
+      ...(gate === 'no-recipient' ? { hint: 'set DIGEST_TO in Vercel env' } : {}),
+    })
+  }
+  const to = digestRecipient()
 
   const today = localDate()
-  const { data: tasks, error } = await db.from('tasks')
-    .select('title, priority, reference, due_date, created_at, customer_id, snoozed_until, done')
-    .eq('done', false)
-  if (error) return res.status(500).json({ success: false, error: error.message })
+  // This read is PostgREST, like every other read in the app. It was written
+  // as a supabase-js chain — db.from('tasks').select(...).eq(...) — against a
+  // client that has no `from`, so it threw TypeError on every invocation from
+  // 21 Aug and the cron returned 500 every morning without ever reaching the
+  // mail gate. Nothing caught it because a digest that never sends looks
+  // exactly like a digest that is HOLD-gated. test/dbApi.test.mjs now fails
+  // any call to a db method that does not exist.
+  //
+  // Paged, not a plain select: the sweep raises tasks in bulk and PostgREST
+  // caps an unpaged read at 1000 rows, which would quietly digest page one.
+  let tasks
+  try {
+    tasks = await selectAllPaged('tasks',
+      'title,priority,reference,due_date,created_at,customer_id,snoozed_until,done',
+      'done=is.false')
+  } catch (e) {
+    console.error('[cron/digest] could not read the tasks:', e)
+    return res.status(500).json({ success: false, error: 'Could not read the tasks.' })
+  }
 
-  const digest = buildDigest(tasks || [], { today })
+  const digest = buildDigest(tasks, { today })
   // A quiet morning sends nothing at all — a digest that arrives every day
   // saying "nothing today" trains its reader to ignore the one that matters.
   if (digest.quiet) return res.status(200).json({ success: true, quiet: true, sent: false })

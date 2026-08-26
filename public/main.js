@@ -24347,8 +24347,16 @@ const FEE_META = {
     const style = mode === 'live' ? 'badge-active' : mode === 'test' ? 'badge-sim' : 'badge-rental';
     return `<span class="badge ${style}">${escHtml(mode.toUpperCase())}</span>`;
   };
+  // The digest is not a channel with a HOLD/TEST/LIVE gate — it is a scheduled
+  // job with one switch, and for a week it reported success every morning
+  // while sending nothing because DIGEST_TO was never set. It earns a row here
+  // for that reason: a gate nobody can see is a gate nobody fixes.
+  const digestBadge = (st) => {
+    if (st === 'on') return '<span class="badge badge-active">ON</span>';
+    return `<span class="badge" style="background:var(--bg-secondary);color:var(--muted);">${st === 'email-not-configured' ? 'no email' : 'no recipient'}</span>`;
+  };
   const msgHtml = settingsCard('messaging', '<i class="kc-ic kc-ic-email" aria-hidden="true"></i> Messaging (email & SMS)',
-    `email ${health?.email?.configured ? health.email.mode : 'not connected'} · SMS ${health?.sms?.configured ? health.sms.mode : 'not connected'}`, `
+    `email ${health?.email?.configured ? health.email.mode : 'not connected'} · SMS ${health?.sms?.configured ? health.sms.mode : 'not connected'} · morning digest ${health?.digest === 'on' ? 'on' : 'off'}`, `
       <table><thead><tr><th>Channel</th><th>Provider</th><th>Status</th><th>What the status means</th></tr></thead>
       <tbody>
         <tr>
@@ -24364,6 +24372,16 @@ const FEE_META = {
           <td style="font-size:var(--fs-small);color:var(--muted);">${health?.sms?.configured
             ? 'HOLD builds &amp; logs but sends nothing · TEST sends everything to SMS_TEST_TO · LIVE texts real customers (SMS_LIVE).'
             : 'Connect the Twilio console: paste TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM (or TWILIO_MESSAGING_SERVICE_SID) into Vercel env vars, redeploy, and this flips to HOLD.'}</td>
+        </tr>
+        <tr>
+          <td><strong><i class="kc-ic kc-ic-sun" aria-hidden="true"></i> Morning digest</strong></td>
+          <td style="font-size:var(--fs-small);">6:30am daily</td>
+          <td>${digestBadge(health?.digest)}</td>
+          <td style="font-size:var(--fs-small);color:var(--muted);">${health?.digest === 'on'
+            ? 'Everything still waiting, in one email each morning — sent after the 6am sweep so it describes today, and skipped entirely on a morning with nothing open.'
+            : health?.digest === 'email-not-configured'
+              ? 'A recipient is set, but email itself is not connected — fix the Email row above and this follows.'
+              : 'Nobody is receiving it. The job runs at 6:30 every morning and quietly does nothing: set DIGEST_TO to your address in Vercel env vars and redeploy.'}</td>
         </tr>
       </tbody></table>
       <div style="padding:8px 14px 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
