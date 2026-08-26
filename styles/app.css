@@ -647,6 +647,16 @@ body.kc-resizing-x .sidebar { transition: none; }
 
   .search-box { flex: 1 1 100%; min-width: 0; width: auto; }
 
+  /* …and `width: auto` on an <input> is not "as wide as there is room": with no
+     flex parent it falls back to the size attribute, roughly 20 characters,
+     which at Simple Mode largest is 17px type and wider than a 320px phone.
+     The rule above worked while the box was a direct flex child of the topbar;
+     e13e390 moved it into the customer list inside a plain <span>, and a span
+     is not a flex container, so `flex` on the input stopped meaning anything.
+     Measured 26 Aug: Customers overflowed 320px by 18px at text largest, and
+     only at largest, which is why the nightly sweep did not have it. */
+  .search-box { max-width: 100%; }
+
   /* On a handset the field takes a row of its own, ABOVE the buttons. Without
      the order it kept its 300px and wrapped mid-row, leaving Help stranded
      alone on the line above it — a single orphaned button reads as a mistake.
@@ -4700,6 +4710,15 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
+
+/* A hand-off point in the markup that is NOT a box. renderCustomersTab moves
+   the real filter input in here, and `display: contents` makes the input
+   itself the flex item of the row around it — which is what every existing
+   rule for that input was written against. Without it the span became the
+   flex item, the input sized itself off its size attribute, and the row blew
+   past a 320px screen at the largest text size. A plain <span> carrying no
+   role and no label is the safe case for display: contents. */
+.kc-slot { display: contents; }
 
 .kc-man-shell { height: 100vh; width: 100%; overflow-y: auto; }
 

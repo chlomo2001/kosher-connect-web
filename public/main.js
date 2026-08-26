@@ -7552,7 +7552,7 @@ function renderCustomersTab() {
         <span id="custCount" style="font-size:var(--fs-small);color:var(--muted);font-weight:400;margin-left:8px;"></span></div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span id="custInitialChip"></span>
-        <span id="searchHere"></span>
+        <span id="searchHere" class="kc-slot"></span>
         <select class="form-input kc-fs-sel" onchange="customerFilter=this.value; renderTableRows()">
           <option value="all" ${customerFilter==='all'?'selected':''}>Filter: everyone</option>
           <option value="rental" ${customerFilter==='rental'?'selected':''}>📱 Active rental</option>
