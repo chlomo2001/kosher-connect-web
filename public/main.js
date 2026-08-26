@@ -19186,11 +19186,23 @@ async function renderKolTorahTab() {
     `<option value="${t.id}">${escHtml(t.name)}${t.price ? ` — ${fmtGbp(t.price)}` : ''}</option>`).join('');
 
   // ── Jobs ────────────────────────────────────────────────────────────────
+  // The loud button is the NEXT step, not always the last one.
+  //
+  // 'Collected' was btn-primary at every stage, so a job still OPEN — a CD
+  // dropped off and not yet converted — drew the eye to the button that marks
+  // it handed back, skipping the work. The quiet outline button beside it was
+  // the one that actually came next. Measured 26 Aug on a live open job.
+  //
+  // Collected stays reachable from open, because a job done and handed over in
+  // one visit is a real thing; it simply stops being the loudest thing on the
+  // row when it is not what happens next.
   const jobBtns = (j) => {
     const b = [];
-    if (j.status === 'open') b.push(['ready', 'Ready', 'btn btn-outline kc-ic kc-ic-check']);
+    const nextIs = (stage) => j.status === stage ? 'btn btn-primary' : 'btn btn-outline';
+    if (j.status === 'open') b.push(['ready', 'Ready', `${nextIs('open')} kc-ic kc-ic-check`]);
     if (j.status === 'open' || j.status === 'ready') {
-      b.push(['collected', '<i class="kc-ic kc-ic-upload" aria-hidden="true"></i> Collected', 'btn btn-primary']);
+      b.push(['collected', '<i class="kc-ic kc-ic-upload" aria-hidden="true"></i> Collected',
+        j.status === 'ready' ? 'btn btn-primary' : 'btn btn-outline']);
       b.push(['cancelled', '✕', 'action-btn danger']);
     }
     if (j.status === 'ready') b.push(['open', '', 'btn btn-outline kc-ic kc-ic-undo']);
