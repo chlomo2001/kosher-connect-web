@@ -10,6 +10,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
+import SkipLink from '../components/SkipLink'
 import { formatPhoneDisplay } from '../lib/ukPhone.mjs'
 import { CardIcon, FlipPhoneIcon, PlaneIcon, DocIcon, TicketIcon, SimIcon, ChatIcon } from '../components/kcIcons'
 
@@ -17,6 +18,7 @@ import { CardIcon, FlipPhoneIcon, PlaneIcon, DocIcon, TicketIcon, SimIcon, ChatI
 // don't know English. Shares the 'kcLang' preference with /welcome.
 const P = {
   en: {
+    skip: 'Skip to content',
     locale: 'en-GB',
     loading: 'Loading your account…',
     account: 'Your Kosher Connect account',
@@ -103,6 +105,7 @@ const P = {
   // Rewritten to read as written-in-Hebrew, in the same voice as the Hebrew
   // welcome page: warm, respectful plural, plain words — not translated English.
   he: {
+    skip: 'דילוג לתוכן',
     locale: 'he-IL',
     loading: 'החשבון שלכם נטען…',
     account: 'החשבון שלכם בכשר קונקט',
@@ -621,10 +624,11 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       <>
         <Head><title>{L.title}</title><meta name="robots" content="noindex, nofollow" /></Head>
         <div className="pd-shell" dir={dir}>
+          <SkipLink>{L.skip}</SkipLink>
           <header className="pd-top">
             <img className="pd-logo" src="/logo-full-tight.png" alt="Kosher Connect" />
           </header>
-          <main className="pd-main" aria-busy="true" aria-label={L.loading}>
+          <main className="pd-main" id="main" aria-busy="true" aria-label={L.loading}>
             <div className="pd-skel pd-skel-title" />
             <div className="pd-grid" aria-hidden="true">
               <div className="pd-card pd-span2 pd-hero">
@@ -656,7 +660,8 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
         <div className="login-shell">
           <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
           {langBtn}
-          <div className="login-card" dir={dir}>
+          <main id="main">
+            <div className="login-card" dir={dir}>
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
               <img src="/logo-full-tight.png" alt="Kosher Connect" style={{ height: 44, marginBottom: 12 }} />
               <div className="login-title" style={{ fontSize: 22 }}>{L.noMatchTitle}</div>
@@ -669,6 +674,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
               style={{ width: '100%', marginTop: 16, padding: '10px 16px' }}>{L.tryAnother}</button>
             <a className="p-backlink" href="/welcome">{L.backToSite}</a>
           </div>
+          </main>
         </div>
       </>
     )
@@ -713,6 +719,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       <>
         <Head><title>{L.title}</title><meta name="robots" content="noindex, nofollow" /></Head>
         <div className="pd-shell" dir={dir}>
+          <SkipLink>{L.skip}</SkipLink>
           <header className="pd-top">
             <img className="pd-logo" src="/logo-full-tight.png" alt="Kosher Connect" />
             <div className="pd-top-actions">
@@ -724,7 +731,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
             </div>
           </header>
 
-          <main className="pd-main">
+          <main className="pd-main" id="main">
             <div className="pd-greet">
               <h1>{greeting}{account.customer?.firstName ? `, ${account.customer.firstName}` : ''}</h1>
               <div className="pd-greet-sub">{L.account}</div>
@@ -1015,7 +1022,8 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
         <Head><title>{L.title}</title><meta name="robots" content="noindex, nofollow" /></Head>
         <div className="login-shell" dir={dir}>
           <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
-          <div className="login-card" role="alert">
+          <main id="main">
+            <div className="login-card" role="alert">
             <div style={{ textAlign: 'center' }}>
               <img src="/logo-full-tight.png" alt="Kosher Connect" style={{ height: 44, marginBottom: 12 }} />
               <div className="login-title">{L.netErrTitle}</div>
@@ -1028,6 +1036,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
               {L.noEmailHelp} <a href="tel:+441615311386" dir="ltr" style={{ whiteSpace: 'nowrap' }}>0161 531 1386</a>
             </div>
           </div>
+          </main>
         </div>
       </>
     )

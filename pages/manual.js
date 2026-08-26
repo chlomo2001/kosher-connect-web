@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
+import SkipLink from '../components/SkipLink'
 import AppStyles from '../components/AppStyles'
 import { requireStaffCookie } from '../lib/pageAuth'
 import { SCREENS, screensOf, manualProgress, manualStampLine } from '../lib/manual.mjs'
@@ -291,11 +292,14 @@ export default function Manual({ shots = MANUAL_SHOTS }) {
           screen below the first one unreachable. /welcome shipped that bug
           once; this page shipped it again on 18 Aug. */}
       <div className="kc-man-shell" ref={shellRef}>
+      <SkipLink />
       <div className="kc-man-layout">
         <ManualRail groups={[['The frame around every screen', frame],
                              ['The staff app', staff],
                              ['Pages with their own address', pages]]} />
-      <div className="kc-man-col">
+      {/* The rail beside this is the nav landmark; the column IS the manual,
+          so it becomes <main> rather than gaining a wrapper inside it. */}
+      <main className="kc-man-col" id="main">
         <div className="kc-man-chrome" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
           {/* A plain link, like every other page here: leaving the manual is a
               real navigation back into the app, not a client-side hop. */}
@@ -427,7 +431,7 @@ export default function Manual({ shots = MANUAL_SHOTS }) {
           <h2 style={{ margin: '26px 0 12px' }}>Pages with their own address</h2>
           {pages.map((s) => <Screen key={s.id} s={s} shots={shots} onZoom={setZoom} />)}
         </>}
-      </div>
+      </main>
       </div>
       {showTop && (
         <button className="kc-man-top" aria-label="Back to the top"

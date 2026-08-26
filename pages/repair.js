@@ -2,6 +2,7 @@ import { legalIdentifier } from '../lib/company.mjs'
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
+import SkipLink from '../components/SkipLink'
 import { WrenchIcon } from '../components/kcIcons'
 
 // Public repair booking — the online front door for the repair bench. One
@@ -17,6 +18,7 @@ const PHONE_SHOWN = '0161 531 1386'
 
 const T = {
   en: {
+    skip: 'Skip to content',
     dir: 'ltr',
     tag: 'Repairs',
     back: '← Back to the main page', account: 'My account',
@@ -48,6 +50,7 @@ const T = {
     tradingName: 'Kosher Connect is a trading name of',
   },
   he: {
+    skip: 'דילוג לתוכן',
     dir: 'rtl',
     tag: 'תיקונים',
     homeAria: 'כשר קונקט — חזרה לעמוד הראשי',
@@ -133,6 +136,7 @@ export default function RepairBooking() {
         <link rel="canonical" href="https://www.kosher-connect.com/repair" />
       </Head>
       <div className="welcome-shell">
+        <SkipLink>{t.skip}</SkipLink>
         {/* Physical side from the page language, not `right` — this button is
             outside the dir="rtl" wrapper, so in Hebrew the mirrored topbar puts
             the logo on the right and a right-pinned toggle lands on top of it. */}
@@ -160,6 +164,10 @@ export default function RepairBooking() {
               <a href="/portal" className="w-pill-primary">{t.account}</a>
             </nav>
           </div>
+
+          {/* The topbar above is the site nav; everything from here to the
+              end of the wrapper is the page. */}
+          <main id="main">
 
           <section className="w-section rp-head" id="top">
             <div className="w-strap">{t.strap}</div>
@@ -215,6 +223,7 @@ export default function RepairBooking() {
           <footer className="rp-foot">
             © {new Date().getFullYear()} {t.brandName}. {t.rights} {t.tradingName} <bdi>{legalIdentifier()}</bdi>
           </footer>
+        </main>
         </div>
       </div>
     </>

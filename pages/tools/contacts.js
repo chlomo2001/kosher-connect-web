@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../../components/ThemeToggle'
+import SkipLink from '../../components/SkipLink'
 import ToolDrop from '../../components/ToolDrop'
 import AppStyles from '../../components/AppStyles'
 import { requireStaffCookie } from '../../lib/pageAuth'
@@ -146,8 +147,12 @@ export default function ContactsConverter() {
       <Head><title>Contacts Converter · Kosher Connect</title><meta name="robots" content="noindex, nofollow" /></Head>
       <AppStyles />
       <div className="tool-shell">
+        <SkipLink />
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
-        <div className="tool-wrap">
+        {/* <main>, not a div: .tool-wrap holds the page and nothing else —
+            the back link and the heading included — so it is the content
+            landmark rather than needing a new element inside it. */}
+        <main className="tool-wrap" id="main">
           <div className="tool-head">
             <a href="/" className="tool-back">← Back to the app</a>
             <h1>Contacts Converter</h1>
@@ -281,7 +286,7 @@ export default function ContactsConverter() {
           <div className="tool-foot">
             Looking to move SMS or a Nokia phonebook? Use the <a href="/tools/transfer">phone-to-phone transfer</a> tool.
           </div>
-        </div>
+        </main>
       </div>
     </>
   )

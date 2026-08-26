@@ -1,4 +1,5 @@
 import ThemeToggle from './ThemeToggle'
+import SkipLink from './SkipLink'
 
 // Shared chrome for the public legal pages (privacy, terms). Brand-styled,
 // theme-aware, self-contained — no auth, so Google's review and customers can
@@ -6,6 +7,7 @@ import ThemeToggle from './ThemeToggle'
 export function LegalShell({ title, updated, children }) {
   return (
     <div className="legal-wrap">
+      <SkipLink />
       <header className="legal-top">
         <a className="legal-home" href="/welcome">← Kosher Connect</a>
         {/* Every other public page offers the theme toggle; these three did
@@ -15,7 +17,7 @@ export function LegalShell({ title, updated, children }) {
             of /repair's "My account" button. */}
         <ThemeToggle />
       </header>
-      <main className="legal-main">
+      <main className="legal-main" id="main">
         <h1>{title}</h1>
         <p className="legal-updated">Last updated: {updated}</p>
         {children}

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import Head from 'next/head'
 import ThemeToggle from '../../components/ThemeToggle'
+import SkipLink from '../../components/SkipLink'
 import ToolDrop from '../../components/ToolDrop'
 import AppStyles from '../../components/AppStyles'
 import { requireStaffCookie } from '../../lib/pageAuth'
@@ -294,8 +295,12 @@ export default function ScanReader() {
       <Head><title>Scan Reader · Kosher Connect</title><meta name="robots" content="noindex, nofollow" /></Head>
       <AppStyles />
       <div className="tool-shell">
+        <SkipLink />
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
-        <div className="tool-wrap">
+        {/* <main>, not a div: .tool-wrap holds the page and nothing else —
+            the back link and the heading included — so it is the content
+            landmark rather than needing a new element inside it. */}
+        <main className="tool-wrap" id="main">
           <div className="tool-head">
             <a href="/" className="tool-back">← Back to the app</a>
             <h1>Scan Reader</h1>
@@ -389,7 +394,7 @@ export default function ScanReader() {
               )}
             </div>
           )}
-        </div>
+        </main>
       </div>
     </>
   )

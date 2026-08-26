@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Head from 'next/head'
 import Script from 'next/script'
 import ThemeToggle from '../components/ThemeToggle'
+import SkipLink from '../components/SkipLink'
 import { WHATSAPP_ENABLED } from '../lib/flags'
 import {
   PlaneIcon, FlipPhoneIcon, MusicIcon, WrenchIcon, BagIcon, ChatIcon,
@@ -175,6 +176,7 @@ const T = {
     footServices: 'Services', footAccount: 'Your account', footLegal: 'Information',
     hoursLabel: 'Open',
     rights: 'All rights reserved.',
+    skip: 'Skip to content',
     tradingName: 'Kosher Connect is a trading name of',
     paidTitle: 'Payment received — thank you!',
     paidBody: 'Your payment went through and will show on your account shortly.',
@@ -183,6 +185,7 @@ const T = {
   },
   he: {
     dir: 'rtl', langLabel: 'HE',
+    skip: 'דילוג לתוכן',
     brandName: 'כשר קונקט',
     nav: { mobile: 'חבילות וסים', travel: 'טלפון לחו״ל', intl: 'מספרים בינלאומיים', repairs: 'תיקונים ועוד', repair: 'לקבוע תיקון', faq: 'שאלות', visit: 'בואו לבקר', message: 'דברו איתנו', account: 'האזור האישי' },
     heroEyebrow: 'כשר קונקט · סלפורד, מנצ׳סטר',
@@ -528,6 +531,10 @@ export default function Welcome() {
           the bar's logical end — the LEFT in Hebrew. The toggle therefore sat
           directly on top of the Hebrew logo, at 320px and at 1440px alike.
           Measured overlapping at every width tested before this line changed. */}
+      {/* Before the theme toggle, not after: the toggle is position:fixed and
+          rendered first, so it was taking the first Tab and the skip link the
+          second — which is a skip link that skips nothing. */}
+      <SkipLink>{t.skip}</SkipLink>
       <ThemeToggle style={{ position: 'fixed', top: 14, [t.dir === 'rtl' ? 'left' : 'right']: 14, zIndex: 60 }} />
 
       <div className="sk" dir={t.dir} lang={lang === 'en' ? 'en-GB' : lang}>
@@ -571,6 +578,11 @@ export default function Welcome() {
           </nav>
           </div>
         </header>
+
+        {/* Everything between the site header and the footer is the content,
+            so that is exactly what <main> wraps — the nav above it and the
+            footer below it are landmarks in their own right. */}
+        <main id="main">
 
         {paid && (
           <div className="sk-paid" role="status">
@@ -805,6 +817,8 @@ export default function Welcome() {
             </div>
           </div>
         </section>
+
+        </main>
 
         <footer className="sk-foot">
           <div className="sk-wrap">

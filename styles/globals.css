@@ -1319,3 +1319,24 @@ html { scroll-behavior: smooth; }
 }
 
 
+
+/* Skip to content — WCAG 2.4.1 (Level A). Off-screen until focused, then it
+   lands where the eye already is: top-left of the viewport, above everything.
+
+   Clipped rather than `display: none` on purpose. Hidden the wrong way, the
+   link is removed from the accessibility tree and the control exists only in
+   the source, which is worse than not having one — it looks like compliance
+   and is not. `position: fixed` because several of these pages have their own
+   scroll container and an absolute one would ride away with the content. */
+.kc-skip {
+  position: fixed; top: 0; inset-inline-start: 0; z-index: 999;
+  transform: translateY(-120%);
+  padding: 10px 16px; min-height: 44px; display: inline-flex; align-items: center;
+  background: var(--accent); color: var(--on-accent, #fff);
+  font: 600 var(--fs-ui, 14px)/1.2 inherit; text-decoration: none;
+  border-radius: 0 0 var(--radius, 6px) 0;
+  transition: transform var(--dur-1, .15s) var(--ease-out, ease);
+}
+.kc-skip:focus { transform: translateY(0); }
+.kc-skip:focus-visible { outline: 2px solid var(--text); outline-offset: -4px; }
+@media (prefers-reduced-motion: reduce) { .kc-skip { transition: none; } }

@@ -79,6 +79,10 @@ export default function Login({ supabaseUrl, googleEnabled }) {
       </Head>
       <div className="login-shell">
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
+        {/* The form is the whole page, so it is the content landmark. A <main>
+            around it rather than on it: <main> and <form> both carry meaning
+            and stacking them on one element muddles both. */}
+        <main id="main">
         <form className="login-card" onSubmit={ticket ? submitCode : submit}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <img src="/logo-full-tight.png" alt="Kosher Connect" style={{ height: 44, marginBottom: 12 }} />
@@ -150,6 +154,7 @@ export default function Login({ supabaseUrl, googleEnabled }) {
             <a href="https://kosher-connect.com/terms" style={{ color: 'inherit' }}>Terms of service</a>
           </div>
         </form>
+        </main>
       </div>
     </>
   )
