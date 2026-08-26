@@ -18199,7 +18199,16 @@ function renderPosView() {
           <button class="btn btn-outline" onclick="closePosView()" style="white-space:nowrap;">← Exit till</button>
           <button id="posParkedBtn" class="btn btn-outline kc-ic kc-ic-pause" onclick="posToggleParked()" title="Resume a held sale"
             style="white-space:nowrap;${parkedN ? '' : 'display:none;'}">Parked (<span id="posParkedN">${parkedN}</span>)</button>
-          <input class="form-input pos-scan" id="posScan" placeholder="${kcHint('🔍 Scan a barcode, or type to search…', '🔍 Scan or search')}"
+          ${/* The hero control on the till, and until 26 Aug it promised
+                something the shop could not do: it read "Scan a barcode" while
+                not one of the fifteen stock lines had a barcode on it. The
+                field for them has been in the stock form all along, with the
+                right words on it — the items were simply entered without.
+                So the placeholder now reads the catalogue and says whichever
+                is true. Typing still finds an item either way. */''}
+          <input class="form-input pos-scan" id="posScan" placeholder="${posCanScan()
+            ? kcHint('🔍 Scan a barcode, or type to search…', '🔍 Scan or search')
+            : kcHint('🔍 Type to find an item…', '🔍 Find an item')}"
             autocomplete="off" oninput="posRenderTiles()"
             onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();saveSale();}else if(event.key==='Enter'){event.preventDefault();posScanEnter();}">
           <button class="theme-toggle" data-theme-btn onclick="toggleTheme()" title="Light / dark mode"
@@ -18471,6 +18480,11 @@ function posFindItem(q) {
     ));
 }
 
+/** Is there anything in the shop a scanner could actually match? */
+function posCanScan() {
+  return shopItems.some(i => i.active && String(i.barcode || '').trim());
+}
+
 function posScanEnter() {
   const el = document.getElementById('posScan');
   const q = el.value.trim();
@@ -18479,6 +18493,12 @@ function posScanEnter() {
   const shown = shopItems.filter(i => i.active && i.quantity > 0 && posTileMatch(i, q));
   const item = posFindItem(q) || (shown.length === 1 ? shown[0] : null);
   if (item) { posAdd(item.id); el.value = ''; posRenderTiles(); }
+  // "No matching item" is true and useless when the answer is that NOTHING has
+  // a barcode yet: a scan will fail on every product in the shop, and the
+  // person at the counter has no way to tell that from a mis-scan.
+  else if (!posCanScan() && /^\d{8,}$/.test(q)) {
+    toast('Nothing in the shop has a barcode yet, so scanning cannot find anything — add one on the item in Shop, or type the name.', 'warning');
+  }
   else toast('No matching item.', 'warning');
 }
 
