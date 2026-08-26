@@ -29,6 +29,7 @@ const T = {
     loading: 'Loading the guide…',
     empty1: 'The guide is being written — call us on', empty2: 'and we’ll talk you through the options.',
     specs: { dualSim: 'Dual SIM', yiddishText: 'Hebrew text', touchScreen: 'Touch-screen', texting: 'Texting' },
+    yes: 'Yes', no: 'No',
     askInShop: 'Ask in shop',
     callAbout: 'Call us about the',
     prosAria: "What's good", consAria: 'Worth knowing',
@@ -51,6 +52,7 @@ const T = {
     loading: 'המדריך נטען…',
     empty1: 'המדריך עוד נכתב — התקשרו אלינו:', empty2: 'ונעבור איתכם על האפשרויות.',
     specs: { dualSim: 'שני כרטיסי סים', yiddishText: 'טקסט בעברית', touchScreen: 'מסך מגע', texting: 'הודעות' },
+    yes: 'כן', no: 'לא',
     askInShop: 'שאלו בחנות',
     callAbout: 'להתקשר בקשר ל־',
     prosAria: 'מה טוב', consAria: 'כדאי לדעת',
@@ -67,6 +69,17 @@ const T = {
 // BEIS — Hebrew characters — not whether it speaks Yiddish, so every label a
 // person reads now says Hebrew. Renaming the column is a migration for its own
 // day; until then the labels above are the truth and this key is just plumbing.
+// A bare yes/no answer in the reader's own language; anything else is the
+// owner's prose and is returned untouched (null → the caller keeps the raw
+// value inside its <bdi>). Whitespace and case only — no fuzzy matching, so
+// "Yes — OTP (bank texts only)" is never caught by this.
+function specWord(value, t) {
+  const v = String(value).trim().toLowerCase()
+  if (v === 'yes') return t.yes
+  if (v === 'no') return t.no
+  return null
+}
+
 const SPEC_KEYS = ['dualSim', 'yiddishText', 'touchScreen', 'texting']
 
 const lines = (s) => String(s || '').split('\n').map((l) => l.trim().replace(/^[-•]\s*/, '')).filter(Boolean)
@@ -171,9 +184,21 @@ export default function PhoneGuide() {
                         // Spec values are owner-written English (e.g. "Yes —
                         // OTP (bank texts only)") — isolate so RTL can't
                         // shuffle the word order.
+                        //
+                        // The exception is a bare Yes or No. Those are not
+                        // prose, they are the two answers the form offers, and
+                        // on the Hebrew page they were the only English left
+                        // in a translated row: "מסך מגע  No". Translating a
+                        // known token is not the same as translating somebody
+                        // else's sentence, so ONLY the bare pair is swapped —
+                        // "Yes — OTP (bank texts only)" stays exactly as
+                        // written, because rewriting that would be inventing
+                        // copy for the shop.
                         <div className="pg-spec" key={k}>
                           <dt>{t.specs[k]}</dt>
-                          <dd>{m[k] ? <bdi dir="ltr">{m[k]}</bdi> : <span className="pg-spec-none">—</span>}</dd>
+                          <dd>{m[k]
+                            ? (specWord(m[k], t) ?? <bdi dir="ltr">{m[k]}</bdi>)
+                            : <span className="pg-spec-none">—</span>}</dd>
                         </div>
                       ))}
                     </dl>
