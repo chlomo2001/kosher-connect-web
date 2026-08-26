@@ -296,12 +296,25 @@ say(await p.evaluate(() => {
 }), 'a one-way booking should not ask about a return check-in')
 
 // The chip must not say the job is done while the flight home is outstanding.
-say(await p.evaluate(() => {
-  const oneWayDone = checkinChip({ checkinDone: true })
-  const halfDone = checkinChip({ checkinDone: true, returnDate: '2026-09-26', checkinBy: 'us', returnCheckinDate: '2026-09-25' })
-  const bothDone = checkinChip({ checkinDone: true, returnDate: '2026-09-26', returnCheckinDone: true })
-  return /✔/.test(oneWayDone) && !/✔/.test(halfDone) && /✔/.test(bothDone) && /×2/.test(bothDone)
-}), 'the chip should only read done when BOTH legs are done')
+//
+// This looked for a ✔ glyph until 26 Aug, and failed nightly from the day the
+// emoji sweep replaced every glyph with a mask icon. The chip's logic was
+// right the whole time; the check was reading a signal the app had stopped
+// sending. So it now reads the two signals the app actually uses — the
+// badge-active class and the kc-ic-check mask — and asserts the retired glyph
+// is NOT there, so the pair cannot drift apart again in either direction.
+const chips = await p.evaluate(() => ({
+  oneWayDone: checkinChip({ checkinDone: true }),
+  halfDone: checkinChip({ checkinDone: true, returnDate: '2026-09-26', checkinBy: 'us', returnCheckinDate: '2026-09-25' }),
+  bothDone: checkinChip({ checkinDone: true, returnDate: '2026-09-26', returnCheckinDone: true }),
+}))
+const readsDone = (html) => /badge-active/.test(html) && /kc-ic-check/.test(html)
+say(readsDone(chips.oneWayDone), 'a one-way booking that is checked in should read done')
+say(!readsDone(chips.halfDone), 'the chip should not read done while the flight home is outstanding')
+say(readsDone(chips.bothDone) && /×2/.test(chips.bothDone),
+  'a round trip checked in both ways should read done, and say it was two')
+say(!/✔/.test(Object.values(chips).join('')),
+  'the chip is drawing a ✔ glyph again — the app draws its ticks with the kc-ic-check mask')
 await p.evaluate(() => { try { closeDynamicModal() } catch {} })
 await p.waitForTimeout(200)
 

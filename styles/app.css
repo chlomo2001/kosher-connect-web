@@ -4901,6 +4901,14 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 }
 @media (max-width: 760px) { .kc-man-dialog { grid-template-columns: 1fr; } }
 .kc-man-dialog a:has(img) { display: block; }
+/* "See it full size" sits alone under the description, so WCAG 2.5.8's
+   inline-in-a-sentence exemption does not cover it — it is a target on its own
+   line and has to be one you can press. The micro type stays; the box around
+   it grows to a finger. */
+.kc-man-fullsize {
+  display: inline-flex; align-items: center; min-height: 24px;
+  font-size: var(--fs-micro); color: var(--muted);
+}
 .kc-man-dialog a img:hover { border-color: var(--primary, var(--text)); }
 
 /* Rules and failures read as notes in the margin, not as more of the same

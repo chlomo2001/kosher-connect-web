@@ -12,6 +12,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { SCREENS } from '../lib/manual.mjs'
 import { MODALS } from '../ops/harness/modals.mjs'
+import { pngSize } from '../lib/pngSize.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const DIR = path.join(ROOT, 'public/manual')
@@ -52,13 +53,27 @@ test('no picture is an empty or truncated file', () => {
   }
 })
 
+// Bytes on disk are not the same as a readable header, and the header is what
+// the page reserves the reader's space from.
+test('every picture reports a size the page can reserve space with', () => {
+  const bad = []
+  for (const n of shots) {
+    const { w, h } = pngSize(path.join(DIR, `${n}.png`))
+    if (!(w > 0 && h > 0)) bad.push(n)
+  }
+  assert.deepEqual(bad, [], `unmeasurable picture(s): ${bad.join(', ')} — the page cannot reserve their space`)
+})
+
 // The page must actually put them on screen. Without this the pictures could
 // all be present, correct and never rendered.
 test('the manual page renders the pictures it is given', () => {
   const src = readFileSync(path.join(ROOT, 'pages/manual.js'), 'utf8')
   assert.match(src, /shots\[`screen-\$\{s\.id\}`\]/, 'screen pictures are not looked up')
   assert.match(src, /shots\[`dialog-\$\{id\}`\]/, 'dialog pictures are not looked up')
-  assert.match(src, /<img[\s\S]{0,160}?src=\{screenShot\}/, 'the screen picture is never rendered')
+  // `.src`, because a shot is { src, w, h } now — the size is what lets the
+  // browser hold the box open for a lazy picture (26 Aug: the dialog links
+  // measured 328×2 on a phone without it).
+  assert.match(src, /<img[\s\S]{0,160}?src=\{screenShot\.src\}/, 'the screen picture is never rendered')
   assert.match(src, /readdirSync/, 'the page never reads which pictures exist')
 })
 

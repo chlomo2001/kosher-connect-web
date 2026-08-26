@@ -264,3 +264,39 @@ test('docs/MANUAL.md is up to date', () => {
   assert.equal(read('docs/MANUAL.md'), manualMarkdown(),
     'docs/MANUAL.md has fallen behind lib/manual.mjs — run: node scripts/build-manual.mjs')
 })
+
+// ── The pictures ──────────────────────────────────────────────────────────
+// Added 26 Aug, after the nightly touch-target audit measured the dialog
+// thumbnails at 328×2 on a phone. Every picture on /manual is lazy, and a lazy
+// picture with no declared size has no height until it arrives — so the links
+// wrapped around them were, for a moment on every load and for ever if a file
+// is missing, two pixels tall. The size comes from the PNG header now.
+test('a PNG measures, and an unmeasurable file says so rather than guessing', async () => {
+  const { pngSize } = await import('../lib/pngSize.mjs')
+  const real = pngSize(new URL('../public/manual/dialog-cashup.png', import.meta.url).pathname)
+  assert.ok(real.w > 0 && real.h > 0, 'a real screenshot must measure')
+  // Not a PNG, and not there at all — both must be {}, never a throw and never
+  // a made-up number: a wrong height reserves the wrong box on every screen.
+  assert.deepEqual(pngSize(new URL('../package.json', import.meta.url).pathname), {})
+  assert.deepEqual(pngSize('/no/such/file.png'), {})
+})
+
+test('every lazy picture on the manual declares the space it will need', () => {
+  const SRC = readFileSync(new URL('../pages/manual.js', import.meta.url), 'utf8')
+  const imgs = SRC.match(/<img\b[\s\S]*?\/>/g) || []
+  assert.ok(imgs.length >= 3, `only ${imgs.length} pictures found — the scan has drifted`)
+  for (const img of imgs) {
+    if (!/loading="lazy"/.test(img)) continue
+    assert.match(img, /\{\.\.\.shotAttrs\(/,
+      `a lazy picture with no declared size:\n${img}\nit will have no height until it loads, and anything wrapping it collapses`)
+  }
+})
+
+test('the manual builds its shot list with sizes, not bare paths', () => {
+  // Both prop loaders — the real page and the offline harness — must agree, or
+  // the harness measures a page the reader never sees.
+  for (const [file, where] of [['../pages/manual.js', 'the page'], ['../ops/harness/public.mjs', 'the harness']]) {
+    const src = readFileSync(new URL(file, import.meta.url), 'utf8')
+    assert.match(src, /pngSize\(/, `${where} builds its shot list without measuring the files`)
+  }
+})

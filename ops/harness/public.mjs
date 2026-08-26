@@ -23,6 +23,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { measure, report } from './contrast.mjs'
 import { BROWSER_ENV } from './render.mjs'
+import { pngSize } from '../../lib/pngSize.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '../..')
@@ -48,7 +49,12 @@ function pageProps(entry) {
       // filesystem root. Absolute paths gave every picture a broken-image box,
       // which measures nothing like a real screenshot — and measuring is the
       // whole point of rendering it.
-      if (f.endsWith('.png')) shots[f.slice(0, -4)] = path.relative(HERE, path.join(dir, f))
+      // Same { src, w, h } shape the real page builds — the harness measures
+      // what the browser measures, and the declared size is the whole reason
+      // the lazy thumbnails are not two pixels tall.
+      if (f.endsWith('.png')) {
+        shots[f.slice(0, -4)] = { src: path.relative(HERE, path.join(dir, f)), ...pngSize(path.join(dir, f)) }
+      }
     }
     return { shots }
   } catch { return {} }

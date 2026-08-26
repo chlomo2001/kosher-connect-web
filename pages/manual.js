@@ -87,6 +87,14 @@ function ManualRail({ groups }) {
   )
 }
 
+// Every picture on this page is lazy, and a lazy picture with no declared
+// shape has no height until it arrives. That cost the manual two things: it
+// shunted the reader's place down the page as each shot loaded, and it left
+// the dialog thumbnails — which are links — two pixels tall, which the
+// nightly touch-target audit caught on 26 Aug. `shots` carries the pixel size
+// of each file now, so the browser can reserve the box from the ratio.
+const shotAttrs = (shot) => (shot && shot.w ? { width: shot.w, height: shot.h } : {})
+
 function Screen({ s, shots, onZoom }) {
   const screenShot = shots[`screen-${s.id}`]
   return (
@@ -105,9 +113,9 @@ function Screen({ s, shots, onZoom }) {
           {/* Pressable (owner, 23 Aug: zoom "first") — opens the picture full
               size in a lightbox rather than a tab, so a glance costs nothing
               and Escape puts you straight back where you were reading. */}
-          <img src={screenShot} alt={`The ${s.name} screen`} loading="lazy"
+          <img src={screenShot.src} alt={`The ${s.name} screen`} loading="lazy" {...shotAttrs(screenShot)}
             style={{ cursor: 'zoom-in' }} title="Press to see it full size"
-            onClick={() => onZoom && onZoom({ src: screenShot, alt: `The ${s.name} screen` })} />
+            onClick={() => onZoom && onZoom({ src: screenShot.src, alt: `The ${s.name} screen` })} />
           <figcaption>{s.name} — the screen as it opens, with example data. Press the picture to zoom.</figcaption>
         </figure>
       )}
@@ -141,13 +149,15 @@ function Screen({ s, shots, onZoom }) {
                     {/* The thumbnail is small enough that the box's own words
                         are not readable in it, which for a dialog is most of
                         the point — so it opens full size in a new tab. */}
-                    <a href={img} target="_blank" rel="noreferrer" title="Open this box full size">
-                      <img src={img} alt={`The ${id} box`} loading="lazy" />
+                    <a href={img.src} target="_blank" rel="noreferrer" title="Open this box full size">
+                      <img src={img.src} alt={`The ${id} box`} loading="lazy" {...shotAttrs(img)} />
                     </a>
                     <div style={{ fontSize: 'var(--fs-small)' }}>
                       {text}
-                      <div style={{ marginTop: 6, fontSize: 'var(--fs-micro)', color: 'var(--muted)' }}>
-                        <a href={img} target="_blank" rel="noreferrer">See it full size</a>
+                      {/* Its own line, so it needs its own target: 13px of
+                          micro type is a link you aim at rather than press. */}
+                      <div style={{ marginTop: 6 }}>
+                        <a className="kc-man-fullsize" href={img.src} target="_blank" rel="noreferrer">See it full size</a>
                       </div>
                     </div>
                   </div>
@@ -352,9 +362,10 @@ export default function Manual({ shots = {} }) {
                     screen and it cannot drift between the two places. */}
                 {shots[`screen-${g.tab}`] && (
                   <figure className="kc-man-shot kc-man-job-shot">
-                    <img src={shots[`screen-${g.tab}`]} alt={`The ${g.tab} screen`} loading="lazy"
+                    <img src={shots[`screen-${g.tab}`].src} alt={`The ${g.tab} screen`} loading="lazy"
+                      {...shotAttrs(shots[`screen-${g.tab}`])}
                       style={{ cursor: 'zoom-in' }} title="Press to see it full size"
-                      onClick={() => setZoom({ src: shots[`screen-${g.tab}`], alt: `The ${g.tab} screen` })} />
+                      onClick={() => setZoom({ src: shots[`screen-${g.tab}`].src, alt: `The ${g.tab} screen` })} />
                     <figcaption>Where this happens. Press the picture to zoom.</figcaption>
                   </figure>
                 )}
@@ -433,11 +444,15 @@ export async function getServerSideProps({ req }) {
   // modules belong inside the server-only function.
   const { default: fs } = await import('node:fs')
   const { default: path } = await import('node:path')
+  const { pngSize } = await import('../lib/pngSize.mjs')
   let shots = {}
   try {
     const dir = path.join(process.cwd(), 'public/manual')
     for (const f of fs.readdirSync(dir)) {
-      if (f.endsWith('.png')) shots[f.slice(0, -4)] = `/manual/${f}`
+      // { src, w, h } rather than a bare path: the size is what lets the
+      // browser hold the space open for a lazy picture. A file it cannot
+      // measure still gets a src and simply goes back to arriving unannounced.
+      if (f.endsWith('.png')) shots[f.slice(0, -4)] = { src: `/manual/${f}`, ...pngSize(path.join(dir, f)) }
     }
   } catch { shots = {} }
   return { props: { shots } }
