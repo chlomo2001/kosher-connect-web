@@ -12,6 +12,9 @@ export default function Privacy() {
     <>
       <Head><title>Privacy Policy · Kosher Connect</title>
         <meta name="robots" content="index" />
+        {/* Indexable, so it needs a description or Google writes one from the
+            first paragraph. Found by Lighthouse SEO, 26 Aug. */}
+        <meta name="description" content="What personal information Kosher Connect collects, why we hold it, how long we keep it, and your rights over it. Kosher Connect is a trading name of Hatsluche Ltd, Salford." />
         <link rel="canonical" href="https://www.kosher-connect.com/privacy" /></Head>
       <style dangerouslySetInnerHTML={{ __html: LEGAL_CSS }} />
       <LegalShell title="Privacy Policy" updated="28 July 2026">

@@ -6,7 +6,7 @@ bash ops/harness/audit-all.sh --smoke # ~90s — run this before a ship
 bash ops/harness/audit-all.sh         # every check below; ~25-30 min, runs nightly
 ```
 
-**Two speeds, since 24 Aug.** The full sweep is 32 checks and 45 browser
+**Two speeds, since 24 Aug.** The full sweep is 33 checks and 46 browser
 launches. It was being run inline in every session and before every ship, and
 half an hour is how a check that is worth having turns into a check people
 route around. It now runs **once a night** — the "KC nightly full audit"
@@ -411,3 +411,78 @@ a filter over the English one, and the skip link is a separate string in each.
 One thing it is **not**: a substitute for reading. It checks structure, not
 sense — an `alt` of "image" passes rule 2, and a button named "Click here"
 passes rule 3. It catches rot, not bad writing.
+
+## `vitals.mjs` — Core Web Vitals, and the one nobody had measured
+
+```bash
+node ops/harness/vitals.mjs                 # the staff app: INP under load
+node ops/harness/vitals.mjs --cpu 1         # no throttle (default 4×)
+
+npm run build && npm start &                # …then, for the public pages:
+node ops/harness/vitals.mjs --public --base http://127.0.0.1:3000
+```
+
+Google's three numbers, and where each actually comes from:
+
+- **LCP** — how long until the main thing is on screen. A page-load metric.
+- **CLS** — how much the page moved under the reader. A page-load metric.
+- **INP** — how long the screen takes to answer a press. **Not** a page-load
+  metric, which is exactly why nothing here had ever measured it. Lighthouse
+  reports **TBT** as its lab stand-in, and TBT is a proxy for INP the way a
+  forecast is a proxy for rain.
+
+The difference was not academic. Lighthouse gave `/welcome` a Performance score
+of 97 with TBT at 100ms — and the first INP run found switching to **Settings
+answered a press in 280ms**, with Customers, Tickets and Kol Torah at 208-232ms,
+against a "good" bar of 200. `renderTab()` was building the whole tab inside the
+press that started the navigation, so the browser could not paint the new title
+or the nav highlight until the tab was finished. Yielding one frame before the
+heavy part (`requestAnimationFrame` → `setTimeout`, the standard shape) took
+every tab to 40-80ms. Nothing on screen changed: the `.tab-enter` animation was
+already covering that frame.
+
+Two things it must do or it lies:
+
+- **Press for real.** A synthetic `el.click()` produces no `event` entry with an
+  `interactionId`, so the browser does not count it as an interaction at all —
+  the first draft of this reported INP 0 on every tab and read as a pass.
+- **Throttle.** 4× CPU by default. The counter runs on a tablet; an unthrottled
+  headless Chromium answers every press in under a millisecond.
+
+**`--public` refuses to run without a server, on purpose.** The offline build
+renders each public page without its data and lets the client fill it in;
+production server-renders it. Measured against the offline build `/phone-guide`
+reports **CLS 0.63** — a catastrophic score — and against `next start` the same
+page measures **0.0096**. The number was real; it was measuring the harness. A
+metric that can be off by 65× on a scaffolding detail is worse than no metric.
+
+The staff-app half is in the nightly sweep (it needs nothing). The public half
+is run by hand alongside Lighthouse.
+
+### Lighthouse
+
+Not in this directory and not a dependency — install it for a session with
+`npm i --no-save lighthouse`, then point it at a running production build:
+
+```bash
+CHROME_PATH=/opt/pw-browsers/chromium npx lighthouse http://127.0.0.1:3000/welcome \
+  --only-categories=performance,best-practices,accessibility,seo \
+  --chrome-flags="--headless=new --no-sandbox"
+```
+
+Measured 26 Aug 2026 against `next start`, nine pages:
+
+| page | perf | a11y | best-practices | SEO |
+|---|---|---|---|---|
+| welcome | 98 | 100 | 100 | 100 |
+| phone-guide | 100 | 100 | 100 | 100 |
+| repair | 100 | 100 | 100 | 100 |
+| privacy · terms · refund | 100 | 100 | 100 | 100 |
+| login · manual · portal | 100 | 100 | 100 | 58 |
+
+The 58s are not a defect: those three pages carry `robots: noindex` deliberately,
+and "Page is blocked from indexing" is most of that category. It found two real
+things — no meta description on the three *indexable* legal pages, and the
+portal's signed-out branch (the one every customer meets first) rendering with no
+`<main>` landmark, which the nightly structural sweep could not see because the
+offline harness renders a different one of the portal's five branches.

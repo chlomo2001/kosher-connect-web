@@ -6,7 +6,7 @@
 #   bash ops/harness/audit-all.sh            the full sweep — nightly
 #   bash ops/harness/audit-all.sh --smoke    ~90 seconds, before a ship
 #
-# TWO SPEEDS, and the reason for them. The full sweep is 32 checks and 45
+# TWO SPEEDS, and the reason for them. The full sweep is 33 checks and 46
 # browser launches, 25-30 minutes. It was being run inline in every session and
 # before every ship, which is how a check that is worth having becomes a check
 # people route around. From 24 Aug it runs ONCE A NIGHT (the "KC nightly full
@@ -330,6 +330,25 @@ run "public pages · contrast, every theme state" \
 # run before a ship. It moves up if it earns it.
 run "every surface · landmarks, heading order, names, alt text, skip link" \
   bash -eo pipefail -c 'for l in en he; do node ops/harness/a11y.mjs --lang $l | tail -1; done'
+
+# Core Web Vitals — specifically INP, the one nothing here had ever measured.
+# LCP and CLS are page-load numbers and Lighthouse reports both; INP is not a
+# page-load number at all. Lighthouse's stand-in for it is TBT, which is a proxy
+# the way a forecast is a proxy for rain, and the difference showed: with TBT at
+# 100ms and a Performance score of 97, switching to Settings answered a press in
+# 280ms — a third over Google's "good" bar of 200.
+#
+# Driven with real presses (a synthetic .click() produces no interaction entry,
+# so the first draft reported INP 0 everywhere) and throttled 4× — the counter
+# runs on a tablet, and an unthrottled headless Chromium answers in under a
+# millisecond, which measures nothing.
+#
+# The PUBLIC half is deliberately not here: it needs `npm start`, because the
+# offline build renders each page without its data and lets the client fill it
+# in. Measured that way /phone-guide scores CLS 0.63 and against a real server
+# 0.0096. See the header of vitals.mjs.
+run "core web vitals · the app answers a press inside 200ms" \
+  bash -eo pipefail -c 'node ops/harness/vitals.mjs | tail -1'
 
 run "dark rules written only once" \
   node ops/harness/theme-pairs.mjs

@@ -13,6 +13,7 @@ export default function Refund() {
     <>
       <Head><title>Refunds &amp; Cancellations · Kosher Connect</title>
         <meta name="robots" content="index" />
+        <meta name="description" content="When Kosher Connect will refund, exchange or cancel — phones, accessories, SIM plans, rentals, repairs and travel bookings. Your statutory rights are unaffected." />
         <link rel="canonical" href="https://www.kosher-connect.com/refund" /></Head>
       <style dangerouslySetInnerHTML={{ __html: LEGAL_CSS }} />
       <LegalShell title="Refunds & Cancellations" updated="22 July 2026">

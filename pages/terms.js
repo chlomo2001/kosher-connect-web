@@ -11,6 +11,7 @@ export default function Terms() {
     <>
       <Head><title>Terms of Service · Kosher Connect</title>
         <meta name="robots" content="index" />
+        <meta name="description" content="The terms you agree to when you buy a phone, rent a handset, take a SIM plan or book travel with Kosher Connect, 421 Bury New Road, Salford." />
         <link rel="canonical" href="https://www.kosher-connect.com/terms" /></Head>
       <style dangerouslySetInnerHTML={{ __html: LEGAL_CSS }} />
       <LegalShell title="Terms of Service" updated="28 July 2026">

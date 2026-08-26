@@ -217,6 +217,22 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   const [busy, setBusy] = useState(false)
   const [account, setAccount] = useState(null)
   const [loading, setLoading] = useState(false)
+  // Has the token check run yet? The skeleton below says it exists "so the page
+  // doesn't flash a login-style card and then jump to a completely different
+  // layout" — and it could not do that, because `loading` starts false and only
+  // becomes true inside an effect, which runs AFTER the first paint. So a
+  // customer who was already signed in met the sign-in form for one frame,
+  // every single visit.
+  //
+  // Not `useState(!!token())`: that reads sessionStorage, which does not exist
+  // on the server, and the two renders would disagree. A flag that starts false
+  // on both sides and is set by the same effect that does the checking says the
+  // true thing — "we have not looked yet" — and hydrates cleanly.
+  //
+  // Found by ops/harness/a11y.mjs, which does not check for flashes at all: the
+  // sign-in card autofocuses its email box, so the one-frame render moved the
+  // keyboard, and the skip link stopped being the first thing Tab reached.
+  const [booted, setBooted] = useState(false)
   const [netErr, setNetErr] = useState(false)   // couldn't reach us — session kept
   const [linkErr, setLinkErr] = useState('')    // expired / already-used sign-in link
 
@@ -342,6 +358,10 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+    // We have looked now, whatever we find. Batched with the setLoading(true)
+    // that loadAccount/refreshSession do below, so a signed-in visit goes
+    // straight from "not looked yet" to "loading" without a frame between.
+    setBooted(true)
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
     // Supabase's magic-link redirect delivers a refresh_token too — keeping it
     // means the session survives tab close and the ~1h access-token expiry,
@@ -617,7 +637,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
   }
 
   // ── Signed-in read-only account view ──────────────────────────────────────
-  if (loading) {
+  if (loading || !booted) {
     // Skeleton of the signed-in dashboard, so the page doesn't flash a
     // login-style card and then jump to a completely different layout.
     return (
@@ -1026,7 +1046,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
             <div className="login-card" role="alert">
             <div style={{ textAlign: 'center' }}>
               <img src="/logo-full-tight.png" alt="Kosher Connect" style={{ height: 44, marginBottom: 12 }} />
-              <div className="login-title">{L.netErrTitle}</div>
+              <h1 className="login-title">{L.netErrTitle}</h1>
               <div className="login-sub">{L.netErrBody}</div>
             </div>
             <button className="btn btn-primary" onClick={retry} style={{ width: '100%', padding: '10px 16px', marginTop: 16 }}>
@@ -1048,10 +1068,18 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
       <div className="login-shell">
         <ThemeToggle style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }} />
         {langBtn}
+        {/* The sign-in form is the whole page, so it is the content landmark —
+            a <main> AROUND it rather than on it, because <main> and <form> both
+            carry meaning and neither should have to give it up. This branch is
+            the one every customer meets first and it was the one branch of five
+            with no landmark at all: Lighthouse scored the portal 98 on
+            accessibility for it, and the nightly structural sweep never saw it
+            because the offline harness renders a different branch. */}
+        <main id="main">
         <form className="login-card" dir={dir} onSubmit={submit}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <img src="/logo-full-tight.png" alt="Kosher Connect" style={{ height: 44, marginBottom: 12 }} />
-            <div className="login-title">{L.title}</div>
+            <h1 className="login-title">{L.title}</h1>
             <div className="login-sub">{L.subSignedOut(greeting)}</div>
           </div>
           {sent ? (
@@ -1098,6 +1126,7 @@ export default function Portal({ supabaseUrl, googleEnabled }) {
           )}
           <a className="p-backlink" href="/welcome">{L.backToSite}</a>
         </form>
+        </main>
       </div>
     </>
   )

@@ -987,7 +987,38 @@ function renderTab(tab) {
   // row is there immediately, once after the render settles with whatever it
   // fetched.
   kcPaintNextAction(tab);
-  Promise.resolve(meta.render()).then(() => kcPaintNextAction(tab)).catch(() => {});
+  // Yield before the heavy part. `meta.render()` used to run inside the press
+  // that started the navigation, which meant the browser could not paint
+  // anything — not the new title, not the nav highlight — until the whole tab
+  // had been built. Measured with `node ops/harness/vitals.mjs` at 4× CPU
+  // (a counter tablet, not this machine): Settings answered a press in 280ms,
+  // Customers, Tickets and Kol Torah in 208-232ms. Google's "good" bar for INP
+  // is 200ms, and INP is the one Web Vital nothing here had ever measured —
+  // Lighthouse reports TBT as a lab stand-in for it, and a stand-in is not the
+  // thing.
+  //
+  // rAF-then-setTimeout is the standard shape: the frame callback runs before
+  // the paint, the timeout after it, so the press is answered and the tab is
+  // built in the next task. What changes on screen is nothing — the .tab-enter
+  // animation was already covering this frame.
+  //
+  // The visibility guard is not decoration: requestAnimationFrame does not fire
+  // in a hidden tab, so a first render kicked off in a background tab would
+  // simply never happen.
+  //
+  // Returns a promise now, resolving when the tab is actually on screen. The
+  // harness sweeps used to guess with a fixed wait; they can await it.
+  const paint = () => Promise.resolve(meta.render())
+    .then(() => kcPaintNextAction(tab))
+    .catch(() => {});
+  return new Promise((resolve) => {
+    const go = () => { paint().then(resolve, resolve); };
+    if (typeof requestAnimationFrame === 'function' && document.visibilityState !== 'hidden') {
+      requestAnimationFrame(() => setTimeout(go, 0));
+    } else {
+      setTimeout(go, 0);
+    }
+  });
 }
 
 // ══ THE NEXT ACTION ON EVERY SCREEN ══════════════════════════════════════
