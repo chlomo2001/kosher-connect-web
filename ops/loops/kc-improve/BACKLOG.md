@@ -2161,6 +2161,39 @@ that the rest of the app breaks, seven decorative side-stripes, missing
 `:disabled` styling on ~13 non-`.btn` controls, seven success toasts announcing
 a change already visible on screen, and a hand-rolled toggle animating `left`.
 
+## UX/UI night — 26 Aug 2026 (03:09–06:00)
+
+Ground: gate green on arrival; the backlog's "found, not fixed" list was fully
+closed, so the discovery lane was **rendering every tab and measuring the rules
+the project has already written down**. Three of the five came from measuring a
+DESIGN.md rule across all sixteen tabs rather than reading one screen — the
+duplicate create button, the destructive-last rule, and the row-menu threshold
+were each a count, not an impression.
+
+| # | Shipped | What it was | Found by |
+|---|---------|-------------|----------|
+| 1 | `8cd62e4` | Three tabs carried the SAME create action as two full-strength primary buttons ~250px apart — topbar (where #58 deliberately fixed it) and content. Measured across all sixteen: rentals, Online & Print, Virtual Numbers duplicated; thirteen did not. The per-screen copy goes; the rentals row keeps what you do BESIDES creating, and Online & Print's empty state stopped naming a button without saying which | writing a probe that compares the topbar primary's label against every visible control in the content |
+| 2 | `8cd62e4` | The till's empty basket still read "Scan a barcode or tap an item to start" after `c3781c4` stopped the scan box promising a scan the shop cannot do — putting the promise back two inches to the right. Same test now drives both | re-reading the previous commit's own screen |
+| 3 | `1293e38` | DESIGN.md ends its row-action rule "destructive last, set apart". Measured every table: exactly one row broke it — a booking's ✕ third of four, between Passengers and Set a reminder, so a press one button off deletes the booking instead of opening a reminder | a probe for a destructive control that is not the last child of its actions cell |
+| 4 | `f6b2574` | Kol Torah's "Collected" was `btn-primary` at every stage, so a job still OPEN — a CD dropped off, not yet converted — drew the eye to the button that marks it handed back, skipping the work. The quiet outline button beside it was the one that came next. Primary now follows the stage | rendering the tab and reading the row against its own status badge |
+| 5 | `d0646e7` | The Hebrew phone guide had translated labels and English answers — "שני כרטיסי סים  Yes", "מסך מגע  No" — four rows on every handset card, on a page a customer reads before choosing. Only the bare pair is swapped, matched on trimmed lower case, so "Yes — OTP (bank texts only)" stays as the owner wrote it | rendering the public pages in Hebrew at 390px |
+
+### Found, NOT fixed — needs the owner or a decision
+
+- **Four tabs never adopted the row-menu pattern.** DESIGN.md: "three or more:
+  one primary action stays on the row, the rest go behind `kcRowMenuHtml`".
+  Measured at 1440px: bookings 4 controls, virtual 4, repairs 3, koltorah 3 —
+  none with a menu; customers, rentals, sim, shop are compliant. Not converted
+  tonight because on Kol Torah and Repairs the extra controls are STAGE
+  ADVANCES, the row's whole purpose, and hiding a stage behind ⋯ would trade a
+  tidy row for a slower counter. Which of the four are genuinely secondary is a
+  judgement about how the shop works, so it is an issue rather than a silent
+  redesign.
+- **The Hebrew phone guide's pros and cons are English.** "Big clear buttons",
+  "Battery lasts all week", "No camera" — owner-written content with no Hebrew
+  written yet, on the page a Hebrew-speaking customer reads to choose a phone.
+  Not a code fault and not mine to invent.
+
 ## UX/UI night — 24 Aug 2026 (03:07–04:00)
 
 Ground: full `audit-all.sh` clean (exit 0, run unpiped). The discovery lane was
