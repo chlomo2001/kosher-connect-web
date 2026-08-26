@@ -24367,7 +24367,9 @@ const FEE_META = {
       <tbody>
         <tr>
           <td><strong><i class="kc-ic kc-ic-email" aria-hidden="true"></i> Email</strong></td>
-          <td style="font-size:var(--fs-small);">${escHtml(health?.email?.provider || '—')}</td>
+          <td style="font-size:var(--fs-small);">${escHtml(health?.email?.provider || '—')}${health?.email?.senderName
+            ? `<div style="color:var(--muted);font-size:var(--fs-micro);">as “${escHtml(health.email.senderName)}”</div>`
+            : ''}</td>
           <td>${chanBadge(health?.email)}</td>
           <td style="font-size:var(--fs-small);color:var(--muted);">HOLD builds &amp; logs but sends nothing · TEST sends everything to your own address · LIVE emails real customers (MAIL_LIVE).</td>
         </tr>

@@ -2230,7 +2230,8 @@
       "configured": true,
       "provider": "resend",
       "mode": "live",
-      "webhook": "armed"
+      "webhook": "armed",
+      "senderName": "Kosher Connect"
     },
     "sms": {
       "configured": true,

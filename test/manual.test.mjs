@@ -292,13 +292,25 @@ test('every lazy picture on the manual declares the space it will need', () => {
   }
 })
 
-test('the manual builds its shot list with sizes, not bare paths', () => {
-  // Both prop loaders — the real page and the offline harness — must agree, or
-  // the harness measures a page the reader never sees.
-  for (const [file, where] of [['../pages/manual.js', 'the page'], ['../ops/harness/public.mjs', 'the harness']]) {
-    const src = readFileSync(new URL(file, import.meta.url), 'utf8')
-    assert.match(src, /pngSize\(/, `${where} builds its shot list without measuring the files`)
+test('the manual builds its shot list with sizes, not bare paths', async () => {
+  // This said "both prop loaders must call pngSize" — its own comment named the
+  // right worry ("or the harness measures a page the reader never sees") and
+  // then checked the wrong thing. Both DID call it, both passed, and they were
+  // still two separate lists: the harness's worked and the page's threw ENOENT
+  // on every production request. Calling the same function is not agreeing.
+  //
+  // There is one list now, generated at build time, and the sizes are in it.
+  const { MANUAL_SHOTS } = await import('../lib/manualShots.mjs')
+  const entries = Object.entries(MANUAL_SHOTS)
+  assert.ok(entries.length >= 30, `only ${entries.length} pictures in the manifest`)
+  for (const [id, shot] of entries) {
+    assert.ok(shot.w > 0 && shot.h > 0, `${id} has no size — the page cannot reserve its space`)
+    assert.match(shot.src, /^\/manual\//, `${id} has a src the browser cannot fetch: ${shot.src}`)
   }
+  // And it is generated, not hand-kept.
+  const builder = readFileSync(new URL('../scripts/build-manual-shots.mjs', import.meta.url), 'utf8')
+  assert.match(builder, /lib\/manualShots\.mjs/, 'nothing writes the manifest — it will go stale by hand')
+  assert.match(builder, /pngSize\(/, 'the manifest is written without measuring the files')
 })
 
 // A picture you can only press with a mouse is a picture half the readers

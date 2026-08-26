@@ -74,7 +74,44 @@ test('the manual page renders the pictures it is given', () => {
   // browser hold the box open for a lazy picture (26 Aug: the dialog links
   // measured 328×2 on a phone without it).
   assert.match(src, /<img[\s\S]{0,160}?src=\{screenShot\.src\}/, 'the screen picture is never rendered')
-  assert.match(src, /readdirSync/, 'the page never reads which pictures exist')
+  // It used to say `readdirSync` had to be here. It was here, it ran on every
+  // request, and it threw ENOENT on every request — `public/` is not on a
+  // serverless function's filesystem. The page must NOT touch the disk; the
+  // list is generated into lib/manualShots.mjs at build time.
+  // Comments stripped: the page explains in prose WHY it no longer reads the
+  // directory, and that explanation names the call. Naming it is not making it.
+  const code = src.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n')
+  assert.ok(!/readdirSync|process\.cwd\(\)/.test(code),
+    'the page reads the filesystem at request time — public/ is not there in production')
+  assert.match(src, /import \{ MANUAL_SHOTS \} from '\.\.\/lib\/manualShots\.mjs'/,
+    'the page must take its picture list from the generated manifest')
+})
+
+// The manifest and the directory are two things that can disagree, and the
+// whole point of the manifest is that the page trusts it without looking. So
+// they are compared here, every run.
+test('the manifest lists exactly the pictures that exist, at their real sizes', async () => {
+  const { MANUAL_SHOTS } = await import('../lib/manualShots.mjs')
+  const listed = Object.keys(MANUAL_SHOTS).sort()
+  assert.deepEqual(listed, [...shots].sort(),
+    'lib/manualShots.mjs is out of step with public/manual — run scripts/build-manual-shots.mjs')
+  const wrong = []
+  for (const [id, shot] of Object.entries(MANUAL_SHOTS)) {
+    const { w, h } = pngSize(path.join(DIR, `${id}.png`))
+    if (shot.w !== w || shot.h !== h) wrong.push(`${id}: manifest ${shot.w}×${shot.h}, file ${w}×${h}`)
+    if (shot.src !== `/manual/${id}.png`) wrong.push(`${id}: src is ${shot.src}`)
+  }
+  assert.deepEqual(wrong, [], 'the manifest describes a picture that is not the one on disk')
+})
+
+// The harness renders /manual sixty pictures deep every night. It did that
+// while production rendered none, because each built its own list. One list.
+test('the harness and the page take their pictures from the same list', () => {
+  const harness = readFileSync(path.join(ROOT, 'ops/harness/public.mjs'), 'utf8')
+  assert.match(harness, /import \{ MANUAL_SHOTS \}/,
+    'the harness builds its own picture list — then it is not testing the page')
+  assert.ok(!/readdirSync\(dir\)/.test(harness),
+    'the harness is still reading public/manual for itself')
 })
 
 // A missing picture must degrade to the old text page, not to a broken image.
@@ -118,8 +155,11 @@ test('the manual is behind the staff gate, unconditionally', () => {
 // that harness for a day — four checks silently going from pass to fail.
 test('the page survives being rendered with no server props', () => {
   const src = readFileSync(path.join(ROOT, 'pages/manual.js'), 'utf8')
-  assert.match(src, /export default function Manual\(\{ shots = \{\} \}\)/,
-    'shots must default — the offline harness renders this with no props')
+  // The default is the generated manifest now, not {}. It has to be a real
+  // default and not an empty one: getServerSideProps returns no `shots` at all,
+  // so the default IS what production renders — which is the whole fix.
+  assert.match(src, /export default function Manual\(\{ shots = MANUAL_SHOTS \}\)/,
+    'shots must default to the manifest — that default is what production renders')
   const beforeGssp = src.slice(0, src.indexOf('export async function getServerSideProps'))
   assert.doesNotMatch(beforeGssp, /^import .* from ['"]node:/m,
     'server-only modules must be imported inside getServerSideProps, not at module scope')

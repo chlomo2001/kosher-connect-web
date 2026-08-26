@@ -23,7 +23,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { measure, report } from './contrast.mjs'
 import { BROWSER_ENV } from './render.mjs'
-import { pngSize } from '../../lib/pngSize.mjs'
+import { MANUAL_SHOTS } from '../../lib/manualShots.mjs'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '../..')
@@ -40,24 +40,21 @@ const cjs = require(path.join(ROOT, 'node_modules/next/dist/compiled/babel/plugi
 // put it out of scope, which is how the first attempt failed.
 function pageProps(entry) {
   if (!String(entry).endsWith('manual.js')) return {}
-  try {
-    const dir = path.join(ROOT, 'public/manual')
-    const shots = {}
-    for (const f of readdirSync(dir)) {
-      // A file:// path, not the site-absolute /manual/… the real page uses:
-      // the harness opens its HTML off the disk, where a leading slash is the
-      // filesystem root. Absolute paths gave every picture a broken-image box,
-      // which measures nothing like a real screenshot — and measuring is the
-      // whole point of rendering it.
-      // Same { src, w, h } shape the real page builds — the harness measures
-      // what the browser measures, and the declared size is the whole reason
-      // the lazy thumbnails are not two pixels tall.
-      if (f.endsWith('.png')) {
-        shots[f.slice(0, -4)] = { src: path.relative(HERE, path.join(dir, f)), ...pngSize(path.join(dir, f)) }
-      }
-    }
-    return { shots }
-  } catch { return {} }
+  // The SAME list the page ships with, not a second readdir of the same
+  // directory. Two independent lists is how the harness came to render sixty
+  // pictures every night while production rendered none: this one worked, the
+  // page's own did not, and nothing compared them (26 Aug).
+  //
+  // Only the src is rewritten. A file:// path, not the site-absolute /manual/…
+  // the real page uses: the harness opens its HTML off the disk, where a
+  // leading slash is the filesystem root. Absolute paths gave every picture a
+  // broken-image box, which measures nothing like a real screenshot — and
+  // measuring is the whole point of rendering it.
+  const shots = {}
+  for (const [id, shot] of Object.entries(MANUAL_SHOTS)) {
+    shots[id] = { ...shot, src: path.relative(HERE, path.join(ROOT, 'public/manual', `${id}.png`)) }
+  }
+  return { shots }
 }
 
 export const PAGES = { welcome: 'pages/welcome.js', portal: 'pages/portal.js', 'phone-guide': 'pages/phone-guide.js', repair: 'pages/repair.js', login: 'pages/login.js',

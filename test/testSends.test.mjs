@@ -56,3 +56,36 @@ test('the test email goes through the real template', () => {
   // rendering shows.
   assert.match(API, /brandShell\(/, 'the test must use the shell real receipts use')
 })
+
+// ── Who the mail is from ──────────────────────────────────────────────────
+// Owner, 26 Aug: the test email arrived from "receipts". MAIL_FROM is the bare
+// address, and with no display name a mail client shows whatever sits in front
+// of the @ — so every receipt the shop had ever sent was signed by nobody, in
+// an inbox list where "Uber Receipts" and "Find A Minyan" both manage a name.
+test('mail leaves with the shop\'s name on it, not the bit before the @', async () => {
+  const SRC = read('lib/email.js')
+  assert.match(SRC, /const FROM = withDisplayName\(/,
+    'the From address goes out raw — a bare address has no name on it')
+  assert.match(SRC, /COMPANY\.tradingName/,
+    'the name must come from lib/company.mjs, not a literal here or an env var')
+  // An address that already carries a name is somebody\'s deliberate choice.
+  assert.match(SRC, /if \(!addr \|\| addr\.includes\('<'\)\) return addr/,
+    'an address that already has a display name must be left alone')
+})
+
+test('the probe says whose name is on the mail', async () => {
+  // The SMS row has reported which sender it will use for weeks. Email said
+  // nothing, so the missing name was discoverable only by sending one and
+  // looking at it — which is how it survived until the owner did exactly that.
+  const had = { from: process.env.MAIL_FROM, key: process.env.RESEND_API_KEY }
+  try {
+    process.env.MAIL_FROM = 'receipts@mail.kosher-connect.com'
+    process.env.RESEND_API_KEY = 're_test_only'
+    // Fresh module: FROM is resolved once, at import.
+    const { emailStatus } = await import(`../lib/email.js?named=${Date.now()}`)
+    assert.equal(emailStatus().senderName, 'Kosher Connect')
+  } finally {
+    if (had.from === undefined) delete process.env.MAIL_FROM; else process.env.MAIL_FROM = had.from
+    if (had.key === undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY = had.key
+  }
+})

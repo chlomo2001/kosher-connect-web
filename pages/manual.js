@@ -5,6 +5,7 @@ import AppStyles from '../components/AppStyles'
 import { requireStaffCookie } from '../lib/pageAuth'
 import { SCREENS, screensOf, manualProgress, manualStampLine } from '../lib/manual.mjs'
 import { GUIDES } from '../lib/guides.mjs'
+import { MANUAL_SHOTS } from '../lib/manualShots.mjs'
 
 // /manual — the whole system, one screen at a time, on one printable page.
 //
@@ -215,7 +216,7 @@ function screenText(s) {
 // server-supplied prop is absent cannot be checked offline at all, and the
 // pictures are an enhancement — their absence must degrade to the text page,
 // which is the same contract test/manualShots.test.mjs already holds.
-export default function Manual({ shots = {} }) {
+export default function Manual({ shots = MANUAL_SHOTS }) {
   // Marks the page for the print rules in app.css. body and #__next are sized
   // and clipped for the app frame, and printing inherits that: the first
   // attempt printed exactly one page — the part of the manual on screen — and
@@ -450,27 +451,19 @@ export default function Manual({ shots = {} }) {
 export async function getServerSideProps({ req }) {
   const gate = await requireStaffCookie(req)
   if (gate) return gate
-  // Which pictures actually exist, read at request time rather than assumed.
-  // A screen whose shot has not been taken yet simply reads as it always did,
-  // instead of showing a broken image — the manual degrades to the old page
-  // rather than to a worse one.
-  // Imported HERE, not at module scope. A top-level `import fs from 'node:fs'`
-  // is invisible to Next (it strips getServerSideProps from the client bundle)
-  // but NOT to the offline page harness, which parses the module as written —
-  // and it dropped /manual out of the harness entirely for a day. Server-only
-  // modules belong inside the server-only function.
-  const { default: fs } = await import('node:fs')
-  const { default: path } = await import('node:path')
-  const { pngSize } = await import('../lib/pngSize.mjs')
-  let shots = {}
-  try {
-    const dir = path.join(process.cwd(), 'public/manual')
-    for (const f of fs.readdirSync(dir)) {
-      // { src, w, h } rather than a bare path: the size is what lets the
-      // browser hold the space open for a lazy picture. A file it cannot
-      // measure still gets a src and simply goes back to arriving unannounced.
-      if (f.endsWith('.png')) shots[f.slice(0, -4)] = { src: `/manual/${f}`, ...pngSize(path.join(dir, f)) }
-    }
-  } catch { shots = {} }
-  return { props: { shots } }
+  // No filesystem here. This used to read public/manual with fs.readdirSync at
+  // request time — correct locally, correct in the offline harness, and ENOENT
+  // on every single production request, because `public/` is served by the CDN
+  // and is NOT part of a serverless function's bundle. The catch turned that
+  // into `shots = {}` and the page degraded exactly as it was designed to: back
+  // to the words-only manual. Sixty pictures on the CDN, every one fetchable by
+  // URL, and the page never asked for one. Nobody had ever seen a picture in
+  // the manual (owner, 26 Aug).
+  //
+  // The list is generated at build time into lib/manualShots.mjs and imported,
+  // so the component's own default supplies it and this function has nothing
+  // left to do but the gate. The harness still passes its own `shots` (file://
+  // paths, because it opens the page off the disk) and that override still
+  // wins.
+  return { props: {} }
 }
