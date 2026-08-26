@@ -14978,8 +14978,14 @@ function renderBookingsTab() {
           <div class="row-actions">
           <button class="action-btn kc-ic kc-ic-takeoff" onclick="openCheckinModal('${escHtml(b.id)}')" title="Online check-in" aria-label="Online check-in"></button>
           <button class="action-btn kc-ic kc-ic-users" onclick="openPassengersModal('${escHtml(b.id)}')" title="Passengers (DOB, passport)" aria-label="Passengers"></button>
-          <button class="action-btn danger" onclick="deleteBookingRow('${escHtml(b.id)}')" title="Delete booking" aria-label="Delete booking">✕</button>
           <button class="action-btn kc-ic kc-ic-clock" onclick="openRemindModal('booking','${escHtml(b.id)}')" title="Remind me" aria-label="Set a reminder"></button>
+          ${/* Destructive LAST, as DESIGN.md's row-action rule says, and this
+                row was the only one in the app breaking it — measured 26 Aug
+                across every table: delete sat third of four, between two
+                harmless controls, so an aimed press that lands one button off
+                deletes the booking instead of setting a reminder. Every other
+                destructive control in the app is already at the end. */''}
+          <button class="action-btn danger" onclick="deleteBookingRow('${escHtml(b.id)}')" title="Delete booking" aria-label="Delete booking">✕</button>
           <select class="form-input" style="width:110px;padding:5px 8px;font-size:var(--fs-small);"
             aria-label="Status for ${escHtml(b.customerName || b.bookingRef || 'this booking')}"
             onchange="changeBookingStatus('${escHtml(b.id)}', this.value)">
