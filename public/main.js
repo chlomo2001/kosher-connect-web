@@ -3106,7 +3106,12 @@ function renderRentalsTab() {
     </div>
 
     <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-      <button class="btn btn-primary kc-ic kc-ic-phone" onclick="openNewRentalModal()">New rental</button>
+      ${/* The create action lives in the topbar, on every tab, in the same
+             place (#58). It was ALSO here, in the same blue, so three screens
+             carried two identical primary buttons ~250px apart — measured
+             26 Aug: rentals, Online & Print, Virtual Numbers. Two loud buttons
+             for one job is the "buttons which aren't really needed" the owner
+             asked about, and the duplicate is the one that moves per screen. */''}
       <button class="btn btn-outline kc-ic kc-ic-gear" onclick="openManagePhonesModal()">Manage phones</button>
       <button class="btn btn-outline kc-ic kc-ic-signal" onclick="openPoolsModal()">Pools</button>
       <button class="btn ${rentalView === 'calendar' ? 'btn-primary' : 'btn-outline'} kc-ic kc-ic-calendar"
@@ -16932,7 +16937,7 @@ async function renderServicesTab() {
   ], renderServicesTab);
   const svcShown = kcViewApply('services', serviceOrders);
   const orderRows = svcShown.length === 0
-    ? `<tr><td colspan="5"><div class="empty-state"><div class="emoji kc-ic kc-ic-printer"></div><p>${serviceOrders.length ? 'No orders match this filter.' : 'No services charged yet.'}</p>${serviceOrders.length ? '' : '<small>Click "+ Charge a service" to record the first one.</small>'}${kcClearFiltersBtn('services')}</div></td></tr>`
+    ? `<tr><td colspan="5"><div class="empty-state"><div class="emoji kc-ic kc-ic-printer"></div><p>${serviceOrders.length ? 'No orders match this filter.' : 'No services charged yet.'}</p>${serviceOrders.length ? '' : '<small>Press "+ Charge a service", top right, to record the first one.</small>'}${kcClearFiltersBtn('services')}</div></td></tr>`
     : svcShown.map(o => `
       <tr>
         <td><div class="customer-name">${custNameLink(o.customerId, escName(o.customerName || '—'))}</div></td>
@@ -16998,7 +17003,12 @@ async function renderServicesTab() {
     })()}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
       ${svcBar}
-      <button class="btn btn-primary" onclick="openNewServiceModal()">+ Charge a service</button>
+      ${/* The create action lives in the topbar, on every tab, in the same
+             place (#58). It was ALSO here, in the same blue, so three screens
+             carried two identical primary buttons ~250px apart — measured
+             26 Aug: rentals, Online & Print, Virtual Numbers. Two loud buttons
+             for one job is the "buttons which aren't really needed" the owner
+             asked about, and the duplicate is the one that moves per screen. */''}
     </div>
     <div class="dash-cols">
       <div class="table-card">
@@ -18602,8 +18612,13 @@ function posRenderBasket() {
   if (!el) return;
   posSyncActionButtons();
   let total = 0;
+  // Says the same thing the scan box says. When nothing in the shop carries a
+  // barcode the box stops offering a scan (c3781c4), and an empty basket that
+  // still said "Scan a barcode" would put the promise straight back two
+  // inches to the right.
   el.innerHTML = posBasket.length === 0
-    ? '<div style="color:var(--muted);font-size:var(--fs-body);padding:10px 2px;">Scan a barcode or tap an item to start.</div>'
+    ? `<div style="color:var(--muted);font-size:var(--fs-body);padding:10px 2px;">${
+        posCanScan() ? 'Scan a barcode or tap an item to start.' : 'Tap an item to start, or type its name above.'}</div>`
     : posBasket.map(l => {
         const i = shopItems.find(x => x.id === l.itemId);
         if (!i) return '';
@@ -23512,7 +23527,12 @@ async function renderVirtualTab() {
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
       ${vnBar}
-      <button class="btn btn-primary" onclick="openNewVNModal()">+ New number</button>
+      ${/* The create action lives in the topbar, on every tab, in the same
+             place (#58). It was ALSO here, in the same blue, so three screens
+             carried two identical primary buttons ~250px apart — measured
+             26 Aug: rentals, Online & Print, Virtual Numbers. Two loud buttons
+             for one job is the "buttons which aren't really needed" the owner
+             asked about, and the duplicate is the one that moves per screen. */''}
     </div>
     <div id="vnBulkBar" style="display:${vnSelected.size ? 'flex' : 'none'};margin:0 0 10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-secondary);align-items:center;gap:10px;flex-wrap:wrap;">
       <strong id="vnBulkCount" style="font-size:var(--fs-body);">${vnSelected.size} number${vnSelected.size === 1 ? '' : 's'} selected</strong>
