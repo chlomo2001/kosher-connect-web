@@ -14975,17 +14975,23 @@ function renderBookingsTab() {
         <td>${bookingStatusBadge(b.status)}</td>
         <td style="cursor:pointer;" onclick="openCheckinModal('${escHtml(b.id)}')" title="Set check-in">${checkinChip(b)}</td>
         <td>
+          ${/* Was four buttons and a status box — five controls, the widest row
+                in the app (issue #24). Check-in is the one that stays: it is
+                the only action here with a DEADLINE, it is what the sweep
+                raises tasks about, and it is the reason the row carries a
+                check-in chip at all. Passengers and Remind are things you go
+                looking for; check-in is the thing that comes looking for you.
+
+                The status box stays out of the menu too. It is not an action,
+                it is the row's state — the same reason Kol Torah and Repairs
+                keep their stage buttons on the row (DESIGN.md, row actions). */''}
           <div class="row-actions">
           <button class="action-btn kc-ic kc-ic-takeoff" onclick="openCheckinModal('${escHtml(b.id)}')" title="Online check-in" aria-label="Online check-in"></button>
-          <button class="action-btn kc-ic kc-ic-users" onclick="openPassengersModal('${escHtml(b.id)}')" title="Passengers (DOB, passport)" aria-label="Passengers"></button>
-          <button class="action-btn kc-ic kc-ic-clock" onclick="openRemindModal('booking','${escHtml(b.id)}')" title="Remind me" aria-label="Set a reminder"></button>
-          ${/* Destructive LAST, as DESIGN.md's row-action rule says, and this
-                row was the only one in the app breaking it — measured 26 Aug
-                across every table: delete sat third of four, between two
-                harmless controls, so an aimed press that lands one button off
-                deletes the booking instead of setting a reminder. Every other
-                destructive control in the app is already at the end. */''}
-          <button class="action-btn danger" onclick="deleteBookingRow('${escHtml(b.id)}')" title="Delete booking" aria-label="Delete booking">✕</button>
+          ${kcRowMenuHtml([
+            { label: 'Passengers (DOB, passport)', icon: 'users', onclick: `openPassengersModal('${escHtml(b.id)}')` },
+            { label: 'Remind me about this', icon: 'clock', onclick: `openRemindModal('booking','${escHtml(b.id)}')` },
+            { label: 'Delete this booking', icon: 'trash', onclick: `deleteBookingRow('${escHtml(b.id)}')`, danger: true },
+          ], { label: 'More for this booking' })}
           <select class="form-input" style="width:110px;padding:5px 8px;font-size:var(--fs-small);"
             aria-label="Status for ${escHtml(b.customerName || b.bookingRef || 'this booking')}"
             onchange="changeBookingStatus('${escHtml(b.id)}', this.value)">
@@ -23531,16 +23537,26 @@ async function renderVirtualTab() {
           ? 'background:rgba(34,197,94,0.15);color:var(--success-ink);'
           : 'background:rgba(148,163,184,0.15);color:var(--muted);'}">${escHtml(v.status)}</span></td>
         <td>${v.shortcutUrl ? `<a href="${escHtml(v.shortcutUrl)}" target="_blank" rel="noopener" style="color:var(--accent);font-size:var(--fs-small);">open</a>` : '—'}</td>
+        ${/* Four controls on one row, against DESIGN.md's rule of one primary
+              and the rest behind ⋯ (issue #24). Billing is the one that stays,
+              and that is measured, not guessed: every one of the 77 numbers on
+              the books is Active and not one has EVER been deactivated, so the
+              control the rule would have kept on grounds of prominence is the
+              one nobody has pressed. Billing is what these rows are for — the
+              shop bills them weekly or monthly. */''}
         <td style="white-space:nowrap;">
-          <button class="action-btn kc-ic kc-ic-clock" style="font-size:var(--fs-micro);padding:4px 10px;"
-            onclick="openRemindModal('vn','${escHtml(v.id)}')" title="Remind me"></button>
+          <div class="row-actions">
           <button class="action-btn kc-ic kc-ic-pound" style="font-size:var(--fs-micro);padding:4px 10px;"
             onclick="openVNBillingModal('${escHtml(v.id)}')">Billing</button>
-          <button class="action-btn" style="font-size:var(--fs-micro);padding:4px 10px;"
-            onclick="toggleVNStatus('${escHtml(v.id)}', '${v.status === 'Active' ? 'Inactive' : 'Active'}')">
-            ${v.status === 'Active' ? '<i class="kc-ic kc-ic-pause" aria-hidden="true"></i> Deactivate' : '<i class="kc-ic kc-ic-play" aria-hidden="true"></i> Activate'}</button>
-          <button class="action-btn danger" style="font-size:var(--fs-micro);padding:4px 10px;"
-            aria-label="Delete this number" onclick="deleteVN('${escHtml(v.id)}', '${escHtml(v.number)}')">✕</button>
+          ${kcRowMenuHtml([
+            { label: 'Remind me about this', icon: 'clock', onclick: `openRemindModal('vn','${escHtml(v.id)}')` },
+            { label: v.status === 'Active' ? 'Deactivate this number' : 'Activate this number',
+              icon: v.status === 'Active' ? 'pause' : 'play',
+              onclick: `toggleVNStatus('${escHtml(v.id)}', '${v.status === 'Active' ? 'Inactive' : 'Active'}')` },
+            { label: 'Delete this number', icon: 'trash',
+              onclick: `deleteVN('${escHtml(v.id)}', '${escHtml(v.number)}')`, danger: true },
+          ], { label: 'More for this number' })}
+          </div>
         </td>
       </tr>`).join('');
 

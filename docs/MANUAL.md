@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **30 of 30 screens written out in full.**
-*As of 26 Aug 2026 · m-e8073d77 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 26 Aug 2026 · m-2fce137b — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -328,6 +328,7 @@ Flights booked for customers: the ticket and what it cost, who is travelling, wh
 - **Travel documents panel** — The check that runs on every booking as you fill it in. It blocks a booking where the passport dies before they are home, asks you to verify what it cannot see, and passes what is genuinely fine.
 - **Filter and sort** — Upcoming travel is the working list — and a customer already abroad stays on it until they land back, because they are still away.
 - **The list** — Customer, route, airline and reference, the travel date with a mark for a return leg, price, fee, status, and where the check-in has got to.
+- **⋯ More for this booking** — Passengers opens who is travelling, with their dates of birth and passports. Remind me sets a reminder about the booking. Delete removes it. Online check-in stays out on the row instead, because it is the one thing here with a date on it — the sweep raises a job for it, and the chip on the row says how far it has got. The status box stays out too: that is the booking's state, not an action.
 - **Tickets from email** — Airline confirmations that have arrived, read and waiting to be confirmed into bookings. Each row says what the message IS — a booking confirmation, an unpaid reservation, a cancellation, or something that is not a booking at all — and only the real bookings offer to become one. ↻ Check now re-reads them on the spot, for the customer standing at the counter who has just forwarded theirs. The timestamp is when the email arrived, in the shop's own time.
 - **Not paid yet** — An airline holding seats it has not been paid for. It is a real reservation, so it can still be booked in, but the note says to deal with the payment first — the airline cancels it if nobody does.
 - **Not about a booking** — A privacy notice, an advert, a baggage message — airline post that is not a booking to make. It offers only to be read and dismissed, never to be confirmed into a flight. Most of these never reach the queue; the ones that do are cleared with Dismiss.
@@ -504,8 +505,7 @@ Numbers rented to customers that ring through to somewhere else: who has which, 
 - **Filter and sort** — Active or not, and the ones with billing switched on — those are the ones that take money by themselves and are worth reading down.
 - **The list** — The number, whose it is, the platform, what it bills and when next, whether it is active, and a link straight into the platform where one is saved.
 - **Billing** — What this number charges and how often. Switching billing on is what makes it charge; it does not follow from the number merely existing.
-- **Deactivate · Activate** — Stops or restarts a number without losing it or its history.
-- **Remind me** — A reminder for you about this number — chasing the platform, or a customer who asked for it to end.
+- **⋯ More for this number** — Deactivate stops a number without losing it or its history, and Activate starts it again. Remind me sets a reminder for you about it — chasing the platform, or a customer who asked for it to end. Delete removes it. Billing is the one kept out on the row, because it is what the row is for.
 
 **Boxes that open on top of it**
 

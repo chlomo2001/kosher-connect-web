@@ -178,6 +178,24 @@ and [NN/g](https://www.nngroup.com/articles/contextual-menus-guidelines/):
   that only exists on hover does not exist to a finger.
 - **Only actions belonging to the same object.** A row menu is that row's.
 - **Destructive last, set apart** by a hairline as well as by colour.
+- **A stage is not an action, and does not go in the menu.** Kol Torah and
+  Repairs each carry three controls on a row, and two of the three are the
+  stage the job moves to next — Ready, Collected, the repair stages. Those are
+  the row's whole purpose, and hiding one behind ⋯ trades a tidy row for a
+  slower counter. The same exemption covers a state control that is not a
+  button at all: Tickets & Flights keeps its status box on the row beside the
+  ⋯. The rule exists to reduce noise, not to bury the work.
+
+Settled 26 Aug by measuring the rule across every table rather than reading one
+screen (issue #24). Four tabs were outside it. Two were converted and two were
+the exception above:
+
+| tab | was | now | why |
+|---|---|---|---|
+| virtual | 4 buttons | Billing + ⋯ | every one of the 77 numbers on the books is Active and not one has **ever** been deactivated — the control prominence would have kept is the one nobody presses. Billing is what the row is for. |
+| bookings | 4 buttons + a status box | Check-in + ⋯ + the status box | check-in is the only action here with a deadline, it is what the sweep raises tasks about, and it is why the row carries a check-in chip. Passengers and Remind are things you go looking for. |
+| koltorah | 3 buttons | unchanged | two of the three are stage advances |
+| repairs | 3 buttons | unchanged | same |
 
 The menu keeps the ARIA menu-button contract: `aria-haspopup="menu"` and
 `aria-expanded` on the button, `role="menu"` / `role="menuitem"` inside,
