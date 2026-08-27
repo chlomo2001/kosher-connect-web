@@ -73,6 +73,12 @@ const JOBS = [
   { job: 'Sell something (till)',
     navigate: [tab('shop'), click('Sell')],
     fast:     [palette(), paletteQuick('Point of Sale')] },
+  // The other end of the same day. Added 27 Aug: the till had a route here and
+  // counting it did not, so nothing proved the way to the cash-up stayed open —
+  // and it is the one job that has to be done before anybody goes home.
+  { job: 'Cash up at the end of the day',
+    navigate: [tab('shop'), click('Cash up')],
+    fast:     [palette(), paletteQuick('cash')] },
   { job: 'Book a flight',
     navigate: [tab('bookings'), click('New booking')],
     fast:     [palette(), paletteQuick('booking')] },

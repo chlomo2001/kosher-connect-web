@@ -915,7 +915,14 @@ const TAB_META = {
   sim:       { label: 'SIM Plans',         title: 'SIM <span>Plans</span>',             render: () => renderSimsTab(),      search: false, primary: { label: '+ New SIM plan', run: () => openAddSimModal() } },
   bookings:  { label: 'Tickets & Flights', title: 'Tickets <span>&amp; Flights</span>', render: () => renderBookingsTab(),  search: false, primary: { label: '+ New booking',  run: () => openNewBookingModal() } },
   wallet:    { label: 'Wallet',            title: 'Wallet <span>&amp; Ledger</span>',   render: () => renderWalletTab(),    search: false },
-  repairs:   { label: 'Repairs',           title: 'Phone <span>Repairs</span>',         render: () => renderRepairsTab(),   search: false, primary: { label: '+ New repair',   run: () => openNewRepairModal() } },
+  // The price list is fetched, not bundled, so every door into the repair
+  // dialog has to make sure it has arrived. The palette entry and the customer
+  // card's Repair button both await getServiceMenu('repair') first; this one
+  // relied on renderRepairsTab() having already finished, which is true when
+  // the tab has settled and not guaranteed the instant it is asked for. An
+  // empty menu renders "Price list unavailable", and saveNewRepair then refuses
+  // with "Pick at least one service" — a dead end with nothing to pick.
+  repairs:   { label: 'Repairs',           title: 'Phone <span>Repairs</span>',         render: () => renderRepairsTab(),   search: false, primary: { label: '+ New repair',   run: async () => { if (!repairMenu.length) repairMenu = await window.api.getServiceMenu('repair'); openNewRepairModal() } } },
   services:  { label: 'Online & Print',    title: 'Online <span>&amp; Print</span>',    render: () => renderServicesTab(),  search: false, primary: { label: '+ Charge a service', run: () => openNewServiceModal() } },
   shop:      { label: 'Shop',              title: 'Shop <span>&amp; Stock</span>',      render: () => renderShopTab(),      search: false },
   koltorah:  { label: 'Kol Torah',         title: 'Kol <span>Torah</span>',             render: () => renderKolTorahTab(),  search: false, primary: { label: '+ New job',      run: () => ktFocusNewJob() } },
@@ -11588,7 +11595,7 @@ async function openCashupModal(dateISO) {
         <!-- role=status: this is computed as the counter types and is the one
              number the whole screen exists to produce. Without it a screen
              reader announces the keystrokes and never the answer. -->
-        <div id="cuVariance" role="status" style="font-size:var(--fs-small);margin-top:4px;font-weight:600;">
+        <div id="cuVariance" role="status" data-variance="${data.count ? data.count.variance : ''}" style="font-size:var(--fs-small);margin-top:4px;font-weight:600;">
           ${data.count ? (data.count.variance === 0 ? '✓ Till balances' : `${data.count.variance > 0 ? '+' : '−'}${fmtGbp(Math.abs(data.count.variance))} ${data.count.variance > 0 ? 'over' : 'short'}`) : ''}</div>
       </div>
       <div class="form-group">
@@ -11607,8 +11614,9 @@ function cuUpdateVariance(inputEl, expected) {
   const el = document.getElementById('cuVariance');
   const v = parseFloat(inputEl.value);
   if (!el) return;
-  if (!Number.isFinite(v)) { el.textContent = ''; return; }
+  if (!Number.isFinite(v)) { el.textContent = ''; delete el.dataset.variance; return; }
   const d = +(v - expected).toFixed(2);
+  el.dataset.variance = String(d);
   el.textContent = d === 0 ? '✓ Till balances'
     : `${d > 0 ? '+' : '−'}${fmtGbp(Math.abs(d))} ${d > 0 ? 'over' : 'short'}`;
   el.style.color = d === 0 ? 'var(--success)' : 'var(--danger-ink)';
@@ -11617,6 +11625,9 @@ function cuUpdateVariance(inputEl, expected) {
 async function saveCashup(date) {
   const counted = parseFloat(document.getElementById('cuCounted').value);
   if (!Number.isFinite(counted) || counted < 0) { toast('Enter the counted amount.', 'error'); return; }
+  // What the screen was claiming at the moment the button went down, so the
+  // answer that comes back can be compared against it.
+  const onScreenVariance = document.getElementById('cuVariance')?.dataset.variance;
   const res = await kcFetch('/api/cashup', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -11625,11 +11636,31 @@ async function saveCashup(date) {
   // The count is not saved, and the person is standing at an open till with a
   // number in their hand. Say which, so they know whether to write it down.
   if (!res || !res.success) { toast(res?.error || 'The count was not saved — check the connection and try again. Your figure is still in the box.', 'error'); return; }
+
+  // The server recomputes what the till SHOULD hold at the moment of saving;
+  // the figure on screen was worked out when the dialog opened. Those are two
+  // different questions if a sale lands in between, and the screen said one
+  // thing while the toast said another. The server's answer is the one that
+  // gets written down, so it is the one that gets said — and where the two
+  // disagree, say that too, because it means the takings moved while somebody
+  // was counting and the drawer is not what they thought.
+  const v = Number(res.variance);
+  if (!Number.isFinite(v)) {
+    // Saved, but the server did not say by how much. Never guess: an undefined
+    // variance used to print "−£0.00 short", and "short" is not a word to put
+    // in front of somebody at a till on the strength of a missing number.
+    toast('Count saved. The till figure did not come back — reopen the cash-up to see it.', 'warning');
+    closeDynamicModal();
+    return;
+  }
+  const shown = Number(onScreenVariance);
+  const moved = Number.isFinite(shown) && Math.abs(shown - v) >= 0.01;
   closeDynamicModal();
-  const v = res.variance;
-  toast(v === 0 ? 'Till counted — balances exactly. ✓'
-    : `Till counted — ${v > 0 ? '+' : '−'}${fmtGbp(Math.abs(v))} ${v > 0 ? 'over' : 'short'}.`,
-    v === 0 ? 'success' : 'warning');
+  const line = v === 0 ? 'Till counted — balances exactly. ✓'
+    : `Till counted — ${v > 0 ? '+' : '−'}${fmtGbp(Math.abs(v))} ${v > 0 ? 'over' : 'short'}.`;
+  toast(moved
+    ? `${line} Takings changed while you were counting — the screen said ${shown > 0 ? '+' : '−'}${fmtGbp(Math.abs(shown))}.`
+    : line, v === 0 ? 'success' : 'warning');
 }
 
 // ── Bank reconciliation (owner-only; lives under the Wallet tab) ─────────
