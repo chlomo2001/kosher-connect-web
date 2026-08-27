@@ -24582,6 +24582,19 @@ const FEE_META = {
   // this tells any helper which converter handles which handset, and where the
   // same job can be done in-app. The work itself is charged via the "Contact
   // Transfer / Phone Setup" line on the Online & Print menu.
+  //
+  // It listed five PC converters when it was written (July, when the plan was
+  // explicitly NOT to rebuild them). Three of those were then rebuilt anyway —
+  // pages/tools/contacts.js says so in its own header, "one page replacing five
+  // of the owner's stand-alone tools" — and the in-app rows were added at the
+  // top without anybody removing the rows they superseded. A directory that
+  // sends a helper to a program they don't need is worse than no directory.
+  //
+  // What is left on the PC is left because the app genuinely cannot do it:
+  // parseNbf reads predefmessages/1|3 — MESSAGES — so there is no route from an
+  // NBF to contacts, and parseSmsBackupXml refuses anything without an <smses>
+  // root. Both are closable given a sample file; until then the honest answer
+  // is "office PC".
   const contactToolsHtml = settingsCard('contacttools', '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> Contact tools (phone migrations)',
     'which converter handles which handset', `
       <div style="padding:10px 16px 6px;">
@@ -24590,15 +24603,16 @@ const FEE_META = {
           <tbody>
             <tr><td>Contacts Converter</td><td>Excel / CSV / VCF → clean +44 VCF (map, merge, dedupe)</td><td><a href="/tools/contacts" target="_blank" rel="noopener">in-app</a></td></tr>
             <tr><td>Transfer Wizard</td><td>Phone-to-phone: XML / NBF / IB / VCF → VCF or FIG zip</td><td><a href="/tools/transfer" target="_blank" rel="noopener">in-app</a></td></tr>
-            <tr><td>xml→fig</td><td>Nokia backup XML → Fig core phone format</td><td>office PC</td></tr>
-            <tr><td>NokiaB→VCF</td><td>Nokia backup (NBF) → VCF</td><td>office PC</td></tr>
-            <tr><td>Excel→VCF / CSV→VCF offline</td><td>Spreadsheet exports → VCF</td><td>office PC</td></tr>
-            <tr><td>VCF UK-prefix converter</td><td>Normalises numbers to +44</td><td>office PC</td></tr>
-            <tr><td>VCF cleaner</td><td>Strips broken / duplicate entries from a VCF</td><td>office PC</td></tr>
+            <tr><td>xml→fig</td><td>A Nokia backup XML the Transfer Wizard refuses — it only reads the <code>&lt;smses&gt;</code> kind</td><td>office PC</td></tr>
+            <tr><td>NokiaB→VCF</td><td><strong>Contacts</strong> out of a Nokia .NBF — the Wizard reads an NBF for messages only</td><td>office PC</td></tr>
           </tbody>
         </table></div>
       </div>
       <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
+        The old <strong>Excel→VCF</strong>, <strong>CSV→VCF offline</strong>, <strong>VCF UK-prefix converter</strong> and
+        <strong>VCF cleaner</strong> apps are still sitting on the office PC, but nothing needs them any more — Contacts
+        Converter does all four jobs in one pass, on this machine, without the files leaving it.
+        <br><br>
         Charge the job with the <strong>Contact Transfer / Phone Setup</strong> line on the Online &amp; Print menu — it lands on the customer's timeline and wallet like any other service. Then save the finished <strong>.vcf</strong> against the customer (Documents on their card), so next phone change their contacts are one click away.</div>`);
 
   // A category eyebrow above its cards — same idea as the sidebar's group
