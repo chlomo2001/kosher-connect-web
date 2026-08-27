@@ -5044,6 +5044,8 @@ async function saveMultiPhoneRental(customerId, phoneIds, addAnother) {
       vnSub: i === 0 && mAddVN ? mVnSub : '',
       vnPrice: i === 0 && mAddVN ? mVnPrice : 0,
       notes, amountPaid: pay,
+      // Same method on every rental of the batch — one payment, one tender.
+      paymentMethod: payMethod !== 'account' && pay > 0 ? payMethod : null,
       depositHeld: 0,
       termsAck: !!document.getElementById('rTerms')?.checked,
       termsAckName: document.getElementById('rTerms')?.checked
@@ -5416,6 +5418,13 @@ async function saveNewRental(addAnother = false) {
     vnPrice,
     notes,
     amountPaid:   payAmt, // #25
+    // HOW it was paid, not just that it was. The form has asked cash / card /
+    // transfer since the beginning and the answer was read to decide whether
+    // money moved, then dropped on the floor — so every rental payment reached
+    // the ledger with no method, and cash-up's expected-cash total (which counts
+    // only method='cash') never saw a rental. A cash hire made the till read
+    // over at the end of the day, every day.
+    paymentMethod: paidNow ? payMethod : null,
     // #26 — optional refundable deposit, tracked as held (not a wallet charge).
     depositHeld:  document.getElementById('rDeposit')?.checked
                     ? (parseFloat(document.getElementById('rDepositAmount')?.value) || 0) : 0,
