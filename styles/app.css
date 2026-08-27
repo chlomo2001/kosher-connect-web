@@ -3181,6 +3181,12 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
    min-content width, and the section header above made that 1066px. */
 
 .rentals-split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+/* …unless there is genuinely room — see the wide-screen block at the end of
+   this file. It has to sit after the air-pass column cap and after
+   .rentals-inv-spacer's display:none, both of which are declared below. */
+
+
+}
 
 .rentals-split-col { display: flex; flex-direction: column; min-width: 0; }
 
@@ -3188,9 +3194,10 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 
 
 /* The rentals column carries a filter/sort toolbar. The Phone Inventory column
-   used to carry an equal-height spacer so the two tables lined up side-by-side;
-   now that the split always stacks there is nothing to line up with, and the
-   spacer only opened a dead 38px gap under the "Phone Inventory" heading. */
+   carries an equal-height spacer so the two tables line up when they sit side
+   by side; stacked there is nothing to line up with and the spacer would only
+   open a dead 38px gap under the "Phone Inventory" heading, so it is hidden by
+   default and the wide breakpoint above brings it back. */
 
 .rentals-filter-row { min-height: 38px; margin-bottom: 10px; }
 
@@ -5532,3 +5539,37 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
   }
   input[type="checkbox"]:disabled, input[type="radio"]:disabled { cursor: not-allowed; opacity: .5; }
 }
+
+
+/* …UNLESS there is genuinely room. Owner, 27 Aug: "active rental and phone
+   inventory can be side by side instead? it makes me nervous" — stacked, the
+   inventory sits below the fold, so while you are looking at a hire you cannot
+   see what is free.
+   The measurement above still holds and is why this is a breakpoint rather
+   than a preference: the rentals table needs 999px of content and half of a
+   1280px screen is 484px. What the old escape hatch got wrong was the trigger
+   (1150px, where it cannot possibly fit) and the split (50/50, which starves
+   the wide table to feed the narrow one).
+   So: rentals takes a fixed 1010px — enough that it NEVER clips, which was the
+   whole complaint — and inventory takes what is left. Below 1700px nothing
+   changes and the page stacks exactly as the air pass judged it.
+   Measured with the cap lifted: 1920px gives 1608px of shell (inventory scrolls
+   ~90px, which it may — it is the secondary list and its wrap scrolls), 2560px
+   gives 2248px and both sit at natural width. */
+@media (min-width: 1700px) {
+  /* The same exemption the till has: a screen that needs width gets it. The
+     1220px air-pass column is right for reading and wrong for two tables. */
+  /* .rentals-split IS the direct child of .content, so `*:has(.rentals-split)`
+     matches nothing — :has() needs a DESCENDANT. Both forms are listed so this
+     keeps working if the tab ever grows a wrapper. */
+  .content > .rentals-split,
+  .content > *:has(.rentals-split) { max-width: 2280px; }
+  .rentals-split { grid-template-columns: minmax(0, 1010px) minmax(0, 1fr); }
+  /* The rentals column carries a filter toolbar; with the two side by side
+     again the inventory needs its spacer back or the tables start apart.
+     70px, not the .rentals-filter-row min-height of 38: the toolbar WRAPS to
+     two rows here — three dropdowns, then "Save view" under them — and
+     measured at 1920 it is 70px tall, which left a 32px step between the two
+     tables. If the toolbar ever gains or loses a row this number is the thing
+     that will look wrong first. */
+  .rentals-inv-spacer { display: block; min-height: 70px; }
