@@ -125,18 +125,44 @@ async function handler(req, res) {
     const { customerId } = req.body || {}
     if (!customerId) return res.status(400).json({ success: false, error: 'customerId is required.' })
 
-    const stamp = { verified_at: new Date().toISOString(), verified_by: req.staff?.id || null }
-    const rows = await db.update('customers', `id=eq.${enc(customerId)}&${UNVERIFIED}`, stamp)
-    if (!rows.length) {
-      return res.status(404).json({ success: false, error: 'That customer is not waiting to be confirmed.' })
+    // TWO KINDS OF ID REACH THIS ROUTE, and until 27 Aug only one of them
+    // worked. The Confirm Data screen sends the row uuid, because its bundles
+    // are keyed by `customer_id` off the attached tables. The customer CARD's
+    // "unconfirmed — confirm?" button sends what the rest of the app calls a
+    // customer id, which is `legacy_id` — ten other endpoints look a customer
+    // up that way and this was the only one using `id`. So the card's button
+    // matched zero rows, returned 404, and said "Could not confirm that —
+    // nothing was changed." every single time. Shloime found it by pressing it
+    // twice.
+    //
+    // Resolve the row first, then work in uuids: the attached tables hold a
+    // uuid foreign key, so the stamp below needs one whichever id came in.
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(customerId))
+    const found = await db.select('customers',
+      `select=id,verified_at,data_source&${isUuid ? 'id' : 'legacy_id'}=eq.${enc(customerId)}&limit=1`)
+    if (!found.length) return res.status(404).json({ success: false, error: 'That customer could not be found.' })
+    const row = found[0]
+    const uuid = row.id
+
+    // Already confirmed is not a failure. Somebody pressing confirm on a record
+    // that is already vouched for has got the outcome they wanted, and an error
+    // toast there is the app arguing with a person who is right.
+    if (row.verified_at) return res.json({ success: true, confirmed: 0, attached: 0, already: true })
+    if (row.data_source !== 'import') {
+      // Nothing to confirm: this record was typed into the app, not imported,
+      // so it was never anybody's guess in the first place.
+      return res.json({ success: true, confirmed: 0, attached: 0, already: true })
     }
+
+    const stamp = { verified_at: new Date().toISOString(), verified_by: req.staff?.id || null }
+    const rows = await db.update('customers', `id=eq.${enc(uuid)}&${UNVERIFIED}`, stamp)
     // Everything attached goes with it — that is what the screen showed.
     let attached = 0
     for (const [table] of ATTACHED) {
-      const done = await db.update(table, `customer_id=eq.${enc(customerId)}&${UNVERIFIED}`, stamp)
+      const done = await db.update(table, `customer_id=eq.${enc(uuid)}&${UNVERIFIED}`, stamp)
       attached += done.length
     }
-    return res.json({ success: true, confirmed: 1 + attached, attached })
+    return res.json({ success: true, confirmed: rows.length + attached, attached })
   }
 
   res.status(405).end()

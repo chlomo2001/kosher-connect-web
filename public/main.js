@@ -3596,7 +3596,7 @@ function renderRentalRows() {
             It is not lost — it sits under the balance it explains, so "£75
             owed" still says what the hire was agreed at. */''}
       <td class="kc-money" data-label="Balance" style="font-weight:700;${debtColor}">
-        ${totalOwed > 0 ? '£'+totalOwed+' owed' : '✓ Paid'}
+        ${totalOwed > 0 ? fmtGbp(totalOwed) + ' owed' : '✓ Paid'}
         <div class="kc-money-sub">${fmtGbp(r.price)} hire</div></td>
       <td>${statusBadge}${rentalItemsAllAnswered(r) ? `
         <span class="badge kc-ic kc-ic-package" style="background:var(--accent-wash);color:var(--accent);margin-top:3px;"
@@ -4595,8 +4595,8 @@ function updateVNPrice() {
   const sub = document.getElementById('rVNSub');
   if (sub && sub.options.length >= 2) {
     const rate = rateFor(country, ukPlan);
-    sub.options[0].textContent = `Weekly (£${rate.vnWeekly ?? settingNum('vn_weekly', 5)}/week)`;
-    sub.options[1].textContent = `Monthly / 30 days (£${rate.vnPer30Days ?? settingNum('vn_per_30_days', 10)})`;
+    sub.options[0].textContent = `Weekly (${fmtGbp(rate.vnWeekly ?? settingNum('vn_weekly', 5))}/week)`;
+    sub.options[1].textContent = `Monthly / 30 days (${fmtGbp(rate.vnPer30Days ?? settingNum('vn_per_30_days', 10))})`;
   }
   priceEl.value = calcVNPrice(vnSub, from, to, country, ukPlan);
 }
@@ -4654,7 +4654,7 @@ function updateRentalCalc() {
     const dtype = document.getElementById('rDiscountType')?.value || 'percent';
     const dval  = parseFloat(document.getElementById('rDiscountValue')?.value) || 0;
     finalPrice  = dtype === 'percent' ? Math.max(0, price * (1 - dval / 100)) : Math.max(0, price - dval);
-    if (dval > 0) discountLine = ` &nbsp;|&nbsp; <span style="color:var(--gold);font-size:var(--fs-small);">-${dtype==='percent'?dval+'%':'£'+dval} discount → <strong>${fmtGbp(finalPrice)}</strong></span>`;
+    if (dval > 0) discountLine = ` &nbsp;|&nbsp; <span style="color:var(--gold);font-size:var(--fs-small);">-${dtype==='percent'?dval+'%':fmtGbp(dval)} discount → <strong>${fmtGbp(finalPrice)}</strong></span>`;
   } else {
     // Auto multi-phone discount (3rd+ concurrent phone); a manual discount
     // replaces it — staff choice wins.
@@ -4674,20 +4674,20 @@ function updateRentalCalc() {
   const rawFirst = first * rate.ratePerDay;
   const windowLen = rate.capPeriodDays || 30;
   const steps = [
-    `${first} chargeable day${first === 1 ? '' : 's'} × £${rate.ratePerDay}/day = ${fmtGbp(rawFirst)}${
+    `${first} chargeable day${first === 1 ? '' : 's'} × ${fmtGbp(rate.ratePerDay)}/day = ${fmtGbp(rawFirst)}${
       periods.length > 1 ? ` (first ${windowLen} days)` : ''}`,
   ];
   if (rate.minCharge && first > 0 && rawFirst < rate.minCharge)
-    steps.push(`below the £${rate.minCharge} minimum → £${rate.minCharge}`);
+    steps.push(`below the ${fmtGbp(rate.minCharge)} minimum → ${fmtGbp(rate.minCharge)}`);
   if (rate.cap != null && Math.min(Math.max(rawFirst, first > 0 ? rate.minCharge : 0), rate.cap) === rate.cap)
-    steps.push(`capped at £${rate.cap}`);
+    steps.push(`capped at ${fmtGbp(rate.cap)}`);
   periods.slice(1).forEach((cd, i) => {
     const dayRate = rate.afterCapPerDay == null ? rate.ratePerDay : rate.afterCapPerDay;
     const rawWin = cd * dayRate;
     const capped = rate.cap != null && rawWin > rate.cap;
-    steps.push(`then ${cd} day${cd === 1 ? '' : 's'} × £${dayRate}/day${
+    steps.push(`then ${cd} day${cd === 1 ? '' : 's'} × ${fmtGbp(dayRate)}/day${
       rate.afterCapPerDay == null ? '' : ' (after the cap)'} = ${fmtGbp(capped ? rate.cap : rawWin)}${
-      capped ? ` (capped at £${rate.cap})` : ''}`);
+      capped ? ` (capped at ${fmtGbp(rate.cap)})` : ''}`);
   });
   if (country === 'USA' && !simGiven) steps.push('no-SIM rate applied');
   // USA pool suggestion: recommend the phone whose pool expiry best fits the
@@ -6420,7 +6420,7 @@ function mgUpdateCalc() {
     const dtype = document.getElementById('mgDiscountType')?.value || 'percent';
     const dval  = parseFloat(document.getElementById('mgDiscountValue')?.value) || 0;
     discountedBase = dtype === 'percent' ? Math.max(0, price * (1 - dval / 100)) : Math.max(0, price - dval);
-    if (dval > 0) discountLine = ` &nbsp;|&nbsp; -${dtype==='percent'?dval+'%':'£'+dval} → <strong style="color:var(--accent);">${fmtGbp(discountedBase)}</strong>`;
+    if (dval > 0) discountLine = ` &nbsp;|&nbsp; -${dtype==='percent'?dval+'%':fmtGbp(dval)} → <strong style="color:var(--accent);">${fmtGbp(discountedBase)}</strong>`;
   }
   // Fold the add-on virtual number back in — it's part of r.price (and the
   // rental's ledger charge). The base-only recompute must not drop it, or
@@ -9197,7 +9197,7 @@ function printHouseStatement() {
   const rows = s.entries.map(e => `<tr>
       <td>${fmtDate(String(e.at).slice(0, 10))}</td>
       <td>${escHtml(e.description || e.type)}</td>
-      <td class="amt">${e.amount < 0 ? '−' : '+'}£${Math.abs(e.amount).toFixed(2)}</td>
+      <td class="amt">${e.amount < 0 ? '−' : '+'}${fmtGbp(Math.abs(e.amount))}</td>
     </tr>`).join('');
   const w = window.open('', '_blank');
   if (!w) { toast('Allow pop-ups to print the statement.', 'warning'); return; }
@@ -9260,7 +9260,7 @@ async function chargeCardOnFile(custId) {
       // Confirmed charged — retire the token so a later, deliberate charge of the
       // same amount is a genuinely new operation with its own key.
       delete cardChargeRefs[refKey];
-      toast(`Charged £${amount.toFixed(2)} to card on file`, 'success', 'check'); loadWalletSection(custId);
+      toast(`Charged ${fmtGbp(amount)} to card on file`, 'success', 'check'); loadWalletSection(custId);
     }
     // Processing or any failure: KEEP the token so a retry reuses it and Stripe
     // dedupes rather than double-charging.
@@ -13512,7 +13512,7 @@ function openManageSimModal(id) {
           <span class="history-dot dot-blue"></span>
           <span class="history-desc">${escHtml(h.desc)}</span>
           <span class="history-date">${escHtml(h.date || '')}</span>
-          <span class="history-amount">${h.amount > 0 ? '£'+h.amount : '—'}</span>
+          <span class="history-amount">${h.amount > 0 ? fmtGbp(h.amount) : '—'}</span>
           <button class="action-btn danger" style="margin-left:8px;padding:3px 8px;font-size:var(--fs-micro);"
             aria-label="Delete this charge" onclick="deleteSimCharge('${id}','${h.id}')">✕</button>
         </div>`).join('');
@@ -13554,12 +13554,12 @@ function openManageSimModal(id) {
         <div style="display:flex;flex-direction:column;gap:4px;flex:2;min-width:min(100%, 28ch);">
           <label style="font-size:var(--fs-micro);color:var(--muted);font-weight:600;">Type</label>
           <select class="form-input" id="simChargeType" onchange="onSimChargeTypeChange('${id}')" style="font-size:var(--fs-body);">
-            <option value="activation">🟢 Initial Setup — £${simChargePrice('activation')}</option>
+            <option value="activation">🟢 Initial Setup — ${fmtGbp(simChargePrice('activation'))}</option>
             <!-- Service is the default: setup was already charged when the SIM was created. -->
-            <option value="service" selected>🔧 Service (swap/roaming) — £${simChargePrice('service')}</option>
-            <option value="sim-replacement">📦 SIM Replacement — £${simChargePrice('sim-replacement')}</option>
+            <option value="service" selected>🔧 Service (swap/roaming) — ${fmtGbp(simChargePrice('service'))}</option>
+            <option value="sim-replacement">📦 SIM Replacement — ${fmtGbp(simChargePrice('sim-replacement'))}</option>
             <option value="monthly">${s.paymentType !== 'direct' && s.simMonthlyCost ? `📅 Monthly DD — ${fmtGbp(ddMonthlyAmount(s.simMonthlyCost))}` : '📅 Monthly Subscription'}</option>
-            <option value="annual">📅 Annual Subscription — £${simChargePrice('annual')}</option>
+            <option value="annual">📅 Annual Subscription — ${fmtGbp(simChargePrice('annual'))}</option>
             ${simMenu.map(m => `<option value="menu:${escHtml(String(m.id))}">${simMenuIcon(m.name)} ${escHtml(m.name)} — ${fmtGbp(m.price)}</option>`).join('')}
             <option value="custom">✏️ Custom</option>
           </select>
@@ -16583,7 +16583,7 @@ function svTimedBreakdown(minutes) {
       <span class="kc-ic kc-ic-stopwatch" aria-hidden="true"></span>
       <input class="form-input kc-inline-num" id="svMins" type="number" min="1" step="1"
         value="${minutes}" aria-label="Minutes to charge for" oninput="svTimedRecalc()">
-      <span>min at £${settingNum('online_hourly_rate', 45)}/hr =</span>
+      <span>min at ${fmtGbp(settingNum('online_hourly_rate', 45))}/hr =</span>
       <strong id="svTimedAmount"></strong>
       <span id="svTimedNote" style="color:var(--muted);"></span>
     </div>
@@ -16804,7 +16804,7 @@ function svcPipTick() {
   const clock = d.getElementById('pipClock');
   if (clock) clock.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
   const sub = d.getElementById('pipSub');
-  if (sub) sub.textContent = `${fmtGbp(amount)} · ${minutes} min at £${settingNum('online_hourly_rate', 45)}/hr`;
+  if (sub) sub.textContent = `${fmtGbp(amount)} · ${minutes} min at ${fmtGbp(settingNum('online_hourly_rate', 45))}/hr`;
   const hold = d.getElementById('pipHold');
   // ▶ is monochrome text and stays; ⏸ was a colour emoji, so the pause face
   // becomes a class. Both states set BOTH classes so neither can stick.
@@ -16974,7 +16974,7 @@ async function renderServicesTab() {
       return `
         <div class="table-card" style="margin-bottom:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <span class="kc-ic kc-ic-stopwatch" style="font-size:20px;" aria-hidden="true"></span>
-          <span style="font-size:var(--fs-body);color:var(--muted);">Hourly help timer (£${settingNum('online_hourly_rate', 45)}/hr, 10-min minimum)</span>
+          <span style="font-size:var(--fs-body);color:var(--muted);">Hourly help timer (${fmtGbp(settingNum('online_hourly_rate', 45))}/hr, 10-min minimum)</span>
           <!-- 230px is what "Who are you helping?" needs in this type. Below
                that the row squeezed it to 189px and truncated its own prompt to
                "Who are you helpi" — oddly only at 390px, since by 320 the Start
@@ -18322,7 +18322,7 @@ function posRenderTender() {
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
         <input class="form-input" id="posTenderIn" type="number" min="0" step="0.01" placeholder="Cash given £"
           oninput="posChangeCalc()" style="width:132px;min-height:0;padding:7px 10px;">
-        ${[5, 10, 20, 50].map(n => `<button class="pos-note" onclick="posTenderQuick(${n})">£${n}</button>`).join('')}
+        ${[5, 10, 20, 50].map(n => `<button class="pos-note" onclick="posTenderQuick(${n})">${fmtGbp(n)}</button>`).join('')}
         <!-- Change due. Computed from what was tendered, and until now
              announced to nobody. -->
         <span id="posChange" role="status" style="font-weight:700;font-size:var(--fs-ui);margin-left:auto;"></span>
@@ -24532,7 +24532,7 @@ const FEE_META = {
           : `<div style="color:var(--muted);margin-top:10px;">Nothing used yet this month.</div>`}
         <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:10px;">
           Counted from each Gemini reply’s own token report, so the usage is exact.
-          The money is an <strong>estimate</strong>: list prices as of ${escHtml(aiUsed.pricedOn)}, converted at $1 = £${aiUsed.fxRate}.
+          The money is an <strong>estimate</strong>: list prices as of ${escHtml(aiUsed.pricedOn)}, converted at $1 = ${fmtGbp(aiUsed.fxRate)}.
           Google does not report spend to the app, so this is our meter, not their bill.
         </div>
       </div>`);
@@ -25231,7 +25231,7 @@ function elidBalRow(a) {
   const money = a.error
     // A failed read is not a zero balance, and must never look like one.
     ? `<span style="color:var(--danger-ink);font-size:var(--fs-small);" title="${escHtml(a.error)}">couldn’t read</span>`
-    : `<strong style="font-feature-settings:'tnum';">£${Number(a.balance || 0).toFixed(2)}</strong>`;
+    : `<strong style="font-feature-settings:'tnum';">${fmtGbp(Number(a.balance || 0))}</strong>`;
   return `<div class="history-item history-flat" style="gap:10px;">
       <span class="kc-truncate" style="flex:1;">${escHtml(a.username)}${a.internal
         ? ' <span style="font-size:var(--fs-micro);color:var(--muted);">· shop account</span>' : ''}</span>
