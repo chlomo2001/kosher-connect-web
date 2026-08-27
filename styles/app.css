@@ -5571,7 +5571,7 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
      under each Gregorian one), so ACTIONS clipped on his screen at 1920 while
      the inventory sat on space it did not need. The wide table now takes
      everything left over and grows with the monitor. */
-  .rentals-split { grid-template-columns: minmax(0, 1fr) minmax(300px, 372px); }
+  .rentals-split { grid-template-columns: minmax(0, 1fr) minmax(300px, 384px); }
 
   /* And the inventory goes compact beside it. Measured at natural width the
      six columns are Number 157, Country 94, Pool 66, Expires 83, Status 106,
@@ -5584,6 +5584,32 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
      the ROW ITSELF opens Edit on click, delete lives in Manage phones, and the
      full six-column table is right there in the stacked view below 1900px. */
   .rentals-split-col .kc-inv-detail { display: none; }
+
+  /* Edit and Delete go; "It's back" stays. The row already opens Edit on click
+     and Delete belongs in Manage phones, but recording a return has no other
+     one-tap route from here. */
+  .rentals-split-col:last-child .kc-inv-editdel { display: none; }
+
+  /* …and the column itself only exists when a phone is actually out without a
+     rental. renderPhoneRows sets .has-back; without it this is 65px of empty
+     column taken off the hire list on every screen. */
+  .rentals-split-col:last-child table:not(.has-back) .kc-inv-actions { display: none; }
+
+  /* A narrow secondary column earns a slightly tighter measure than a
+     full-width table. Four columns, both sides, is where the last dozen pixels
+     come from — and 8px still clears the 4px the browser would give it. */
+  .rentals-split-col:last-child table th,
+  .rentals-split-col:last-child table td { padding-inline: 8px; }
+
+  /* What pays for it: the country NAME becomes sr-only so the flag stands
+     alone. Same width back, and nothing is lost to a screen reader — the two
+     labels here are "It's back" and the country, and both stay readable to
+     assistive tech while taking no space. */
+  .rentals-split-col:last-child .kc-inv-shrink {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%);
+    white-space: nowrap; border: 0;
+  }
 
   /* And the floor has to come off with them. `.table-wrap table` carries
      min-width: 560px "to stop real columns crushing together" — sound for six

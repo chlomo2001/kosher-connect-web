@@ -3303,8 +3303,14 @@ function renderRentalsTab() {
                         question being asked is "what is free", not "when does its
                         pool run out". Both facts are still on the row's Edit and in
                         the full-width stacked view. */''}
-                  <th>Number</th><th>Country</th><th class="kc-inv-detail">Pool</th>
-                  <th class="kc-inv-detail">Expires</th><th>Status</th><th class="kc-inv-detail">Actions</th>
+                  ${/* Country and Actions carry kc-inv-shrink on their LABELS, not just
+                        on the cells below them. A column is as wide as its widest
+                        member and that is the HEADER here: "Country" measures 90px
+                        against a 16px flag, "Actions" 86px against a 44px button, so
+                        shrinking only the cells moved nothing. sr-only rather than
+                        hidden, so both are still announced. */''}
+                  <th>Number</th><th><span class="kc-inv-shrink">Country</span></th><th class="kc-inv-detail">Pool</th>
+                  <th class="kc-inv-detail">Expires</th><th>Status</th><th class="kc-inv-actions"><span class="kc-inv-shrink">Actions</span></th>
                 </tr>
               </thead>
               <tbody id="phoneTableBody"></tbody>
@@ -4162,7 +4168,11 @@ function renderPhoneRows() {
             column right beside it, and the same fact twice in two cells reads
             as two facts. */''}
       <td class="kc-phone">${deviceChip(p, { flag: false, stacked: true })}</td>
-      <td>${countryFlag(p.country)} ${escHtml(p.country)}</td>
+      ${/* The NAME carries kc-inv-shrink, not display:none — compact it becomes
+            sr-only rather than absent, so the flag is what you read and a screen
+            reader still hears "Israel". This is what pays for the It's back
+            column below: the two cost about the same width. */''}
+      <td>${countryFlag(p.country)} <span class="kc-inv-shrink">${escHtml(p.country)}</span></td>
       ${/* Pool and its expiry are a USA-only fact. In the table the other
             countries say "N/A" under the header; on a card there is no header
             and no column, so a line reading "Pool: N/A" would be a line about
@@ -4170,15 +4180,26 @@ function renderPhoneRows() {
       <td class="kc-inv-detail ${isUSA ? '' : 'kc-drop-sm'}" data-label="Pool" style="font-size:var(--fs-small);color:${isUSA?'':'var(--muted)'};">${isUSA ? escHtml(poolDisplay) : poolDisplay}</td>
       <td class="kc-inv-detail ${isUSA ? '' : 'kc-drop-sm'}" data-label="Pool expires" style="font-size:var(--fs-micro);color:${poolExpired?'var(--danger-ink)':isUSA?'var(--muted)':'var(--muted)'};">${isUSA ? expiryDisplay : '<span style="color:var(--muted);">N/A</span>'}</td>
       <td>${statusBadge}</td>
-      <td class="kc-inv-detail">
+      <td class="kc-inv-actions">
         <div class="row-actions">
-          ${phoneOutWithoutRental(p) ? `<button class="action-btn kc-ic kc-ic-download" style="color:var(--success);font-weight:600;" onclick="markPhoneBack('${p.id}')" title="Record the return${p.heldByNote ? ' from ' + escHtml(p.heldByNote) : ''}">It's back</button>` : ''}
-          <button class="action-btn" onclick="openEditPhoneModal('${p.id}')">Edit</button>
-          <button class="action-btn danger" onclick="deletePhone('${p.id}')">Delete</button>
+          ${/* "It's back" survives the compact column; its WORDS go sr-only so
+                the icon stands alone, which is why it needs a real aria-label
+                rather than leaning on the visible text. Edit and Delete drop —
+                the row itself opens Edit on click and Delete belongs in Manage
+                phones, neither of which is true of recording a return. */''}
+          ${phoneOutWithoutRental(p) ? `<button class="action-btn kc-ic kc-ic-download kc-inv-back" style="color:var(--success);font-weight:600;" onclick="markPhoneBack('${p.id}')" aria-label="Record ${escHtml(fmtPhone(p.number))} as back${p.heldByNote ? ' from ' + escHtml(p.heldByNote) : ''}" title="Record the return${p.heldByNote ? ' from ' + escHtml(p.heldByNote) : ''}"><span class="kc-inv-shrink">It's back</span></button>` : ''}
+          <button class="action-btn kc-inv-editdel" onclick="openEditPhoneModal('${p.id}')">Edit</button>
+          <button class="action-btn danger kc-inv-editdel" onclick="deletePhone('${p.id}')">Delete</button>
         </div>
       </td>
     </tr>`;
   }).join('');
+
+  // The It's back column only EXISTS when something needs it. A phone out with
+  // no rental against it is the exception, not the rule, so carrying an empty
+  // column for it would cost the hire list ~65px on every screen for a state
+  // that is usually not on the shelf at all. Compact mode reads this class.
+  tbody.closest('table')?.classList.toggle('has-back', shown.some(phoneOutWithoutRental));
 }
 
 // A phone that is OUT but has no rental record — imported lines whose holder
