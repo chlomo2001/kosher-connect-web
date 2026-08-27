@@ -2707,6 +2707,63 @@ function poolScore(overlap, alreadyActive) {
   return s;
 }
 
+// ── KC_POOL mirror start ──
+// Mirrors lib/poolCover.mjs. Held to it by test/poolCoverMirror.test.mjs, which
+// lifts this block and runs both against the same dates. See that file's header
+// for why the rule lives in two places at all — main.js is a plain script.
+const KC_POOL = (() => {
+  const WARN_WITHIN_DAYS = 7;
+  const daysBetween = (a, b) => {
+    if (!a || !b) return null;
+    const ms = Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`);
+    return Number.isFinite(ms) ? Math.round(ms / 86400000) : null;
+  };
+  const poolCover = (poolExpiry, returnDate, today) => {
+    if (!poolExpiry) return 'unknown';
+    if (today && poolExpiry < today) return 'expired';
+    if (returnDate && poolExpiry < returnDate) return 'short';
+    const left = daysBetween(today, poolExpiry);
+    if (left !== null && left <= WARN_WITHIN_DAYS) return 'soon';
+    return 'covered';
+  };
+  const poolCoverNote = (state, poolExpiry, returnDate, today) => {
+    switch (state) {
+      case 'expired':
+        return `Pool ran out ${Math.abs(daysBetween(today, poolExpiry))} day(s) ago and the phone is still out — renew it or move the line to a live pool.`;
+      case 'short': {
+        const gap = daysBetween(poolExpiry, returnDate);
+        return `Pool runs out ${gap} day(s) before this is due back — the service will cut out mid-hire unless it is renewed.`;
+      }
+      case 'soon':
+        return `Pool runs out in ${daysBetween(today, poolExpiry)} day(s) — renew it or put the line in a new pool.`;
+      case 'unknown':
+        return 'No pool expiry on record — nobody can say whether this hire is covered.';
+      default:
+        return '';
+    }
+  };
+  const poolCoverNeedsAction = (state) => state === 'expired' || state === 'short' || state === 'soon';
+  return { WARN_WITHIN_DAYS, daysBetween, poolCover, poolCoverNote, poolCoverNeedsAction };
+})();
+// ── KC_POOL mirror end ──
+
+// The badge a rental row wears when its pool will not last the hire. Empty for
+// the two states not worth interrupting anybody about.
+function poolCoverBadge(r) {
+  if (!r || r.status === 'returned') return '';
+  const p = phones.find(x => String(x.id) === String(r.phoneId));
+  if (!p || !p.pool) return '';
+  const state = KC_POOL.poolCover(p.poolExpiry || null, r.toDate || null, localISO());
+  if (!KC_POOL.poolCoverNeedsAction(state)) return '';
+  const note = KC_POOL.poolCoverNote(state, p.poolExpiry || null, r.toDate || null, localISO());
+  // expired and short are red: the customer loses service abroad. soon is amber:
+  // the shop loses a renewal it meant to do.
+  const red = state === 'expired' || state === 'short';
+  const label = state === 'expired' ? 'Pool expired' : state === 'short' ? 'Pool ends first' : 'Pool ends soon';
+  return `<span class="badge kc-ic kc-ic-alert" title="${escHtml(note)}"
+    style="margin-top:3px;background:${red ? 'var(--danger-wash)' : 'var(--warning-wash)'};color:${red ? 'var(--danger-ink)' : 'var(--warning-ink)'};">${label}</span>`;
+}
+
 function poolReason(overlap, alreadyActive) {
   let p1;
   if (overlap < 0) p1 = `Pool expires ${Math.abs(overlap)} day(s) BEFORE return — risky, service may cut out mid-trip.`;
@@ -3598,7 +3655,7 @@ function renderRentalRows() {
       <td class="kc-money" data-label="Balance" style="font-weight:700;${debtColor}">
         ${totalOwed > 0 ? fmtGbp(totalOwed) + ' owed' : '✓ Paid'}
         <div class="kc-money-sub">${fmtGbp(r.price)} hire</div></td>
-      <td>${statusBadge}${rentalItemsAllAnswered(r) ? `
+      <td>${statusBadge}${poolCoverBadge(r)}${rentalItemsAllAnswered(r) ? `
         <span class="badge kc-ic kc-ic-package" style="background:var(--accent-wash);color:var(--accent);margin-top:3px;"
           title="Every item is accounted for — this hire just needs closing">All items in</span>` : ''}</td>
       <td>

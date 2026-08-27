@@ -25,6 +25,7 @@
 
 import crypto from 'node:crypto'
 import { db, tablesMode } from '../../../lib/db.js'
+import { poolCover, poolCoverNote, poolCoverNeedsAction } from '../../../lib/poolCover.mjs'
 import { resolveStaff } from '../../../lib/auth.js'
 import { advanceOneMonth, advancePastDate } from '../../../lib/money.mjs'
 import { displayDate } from '../../../lib/localDay.mjs'
@@ -314,6 +315,57 @@ async function handler(req, res) {
       overdueTasks++
     }
     counts.overdueTasks = overdueTasks
+
+    // ── Pools that will not last the hire ──────────────────────────────────
+    //
+    // Shloime, 27 Aug: a rental much longer than its pool's validity was not
+    // flagged anywhere. The app knew this at the moment of CHOOSING a phone —
+    // poolPhoneSuggestions ranks candidates on exactly this overlap and will say
+    // "risky, service may cut out mid-trip" — and then never looked again. So a
+    // hire that outlasts its pool sat in the list looking like one that does
+    // not, until the customer rang from abroad with no service.
+    //
+    // The decision is lib/poolCover.mjs, shared with the rentals row so the
+    // badge and this task can never disagree about the same rental.
+    const liveRentals = await db.select(
+      'rentals',
+      'select=id,legacy_id,end_date,customer_id,line_id,customers(first_name,last_name),'
+        + 'lines(number,pool_id,renewal_date)&status=in.(active,overdue)&is_void=is.false'
+    )
+    const poolWanted = new Set()
+    let poolTasks = 0
+    for (const r of liveRentals) {
+      const line = r.lines
+      if (!line || !line.pool_id) continue          // not a pooled line — nothing to expire
+      const state = poolCover(line.renewal_date || null, r.end_date || null, localDate())
+      if (!poolCoverNeedsAction(state)) continue
+      const name = r.customers ? `${r.customers.first_name || ''} ${r.customers.last_name || ''}`.trim() : '?'
+      const ref = `POOLEXP-${r.id}`
+      poolWanted.add(ref)
+      const icon = state === 'soon' ? '⏳' : '⚠️'
+      await upsertOpenTask({
+        reference: ref,
+        title: `${icon} Pool ${state === 'expired' ? 'has run out' : state === 'short' ? 'ends before this comes back' : 'ends within a week'} — ${name} (${line.number || 'line'})`,
+        customerUuid: r.customer_id,
+        priority: state === 'soon' ? 'medium' : 'high',
+        notes: poolCoverNote(state, line.renewal_date || null, r.end_date || null, localDate()),
+        dueDate: line.renewal_date || null,
+      })
+      poolTasks++
+    }
+    counts.poolTasks = poolTasks
+
+    // …and close the ones whose rental came back, or whose pool was renewed.
+    // Same shape as the OVERDUE close below: a task nobody closed is a task
+    // nobody trusts.
+    const openPool = await db.select('tasks', 'select=id,reference&done=is.false&reference=like.POOLEXP-*')
+    let poolClosed = 0
+    for (const t of openPool) {
+      if (poolWanted.has(t.reference)) continue
+      await closeOpenTask(t.reference)
+      poolClosed++
+    }
+    counts.poolClosed = poolClosed
 
     // Close OVERDUE tasks whose rental has since been returned/voided.
     const openOverdue = await db.select('tasks', 'select=id,reference&done=is.false&reference=like.OVERDUE-*')
