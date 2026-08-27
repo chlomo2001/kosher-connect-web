@@ -6,7 +6,7 @@ bash ops/harness/audit-all.sh --smoke # ~90s — run this before a ship
 bash ops/harness/audit-all.sh         # every check below; ~25-30 min, runs nightly
 ```
 
-**Two speeds, since 24 Aug.** The full sweep is 33 checks and 46 browser
+**Two speeds, since 24 Aug.** The full sweep is 34 checks and 48 browser
 launches. It was being run inline in every session and before every ship, and
 half an hour is how a check that is worth having turns into a check people
 route around. It now runs **once a night** — the "KC nightly full audit"

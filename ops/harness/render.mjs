@@ -220,12 +220,12 @@ export async function audit(page, tabs = TABS) {
 // Contrast of every visible run of text against what is actually painted
 // behind it — translucent fills composited down to the first opaque ancestor,
 // because a wash over a dark card is where this goes wrong.
-export async function contrast(page, tabs = TABS) {
+export async function contrast(page, tabs = TABS, aaa = false) {
   const findings = []
   for (const tab of tabs) {
     await page.evaluate((t) => window.renderTab(t), tab).catch(() => {})
     await page.waitForTimeout(280)
-    findings.push(...await page.evaluate((tab) => {
+    findings.push(...await page.evaluate(([tab, wantAAA]) => {
       // Chromium reports some colours as `color(srgb 0.88 0.44 0.54)` — 0–1
       // channels, not 0–255. Dividing those by 255 makes anything look black,
       // which invented a 1.28:1 failure on a button that is genuinely fine.
@@ -275,7 +275,9 @@ export async function contrast(page, tabs = TABS) {
         const size = parseFloat(cs.fontSize)
         const bold = Number(cs.fontWeight) >= 700
         const large = size >= 24 || (size >= 18.66 && bold)
-        const need = large ? 3 : 4.5
+        // WCAG 1.4.3 (AA) is 4.5:1, or 3:1 for large text. 1.4.6 (AAA) raises
+        // both: 7:1, or 4.5:1 large. --aaa measures the harder bar.
+        const need = wantAAA ? (large ? 4.5 : 7) : (large ? 3 : 4.5)
         const L1 = lum(cs.color), L2 = lum(backdrop(el))
         const ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05)
         if (ratio < need) {
@@ -284,7 +286,7 @@ export async function contrast(page, tabs = TABS) {
         }
       })
       return out
-    }, tab))
+    }, [tab, aaa]))
   }
   return findings
 }
@@ -335,6 +337,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const theme = arg('--theme', 'light')
     // 24 is WCAG 2.5.8 (AA); --min 44 is 2.5.5 (AAA).
     const minTarget = Number(arg('--min', 24))
+    // --aaa raises the contrast bar from 1.4.3 (AA, 4.5:1) to 1.4.6 (AAA, 7:1).
+    const wantAAA = process.argv.includes('--aaa')
     const ctx = await browser.newContext({ locale: 'en-GB', viewport: { width, height: 900 }, colorScheme: theme, hasTouch: process.argv.includes('--targets') })
     // Simple Mode's text-size steps (docs/DESIGN.md §Type). The third dimension
     // beside width and theme, and the one most likely to break a layout: every
@@ -376,7 +380,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       console.log(rows.length ? `\n${rows.length} distinct target(s) under ${box} at ${width}px${fsNote}` : `\nno target under ${box} at ${width}px${fsNote}`)
       findings = rows.length
     } else if (process.argv.includes('--contrast')) {
-      const found = await contrast(page)
+      const found = await contrast(page, TABS, wantAAA)
       const seen = new Map()
       for (const f of found) {
         const key = `${f.sel}|${f.ratio}`

@@ -123,7 +123,7 @@
   /* Tuned against --bg ivory, but every table column header sits on
      --surface2, which is darker — 4.38:1 on 11px text across nine tabs.
      Six points darker clears both: 5.14:1 on --bg, 4.79:1 on --surface2. */
-  --muted: #64676a;             /* muted (warm slate, AA on ivory AND surface2) */
+  --muted: #4a4d50;             /* muted (warm slate) — 8.37:1 on the card, 7.16:1 on the band: WCAG 1.4.6 (AAA) on both */
 
   /* ── Semantic ── */
   --gold: #7c5d24;              /* warm accent text (AA on cream) */
@@ -276,7 +276,7 @@
 
   --text: #f2f0ea;
   --ink-secondary: #cacdc9;
-  --muted: #9aa1a9;            /* lifted for AA on dark cards */
+  --muted: #a6adb5;            /* lifted for AAA on dark cards: 7.22:1 on the card, 8.21:1 on the canvas */
 
   --gold: #e0a94a;
   --sim: #38bdf8;

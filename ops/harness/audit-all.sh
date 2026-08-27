@@ -6,7 +6,7 @@
 #   bash ops/harness/audit-all.sh            the full sweep — nightly
 #   bash ops/harness/audit-all.sh --smoke    ~90 seconds, before a ship
 #
-# TWO SPEEDS, and the reason for them. The full sweep is 33 checks and 46
+# TWO SPEEDS, and the reason for them. The full sweep is 34 checks and 48
 # browser launches, 25-30 minutes. It was being run inline in every session and
 # before every ship, which is how a check that is worth having becomes a check
 # people route around. From 24 Aug it runs ONCE A NIGHT (the "KC nightly full
@@ -104,6 +104,24 @@ run "staff app · sideways overflow, every tab, every width" \
 
 run "staff app · contrast, both themes" \
   bash -eo pipefail -c 'for t in light dark; do node ops/harness/render.mjs --contrast --theme $t --width 1280 | tail -1; done'
+
+# WCAG 1.4.6 (AAA), 7:1 — reported, NOT enforced, and the distinction is the
+# point of this line. On 27 Aug the app cleared AA everywhere and missed AAA in
+# 169 places, almost all of them at 6.2-6.9:1. One token did most of it: --muted
+# went from #64676a to #4a4d50 (and #9aa1a9 to #a6adb5 on dark), which is
+# invisible side by side and took light from 102 findings to 53.
+#
+# What is LEFT is the part that should not be fixed. Every remaining failure is
+# semantic colour — "owes £45.00" in red, "in credit" in green, the status
+# badges. Pushing those to 7:1 walks them toward black and destroys the coding
+# that makes them readable at a glance, which is a worse outcome for every user
+# including the one 1.4.6 exists for. 1.4.6 is AAA precisely because it is not
+# always achievable, and this is what that looks like.
+#
+# So it prints and never fails: a number to watch, not a gate. If it climbs back
+# toward 100 somebody has darkened the palette by accident.
+run "staff app · contrast at AAA 7:1 (reported, not enforced)" \
+  bash -o pipefail -c 'for t in light dark; do node ops/harness/render.mjs --contrast --aaa --theme $t --width 1280 | tail -1 || true; done; true'
 
 # Touch targets, now at WCAG 2.5.5's 44×44 (AAA) rather than 2.5.8's 24 (AA).
 # Not a stricter version of the same line — a different question. 24 asks

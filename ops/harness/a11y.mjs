@@ -26,6 +26,9 @@
 //      a wrapping <label>, its own text, then title.
 //   4. Every page has a content landmark, and wherever navigation repeats
 //      there is a skip link that is FIRST in the tab order and lands on it.
+//   5. Every link's name says where it goes without the sentence around it —
+//      WCAG 2.4.9 (AAA). Rule 3 asks whether a control HAS a name; this asks
+//      whether the name is worth anything read out of context.
 //
 // Rule 4 is driven, not read: the check presses Tab and then Enter, because
 // the first version of this passed on source order while three pages were
@@ -54,7 +57,10 @@ const only = arg('--only', null)
 // are held to the same rules rather than two drifting copies.
 const INSPECT = () => {
   const root = document.getElementById('mainContent') || document.getElementById('__next') || document.body
-  const out = { noAlt: [], unnamed: [], headings: [], h1: 0, main: false, skip: false, nav: false, autofocus: false }
+  const out = { noAlt: [], unnamed: [], vague: [], headings: [], h1: 0, main: false, skip: false, nav: false, autofocus: false }
+  // The empty phrases, and the bare glyphs that carry a direction but not a
+  // destination. A link named only "→" is a link named nothing.
+  const VAGUE = /^(here|click here|read more|more|link|this|go|see|view|open|learn more|find out more|→|←|›|‹|\.\.\.|…)$/i
 
   root.querySelectorAll('img').forEach((el) => {
     if (el.getAttribute('alt') === null && el.getAttribute('role') !== 'presentation'
@@ -89,10 +95,23 @@ const INSPECT = () => {
     if (el.type === 'hidden' || el.getAttribute('aria-hidden') === 'true' || el.tabIndex < 0) return
     const r = el.getBoundingClientRect()
     if (!r.width || !r.height) return
-    if (!nameOf(el)) {
+    const name = nameOf(el)
+    if (!name) {
       const cls = String(el.className || '').split(' ').filter(Boolean)[0] || ''
       out.unnamed.push(el.tagName.toLowerCase() + (cls ? '.' + cls : ''))
+      return
     }
+    // Rule 5 — WCAG 2.4.9 Link Purpose (Link Only), Level AAA. Having a name is
+    // rule 3; this asks whether the name is any USE on its own, read out of a
+    // list of links with no sentence around it. "Read more" three times on one
+    // page is three links to nowhere.
+    //
+    // Computed with the same nameOf() as rule 3 on purpose. A first draft of
+    // this read textContent alone and reported two false positives — /welcome's
+    // brand link, whose name comes from a child <span role="img" aria-label>,
+    // and every one of the manual's 31 dialog thumbnails, whose name is the
+    // <img alt>. Both are properly named; only the scan was naive.
+    if (el.tagName === 'A' && VAGUE.test(name.trim())) out.vague.push(name.trim())
   })
 
   let prev = 0
@@ -119,6 +138,7 @@ async function judge(p, where, { isPage }) {
   const r = await p.evaluate(INSPECT)
   r.noAlt.forEach((s) => note(where, `image with no alt — ${s}`))
   ;[...new Set(r.unnamed)].forEach((s) => note(where, `control with no accessible name — ${s}`))
+  ;[...new Set(r.vague)].forEach((s) => note(where, `link whose name says nothing on its own — "${s}" (2.4.9)`))
   r.headings.forEach((s) => note(where, `heading level skipped — ${s}`))
   if (isPage) {
     if (r.h1 !== 1) note(where, `${r.h1} <h1> elements, expected exactly 1`)
