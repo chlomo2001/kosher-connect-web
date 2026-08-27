@@ -13,10 +13,11 @@ language and this is all of it.
 
 ## The front page — `/welcome`
 
-150 lines, from `pages/welcome.js` (`T`).
+151 lines, from `pages/welcome.js` (`T`).
 
 | Where | English | Hebrew |
 | --- | --- | --- |
+| `skip` | Skip to content | דילוג לתוכן |
 | `brandName` | Kosher Connect | כשר קונקט |
 | `nav.mobile` | Mobile & SIM | חבילות וסים |
 | `nav.travel` | Travel phones | טלפון לחו״ל |
@@ -170,10 +171,11 @@ language and this is all of it.
 
 ## The customer portal — `/portal`
 
-123 lines, from `pages/portal.js` (`P`).
+124 lines, from `pages/portal.js` (`P`).
 
 | Where | English | Hebrew |
 | --- | --- | --- |
+| `skip` | Skip to content | דילוג לתוכן |
 | `loading` | Loading your account… | החשבון שלכם נטען… |
 | `account` | Your Kosher Connect account | החשבון שלכם בכשר קונקט |
 | `signout` | Sign out | יציאה מהחשבון |
@@ -300,10 +302,11 @@ language and this is all of it.
 
 ## The phone guide — `/phone-guide`
 
-29 lines, from `pages/phone-guide.js` (`T`).
+30 lines, from `pages/phone-guide.js` (`T`).
 
 | Where | English | Hebrew |
 | --- | --- | --- |
+| `skip` | Skip to content | דילוג לתוכן |
 | `tag` | The phone guide | מדריך הטלפונים |
 | `homeAria` | Kosher Connect — back to the main page | כשר קונקט — חזרה לעמוד הראשי |
 | `back` | ← Back to the main page | → חזרה לעמוד הראשי |
@@ -336,10 +339,11 @@ language and this is all of it.
 
 ## Book a repair — `/repair`
 
-30 lines, from `pages/repair.js` (`T`).
+31 lines, from `pages/repair.js` (`T`).
 
 | Where | English | Hebrew |
 | --- | --- | --- |
+| `skip` | Skip to content | דילוג לתוכן |
 | `tag` | Repairs | תיקונים |
 | `homeAria` | Kosher Connect — back to the main page | כשר קונקט — חזרה לעמוד הראשי |
 | `back` | ← Back to the main page | → חזרה לעמוד הראשי |
@@ -397,34 +401,34 @@ built from them.
 | `lib/hebrewDate.mjs` | 151 | return dow === 6 ? 'שבת' : HE_ONES[dow + 1] + '׳' |
 | `lib/company.mjs` | 62 | * "…שם מסחרי של Hatsluche Ltd." — an English name and a full stop sitting at |
 | `lib/company.mjs` | 67 | * fixes it, so the Hebrew string now stops at "של" and this supplies the rest. |
-| `public/main.js` | 1684 | const ones  = ['','א','ב','ג','ד','ה','ו','ז','ח','ט']; |
-| `public/main.js` | 1685 | const tens  = ['','י','כ','ל','מ','נ','ס','ע','פ','צ']; |
-| `public/main.js` | 1686 | const hunds = ['','ק','ר','ש','ת','תק','תר','תש','תת','תתק']; |
-| `public/main.js` | 1689 | // תשפ״ו, not ה׳תשפ״ו — the way every calendar and every שטר writes them. |
-| `public/main.js` | 1691 | // whole 700 vanished: 5786 printed as פ״ו, on the calendar AND on every |
-| `public/main.js` | 1698 | if (r === 15) result += 'טו'; |
-| `public/main.js` | 1699 | else if (r === 16) result += 'טז'; |
-| `public/main.js` | 1703 | // tens-and-units part, so a decade year came out wrong: 5770 printed תשע׳ |
-| `public/main.js` | 1704 | // instead of תש״ע, and 5800 would print bare תת. Nothing rendered today is |
-| `public/main.js` | 1705 | // in the broken range (תשפ״ו is identical both ways); the first year that |
-| `public/main.js` | 1708 | return result.length > 1 ? result.slice(0,-1) + '״' + result.slice(-1) : result ? result + '׳' : ''; |
-| `public/main.js` | 1736 | // Which Hebrew month(s) a Gregorian month covers — "אב–אלול תשפ״ו". A grid of |
-| `public/main.js` | 1738 | // simply restart at א׳ with nothing saying which month began. |
-| `public/main.js` | 1833 | const ONES = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט']; |
-| `public/main.js` | 1834 | const TENS = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ']; |
-| `public/main.js` | 1835 | const HUNDREDS = ['', 'ק', 'ר', 'ש', 'ת']; |
-| `public/main.js` | 1840 | while (v >= 400) { s += 'ת'; v -= 400; } |
-| `public/main.js` | 1842 | if (v === 15) { s += 'טו'; v = 0; } |
-| `public/main.js` | 1843 | else if (v === 16) { s += 'טז'; v = 0; } |
-| `public/main.js` | 1846 | return s.length > 1 ? s.slice(0, -1) + '״' + s.slice(-1) : s + '׳'; |
-| `public/main.js` | 1848 | const MONTHS_HE = ['', 'ניסן', 'אייר', 'סיון', 'תמוז', 'אב', 'אלול', |
-| `public/main.js` | 1849 | 'תשרי', 'חשון', 'כסלו', 'טבת', 'שבט', 'אדר', 'אדר ב׳']; |
-| `public/main.js` | 1851 | if (hm === 12 && isHebrewLeapYear(hy)) return 'אדר א׳'; |
-| `public/main.js` | 1860 | return dow === 6 ? 'שבת' : ONES[dow + 1] + '׳'; |
-| `public/main.js` | 3315 | // On Rosh Chodesh the column names the month instead of printing א׳: |
-| `public/main.js` | 3416 | title="${heb ? 'Show a Gregorian month instead' : 'Show a Hebrew month instead — א׳ to כ״ט of one Hebrew month'}" |
-| `public/main.js` | 20789 | ['A–Z / א–ת', 'On Customers: show only that initial — same letter again or Esc shows all'], |
+| `public/main.js` | 1715 | const ones  = ['','א','ב','ג','ד','ה','ו','ז','ח','ט']; |
+| `public/main.js` | 1716 | const tens  = ['','י','כ','ל','מ','נ','ס','ע','פ','צ']; |
+| `public/main.js` | 1717 | const hunds = ['','ק','ר','ש','ת','תק','תר','תש','תת','תתק']; |
+| `public/main.js` | 1720 | // תשפ״ו, not ה׳תשפ״ו — the way every calendar and every שטר writes them. |
+| `public/main.js` | 1722 | // whole 700 vanished: 5786 printed as פ״ו, on the calendar AND on every |
+| `public/main.js` | 1729 | if (r === 15) result += 'טו'; |
+| `public/main.js` | 1730 | else if (r === 16) result += 'טז'; |
+| `public/main.js` | 1734 | // tens-and-units part, so a decade year came out wrong: 5770 printed תשע׳ |
+| `public/main.js` | 1735 | // instead of תש״ע, and 5800 would print bare תת. Nothing rendered today is |
+| `public/main.js` | 1736 | // in the broken range (תשפ״ו is identical both ways); the first year that |
+| `public/main.js` | 1739 | return result.length > 1 ? result.slice(0,-1) + '״' + result.slice(-1) : result ? result + '׳' : ''; |
+| `public/main.js` | 1767 | // Which Hebrew month(s) a Gregorian month covers — "אב–אלול תשפ״ו". A grid of |
+| `public/main.js` | 1769 | // simply restart at א׳ with nothing saying which month began. |
+| `public/main.js` | 1864 | const ONES = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט']; |
+| `public/main.js` | 1865 | const TENS = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ']; |
+| `public/main.js` | 1866 | const HUNDREDS = ['', 'ק', 'ר', 'ש', 'ת']; |
+| `public/main.js` | 1871 | while (v >= 400) { s += 'ת'; v -= 400; } |
+| `public/main.js` | 1873 | if (v === 15) { s += 'טו'; v = 0; } |
+| `public/main.js` | 1874 | else if (v === 16) { s += 'טז'; v = 0; } |
+| `public/main.js` | 1877 | return s.length > 1 ? s.slice(0, -1) + '״' + s.slice(-1) : s + '׳'; |
+| `public/main.js` | 1879 | const MONTHS_HE = ['', 'ניסן', 'אייר', 'סיון', 'תמוז', 'אב', 'אלול', |
+| `public/main.js` | 1880 | 'תשרי', 'חשון', 'כסלו', 'טבת', 'שבט', 'אדר', 'אדר ב׳']; |
+| `public/main.js` | 1882 | if (hm === 12 && isHebrewLeapYear(hy)) return 'אדר א׳'; |
+| `public/main.js` | 1891 | return dow === 6 ? 'שבת' : ONES[dow + 1] + '׳'; |
+| `public/main.js` | 3346 | // On Rosh Chodesh the column names the month instead of printing א׳: |
+| `public/main.js` | 3447 | title="${heb ? 'Show a Gregorian month instead' : 'Show a Hebrew month instead — א׳ to כ״ט of one Hebrew month'}" |
+| `public/main.js` | 20830 | ['A–Z / א–ת', 'On Customers: show only that initial — same letter again or Esc shows all'], |
 
 ---
 
-**375 lines in total.**
+**379 lines in total.**

@@ -187,11 +187,17 @@ test('it summarises tasks and derives nothing of its own', () => {
   for (const smell of ['balance', 'renewalDate', 'toDate', 'ledger', 'fetch(', 'db.']) {
     assert.ok(!SRC.includes(smell), `dailyDigest is re-deriving work: ${smell}`)
   }
-  // Every group the sweep can raise has a home here.
-  const keys = GROUPS.map(([k]) => k)
-  for (const k of ['OVERDUE', 'BALANCE', 'PASSPORT', 'PICKUP', 'SIMDUE', 'FLIGHT', 'VN', 'SIMMAIL', 'STOCKLOW']) {
-    assert.ok(keys.includes(k), `${k} tasks would fall into "other"`)
-  }
+  // Which groups exist is NOT asserted here any more. This used to hold a
+  // hand-typed list of nine prefixes, and a hand-typed list is exactly how the
+  // 27 August bug survived: it named VN — which nothing has ever raised as a
+  // task, only as a ledger charge_reference — so the test happily insisted on a
+  // section that could never appear, while TICKET sat mislabelled as Kol Torah
+  // and seven real kinds of work fell into 'other'. A list of prefixes checked
+  // against a list of prefixes proves nothing.
+  //
+  // test/digestGroups.test.mjs asks the question this one could not: it reads
+  // the references the CODE raises, at the places tasks are actually created,
+  // and joins them against this table in both directions.
 })
 
 test('every group carries a title a person can read', () => {
