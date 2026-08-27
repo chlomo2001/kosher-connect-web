@@ -4707,10 +4707,22 @@ function updateRentalCalc() {
     // Nothing was wrong with the allocation; it was handed the wrong pot. And
     // "Full total" re-filled from the same stale number, so the one control
     // meant to fix this reproduced it.
-    rLastTotal = net;
+    // A virtual number is ONE number for the customer, not one per handset, so
+    // it is added once to the batch — the same weekly/monthly split the single
+    // rental makes. Until 27 Aug the multi-phone branch ignored it completely:
+    // the box was ticked, the price was on screen, and neither the total here
+    // nor the charge below knew about it.
+    const mVnMonthly = document.getElementById('rVNSub')?.value === 'monthly';
+    const mVnAmt = (document.getElementById('rAddVN')?.checked && !mVnMonthly)
+      ? (parseFloat(document.getElementById('rVNPrice')?.value) || 0) : 0;
+    if (mVnAmt > 0) {
+      txt.innerHTML += `<br><span style="color:var(--muted);">+ virtual number ${fmtGbp(mVnAmt)}</span>`
+        + `<br><strong style="font-size:var(--fs-body);">With the number: ${fmtGbp(round2(net + mVnAmt))}</strong>`;
+    }
+    rLastTotal = round2(net + mVnAmt);
     const mPay = document.getElementById('rPayAmount');
     if (mPay && document.getElementById('rPay')?.value !== 'account' && mPay.dataset.touched !== '1') {
-      mPay.value = net.toFixed(2);
+      mPay.value = rLastTotal.toFixed(2);
     }
     return;
   }
@@ -4864,7 +4876,17 @@ async function saveMultiPhoneRental(customerId, phoneIds, addAnother) {
     const net = pct > 0 ? round2(Math.max(0, price * (1 - pct / 100))) : round2(price);
     return { phone, chargeableDays, totalDays, price: round2(price), pct, net };
   });
-  const total = round2(lines.reduce((sum, l) => sum + l.net, 0));
+  // The virtual number, once for the batch. A weekly one is a one-off line and
+  // rides on the first rental exactly as it does on a single rental; a monthly
+  // one is provisioned as a real VN record and bills on the recurring path, so
+  // it is deliberately NOT in this total.
+  const mAddVN   = !!document.getElementById('rAddVN')?.checked;
+  const mVnSub   = document.getElementById('rVNSub')?.value || 'weekly';
+  const mVnPrefix = document.getElementById('rVNPrefix')?.value || '';
+  const mVnPrice = mAddVN ? (parseFloat(document.getElementById('rVNPrice')?.value) || 0) : 0;
+  const mVnRecurs = mAddVN && mVnSub === 'monthly';
+  const vnOnBatch = mAddVN && !mVnRecurs ? round2(mVnPrice) : 0;
+  const total = round2(lines.reduce((sum, l) => sum + l.net, 0) + vnOnBatch);
 
   // Payment taken now is spread across the batch in order, so each rental
   // carries its own true amountPaid and no rental is silently overpaid.
@@ -4877,6 +4899,8 @@ async function saveMultiPhoneRental(customerId, phoneIds, addAnother) {
     body: `<strong>${escName(customer.firstName)} ${escName(customer.lastName)}</strong> · ${fmtDate(from)} → ${fmtDate(to)}<br>` +
       lines.map(l => `${escHtml(fmtPhone(l.phone.number))} (${escHtml(l.phone.country)}) — ${fmtGbp(l.price)}` +
         (l.pct > 0 ? ` <span style="color:var(--gold);">−${l.pct}% → ${fmtGbp(l.net)}</span>` : '')).join('<br>') +
+      (vnOnBatch > 0 ? `<br>+ virtual number ${escHtml(mVnPrefix)} — ${fmtGbp(vnOnBatch)}` : '') +
+      (mVnRecurs ? `<br>+ virtual number ${escHtml(mVnPrefix)} — billed monthly, not on this rental` : '') +
       (payLeft > 0
         ? `<br><br>${fmtGbp(payLeft)} paid now, spread across them in order.`
           + (payLeft < total
@@ -4891,8 +4915,14 @@ async function saveMultiPhoneRental(customerId, phoneIds, addAnother) {
   }))) return;
 
   const created = [];
-  for (const l of lines) {
-    const pay = round2(Math.min(payLeft, l.net));
+  lines.forEach((l, i) => {
+    // The virtual number rides on the FIRST rental of the batch — one number,
+    // charged once. Spreading it across the handsets would put a fraction of a
+    // number on each, and returning one phone early would then refund part of
+    // something the customer still has.
+    const vnHere = i === 0 ? vnOnBatch : 0;
+    const lineTotal = round2(l.net + vnHere);
+    const pay = round2(Math.min(payLeft, lineTotal));
     payLeft = round2(payLeft - pay);
     const rental = {
       id: uid(), customerId,
@@ -4902,9 +4932,12 @@ async function saveMultiPhoneRental(customerId, phoneIds, addAnother) {
       ukPlan: l.phone.ukPlan || 'standard',
       fromDate: from, toDate: to,
       chargeableDays: l.chargeableDays, totalDays: l.totalDays,
-      price: l.net, basePrice: l.price, rentalPrice: l.price,
+      price: lineTotal, basePrice: l.price, rentalPrice: l.price,
       discountValue: l.pct, discountType: 'percent',
-      vn: false, vnPrefix: '', vnSub: '', vnPrice: 0,
+      vn: i === 0 ? mAddVN : false,
+      vnPrefix: i === 0 && mAddVN ? mVnPrefix : '',
+      vnSub: i === 0 && mAddVN ? mVnSub : '',
+      vnPrice: i === 0 && mAddVN ? mVnPrice : 0,
       notes, amountPaid: pay,
       depositHeld: 0,
       termsAck: !!document.getElementById('rTerms')?.checked,
@@ -4917,6 +4950,22 @@ async function saveMultiPhoneRental(customerId, phoneIds, addAnother) {
     };
     rentals.push(rental);
     created.push(rental);
+  });
+
+  // …and the VN record itself, once, exactly as the single-rental path does it.
+  if (mAddVN) {
+    await window.api.addVirtualNumber({
+      number: `${mVnPrefix} — pending`,
+      customerId,
+      platform: 'Other',
+      notes: `Auto-created with rental ${lines[0]?.phone?.number || ''} · ${mVnSub} · from ${fmtDate(from)}`,
+      ...(mVnRecurs ? {
+        billingEnabled: true,
+        monthlyPrice: mVnPrice,
+        nextBillingDate: from,
+        bundleLabel: `Rental add-on +${mVnPrefix}`,
+      } : {}),
+    }).catch(() => null);
   }
 
   const saveRes = await saveRentals(rentals);

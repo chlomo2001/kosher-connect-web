@@ -40,13 +40,20 @@ function multiBranch() {
 }
 
 test('the batch total is stored, not only painted', () => {
-  assert.match(multiBranch(), /rLastTotal\s*=\s*net/,
+  // Written against `rLastTotal = net`; the VN fix later the same evening made
+  // it `round2(net + mVnAmt)`. The assertion is on the PROPERTY — something is
+  // assigned to rLastTotal in this branch — because what the total is made of
+  // is allowed to grow, and what must never come back is the early return
+  // jumping over the assignment entirely.
+  assert.match(multiBranch(), /rLastTotal\s*=\s*[^;]+;/,
     'the batch total must reach rLastTotal before the early return, or "Full total" refills from a stale number')
+  assert.match(multiBranch(), /rLastTotal[\s\S]*?net/,
+    'and it must be built from the batch total, not from a single phone')
 })
 
 test('the paid-now box follows the batch total too', () => {
-  assert.match(multiBranch(), /rPayAmount[\s\S]*?\.value = net\.toFixed\(2\)/,
-    'an untouched paid-now box must track the batch total')
+  assert.match(multiBranch(), /rPayAmount[\s\S]*?\.value = rLastTotal\.toFixed\(2\)/,
+    'an untouched paid-now box must track whatever the stored batch total is')
 })
 
 test('it still respects a figure somebody typed by hand', () => {
@@ -69,4 +76,55 @@ test('the pot is still capped at the total', () => {
   // not be the only thing standing between a stale number and the ledger.
   const save = CODE.slice(CODE.indexOf('async function saveMultiPhoneRental'))
   assert.match(save, /Math\.min\(total,/)
+})
+
+// ── The virtual number, added 27 Aug ───────────────────────────────────────
+//
+// Reported the same evening: "another money bug, VN isnt being added to the
+// total calculation!"
+//
+// The VN checkbox lives on the shared rental form and is on screen whatever
+// the phone count. saveMultiPhoneRental wrote `vn: false, vnPrice: 0` — it
+// hardcoded the number OFF. So the operator ticked the box, set the price, saw
+// it on the form, and neither the total nor the charge ever knew. The single
+// rental path had it right all along (totalPrice = discountedRental +
+// vnOnRental), which is what makes this the same shape as the payment bug
+// above: two paths through one form, and only one of them was finished.
+
+test('the multi-phone save reads the VN fields at all', () => {
+  const save = CODE.slice(CODE.indexOf('async function saveMultiPhoneRental'))
+  assert.doesNotMatch(save.slice(0, CODE.indexOf('const created') - CODE.indexOf('async function saveMultiPhoneRental')),
+    /vn: false, vnPrefix: '', vnSub: '', vnPrice: 0/,
+    'the VN must no longer be hardcoded off')
+  assert.match(save, /rAddVN/, 'it has to look at the checkbox')
+  assert.match(save, /rVNPrice/, 'and at the price')
+})
+
+test('a weekly VN is in the batch total', () => {
+  const save = CODE.slice(CODE.indexOf('async function saveMultiPhoneRental'))
+  assert.match(save, /const total = round2\(lines\.reduce\([\s\S]{0,80}\+ vnOnBatch\)/,
+    'the batch total must include the one-off VN')
+})
+
+test('a monthly VN is deliberately NOT in the rental charge', () => {
+  // It bills on the recurring VN path (VN-<id>-<month>). Charging it here as
+  // well would take the same money twice — the single-rental path carries the
+  // same note for the same reason.
+  const save = CODE.slice(CODE.indexOf('async function saveMultiPhoneRental'))
+  assert.match(save, /mVnRecurs = mAddVN && mVnSub === 'monthly'/)
+  assert.match(save, /vnOnBatch = mAddVN && !mVnRecurs/)
+})
+
+test('the number is charged once, not once per handset', () => {
+  const save = CODE.slice(CODE.indexOf('async function saveMultiPhoneRental'))
+  assert.match(save, /i === 0 \? vnOnBatch : 0/,
+    'one virtual number for the customer — not a fraction of one on each phone')
+  assert.match(save, /addVirtualNumber/,
+    'and the VN record itself is created once, as the single-rental path does')
+})
+
+test('the calculator shows the VN in the batch total too', () => {
+  const calc = CODE.slice(CODE.indexOf('if (nrPhones.length > 1) {'))
+  assert.match(calc.slice(0, 3000), /rLastTotal = round2\(net \+ mVnAmt\)/,
+    'the stored total — and so the paid-now default — must include the VN')
 })
