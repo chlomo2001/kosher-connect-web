@@ -4693,6 +4693,25 @@ function updateRentalCalc() {
         (r.pct > 0 ? ` <span style="color:var(--gold);">−${r.pct}% → ${fmtGbp(r.net)}</span>` : '')).join('<br>') +
       `<br><strong style="font-size:var(--fs-body);">Total: ${fmtGbp(net)}</strong>` +
       (net !== gross ? ` <span style="color:var(--gold);font-size:var(--fs-small);">(was ${fmtGbp(gross)})</span>` : '');
+    // …and STORE it. This `return` used to jump straight over the two lines at
+    // the bottom of this function that keep rLastTotal and the "paid now" box in
+    // step with the total — so with more than one phone the batch total was
+    // painted on screen and never recorded anywhere. rLastTotal kept whatever it
+    // held the last time the calculator ran in single-phone mode.
+    //
+    // What that cost, 27 Aug: Shloime hired five phones out, ticked paid, and
+    // the ledger took £237.60 against £327.60 of charges. saveMultiPhoneRental
+    // caps the payment at the batch total (Math.min) and spreads it in order, so
+    // a stale figure can only ever under-pay — the first three rentals were
+    // settled, the fourth got £32.40 and the fifth got no payment row at all.
+    // Nothing was wrong with the allocation; it was handed the wrong pot. And
+    // "Full total" re-filled from the same stale number, so the one control
+    // meant to fix this reproduced it.
+    rLastTotal = net;
+    const mPay = document.getElementById('rPayAmount');
+    if (mPay && document.getElementById('rPay')?.value !== 'account' && mPay.dataset.touched !== '1') {
+      mPay.value = net.toFixed(2);
+    }
     return;
   }
   const selPhone = document.getElementById('rPhone');
@@ -4858,7 +4877,15 @@ async function saveMultiPhoneRental(customerId, phoneIds, addAnother) {
     body: `<strong>${escName(customer.firstName)} ${escName(customer.lastName)}</strong> · ${fmtDate(from)} → ${fmtDate(to)}<br>` +
       lines.map(l => `${escHtml(fmtPhone(l.phone.number))} (${escHtml(l.phone.country)}) — ${fmtGbp(l.price)}` +
         (l.pct > 0 ? ` <span style="color:var(--gold);">−${l.pct}% → ${fmtGbp(l.net)}</span>` : '')).join('<br>') +
-      (payLeft > 0 ? `<br><br>${fmtGbp(payLeft)} paid now, spread across them in order.` : ''),
+      (payLeft > 0
+        ? `<br><br>${fmtGbp(payLeft)} paid now, spread across them in order.`
+          + (payLeft < total
+              // Never silent. A short pot used to be indistinguishable from a
+              // full one here, and the difference is money the shop then chases
+              // a customer for who has already handed it over.
+              ? `<br><span style="color:var(--danger-ink);font-weight:600;">That is ${fmtGbp(round2(total - payLeft))} less than the total — the rest goes on their account.</span>`
+              : '')
+        : ''),
     amount: total,
     okLabel: isReservation ? `Reserve ${lines.length} & charge` : `Charge ${lines.length} rentals`,
   }))) return;
