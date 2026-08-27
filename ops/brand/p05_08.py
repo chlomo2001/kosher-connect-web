@@ -117,8 +117,9 @@ def palette(c):
     p.hair(ML, dy + 22, CW)
     p.label('THE DISCIPLINE', ML, dy + 28, tint(INK, 0.55), 6.6, 'MonoB')
     rules = [
-        ('ONE BRAND, ONE PLACE', 'Every surface reads these values from styles/globals.css. The public '
-                                 'pages once kept near-miss copies, which is why the product read as two.'),
+        ('ONE BRAND, ONE PLACE', 'These values are decided in docs/brand/standard.json and styles/globals.css '
+                                 'has to match them. The public pages once kept near-miss copies, which is why '
+                                 'the product read as two.'),
         ('BLUE IS A BUDGET', 'A screen with one blue thing on it tells you where to press. A screen '
                              'with six tells you nothing. The accent is spent, not applied.'),
         ('GOLD DOES NOT SPEAK', 'It rules, edges and decorates. The moment it has to be read it '
@@ -130,7 +131,7 @@ def palette(c):
         x, w = col(i * 3, 3)
         p.label(h, x, dy, BLUE, 6.4, 'MonoB')
         p.para(body, x, dy - 12, w, 9.8, 'Sans', 7.2, tint(INK, 0.76))
-    p.foot('PLATE 03  ·  COLOUR  ·  SAMPLED FROM logo-full.png AND styles/globals.css')
+    p.foot('PLATE 03  ·  COLOUR  ·  DECIDED IN docs/brand/standard.json  ·  ENFORCED BY brandTokens.mjs')
     c.showPage()
 
 # ══ PLATE 04 — contrast ══════════════════════════════════════════════════

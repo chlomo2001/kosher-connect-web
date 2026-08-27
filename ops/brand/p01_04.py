@@ -67,13 +67,13 @@ def cover(c):
     c.line(ML, yy, ML + 132, yy)
     c.setFillColor(tint(HexColor('#ffffff'), 0.76)); c.setFont('Sans', 9.4)
     for ln in ['The mark, the colour, the words and the way they are set —',
-               'every value measured from the assets themselves rather than',
-               'remembered, and every claim in here checkable against them.']:
+               'decided here rather than remembered, and every claim in here',
+               'checked against the product that has to keep it.']:
         yy -= 15; c.drawString(ML, yy, ln)
 
     c.setFont('Mono', 6.4); c.setFillColor(tint(HexColor('#ffffff'), 0.42))
     c.drawString(ML, MB + 22, '421 BURY NEW ROAD  ·  SALFORD  M7 4ED  ·  0161 531 1386')
-    c.drawRightString(W - MR, MB + 22, '24 AUGUST 2026')
+    c.drawRightString(W - MR, MB + 22, '27 AUGUST 2026')
     c.showPage()
 
 # ══ PLATE 02 ═════════════════════════════════════════════════════════════
