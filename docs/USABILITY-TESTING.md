@@ -7,21 +7,32 @@ Vitals, Nielsen's ten. All of that finds **violations**. None of it finds
 every single time, forty times a day.
 
 This is the instrument for that. It needs people, and it is deliberately short:
-about **25 minutes per person**, five people, one afternoon.
+about **25 minutes per person**, eight people, one afternoon and a bit.
+
+Everything below is meant to be *run*, not read. The tasks are worded so they
+can be said out loud as they stand, the questionnaires are here in full, and the
+arithmetic is done rather than left as an exercise. Nobody should have to design
+anything on the day.
 
 ---
 
 ## Who, and how many
 
-**Five participants.** Beyond five the same problems start repeating; the sixth
-person mostly confirms the first five. Aim for:
+**Eight participants.** Five is the number usually quoted, and it is the right
+number for *finding problems* — beyond five the same ones start repeating. Eight
+is for the **numbers**: a SUS mean from five carries a margin of roughly ±12
+points, and from eight it is nearer ±9. If the target is "90 or better" then the
+difference between five and eight is the difference between a figure that can be
+quoted and one that cannot. Three extra people is about ninety minutes.
+
+Aim for:
 
 - Shloime
-- Two people who work the counter daily
-- One person who uses the app occasionally (covers a shift, does the books)
-- One person who has **never** seen it — a relative, a friend. This one is worth
-  more than it sounds: everybody else has learnt their way around the rough
-  edges and can no longer see them.
+- Three people who work the counter daily
+- Two who use it occasionally (cover a shift, do the books)
+- Two who have **never** seen it — a relative, a friend. These are worth more
+  than they sound: everybody else has learnt their way around the rough edges
+  and can no longer see them.
 
 Run them **one at a time**, on the **counter tablet**, not on a laptop. The whole
 quality programme has been aimed at that device; testing on a desktop tests a
@@ -55,24 +66,35 @@ are worth more than the times.
 
 ## The task script
 
-Five tasks, in this order, matching the five flows the app is actually for. Read
-each one out as written — a task read differently is a different task.
+Five tasks, in this order — the five flows the counter actually runs on. Read
+each one out as written; a task read differently is a different task.
 
-> **1.** A customer is standing in front of you. They want to hire a travel
-> phone for two weeks, starting today. Their name is *[pick a real customer]*.
-> Set it up and take a £50 deposit.
+> **1. Take a payment.** *[Pick a customer with a balance.]* This customer wants
+> to pay £20 off what they owe, in cash. Do that, and then show me their
+> balance.
 
-> **2.** *[Pick a rental that is out.]* This customer has just brought their
-> phone back. Take it back in and tell me what they owe.
+> **2. Start a rental.** A customer is standing in front of you. They want to
+> hire a travel phone for two weeks, starting today. Their name is *[pick a real
+> customer]*. Set it up and take a £50 deposit.
 
-> **3.** *[Pick a customer with a balance.]* This customer wants to pay £20 off
-> what they owe, in cash. Do that, and then show me their balance.
+> **3. Book a repair.** Somebody has brought in a Nokia 105 with a broken
+> charging port. Book it in for *[pick a customer]* and tell me what it will
+> cost.
 
-> **4.** Somebody wants a phone charger and a pair of earphones. Ring it
-> through the till and take the money in cash.
+> **4. Cash up.** It is the end of the day. There is *[say an amount a few
+> pounds off what the till expects]* in the drawer. Count the till and tell me
+> whether it balances.
 
-> **5.** *[Pick a customer.]* They want a flight to Tel Aviv on *[a date about
-> six weeks out]*, £310, and they'll pay later. Get it into the system.
+> **5. Answer a text.** A customer has texted in and is waiting for a reply.
+> Find it and answer them.
+
+Task 4 is worth setting up deliberately: give them an amount that does **not**
+match, because a till that balances tests nothing. What you are watching for is
+whether the person notices the variance, believes it, and knows what to do next.
+
+Task 5 is the one to watch the clock on. An unanswered text is the most
+time-sensitive thing in the shop, and the route to it is the one that has been
+redesigned most.
 
 After each task, before moving on, ask the **Single Ease Question**:
 
@@ -129,6 +151,9 @@ a score of 68 is *ordinary*, not a D grade:
 
 **The target for this app is 90+**, which is a demanding bar and the right one:
 this is not software people chose, it is software they have to use all day.
+
+With eight people, quote the mean and the range — "88, from 8 people, 74 to 97"
+says something a bare "88" does not.
 
 ### Scoring SEQ
 
@@ -191,8 +216,10 @@ be added; it is not worth the extra twenty minutes per person otherwise.
 
 ## And a warning about the scores
 
-Five people is enough to find most of the *problems* and not enough to make the
-*numbers* precise. A SUS mean from five participants carries a margin of roughly
-±12 points. Treat 90 from five people as "this is very likely good" rather than
-as a measurement, and never report it to anybody as a bare figure without the
-participant count beside it.
+Eight people is enough to find nearly all the *problems* and still not enough to
+make the *numbers* precise. A SUS mean from eight carries a margin of roughly ±9
+points — better than the ±12 five would give, and not a measurement. Treat 90
+from eight people as "this is very likely good", and never report it to anybody
+as a bare figure without the participant count beside it.
+
+The notes are still worth more than the number. They always are.
