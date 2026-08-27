@@ -5605,7 +5605,7 @@ function openManagePhonesModal() {
             <span aria-hidden="true" class="kc-flag-btn-chev">▾</span>
           </button>
           <input type="hidden" id="pCountry" value="USA"
-            onchange="document.getElementById('pUKPlanGroup').style.display=this.value==='UK'?'block':'none'; document.getElementById('pPoolGroup').style.display=this.value==='USA'?'contents':'none';">
+            onchange="document.getElementById('pUKPlanGroup').style.display=this.value==='UK'?'block':'none'; document.getElementById('pPoolGroup').style.display=this.value==='USA'?'contents':'none'; providerPickerSetCountry('pCompany', this.value);">
           <div class="customer-dropdown" id="pCountry_dd" role="listbox" aria-label="Country">
             ${FLAG_COUNTRIES.map(c => `<div class="customer-dropdown-item kc-flag-item" role="option" tabindex="0" data-country="${c}" aria-selected="${c === 'USA'}"
               onmousedown="kcFlagPick('pCountry','${c}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();kcFlagPick('pCountry','${c}')}">
@@ -5622,7 +5622,7 @@ function openManagePhonesModal() {
       </div>
       <div class="form-group">
         <label class="form-label">Company</label>
-        <input class="form-input" id="pCompany" type="text" list="kcProviderList" autocomplete="off" placeholder="Type the first letters — US Mobile, Lebara…">${providerDatalist()}
+        ${providerPicker('pCompany', { country: 'USA' })}
       </div>
       <div class="form-group">
         <label class="form-label">Phone Model <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
@@ -5706,12 +5706,18 @@ function saveNewPhone() {
   const number = document.getElementById('pNumber').value.trim();
   if (!number) { toast('Phone number is required.', 'error'); return; }
   const pCountryVal = document.getElementById('pCountry').value;
+  const pProvider = providerPickerValue('pCompany', pCountryVal);
+  if (pProvider.error) { toast(pProvider.error, 'error'); return; }
   const phone = {
     id:         uid(),
     number,
     country:    pCountryVal,
     ukPlan:     pCountryVal === 'UK' ? document.getElementById('pUKPlan').value : undefined,
-    company:    document.getElementById('pCompany').value.trim(),
+    company:    pProvider.provider,
+    // Which of AT&T / Verizon / T-Mobile is actually carrying a US Mobile line.
+    // Empty for everybody else — a network a line is not on is a wrong fact,
+    // and a wrong fact is worse than a missing one.
+    subBrand:   pProvider.subBrand,
     model:      document.getElementById('pModel').value.trim(),
     pool:       document.getElementById('pPool').value.trim(),
     // Window comes from the pool registry (see saveEditPhone) — never typed.
@@ -5941,7 +5947,7 @@ function openEditPhoneModal(phoneId) {
       </div>` : ''}
       <div class="form-group">
         <label class="form-label">Company</label>
-        <input class="form-input" id="epCompany" type="text" list="kcProviderList" autocomplete="off" value="${escHtml(p.company||'')}">${providerDatalist()}
+        ${providerPicker('epCompany', { country: p.country || null, provider: p.company || '', subBrand: p.subBrand || '' })}
       </div>
       <div class="form-group">
         <label class="form-label">Phone Model <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
@@ -5993,7 +5999,10 @@ function saveEditPhone(phoneId) {
     if (reg) { p.poolExpiry = reg.till || null; p.poolActiveFrom = reg.from || null; }
     else if (!p.pool) { p.poolExpiry = null; p.poolActiveFrom = null; }
   }
-  p.company = document.getElementById('epCompany').value.trim();
+  const epProvider = providerPickerValue('epCompany', p.country || null);
+  if (epProvider.error) { toast(epProvider.error, 'error'); return; }
+  p.company = epProvider.provider;
+  p.subBrand = epProvider.subBrand;
   const epModel = document.getElementById('epModel');
   if (epModel) p.model = epModel.value.trim();
   const epIMEI = document.getElementById('epIMEI');
@@ -10111,6 +10120,149 @@ function knownProviders() {
   });
   return [...seen.values()].sort((a, b) => a.localeCompare(b));
 }
+// ── KC_PROV mirror start ──
+// Mirrors lib/providers.mjs. Held to it by test/providersMirror.test.mjs.
+const KC_PROV = (() => {
+  const PROVIDER_SEEDS = {
+    USA: ['US Mobile', 'Tello'],
+    UK: ['Lebara', 'O2', 'Vodafone', 'EE', 'Three', 'giffgaff', 'Lycamobile'],
+    Israel: ['HOT Mobile', 'Golan Telecom', 'Partner', 'Cellcom', '019 Mobile'],
+    Canada: ['Lucky Mobile'],
+    EU: [],
+  };
+  const US_MOBILE_SUB_BRANDS = ['AT&T', 'Verizon', 'T-Mobile'];
+  const norm = (v) => String(v ?? '').trim().toLowerCase().replace(/[\s.]+/g, '');
+  const isUsMobile = (provider) => norm(provider) === 'usmobile';
+  const needsSubBrand = (provider) => isUsMobile(provider);
+  const providersForCountry = (country, used = []) => {
+    const seen = new Map();
+    const add = (n) => {
+      const name = String(n ?? '').trim();
+      if (name && !seen.has(norm(name))) seen.set(norm(name), name);
+    };
+    if (country) (PROVIDER_SEEDS[country] || []).forEach(add);
+    else Object.values(PROVIDER_SEEDS).flat().forEach(add);
+    used.filter((u) => (country ? u.country === country : true))
+        .forEach((u) => add(u.provider));
+    return [...seen.values()].sort((a, b) => a.localeCompare(b, 'en-GB'));
+  };
+  const resolveProvider = ({ choice, typed, subBrand }, country) => {
+    const isOther = choice === '__other__';
+    const provider = String((isOther ? typed : choice) ?? '').trim();
+    if (!provider) {
+      return { provider: '', subBrand: '', error: isOther ? 'Type the provider’s name.' : 'Choose a provider.' };
+    }
+    if (needsSubBrand(provider)) {
+      const sb = String(subBrand ?? '').trim();
+      if (!US_MOBILE_SUB_BRANDS.includes(sb)) {
+        return { provider, subBrand: '', error: 'US Mobile runs on AT&T, Verizon or T-Mobile — say which.' };
+      }
+      return { provider, subBrand: sb, error: '' };
+    }
+    return { provider, subBrand: '', error: '' };
+  };
+  return { PROVIDER_SEEDS, US_MOBILE_SUB_BRANDS, isUsMobile, needsSubBrand, providersForCountry, resolveProvider };
+})();
+// ── KC_PROV mirror end ──
+
+// Every provider this shop has actually used, with the country it was used in.
+// The list IS the data — a name typed once sits on a record, and the record is
+// the memory. That is why nothing new is stored for the "save it to the
+// dropdown" half of the ask: there is no separate list to fall out of step.
+function providersUsed() {
+  const out = [];
+  if (typeof phones !== 'undefined') {
+    for (const p of phones) if (p && p.company) out.push({ provider: p.company, country: p.country || null });
+  }
+  if (typeof sims !== 'undefined') {
+    for (const s of sims) if (s && s.provider) out.push({ provider: s.provider, country: null });
+  }
+  return out;
+}
+
+// ── THE provider picker ────────────────────────────────────────────────────
+//
+// Shloime, 27 Aug: pick from a dropdown; USA means US Mobile / Tello / other;
+// another country means type it and have it remembered for that country; and
+// US Mobile has to say which of AT&T, Verizon or T-Mobile is actually carrying
+// the line.
+//
+// One control, three forms — new phone, edit phone, SIM plan — for the same
+// reason there is one customer picker in eleven places: three of these drifting
+// apart is how the shop ends up with "US Mobile", "us mobile" and "USMobile" in
+// the same column.
+//
+// `country` may be null. The SIM-plan form has no country field (SIM plans are
+// the UK SIM-only side of the shop), so there it offers everything rather than
+// inventing a scope.
+function providerPicker(base, { country = null, provider = '', subBrand = '' } = {}) {
+  const list = KC_PROV.providersForCountry(country, providersUsed());
+  const known = list.some((n) => n.toLowerCase() === String(provider || '').toLowerCase());
+  const other = !!provider && !known;
+  const opts = list.map((n) =>
+    `<option value="${escHtml(n)}"${!other && n.toLowerCase() === String(provider || '').toLowerCase() ? ' selected' : ''}>${escHtml(n)}</option>`).join('');
+  const subs = KC_PROV.US_MOBILE_SUB_BRANDS.map((n) =>
+    `<option value="${escHtml(n)}"${n === subBrand ? ' selected' : ''}>${escHtml(n)}</option>`).join('');
+  const showOther = other;
+  const showSub = KC_PROV.needsSubBrand(provider);
+  // Wrapped so a country change can rebuild the list in place. A USA phone
+  // switched to Israel must stop offering Tello, and keeping the two in step by
+  // hand is the kind of thing that is right on the day and wrong by Thursday.
+  return `<div id="${base}_wrap" data-country="${escHtml(country || '')}">
+    <select class="form-input" id="${base}" onchange="providerPickerChanged('${base}')">
+      <option value=""${provider ? '' : ' selected'}>Choose…</option>
+      ${opts}
+      <option value="__other__"${showOther ? ' selected' : ''}>Other — type it in…</option>
+    </select>
+    <input class="form-input" id="${base}_other" type="text" autocomplete="off"
+      placeholder="What provider?" value="${escHtml(showOther ? provider : '')}"
+      oninput="providerPickerChanged('${base}')"
+      style="margin-top:6px;${showOther ? '' : 'display:none;'}">
+    <div id="${base}_subWrap" style="margin-top:6px;${showSub ? '' : 'display:none;'}">
+      <label class="form-label" for="${base}_sub" style="font-size:var(--fs-small);">US Mobile runs on *</label>
+      <select class="form-input" id="${base}_sub">
+        <option value=""${subBrand ? '' : ' selected'}>Which network?</option>
+        ${subs}
+      </select>
+    </div>
+  </div>`;
+}
+
+// The country changed — rebuild the list for the new one, keeping what was
+// already chosen if that provider exists there too. Somebody correcting a
+// country on a US Mobile line should not have to re-pick the network.
+function providerPickerSetCountry(base, country) {
+  const wrap = document.getElementById(`${base}_wrap`);
+  if (!wrap) return;
+  const now = providerPickerValue(base, country);
+  const html = providerPicker(base, { country, provider: now.provider, subBrand: now.subBrand });
+  wrap.outerHTML = html;
+  providerPickerChanged(base);
+}
+
+// Show the right extra box for whatever is chosen. Called by both controls, so
+// typing a name into "Other" that happens to BE US Mobile still asks which
+// network — the question follows the provider, not the dropdown.
+function providerPickerChanged(base) {
+  const sel = document.getElementById(base);
+  const other = document.getElementById(`${base}_other`);
+  const subWrap = document.getElementById(`${base}_subWrap`);
+  if (!sel) return;
+  const isOther = sel.value === '__other__';
+  if (other) other.style.display = isOther ? '' : 'none';
+  const name = isOther ? (other?.value || '') : sel.value;
+  if (subWrap) subWrap.style.display = KC_PROV.needsSubBrand(name) ? '' : 'none';
+}
+
+/** What the picker is holding: { provider, subBrand, error }. */
+function providerPickerValue(base, country = null) {
+  return KC_PROV.resolveProvider({
+    choice: document.getElementById(base)?.value || '',
+    typed: document.getElementById(`${base}_other`)?.value || '',
+    subBrand: document.getElementById(`${base}_sub`)?.value || '',
+  }, country);
+}
+
 function providerDatalist(id = 'kcProviderList') {
   return `<datalist id="${id}">${knownProviders().map(n => `<option value="${escHtml(n)}"></option>`).join('')}</datalist>`;
 }
@@ -13291,8 +13443,7 @@ function openSimFormModal(id, preselectCustomerId = null, prefill = null) {
       </div>
       <div class="form-group">
         <label class="form-label">Provider *</label>
-        <input class="form-input" id="simProvider" type="text" list="kcProviderList" autocomplete="off" placeholder="Type the first letters — Lebara, O2…"
-          value="${escHtml(s?.provider || '')}">${providerDatalist()}
+        ${providerPicker('simProvider', { provider: s?.provider || '', subBrand: s?.subBrand || '' })}
         <span class="form-error" id="errSimProvider">Required</span>
       </div>
       <div class="form-group">
@@ -13367,7 +13518,9 @@ function openSimFormModal(id, preselectCustomerId = null, prefill = null) {
 
 async function saveSimForm(editId) {
   const customerId = document.getElementById('simCustomer').value;
-  const provider   = document.getElementById('simProvider').value.trim();
+  const simProv    = providerPickerValue('simProvider', null);
+  const provider   = simProv.provider;
+  if (simProv.error && provider) { toast(simProv.error, 'error'); return; }
 
   let valid = true;
   if (!customerId) { document.getElementById('errSimCustomer').classList.add('visible'); valid = false; }
@@ -13382,6 +13535,7 @@ async function saveSimForm(editId) {
     customerId,
     customerName:   customer ? `${customer.firstName} ${customer.lastName}` : '',
     provider,
+    subBrand: simProv.subBrand,
     simNumber:      document.getElementById('simNumber').value.trim(),
     iccid:          document.getElementById('simIccid').value.trim(),
     email:          document.getElementById('simEmail').value.trim(),
