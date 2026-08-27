@@ -19,40 +19,40 @@ language and this is all of it.
 | --- | --- | --- |
 | `skip` | Skip to content | דילוג לתוכן |
 | `brandName` | Kosher Connect | כשר קונקט |
-| `nav.mobile` | Mobile & SIM | חבילות וסים |
-| `nav.travel` | Travel phones | טלפון לחו״ל |
+| `nav.mobile` | Mobile & SIM | סלולר וסים |
+| `nav.travel` | Travel phones | טלפונים לחו״ל |
 | `nav.intl` | International numbers | מספרים בינלאומיים |
 | `nav.repairs` | Repairs & more | תיקונים ועוד |
-| `nav.repair` | Book a repair | לקבוע תיקון |
-| `nav.faq` | Questions | שאלות |
-| `nav.visit` | Visit us | בואו לבקר |
-| `nav.message` | Message us | דברו איתנו |
+| `nav.repair` | Book a repair | הזמנת תיקון |
+| `nav.faq` | Questions | שאלות נפוצות |
+| `nav.visit` | Visit us | בקרו אותנו |
+| `nav.message` | Message us | צרו קשר |
 | `nav.account` | My account | האזור האישי |
 | `heroEyebrow` | Kosher Connect · Salford, Manchester | כשר קונקט · סלפורד, מנצ׳סטר |
-| `heroTitle` | Your phone bill, halved. | למה לשלם כפול על הסלולר? |
-| `heroBody` | Kosher Connect is a phone and SIM shop in Salford, Manchester. Most people are quietly on the wrong SIM — bring us your last bill and we’ll match a plan to how you actually use your phone, same coverage, same number, far less money. | כשר קונקט היא חנות סלולר וסים בסלפורד, מנצ׳סטר. רוב האנשים משלמים כל חודש על חבילה שפשוט לא מתאימה להם — תביאו לנו את החשבונית האחרונה ונתאים לכם חבילה לפי השימוש האמיתי שלכם. אותה רשת, אותו מספר, והרבה פחות בסוף החודש. |
-| `heroPill` | Keep your number · pay less every month | המספר נשאר · החשבון קטן |
-| `ctaMessage` | Message us | דברו איתנו |
-| `ctaCall` | Call | חייגו |
+| `heroTitle` | Your phone bill, halved. | חשבון הסלולר שלכם, בחצי המחיר. |
+| `heroBody` | Kosher Connect is a phone and SIM shop in Salford, Manchester. Most people are quietly on the wrong SIM — bring us your last bill and we’ll match a plan to how you actually use your phone, same coverage, same number, far less money. | כשר קונקט היא חנות סלולר וסים בסלפורד, מנצ׳סטר. רוב האנשים מנויים לחבילה הלא נכונה בלי לשים לב — הביאו לנו את החשבונית האחרונה שלכם ונתאים לכם חבילה לפי אופן השימוש האמיתי שלכם. אותה קליטה, אותו מספר, והרבה פחות כסף. |
+| `heroPill` | Keep your number · pay less every month | נשארים עם המספר · משלמים פחות כל חודש |
+| `ctaMessage` | Message us | צרו קשר |
+| `ctaCall` | Call | התקשרו |
 | `heroSub` | Kosher Connect is a phone and SIM shop in Salford, Manchester — travel phones, international numbers, repairs and more, all under one roof. | כשר קונקט היא חנות סלולר וסים בסלפורד, מנצ׳סטר — טלפונים לחו״ל, מספרים בינלאומיים, תיקונים ועוד, הכול במקום אחד. |
-| `bands.0.eyebrow` | Mobile & SIM | חבילות וסים |
-| `bands.0.title` | Kosher SIM plans, matched to how you really use your phone | חבילה כשרה שנתפרת בדיוק לפי השימוש שלכם |
+| `bands.0.eyebrow` | Mobile & SIM | חבילות סלולר וסים |
+| `bands.0.title` | Kosher SIM plans, matched to how you really use your phone | סים כשר, מותאם אישית לשימוש שלכם |
 | `bands.0.accent` | Pay less | משלמים פחות |
-| `bands.0.sub` | the right plan for how you really use your phone | החבילה הנכונה, לפי מה שאתם באמת צריכים |
-| `bands.0.body` | Bring in your latest bill and we’ll go through it with you, line by line — what you use, what you don’t, and which plan actually fits, international minutes and all. Then we handle the switch from start to finish. No long contract you can’t follow, no company in the middle, no small print. | תביאו את החשבונית האחרונה ונעבור עליה ביחד, שורה אחרי שורה — מה אתם באמת מנצלים, מה מיותר, ואיזו חבילה באמת מתאימה, כולל דקות לחו״ל. ומשם? את כל המעבר אנחנו עושים בשבילכם, מההתחלה ועד הסוף. בלי התחייבות, בלי חברה באמצע, בלי אותיות קטנות. |
-| `bands.0.chips.0` | Keep your number | שומרים על המספר |
-| `bands.0.chips.1` | Keep your phone | נשארים עם אותו מכשיר |
-| `bands.0.chips.2` | We do the switch for you | המעבר — עלינו |
+| `bands.0.sub` | the right plan for how you really use your phone | החבילה הנכונה, בהתאם לצרכים שלכם |
+| `bands.0.body` | Bring in your latest bill and we’ll go through it with you, line by line — what you use, what you don’t, and which plan actually fits, international minutes and all. Then we handle the switch from start to finish. No long contract you can’t follow, no company in the middle, no small print. | הביאו את החשבונית האחרונה שלכם ונעבור עליה יחד, שורה אחר שורה — מה אתם מנצלים, מה מיותר, ואיזו חבילה באמת מתאימה לכם, כולל דקות לחו״ל. אנחנו נדאג לכל תהליך הניוד מאלף ועד תו. בלי התחייבויות ארוכות, בלי מתווכים ובלי אותיות קטנות. |
+| `bands.0.chips.0` | Keep your number | שומרים על המספר הקיים |
+| `bands.0.chips.1` | Keep your phone | נשארים עם המכשיר שלכם |
+| `bands.0.chips.2` | We do the switch for you | הניוד עלינו |
 | `bands.0.price` | £20 setup · then £20 a year · £5 a service (free for USA & Canada SIMs) | ‎£20‎ הקמה · ‎£20‎ לשנה · ‎£5‎ לשירות (חינם לסים של ארה״ב וקנדה) |
 | `bands.0.cta` | Bring us your bill | תביאו לנו את החשבונית |
 | `bands.0.prefill` | I’d like you to look at my phone bill and see if I could pay less. | אשמח שתעברו על חשבונית הסלולר שלי ותבדקו אם אפשר לשלם פחות. |
 | `bands.1.eyebrow` | Travel phones | טלפון לחו״ל |
-| `bands.1.title` | A kosher phone, sorted before you travel | טסים? הטלפון הכשר כבר מחכה לכם מוכן |
-| `bands.1.accent` | Shabbos & Yom Tov never charged | שבת ויום טוב בחינם |
-| `bands.1.sub` | priced by the day, not the trip | התשלום לפי יום, לא לפי נסיעה |
+| `bands.1.title` | A kosher phone, sorted before you travel | טסים לחו״ל? הטלפון הכשר שלכם כבר מוכן |
+| `bands.1.accent` | Shabbos & Yom Tov never charged | ללא חיוב בשבתות וימים טובים |
+| `bands.1.sub` | priced by the day, not the trip | תמחור יומי, לא לפי נסיעה |
 | `bands.1.body` | Off to the USA, Canada, Europe or Eretz Yisroel? Rent a kosher phone, set up with you in the shop before you go — so there’s nothing to arrange at a foreign airport. You pay by the day{minClause}, Shabbos and Yom Tov are never charged, and every rental includes local calls and calls back to the UK. | טסים לארה״ב, קנדה, אירופה או לארץ? שוכרים אצלנו טלפון כשר, ומגדירים אותו איתכם בחנות עוד לפני הטיסה — בלי להסתבך בשדה תעופה. משלמים לפי יום{minClause}, שבת ויום טוב — בחינם תמיד, וכל השכרה כוללת שיחות מקומיות ושיחות חזרה לאנגליה. |
 | `bands.1.note` | We can book your flights as well — one trip, one place. | ואפשר להזמין אצלנו גם את הטיסות — נסיעה אחת, הכול במקום אחד. |
-| `bands.1.chips.0` | Set up before you travel | מוכן לפני הטיסה |
+| `bands.1.chips.0` | Set up before you travel | מוגדר ומוכן לפני הטיסה |
 | `bands.1.chips.1` | Priced by the day | תמחור לפי יום |
 | `bands.1.chips.2` | Shabbos never charged | שבת ויו״ט בחינם |
 | `bands.1.price` | {dayClause}{minSpec}{capSpec}Shabbos & Yom Tov never charged | {dayClause}{minSpec}{capSpec}שבת ויום טוב בחינם, תמיד |
@@ -72,9 +72,9 @@ language and this is all of it.
 | `moreTitle` | More at Kosher Connect | עוד אצלנו בכשר קונקט |
 | `moreLead` | One shop for the phone and everything around it — so you’re not sent from place to place. | חנות אחת לטלפון ולכל מה שמסביב — במקום להתרוצץ בין מקומות. |
 | `moreGroups.0.label` | For your phone | לטלפון שלכם |
-| `moreGroups.0.items.0.title` | Repairs | תיקונים |
+| `moreGroups.0.items.0.title` | Repairs | מעבדת תיקונים |
 | `moreGroups.0.items.0.body` | Screens, batteries, charging trouble — most fixed quickly, and we’ll tell you honestly if it isn’t worth it. | מסך, סוללה, בעיות טעינה — את רוב התיקונים מסיימים מהר. ואם לא שווה לתקן? נגיד לכם ביושר. |
-| `moreGroups.0.items.0.linkLabel` | Book a repair → | לקבוע תיקון ← |
+| `moreGroups.0.items.0.linkLabel` | Book a repair → | להזמנת תיקון ← |
 | `moreGroups.0.items.1.title` | Accessories | אביזרים |
 | `moreGroups.0.items.1.body` | Chargers, cables, cases, power banks, SD cards, adapters and USA SIMs — on the shelf. | מטענים, כבלים, כיסויים, מטענים ניידים, כרטיסי זיכרון, מתאמים וסים לארה״ב — הכול על המדף. |
 | `moreGroups.0.items.1.linkLabel` | Ask if it’s in stock → | לבדוק אם יש במלאי ← |
@@ -102,9 +102,9 @@ language and this is all of it.
 | `contactTitle` | Send us a message | שלחו לנו הודעה |
 | `contactLead` | Ask a question, tell us your plan, or leave your bill details — we’ll get back to you. | שאלה, בקשה, או פרטים מהחשבונית — כתבו לנו ונחזור אליכם. |
 | `fName` | Your name | שם מלא |
-| `fContact` | Phone or email | טלפון או מייל |
-| `fMsg` | How can we help? | איך אפשר לעזור? |
-| `fSend` | Send message | שליחה |
+| `fContact` | Phone or email | טלפון או דוא״ל |
+| `fMsg` | How can we help? | איך נוכל לעזור? |
+| `fSend` | Send message | שלח הודעה |
 | `fSending` | Sending… | שולחים… |
 | `fEmail` | Email (optional) | מייל (לא חובה) |
 | `fAddress` | Address (optional) | כתובת (לא חובה) |
@@ -123,9 +123,9 @@ language and this is all of it.
 | `fPrivacy` | We only use these details to reply to you. | הפרטים משמשים אותנו רק כדי לחזור אליכם. |
 | `fPrivacyLink` | Privacy notice | מדיניות הפרטיות |
 | `legalPrivacy` | Privacy | פרטיות |
-| `legalTerms` | Terms | תנאים |
-| `legalRefunds` | Refunds | החזרים |
-| `faqTitle` | The things people ring up and ask | מה שהכי שואלים אותנו בטלפון |
+| `legalTerms` | Terms | תקנון ותנאי שימוש |
+| `legalRefunds` | Refunds | מדיניות החזרים |
+| `faqTitle` | The things people ring up and ask | שאלות נפוצות |
 | `faq.0.q` | Which kosher phone should I get? | איזה טלפון כשר מתאים לי? |
 | `faq.0.a` | Come in and we will go through it with you — the handsets differ in what they can do and in what they cost to run, and the right one depends on what you actually need it for. Our phone guide sets out the range, and there is no pressure to decide on the spot. | בואו לחנות ונעבור על זה יחד — המכשירים שונים במה שהם עושים ובעלות התפעול, והבחירה תלויה במה שאתם באמת צריכים. במדריך המכשירים תמצאו את כל הדגמים, ואין שום לחץ להחליט במקום. |
 | `faq.1.q` | Can I keep my own number if I move my plan to you? | אפשר לשמור על המספר הקיים אם עוברים אליכם? |
@@ -142,11 +142,11 @@ language and this is all of it.
 | `faq.6.a` | Most plans are handled by us and billed to your account, so there is nothing to remember. Your balance and renewal dates are always on your account page, and you can pay there or in the shop. | רוב החבילות מנוהלות אצלנו ומחויבות לחשבון שלכם, כך שאין מה לזכור. היתרה ותאריכי החידוש תמיד מופיעים באזור האישי, ואפשר לשלם שם או בחנות. |
 | `faq.7.q` | You are closed — can I still get help? | אתם סגורים — אפשר בכל זאת לקבל עזרה? |
 | `faq.7.a` | Leave us a message with the form on this page, or ring and leave a voicemail. We pick both up when we open. For an urgent problem abroad, say so in the message and we will come back to you first. | השאירו לנו הודעה בטופס שבעמוד, או התקשרו והשאירו הודעה קולית. אנחנו אוספים את שתיהן עם הפתיחה. אם זה דחוף ואתם בחו״ל — כתבו זאת, ונחזור אליכם ראשונים. |
-| `appTitle` | Your account online — what the app does | החשבון שלכם אונליין — מה האפליקציה עושה |
+| `appTitle` | Your account online — what the app does | החשבון המקוון שלכם — מה האפליקציה מאפשרת |
 | `appBody1` | Kosher Connect is this shop’s online account app. Customers sign in to see their SIM plans, phone rentals, flight bookings, repairs and balance, and to pay online — and our team runs the shop on the same system: rentals, SIM plan management, repairs, bookings and the till. | כשר קונקט היא אפליקציית החשבון המקוון של החנות. לקוחות נכנסים כדי לראות את חבילות הסים, השכרות הטלפונים, הזמנות הטיסות, התיקונים והיתרה — ולשלם אונליין. הצוות שלנו מנהל באותה מערכת את החנות עצמה: השכרות, חבילות, תיקונים, הזמנות והקופה. |
 | `appBody2` | Signing in with Google is optional and only confirms your name and email address, so we know which account is yours. We never see or access your Gmail, your Drive files, your contacts or anything else in your Google account. The full detail is in our privacy policy. | התחברות עם Google היא אופציונלית ומאשרת רק את השם וכתובת המייל שלכם, כדי שנדע איזה חשבון שייך לכם. אין לנו גישה ל‑Gmail, לקבצי Drive, לאנשי הקשר או לכל דבר אחר בחשבון Google שלכם. הפירוט המלא במדיניות הפרטיות. |
 | `appPolicy` | Read the privacy policy | למדיניות הפרטיות |
-| `appAccount` | Go to my account | לאזור האישי |
+| `appAccount` | Go to my account | מעבר לאזור האישי |
 | `fBadName` | Please enter your name. | נא להזין שם. |
 | `fBadContact` | Please enter a valid phone number or email address. | נא להזין מספר טלפון או כתובת מייל תקינים. |
 | `preferCall` | Prefer to call? | מעדיפים להתקשר? |
@@ -176,13 +176,13 @@ language and this is all of it.
 | Where | English | Hebrew |
 | --- | --- | --- |
 | `skip` | Skip to content | דילוג לתוכן |
-| `loading` | Loading your account… | החשבון שלכם נטען… |
+| `loading` | Loading your account… | טוען את החשבון... |
 | `account` | Your Kosher Connect account | החשבון שלכם בכשר קונקט |
-| `signout` | Sign out | יציאה מהחשבון |
-| `wallet` | Wallet balance | יתרת הארנק |
+| `signout` | Sign out | התנתקות |
+| `wallet` | Wallet balance | יתרת ארנק |
 | `youOwe()` | You owe … | יתרה לתשלום: … |
 | `inCredit()` | … in credit | … עומדים לזכותכם |
-| `paidNote` | ✓ Payment received — thank you. Your balance will update shortly. | ✓ התשלום התקבל — תודה רבה. היתרה תתעדכן בדקות הקרובות. |
+| `paidNote` | ✓ Payment received — thank you. Your balance will update shortly. | ✓ התשלום התקבל — תודה רבה. היתרה תתעדכן בהקדם. |
 | `payBtn()` | Pay … by card | לתשלום … בכרטיס אשראי |
 | `pay()` | Pay … | לתשלום … |
 | `starting` | Starting… | רק רגע… |
@@ -190,38 +190,38 @@ language and this is all of it.
 | `cancel` | Cancel | ביטול |
 | `payStartFail` | Could not start the payment. | התשלום לא הצליח להתחיל. נסו שוב, ואם זה חוזר על עצמו — דברו איתנו. |
 | `payFormFail` | Could not load the payment form. | טופס התשלום לא עלה. נסו לרענן את העמוד. |
-| `payFailed` | Payment failed. | התשלום לא עבר. אפשר לנסות שוב, או פשוט לשלם אצלנו בחנות. |
+| `payFailed` | Payment failed. Try again, or pay us in the shop. | התשלום נכשל. נסו שוב, או שלמו אצלנו בחנות. |
 | `payProcessing` | Your payment is processing — we’ll update your balance shortly. | התשלום בעיצומו — היתרה תתעדכן בעוד רגע. |
 | `pmTitle` | Payment method | אמצעי תשלום |
 | `cardOnFile` | ✓ A card is saved on file. | ✓ כרטיס אשראי שמור אצלנו במערכת. |
 | `saveCard` | Save card | שמירת כרטיס |
 | `saving` | Saving… | שומרים… |
-| `saveCardStart` | Save a card for future payments | לשמור כרטיס לתשלומים הבאים |
+| `saveCardStart` | Save a card for future payments | שמירת כרטיס אשראי לתשלומים עתידיים |
 | `couldNotStart` | Could not start. | משהו השתבש. נסו שוב בעוד רגע. |
 | `couldNotLoadForm` | Could not load the form. | הטופס לא עלה. נסו לרענן את העמוד. |
 | `couldNotSaveCard` | Could not save the card. | הכרטיס לא נשמר. נסו שוב. |
-| `ddOnFile` | ✓ Direct Debit is set up — monthly charges collect from your bank account automatically. | ✓ הוראת קבע פעילה — חיובים חודשיים נגבים מחשבון הבנק אוטומטית. |
-| `ddStart` | Set up Direct Debit (bank account) | להקים הוראת קבע (חשבון בנק) |
+| `ddOnFile` | ✓ Direct Debit is set up — monthly charges collect from your bank account automatically. | ✓ הוראת הקבע פעילה — חיובים חודשיים ייגבו מחשבון הבנק שלכם אוטומטית. |
+| `ddStart` | Set up Direct Debit (bank account) | הקמת הוראת קבע (חשבון בנק) |
 | `ddNote` | For monthly plans: pays from your bank account, keeps working when a card is replaced, protected by the Direct Debit Guarantee. | לחבילות חודשיות: התשלום יורד מחשבון הבנק, ממשיך לעבוד גם כשמחליפים כרטיס, ומוגן במסגרת ה־Direct Debit Guarantee. |
 | `couldNotSaveDd` | Could not set up the Direct Debit. | הוראת הקבע לא הוקמה. נסו שוב. |
 | `rentals` | Rentals | השכרות |
-| `noRentals` | No active rentals. | אין כרגע השכרות פעילות. |
+| `noRentals` | No active rentals. | אין השכרות פעילות. |
 | `flights` | Flights | טיסות |
 | `noFlights` | No upcoming flights. | אין טיסות קרובות ביומן. |
 | `simPlan()` | My SIM plans | חבילות הסים שלי |
 | `noSims` | No SIM plan with us yet. | עוד אין חבילת סים אצלנו. |
-| `simLogin` | Sign-in email | מייל כניסה |
-| `simLoginOurs` | ours, set up for this line — use it to sign in at the carrier; don’t email it | שלנו, הוקם עבור הקו הזה — להתחברות אצל הספק; לא לשליחת מיילים |
-| `simLoginNone` | Sign-in email not on record — call us and we’ll sort it. | אין מייל כניסה רשום — התקשרו אלינו ונסדר. |
-| `simOtp` | Sign-in code | קוד כניסה |
+| `simLogin` | Sign-in email | דוא״ל להתחברות |
+| `simLoginOurs` | ours, set up for this line — use it to sign in at the carrier; don’t email it | כתובת שלנו, שהוגדרה עבור קו זה — משמשת להתחברות מול הספק; אין לשלוח אליה הודעות |
+| `simLoginNone` | Sign-in email not on record — call us and we’ll sort it. | לא רשום דוא״ל להתחברות — התקשרו אלינו ונסדר זאת. |
+| `simOtp` | Sign-in code | קוד אימות (OTP) |
 | `simOtpAt()` | received … | התקבל … |
-| `downloadFailed` | Couldn’t open that file — try again, or call us and we’ll send it over. | לא הצלחנו לפתוח את הקובץ — נסו שוב, או התקשרו אלינו ונשלח לכם אותו. |
+| `downloadFailed` | Couldn’t open that file — try again, or call us and we’ll send it over. | לא הצלחנו לפתוח את הקובץ — נסו שוב, או התקשרו ונדאג לשלוח לכם. |
 | `renews()` | Renews … | מתחדשת ב־… |
 | `renewIn()` | in … days | בעוד … ימים |
 | `renewToday` | today | היום |
 | `renewOverdueLead` | renewal due — | החידוש הגיע — |
 | `renewOverdueCall` | call us | התקשרו אלינו |
-| `bookingRef` | Ref | אסמכתא |
+| `bookingRef` | Ref | מספר אסמכתא |
 | `bankRef1` | Paying by bank transfer? Please use the reference | משלמים בהעברה בנקאית? נא לציין את האסמכתא |
 | `bankRef2` | so we can match your payment. | כדי שנוכל לשייך את התשלום. |
 | `noMatchTitle` | We couldn’t match this email to an account | לא הצלחנו לשייך את המייל הזה לחשבון |
@@ -242,20 +242,20 @@ language and this is all of it.
 | `rejected` | Not accepted | לא התקבל |
 | `rejectedHint` | Please send it again — pop into the shop or call us if unsure. | נא לשלוח שוב — או לגשת לחנות או להתקשר אם משהו לא ברור. |
 | `reqTitle` | Need something? | צריכים משהו? |
-| `reqHint` | Tell us what you need and we’ll get back to you — a call back, a question about your plan, anything. | כתבו לנו מה אתם צריכים ונחזור אליכם — שיחת טלפון, שאלה על החבילה, כל דבר. |
-| `reqPlaceholder` | e.g. Please call me about my SIM plan — mornings are best, 07… | למשל: נא להתקשר אליי בעניין חבילת הסים — עדיף בבוקר, 07… |
-| `reqSend` | Send request | שליחת בקשה |
+| `reqHint` | Tell us what you need and we’ll get back to you — a call back, a question about your plan, anything. | ספרו לנו מה אתם צריכים ונחזור אליכם — בקשה לשיחה חוזרת, שאלה על החבילה, או כל דבר אחר. |
+| `reqPlaceholder` | e.g. Please call me about my SIM plan — mornings are best, 07… | למשל: אנא התקשרו אליי בנוגע לחבילת הסים — עדיף בבוקר, 07... |
+| `reqSend` | Send request | שליחת פנייה |
 | `reqSending` | Sending… | שולחים… |
-| `reqSent` | ✓ Got it — we’ll be in touch. | ✓ קיבלנו — נחזור אליכם בקרוב. |
+| `reqSent` | ✓ Got it — we’ll be in touch. | ✓ קיבלנו — נהיה בקשר. |
 | `reqFailed` | That didn’t send. Please try again, or just call us. | הבקשה לא נשלחה. נסו שוב, או פשוט התקשרו אלינו. |
 | `qShort` | Questions? We’re here — | יש שאלה? אנחנו כאן — |
 | `reassure` | No password needed — we email you a secure one-time sign-in link. | בלי סיסמה ובלי הרשמה — שולחים לכם למייל קישור כניסה מאובטח, חד־פעמי. |
-| `statuses.active` | Active | פעילה |
+| `statuses.active` | Active | פעיל |
 | `statuses.out` | Active | פעילה |
-| `statuses.booked` | Booked | שמורה |
-| `statuses.overdue` | Overdue | באיחור |
+| `statuses.booked` | Booked | הוזמן |
+| `statuses.overdue` | Overdue | באיחור תשלום |
 | `statuses.returned` | Returned | הוחזרה |
-| `statuses.renewal_pending` | Renewal due | לחידוש |
+| `statuses.renewal_pending` | Renewal due | ממתין לחידוש |
 | `statuses.cancelled` | Cancelled | בוטלה |
 | `statuses.suspended` | Suspended | מושהית |
 | `statuses.Booked` | Booked | הוזמנה |
@@ -270,7 +270,7 @@ language and this is all of it.
 | `sending` | Sending… | שולחים… |
 | `noEmailHelp` | No email address? Call us on | אין לכם כתובת מייל? התקשרו אלינו: |
 | `noEmailHelp2` | and we’ll sort your account in the shop. | ונסדר לכם גישה בחנות. |
-| `entryTypes.payment` | Payment received | תשלום שהתקבל |
+| `entryTypes.payment` | Payment received | קבלת תשלום |
 | `entryTypes.charge` | Charge | חיוב |
 | `entryTypes.refund` | Refund | זיכוי |
 | `entryTypes.refund_payout` | Refund paid out | החזר ששולם |
@@ -310,29 +310,29 @@ language and this is all of it.
 | `tag` | The phone guide | מדריך הטלפונים |
 | `homeAria` | Kosher Connect — back to the main page | כשר קונקט — חזרה לעמוד הראשי |
 | `back` | ← Back to the main page | → חזרה לעמוד הראשי |
-| `account` | My account | החשבון שלי |
-| `strap` | Compared honestly — no favourites | השוואה הוגנת — בלי מועדפים |
+| `account` | My account | האזור האישי |
+| `strap` | Compared honestly — no favourites | השוואה שקופה — בלי אותיות קטנות |
 | `h3` | Which kosher phone is right for you? | איזה טלפון כשר מתאים לכם? |
-| `lead1` | Every handset below is one we sell, set up and stand behind. The specs answer what people actually ask in the shop | כל מכשיר ברשימה הוא מכשיר שאנחנו מוכרים, מגדירים ועומדים מאחוריו. המפרט עונה על מה שבאמת שואלים אצלנו בחנות |
-| `leadVerdicts` | ; the pros and cons are our honest take | ; והיתרונות והחסרונות — דעתנו הכנה |
-| `lead2` | — and if the right phone for you is the cheapest one on the list, that’s the one we’ll recommend. | — ואם הטלפון הנכון עבורכם הוא דווקא הזול ביותר ברשימה, עליו נמליץ. |
+| `lead1` | Every handset below is one we sell, set up and stand behind. The specs answer what people actually ask in the shop | המכשירים שמופיעים כאן הם אלו שאנחנו מוכרים, מגדירים ולוקחים עליהם אחריות. המפרט עונה על השאלות שלקוחות שואלים אותנו בחנות |
+| `leadVerdicts` | ; the pros and cons are our honest take | ; היתרונות והחסרונות משקפים את דעתנו הכנה |
+| `lead2` | — and if the right phone for you is the cheapest one on the list, that’s the one we’ll recommend. | — ואם הטלפון שהכי מתאים לכם הוא הזול ביותר ברשימה, זה בדיוק המכשיר שעליו נמליץ. |
 | `loading` | Loading the guide… | המדריך נטען… |
-| `empty1` | The guide is being written — call us on | המדריך עוד נכתב — התקשרו אלינו: |
+| `empty1` | The guide is being written — call us on | המדריך נמצא כעת בכתיבה — התקשרו אלינו: |
 | `empty2` | and we’ll talk you through the options. | ונעבור איתכם על האפשרויות. |
-| `specs.dualSim` | Dual SIM | שני כרטיסי סים |
-| `specs.yiddishText` | Hebrew text | טקסט בעברית |
+| `specs.dualSim` | Dual SIM | סים כפול (Dual SIM) |
+| `specs.yiddishText` | Hebrew text | תמיכה בעברית |
 | `specs.touchScreen` | Touch-screen | מסך מגע |
-| `specs.texting` | Texting | הודעות |
+| `specs.texting` | Texting | הודעות SMS |
 | `yes` | Yes | כן |
 | `no` | No | לא |
 | `askInShop` | Ask in shop | שאלו בחנות |
-| `callAbout` | Call us about the | להתקשר בקשר ל־ |
-| `prosAria` | What's good | מה טוב |
-| `consAria` | Worth knowing | כדאי לדעת |
-| `foot1` | OTP texting means the phone can receive texts from the bank only — nothing else gets through. | טקסט OTP פירושו שהטלפון מקבל הודעות מהבנק בלבד — שום דבר אחר לא עובר. |
-| `foot2` | Not every phone includes a warranty — please ask before purchase. Prices can change; the shop price on the day is the right one. | לא לכל טלפון מצורפת אחריות — נא לשאול לפני הקנייה. המחירים יכולים להשתנות; המחיר בחנות ביום הקנייה הוא הקובע. |
-| `foot3a` | Not sure? Come in, or call | לא בטוחים? קפצו אלינו, או התקשרו: |
-| `foot3b` | — describe who the phone is for and we’ll tell you straight which one fits. | — ספרו למי הטלפון מיועד, ונגיד לכם ישר איזה מתאים. |
+| `callAbout` | Call us about the | התקשרו אלינו לגבי |
+| `prosAria` | What's good | יתרונות |
+| `consAria` | Worth knowing | חסרונות / כדאי לדעת |
+| `foot1` | OTP texting means the phone can receive texts from the bank only — nothing else gets through. | תמיכה בהודעות OTP (סיסמה חד-פעמית) פירושה שהמכשיר מקבל הודעות מהבנק בלבד — שום דבר אחר לא נכנס. |
+| `foot2` | Not every phone includes a warranty — please ask before purchase. Prices can change; the shop price on the day is the right one. | לא לכל מכשיר מצורפת אחריות — אנא ודאו זאת טרם הקנייה. המחירים עשויים להשתנות; המחיר הקובע הוא המחיר בחנות ביום הרכישה. |
+| `foot3a` | Not sure? Come in, or call | מתלבטים? קפצו לבקר, או התקשרו |
+| `foot3b` | — describe who the phone is for and we’ll tell you straight which one fits. | — ספרו לנו למי מיועד הטלפון, ונגיד לכם מיד איזה מכשיר יתאים. |
 | `brandName` | Kosher Connect | כשר קונקט |
 | `rights` | All rights reserved. | כל הזכויות שמורות. |
 | `tradingName` | Kosher Connect is a trading name of | כשר קונקט הוא שם מסחרי של |
@@ -344,33 +344,33 @@ language and this is all of it.
 | Where | English | Hebrew |
 | --- | --- | --- |
 | `skip` | Skip to content | דילוג לתוכן |
-| `tag` | Repairs | תיקונים |
-| `homeAria` | Kosher Connect — back to the main page | כשר קונקט — חזרה לעמוד הראשי |
-| `back` | ← Back to the main page | → חזרה לעמוד הראשי |
+| `tag` | Repairs | מעבדת תיקונים |
+| `homeAria` | Kosher Connect — back to the main page | כשר קונקט — חזרה לעמוד הבית |
+| `back` | ← Back to the main page | → חזרה לעמוד הבית |
 | `account` | My account | האזור האישי |
-| `strap` | Screens · mic · charging · housing · buttons | מסכים · מיקרופון · טעינה · מארז · כפתורים |
-| `h3` | Book a repair | לקבוע תיקון |
+| `strap` | Screens · mic · charging · housing · buttons | מסכים · מיקרופונים · שקעי טעינה · מארזים · כפתורים |
+| `h3` | Book a repair | הזמנת תיקון |
 | `lead` | Tell us what’s broken and how to reach you — we’ll come back with an honest price, and if it isn’t worth fixing, we’ll say so. Most jobs are done quickly. | ספרו לנו מה התקלקל ואיך להשיג אתכם — נחזור אליכם עם מחיר הוגן, ואם לא שווה לתקן נגיד ביושר. את רוב התיקונים מסיימים מהר. |
-| `fName` | Your name | השם שלכם |
-| `fContact` | Phone number or email | טלפון או אימייל |
-| `fDevice` | Which phone or device? (e.g. Nokia 105, Fig Core) | איזה מכשיר? (למשל Nokia 105, Fig Core) |
-| `fIssue` | What’s wrong with it? | מה הבעיה? |
-| `send` | Send it in | לשלוח |
-| `sending` | Sending… | שולח… |
-| `okTitle` | Got it — we’ll be in touch. | קיבלנו — נחזור אליכם בקרוב. |
-| `okWhen` | We reply during opening hours, usually the same day. | נחזור אליכם בשעות הפתיחה, לרוב עוד באותו יום. |
-| `hoursLabel` | Open: | שעות פתיחה: |
-| `okBody` | Bring the device in to 421 Bury New Road, Salford M7 4ED. Left of Toy Zone, MMR Group building — ring bell 5. | אפשר להביא את המכשיר לכתובת: 421 Bury New Road, Salford M7 4ED. משמאל ל־Toy Zone, בניין MMR Group — פעמון 5. |
+| `fName` | Your name | שם מלא |
+| `fContact` | Phone number or email | טלפון או דוא״ל |
+| `fDevice` | Which phone or device? (e.g. Nokia 105, Fig Core) | איזה מכשיר ברשותכם? (למשל Nokia 105, Fig Core) |
+| `fIssue` | What’s wrong with it? | תיאור התקלה |
+| `send` | Send it in | שלח פנייה |
+| `sending` | Sending… | שולח פנייה... |
+| `okTitle` | Got it — we’ll be in touch. | קיבלנו — נהיה בקשר. |
+| `okWhen` | We reply during opening hours, usually the same day. | אנו עונים בשעות הפעילות, בדרך כלל עוד באותו היום. |
+| `hoursLabel` | Open: | שעות פעילות: |
+| `okBody` | Bring the device in to 421 Bury New Road, Salford M7 4ED. Left of Toy Zone, MMR Group building — ring bell 5. | הביאו את המכשיר אלינו לכתובת: 421 Bury New Road, Salford M7 4ED. משמאל ל-Toy Zone, בבניין MMR Group — צלצלו בפעמון 5. |
 | `okCall` | In a hurry? Call | ממהרים? התקשרו: |
-| `errFallback` | That didn’t send — please call us on | לא נשלח — התקשרו אלינו: |
-| `errCodes.rate` | That’s a few in a row — give it a minute, or call us on | נשלחו כמה פניות ברצף — נסו שוב בעוד דקה, או התקשרו אלינו: |
-| `errCodes.name` | Please enter your name, then try again — or call us on | נא למלא את השם ולנסות שוב — או להתקשר אלינו: |
-| `errCodes.contact` | Please check the phone number or email, then try again — or call us on | נא לבדוק את מספר הטלפון או המייל ולנסות שוב — או להתקשר אלינו: |
-| `errCodes.device` | Please tell us which device and what’s wrong, then try again — or call us on | נא לציין איזו מכשיר ומה התקלה ולנסות שוב — או להתקשר אלינו: |
-| `errCodes.offline` | We can’t take repairs through the form this minute — please call us on | לא נוכל לקבל פניות דרך הטופס ברגע זה — נא להתקשר אלינו: |
-| `errCodes.server` | That didn’t send — please call us on | לא נשלח — התקשרו אלינו: |
-| `urgent` | Urgent? Skip the form — | דחוף? בלי טפסים — |
-| `urgentCall` | call | התקשרו |
+| `errFallback` | That didn’t send — please call us on | הפנייה לא נשלחה — אנא התקשרו אלינו: |
+| `errCodes.rate` | That’s a few in a row — give it a minute, or call us on | שלחתם מספר פניות ברצף — המתינו דקה ונסו שוב, או התקשרו אלינו: |
+| `errCodes.name` | Please enter your name, then try again — or call us on | אנא הזינו את שמכם ונסו שוב — או התקשרו: |
+| `errCodes.contact` | Please check the phone number or email, then try again — or call us on | אנא בדקו את מספר הטלפון או הדוא״ל ונסו שוב — או התקשרו: |
+| `errCodes.device` | Please tell us which device and what’s wrong, then try again — or call us on | אנא ציינו איזה מכשיר ברשותכם ומה התקלה, ונסו שוב — או התקשרו: |
+| `errCodes.offline` | We can’t take repairs through the form this minute — please call us on | לא ניתן לקבל פניות דרך הטופס כרגע — אנא התקשרו: |
+| `errCodes.server` | That didn’t send — please call us on | הפנייה לא נשלחה — אנא התקשרו: |
+| `urgent` | Urgent? Skip the form — | מקרה דחוף? דלגו על הטופס — |
+| `urgentCall` | call | חייגו עכשיו |
 | `brandName` | Kosher Connect | כשר קונקט |
 | `rights` | All rights reserved. | כל הזכויות שמורות. |
 | `tradingName` | Kosher Connect is a trading name of | כשר קונקט הוא שם מסחרי של |
@@ -432,3 +432,36 @@ built from them.
 ---
 
 **379 lines in total.**
+
+---
+
+## Three lines that need a person, not a translator
+
+The Hebrew above was rewritten on 27 August 2026 from the document the owner
+commissioned — native Israeli UX microcopy (מיקרו-קופי), the register a Partner
+or Cellcom site is written in, rather than the literal translation that was
+here before. 115 strings across the four public pages.
+
+Three of them were **not** applied as written, because each is a decision about
+what the shop is promising rather than about how to say it. They are listed
+here so Shloime or Psic can settle them in one minute:
+
+**1. `/repair` → `lead` — left as it was.**
+The document renders *"Most jobs are done quickly"* as
+**רוב התיקונים מתבצעים במקום** — "most repairs are done **on the spot**". That is
+a stronger promise than the English makes: quickly is a pace, on the spot is a
+guarantee that somebody waits at the counter. If the bench really does turn
+most jobs round while the customer waits, take the document's line — it is
+better copy. Not a change to make on the shop's behalf.
+
+**2. `/welcome` → `bands.0.body` — one word changed from the document.**
+The document ends the paragraph **מאלף ועד תף**. The idiom is
+*from aleph to tav* — תו — and תף is not a letter, so this reads as a typo in
+the source rather than a choice. Written as **מאלף ועד תו**. If the intent was
+something else, this is the line to look at.
+
+**3. `/portal` → `payFailed` — the English was brought up to the Hebrew.**
+The document's Hebrew adds a next step the English never had: *try again, or
+pay us in the shop*. It is right, and the bare "Payment failed." is exactly the
+dead end the 27 August heuristic evaluation went after everywhere else. Rather
+than let the two languages say different things, the English now says it too.

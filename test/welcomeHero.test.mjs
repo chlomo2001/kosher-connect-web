@@ -91,7 +91,17 @@ test('the long accent breaks at the phrase, not mid-claim', () => {
 test('the Hebrew says the same thing in the same shape', () => {
   // The Hebrew had the identical fault: שבת ויום טוב on one line with בחינם —
   // the word that carries the claim — stranded on the next.
-  assert.match(SRC, /accent:\s*'שבת ויום טוב בחינם'/,
-    'the Hebrew accent must carry the whole claim too')
-  assert.ok(!/accent:\s*'שבת ויום טוב',/.test(SRC), 'the Hebrew fragment is back')
+  //
+  // This used to pin the exact phrase 'שבת ויום טוב בחינם'. On 27 Aug the owner
+  // had the whole of the Hebrew rewritten by somebody who writes Israeli
+  // microcopy for a living, and this line became 'ללא חיוב בשבתות וימים טובים'
+  // — which says the same thing better and put the claim FIRST, where it cannot
+  // be stranded at all. A test that pins a sentence blocks the sentence being
+  // improved; what it is actually for is the property, so that is what it
+  // checks now: the accent names the days AND says they are not charged, in one
+  // string.
+  const he = SRC.match(/accent:\s*'([^']*(?:שבת|שבתות)[^']*)'/)
+  assert.ok(he, 'the Hebrew travel accent is missing')
+  assert.match(he[1], /ימים טובים|יום טוב/, 'it must name Yom Tov as well as Shabbos')
+  assert.match(he[1], /ללא חיוב|בחינם|לא מחויב/, 'it must carry the claim — that they are not charged')
 })
