@@ -250,6 +250,48 @@
           "notes": ""
         }
       ]
+    },
+    {
+      "id": "b2",
+      "customerId": "c1",
+      "route": "TLV → MAN",
+      "airline": "Wizz",
+      "bookingRef": "FLW77Q",
+      "travelDate": "2026-08-12",
+      "status": "Completed",
+      "price": 285,
+      "amountPaid": 285,
+      "customerName": "Menachem Adler",
+      "returnDate": null,
+      "legs": []
+    },
+    {
+      "id": "b3",
+      "customerId": "c1",
+      "route": "MAN → JFK",
+      "airline": "Wizz",
+      "bookingRef": "TKT31A",
+      "travelDate": "2026-08-13",
+      "status": "Ticketed",
+      "price": 285,
+      "amountPaid": 285,
+      "customerName": "Menachem Adler",
+      "returnDate": null,
+      "legs": []
+    },
+    {
+      "id": "b4",
+      "customerId": "c1",
+      "route": "MAN → CDG",
+      "airline": "Wizz",
+      "bookingRef": "CNL08B",
+      "travelDate": "2026-08-14",
+      "status": "Cancelled",
+      "price": 285,
+      "amountPaid": 285,
+      "customerName": "Menachem Adler",
+      "returnDate": null,
+      "legs": []
     }
   ],
   "/api/virtual-numbers": [

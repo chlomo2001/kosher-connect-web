@@ -1390,7 +1390,12 @@ tbody tr.selected td { background: rgba(0, 96, 168, 0.05); }
   display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px;
   background: var(--accent); color: var(--on-accent); font-size: var(--fs-micro);
 }
-.tm-list { display: flex; flex-direction: column; }
+/* Bounded even when open. A shop with eleven unparsed confirmations was
+   pushing the bookings register below three screenfolds — the queue is work to
+   get through, not a page to read, so it gets a window and scrolls inside it.
+   Roughly four cards, which is enough to see there is a queue and to work the
+   top of it without losing the table underneath. */
+.tm-list { display: flex; flex-direction: column; max-height: 360px; overflow-y: auto; }
 .tm-row {
   /* tick · the ticket · what you can do with it */
   display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px;

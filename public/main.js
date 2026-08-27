@@ -14696,8 +14696,16 @@ function bookingStatusBadge(status) {
     Cancelled: 'badge-cancelled',
   };
   // For flights, "Completed" reads more naturally as "Flown".
-  const label = status === 'Completed' ? '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i> Flown' : status;
-  return `<span class="badge ${cls[status] || 'badge-booking'}">${escHtml(label)}</span>`;
+  //
+  // The icon is TRUSTED MARKUP and the status is a VALUE, so they cannot travel
+  // in the same string: this used to build `<i …></i> Flown` into `label` and
+  // then run escHtml over the lot, which printed the tag as words in the
+  // status column — `<i class="kc-ic kc-ic-plane" aria-hidden="true"></i> Flown`
+  // on every flown booking (owner's screenshot, 28 Aug). Markup concatenated,
+  // value escaped, and never the other way round.
+  const icon = status === 'Completed' ? '<i class="kc-ic kc-ic-plane" aria-hidden="true"></i> ' : '';
+  const label = status === 'Completed' ? 'Flown' : status;
+  return `<span class="badge ${cls[status] || 'badge-booking'}">${icon}${escHtml(label)}</span>`;
 }
 
 // ── Tickets that arrived by email ─────────────────────────────────────────
@@ -14809,15 +14817,40 @@ function bookingForReference(reference, list) {
   return null;
 }
 
+// Open or shut, remembered. Owner, 28 Aug: "a button to collapse the emails
+// for tickets - now is taking over too much of the screen - i have to scroll
+// alot in order to see the bookings". Two things fix that and they are
+// different: the toggle puts it away entirely, and the capped height (CSS,
+// .tm-list) stops it eating the page even when it is open. A queue of eleven
+// unparsed confirmations was pushing the register below three screenfolds.
+//
+// Default is OPEN. These are tickets the shop has bought and not charged for,
+// so hiding them by default would be the app deciding not to mention money.
+const TM_COLLAPSE_KEY = 'kc_tm_collapsed';
+function tmCollapsed() {
+  try { return localStorage.getItem(TM_COLLAPSE_KEY) === '1'; } catch { return false; }
+}
+function tmToggleCollapse() {
+  try { localStorage.setItem(TM_COLLAPSE_KEY, tmCollapsed() ? '0' : '1'); } catch { /* private mode */ }
+  renderBookingsTab();
+}
+
 function tmQueueHtml() {
   if (!tmData || !tmData.tickets || !tmData.tickets.length) return '';
+  const shut = tmCollapsed();
   return `
     <div class="card" id="tmPanel" style="margin-bottom:12px;">
       <div class="card-head">
         <h2 class="card-title"><i class="kc-ic kc-ic-mail" aria-hidden="true"></i> Tickets from email
           <span class="tm-count">${tmData.tickets.length}</span></h2>
         <span style="font-size:var(--fs-micro);color:var(--muted);">
-          Read from the airline's own confirmation — confirm the details and it becomes a booking.</span>
+          ${shut
+            ? `${tmData.tickets.length} waiting — the bookings are below.`
+            : `Read from the airline's own confirmation — confirm the details and it becomes a booking.`}</span>
+        <button class="btn btn-outline btn-sm" id="tmCollapse" onclick="tmToggleCollapse()"
+          aria-expanded="${shut ? 'false' : 'true'}" aria-controls="tmBody"
+          title="${shut ? 'Show the tickets waiting to be confirmed' : 'Put these away and go straight to the bookings'}"
+          >${shut ? '▸ Show' : '▾ Hide'}</button>
         <!-- The list is cached for a minute and refreshed when the tab is
              opened, which is right for reading and wrong for the case that
              actually happens: someone at the counter has just forwarded the
@@ -14825,6 +14858,7 @@ function tmQueueHtml() {
         <button class="btn btn-outline btn-sm" id="tmRefresh" onclick="tmRefresh()"
           title="Check for tickets that have just arrived">↻ Check now</button>
       </div>
+      <div id="tmBody"${shut ? ' hidden' : ''}>
       <div class="tm-bulk" id="tmBulkBar" style="display:${tmSelected.size ? 'flex' : 'none'};">
         <strong id="tmBulkCount" style="font-size:var(--fs-body);">${tmSelected.size} selected</strong>
         <button class="btn btn-outline btn-sm" onclick="tmDismissSelected()">✕ Dismiss selected</button>
@@ -14836,6 +14870,7 @@ function tmQueueHtml() {
           onclick="tmSelectAll(this.checked)"> Select all ${tmData.tickets.length}
       </label>
       <div class="tm-list">${tmData.tickets.map(tmCardHtml).join('')}</div>
+      </div>
     </div>`;
 }
 
@@ -15357,8 +15392,40 @@ const KC_MAILBODY = (() => {
     if (!label || label.length > 60) return '';
     return label;
   }
-  function segments(body) {
+  // Raw HTML that never got flattened on the way in — see lib/mailBody.mjs.
+  const LOOKS_HTML = /<\s*(?:!doctype|html|head|body|table|tr|td|div|p|br|span|style|meta|a)\b/i;
+  const ENTITY = {
+    amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+    mdash: '\u2014', ndash: '\u2013', hellip: '\u2026', pound: '\u00a3', euro: '\u20ac',
+    rsquo: '\u2019', lsquo: '\u2018', ldquo: '\u201c', rdquo: '\u201d',
+  };
+  function decodeEntities(t) {
+    return String(t)
+      .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+      .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+      .replace(/&([a-z]+);/gi, (m, name) => ENTITY[name.toLowerCase()] ?? m);
+  }
+  function htmlToText(body) {
     const src = String(body == null ? '' : body);
+    if (!LOOKS_HTML.test(src)) return src;
+    const text = src
+      .replace(/<!--[\s\S]*?-->/g, ' ')
+      .replace(/<(script|style|head|title)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
+      .replace(/<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a\s*>/gi, (m, href, inner) => {
+        const label = inner.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        return label ? ` ${label} ( ${href} ) ` : ` ( ${href} ) `;
+      })
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|tr|table|h[1-6]|li|ul|ol|section|header|footer)\s*>/gi, '\n')
+      .replace(/<[^>]+>/g, ' ');
+    return decodeEntities(text)
+      .replace(/[ \t\u00a0]+/g, ' ')
+      .replace(/^[ \t]+|[ \t]+$/gm, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+  function segments(body) {
+    const src = htmlToText(String(body == null ? '' : body));
     if (!src.trim()) return [];
     const out = [];
     const pushText = (t) => {
@@ -15405,7 +15472,7 @@ const KC_MAILBODY = (() => {
     }).filter(seg => seg.type !== 'text' || seg.text !== '');
   }
   const text = (body) => segments(body).map(s => s.text).join('');
-  return { segments, text, linkHost };
+  return { segments, text, linkHost, htmlToText };
 })();
 // ── KC_MAILBODY mirror end ──
 
