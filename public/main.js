@@ -9054,8 +9054,8 @@ async function reviewCustomerDoc(custId, id, action) {
     });
     const d = await r.json();
     if (d.success) { toast(action === 'approve' ? 'Approved' : 'Rejected — the customer sees this in their portal', 'success', action === 'approve' ? 'check' : null); loadDocsSection(custId); }
-    else toast(d.error || 'Failed.', 'error');
-  } catch { toast('Failed.', 'error'); }
+    else toast(d.error || 'That did not go through — the document is unchanged.', 'error');
+  } catch { toast('That did not go through — check the connection and try again.', 'error'); }
 }
 // Charge a customer's saved card-on-file off-session (owner action). The server
 // requires a stored card and reports clearly when there isn't one, or when the
@@ -9264,8 +9264,14 @@ async function chargeCardOnFile(custId) {
       toast(d.note || 'Payment processing — the card issuer hasn’t answered yet. Check this customer’s wallet in a minute; don’t charge again.', 'warning');
       loadWalletSection(custId);
     }
-    else toast(d.error || 'Charge failed.', 'error');
-  } catch { toast('Charge failed.', 'error'); }
+    else toast(d.error || 'Charge failed — nothing was taken from the card.', 'error');
+  }
+  // A dropped connection is NOT a declined card. The request may have reached
+  // Stripe and the card may be charged; the only thing that certainly failed
+  // is hearing back. This said “Charge failed.”, which reads as an instruction
+  // to charge again — while the success path six lines up already knows to say
+  // the opposite. Nielsen 9, and the most expensive sentence in the app.
+  catch { toast('The connection dropped before the card answered — check this customer’s wallet before charging again.', 'error'); }
   finally { kcEndWrite(guardKey); }
 }
 
@@ -9578,7 +9584,7 @@ async function createPaymentLink(custId) {
       ? `Payment link created — customer chooses the amount${amount > 0 ? ` (suggested ${fmtGbp(amount)})` : ''}`
       : `Payment link created — ${fmtGbp(amount)}` });
   } catch {
-    toast('Could not reach the payment-link service.', 'error');
+    toast('Could not reach the payment-link service — no link was made. Try again, or take the payment at the counter.', 'error');
   } finally {
     if (btn) { btn.disabled = false; if (btn.textContent === 'Creating…') btn.textContent = 'Create link'; }
     kcEndWrite(guard);
@@ -9755,7 +9761,7 @@ async function runElidMatch() {
         const r = await kcFetch('/api/elid/match', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ offset, limit: 12 }) });
         j = await r.json().catch(() => ({}));
         if (!r.ok || !j.success) { if (prog) prog.textContent = j.error || 'Match failed.'; break; }
-      } catch { if (prog) prog.textContent = 'Could not reach the server.'; break; }
+      } catch { if (prog) prog.textContent = 'Could not reach the server — stopped here. Nothing after this point was imported.'; break; }
       total = j.total; matched += j.matched;
       (j.linked || []).forEach((l) => {
         found.push(l);
@@ -9792,7 +9798,7 @@ async function openElidImportModal() {
     const j = await r.json().catch(() => ({}));
     if (!r.ok || !j.success) { const b = document.getElementById('eiBody'); if (b) b.innerHTML = escHtml(j.error || 'Could not load.'); return; }
     renderElidImport(j.accounts || []);
-  } catch { const b = document.getElementById('eiBody'); if (b) b.textContent = 'Could not reach the server.'; }
+  } catch { const b = document.getElementById('eiBody'); if (b) b.textContent = 'Could not reach the server — nothing was linked. Close this and try again.'; }
 }
 // Levenshtein edit distance (small; for spelling-variant name matching).
 function elidLev(a, b) {
@@ -10463,7 +10469,7 @@ async function dupMarkNotSame(aId, bId) {
     if (!r.ok || !j.success) { toast(j.error || 'Could not save that.', 'error'); return; }
     dupPairSettled(aId, bId);
     toast('Noted — that pair won\'t come up again.', 'success');
-  } catch { toast('Could not reach the server.', 'error'); }
+  } catch { toast('Could not reach the server — nothing was saved. Try again.', 'error'); }
 }
 
 async function openDupScanModal() {
@@ -10473,7 +10479,7 @@ async function openDupScanModal() {
     const j = await r.json().catch(() => ({}));
     if (!r.ok || !j.success) { const b = document.getElementById('dupBody'); if (b) b.innerHTML = escHtml(j.error || 'Could not scan.'); return; }
     renderDupScan(j);
-  } catch { const b = document.getElementById('dupBody'); if (b) b.textContent = 'Could not reach the server.'; }
+  } catch { const b = document.getElementById('dupBody'); if (b) b.textContent = 'Could not reach the server — no duplicates were read. Close this and try again.'; }
 }
 function renderDupScan(j) {
   const pairs = j.pairs || [];   // the server already drops dismissed pairs
@@ -10628,7 +10634,7 @@ async function mergeDupPair(dupId, survivorId) {
     toast(`Merged into ${j.kept?.name || 'the kept record'}${moved ? ` — moved ${moved}` : ''}.`, 'success');
     dupPairSettled(dupId, survivorId);
     if (typeof renderTableRows === 'function') renderTableRows();
-  } catch { toast('Could not reach the server.', 'error'); }
+  } catch { toast('The connection dropped during the merge — reopen the customer to see whether it went through before trying again.', 'error'); }
 }
 
 async function deleteCustomerDoc(custId, id) {
@@ -10643,8 +10649,8 @@ async function deleteCustomerDoc(custId, id) {
       try {
         const r = await kcFetch(`/api/documents?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
         const d = await r.json();
-        if (!d.success) { toast(d.error || 'Delete failed.', 'error'); loadDocsSection(custId); }
-      } catch { toast('Delete failed.', 'error'); loadDocsSection(custId); }
+        if (!d.success) { toast(d.error || 'The document was not deleted — it is still here.', 'error'); loadDocsSection(custId); }
+      } catch { toast('The document was not deleted — check the connection and try again.', 'error'); loadDocsSection(custId); }
     },
   });
 }
@@ -10911,7 +10917,9 @@ async function submitRefund(customerId, idx) {
     closeDynamicModal();
     loadWalletSection(customerId);
   } catch {
-    toast('Could not reach the refund service.', 'error');
+      // Same ambiguity as the card charge, in the other direction: the refund
+      // may have gone through and only the answer was lost.
+      toast('The connection dropped before the refund was confirmed — check the wallet before refunding again.', 'error');
     if (btn) { btn.disabled = false; btn.textContent = 'Refund to card'; }
   } finally {
     kcEndWrite(guard);
@@ -13961,7 +13969,7 @@ function fallbackCopy(t, done) {
   const ta = document.createElement('textarea');
   ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
   document.body.appendChild(ta); ta.select();
-  try { document.execCommand('copy'); done(); } catch { toast('Copy failed', 'error'); }
+  try { document.execCommand('copy'); done(); } catch { toast('Could not copy — select and copy manually.', 'error'); }
   ta.remove();
 }
 
@@ -16690,7 +16698,9 @@ async function svcTimerPopOut() {
     // Must be the first await after the click: the browser only grants this
     // while the user's gesture is still live.
     svcPipWin = await documentPictureInPicture.requestWindow({ width: 250, height: 152 });
-  } catch { return toast('Couldn’t open the floating timer.', 'error'); }
+  // The in-page timer is still running — say so, or this reads as "the timer
+  // has stopped" when all that failed is the extra window.
+  } catch { return toast('Couldn’t open the floating timer — this browser would not allow it. The timer on this page is still running.', 'error'); }
 
   const d = svcPipWin.document;
   d.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme') || 'light');
@@ -19851,7 +19861,7 @@ async function bizApplyRange() {
   const rep = (d) => kcFetch('/api/ledger?report=1&from=' + d).then(r => r.json()).catch(() => null);
 
   const [sinceFrom, sinceAfterTo, sinceBefore] = await Promise.all([rep(from), rep(dayAfter(to)), rep(before)]);
-  if (!sinceFrom?.success) { toast('Could not load that range.', 'error'); return; }
+  if (!sinceFrom?.success) { toast('Could not load that range — check the connection and try again.', 'error'); return; }
   bizCustom = {
     from, to,
     now: bizDiff(sinceFrom, sinceAfterTo),
@@ -20380,7 +20390,7 @@ async function assistantBuildAction(plan) {
     if (matches.length > 1) return { error: `Several open tasks match “${escHtml(hint)}” — please be more specific.` };
     const tk = matches[0];
     return { summary: `Mark done: <strong>${escHtml(tk.title)}</strong>.`,
-      run: async () => { try { const r = await window.api.updateTask({ id: tk.id, done: true }); if (r && (r.success || r.task)) { toast('Marked done.', 'success'); if (currentTab === 'tasks') renderTasksTab(); const o = document.getElementById('askOut'); if (o) o.innerHTML = '<div style="color:var(--success);font-size:var(--fs-body);">✓ Done.</div>'; } else toast('Could not update.', 'error'); } catch { toast('Could not update.', 'error'); } } };
+      run: async () => { try { const r = await window.api.updateTask({ id: tk.id, done: true }); if (r && (r.success || r.task)) { toast('Marked done.', 'success'); if (currentTab === 'tasks') renderTasksTab(); const o = document.getElementById('askOut'); if (o) o.innerHTML = '<div style="color:var(--success);font-size:var(--fs-body);">✓ Done.</div>'; } else toast('That task is still open — try again.', 'error'); } catch { toast('That task is still open — check the connection and try again.', 'error'); } } };
   }
   return { error: 'I’m not sure how to do that yet.' };
 }
@@ -21137,7 +21147,7 @@ async function openTaskTriageModal() {
     const j = await r.json().catch(() => ({}));
     if (!r.ok || !j.success) { const b = document.getElementById('aiPlanBody'); if (b) b.innerHTML = escHtml(j.error || 'Could not build a plan.'); return; }
     renderTaskTriage(j);
-  } catch { const b = document.getElementById('aiPlanBody'); if (b) b.textContent = 'Could not reach the server.'; }
+  } catch { const b = document.getElementById('aiPlanBody'); if (b) b.textContent = 'Could not reach the server — nothing was worked out. Close this and try again.'; }
 }
 function renderTaskTriage(j) {
   const buckets = [
@@ -21183,8 +21193,8 @@ async function triageDone(id, btn) {
       btn.style.background = 'var(--success)'; btn.style.color = '#fff'; btn.disabled = true;
       if (Array.isArray(tasksList)) { const tk = tasksList.find((x) => String(x.id) === String(id)); if (tk) tk.done = true; }
       toast('Marked done.', 'success');
-    } else toast('Could not update.', 'error');
-  } catch { toast('Could not update.', 'error'); }
+    } else toast('That task is still open — try again.', 'error');
+  } catch { toast('That task is still open — check the connection and try again.', 'error'); }
 }
 
 function suggestTaskPriority(t, todayISO) {
@@ -24885,7 +24895,7 @@ async function sendSmsReply(id) {
     else toast('Reply sent.', 'success');
     loadMessageLog();
   } catch {
-    toast('Could not reach the server.', 'error');
+      toast('Could not reach the server — the reply was not sent. Try again.', 'error');
     if (btn) { btn.disabled = false; btn.classList.add('kc-ic', 'kc-ic-upload'); btn.textContent = 'Send reply'; }
   }
 }
