@@ -3251,18 +3251,30 @@ function renderRentalsTab() {
           <button class="btn btn-outline btn-sm" id="rentalBulkSameCust" style="display:none;" onclick="selectSameCustomerRentals()"></button>
           <button class="btn btn-outline btn-sm" onclick="clearRentalSel()">Deselect all</button>
         </div>
-        <div class="table-wrap kc-stack-sm">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:28px;"><input type="checkbox" id="rentalSelAll" aria-label="Select every rental in this view"
-                  onclick="toggleAllRentalSel(this.checked)"></th>
-                <th>Customer</th><th>Phone</th><th>From → To</th>
-                <th>Days</th><th>Balance</th><th>Status</th><th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="rentalTableBody"></tbody>
-          </table>
+        <div class="kc-resizable-box">
+          ${/* The same grip the inventory has carried since 13 Aug. BOTH lists
+                were always capped at 420px; only one had a handle, which read
+                as an inconsistency the moment the two cards sat side by side —
+                owner, 27 Aug: "why is the expand box on height on right card
+                but not on eft". */''}
+          <button type="button" class="kc-grip" id="rentalGrip" data-grip="rentals"
+            title="Drag to resize — double-click to fit every hire"
+            aria-label="Resize the rentals list"
+            onpointerdown="invGripDown(event)" onkeydown="invGripKey(event)"
+            ondblclick="invGripFit(event)"></button>
+          <div class="table-wrap kc-stack-sm">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:28px;"><input type="checkbox" id="rentalSelAll" aria-label="Select every rental in this view"
+                    onclick="toggleAllRentalSel(this.checked)"></th>
+                  <th>Customer</th><th>Phone</th><th>From → To</th>
+                  <th>Days</th><th>Balance</th><th>Status</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="rentalTableBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
       <div class="rentals-split-col">
@@ -3276,11 +3288,11 @@ function renderRentalsTab() {
                the resize rule on .modal), on the card's TOP right instead of
                the bottom (owner, 13 Aug): drag it up and the list opens out.
                Drawn as the corner itself, not as a button beside the title. -->
-          <button type="button" class="kc-grip" id="invGrip"
+          <button type="button" class="kc-grip" id="invGrip" data-grip="inv"
             title="Drag to resize — double-click to fit every phone"
             aria-label="Resize the phone inventory list"
             onpointerdown="invGripDown(event)" onkeydown="invGripKey(event)"
-            ondblclick="invGripFit()"></button>
+            ondblclick="invGripFit(event)"></button>
           <div class="table-wrap kc-stack-sm">
             <table>
               <thead>
@@ -3966,19 +3978,35 @@ function phonesMatchingSearch() {
   });
 }
 
-// ── How tall the Phone Inventory list is ─────────────────────────────────
-// The list is capped at 420px so the two halves of the rentals split stay
-// comparable (see .rentals-split-col .table-wrap). With 40-odd handsets on the
-// shelf that is eight rows of a fleet the counter wants to see at once, so the
-// grip in the section header takes it as tall as they like — and the app
-// remembers, because re-setting it on every visit is the same annoyance one
-// step further along.
-const INV_H_KEY = 'kc_inv_height';
-const INV_H_MIN = 160;
+// ── How tall the two rentals lists are ───────────────────────────────────
+// Both are capped at 420px so the halves of the rentals split stay comparable
+// (see .rentals-split-col .table-wrap). With 40-odd handsets on the shelf that
+// is eight rows of a fleet the counter wants to see at once, so the grip in the
+// section header takes it as tall as they like — and the app remembers, because
+// re-setting it on every visit is the same annoyance one step further along.
+//
+// It used to be the INVENTORY's grip and nothing else, which was fine while the
+// inventory sat underneath. Side by side the two cards read as a pair and only
+// one of them could be opened out — owner, 27 Aug: "why is the expand box on
+// height on right card but not on eft". The cap was always on both; only the
+// handle was missing. So the machinery below takes a KEY and the hire list has
+// one too, with its own remembered height.
+const GRIPS = {
+  inv:     { tbody: 'phoneTableBody',  store: 'kc_inv_height' },
+  rentals: { tbody: 'rentalTableBody', store: 'kc_rentals_height' },
+};
+const INV_H_KEY = 'kc_inv_height';   // kept: an owner who has already dragged
+const INV_H_MIN = 160;               // the inventory keeps that height
 const INV_H_DEFAULT = 420;
 
-function invWrap() {
-  return document.getElementById('phoneTableBody')?.closest('.table-wrap') || null;
+// Which list the gesture in progress belongs to. Set from the grip's own
+// data-grip on the way in, so every helper below reads one place.
+let gripKey = 'inv';
+const gripOf = (e) => { gripKey = e.currentTarget?.dataset?.grip || 'inv'; return gripKey; };
+
+function invWrap(key = gripKey) {
+  const id = GRIPS[key]?.tbody || GRIPS.inv.tbody;
+  return document.getElementById(id)?.closest('.table-wrap') || null;
 }
 // The effective cap, not the painted height: a short list sits below its cap,
 // and starting a drag from the painted height would make the first pixel jump.
@@ -4016,17 +4044,23 @@ function invApplyHeight(px, save = true, anchorBottom = false) {
     const after = w.getBoundingClientRect().bottom;
     sc.scrollTop += after - before;
   }
-  const grip = document.getElementById('invGrip');
+  const grip = document.querySelector(`.kc-grip[data-grip="${gripKey}"]`);
   if (grip) grip.setAttribute('aria-valuenow', String(h));
-  if (save) { try { localStorage.setItem(INV_H_KEY, String(h)); } catch { /* private mode */ } }
+  if (save) {
+    try { localStorage.setItem(GRIPS[gripKey]?.store || INV_H_KEY, String(h)); } catch { /* private mode */ }
+  }
 }
 function invRestoreHeight() {
-  let v = 0;
-  try { v = Number(localStorage.getItem(INV_H_KEY)) || 0; } catch { /* private mode */ }
-  if (v) invApplyHeight(v, false);
+  for (const key of Object.keys(GRIPS)) {
+    gripKey = key;
+    let v = 0;
+    try { v = Number(localStorage.getItem(GRIPS[key].store)) || 0; } catch { /* private mode */ }
+    if (v) invApplyHeight(v, false);
+  }
+  gripKey = 'inv';
 }
 function invGripDown(e) {
-  const w = invWrap();
+  const w = invWrap(gripOf(e));
   if (!w) return;
   e.preventDefault();
   const grip = e.currentTarget;
@@ -4053,17 +4087,17 @@ function invGripDown(e) {
 // Same grip from the keyboard, since a drag is the one gesture that has no
 // keyboard equivalent unless you give it one.
 function invGripKey(e) {
-  const w = invWrap();
+  const w = invWrap(gripOf(e));
   if (!w) return;
   const step = e.shiftKey ? 120 : 40;
   if (e.key === 'ArrowUp') { e.preventDefault(); invApplyHeight(invCurrentCap(w) + step, true, true); }
   else if (e.key === 'ArrowDown') { e.preventDefault(); invApplyHeight(invCurrentCap(w) - step, true, true); }
   else if (e.key === 'Home') { e.preventDefault(); invApplyHeight(INV_H_DEFAULT, true, true); }
-  else if (e.key === 'End' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); invGripFit(); }
+  else if (e.key === 'End' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); invGripFit(e); }
 }
 // Double-click: show every phone, or go back to the default if it already does.
-function invGripFit() {
-  const w = invWrap();
+function invGripFit(e) {
+  const w = invWrap(e ? gripOf(e) : gripKey);
   if (!w) return;
   const full = w.scrollHeight + 2;
   const fitting = invCurrentCap(w) < full - 4;
