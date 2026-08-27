@@ -33,6 +33,7 @@ const SETTING_RULES = {
   multi_sim_discount_from:   { type: 'count', unit: 'th plan' },
   till_opening_float:        { type: 'money',   unit: '£' },
   rental_pay_days:           { type: 'count',   unit: 'days' },
+  rental_return_grace_days:  { type: 'count',   unit: 'days' },
   sim_dd_surcharge_pct:      { type: 'percent', unit: '%' },
   sim_dd_surcharge_min:      { type: 'money',   unit: '£' },
   // Dashboard colour thresholds. Editable like a fee, but they change nothing

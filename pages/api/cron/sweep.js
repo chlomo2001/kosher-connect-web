@@ -26,7 +26,7 @@
 import crypto from 'node:crypto'
 import { db, tablesMode } from '../../../lib/db.js'
 import { poolCover, poolCoverNote, poolCoverNeedsAction } from '../../../lib/poolCover.mjs'
-import { rentalStage, readinessDue } from '../../../lib/rentalStage.mjs'
+import { rentalStage, readinessDue, RETURN_GRACE_DAYS } from '../../../lib/rentalStage.mjs'
 
 // The stage rule speaks the app's shape; the sweep reads database rows. One
 // adapter, so the two cannot disagree about which date is which.
@@ -36,6 +36,17 @@ const asStageRental = (r) => ({
   toDate: r.end_date || null,
   pickupDate: (r.legacy_extras && r.legacy_extras.pickupDate) || null,
 })
+
+// Days past its return date before a phone is chased rather than simply waited
+// for. Owner-editable in Settings; the lib constant is the fallback so a sweep
+// still runs if the row is missing.
+async function returnGraceDays() {
+  try {
+    const rows = await db.select('settings', 'select=num_value&key=eq.rental_return_grace_days')
+    const n = rows.length ? Number(rows[0].num_value) : NaN
+    return Number.isFinite(n) ? Math.max(0, n) : RETURN_GRACE_DAYS
+  } catch { return RETURN_GRACE_DAYS }
+}
 import { resolveStaff } from '../../../lib/auth.js'
 import { advanceOneMonth, advancePastDate } from '../../../lib/money.mjs'
 import { displayDate } from '../../../lib/localDay.mjs'
@@ -302,6 +313,17 @@ async function handler(req, res) {
   try {
     await section('overdue', async () => {
     // ── 1. Overdue rentals ──
+    //
+    // The stored status still flips the morning after the dates end, and it has
+    // to: `overdue` is what keeps the handset counted as out rather than back on
+    // the shelf. What changed is when the shop gets TOLD.
+    //
+    // Shloime, 27 Aug: "the person is back, but hasnt retuned the phone/sim, so
+    // the line doesnt have to be actively running, but still its not available
+    // yet until physically back". A customer who landed last night and will drop
+    // the phone in on his way past is not a problem to chase, so the task waits
+    // out the grace window (Settings → rental_return_grace_days). The rentals
+    // list says "Home — phone out 2d" in the meantime.
     const flipped = await db.update(
       'rentals',
       `status=eq.active&end_date=lt.${today}`,
@@ -309,9 +331,13 @@ async function handler(req, res) {
     )
     counts.rentalsFlippedOverdue = flipped.length
 
+    const grace = await returnGraceDays()
+    counts.returnGraceDays = grace
+    const chaseFrom = localDate(-grace)
     const overdue = await db.select(
       'rentals',
-      `select=id,legacy_id,end_date,customer_id,customers(first_name,last_name)&status=eq.overdue&is_void=is.false`
+      `select=id,legacy_id,end_date,customer_id,customers(first_name,last_name)`
+        + `&status=eq.overdue&is_void=is.false&end_date=lt.${chaseFrom}`
     )
     let overdueTasks = 0
     for (const r of overdue) {
@@ -320,7 +346,8 @@ async function handler(req, res) {
         reference: `OVERDUE-${r.id}`,
         title: `Rental overdue — ${name} (due ${displayDate(r.end_date)})`,
         customerUuid: r.customer_id,
-        notes: `Rental ${r.legacy_id || r.id} was due back ${r.end_date}.`,
+        notes: `Rental ${r.legacy_id || r.id} was due back ${r.end_date}`
+             + (grace > 0 ? `, more than ${grace} day${grace === 1 ? '' : 's'} ago.` : '.'),
       })
       overdueTasks++
     }
@@ -354,7 +381,7 @@ async function handler(req, res) {
       // within 24 hours. A phone collected a fortnight early, sitting at home
       // with an unactivated pool, is not a problem — and a task saying it is
       // teaches people to close tasks without reading them.
-      if (!readinessDue(asStageRental(r), localDate())) continue
+      if (!readinessDue(asStageRental(r), localDate(), grace)) continue
       const state = poolCover(line.renewal_date || null, r.end_date || null, localDate())
       if (!poolCoverNeedsAction(state)) continue
       const name = r.customers ? `${r.customers.first_name || ''} ${r.customers.last_name || ''}`.trim() : '?'
@@ -382,8 +409,8 @@ async function handler(req, res) {
     let handoverTasks = 0
     for (const r of liveRentals) {
       const sr = asStageRental(r)
-      if (rentalStage(sr, localDate()) !== 'fetched') continue
-      if (!readinessDue(sr, localDate())) continue
+      if (rentalStage(sr, localDate(), false, grace) !== 'fetched') continue
+      if (!readinessDue(sr, localDate(), grace)) continue
       const name = r.customers ? `${r.customers.first_name || ''} ${r.customers.last_name || ''}`.trim() : '?'
       const ref = `HANDOVER-${r.id}`
       handoverWanted.add(ref)

@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **30 of 30 screens written out in full.**
-*As of 26 Aug 2026 · m-24097f68 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 27 Aug 2026 · m-4bad12b1 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -219,12 +219,16 @@ Every phone the shop hires out: what is out with whom, what is due back, and wha
 - A phone shown as free is free for the dates in the form. Change the dates and the list changes with them.
 - What you tick as given — SIM, charger — is what the return screen expects back, and an unticked SIM changes the rate on a USA phone.
 - A rental left on account is owed by the day the phone comes back, or by the number of days set in Settings, whichever is later — so a two-day hire is never asked for money the day after tomorrow. The receipt says that date out loud rather than leaving the customer to guess.
+- A hire moves through five states and the row says which: reserved while it is still on the shelf, collected once it has left the shop but the customer has not flown, active while they are away, home once the dates have ended and the phone has not come back, and closed when it has. Every one of them shows on the customer's card, so a reservation is on their record from the day it is taken.
+- Collecting the phone early does not start the charge. A hire is priced on the travel dates it was booked for, and handing it over sooner is free — the confirmation says which days are being charged and how many are not.
+- Home is not late. A customer who has landed and not yet dropped the phone in is not chased, and nothing is asked about whether their line is still live; the handset stays counted as out and off the free list until it is physically back. It becomes overdue — and raises a task — only after the number of days set in Settings.
 
 **When it goes wrong**
 
 - **The handset you want is not in the list** — It is on hire, or committed to another booking, over those dates. Availability shows who has it and until when.
 - **The price is not what you expected** — Open the price box in the form — it shows the day rate, the free days it has taken off and the cap it has applied. If the rate itself is wrong, that is Settings, not the rental.
 - **A phone came back but the rental still shows as out** — The return was never saved. Find it, Manage, turn on Returned — late days are worked out from the day you mark it, so do it on the day.
+- **The row says Home rather than Overdue** — The dates have ended and the phone has not come back yet, which is the ordinary end of a hire rather than a problem. It is still counted as out, and the handset is not offered to anybody else. It turns into Overdue, and raises a task, once it has been waiting longer than the shop allows — that number is in Settings.
 
 ---
 

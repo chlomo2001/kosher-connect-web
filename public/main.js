@@ -1227,13 +1227,15 @@ function kcNextFacts() {
   // Same computed status the tile and the list use, so all three agree; the
   // uncollected reservation is a real problem, but it is a different one and
   // it needs a different sentence than "chase the phone".
-  const outRentals = (rentals || []).filter(r => {
-    const st = getComputedStatus(r, today);
-    return st === 'active' || st === 'overdue';
-  });
+  const outRentals = (rentals || []).filter(r =>
+    KC_STAGE.OUT_WITH_CUSTOMER.includes(getComputedStatus(r, today)));
   const tks = tasksList || [];
   return {
-    overdueRentals: outRentals.filter(r => r.toDate && r.toDate < today).length,
+    // Stage, not "any date in the past": the day after a customer lands his
+    // phone is out but not late, and "N phones overdue back — chase them" on a
+    // hire that ended last night is the kind of alarm people stop reading.
+    overdueRentals: outRentals.filter(r =>
+      getComputedStatus(r, today) === 'overdue').length,
     dueTodayRentals: outRentals.filter(r => r.toDate === today).length,
     readyRepairs: (repairs || []).filter(r => r.status === 'Ready').length,
     lateRenewals: (sims || []).filter(s => simLive(s) && s.renewalDate && s.renewalDate < today).length,
@@ -2755,7 +2757,7 @@ function poolCoverBadge(r) {
   // table is not a problem, and saying it is trains people to ignore badges.
   // Nothing is asked about the line until the trip is running, or 24 hours
   // before it starts.
-  if (!KC_STAGE.readinessDue(r, localISO())) return '';
+  if (!KC_STAGE.readinessDue(r, localISO(), returnGraceDays())) return '';
   const p = phones.find(x => String(x.id) === String(r.phoneId));
   if (!p || !p.pool) return '';
   const state = KC_POOL.poolCover(p.poolExpiry || null, r.toDate || null, localISO());
@@ -3125,10 +3127,8 @@ function renderRentalsTab() {
   // uses it: a rental saved as 'active' whose end date has passed IS overdue,
   // and counting the raw field made the tile disagree with the rows the tile
   // opens. Count what the filter will show, or the number is decoration.
-  const outNow = rentals.filter(r => {
-    const st = getComputedStatus(r, today0);
-    return st === 'active' || st === 'overdue';
-  }).length;
+  const outNow = rentals.filter(r =>
+    KC_STAGE.OUT_WITH_CUSTOMER.includes(getComputedStatus(r, today0))).length;
   const availablePhones = phones.filter(p => p.status === 'available' && !p.maintenance).length;
   const returningToday  = rentals.filter(r =>
     getComputedStatus(r, today0) === 'active' && r.toDate === today0).length;
@@ -3147,12 +3147,14 @@ function renderRentalsTab() {
     ] },
     { dim: 'status', title: 'Status', options: [
       { value: 'all', label: 'Status: all' },
-      // What the "Phones Out" tile counts. Active and overdue together, because
-      // both mean a handset is with a customer; booked is deliberately out of it
-      // (reserved, not collected). The tile opens this, so count and list agree.
-      { value: 'out', label: 'Out now', test: r => ['active', 'overdue'].includes(getComputedStatus(r, localISO())) },
+      // What the "Phones Out" tile counts. Every stage where a handset is with a
+      // customer — running, home-but-not-returned, or late; booked is
+      // deliberately out of it (reserved, not collected). The tile opens this,
+      // so count and list agree.
+      { value: 'out', label: 'Out now', test: r => KC_STAGE.OUT_WITH_CUSTOMER.includes(getComputedStatus(r, localISO())) },
       { value: 'active', label: 'Active', test: r => getComputedStatus(r, localISO()) === 'active' },
       { value: 'due_today', label: 'Due today', test: r => getComputedStatus(r, localISO()) === 'active' && r.toDate === localISO() },
+      { value: 'ended', label: 'Home, phone out', test: r => getComputedStatus(r, localISO()) === 'ended' },
       { value: 'overdue', label: 'Overdue', test: r => getComputedStatus(r, localISO()) === 'overdue' },
       { value: 'returned', label: 'Closed', test: r => getComputedStatus(r, localISO()) === 'returned' },
       { value: 'returned_incomplete', label: 'Returned ⚠', test: r => getComputedStatus(r, localISO()) === 'returned_incomplete' },
@@ -3467,8 +3469,13 @@ function availabilityCalendarHtml() {
           aria-label="${fmtDate(dIso)}: free${pooled ? ', pool active' : ''}${offDayNote}"
           onclick="calQuickReserve('${p.id}','${dIso}')"></td>`;
       }
-      const state = hit.r.status === 'booked' ? 'booked'
-        : (hit.r.status !== 'returned' && hit.r.toDate < today) ? 'overdue' : 'active';
+      // Availability grid, so the question is only "is this phone free". A hire
+      // whose dates have ended but whose handset has not come back yet is still
+      // OUT, not late — it goes red only once it is genuinely overdue, which is
+      // the same grace the list and the tiles use.
+      const calStage = getComputedStatus(hit.r, today);
+      const state = calStage === 'booked' ? 'booked'
+        : calStage === 'overdue' ? 'overdue' : 'active';
       // The fill used to be the ONLY signal, so gold "reserved" and red
       // "overdue" were the same cell to anyone with a colour-vision
       // deficiency — and the <td> was empty, so the whole grid read as blank
@@ -3550,23 +3557,32 @@ function getItemStatus(r, item) {
 // Mirrors lib/rentalStage.mjs. Held to it by test/rentalStageMirror.test.mjs.
 const KC_STAGE = (() => {
   const READY_LEAD_DAYS = 1;
+  const RETURN_GRACE_DAYS = 3;
   const dayBefore = (iso, days) => {
     if (!iso) return null;
     const t = Date.parse(`${iso}T00:00:00Z`);
     return Number.isFinite(t) ? new Date(t - days * 86400000).toISOString().slice(0, 10) : null;
   };
-  const rentalStage = (r, today, incomplete = false) => {
+  const daysPast = (iso, today) => {
+    const a = Date.parse(`${iso}T00:00:00Z`);
+    const b = Date.parse(`${today}T00:00:00Z`);
+    return Number.isFinite(a) && Number.isFinite(b) ? Math.round((b - a) / 86400000) : 0;
+  };
+  const rentalStage = (r, today, incomplete = false, graceDays = RETURN_GRACE_DAYS) => {
     if (!r) return 'reserved';
     if (r.status === 'returned') return incomplete ? 'returned_incomplete' : 'returned';
     const from = r.fromDate || null;
     const to = r.toDate || null;
-    if (to && to < today) return 'overdue';
+    if (to && to < today) {
+      const grace = Number.isFinite(graceDays) ? Math.max(0, graceDays) : RETURN_GRACE_DAYS;
+      return daysPast(to, today) > grace ? 'overdue' : 'ended';
+    }
     if (from && from > today) return r.pickupDate ? 'fetched' : 'reserved';
     if (r.status === 'booked' && !r.pickupDate) return 'reserved';
     return 'active';
   };
-  const readinessDue = (r, today) => {
-    const stage = rentalStage(r, today);
+  const readinessDue = (r, today, graceDays = RETURN_GRACE_DAYS) => {
+    const stage = rentalStage(r, today, false, graceDays);
     if (stage === 'active' || stage === 'overdue') return true;
     if (stage !== 'fetched') return false;
     const due = dayBefore(r.fromDate, READY_LEAD_DAYS);
@@ -3577,6 +3593,7 @@ const KC_STAGE = (() => {
     reserved: 'Reserved',
     fetched: 'Collected — not travelling yet',
     active: 'Active',
+    ended: 'Home — phone not back yet',
     overdue: 'Overdue',
     returned: 'Closed',
     returned_incomplete: 'Returned — kit unaccounted for',
@@ -3585,22 +3602,33 @@ const KC_STAGE = (() => {
     if (stage === 'overdue') return 'danger';
     if (stage === 'returned_incomplete') return 'warning';
     if (stage === 'fetched') return ready ? 'warning' : 'quiet';
-    if (stage === 'reserved') return 'quiet';
+    if (stage === 'reserved' || stage === 'ended') return 'quiet';
     return 'normal';
   };
-  const ON_CUSTOMER_CARD = ['reserved', 'fetched', 'active', 'overdue'];
-  return { READY_LEAD_DAYS, rentalStage, readinessDue, readyFrom, stageLabel, stageTone, ON_CUSTOMER_CARD };
+  const ON_CUSTOMER_CARD = ['reserved', 'fetched', 'active', 'ended', 'overdue'];
+  const OUT_WITH_CUSTOMER = ['active', 'ended', 'overdue'];
+  return { READY_LEAD_DAYS, RETURN_GRACE_DAYS, rentalStage, readinessDue, readyFrom,
+    stageLabel, stageTone, ON_CUSTOMER_CARD, OUT_WITH_CUSTOMER };
 })();
 // ── KC_STAGE mirror end ──
 
-// The five stages, decided in one place (lib/rentalStage.mjs, mirrored above).
+// The stages, decided in one place (lib/rentalStage.mjs, mirrored above).
 //
 // 'booked' is kept as the returned value for a reservation because eleven call
 // sites and a stored enum already say booked; 'reserved' is what a person
-// reads. The new one is 'fetched' — out of the shop, not travelling yet.
+// reads. The two added for Shloime's lifecycle are 'fetched' — out of the shop,
+// not travelling yet — and 'ended', the far end of the same idea: the customer
+// is home, the handset is not, and neither fact is a fault yet.
+// How long past its return date a phone is simply not back yet, rather than
+// late. Owner-editable beside the fees; KC_STAGE's constant is the fallback for
+// before settings have loaded.
+function returnGraceDays() {
+  return settingNum('rental_return_grace_days', KC_STAGE.RETURN_GRACE_DAYS);
+}
+
 function getComputedStatus(r, today) {
   const eq0 = r.equipmentGiven || { phone: true, sim: true, plug: true, cable: true };
-  const stage = KC_STAGE.rentalStage(r, today, false);
+  const stage = KC_STAGE.rentalStage(r, today, false, returnGraceDays());
   if (stage === 'reserved') return 'booked';
   if (stage === 'fetched') return 'fetched';
   if (stage !== 'returned') return stage;
@@ -3688,12 +3716,21 @@ function renderRentalRows() {
       // Out of the shop, not travelling yet. Quiet until 24 hours before the
       // trip, then amber — because that is the point at which somebody has to
       // check the line is actually live.
-      const soon = KC_STAGE.readinessDue(r, today);
+      const soon = KC_STAGE.readinessDue(r, today, returnGraceDays());
       statusBadge = `<span class="badge kc-ic kc-ic-package" title="Collected ${escHtml(fmtDate(r.pickupDate || ''))} · travels ${escHtml(fmtDate(r.fromDate))}${soon ? ' — check the line is live' : ''}"
         style="background:${soon ? 'var(--warning-wash)' : 'var(--bg-secondary)'};color:${soon ? 'var(--warning-ink)' : 'var(--muted)'};">Collected${soon ? ' — travels tomorrow' : ''}</span>`;
     }
     else if (computedStatus === 'active' && r.toDate === today) statusBadge = `<span class="badge badge-sim">Due Today</span>`;
     else if (computedStatus === 'active')               statusBadge = `<span class="badge badge-rental">Active</span>`;
+    else if (computedStatus === 'ended') {
+      // The trip is over and the handset has not come back. Shloime, 27 Aug:
+      // "the person is back, but hasnt retuned the phone/sim". That is the
+      // ordinary end of a hire, not a fault, so it says so plainly and waits —
+      // the red Overdue badge below is what it becomes if it keeps waiting.
+      const late = Math.max(1, Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${r.toDate}T00:00:00Z`)) / 86400000));
+      statusBadge = `<span class="badge kc-ic kc-ic-package" title="Trip ended ${escHtml(fmtDate(r.toDate))} — the phone is still out, nothing owed on it"
+        style="background:var(--bg-secondary);color:var(--muted);">Home — phone out ${late}d</span>`;
+    }
     else if (computedStatus === 'overdue')              statusBadge = `<span class="badge kc-ic kc-ic-alert" style="background:rgba(239,68,68,0.15);color:var(--danger-ink);">Overdue</span>`;
     else if (computedStatus === 'returned')             statusBadge = `<span class="badge badge-active">Closed</span>`;
     else                                                statusBadge = `<span class="badge kc-ic kc-ic-alert" style="background:var(--canvas-cream);color:var(--gold);">Returned</span>`;
@@ -7783,10 +7820,8 @@ function renderCustomersTab() {
       </div>
       <div class="stat-card">
         <div class="stat-label">Phones out</div>
-        <div class="stat-value green">${rentals.filter(r => {
-          const st = getComputedStatus(r, localISO());
-          return st === 'active' || st === 'overdue';
-        }).length}</div>
+        <div class="stat-value green">${rentals.filter(r =>
+          KC_STAGE.OUT_WITH_CUSTOMER.includes(getComputedStatus(r, localISO()))).length}</div>
         <div class="stat-sub">With customers now</div>
       </div>
       <div class="stat-card">
@@ -8301,7 +8336,7 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   // be recorded on customers card").
   const cTodayISO = localISO();
   const cActiveRentals = rentals.filter(r => r.customerId === c.id && !r.voided
-    && KC_STAGE.ON_CUSTOMER_CARD.includes(KC_STAGE.rentalStage(r, cTodayISO)));
+    && KC_STAGE.ON_CUSTOMER_CARD.includes(KC_STAGE.rentalStage(r, cTodayISO, false, returnGraceDays())));
   // Real linked SIMs and virtual numbers (the global lists), not the legacy
   // embedded c.services — those seeded plans were being missed entirely.
   const cSims = sims.filter(s => s.customerId === c.id && simLive(s));
@@ -23573,11 +23608,9 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
   // when a handset is actually with a customer. 'Not returned' also caught
   // reservations nobody collected, which inflated this summary's headline and
   // its "N overdue" sub-line — the two numbers the owner reads first.
-  const activeRentals = rentals.filter(r => {
-    const st = getComputedStatus(r, today);
-    return st === 'active' || st === 'overdue';
-  });
-  const overdue = activeRentals.filter(r => r.toDate && r.toDate < today);
+  const activeRentals = rentals.filter(r =>
+    KC_STAGE.OUT_WITH_CUSTOMER.includes(getComputedStatus(r, today)));
+  const overdue = activeRentals.filter(r => getComputedStatus(r, today) === 'overdue');
   const dueToday = activeRentals.filter(r => r.toDate === today);
   // NOT a positive match on two names: the owner can add their own stages
   // ("Waiting for part"), and a repair sitting on one is still open work. Open

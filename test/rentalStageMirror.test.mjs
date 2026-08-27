@@ -1,4 +1,4 @@
-// The five stages a hire passes through, and the browser copy of the rule.
+// The stages a hire passes through, and the browser copy of the rule.
 //
 // Shloime, 27 Aug: "at each rental there should be … 'reserved'/booked state,
 // fetched, and then active, non active and returned. and at each stage - even
@@ -16,7 +16,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
   rentalStage, readinessDue, readyFrom, stageLabel, stageTone,
-  READY_LEAD_DAYS, ON_CUSTOMER_CARD,
+  READY_LEAD_DAYS, RETURN_GRACE_DAYS, ON_CUSTOMER_CARD, OUT_WITH_CUSTOMER,
 } from '../lib/rentalStage.mjs'
 
 const SRC = readFileSync(new URL('../public/main.js', import.meta.url), 'utf8')
@@ -41,20 +41,29 @@ const TODAY = '2026-09-01'
 test('the browser mirror stages exactly what the lib stages', () => {
   const B = lift()
   for (const r of CASES) {
-    assert.equal(B.rentalStage(r, TODAY), rentalStage(r, TODAY), JSON.stringify(r))
-    assert.equal(B.readinessDue(r, TODAY), readinessDue(r, TODAY), JSON.stringify(r))
+    // Every grace the owner could plausibly set, including 0 (chase from day
+    // one, the behaviour before the ended stage existed) and a value nothing
+    // will reach.
+    for (const grace of [undefined, 0, 1, 3, 7, 90]) {
+      assert.equal(B.rentalStage(r, TODAY, false, grace), rentalStage(r, TODAY, false, grace),
+        `${JSON.stringify(r)} @ grace ${grace}`)
+      assert.equal(B.readinessDue(r, TODAY, grace), readinessDue(r, TODAY, grace),
+        `${JSON.stringify(r)} @ grace ${grace}`)
+    }
   }
 })
 
 test('the mirror agrees on the labels, the tone and the lead time', () => {
   const B = lift()
-  for (const st of ['reserved', 'fetched', 'active', 'overdue', 'returned', 'returned_incomplete']) {
+  for (const st of ['reserved', 'fetched', 'active', 'ended', 'overdue', 'returned', 'returned_incomplete']) {
     assert.equal(B.stageLabel(st), stageLabel(st))
     assert.equal(B.stageTone(st, false), stageTone(st, false))
     assert.equal(B.stageTone(st, true), stageTone(st, true))
   }
   assert.equal(B.READY_LEAD_DAYS, READY_LEAD_DAYS, 'both copies must agree what 24 hours means')
+  assert.equal(B.RETURN_GRACE_DAYS, RETURN_GRACE_DAYS, 'both copies must fall back to the same grace')
   assert.deepEqual(B.ON_CUSTOMER_CARD, ON_CUSTOMER_CARD)
+  assert.deepEqual(B.OUT_WITH_CUSTOMER, OUT_WITH_CUSTOMER)
 })
 
 test('a phone in the shop is reserved; collected early it is fetched', () => {
@@ -103,4 +112,59 @@ test('the customer card actually uses the list', () => {
 test('the pool badge waits for readiness too', () => {
   assert.match(SRC, /poolCoverBadge[\s\S]{0,600}?readinessDue/,
     'a pool warning on a phone nobody is travelling with is noise')
+})
+
+
+// ── "non active": home, and the phone has not come back ────────────────────
+//
+// Shloime, asked what he meant by it: "the person is back, but hasnt retuned
+// the phone/sim, so the line doesnt have to be actively running, but still its
+// not available yet until physically back".
+//
+// Three separate claims, and each one is a test below: it is not active, it is
+// not chased, and it is not available.
+
+const HIRE = { status: 'active', fromDate: '2026-08-01', toDate: '2026-08-20' }
+
+test('the day after the dates end the hire is home, not overdue', () => {
+  assert.equal(rentalStage(HIRE, '2026-08-20'), 'active', 'the last day is still the trip')
+  assert.equal(rentalStage(HIRE, '2026-08-21'), 'ended')
+  assert.equal(rentalStage(HIRE, '2026-08-23'), 'ended', 'still inside the three-day grace')
+  assert.equal(rentalStage(HIRE, '2026-08-24'), 'overdue', 'past it — now worth chasing')
+})
+
+test('the grace is the owner\'s to set, and zero restores the old behaviour', () => {
+  assert.equal(rentalStage(HIRE, '2026-08-21', false, 0), 'overdue')
+  assert.equal(rentalStage(HIRE, '2026-08-27', false, 7), 'ended')
+  assert.equal(rentalStage(HIRE, '2026-08-29', false, 7), 'overdue')
+  // Rubbish in settings must not silently mean "never chase anyone".
+  assert.equal(rentalStage(HIRE, '2026-08-24', false, NaN), 'overdue')
+  assert.equal(rentalStage(HIRE, '2026-08-24', false, -5), 'overdue')
+})
+
+test('nobody is asked whether the line is live once the customer is home', () => {
+  assert.equal(readinessDue(HIRE, '2026-08-20'), true, 'mid-trip the line matters')
+  assert.equal(readinessDue(HIRE, '2026-08-21'), false, 'he has landed — the pool is nobody\'s problem')
+  assert.equal(readinessDue(HIRE, '2026-08-23'), false)
+})
+
+test('the phone is still with the customer, so it is not available to hire out', () => {
+  for (const today of ['2026-08-20', '2026-08-21', '2026-08-23', '2026-08-24']) {
+    assert.ok(OUT_WITH_CUSTOMER.includes(rentalStage(HIRE, today)),
+      `${today}: the handset has not come back, so it cannot be free stock`)
+  }
+  assert.ok(!OUT_WITH_CUSTOMER.includes('returned'))
+  assert.ok(!OUT_WITH_CUSTOMER.includes('reserved'), 'a reservation blocks dates, not the shelf')
+})
+
+test('every stage of a hire shows on the customer card, ended included', () => {
+  for (const today of ['2026-07-25', '2026-08-05', '2026-08-21', '2026-08-30']) {
+    assert.ok(ON_CUSTOMER_CARD.includes(rentalStage(HIRE, today)), today)
+  }
+})
+
+test('ended reads as a state of affairs, not as a fault', () => {
+  assert.equal(stageTone('ended'), 'quiet')
+  assert.equal(stageTone('overdue'), 'danger')
+  assert.notEqual(stageLabel('ended'), stageLabel('overdue'))
 })
