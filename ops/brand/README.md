@@ -29,13 +29,63 @@ collision in this document was the same shape — a fixed-position label meeting
 paragraph that grew. It found the cover's eyebrow sitting invisibly *behind* the
 word BRAND, which no amount of looking had noticed.
 
-## Where the values come from
+## Which way round this runs — changed 27 Aug 2026
 
-Nothing here is typed from memory. Colours are sampled pixel-by-pixel out of
-`public/logo-full.png`; contrast ratios are computed by the WCAG 2.2 sRGB
-formula; the type ramp and the tokens are read from `styles/globals.css` and
-`docs/DESIGN.md`. If a value in the product changes, this document is wrong
-until it is rebuilt — which is the intended relationship.
+**`docs/brand/standard.json` decides. Everything else answers to it.**
+
+This used to run the other way, and the paragraph here said so: colours were
+sampled out of `public/logo-full.png`, the tokens were read from
+`styles/globals.css`, and "if a value in the product changes, this document is
+wrong until it is rebuilt — which is the intended relationship".
+
+The owner asked for that inverted:
+
+> i dont realy want the 'site' to tell the branding sheet the brand, i want the
+> pdf/whtever sheet to be the main doc deciding branding and marketing, and work
+> the other way round.
+
+He is right, and the old arrangement was worse than the sentence admitted. In
+practice `kit.py` held the palette as Python literals with comments naming the
+CSS tokens they mirrored — so the standard was neither derived nor
+authoritative, it was a **hand-transcribed copy** that could disagree with the
+product in silence. It already had: `BLUE_TOK` sat at `#0060a8` commented
+"`--kc-blue`, as declared" months after the owner moved `--kc-blue` to
+`#07639e`, and nothing noticed because nothing read it.
+
+So there is now one authored file and two consumers:
+
+```
+                    docs/brand/standard.json
+                    (the decisions, edited by hand)
+                       │                    │
+       typeset from it │                    │ checked against it
+                       ▼                    ▼
+   KOSHER-CONNECT-BRAND-STANDARD.pdf    styles/globals.css
+```
+
+`ops/brand/kit.py` reads the palette out of it rather than declaring it.
+`ops/harness/brandTokens.mjs` fails if `:root` declares any brand token at a
+value the standard did not choose — and it runs in `--smoke`, so the drift
+above cannot happen twice. Verified by putting the old blue back: it names the
+token, both values, and what the colour is for.
+
+**Changing the brand is now a two-line diff and a rebuild.** Edit the hex in
+`standard.json`, run `build.py`, change `globals.css` to match. Changing
+`globals.css` alone is a gate failure, which is the point: the site no longer
+gets to tell the sheet what the brand is.
+
+The logo has not stopped mattering — it is where `#07639e` came from, and
+plate 05 is the record of that. But it is now **provenance rather than input**.
+Nothing re-samples it at build time, because a mark that gets re-exported one
+day with slightly different compression should not silently restyle the app.
+
+### What the standard also carries now
+
+The palette was never the whole brand, and the file says so. `standard.json`
+holds the positioning (the promise, and why it is not price), the psychology
+behind the restraint, the voice rules, and the accessibility floor — the last
+of these pinned to what actually enforces it, so the document cannot promise
+AAA while the harness quietly measures AA.
 
 ## The question that was open, and is not any more
 

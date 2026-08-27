@@ -93,6 +93,13 @@ if [ "$smoke" = 1 ]; then
   # which is exactly how it drifted.
   run "smoke · the brand standard still describes this app" \
     bash -eo pipefail -c 'node ops/harness/brand.mjs | tail -1'
+
+  # And the other direction, which is the one that decides. The standard names
+  # every brand colour; this fails if styles/globals.css declares anything else.
+  # Not a duplicate of the line above: that one checks BEHAVIOUR against the
+  # document's rules, this one checks the document's VALUES against the product.
+  run "smoke · the product declares what the standard decides" \
+    bash -eo pipefail -c 'node ops/harness/brandTokens.mjs | tail -1'
   echo
   [ "$fail" = 0 ] && echo "SMOKE: clean — the full sweep still runs tonight." \
                   || echo "SMOKE: something needs a look — scroll up."

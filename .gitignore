@@ -29,3 +29,7 @@ public/app.css
 
 # Derived from the repo by ops/brand/prepare.py — regenerate, do not commit.
 ops/brand/assets/
+
+# Python bytecode — ops/brand/*.py rebuild these on every run
+__pycache__/
+*.pyc

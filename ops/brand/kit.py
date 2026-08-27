@@ -8,6 +8,9 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 import os
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.join(HERE, '..', '..')
+
 FONTS = '/root/.claude/skills/synced/canvas-design/canvas-fonts'
 def _reg(name, file):
     pdfmetrics.registerFont(TTFont(name, os.path.join(FONTS, file)))
@@ -42,15 +45,29 @@ def col(i, span=1):
     return ML + i * (COLW + GUT), span * COLW + (span - 1) * GUT
 
 # ── the palette, and nothing outside it ──────────────────────────────────
-INK      = HexColor('#0a2540')   # --kc-navy
-BLUE     = HexColor('#07639e')   # the logo's own blue (see plate 06)
-BLUE_TOK = HexColor('#0060a8')   # --kc-blue, as declared
-GOLD     = HexColor('#c19161')   # --kc-gold
-GOLD_INK = HexColor('#8d612b')   # --kc-gold-ink
-PAPER    = HexColor('#f7f3ea')   # --bg
-CARD     = HexColor('#fffdf8')   # --surface
-RULE     = HexColor('#d9cfbb')
-FAINT    = HexColor('#e9e0cf')
+#
+# READ, NOT TYPED. docs/brand/standard.json is the source of truth: this
+# document is typeset FROM it and styles/globals.css is checked AGAINST it.
+#
+# These were Python literals until 27 Aug 2026, with comments naming the CSS
+# tokens they mirrored — which made the standard a hand-transcribed copy of the
+# product rather than a decision about it. It had already drifted: BLUE_TOK sat
+# at #0060a8 commented "--kc-blue, as declared" months after the owner moved
+# --kc-blue to #07639e, and nothing noticed because nothing read it.
+import json as _json
+STANDARD = _json.load(open(os.path.join(REPO_ROOT, 'docs', 'brand', 'standard.json'), encoding='utf-8'))
+_P = STANDARD['palette']
+_PRINT = STANDARD['print_only']
+
+INK      = HexColor(_P['ink']['hex'])          # --kc-navy
+BLUE     = HexColor(_P['blue']['hex'])         # --kc-blue, the logo's own blue
+BLUE_DK  = HexColor(_P['blue_bright']['hex'])  # --kc-blue-bright
+GOLD     = HexColor(_P['gold']['hex'])         # --kc-gold, decoration only
+GOLD_INK = HexColor(_P['gold_ink']['hex'])     # --kc-gold-ink
+PAPER    = HexColor(_P['paper']['hex'])        # --bg
+CARD     = HexColor(_P['card']['hex'])         # --surface
+RULE     = HexColor(_PRINT['rule'])            # the document's own furniture,
+FAINT    = HexColor(_PRINT['faint'])           # not product tokens
 def tint(c, a):
     return Color(c.red, c.green, c.blue, alpha=a)
 

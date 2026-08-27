@@ -1,0 +1,131 @@
+{
+  "$comment": "THE SOURCE OF TRUTH. The PDF is typeset from this file and the product is checked against it. Editing a value here is how the brand changes; editing styles/globals.css to disagree is a gate failure, not a brand decision. See ops/brand/README.md.",
+  "version": "2.0.0",
+  "settled": "2026-08-27",
+
+  "business": {
+    "legal": "Hatsluche Ltd t/a Kosher Connect",
+    "address": "421 Bury New Road, Salford M7 4ED",
+    "phone": "0161 531 1386",
+    "audience": "The orthodox Jewish community of Manchester and Salford, and the travellers within it.",
+    "lines": [
+      "International phone rentals",
+      "UK SIM-only plan management",
+      "Virtual numbers",
+      "Flight bookings",
+      "Phone repairs",
+      "Accessories and counter sales",
+      "Online tech services",
+      "Kol Torah consignment"
+    ]
+  },
+
+  "positioning": {
+    "promise": "You will land, and your phone will work.",
+    "why_this_and_not_price": "Every line of this business is a thing a person hands over only to someone they trust — their number, their travel, their contacts, their money. Nobody chooses a telecom shop to save four pounds; they choose it so that the thing they are quietly worried about does not happen. The brand's job is to look like somewhere that will not lose your contacts, and price is not what communicates that.",
+    "proof_not_claims": "Every claim the shop makes should be one a customer can check the same day: the rate is on the receipt, Shabbos and Yom Tov are not charged and the calendar on the receipt shows which days those were, the manual says what each screen does. Proof is cheaper than persuasion and it survives being repeated by somebody else.",
+    "the_real_channel": "This is a small community and it runs on word of mouth. There is no funnel. The marketing is what the last customer tells the next one, which means the product IS the campaign and a receipt that explains itself is worth more than an advert.",
+    "never_say": [
+      "Superlatives the shop cannot evidence — 'best', 'cheapest', 'number one'.",
+      "Urgency invented to move somebody — countdowns, 'today only' on a service that runs every day.",
+      "Anything that reads as though it were written for a general UK audience and then had a Hebrew word dropped in."
+    ]
+  },
+
+  "psychology": [
+    {
+      "principle": "Restraint reads as competence",
+      "why": "In a market where trust is the product, loud reads as desperate. A shop confident of its trade does not shout, and the audience makes that inference without being asked to. This is why the palette is four values and the type is two faces — the discipline is legible even to someone who could not name it."
+    },
+    {
+      "principle": "The absence of stock photography is a decision, not a gap",
+      "why": "Community norms around imagery rule out the lifestyle photography most retail brands lean on. Rather than work around that, the system makes typography, flat colour and instrument marks do the work — which is why it looks like a scientific atlas rather than a phone shop. The constraint produced the aesthetic; it did not limit it."
+    },
+    {
+      "principle": "Honesty about money is the strongest signal available",
+      "why": "Shabbos and Yom Tov are not chargeable days, and the receipt draws the hire as a calendar so the customer can count the free days rather than take them on faith. A shop that shows its working on the one thing customers are most suspicious about buys more trust than any amount of copy."
+    },
+    {
+      "principle": "The same voice at the counter and on the screen",
+      "why": "A person who is told one thing by a shopkeeper and a different thing by his receipt trusts neither. Sentence case, no exclamation marks, plain British English — the register of somebody explaining rather than selling."
+    },
+    {
+      "principle": "Accessible is not a separate audience",
+      "why": "The counter is a tablet used one-handed while holding a customer's phone; the customers include people who are older, in a hurry, or reading their second language. AAA here is not a compliance exercise, it is the same people the shop already serves."
+    }
+  ],
+
+  "palette": {
+    "$comment": "hex is authoritative. token is the name the product MUST declare it under in styles/globals.css.",
+    "ink": {
+      "hex": "#0a2540", "token": "--kc-navy",
+      "role": "Ink, display type, deep button states",
+      "rationale": "The anchor. Nearly black but blue-biased, so it sits with the mark instead of fighting it."
+    },
+    "blue": {
+      "hex": "#07639e", "token": "--kc-blue",
+      "role": "Primary action, links, eyebrows",
+      "rationale": "The logo's own blue, sampled from 19,915 pixels of logo-full.png — the largest single field in the mark. The product painted #0060a8 until 24 Aug 2026, a visible step in flat colour; the owner settled it on the logo's value.",
+      "never": "Do not re-sample the logo to change this. The value here decides; the logo is the record of where it came from."
+    },
+    "blue_bright": {
+      "hex": "#57a6e6", "token": "--kc-blue-bright",
+      "role": "The blue's dark-theme voice",
+      "rationale": "The primary blue does not clear AA on a near-black canvas. This is the same hue lifted until it does."
+    },
+    "gold": {
+      "hex": "#c19161", "token": "--kc-gold",
+      "role": "Decoration only — rules, marks, reserved fields",
+      "rationale": "The logo's warm tan. It carries the hand and the paper.",
+      "never": "Never text ink. 2.80:1 on paper — it fails body copy at every size. Use gold_ink."
+    },
+    "gold_ink": {
+      "hex": "#8d612b", "token": "--kc-gold-ink",
+      "role": "The gold, when it has to be read",
+      "rationale": "The same gold darkened until 17px copy clears AA. It exists so that nobody is tempted to set text in --kc-gold."
+    },
+    "paper": {
+      "hex": "#f7f3ea", "token": "--bg",
+      "role": "The canvas",
+      "rationale": "Warm ivory, not white. White is a screen; this is a document, and the warmth is what makes the ink feel printed rather than emitted."
+    },
+    "card": {
+      "hex": "#fffdf8", "token": "--surface",
+      "role": "Raised surface on the canvas",
+      "rationale": "Lifted off the paper by a hair. A card is distinguished by being lighter, not by a shadow."
+    }
+  },
+
+  "print_only": {
+    "$comment": "Values used by the standard document itself. They are not product tokens and the conformance check must not look for them.",
+    "rule": "#d9cfbb",
+    "faint": "#e9e0cf"
+  },
+
+  "accessibility": {
+    "$comment": "The floor the brand commits to, above the legal minimum. ops/harness enforces these.",
+    "contrast_body": { "ratio": 7.0, "criterion": "WCAG 2.2 · 1.4.6 Contrast (Enhanced) · AAA" },
+    "contrast_large": { "ratio": 4.5, "criterion": "WCAG 2.2 · 1.4.6 · AAA, text ≥18.66px bold or ≥24px" },
+    "contrast_ui": { "ratio": 3.0, "criterion": "WCAG 2.2 · 1.4.11 Non-text Contrast · AA" },
+    "target_min_px": 44, "target_criterion": "WCAG 2.2 · 2.5.5 Target Size (Enhanced) · AAA",
+    "link_purpose": "WCAG 2.2 · 2.4.9 Link Purpose (Link Only) · AAA — link text must say where it goes, standing alone.",
+    "status_messages": "WCAG 2.2 · 4.1.3 Status Messages · AA — a number that changes on screen is announced.",
+    "reported_not_enforced": "Semantic colour — danger red, the gold — is exempt from the 7:1 body floor. The meaning is in the hue, and forcing the ratio would destroy the signal to satisfy a number. The sweep reports these and does not fail on them."
+  },
+
+  "voice": {
+    "case": "Sentence case everywhere, including buttons and stat labels. Feature names (Kol Torah, SIM Plans, Phone Rentals) are names, not sentences, and keep their capitals.",
+    "punctuation": "No exclamation marks. British English.",
+    "sms": "An outbound SMS carries no emoji — it is read on feature phones and by people who did not choose to receive it.",
+    "numbers": "Money is always formatted, never concatenated. A date is written out, never left as an ISO string in front of a customer."
+  },
+
+  "conformance": {
+    "$comment": "What must agree with this file, and what checks it.",
+    "styles/globals.css": "Must declare every palette token at exactly the hex above — ops/harness/brandTokens.mjs",
+    "public/main.js": "Sentence case, gold never as ink, no literal hex — ops/harness/brand.mjs",
+    "painted contrast": "ops/harness/render.mjs --contrast [--aaa]",
+    "touch targets": "ops/harness/render.mjs --targets --min 44",
+    "structure": "ops/harness/a11y.mjs"
+  }
+}
