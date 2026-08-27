@@ -261,7 +261,10 @@ function moneyRows({ total, paidAmount, method, payBy, payUrl, settle, thing }) 
     return `<tr><td colspan="2" style="padding:10px 0 0;color:#334155">
       Paid in full${how ? ` by ${esc(how)}` : ''} — thank you. Nothing further to pay on ${esc(what)}.</td></tr>`
   }
-  const took = state === 'part' ? `We took ${gbp(money(paidAmount))}${how ? ` by ${esc(how)}` : ''}, so ` : ''
+  // "Received", not "we took". Owner, 27 Aug. The shop did not take anything
+  // off anybody — the customer handed it over, and the receipt is the shop
+  // acknowledging that, which is a different sentence.
+  const took = state === 'part' ? `Received ${gbp(money(paidAmount))}${how ? ` by ${esc(how)}` : ''}, so ` : ''
   // The colon is only earned by a button actually following it.
   const tail = payUrl ? `${settle} — or online now:` : `${settle}.`
   let out = `<tr><td colspan="2" style="padding:10px 0 0;color:#334155">${took}<strong>${gbp(owed)}</strong> is still to pay${payBy ? `, by <strong>${esc(fmtDay(payBy))}</strong>` : ''}. ${tail}</td></tr>`

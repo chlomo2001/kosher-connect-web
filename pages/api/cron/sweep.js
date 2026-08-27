@@ -370,13 +370,37 @@ async function handler(req, res) {
     const liveRentals = await db.select(
       'rentals',
       'select=id,legacy_id,start_date,end_date,customer_id,line_id,legacy_extras,customers(first_name,last_name),'
-        + 'lines(number,pool_id,renewal_date)&status=in.(booked,active,overdue)&is_void=is.false'
+        + 'lines(number,pool_id,renewal_date,carrier)&status=in.(booked,active,overdue)&is_void=is.false'
     )
     const poolWanted = new Set()
     let poolTasks = 0
     for (const r of liveRentals) {
       const line = r.lines
-      if (!line || !line.pool_id) continue          // not a pooled line — nothing to expire
+      if (!line) continue
+      // NO POOL is not "nothing to expire" — on US Mobile it is the line never
+      // coming up at all. Shloime, 27 Aug: "usmobile 'has to have a pool
+      // attached'! its the only way it gets activated!". His steer was a flag
+      // and a task rather than a block on saving, so the row wears a red "No
+      // pool" badge and this raises the task, on the same 24-hour clock as
+      // everything else here.
+      if (!line.pool_id) {
+        if (!/^\s*us\s*mobile\s*$/i.test(String(line.carrier || '').replace(/[^a-z ]/gi, ''))) continue
+        if (!readinessDue(asStageRental(r), localDate(), grace)) continue
+        const nm = r.customers ? `${r.customers.first_name || ''} ${r.customers.last_name || ''}`.trim() : '?'
+        const ref = `NOPOOL-${r.id}`
+        poolWanted.add(ref)
+        await upsertOpenTask({
+          reference: ref,
+          title: `⚠️ No pool on a US Mobile line — ${nm} (${line.number || 'line'})`,
+          customerUuid: r.customer_id,
+          priority: 'high',
+          notes: 'A US Mobile line only activates inside a pool and this one is in none, '
+               + 'so it will not come up. Put it in a pool before the customer travels.',
+          dueDate: r.start_date || null,
+        })
+        poolTasks++
+        continue
+      }
       // Nothing is asked about a line until the trip is running or starts
       // within 24 hours. A phone collected a fortnight early, sitting at home
       // with an unactivated pool, is not a problem — and a task saying it is
@@ -437,7 +461,10 @@ async function handler(req, res) {
     // …and close the ones whose rental came back, or whose pool was renewed.
     // Same shape as the OVERDUE close below: a task nobody closed is a task
     // nobody trusts.
-    const openPool = await db.select('tasks', 'select=id,reference&done=is.false&reference=like.POOLEXP-*')
+    const openPool = [
+      ...await db.select('tasks', 'select=id,reference&done=is.false&reference=like.POOLEXP-*'),
+      ...await db.select('tasks', 'select=id,reference&done=is.false&reference=like.NOPOOL-*'),
+    ]
     let poolClosed = 0
     for (const t of openPool) {
       if (poolWanted.has(t.reference)) continue

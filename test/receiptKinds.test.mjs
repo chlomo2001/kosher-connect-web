@@ -104,7 +104,7 @@ test('a booking leads with the two things worth checking on the day', () => {
   assert.match(t, /Booking reference 8DGFF9/)
   assert.match(t, /Travelling Thu, 12 November 2026/)
   assert.match(t, /Returning Thu, 26 November 2026/)
-  assert.match(t, /We took £200\.00 by Bank transfer, so £210\.00 is still to pay/)
+  assert.match(t, /Received £200\.00 by Bank transfer, so £210\.00 is still to pay/)
   assert.match(t, /Pay £210\.00 online/)
 })
 
@@ -181,7 +181,7 @@ test('paidNow stays supported, and paidAmount wins when both are given', () => {
   const both = text(B.buildSale(COPY, WHO, {
     lines: [{ name: 'Charger', qty: 1, total: 15 }], total: 15, paidNow: true, paidAmount: 5,
   }, { payUrl: PAY }).html)
-  assert.match(both, /We took £5\.00, so £10\.00 is still to pay/,
+  assert.match(both, /Received £5\.00, so £10\.00 is still to pay/,
     'a caller that knows the amount is more informative than a boolean')
 })
 

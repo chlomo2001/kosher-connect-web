@@ -2759,7 +2759,21 @@ function poolCoverBadge(r) {
   // before it starts.
   if (!KC_STAGE.readinessDue(r, localISO(), returnGraceDays())) return '';
   const p = phones.find(x => String(x.id) === String(r.phoneId));
-  if (!p || !p.pool) return '';
+  if (!p) return '';
+  // NO POOL AT ALL is the loudest case, and it used to be the silent one — the
+  // next line read `if (!p || !p.pool) return ''`, so a line that cannot come
+  // up at all said less than one whose pool merely expires next week.
+  //
+  // Shloime, 27 Aug: "usmobile 'has to have a pool attached'! its the only way
+  // it gets activated!" — and his own steer on what to do about it: not a block
+  // on saving, a flag and a task. So the phone still saves without one; this is
+  // where the shop finds out, in red, because the customer flies on a line that
+  // was never going to work.
+  if (!p.pool) {
+    if (!KC_PROV.isUsMobile(p.company)) return '';
+    return `<span class="badge kc-ic kc-ic-alert" title="A US Mobile line only activates inside a pool. This one has none, so it will not come up — put it in a pool before it travels."
+      style="margin-top:3px;background:var(--danger-wash);color:var(--danger-ink);">No pool</span>`;
+  }
   const state = KC_POOL.poolCover(p.poolExpiry || null, r.toDate || null, localISO());
   if (!KC_POOL.poolCoverNeedsAction(state)) return '';
   const note = KC_POOL.poolCoverNote(state, p.poolExpiry || null, r.toDate || null, localISO());
@@ -4179,7 +4193,13 @@ function renderPhoneRows() {
             nothing — those two cells drop out of the card entirely. */''}
       <td class="kc-inv-detail ${isUSA ? '' : 'kc-drop-sm'}" data-label="Pool" style="font-size:var(--fs-small);color:${isUSA?'':'var(--muted)'};">${isUSA ? escHtml(poolDisplay) : poolDisplay}</td>
       <td class="kc-inv-detail ${isUSA ? '' : 'kc-drop-sm'}" data-label="Pool expires" style="font-size:var(--fs-micro);color:${poolExpired?'var(--danger-ink)':isUSA?'var(--muted)':'var(--muted)'};">${isUSA ? expiryDisplay : '<span style="color:var(--muted);">N/A</span>'}</td>
-      <td>${statusBadge}</td>
+      ${/* A US Mobile line with no pool cannot be activated at all, so it sits in
+            "available" telling the shop it is ready to rent when it is not. The
+            badge rides WITH the status rather than replacing it: the handset
+            really is free, it just will not come up. */''}
+      <td>${statusBadge}${KC_PROV.isUsMobile(p.company) && !p.pool
+        ? `<span class="badge kc-ic kc-ic-alert" title="US Mobile only activates inside a pool — this line has none" style="margin-left:4px;background:var(--danger-wash);color:var(--danger-ink);">No pool</span>`
+        : ''}</td>
       <td class="kc-inv-actions">
         <div class="row-actions">
           ${/* "It's back" survives the compact column; its WORDS go sr-only so
@@ -4398,24 +4418,106 @@ function renderPhoneDropdown(open = null) {
         </div>`).join('')
     : `<div class="customer-dropdown-empty">${term ? `No handset matches “${escHtml(term)}”` : 'No phone is free for these dates'}</div>`;
   // The same offer the customer picker makes: the thing you were looking for
-  // can be created from here rather than by abandoning the form. Typing
-  // "Pool 39" and finding nothing is exactly when a pool gets named.
+  // can be created from here rather than by abandoning the form.
+  //
+  // It offered "＋ New pool…", which was the wrong noun. You are in the HANDSET
+  // box; typing a number that is not there means the phone is missing, not the
+  // pool — owner, 27 Aug: "its only correct in manage phones, not in rentals.
+  // it should be a create new phone here, not new pool!!". A pool is still
+  // one field inside the card this opens.
   dd.innerHTML += `<div class="customer-dropdown-item kc-combo-add" role="option"
-    onmousedown="nrNewPoolFromPicker()">＋ New pool…</div>`;
+    onmousedown="nrNewPhoneFromPicker()">＋ New phone…</div>`;
   const shouldOpen = open === null ? dd.classList.contains('open') : open;
   dd.classList.toggle('open', !!shouldOpen);
 }
 
-// "＋ New pool…" from the rental phone picker. The real card, stacked over the
-// half-filled rental so nothing typed is lost, seeded with the name that was
-// being searched for.
-function nrNewPoolFromPicker() {
+// "＋ New phone…" from the rental phone picker. Stacked over the half-filled
+// rental so nothing typed is lost, seeded with the number being searched for.
+//
+// Deliberately the SHORT form: number, country, provider and — for a USA line —
+// its pool. Everything else a handset can carry (IMEI, model, notes, the
+// maintenance states) lives in Manage phones, because the moment this is
+// reached is mid-rental with a customer at the counter.
+function nrNewPhoneFromPicker() {
   const term = (document.getElementById('rPhoneSearch')?.value || '').trim();
-  const prefill = /pool/i.test(term) ? term.replace(/^\s*pool\s*/i, 'Pool ').trim() : '';
-  openNewPoolCard({
-    prefill,
-    after: () => { refreshRentalPhoneOptions(); renderPhoneDropdown(true); },
-  });
+  // Only a number-looking term seeds the field; "pool 39" is not a handset.
+  const seed = /\d/.test(term) && !/pool/i.test(term) ? term : '';
+  showStackedModal(`
+    <div class="modal-title kc-ic kc-ic-phone">New phone</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
+      Adds a handset to the inventory and picks it for this hire. The rest of what a
+      phone can carry — IMEI, model, notes — is in Manage phones.
+    </div>
+    <div class="form-grid">
+      <div class="form-group form-full">
+        <label class="form-label" for="npNumber">Phone number *</label>
+        <input class="form-input" id="npNumber" type="tel" inputmode="tel" dir="ltr"
+          placeholder="+1 718 555 0101" autocomplete="off" value="${escHtml(seed)}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="npCountry">Country *</label>
+        <select class="form-input" id="npCountry" onchange="nrNewPhoneCountry(this.value)">
+          ${FLAG_COUNTRIES.map(c => `<option value="${escHtml(c)}"${c === 'USA' ? ' selected' : ''}>${escHtml(c)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Provider</label>
+        ${providerPicker('npCompany', { country: 'USA' })}
+      </div>
+      <div class="form-group form-full" id="npPoolGroup">
+        <label class="form-label" for="npPool">Pool</label>
+        <input class="form-input" id="npPool" type="text" placeholder="e.g. Pool 39" autocomplete="off"
+          list="npPoolList">
+        <datalist id="npPoolList">${[...new Set(phones.map(x => x.pool).filter(Boolean))]
+          .map(x => `<option value="${escHtml(x)}"></option>`).join('')}</datalist>
+        <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">
+          A US Mobile line only goes live inside a pool. Leave it empty and the phone
+          still saves — it is flagged on the row instead.
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <span class="modal-actions-group">
+        <button class="btn btn-outline" onclick="closeStackedModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="createPhoneFromPicker()">＋ Add phone</button>
+      </span>
+    </div>
+  `);
+  setTimeout(() => document.getElementById('npNumber')?.focus(), 30);
+}
+
+// Pool is a USA fact; the box goes away for everybody else so nobody fills in
+// something that will read as a wrong fact later.
+function nrNewPhoneCountry(country) {
+  const g = document.getElementById('npPoolGroup');
+  if (g) g.style.display = country === 'USA' ? 'block' : 'none';
+  providerPickerSetCountry('npCompany', country);
+}
+
+async function createPhoneFromPicker() {
+  const number = (document.getElementById('npNumber')?.value || '').trim();
+  if (!number) { toast('A phone number is required.', 'error'); return; }
+  const country = document.getElementById('npCountry')?.value || 'USA';
+  const prov = providerPickerValue('npCompany', country);
+  if (prov.error) { toast(prov.error, 'error'); return; }
+  if (phones.some(x => kcTail10(x.number) && kcTail10(x.number) === kcTail10(number))) {
+    toast('That number is already in the inventory.', 'error'); return;
+  }
+  const phone = {
+    id: uid(), number, country,
+    company: prov.provider, subBrand: prov.subBrand || '',
+    pool: country === 'USA' ? (document.getElementById('npPool')?.value || '').trim() : '',
+    status: 'available', createdAt: new Date().toISOString(),
+  };
+  phones.push(phone);
+  savePhones(phones);
+  closeStackedModal();
+  refreshRentalPhoneOptions();
+  // Pick it straight away: the reason this card was opened is that this is the
+  // handset going out, so making them find it again in the list is a step for
+  // nothing.
+  nrPickPhone(phone.id);
+  toast(`${fmtPhone(number)} added and picked.`, 'success');
 }
 
 function phoneSearchFocus() { refreshRentalPhoneOptions(); renderPhoneDropdown(true); }

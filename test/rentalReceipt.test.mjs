@@ -114,7 +114,7 @@ test('anything owed says the amount, the date and how to pay', () => {
 
 test('how they paid is said, and a part payment says how much', () => {
   assert.match(money, /Paid in full\$\{how \? ` by \$\{esc\(how\)\}`/)
-  assert.match(money, /state === 'part'[\s\S]{0,120}?We took \$\{gbp\(money\(paidAmount\)\)\}/)
+  assert.match(money, /state === 'part'[\s\S]{0,120}?Received \$\{gbp\(money\(paidAmount\)\)\}/)
 })
 
 // The owner's question, 21 Aug: "why when its partly paid there's no link to
@@ -327,7 +327,7 @@ test('a part payment reads as arithmetic the customer can follow', () => {
     { payBy: '2026-09-30', payUrl: 'https://x' })
   const t = text(out.html)
   assert.match(t, /Total £140\.00/)
-  assert.match(t, /We took £60\.00 by Cash, so £80\.00 is still to pay/)
+  assert.match(t, /Received £60\.00 by Cash, so £80\.00 is still to pay/)
 })
 
 test('paid in full is not chased and carries no button', () => {
