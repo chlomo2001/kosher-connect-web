@@ -3714,7 +3714,7 @@ function renderRentalRows() {
       ${/* Hebrew under the RETURN date only. The cell already stacks two dates, so
        putting it under both makes four lines in a table row — and the date
        anybody says out loud about a rental is the one it is due back. */''}
-      <td class="kc-date" data-label="From → To" style="font-size:var(--fs-micro);">${fmtDate(r.fromDate)}<br>${fmtDateHeb(r.toDate)}${r.pickupDate && r.pickupDate !== r.fromDate ? `<br><span style="color:var(--muted);" title="Physically taken — the charge runs from here">↳ took ${fmtDate(r.pickupDate)}</span>` : ''}</td>
+      <td class="kc-date" data-label="From → To" style="font-size:var(--fs-micro);">${fmtDate(r.fromDate)}<br>${fmtDateHeb(r.toDate)}${r.pickupDate && r.pickupDate !== r.fromDate ? `<br><span style="color:var(--muted);" title="Physically taken — the charge still runs from the travel date">↳ took ${fmtDate(r.pickupDate)}</span>` : ''}</td>
       <td style="text-align:center;">${r.chargeableDays}d</td>
       ${/* Nine columns could not fit a 1280px screen whatever the buttons did
             (docs/DESIGN.md §Row actions). The owner's call, 17 Aug: Price goes.
@@ -5536,34 +5536,39 @@ async function startReservation(rentalId) {
     toast(`${phone.number} is still out on another rental — return it first.`, 'error');
     return;
   }
-  // Owner #11 — the charge window starts when the phone is PHYSICALLY taken,
-  // not on the reserved from-date. Starting stamps today as the pickup date
-  // and reprices from there; the ledger charge (held back while reserved —
-  // see bucketTargets) posts against the real window.
+  // THE CHARGE RUNS FROM THE TRAVEL DATE, NOT FROM COLLECTION.
+  //
+  // This is a reversal, and worth saying so. The rule here was owner item #11:
+  // "the charge window starts when the phone is PHYSICALLY taken, not on the
+  // reserved from-date", and collecting a phone repriced the hire from that
+  // day. Shloime, 27 Aug 2026, having run it in the shop: "charge should only
+  // start from travel date, not pickup".
+  //
+  // He is describing what a customer thinks they are buying. Somebody who
+  // collects on the Sunday for a Thursday flight has not had four days of
+  // anything, and charging for them turns a courtesy — take it now, it saves
+  // you a trip — into a surcharge nobody agreed to. It also punished the shop's
+  // own convenience: handing phones out early is how a Friday rush is avoided.
+  //
+  // The pickup date is still recorded. It is the day the handset left the shop,
+  // which matters for stock, for possession, and for the stage the hire reads
+  // at (lib/rentalStage.mjs — collected but not travelling is 'fetched'). It
+  // just no longer decides the money.
   const today = localISO();
   const pickup = today <= r.toDate ? today : r.toDate;
-  const oldPrice = Number(r.price) || 0;
-  let newPrice = oldPrice;
-  let newDays = r.chargeableDays;
-  let priceNote = '';
-  if (pickup !== r.fromDate && phone) {
-    const calc = calcRentalPrice(pickup, r.toDate, phone.country, phone.ukPlan || 'standard', r.equipmentGiven?.sim);
-    newPrice = calc.price;
-    newDays = calc.chargeableDays;
-    if (Math.abs(newPrice - oldPrice) >= 0.005) {
-      priceNote = `Charge reworked from the real pickup: ${fmtGbp(newPrice)} (was ${fmtGbp(oldPrice)} for the reserved dates).`;
-    }
-  }
+  const earlyDays = pickup < r.fromDate
+    ? Math.round((Date.parse(`${r.fromDate}T00:00:00Z`) - Date.parse(`${pickup}T00:00:00Z`)) / 86400000) : 0;
   if (!(await kcConfirm({
-    title: 'Start rental — charge begins now',
+    title: 'Hand the phone over',
     body: `<strong>${escName(r.customerName || '')}</strong> takes ${escHtml(fmtPhone(r.phoneNumber || ''))} today.<br>
-      Charged window: <strong>${fmtDate(pickup)} → ${fmtDate(r.toDate)}</strong> · ${newDays} chargeable days.${priceNote ? '<br>' + priceNote : ''}`,
-    amount: newPrice,
-    okLabel: 'Start & charge',
+      Charged window: <strong>${fmtDate(r.fromDate)} → ${fmtDate(r.toDate)}</strong> · ${r.chargeableDays} chargeable days.`
+      + (earlyDays > 0
+          ? `<br><span style="color:var(--muted);">Collected ${earlyDays} day${earlyDays === 1 ? '' : 's'} early — not charged for.</span>`
+          : ''),
+    amount: Number(r.price) || 0,
+    okLabel: 'Hand it over',
   }))) return;
   r.pickupDate = pickup;
-  r.chargeableDays = newDays;
-  r.price = newPrice;
   r.status = 'active';
   saveRentals(rentals);
   if (phone) {
@@ -5571,7 +5576,8 @@ async function startReservation(rentalId) {
     phone.currentRental = r.id;
     savePhones(phones);
   }
-  toast(`Rental started — ${r.customerName} has ${r.phoneNumber} until ${fmtDate(r.toDate)}.${priceNote ? ' ' + priceNote : ''}`, 'success');
+  toast(`Handed over — ${r.customerName} has ${r.phoneNumber} until ${fmtDate(r.toDate)}.`
+    + (earlyDays > 0 ? ` Charged from ${fmtDate(r.fromDate)}, not today.` : ''), 'success');
   renderRentalsTab();
 }
 
