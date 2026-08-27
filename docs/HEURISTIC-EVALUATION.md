@@ -4,8 +4,8 @@
 Nielsen's ten usability heuristics. Every claim below was checked against the
 code or measured in a browser; nothing here is an impression.
 
-The five flows are the app's own, not ones invented for this document. They are
-the list `ops/harness/paths.mjs` walks nightly, and the harness proves each is
+The flows are the app's own, not ones invented for this document. They are the
+list `ops/harness/paths.mjs` walks nightly, and the harness proves each is
 reachable two ways — by navigating and by the command palette:
 
 1. **Hire a phone out** — Rentals → New rental
@@ -13,11 +13,21 @@ reachable two ways — by navigating and by the command palette:
 3. **Take a payment** — Customers → Details → Take payment
 4. **Sell something** — Shop → Sell (the till)
 5. **Book a flight** — Tickets & Flights → New booking
+6. **Book a repair** — Repairs → New repair *(added 27 Aug)*
+7. **Cash up** — Shop → Cash-up *(added 27 Aug)*
+8. **Answer a text** — Messages → Reply *(added 27 Aug)*
+
+The last three were missing from the first pass, which is worth saying plainly:
+this document claimed five flows and the owner's list named three the pass had
+never opened. They are covered below, and one of them produced the largest
+single finding in either pass.
 
 ## What this found
 
-Seventeen things were examined closely. **One was a defect worth the word** —
-and it was about money. The rest of this document is mostly a record of things
+Seventeen things were examined closely on the first pass. **One was a defect
+worth the word** — and it was about money. The second pass, over the three
+flows the first had missed, found a second one of a different kind: a whole
+class of number that changes on screen and is announced to nobody. The rest of this document is mostly a record of things
 that turned out to be right, which is a duller read and the more useful one: a
 heuristic evaluation that finds a fault under every heading is usually
 describing its evaluator.
@@ -164,6 +174,79 @@ generated from `lib/manual.mjs` so it cannot drift, and `test/manual.test.mjs`
 fails the build when a new tab, a new dialog or a renamed primary button is not
 described. Sixty screenshots of the real app sit beside the words. It carries no
 prices — those live in Settings, so the shop has one price list.
+
+---
+
+## Second pass — book a repair, cash up, answer a text (27 Aug)
+
+### The finding: four numbers nobody hears
+
+WCAG **4.1.3 Status Messages** is Level AA, and it is the one criterion this
+app was failing without knowing it. The rule is not about labels: it is about a
+value that changes as a result of what somebody did, presented without moving
+focus. A sighted user watches it update. A screen-reader user hears their own
+keystrokes and never the answer.
+
+Four computed readouts had no live region, and each was the point of its screen:
+
+| | tells the person | flow |
+|---|---|---|
+| `cuVariance` | whether the till is **over or short** | cash up |
+| `posChange` | the **change due** to the customer at the counter | sell at the till |
+| `rpTotal` | the repair total as services are ticked | book a repair |
+| `bkFeeBreakdown` | the booking fee as the form is filled | book a flight |
+
+The customer-facing pages were already right — `/portal`, `/repair` and
+`/welcome` carry eight `role="status"` regions between them. The staff app had
+five in twenty-six thousand lines, and not one of them was on a number. That is
+the shape of the miss: the public side was audited and the counter was not.
+
+All four now carry `role="status"`, and `test/liveRegions.test.mjs` holds them
+there. The test is deliberately a **list, not a rule** — nothing in the source
+distinguishes a status message from ordinary content, so the judgement was made
+once and written down. What the test prevents is the judgement being quietly
+undone.
+
+`plAmountLabel` was examined and deliberately left alone: it is a `<label>`
+whose text swaps when a checkbox is ticked, which the label association already
+announces. A live region there would say it twice.
+
+### Cash up — otherwise strong
+
+- **H1**: the variance is computed as you type, the opening float and expected
+  cash are both on screen, and counting an earlier day carries its own banner
+  saying today's figures are not shown. Little else in the app is this clear.
+- **H2**: "opening float", "expected cash in till", "over", "short" — counter
+  language throughout, not accountancy.
+- **H5**: `POST /api/cashup` upserts on the date, so a double-press cannot
+  double-count. This is the one money write in the app without an in-flight
+  lock, and it does not need one.
+- **H9**: two dead ends fixed. "Could not save the count." now says the figure
+  is still in the box — which matters when somebody is standing at an open till
+  holding the cash.
+
+### Answer a text — the best-guarded flow in the app
+
+- **H5, and the strongest example of it anywhere here**: somebody who texted
+  STOP gets no Reply button. Not disabled — *absent*. The comment in the source
+  says why: "answering a person who has just asked to be left alone is the one
+  message this shop must not send, so the control is not there to be pressed."
+- They still get a **Task** button, because taking somebody off a list is work.
+  Refusing the wrong action without refusing the person is a distinction most
+  software does not make.
+- **H2**: `sms_in` is a column value. It reads "from a customer" — the source
+  notes it "sat under the channel looking like a fault code" until somebody
+  fixed it.
+- **H1**: an unanswered inbound text carries "waiting for an answer" in red, and
+  answering the last one refreshes the dashboard row, so the app stops claiming
+  somebody is waiting the moment they are not.
+
+### Book a repair — no finding beyond the total
+
+The staff side reuses the same customer picker, the same confirm shape and the
+same charge guard as every other flow, which is the point of having them. The
+public form (`/repair`) was already covered by the first pass and carries a
+per-code error message for each way it can fail.
 
 ---
 

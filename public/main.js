@@ -11545,7 +11545,7 @@ async function openCashupModal(dateISO) {
   nextDay.setDate(nextDay.getDate() + 1);
   const nextISO = nextDay.toISOString().slice(0, 10);
   const data = await kcFetch(`/api/cashup?date=${today}`).then(r => r.json()).catch(() => null);
-  if (!data || !data.success) { toast(data?.error || 'Cash-up unavailable.', 'error'); return; }
+  if (!data || !data.success) { toast(data?.error || 'Could not read today’s takings — check the connection and try again. Nothing has been counted.', 'error'); return; }
 
   const methodRows = Object.entries(data.methods)
     .sort((a, b) => b[1] - a[1])
@@ -11585,7 +11585,10 @@ async function openCashupModal(dateISO) {
           value="${data.count ? data.count.counted.toFixed(2) : ''}" placeholder="0.00"
           oninput="cuUpdateVariance(this, ${data.expectedCash})"
           onkeydown="if(event.key==='Enter'){event.preventDefault();saveCashup('${today}');}">
-        <div id="cuVariance" style="font-size:var(--fs-small);margin-top:4px;font-weight:600;">
+        <!-- role=status: this is computed as the counter types and is the one
+             number the whole screen exists to produce. Without it a screen
+             reader announces the keystrokes and never the answer. -->
+        <div id="cuVariance" role="status" style="font-size:var(--fs-small);margin-top:4px;font-weight:600;">
           ${data.count ? (data.count.variance === 0 ? '✓ Till balances' : `${data.count.variance > 0 ? '+' : '−'}${fmtGbp(Math.abs(data.count.variance))} ${data.count.variance > 0 ? 'over' : 'short'}`) : ''}</div>
       </div>
       <div class="form-group">
@@ -11619,7 +11622,9 @@ async function saveCashup(date) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ date, counted, notes: document.getElementById('cuNotes').value.trim() }),
   }).then(r => r.json()).catch(() => null);
-  if (!res || !res.success) { toast(res?.error || 'Could not save the count.', 'error'); return; }
+  // The count is not saved, and the person is standing at an open till with a
+  // number in their hand. Say which, so they know whether to write it down.
+  if (!res || !res.success) { toast(res?.error || 'The count was not saved — check the connection and try again. Your figure is still in the box.', 'error'); return; }
   closeDynamicModal();
   const v = res.variance;
   toast(v === 0 ? 'Till counted — balances exactly. ✓'
@@ -15301,7 +15306,7 @@ async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
             <input type="checkbox" id="bkStartFee" onchange="bkCalcFee()"> + start fee ${fmtGbp(startFee.price)}
           </label>` : ''}
         </div>
-        <div id="bkFeeBreakdown" style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;"></div>
+        <div id="bkFeeBreakdown" role="status" style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;"></div>
       </div>` : ''}
       <div class="form-group">
         <label class="form-label">Passport photocopy held?</label>
@@ -16250,7 +16255,7 @@ function openNewRepairModal(preselectCustomerId = null) {
       </div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
-      <div style="font-size:var(--fs-ui);">Total: <strong id="rpTotal" style="color:var(--success);">£0.00</strong>
+      <div style="font-size:var(--fs-ui);" role="status">Total: <strong id="rpTotal" style="color:var(--success);">£0.00</strong>
         <span style="color:var(--muted);font-size:var(--fs-micro);">— charged to wallet on collection</span></div>
       <div class="modal-actions" style="margin:0;">
         <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
@@ -18287,7 +18292,9 @@ function posRenderTender() {
         <input class="form-input" id="posTenderIn" type="number" min="0" step="0.01" placeholder="Cash given £"
           oninput="posChangeCalc()" style="width:132px;min-height:0;padding:7px 10px;">
         ${[5, 10, 20, 50].map(n => `<button class="pos-note" onclick="posTenderQuick(${n})">£${n}</button>`).join('')}
-        <span id="posChange" style="font-weight:700;font-size:var(--fs-ui);margin-left:auto;"></span>
+        <!-- Change due. Computed from what was tendered, and until now
+             announced to nobody. -->
+        <span id="posChange" role="status" style="font-weight:700;font-size:var(--fs-ui);margin-left:auto;"></span>
       </div>`;
   }
   // The on-account rule, said at the moment it is DECIDED rather than at the
@@ -24752,7 +24759,7 @@ async function loadMessageLog() {
   if (!wrap) return;
   wrap.innerHTML = '<span style="color:var(--muted);">Loading…</span>';
   const res = await kcFetch('/api/message-log?limit=150').then(r => r.json()).catch(() => null);
-  if (!res || !res.success) { wrap.innerHTML = `<span style="color:var(--danger-ink);">${escHtml(res?.error || 'Could not load the log.')}</span>`; return; }
+  if (!res || !res.success) { wrap.innerHTML = `<span style="color:var(--danger-ink);">${escHtml(res?.error || 'Could not load the message log — check the connection and try again. Anyone waiting is still waiting.')}</span>`; return; }
   msgLogEntries = res.entries;
   // The dashboard row is driven off this number too, so refreshing the log
   // refreshes the row — otherwise answering the last one leaves the dashboard
