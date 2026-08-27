@@ -3285,8 +3285,14 @@ function renderRentalsTab() {
             <table>
               <thead>
                 <tr>
-                  <th>Number</th><th>Country</th><th>Pool</th>
-                  <th>Expires</th><th>Status</th><th>Actions</th>
+                  ${/* Pool and Expires carry kc-inv-detail: they are the two columns
+                        that drop out when the inventory is sitting BESIDE the rentals
+                        table rather than under it, because in that position the
+                        question being asked is "what is free", not "when does its
+                        pool run out". Both facts are still on the row's Edit and in
+                        the full-width stacked view. */''}
+                  <th>Number</th><th>Country</th><th class="kc-inv-detail">Pool</th>
+                  <th class="kc-inv-detail">Expires</th><th>Status</th><th class="kc-inv-detail">Actions</th>
                 </tr>
               </thead>
               <tbody id="phoneTableBody"></tbody>
@@ -4127,10 +4133,10 @@ function renderPhoneRows() {
             countries say "N/A" under the header; on a card there is no header
             and no column, so a line reading "Pool: N/A" would be a line about
             nothing — those two cells drop out of the card entirely. */''}
-      <td class="${isUSA ? '' : 'kc-drop-sm'}" data-label="Pool" style="font-size:var(--fs-small);color:${isUSA?'':'var(--muted)'};">${isUSA ? escHtml(poolDisplay) : poolDisplay}</td>
-      <td class="${isUSA ? '' : 'kc-drop-sm'}" data-label="Pool expires" style="font-size:var(--fs-micro);color:${poolExpired?'var(--danger-ink)':isUSA?'var(--muted)':'var(--muted)'};">${isUSA ? expiryDisplay : '<span style="color:var(--muted);">N/A</span>'}</td>
+      <td class="kc-inv-detail ${isUSA ? '' : 'kc-drop-sm'}" data-label="Pool" style="font-size:var(--fs-small);color:${isUSA?'':'var(--muted)'};">${isUSA ? escHtml(poolDisplay) : poolDisplay}</td>
+      <td class="kc-inv-detail ${isUSA ? '' : 'kc-drop-sm'}" data-label="Pool expires" style="font-size:var(--fs-micro);color:${poolExpired?'var(--danger-ink)':isUSA?'var(--muted)':'var(--muted)'};">${isUSA ? expiryDisplay : '<span style="color:var(--muted);">N/A</span>'}</td>
       <td>${statusBadge}</td>
-      <td>
+      <td class="kc-inv-detail">
         <div class="row-actions">
           ${phoneOutWithoutRental(p) ? `<button class="action-btn kc-ic kc-ic-download" style="color:var(--success);font-weight:600;" onclick="markPhoneBack('${p.id}')" title="Record the return${p.heldByNote ? ' from ' + escHtml(p.heldByNote) : ''}">It's back</button>` : ''}
           <button class="action-btn" onclick="openEditPhoneModal('${p.id}')">Edit</button>

@@ -5556,7 +5556,7 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
    Measured with the cap lifted: 1920px gives 1608px of shell (inventory scrolls
    ~90px, which it may — it is the secondary list and its wrap scrolls), 2560px
    gives 2248px and both sit at natural width. */
-@media (min-width: 1700px) {
+@media (min-width: 1900px) {
   /* The same exemption the till has: a screen that needs width gets it. The
      1220px air-pass column is right for reading and wrong for two tables. */
   /* .rentals-split IS the direct child of .content, so `*:has(.rentals-split)`
@@ -5564,7 +5564,34 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
      keeps working if the tab ever grows a wrapper. */
   .content > .rentals-split,
   .content > *:has(.rentals-split) { max-width: 2280px; }
-  .rentals-split { grid-template-columns: minmax(0, 1010px) minmax(0, 1fr); }
+
+  /* Rentals FLEXES and inventory is bounded, not the other way round. The
+     first cut pinned rentals at 1010px because that is what the seed data
+     measures — and the owner's real data is wider (longer names, a Hebrew date
+     under each Gregorian one), so ACTIONS clipped on his screen at 1920 while
+     the inventory sat on space it did not need. The wide table now takes
+     everything left over and grows with the monitor. */
+  .rentals-split { grid-template-columns: minmax(0, 1fr) minmax(300px, 372px); }
+
+  /* And the inventory goes compact beside it. Measured at natural width the
+     six columns are Number 157, Country 94, Pool 66, Expires 83, Status 106,
+     Actions 165 = 671px — and at 1920 there are only ~1608px of shell against
+     a rentals table that wants 1226 of them. So four columns' worth has to go
+     and the choice is which question this column is answering in this
+     position: "what is free", not "when does its pool run out" and not "let me
+     edit it from here".
+     Pool, Expires and Actions drop (357px left, which fits). Nothing is lost:
+     the ROW ITSELF opens Edit on click, delete lives in Manage phones, and the
+     full six-column table is right there in the stacked view below 1900px. */
+  .rentals-split-col .kc-inv-detail { display: none; }
+
+  /* And the floor has to come off with them. `.table-wrap table` carries
+     min-width: 560px "to stop real columns crushing together" — sound for six
+     columns, wrong for three, and it was pinning the compact table at 560 in a
+     370px column so it clipped exactly as before. Three columns in 370px is
+     ~123px each, which is not crushed; the empty-state rule and the small-screen
+     rule already drop this floor for the same reason. */
+  .rentals-split-col:last-child .table-wrap table { min-width: 0; width: 100%; }
   /* The rentals column carries a filter toolbar; with the two side by side
      again the inventory needs its spacer back or the tables start apart.
      70px, not the .rentals-filter-row min-height of 38: the toolbar WRAPS to
