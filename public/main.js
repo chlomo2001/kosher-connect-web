@@ -24590,11 +24590,12 @@ const FEE_META = {
   // top without anybody removing the rows they superseded. A directory that
   // sends a helper to a program they don't need is worse than no directory.
   //
-  // What is left on the PC is left because the app genuinely cannot do it:
-  // parseNbf reads predefmessages/1|3 — MESSAGES — so there is no route from an
-  // NBF to contacts, and parseSmsBackupXml refuses anything without an <smses>
-  // root. Both are closable given a sample file; until then the honest answer
-  // is "office PC".
+  // What is left on the PC is left because the app genuinely cannot do it.
+  // After reading his three converters that is now exactly ONE job: parseNbf
+  // reads predefmessages/1|3 — MESSAGES — so there is no route from an NBF to
+  // contacts. The Wizard's contacts-out-of-Nokia route is .IB, a different file
+  // off a different handset. Closable given a sample NBF that has a phonebook
+  // in it; until then the honest answer is "office PC".
   const contactToolsHtml = settingsCard('contacttools', '<i class="kc-ic kc-ic-wrench" aria-hidden="true"></i> Contact tools (phone migrations)',
     'which converter handles which handset', `
       <div style="padding:10px 16px 6px;">
@@ -24603,15 +24604,16 @@ const FEE_META = {
           <tbody>
             <tr><td>Contacts Converter</td><td>Excel / CSV / VCF → clean +44 VCF (map, merge, dedupe)</td><td><a href="/tools/contacts" target="_blank" rel="noopener">in-app</a></td></tr>
             <tr><td>Transfer Wizard</td><td>Phone-to-phone: XML / NBF / IB / VCF → VCF or FIG zip</td><td><a href="/tools/transfer" target="_blank" rel="noopener">in-app</a></td></tr>
-            <tr><td>xml→fig</td><td>A Nokia backup XML the Transfer Wizard refuses — it only reads the <code>&lt;smses&gt;</code> kind</td><td>office PC</td></tr>
             <tr><td>NokiaB→VCF</td><td><strong>Contacts</strong> out of a Nokia .NBF — the Wizard reads an NBF for messages only</td><td>office PC</td></tr>
           </tbody>
         </table></div>
       </div>
       <div style="padding:0 16px 14px;font-size:var(--fs-micro);color:var(--muted);line-height:1.5;">
-        The old <strong>Excel→VCF</strong>, <strong>CSV→VCF offline</strong>, <strong>VCF UK-prefix converter</strong> and
-        <strong>VCF cleaner</strong> apps are still sitting on the office PC, but nothing needs them any more — Contacts
-        Converter does all four jobs in one pass, on this machine, without the files leaving it.
+        The old <strong>Excel→VCF</strong>, <strong>CSV→VCF offline</strong>, <strong>VCF UK-prefix converter</strong>,
+        <strong>VCF cleaner</strong> and <strong>xml→fig</strong> apps are still sitting on the office PC, but nothing
+        needs them any more — the two tools above do all of it in one pass, on this machine, without the files leaving it.
+        The Transfer Wizard also keeps messages the old xml→fig quietly lost: anything with a
+        <strong>&gt;</strong> in it never matched its pattern and was dropped without a word.
         <br><br>
         Charge the job with the <strong>Contact Transfer / Phone Setup</strong> line on the Online &amp; Print menu — it lands on the customer's timeline and wallet like any other service. Then save the finished <strong>.vcf</strong> against the customer (Documents on their card), so next phone change their contacts are one click away.</div>`);
 
