@@ -2751,6 +2751,11 @@ const KC_POOL = (() => {
 // the two states not worth interrupting anybody about.
 function poolCoverBadge(r) {
   if (!r || r.status === 'returned') return '';
+  // Shloime, 27 Aug: a phone collected early and sitting on somebody's kitchen
+  // table is not a problem, and saying it is trains people to ignore badges.
+  // Nothing is asked about the line until the trip is running, or 24 hours
+  // before it starts.
+  if (!KC_STAGE.readinessDue(r, localISO())) return '';
   const p = phones.find(x => String(x.id) === String(r.phoneId));
   if (!p || !p.pool) return '';
   const state = KC_POOL.poolCover(p.poolExpiry || null, r.toDate || null, localISO());
@@ -3541,10 +3546,65 @@ function getItemStatus(r, item) {
 // on status = 'overdue' correctly returns nothing — which costs whoever writes
 // that query an afternoon. The design is right; the enum's silence about it is
 // the only wrong part, and this comment is the cheap half of the fix.
+// ── KC_STAGE mirror start ──
+// Mirrors lib/rentalStage.mjs. Held to it by test/rentalStageMirror.test.mjs.
+const KC_STAGE = (() => {
+  const READY_LEAD_DAYS = 1;
+  const dayBefore = (iso, days) => {
+    if (!iso) return null;
+    const t = Date.parse(`${iso}T00:00:00Z`);
+    return Number.isFinite(t) ? new Date(t - days * 86400000).toISOString().slice(0, 10) : null;
+  };
+  const rentalStage = (r, today, incomplete = false) => {
+    if (!r) return 'reserved';
+    if (r.status === 'returned') return incomplete ? 'returned_incomplete' : 'returned';
+    const from = r.fromDate || null;
+    const to = r.toDate || null;
+    if (to && to < today) return 'overdue';
+    if (from && from > today) return r.pickupDate ? 'fetched' : 'reserved';
+    if (r.status === 'booked' && !r.pickupDate) return 'reserved';
+    return 'active';
+  };
+  const readinessDue = (r, today) => {
+    const stage = rentalStage(r, today);
+    if (stage === 'active' || stage === 'overdue') return true;
+    if (stage !== 'fetched') return false;
+    const due = dayBefore(r.fromDate, READY_LEAD_DAYS);
+    return !!due && today >= due;
+  };
+  const readyFrom = (r) => dayBefore(r && r.fromDate, READY_LEAD_DAYS);
+  const stageLabel = (stage) => ({
+    reserved: 'Reserved',
+    fetched: 'Collected — not travelling yet',
+    active: 'Active',
+    overdue: 'Overdue',
+    returned: 'Closed',
+    returned_incomplete: 'Returned — kit unaccounted for',
+  }[stage] || stage);
+  const stageTone = (stage, ready = false) => {
+    if (stage === 'overdue') return 'danger';
+    if (stage === 'returned_incomplete') return 'warning';
+    if (stage === 'fetched') return ready ? 'warning' : 'quiet';
+    if (stage === 'reserved') return 'quiet';
+    return 'normal';
+  };
+  const ON_CUSTOMER_CARD = ['reserved', 'fetched', 'active', 'overdue'];
+  return { READY_LEAD_DAYS, rentalStage, readinessDue, readyFrom, stageLabel, stageTone, ON_CUSTOMER_CARD };
+})();
+// ── KC_STAGE mirror end ──
+
+// The five stages, decided in one place (lib/rentalStage.mjs, mirrored above).
+//
+// 'booked' is kept as the returned value for a reservation because eleven call
+// sites and a stored enum already say booked; 'reserved' is what a person
+// reads. The new one is 'fetched' — out of the shop, not travelling yet.
 function getComputedStatus(r, today) {
-  if (r.status === 'booked') return 'booked'; // reservation — not picked up yet
-  if (r.status !== 'returned') return r.toDate < today ? 'overdue' : 'active';
-  const eq = r.equipmentGiven || { phone: true, sim: true, plug: true, cable: true };
+  const eq0 = r.equipmentGiven || { phone: true, sim: true, plug: true, cable: true };
+  const stage = KC_STAGE.rentalStage(r, today, false);
+  if (stage === 'reserved') return 'booked';
+  if (stage === 'fetched') return 'fetched';
+  if (stage !== 'returned') return stage;
+  const eq = eq0;
   // Plug+cable are judged as ONE charger item (same merged semantics as the
   // manage modal), so the ⚠ badge can never point at a key the UI can't show.
   const incomplete =
@@ -3624,6 +3684,14 @@ function renderRentalRows() {
     let statusBadge;
     if      (r.voided)                                  statusBadge = `<span class="badge" style="background:rgba(148,163,184,0.18);color:var(--muted);" title="${escHtml(r.voided.reason)}${r.voided.note ? ' — ' + escHtml(r.voided.note) : ''}">↩ Voided</span>`;
     else if (computedStatus === 'booked')               statusBadge = `<span class="badge" style="background:var(--canvas-cream);color:var(--gold);"><i class="kc-ic kc-ic-calendar" aria-hidden="true"></i> Reserved${r.fromDate <= today ? ' — pickup due' : ''}</span>`;
+    else if (computedStatus === 'fetched') {
+      // Out of the shop, not travelling yet. Quiet until 24 hours before the
+      // trip, then amber — because that is the point at which somebody has to
+      // check the line is actually live.
+      const soon = KC_STAGE.readinessDue(r, today);
+      statusBadge = `<span class="badge kc-ic kc-ic-package" title="Collected ${escHtml(fmtDate(r.pickupDate || ''))} · travels ${escHtml(fmtDate(r.fromDate))}${soon ? ' — check the line is live' : ''}"
+        style="background:${soon ? 'var(--warning-wash)' : 'var(--bg-secondary)'};color:${soon ? 'var(--warning-ink)' : 'var(--muted)'};">Collected${soon ? ' — travels tomorrow' : ''}</span>`;
+    }
     else if (computedStatus === 'active' && r.toDate === today) statusBadge = `<span class="badge badge-sim">Due Today</span>`;
     else if (computedStatus === 'active')               statusBadge = `<span class="badge badge-rental">Active</span>`;
     else if (computedStatus === 'overdue')              statusBadge = `<span class="badge kc-ic kc-ic-alert" style="background:rgba(239,68,68,0.15);color:var(--danger-ink);">Overdue</span>`;
@@ -8220,7 +8288,14 @@ function buildCustomerPanelHtml(c, mode = 'card') {
   const customerPaid = rentals
     .filter(r => r.customerId === c.id)
     .reduce((sum, r) => sum + (r.amountPaid || 0), 0);
-  const cActiveRentals = rentals.filter(r => r.customerId === c.id && (r.status === 'active' || r.status === 'overdue'));
+  // Every stage, not just the running ones. A reservation IS something the
+  // shop is holding for this customer, and a card that only shows a hire once
+  // it starts answers "what have we got of theirs?" with a lie for the days
+  // in between (Shloime, 27 Aug: "at each stage - even only reserved - shall
+  // be recorded on customers card").
+  const cTodayISO = localISO();
+  const cActiveRentals = rentals.filter(r => r.customerId === c.id && !r.voided
+    && KC_STAGE.ON_CUSTOMER_CARD.includes(KC_STAGE.rentalStage(r, cTodayISO)));
   // Real linked SIMs and virtual numbers (the global lists), not the legacy
   // embedded c.services — those seeded plans were being missed entirely.
   const cSims = sims.filter(s => s.customerId === c.id && simLive(s));
@@ -8245,7 +8320,12 @@ function buildCustomerPanelHtml(c, mode = 'card') {
 
   const cUpcoming = customerUpcomingBookings(c);
   const allActiveServices = [
-    ...cActiveRentals.map(r => ({ type: 'rental', flag: countryFlag(r.country), label: `Rental${r.depositHeld > 0 ? ' · 🔒£' + Number(r.depositHeld).toFixed(0) : ''}${r.termsAck ? ' · ✍️' : ''}` })),
+    ...cActiveRentals.map(r => {
+      const st = KC_STAGE.rentalStage(r, cTodayISO);
+      const stageBit = st === 'active' ? '' : ` · ${KC_STAGE.stageLabel(st)}`;
+      return { type: 'rental', flag: countryFlag(r.country),
+        label: `Rental${stageBit}${r.depositHeld > 0 ? ' · 🔒£' + Number(r.depositHeld).toFixed(0) : ''}${r.termsAck ? ' · ✍️' : ''}` };
+    }),
     ...cUpcoming.map(b => ({ type: 'booking', label: `${b.route}${b.travelDate ? ' · ' + fmtDate(b.travelDate) : ''}`, icon: 'plane' })),
     ...cSims.map(s => ({ type: 'sim', simId: s.id, label: `SIM · ${s.provider || 'plan'}${s.simNumber ? ' · ' + s.simNumber : ''}` })),
     ...cVNs.map(v => ({ type: 'vn', label: `VN ${fmtPhone(v.number || '')}` })),

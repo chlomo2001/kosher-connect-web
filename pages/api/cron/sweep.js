@@ -26,6 +26,16 @@
 import crypto from 'node:crypto'
 import { db, tablesMode } from '../../../lib/db.js'
 import { poolCover, poolCoverNote, poolCoverNeedsAction } from '../../../lib/poolCover.mjs'
+import { rentalStage, readinessDue } from '../../../lib/rentalStage.mjs'
+
+// The stage rule speaks the app's shape; the sweep reads database rows. One
+// adapter, so the two cannot disagree about which date is which.
+const asStageRental = (r) => ({
+  status: r.status,
+  fromDate: r.start_date || null,
+  toDate: r.end_date || null,
+  pickupDate: (r.legacy_extras && r.legacy_extras.pickupDate) || null,
+})
 import { resolveStaff } from '../../../lib/auth.js'
 import { advanceOneMonth, advancePastDate } from '../../../lib/money.mjs'
 import { displayDate } from '../../../lib/localDay.mjs'
@@ -327,16 +337,24 @@ async function handler(req, res) {
     //
     // The decision is lib/poolCover.mjs, shared with the rentals row so the
     // badge and this task can never disagree about the same rental.
+    // Reservations are in scope now, because a rental that has been collected
+    // is stored as `active` whatever its travel date — the stage is derived
+    // from the dates, not from the stored status.
     const liveRentals = await db.select(
       'rentals',
-      'select=id,legacy_id,end_date,customer_id,line_id,customers(first_name,last_name),'
-        + 'lines(number,pool_id,renewal_date)&status=in.(active,overdue)&is_void=is.false'
+      'select=id,legacy_id,start_date,end_date,customer_id,line_id,legacy_extras,customers(first_name,last_name),'
+        + 'lines(number,pool_id,renewal_date)&status=in.(booked,active,overdue)&is_void=is.false'
     )
     const poolWanted = new Set()
     let poolTasks = 0
     for (const r of liveRentals) {
       const line = r.lines
       if (!line || !line.pool_id) continue          // not a pooled line — nothing to expire
+      // Nothing is asked about a line until the trip is running or starts
+      // within 24 hours. A phone collected a fortnight early, sitting at home
+      // with an unactivated pool, is not a problem — and a task saying it is
+      // teaches people to close tasks without reading them.
+      if (!readinessDue(asStageRental(r), localDate())) continue
       const state = poolCover(line.renewal_date || null, r.end_date || null, localDate())
       if (!poolCoverNeedsAction(state)) continue
       const name = r.customers ? `${r.customers.first_name || ''} ${r.customers.last_name || ''}`.trim() : '?'
@@ -354,6 +372,40 @@ async function handler(req, res) {
       poolTasks++
     }
     counts.poolTasks = poolTasks
+
+    // ── Trips starting tomorrow ────────────────────────────────────────────
+    //
+    // Shloime's other half of the same ask: "only when the date for that
+    // reservation comes, 24hr before it should be raised - color plus task".
+    // The badge on the row is the colour; this is the task.
+    const handoverWanted = new Set()
+    let handoverTasks = 0
+    for (const r of liveRentals) {
+      const sr = asStageRental(r)
+      if (rentalStage(sr, localDate()) !== 'fetched') continue
+      if (!readinessDue(sr, localDate())) continue
+      const name = r.customers ? `${r.customers.first_name || ''} ${r.customers.last_name || ''}`.trim() : '?'
+      const ref = `HANDOVER-${r.id}`
+      handoverWanted.add(ref)
+      await upsertOpenTask({
+        reference: ref,
+        title: `✈️ Travels tomorrow — check ${name}'s line is live (${r.lines?.number || 'line'})`,
+        customerUuid: r.customer_id,
+        notes: `Collected ${sr.pickupDate || 'earlier'}, travels ${r.start_date}. `
+             + 'Nothing was raised while it sat at home; it is worth a look now.',
+        dueDate: r.start_date || null,
+      })
+      handoverTasks++
+    }
+    counts.handoverTasks = handoverTasks
+    const openHandover = await db.select('tasks', 'select=id,reference&done=is.false&reference=like.HANDOVER-*')
+    let handoverClosed = 0
+    for (const t of openHandover) {
+      if (handoverWanted.has(t.reference)) continue
+      await closeOpenTask(t.reference)
+      handoverClosed++
+    }
+    counts.handoverClosed = handoverClosed
 
     // …and close the ones whose rental came back, or whose pool was renewed.
     // Same shape as the OVERDUE close below: a task nobody closed is a task
