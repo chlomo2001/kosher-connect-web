@@ -3,23 +3,39 @@
 //
 //   POST { customerId, text }   — text the customer on file
 //   POST { replyTo, text }      — answer one inbound SMS, named by its log id
+//   POST { toNumber, text }     — text a UK mobile typed at the counter
 //
-// Mirrors /api/email exactly: the recipient is ALWAYS resolved server-side
-// (the client never supplies a number), and the Twilio gate in lib/sms.js
-// decides HOLD / TEST / LIVE — so with no SMS_LIVE set, pressing Send builds
-// and logs the message but sends nothing.
+// Mirrors /api/email: the Twilio gate in lib/sms.js decides HOLD / TEST / LIVE,
+// so with no SMS_LIVE set, pressing Send builds and logs the message but sends
+// nothing.
 //
-// The reply path keeps that rule rather than bending it. A text can arrive from
-// a number matching no customer, so there is no customer to resolve — but the
-// number is already in email_log, written by the webhook. Naming the LOG ROW
-// means the destination still comes out of our own database and never off the
-// wire, which is the property that stops this endpoint being a way to text an
-// arbitrary number from a browser.
+// The first two paths resolve the recipient entirely server-side — the client
+// names a customer or a log row, never a number. The reply path keeps that rule
+// rather than bending it: a text can arrive from a number matching no customer,
+// but the number is already in email_log, written by the webhook, so the
+// destination still comes out of our own database.
+//
+// The THIRD path is a deliberate, bounded exception, added 28 Aug because the
+// owner asked for it: "a simple option of just sending an SMS to a customer.
+// e.g., compose, to (customer dropdown or free typed uk number), send". The
+// shop's real case is somebody at the counter whose number is not on file yet,
+// and no amount of server-side resolution can produce a number the database has
+// never seen. So the rule that replaces it is a narrower one:
+//
+//   · UK mobiles only — normalised to +447xxxxxxxxx, everything else refused,
+//     so this cannot dial a premium line, a foreign number or a landline;
+//   · staff session required, same as every other path here;
+//   · the send is logged in email_log like all the rest, so who texted what to
+//     which number is answerable afterwards.
+//
+// That is a smaller surface than "any number the browser sends", which is the
+// property the original rule was protecting.
 
 import { withStaff, tabAllowedFor } from '../../lib/auth.js'
 import { db, tablesMode } from '../../lib/db.js'
 import { smsEnabled, sendSms } from '../../lib/sms.js'
 import { replyTarget } from '../../lib/inboundSms.mjs'
+import { normalisePhoneE164, phoneProblem } from '../../lib/phoneNumber.mjs'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -29,6 +45,24 @@ async function inboundToReplyTo(id) {
   const rows = await db.select('email_log',
     `select=id,provider,kind,status,to_email,subject,customer_id&id=eq.${encodeURIComponent(String(id))}&limit=1`)
   return replyTarget(rows[0])
+}
+
+/**
+ * A number typed at the counter, or the reason it cannot be texted.
+ *
+ * UK mobiles only. phoneProblem catches what cannot be a phone number at all;
+ * this is the tighter bound the free-typed path trades for — a landline, a
+ * premium 09, a foreign number and a half-typed one are all refused here, and
+ * the message says which so the operator can fix it rather than guess.
+ */
+function typedUkMobile(raw) {
+  const bad = phoneProblem(raw)
+  if (bad) return { error: bad.message }
+  const e164 = normalisePhoneE164(raw)
+  if (!/^\+447\d{9}$/.test(e164)) {
+    return { error: 'Texts typed in here go to UK mobiles only \u2014 07\u2026 or +447\u2026. For any other number, open the customer and text them from their card.' }
+  }
+  return { phone: e164 }
 }
 
 async function customerPhone(customerId) {
@@ -62,9 +96,13 @@ async function handler(req, res) {
   }
   const b = req.body || {}
   const replying = !!b.replyTo
+  const typed = !replying && !!b.toNumber
   // The reply control lives on the Settings message log, so it follows the
-  // Settings permission; the draft modal keeps the one it always had.
-  if (!(await tabAllowedFor(req.staff, replying ? 'settings' : 'rentals'))) {
+  // Settings permission; the draft modal keeps the one it always had. Composing
+  // to a typed number is the Messages screen's own control and follows Messages
+  // \u2014 the tab a helper is given precisely when texting customers is their job.
+  const need = replying ? 'settings' : typed ? 'messages' : 'rentals'
+  if (!(await tabAllowedFor(req.staff, need))) {
     return res.status(403).json({ success: false, error: 'Not permitted.' })
   }
 
@@ -80,6 +118,14 @@ async function handler(req, res) {
       customerId = src.customerId
       // The id the lookup verified, not the one the browser sent.
       repliesTo = src.id
+    } else if (typed) {
+      const num = typedUkMobile(b.toNumber)
+      if (num.error) return res.status(400).json({ success: false, error: num.error })
+      to = num.phone
+      // No customer is claimed for a number nobody has matched to one. Guessing
+      // would file a stranger's text on somebody's card; the thread still forms,
+      // because msgBuildThreads groups on the number.
+      customerId = null
     } else {
       const who = await customerPhone(b.customerId)
       if (!who) return res.status(400).json({ success: false, error: 'Customer not found.' })

@@ -622,6 +622,12 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 
 /* Checkboxes and radios are sized here, not inline at each of seven call
    sites — inline wins over any stylesheet rule, which is what stopped the
    touch-target bump below reaching them. */
+/* `hidden` is only a UA rule (display:none), so ANY component rule carrying its
+   own display beats it. .form-group is display:flex, which is how a hidden
+   field group in the Messages composer stayed fully on screen. Said once here
+   rather than worked around at each call site. */
+[hidden] { display: none !important; }
+
 input[type="checkbox"], input[type="radio"] {
   width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer;
 }

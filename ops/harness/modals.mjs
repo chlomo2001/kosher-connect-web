@@ -124,6 +124,8 @@ export const MODALS = [
   // Settings log — the seed carries one answerable thread and one from
   // somebody who texted STOP, so the reply box can be checked for being ABSENT
   // as well as present.
+  // Starting a text rather than answering one (owner, 28 Aug).
+  ['sms-compose',   'messages',  `openSmsCompose()`],
   ['sms-reply',     'messages',  `(async () => {
      msgFilter = 'all';
      paintMessages();

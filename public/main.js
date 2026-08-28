@@ -252,6 +252,22 @@ function phoneProblem(raw) {
   return null;
 }
 
+// The number in the form Twilio wants. Mirrors lib/phoneNumber.mjs
+// normalisePhoneE164 — change both together, test/phoneMirror.test.mjs holds
+// them to each other. Never guesses a country code onto a bare local number
+// that is not a UK 0-prefixed one.
+function normalisePhoneE164(raw, opts) {
+  const defaultCc = (opts && opts.defaultCc) || '44';
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s) return '';
+  const plus = s.startsWith('+');
+  let d = s.replace(/\D/g, '');
+  if (!d) return '';
+  if (!plus && d.startsWith('00')) d = d.slice(2);
+  else if (!plus && d.startsWith('0')) d = defaultCc + d.slice(1);
+  return '+' + d;
+}
+
 // Phone numbers for HUMANS — display-only grouping; storage stays canonical
 // (+447974924585). Mirrors lib/ukPhone.mjs formatPhoneDisplay: UK mobiles
 // 4-3-3 (+44 7974 924 585), UK landlines 3-3-4, +972 and +1 their usual
@@ -22423,6 +22439,8 @@ function paintMessages() {
         ${chip('waiting', `Waiting${waiting.length ? ` (${waiting.length})` : ''}`)}${chip('all', 'All')}
         <button class="btn btn-outline btn-sm" onclick="renderMessagesTab()"
           title="Check for texts that have just arrived">↻ Check now</button>
+        <button class="btn btn-primary btn-sm kc-ic kc-ic-chat" onclick="openSmsCompose()"
+          title="Text a customer without waiting for them to text first">New message</button>
       </div>
     </div>
     <div class="table-card"><div class="msg-list">${shown.length ? shown.map(msgThreadRowHtml).join('') : empty}</div></div>`;
@@ -22555,6 +22573,179 @@ function openThread(key) {
     if (w) w.scrollTop = w.scrollHeight;
     document.getElementById('smsReplyText')?.focus();
   }, 30);
+}
+
+// ── Compose ──────────────────────────────────────────────────────────────
+//
+// Owner, 28 Aug: "should we add at messages a simple option of just sending an
+// SMS to a customer. e.g., compose, to (customer dropdown or free typed uk
+// number), send?"
+//
+// Everything on this screen until now started with THEM: you could answer a
+// text, but you could not begin one. The shop's own case is the opposite way
+// round most of the time — the phone is ready, the passport is back, the part
+// has come in — and every one of those went out through WhatsApp on somebody's
+// own handset, where the shop has no record of it.
+//
+// Two ways to say who, because the counter has two situations. A customer on
+// file is the picker, and the number comes off their record server-side, the
+// way every other send in this app works. A number typed in is the person
+// standing there whose record does not exist yet: UK mobiles only, refused
+// server-side as well as here, and no customer claimed for it.
+let smsComposeMode = 'customer';
+
+function openSmsCompose(prefill = {}) {
+  smsComposeMode = prefill.number ? 'number' : 'customer';
+  showDynamicModal(`
+    <div class="modal-title"><i class="kc-ic kc-ic-chat" aria-hidden="true"></i> New message</div>
+    <div style="font-size:var(--fs-small);color:var(--muted);margin-bottom:12px;">
+      A text, from the shop's number. It lands in this screen's conversation with them,
+      so the next person to look knows it was said.
+    </div>
+
+    <div class="kc-subviews" role="tablist" aria-label="Who to text" style="margin-bottom:10px;">
+      <button type="button" class="kc-subview${smsComposeMode === 'customer' ? ' is-on' : ''}" role="tab" id="smsToTab_customer"
+        aria-selected="${smsComposeMode === 'customer'}" onclick="smsComposeMode2('customer')">A customer</button>
+      <button type="button" class="kc-subview${smsComposeMode === 'number' ? ' is-on' : ''}" role="tab" id="smsToTab_number"
+        aria-selected="${smsComposeMode === 'number'}" onclick="smsComposeMode2('number')">A number</button>
+    </div>
+
+    <div class="form-group form-full" id="smsToCustomerBox" style="margin-bottom:14px;"${smsComposeMode === 'number' ? ' hidden' : ''}>
+      <label class="form-label" for="smsToCustomer_search">Who</label>
+      ${customerPicker('smsToCustomer', { placeholder: 'Name or number…', onPick: 'smsComposeCount()' })}
+    </div>
+    <div class="form-group form-full" id="smsToNumberBox" style="margin-bottom:14px;"${smsComposeMode === 'customer' ? ' hidden' : ''}>
+      <label class="form-label" for="smsToNumber">UK mobile</label>
+      <input class="form-input" id="smsToNumber" type="tel" inputmode="tel" dir="ltr" autocomplete="off"
+        placeholder="07911 123456" value="${escHtml(prefill.number || '')}" oninput="smsComposeCount()">
+      <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">
+        UK mobiles only. For any other number, open the customer and text them from their card.
+      </div>
+    </div>
+
+    <div class="form-group form-full">
+      <label class="form-label" for="smsComposeText">Message</label>
+      <textarea class="form-input" id="smsComposeText" rows="4" maxlength="640" style="font-family:inherit;"
+        oninput="smsComposeCount()"
+        placeholder="What you would say to them at the counter.">${escHtml(prefill.text || '')}</textarea>
+      <div id="smsComposeCount" aria-live="polite"
+        style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;"></div>
+    </div>
+
+    <div class="modal-actions">
+      <span class="modal-actions-group">
+        <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
+        <button class="btn btn-primary kc-ic kc-ic-upload" id="smsComposeSend" onclick="sendSmsCompose()">Send</button>
+      </span>
+    </div>
+  `);
+  smsComposeCount();
+  setTimeout(() => document.getElementById(
+    smsComposeMode === 'number' ? 'smsToNumber' : 'smsToCustomer_search')?.focus(), 30);
+}
+
+// Named with the 2 because smsComposeMode is the variable. Switching hides the
+// other box rather than clearing it: somebody who picked the wrong tab, typed a
+// number and switched back should find it still there when they switch again.
+function smsComposeMode2(mode) {
+  smsComposeMode = mode;
+  document.getElementById('smsToCustomerBox')?.toggleAttribute('hidden', mode !== 'customer');
+  document.getElementById('smsToNumberBox')?.toggleAttribute('hidden', mode !== 'number');
+  for (const m of ['customer', 'number']) {
+    const b = document.getElementById(`smsToTab_${m}`);
+    if (!b) continue;
+    b.setAttribute('aria-selected', String(mode === m));
+    b.classList.toggle('is-on', mode === m);   // is-on is what paints it, not aria
+  }
+  document.getElementById(mode === 'number' ? 'smsToNumber' : 'smsToCustomer_search')?.focus();
+  smsComposeCount();
+}
+
+// What it will cost and whether it can go, both live. A text is billed by the
+// segment (160 GSM-7 characters, 153 once it splits), and a message that
+// cannot be sent should say so before the press, not after it.
+function smsComposeCount() {
+  const out = document.getElementById('smsComposeCount');
+  const btn = document.getElementById('smsComposeSend');
+  if (!out) return;
+  const n = (document.getElementById('smsComposeText')?.value || '').trim().length;
+  const parts = n === 0 ? 0 : n <= 160 ? 1 : Math.ceil(n / 153);
+  const bits = [`${n} character${n === 1 ? '' : 's'}`];
+  if (parts) bits.push(`${parts} text${parts === 1 ? '' : 's'}`);
+
+  let blocked = '';
+  if (smsComposeMode === 'number') {
+    const raw = (document.getElementById('smsToNumber')?.value || '').trim();
+    if (!raw) blocked = 'a number is needed';
+    else {
+      const bad = phoneProblem(raw);
+      if (bad) blocked = bad.message;
+      else if (!/^\+447\d{9}$/.test(normalisePhoneE164(raw))) blocked = 'that is not a UK mobile';
+    }
+  } else if (!document.getElementById('smsToCustomer')?.value) {
+    blocked = 'nobody is picked yet';
+  }
+  if (!n) blocked = blocked || 'nothing typed yet';
+
+  out.textContent = blocked ? `${bits.join(' · ')} · ${blocked}` : bits.join(' · ');
+  if (btn) btn.disabled = !!blocked;
+}
+
+async function sendSmsCompose() {
+  const text = (document.getElementById('smsComposeText')?.value || '').trim();
+  if (!text) { toast('Nothing to send.', 'warning'); return; }
+
+  // Who it goes to, named out loud in the confirm. The mistake worth catching
+  // here is the right message to the wrong person, and only a name or a number
+  // catches it — "are you sure?" catches nothing.
+  let body, to;
+  if (smsComposeMode === 'number') {
+    const raw = (document.getElementById('smsToNumber')?.value || '').trim();
+    const bad = phoneProblem(raw);
+    if (bad) { toast(bad.message, 'error'); return; }
+    const e164 = normalisePhoneE164(raw);
+    if (!/^\+447\d{9}$/.test(e164)) {
+      toast('Texts typed in here go to UK mobiles only — 07… or +447…', 'error'); return;
+    }
+    to = { toNumber: e164 };
+    body = `<p>To <strong>${escHtml(fmtPhone(e164))}</strong> — not a customer on file.</p>`;
+  } else {
+    const cid = document.getElementById('smsToCustomer')?.value || '';
+    const c = customers.find(x => String(x.id) === String(cid));
+    if (!c) { toast('Pick who it goes to.', 'warning'); return; }
+    if (!c.phone) { toast(`No mobile number on file for ${c.firstName} ${c.lastName}.`, 'error'); return; }
+    to = { customerId: cid };
+    body = `<p>To <strong>${escName(c.firstName)} ${escName(c.lastName)}</strong> on <strong>${escHtml(fmtPhone(c.phone))}</strong>.</p>`;
+  }
+
+  const ok = await kcConfirm({
+    title: 'Send this text?', icon: 'chat',
+    body: body + `<p style="color:var(--muted);font-size:var(--fs-small);white-space:pre-wrap;">${escHtml(text.slice(0, 320))}</p>`,
+    okLabel: 'Send it', okIcon: 'chat',
+  });
+  if (!ok) { toast('Not sent.', 'warning', 'blocked'); return; }
+
+  const btn = document.getElementById('smsComposeSend');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+  const j = await kcFetch('/api/sms', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...to, text }),
+  }).then(r => r.json()).catch(() => ({ success: false, error: 'Could not reach the server — nothing was sent.' }));
+
+  if (!j.success) {
+    toast(j.error || 'Could not send that.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Send'; }
+    return;
+  }
+  closeDynamicModal();
+  // The same three outcomes the reply path reports, and for the same reason:
+  // "Sent" over a message the gate held is the lie that makes an operator stop
+  // believing the app.
+  if (j.held) toast('Written to the log — SMS is on HOLD, so nothing was sent.', 'info');
+  else if (j.redirected) toast(`Test mode — it went to ${j.sentTo}, not to them.`, 'info');
+  else toast(`Text sent to ${j.sentTo || 'them'}.`, 'success', 'chat');
+  if (to.customerId) recordComm(to.customerId, { type: 'message', text: `Texted: ${text.slice(0, 120)}` });
+  renderMessagesTab();
 }
 
 // ── Live text pulse ──────────────────────────────────────────────────────

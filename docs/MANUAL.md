@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **30 of 30 screens written out in full.**
-*As of 28 Aug 2026 · m-5d968727 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 28 Aug 2026 · m-658184ed — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -645,10 +645,12 @@ The texts customers have sent the shop, as conversations — and the place they 
 - **Make it a task** — For a text that needs something DOING before it can be answered — a phone to come back from repair, a price to check. It joins the task list named after the reply it needs, with their words underneath.
 - **Texts arrive by themselves** — The app checks once a minute, wherever you are in it. A text landing pops up for a few seconds naming who sent it, the red number goes up, and if you are looking at this screen the list refreshes underneath. It never refreshes while a reply is open — a half-typed answer is not worth losing for a fresher list. Nothing pops up for texts that were already waiting when you signed in: those are the list's job, not an interruption's.
 - **Check now** — Asks straight away rather than waiting for the next minute. Worth pressing if somebody is standing there saying they have just texted.
+- **New message** — Starts a text rather than answering one — the phone is ready, the passport is back, the part has come in. Two ways to say who: a customer, whose number is read off their record, or a UK mobile typed in for somebody whose record does not exist yet. It shows what the message will cost before it goes, since a text is billed by the part, and it names who it is going to before sending. Anything other than a UK mobile is refused here: text those from the customer's own card.
 
 **Boxes that open on top of it**
 
 - **sms-reply** — One conversation, and the box to answer it.
+- **sms-compose** — Starting a text. Pick a customer or type a UK mobile, write the message, and it says the character and text count as you go. The message lands in that person's conversation on this screen, so a text sent from the counter is on the record the same as one that came in.
 
 **Rules that bite here**
 
