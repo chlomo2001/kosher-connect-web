@@ -22545,7 +22545,8 @@ function openThread(key) {
     : !t.replyTo
       ? `<div class="kc-note">Nothing to reply to — every text here went out from the shop. Text them from their
            customer card, where the number is read off the record.</div>`
-      : `<label class="form-label" for="smsReplyText">Your reply</label>
+      : `${smsSuggestChipsHtml(t)}
+         <label class="form-label" for="smsReplyText">Your reply</label>
          <textarea class="form-input" id="smsReplyText" rows="3" maxlength="640"
            style="font-family:inherit;" oninput="smsReplyCount()"
            placeholder="Type the answer you would give at the counter."></textarea>
@@ -22574,6 +22575,223 @@ function openThread(key) {
     document.getElementById('smsReplyText')?.focus();
   }, 30);
 }
+
+// The suggestions, from this thread's own customer.
+//
+// The lookup is by NUMBER, because that is all a thread has: /api/message-log
+// returns a name for a matched customer but no id, and the number is the key
+// the thread is grouped on anyway. A text from somebody not on file finds
+// nothing and still gets the one suggestion that always applies.
+function smsSuggestContext(t) {
+  const key = msgKey(t.number);
+  const hits = customers.filter(x => msgKey(x.phone) === key || msgKey(x.altPhone) === key);
+  if (!hits.length) return { shopPhone: '0161 531 1386' };
+  const c = hits[0];
+  // One number, two records — a duplicate, or a family sharing a handset. The
+  // facts still hold for whoever answers ("a phone on this number is overdue"),
+  // but the NAME does not: greeting the wrong brother by name is worse than not
+  // using a name at all. So the facts are pooled and the greeting is dropped.
+  const ids = new Set(hits.map(x => x.id));
+  const solo = hits.length === 1;
+
+  const mine = rentals.filter(r => ids.has(r.customerId));
+  const of = (r) => ({ number: r.phoneNumber || '', toDate: r.toDate });
+  const today = localISO();
+  const soon = localISO(new Date(Date.now() + 14 * 86400000));
+  // The rate to quote is the one they are actually renting on. No live hire
+  // means no rate is offered rather than a guessed one — a wrong price in
+  // writing is worse than no price.
+  const priced = mine.find(r => KC_STAGE.OUT_WITH_CUSTOMER.includes(getComputedStatus(r)))
+    || mine.find(r => getComputedStatus(r) === 'reserved');
+  const rate = priced ? rateFor(priced.country, priced.ukPlan,
+    priced.equipmentGiven ? priced.equipmentGiven.sim !== false : true) : null;
+
+  return {
+    firstName: solo ? (c.firstName || '') : '',
+    overdue: mine.filter(r => ['overdue', 'ended'].includes(getComputedStatus(r))).map(of),
+    live: mine.filter(r => getComputedStatus(r) === 'active').map(of),
+    owed: hits.reduce((n, x) => n + customerOwed(x), 0),
+    readyRepair: (repairs || []).find(r => ids.has(r.customerId) && r.status === 'Ready') || null,
+    trip: hits.flatMap(customerUpcomingBookings)
+      .find(b => b.travelDate && b.travelDate >= today && b.travelDate <= soon) || null,
+    rate: rate ? { perDay: rate.ratePerDay, cap: rate.cap, capDays: rate.capPeriodDays || 30 } : null,
+    shopPhone: '0161 531 1386',
+  };
+}
+
+let smsSuggestions = [];
+
+// Chips, not a pre-filled box. A draft already sitting in the reply field is a
+// draft somebody sends without reading it, and these are guesses — the shop's
+// own words have to be a deliberate press. Pressing one twice does nothing new,
+// and typing over it is the normal case.
+function smsSuggestChipsHtml(t) {
+  const said = t.replyTo ? String(t.replyTo.subject || '') : '';
+  smsSuggestions = KC_SUGGEST.suggestReplies(said, smsSuggestContext(t),
+    { date: fmtDate, gbp: fmtGbp, phone: fmtPhone });
+  if (!smsSuggestions.length) return '';
+  return `
+    <div class="sms-suggest" role="group" aria-label="Suggested replies">
+      <span class="sms-suggest-lead">Suggested</span>
+      ${smsSuggestions.map((s, i) => `<button type="button" class="sms-suggest-chip"
+        onclick="smsUseSuggestion(${i})" title="${escHtml(s.body)}">${escHtml(s.label)}</button>`).join('')}
+    </div>`;
+}
+
+// Put it in the box and leave the cursor at the end, so the next keystroke
+// carries on the sentence rather than replacing it.
+function smsUseSuggestion(i) {
+  const s = smsSuggestions[i];
+  const box = document.getElementById('smsReplyText');
+  if (!s || !box) return;
+  box.value = s.body;
+  box.focus();
+  box.setSelectionRange(box.value.length, box.value.length);
+  smsReplyCount();
+}
+
+// ── KC_SUGGEST mirror start ──
+// Mirrors lib/smsSuggest.mjs. Held to it by test/smsSuggest.test.mjs.
+const KC_SUGGEST = (() => {
+  /** The words, lowercased and stripped of punctuation that gets in the way. */
+  function words(text) {
+    return String(text || '').toLowerCase().replace(/[^a-z0-9£+\s]/g, ' ')
+  }
+
+  /** Did they ask about one of the things the shop is asked about? */
+  function readIntent(text) {
+    const w = words(text)
+    if (!w.trim()) return 'none'
+    // Order matters: a text can hold two of these, and the more specific one is
+    // the one worth answering. "how much to extend" is an extension, not a price
+    // list.
+    if (/\b(extend|longer|another week|another day|keep it|more days)\b/.test(w)) return 'extend'
+    if (/\b(availab|in stock|got any|do you have|any left|spare)\w*/.test(w)) return 'availability'
+    if (/\b(how much|price|prices|cost|costs|rate|rates|charge)\b/.test(w)) return 'price'
+    if (/\b(open|opening|closed|closing|what time|hours)\b/.test(w)) return 'hours'
+    if (/\b(paid|payment|pay|transfer|bank|card)\b/.test(w)) return 'payment'
+    if (/\b(ready|collect|pick ?up|repaired|fixed)\b/.test(w)) return 'collect'
+    // A bare acknowledgement. This is the commonest inbound text there is, and
+    // the right reply is short and ends the exchange.
+    if (/^\s*(ok|okay|k|kk|thanks|thank you|thx|ta|great|perfect|lovely|got it|sure|yes|no)\s*$/.test(w)) return 'ack'
+    return 'other'
+  }
+
+  /**
+   * Suggested replies, best first.
+   *
+   * `ctx` is the customer's situation, already worked out by the caller — this
+   * module does no lookups and holds no prices. Each field is optional; a
+   * suggestion whose facts are missing is simply not offered.
+   *
+   *   firstName   what to call them, or nothing
+   *   overdue     [{ number, toDate }]        hires past their date, phone not back
+   *   live        [{ number, toDate }]        hires running now
+   *   owed        £ still open on the account
+   *   readyRepair { device }                  something on the shelf to collect
+   *   trip        { route, travelDate }       a flight coming up
+   *   rate        { perDay, cap, capDays }    the standard rate, from Settings
+   *   shopPhone   the number to ring
+   *
+   * `fmt` injects the caller's date/money formatters — this module has no locale,
+   * the same arrangement as lib/rentalReceipt.mjs.
+   *
+   * Returns [{ id, label, body }] — `label` is what the button says, `body` is
+   * what goes in the box. At most `max` of them, because a row of eight chips is
+   * a decision rather than a shortcut.
+   */
+  function suggestReplies(text, ctx = {}, fmt = {}, { max = 3 } = {}) {
+    const date = fmt.date || ((v) => String(v || ''))
+    const gbp = fmt.gbp || ((v) => `£${(Number(v) || 0).toFixed(2)}`)
+    const phone = fmt.phone || ((v) => String(v || ''))
+
+    const who = String(ctx.firstName || '').trim().split(/\s+/)[0]
+    const hi = who ? `Hi ${who}, ` : ''
+    const intent = readIntent(text)
+    const out = []
+    const add = (id, label, body) => { if (body && !out.some((o) => o.id === id)) out.push({ id, label, body }) }
+
+    const overdue = (ctx.overdue || [])[0] || null
+    const live = (ctx.live || [])[0] || null
+    const owed = Number(ctx.owed) || 0
+
+    // ── What they asked, when they asked something ────────────────────────
+    if (intent === 'extend' && (live || overdue)) {
+      const r = live || overdue
+      add('extend', 'Extend the hire',
+        `${hi}no problem - we can keep it going. It is booked to ${date(r.toDate)} at the moment; tell us the new date and we will put it on and text you what it comes to.`)
+    }
+    if (intent === 'availability') {
+      add('availability', 'Check the shelf',
+        `${hi}let me check what is free and come straight back to you.`)
+    }
+    if (intent === 'price' && ctx.rate && Number(ctx.rate.perDay) > 0) {
+      const cap = Number(ctx.rate.cap) > 0
+        ? `, and it caps at ${gbp(ctx.rate.cap)} per ${Math.round(Number(ctx.rate.capDays) || 30)} days`
+        : ''
+      add('price', 'Quote the rate',
+        `${hi}the standard rate is ${gbp(ctx.rate.perDay)} a day${cap}. Shabbos and Yom Tov are not charged.`)
+    }
+    if (intent === 'hours' && ctx.shopPhone) {
+      add('hours', 'When we are open',
+        `${hi}give us a ring on ${ctx.shopPhone} and we will tell you when suits - we are on Bury New Road, Salford.`)
+    }
+    // "is my phone ready?" is a question whatever the shelf says. With the repair
+    // actually done it answers itself below; without it, the honest reply is that
+    // somebody will look — not silence, which is what an unanswered intent is.
+    if (intent === 'collect' && !ctx.readyRepair) {
+      add('checking', 'Say we will check',
+        `${hi}let me check where it is up to and come straight back to you.`)
+    }
+    if (intent === 'payment' && owed > 0) {
+      add('paid', 'About the payment',
+        `${hi}thank you. There is ${gbp(owed)} showing as open on the account - if you have already sent it, tell us how and when and we will find it.`)
+    }
+    if (intent === 'payment' && !(owed > 0)) {
+      add('settled', 'Nothing outstanding',
+        `${hi}thank you - there is nothing outstanding on the account at the moment.`)
+    }
+    if (intent === 'ack') {
+      add('ack', 'Close it off',
+        `${hi}any time. Give us a shout if you need anything else.`)
+    }
+
+    // ── What is actually open on their record ─────────────────────────────
+    // Offered whatever they wrote, because "?" and "Hello" are what most of these
+    // texts are, and the answer is on the record rather than in the message.
+    if (overdue) {
+      add('overdue', 'Chase the phone',
+        `${hi}${overdue.number ? `the phone ${phone(overdue.number)}` : 'the rental phone'} was due back on ${date(overdue.toDate)}. Could you drop it in when you are passing? Nothing has been charged yet.`)
+    }
+    if (ctx.readyRepair) {
+      add('collect', 'It is ready',
+        `${hi}your ${ctx.readyRepair.device || 'phone'} is repaired and ready to collect whenever suits.`)
+    }
+    if (owed > 0) {
+      add('owed', 'The balance',
+        `${hi}there is ${gbp(owed)} open on the account. You can settle it in the shop, by transfer, or we can send you a link.`)
+    }
+    if (ctx.trip && ctx.trip.travelDate) {
+      add('trip', 'The trip',
+        `${hi}we have you flying${ctx.trip.route ? ` ${ctx.trip.route}` : ''} on ${date(ctx.trip.travelDate)}. Anything you need before then?`)
+    }
+    if (live && !overdue) {
+      add('live', 'The hire',
+        `${hi}your hire runs to ${date(live.toDate)}. Let us know if anything needs changing.`)
+    }
+
+    // The one that always works. Somebody texted and nothing on their record
+    // explains why, which is a real situation and not a failure — the honest
+    // reply is to ask.
+    add('ask', 'Ask what they need',
+      `${hi}thanks for the message - what can we help with?`)
+
+    return out.slice(0, Math.max(1, max))
+  }
+
+  return { readIntent, suggestReplies };
+})();
+// ── KC_SUGGEST mirror end ──
 
 // ── Compose ──────────────────────────────────────────────────────────────
 //

@@ -5662,3 +5662,27 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 @media (max-width: 700px) {
   .kc-toolbar-end { margin-inline-start: 0; width: 100%; }
 }
+
+/* ─── Suggested replies ───
+   The chips above the reply box on a conversation. Deliberately quieter than a
+   .btn: these are guesses the shop may not want, and a row of primary-looking
+   buttons over the box would read as the app's answer rather than a shortcut
+   to one. 44px tall all the same — this is a counter surface (2.5.5, AAA). */
+.sms-suggest {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  margin: 0 0 10px;
+}
+.sms-suggest-lead {
+  font-size: var(--fs-micro); font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.3px; color: var(--muted); margin-inline-end: 2px;
+}
+.sms-suggest-chip {
+  appearance: none; font: inherit; font-size: var(--fs-small); font-weight: 500;
+  background: var(--surface2); color: var(--ink-secondary);
+  border: 1px solid var(--border); border-radius: 999px;
+  min-height: 44px; padding: 0 14px; cursor: pointer;
+  display: inline-flex; align-items: center;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.sms-suggest-chip:hover { background: var(--primary-subdued); border-color: var(--accent); color: var(--accent); }
+.sms-suggest-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
