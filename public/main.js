@@ -3230,8 +3230,6 @@ function renderRentalsTab() {
              asked about, and the duplicate is the one that moves per screen. */''}
       <button class="btn btn-outline kc-ic kc-ic-gear" onclick="openManagePhonesModal()">Manage phones</button>
       <button class="btn btn-outline kc-ic kc-ic-signal" onclick="openPoolsModal()">Pools</button>
-      <button class="btn ${rentalView === 'calendar' ? 'btn-primary' : 'btn-outline'} kc-ic kc-ic-calendar"
-        onclick="rentalView = rentalView === 'calendar' ? 'list' : 'calendar'; renderRentalsTab();">Availability</button>
       <input class="search-box" type="text" id="rentalScan"
         inputmode="numeric" autocomplete="off"
         placeholder="📷 Scan IMEI — out or back"
@@ -3244,10 +3242,23 @@ function renderRentalsTab() {
         oninput="rentalSearchTerm=this.value; renderRentalRows(); renderPhoneRows(); renderAvailabilityCalendar();">
     </div>
 
-    <div id="availCalWrap">${rentalView === 'calendar' ? availabilityCalendarHtml() : ''}</div>
+    ${/* Three views, one switcher. Availability used to be a toggle BUTTON in
+           the row above, which is why the only way out of it was pressing the
+           same button again (owner, 27 Aug) — a toggle says "on/off", not
+           "you are here", so there was nothing on screen telling you what to
+           press to leave. As a third pill it is a place, and the way out of a
+           place is to go to another one. */''}
+    ${kcSubviews('rentals', [
+      { key: 'hires', label: 'Rentals', count: rentals.filter(r => !r.voided).length },
+      { key: 'stock', label: 'Phone inventory', count: phones.length },
+      { key: 'avail', label: 'Availability' },
+    ], 'renderRentalsTab')}
 
-    <div class="rentals-split" style="${rentalView === 'calendar' ? 'display:none;' : ''}">
-      <div class="rentals-split-col">
+    <div id="availCalWrap">${rentalSub() === 'avail' ? availabilityCalendarHtml() : ''}</div>
+
+    <div class="rentals-split" data-sub="${escHtml(rentalSub())}"
+      style="${rentalSub() === 'avail' ? 'display:none;' : ''}">
+      <div class="rentals-split-col" data-view="hires">
         <div class="section-header">
           <div class="section-title">Active &amp; Recent Rentals
             <span id="rentalCount" style="font-size:var(--fs-small);color:var(--muted);font-weight:400;margin-left:8px;"></span></div>
@@ -3291,7 +3302,7 @@ function renderRentalsTab() {
           </div>
         </div>
       </div>
-      <div class="rentals-split-col">
+      <div class="rentals-split-col" data-view="stock">
         <div class="section-header">
           <div class="section-title">Phone Inventory
             <span id="phoneCount" style="font-size:var(--fs-small);color:var(--muted);font-weight:400;margin-left:8px;"></span></div>
@@ -3345,7 +3356,14 @@ function renderRentalsTab() {
 // free. Click a free cell to reserve that phone from that day; click an
 // occupied one to manage the rental.
 
-let rentalView = 'list';
+// Kept as a derived read: several places still ask "are we on the calendar",
+// and the answer now comes from the sub-view rather than a second variable
+// that could disagree with it.
+function rentalSub() { return kcSub('rentals', 'hires'); }
+Object.defineProperty(window, 'rentalView', {
+  get() { return rentalSub() === 'avail' ? 'calendar' : 'list'; },
+  configurable: true,
+});
 let calMonth = null; // 'YYYY-MM'; defaults to the current month
 // Which calendar the grid counts in. The DATA is always Gregorian — every
 // rental, pool window and renewal is stored as an ISO date — so the Hebrew
@@ -7759,6 +7777,70 @@ function kcConfirmDone(ok) {
 const kcViewState = {};   // tabKey -> { filter, sort }
 const kcViewCfg = {};     // tabKey -> { filters, sorts, render }
 
+// ── Sub-views: a second level of navigation inside one tab ────────────────
+//
+// Owner, 27 Aug, with a tenancydesk screenshot: "i want to adopt sub views in
+// tabs like lets say in rentals, one subview should be the rentals and one the
+// inventory - and maybe we can do for other cases where applicable".
+//
+// It replaces the side-by-side split, which was the wrong answer to the right
+// complaint. Two tables cannot both be full-width on one screen — that was
+// measured twice, once at 1010px and once at 1226 — so the choice was always
+// "squeeze both" or "scroll past one". A switcher is the third option: each
+// list gets the whole width, and getting to the other one is a click rather
+// than a scroll.
+//
+// The chosen view is remembered per tab, because a shop working through
+// returns stays on the same list all morning.
+const kcSubState = {};
+const KC_SUB_KEY = 'kc_subview_';
+function kcSub(tab, fallback) {
+  if (kcSubState[tab]) return kcSubState[tab];
+  try {
+    const v = localStorage.getItem(KC_SUB_KEY + tab);
+    if (v) return (kcSubState[tab] = v);
+  } catch { /* private mode */ }
+  return (kcSubState[tab] = fallback);
+}
+function kcSubSet(tab, key, render) {
+  kcSubState[tab] = key;
+  try { localStorage.setItem(KC_SUB_KEY + tab, key); } catch { /* private mode */ }
+  if (typeof render === 'function') render();
+}
+/**
+ * The switcher itself. `views` is [{ key, label, count? }].
+ *
+ * A tablist rather than a row of buttons: this IS navigation between panels,
+ * and a screen reader that is told so can move through it with the arrow keys
+ * the same way it moves through the tabs above.
+ */
+function kcSubviews(tab, views, renderFn) {
+  const active = kcSub(tab, views[0].key);
+  const known = views.some(v => v.key === active) ? active : views[0].key;
+  return `<div class="kc-subviews" role="tablist" aria-label="Views in this tab">
+    ${views.map(v => `<button type="button" role="tab" class="kc-subview${v.key === known ? ' is-on' : ''}"
+      id="sub-${escHtml(tab)}-${escHtml(v.key)}"
+      aria-selected="${v.key === known}" tabindex="${v.key === known ? '0' : '-1'}"
+      onclick="kcSubSet('${escJs(tab)}','${escJs(v.key)}', ${escJs(renderFn)})"
+      onkeydown="kcSubviewKey(event, '${escJs(tab)}', ${escJs(renderFn)})"
+      >${escHtml(v.label)}${v.count != null ? `<span class="kc-subview-count">${escHtml(String(v.count))}</span>` : ''}</button>`).join('')}
+  </div>`;
+}
+// Left/Right move between views, Home/End to the ends — the tablist pattern.
+function kcSubviewKey(e, tab, renderName) {
+  const list = [...(e.currentTarget.closest('.kc-subviews')?.querySelectorAll('.kc-subview') || [])];
+  const i = list.indexOf(e.currentTarget);
+  let next = -1;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % list.length;
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + list.length) % list.length;
+  else if (e.key === 'Home') next = 0;
+  else if (e.key === 'End') next = list.length - 1;
+  if (next < 0) return;
+  e.preventDefault();
+  list[next].click();
+  setTimeout(() => document.getElementById(list[next].id)?.focus(), 0);
+}
+
 function kcView(key) {
   return kcViewState[key] || (kcViewState[key] = { filter: '', sort: '' });
 }
@@ -8008,10 +8090,18 @@ function renderCustomersTab() {
       </div>
     </div>
 
+    ${/* The toolbar gets its OWN ROW rather than riding on the heading's right
+           edge. In .section-header the title sits left and the controls right,
+           which works for two controls and falls apart at six: they wrapped, so
+           "Duplicates" dropped onto a second line under a heading with a screen
+           of dead space beside it (owner's screenshot, 28 Aug). Below, the
+           search and the two pickers read left-to-right as one thought and the
+           two ACTIONS are pushed to the far end, where an action belongs. */''}
     <div class="section-header">
       <div class="section-title">Customer List
         <span id="custCount" style="font-size:var(--fs-small);color:var(--muted);font-weight:400;margin-left:8px;"></span></div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    </div>
+    <div class="kc-toolbar">
         <span id="custInitialChip"></span>
         <span id="searchHere" class="kc-slot"></span>
         <select class="form-input kc-fs-sel" onchange="customerFilter=this.value; renderTableRows()">
@@ -8034,10 +8124,11 @@ function renderCustomersTab() {
           <option value="recent" ${customerSort==='recent'?'selected':''}>Recently added</option>
           <option value="services" ${customerSort==='services'?'selected':''}>Most services</option>
         </select>
-        <button class="btn btn-outline" id="btnExportCSV">Export CSV</button>
-        ${(!currentStaff || currentStaff.role === 'owner')
-          ? `<button class="btn btn-outline kc-ic kc-ic-users" onclick="openDupScanModal()" title="Review customers who look like the same person entered twice">Duplicates</button>` : ''}
-      </div>
+        <span class="kc-toolbar-end">
+          <button class="btn btn-outline" id="btnExportCSV">Export CSV</button>
+          ${(!currentStaff || currentStaff.role === 'owner')
+            ? `<button class="btn btn-outline kc-ic kc-ic-users" onclick="openDupScanModal()" title="Review customers who look like the same person entered twice">Duplicates</button>` : ''}
+        </span>
     </div>
 
     ${/* kc-stack-sm: below 560px this table stops being a table and becomes a
@@ -18278,14 +18369,27 @@ async function renderShopTab() {
     </div>
     <div class="dash-cols dash-cols-table">
       <div class="table-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:0 14px;">
-          <div class="section-divider" style="margin:12px 0 4px;">Inventory</div>
-          ${shopBar}
+        <div style="padding:0 14px;">
+          ${/* The count sits with the HEADING, the way "Customer List 569" and
+                "Phone Inventory 4" do. In the controls row it needed an auto
+                margin to hold the right edge, which pushed "Save view" onto a
+                line of its own — an orphaned button under a row of filters,
+                which is the shape of the complaint this whole change is
+                answering. */''}
+          <div class="section-divider" style="margin:12px 0 4px;">Inventory
+            <span id="shopFacetCount" style="font-size:var(--fs-small);color:var(--muted);font-weight:400;margin-left:8px;text-transform:none;letter-spacing:0;">${active.length} item${active.length === 1 ? '' : 's'}</span></div>
         </div>
         ${/* Narrow by several things at once, the way the Lightspeed products
              screen does. Each control repaints the table in place — the search
              box especially, which would otherwise refetch the whole tab and
-             lose the cursor on every keystroke. */''}
+             lose the cursor on every keystroke.
+             ONE ROW, not two. The shared filter/sort control used to ride on the
+             right of the "Inventory" heading while the search and the two facets
+             sat underneath — two sets of controls for one list, in two rows that
+             did not line up, and the owner's screenshot on 28 Aug has an arrow
+             pointing at each of them. They are one thought to whoever is using
+             them, so they are one row now: narrow it, then order it, then how
+             many are left. */''}
         <div class="kc-facets">
           <input class="form-input kc-facet-q" id="shopFacetQ" type="search" autocomplete="off"
             placeholder="Item, code or barcode…" value="${escHtml(shopFacets.q)}"
@@ -18300,7 +18404,7 @@ async function renderShopTab() {
             ${stockBrands(active).map(bnd =>
               `<option value="${escHtml(bnd)}"${shopFacets.brand === bnd ? ' selected' : ''}>${escHtml(bnd)}</option>`).join('')}
           </select>
-          <span class="kc-facet-count" id="shopFacetCount">${active.length} item${active.length === 1 ? '' : 's'}</span>
+          ${shopBar}
           ${shopFacetsActive() ? '<button class="btn btn-outline btn-sm" onclick="shopClearFacets()">✕ Clear</button>' : ''}
         </div>
         <table>

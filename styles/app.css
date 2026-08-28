@@ -3914,7 +3914,9 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 
 .cal-free { background: var(--surface); cursor: pointer; }
 
-.cal-free:hover { background: rgba(0, 96, 168, 0.12); }
+/* var(--kc-blue), not a hard-coded rgba of the OLD blue — this still carried
+   #0060a8, which the owner retired on 24 Aug. */
+.cal-free:hover { background: color-mix(in srgb, var(--kc-blue) 12%, var(--surface)); }
 
 /* Owner #5 — a free day still covered by the phone's ACTIVE pool window gets
    a teal wash, so pool time left after a rental's due-back date is visible
@@ -3941,6 +3943,19 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 .cal-booked  { background: #e8b93c; cursor: pointer; }
 
 .cal-overdue { background: var(--danger); cursor: pointer; }
+
+/* A filled cell is as clickable as an empty one and said nothing when you
+   pointed at it — owner, 27 Aug: "when hovering in dates availability on a blue
+   box, it becomes light. shouldnt it instead become darker?" Right on both
+   counts: it had no hover rule at all, and lightening a filled swatch reads as
+   "switching off" while darkening reads as "pressing". Mixed toward the ink
+   rather than to black, so each keeps its own hue and the legend still matches
+   what is on the grid. Scoped to
+   td, so the LEGEND swatches below the grid do not react — they carry the same
+   classes and are not clickable. */
+td.cal-active:hover  { background: color-mix(in srgb, var(--accent) 78%, var(--kc-navy)); }
+td.cal-booked:hover  { background: color-mix(in srgb, #e8b93c 78%, var(--kc-navy)); }
+td.cal-overdue:hover { background: color-mix(in srgb, var(--danger) 78%, var(--kc-navy)); }
 
 td.cal-shabbat, th.cal-shabbat { background: var(--bg-secondary); }
 
@@ -5546,88 +5561,79 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 }
 
 
-/* …UNLESS there is genuinely room. Owner, 27 Aug: "active rental and phone
-   inventory can be side by side instead? it makes me nervous" — stacked, the
-   inventory sits below the fold, so while you are looking at a hire you cannot
-   see what is free.
-   The measurement above still holds and is why this is a breakpoint rather
-   than a preference: the rentals table needs 999px of content and half of a
-   1280px screen is 484px. What the old escape hatch got wrong was the trigger
-   (1150px, where it cannot possibly fit) and the split (50/50, which starves
-   the wide table to feed the narrow one).
-   So: rentals takes a fixed 1010px — enough that it NEVER clips, which was the
-   whole complaint — and inventory takes what is left. Below 1700px nothing
-   changes and the page stacks exactly as the air pass judged it.
-   Measured with the cap lifted: 1920px gives 1608px of shell (inventory scrolls
-   ~90px, which it may — it is the secondary list and its wrap scrolls), 2560px
-   gives 2248px and both sit at natural width. */
-@media (min-width: 1900px) {
-  /* The same exemption the till has: a screen that needs width gets it. The
-     1220px air-pass column is right for reading and wrong for two tables. */
-  /* .rentals-split IS the direct child of .content, so `*:has(.rentals-split)`
-     matches nothing — :has() needs a DESCENDANT. Both forms are listed so this
-     keeps working if the tab ever grows a wrapper. */
-  .content > .rentals-split,
-  .content > *:has(.rentals-split) { max-width: 2280px; }
+/* RETIRED 28 Aug — the side-by-side split, and why it is not coming back.
+   It was the wrong answer to a right complaint. The rentals table needs ~1226px
+   of content and the inventory ~671, so on any real screen the choice was
+   squeeze both or scroll past one; the last version got them to fit only by
+   dropping four of the inventory's six columns. Sub-views are the third option
+   — each list gets the whole width and the other one is a click away. The
+   markup keeps .rentals-split so nothing had to be re-nested; it is now a
+   one-column grid that shows whichever panel the switcher chose. */
 
-  /* Rentals FLEXES and inventory is bounded, not the other way round. The
-     first cut pinned rentals at 1010px because that is what the seed data
-     measures — and the owner's real data is wider (longer names, a Hebrew date
-     under each Gregorian one), so ACTIONS clipped on his screen at 1920 while
-     the inventory sat on space it did not need. The wide table now takes
-     everything left over and grows with the monitor. */
-  .rentals-split { grid-template-columns: minmax(0, 1fr) minmax(300px, 384px); }
+.rentals-split[data-sub="hires"] .rentals-split-col[data-view="stock"],
+.rentals-split[data-sub="stock"] .rentals-split-col[data-view="hires"] { display: none; }
 
-  /* And the inventory goes compact beside it. Measured at natural width the
-     six columns are Number 157, Country 94, Pool 66, Expires 83, Status 106,
-     Actions 165 = 671px — and at 1920 there are only ~1608px of shell against
-     a rentals table that wants 1226 of them. So four columns' worth has to go
-     and the choice is which question this column is answering in this
-     position: "what is free", not "when does its pool run out" and not "let me
-     edit it from here".
-     Pool, Expires and Actions drop (357px left, which fits). Nothing is lost:
-     the ROW ITSELF opens Edit on click, delete lives in Manage phones, and the
-     full six-column table is right there in the stacked view below 1900px. */
-  .rentals-split-col .kc-inv-detail { display: none; }
+/* Full width again, so the compaction that paid for the split is off: pool,
+   expiry and the row actions come back, and the country says its name. */
+.rentals-split-col .kc-inv-detail { display: revert; }
+.rentals-split-col .kc-inv-shrink { position: static; width: auto; height: auto;
+  margin: 0; overflow: visible; clip: auto; clip-path: none; }
 
-  /* Edit and Delete go; "It's back" stays. The row already opens Edit on click
-     and Delete belongs in Manage phones, but recording a return has no other
-     one-tap route from here. */
-  .rentals-split-col:last-child .kc-inv-editdel { display: none; }
+/* ─── SUB-VIEWS: a second level of navigation inside a tab ─── */
+/*
+   Reads as a level BELOW the tab bar and above the page, which is the whole
+   job — the owner's reference (tenancydesk) gets that from a pill on a tinted
+   ground rather than from an underline, because an underline at this level
+   competes with the tab bar's own. So: quiet by default, the chosen one filled.
+   The rule underneath ties the group to the content it switches.
+*/
+.kc-subviews {
+  display: flex; gap: 4px; align-items: center; flex-wrap: wrap;
+  margin: 0 0 14px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.kc-subview {
+  appearance: none; border: 1px solid transparent; background: none;
+  font: inherit; font-size: var(--fs-body); font-weight: 600;
+  color: var(--muted); cursor: pointer;
+  /* 44px tall — this is primary navigation on a counter tablet, so it is held
+     to 2.5.5 (AAA) like the other counter surfaces, not to 2.5.8's 24. */
+  min-height: 44px; padding: 0 16px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 8px;
+  transition: background-color .15s ease, color .15s ease;
+}
+.kc-subview:hover { background: var(--bg-secondary); color: var(--text); }
+.kc-subview.is-on {
+  background: var(--primary-subdued); color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.kc-subview-count {
+  font-size: var(--fs-micro); font-weight: 600;
+  color: var(--muted); background: var(--bg-secondary);
+  border-radius: 999px; padding: 1px 7px; min-width: 20px; text-align: center;
+}
+.kc-subview.is-on .kc-subview-count { background: var(--surface); color: var(--accent); }
 
-  /* …and the column itself only exists when a phone is actually out without a
-     rental. renderPhoneRows sets .has-back; without it this is 65px of empty
-     column taken off the hire list on every screen. */
-  .rentals-split-col:last-child table:not(.has-back) .kc-inv-actions { display: none; }
 
-  /* A narrow secondary column earns a slightly tighter measure than a
-     full-width table. Four columns, both sides, is where the last dozen pixels
-     come from — and 8px still clears the 4px the browser would give it. */
-  .rentals-split-col:last-child table th,
-  .rentals-split-col:last-child table td { padding-inline: 8px; }
-
-  /* What pays for it: the country NAME becomes sr-only so the flag stands
-     alone. Same width back, and nothing is lost to a screen reader — the two
-     labels here are "It's back" and the country, and both stay readable to
-     assistive tech while taking no space. */
-  .rentals-split-col:last-child .kc-inv-shrink {
-    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-    overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%);
-    white-space: nowrap; border: 0;
-  }
-
-  /* And the floor has to come off with them. `.table-wrap table` carries
-     min-width: 560px "to stop real columns crushing together" — sound for six
-     columns, wrong for three, and it was pinning the compact table at 560 in a
-     370px column so it clipped exactly as before. Three columns in 370px is
-     ~123px each, which is not crushed; the empty-state rule and the small-screen
-     rule already drop this floor for the same reason. */
-  .rentals-split-col:last-child .table-wrap table { min-width: 0; width: 100%; }
-  /* The rentals column carries a filter toolbar; with the two side by side
-     again the inventory needs its spacer back or the tables start apart.
-     70px, not the .rentals-filter-row min-height of 38: the toolbar WRAPS to
-     two rows here — three dropdowns, then "Save view" under them — and
-     measured at 1920 it is 70px tall, which left a 32px step between the two
-     tables. If the toolbar ever gains or loses a row this number is the thing
-     that will look wrong first. */
-  .rentals-inv-spacer { display: block; min-height: 70px; }
+/* ─── ONE TOOLBAR ROW, under the heading ─── */
+/*
+   The house arrangement for a list's controls, after two screens got it wrong
+   in the same way (Customers, Shop — owner, 28 Aug). Riding the controls on
+   the right edge of .section-header works for two of them and breaks at six:
+   they wrap, one drops to a second line, and the heading is left with a screen
+   of empty space beside it.
+   So: the heading owns its row, the controls own theirs. Search and pickers
+   read left-to-right as one thought; anything in .kc-toolbar-end is pushed to
+   the far edge, because an action is not a filter and should not sit in the
+   middle of them.
+*/
+.kc-toolbar {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  margin: 0 0 14px;
+}
+.kc-toolbar-end { margin-inline-start: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+/* On a phone there is no "far edge" worth pushing to — the row is already one
+   control per line, and auto margins there just open a gap. */
+@media (max-width: 700px) {
+  .kc-toolbar-end { margin-inline-start: 0; width: 100%; }
+}
