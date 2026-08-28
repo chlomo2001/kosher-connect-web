@@ -4,7 +4,6 @@ import Head from 'next/head'
 import ThemeToggle from '../components/ThemeToggle'
 import SkipLink from '../components/SkipLink'
 import { FlipPhoneIcon } from '../components/kcIcons'
-import { SCENES } from '../components/kcScenes'
 
 // The public phone guide — every handset the shop stands behind, with price,
 // the spec facts customers actually ask about (dual SIM? Hebrew text?
@@ -29,44 +28,6 @@ const T = {
     lead1: 'Every handset below is one we sell, set up and stand behind. The specs answer what people actually ask in the shop',
     leadVerdicts: '; the pros and cons are our honest take',
     lead2: ' — and if the right phone for you is the cheapest one on the list, that’s the one we’ll recommend.',
-    // ── Why a kosher phone (owner ask, 27 Aug) ──────────────────────────
-    // Upstream of the guide below: this page answered "which one" to somebody
-    // who had already decided, and said nothing to the person still deciding.
-    //
-    // Every row of the table is a fact about the handset that a customer can
-    // check in the shop in ten seconds, which is the standard's rule — proof
-    // is cheaper than persuasion and it survives being repeated by somebody
-    // else. No superlatives, no urgency, and nothing here argues with anybody
-    // about how they should live: it describes an object.
-    whyStrap: 'Before you choose a handset',
-    whyTitle: 'Why a kosher phone',
-    whyLead: 'A kosher phone is a handset with no internet and no app store, and on most models no camera. It rings, it texts, and that is the whole of it. Everything below is what that means day to day — and none of it is something you have to take on trust. Come in and press the buttons.',
-    cmpCaption: 'What actually differs',
-    cmpCols: ['', 'A kosher phone', 'An ordinary smartphone'],
-    cmpRows: [
-      ['Calls and texts', 'Yes', 'Yes'],
-      ['Internet browser', 'None on the handset', 'Yes'],
-      ['App store', 'None', 'Yes'],
-      ['Camera', 'None on most models', 'Yes'],
-      ['Bank one-time codes', 'On some models — bank texts only', 'Yes'],
-      ['Hebrew on screen', 'On some models', 'Yes'],
-      ['A filter to set up and keep working', 'Not needed', 'Yes, and it needs maintaining'],
-      ['Battery between charges', 'Days', 'About a day'],
-      ['If it is lost', 'A phone number', 'A phone number, and everything on it'],
-    ],
-    cmpNote: 'Models differ, and the guide below says which is which for each handset. Not sure? Ring us and tell us who the phone is for.',
-    livesTitle: 'Where it fits',
-    lives: [
-      { icon: 'shtender', title: 'In the beis medrash',
-        body: 'It sits in a pocket and does nothing until somebody rings. Home can reach him; the phone cannot reach him with anything else.' },
-      { icon: 'licht', title: 'Erev Shabbos',
-        body: 'Nothing on it to put away — no downloads finishing, no notifications waiting. It goes in the drawer the way a phone used to.' },
-      { icon: 'case', title: 'Away from home',
-        body: 'Abroad, a phone has one job: work when you land. A kosher handset does that, and the line to go with it is what we rent.' },
-      { icon: 'satchel', title: 'A first phone',
-        body: 'A child can ring home and be reached. There is nothing else on it, so there is nothing for a parent to police.' },
-    ],
-    livesFoot: 'The handsets are below, with the price and the specs for each.',
     loading: 'Loading the guide…',
     empty1: 'The guide is being written — call us on', empty2: 'and we’ll talk you through the options.',
     specs: { dualSim: 'Dual SIM', yiddishText: 'Hebrew text', touchScreen: 'Touch-screen', texting: 'Texting' },
@@ -91,38 +52,6 @@ const T = {
     lead1: 'המכשירים שמופיעים כאן הם אלו שאנחנו מוכרים, מגדירים ולוקחים עליהם אחריות. המפרט עונה על השאלות שלקוחות שואלים אותנו בחנות',
     leadVerdicts: '; היתרונות והחסרונות משקפים את דעתנו הכנה',
     lead2: ' — ואם הטלפון שהכי מתאים לכם הוא הזול ביותר ברשימה, זה בדיוק המכשיר שעליו נמליץ.',
-    // The Hebrew of this section is a first pass and is worth a native eye
-    // before it is treated as settled — the rest of the page's Hebrew came
-    // back revised from the owner's own document (task #43).
-    whyStrap: 'לפני שבוחרים מכשיר',
-    whyTitle: 'למה טלפון כשר',
-    whyLead: 'טלפון כשר הוא מכשיר בלי אינטרנט ובלי חנות אפליקציות, וברוב הדגמים גם בלי מצלמה. הוא מצלצל, הוא שולח הודעות, וזהו. כל מה שכתוב למטה הוא מה שזה אומר ביום-יום — ואין כאן שום דבר שצריך להאמין לנו עליו. בואו לחנות ותלחצו על הכפתורים.',
-    cmpCaption: 'מה באמת שונה',
-    cmpCols: ['', 'טלפון כשר', 'סמארטפון רגיל'],
-    cmpRows: [
-      ['שיחות והודעות', 'כן', 'כן'],
-      ['דפדפן אינטרנט', 'אין במכשיר', 'יש'],
-      ['חנות אפליקציות', 'אין', 'יש'],
-      ['מצלמה', 'אין ברוב הדגמים', 'יש'],
-      ['קודים חד-פעמיים מהבנק', 'בחלק מהדגמים — הודעות מהבנק בלבד', 'יש'],
-      ['עברית על המסך', 'בחלק מהדגמים', 'יש'],
-      ['סינון שצריך להתקין ולתחזק', 'לא נדרש', 'נדרש, וצריך לתחזק אותו'],
-      ['סוללה בין טעינות', 'כמה ימים', 'בערך יום'],
-      ['אם המכשיר אובד', 'מספר טלפון', 'מספר טלפון, וכל מה שהיה עליו'],
-    ],
-    cmpNote: 'הדגמים שונים זה מזה, והמדריך שלמטה מפרט לכל מכשיר מה יש בו. מתלבטים? התקשרו וספרו לנו למי הטלפון מיועד.',
-    livesTitle: 'איפה זה משתלב',
-    lives: [
-      { icon: 'shtender', title: 'בבית המדרש',
-        body: 'המכשיר יושב בכיס ולא עושה כלום עד שמישהו מצלצל. מהבית אפשר להשיג אותו; שום דבר אחר לא מגיע אליו.' },
-      { icon: 'licht', title: 'ערב שבת',
-        body: 'אין מה לסדר לפני ההדלקה — אין הורדות שמסתיימות ואין התראות שממתינות. המכשיר נכנס למגירה כמו שטלפון נהג פעם.' },
-      { icon: 'case', title: 'הרחק מהבית',
-        body: 'בחו״ל לטלפון יש תפקיד אחד: לעבוד ברגע שנוחתים. מכשיר כשר עושה את זה, והקו שמלווה אותו הוא מה שאנחנו משכירים.' },
-      { icon: 'satchel', title: 'טלפון ראשון',
-        body: 'ילד יכול לצלצל הביתה ואפשר להשיג אותו. אין על המכשיר שום דבר אחר, ולכן אין להורה על מה לפקח.' },
-    ],
-    livesFoot: 'המכשירים עצמם מופיעים למטה, עם המחיר והמפרט של כל אחד.',
     loading: 'המדריך נטען…',
     empty1: 'המדריך נמצא כעת בכתיבה — התקשרו אלינו:', empty2: 'ונעבור איתכם על האפשרויות.',
     specs: { dualSim: 'סים כפול (Dual SIM)', yiddishText: 'תמיכה בעברית', touchScreen: 'מסך מגע', texting: 'הודעות SMS' },
@@ -234,62 +163,6 @@ export default function PhoneGuide() {
                 {t.lead1}{hasVerdicts && t.leadVerdicts}{t.lead2}
               </p>
             )}
-          </section>
-
-          {/* The case for the thing, before the choice between versions of it.
-              A table and four cards: the table is the checkable difference, the
-              cards are where it lands in a day. Both sit ABOVE the models,
-              because somebody who already knows they want one scrolls past in
-              a second and somebody who does not would otherwise have been shown
-              a price list as an answer to a question they had not asked. */}
-          <section className="w-section pg-why" aria-labelledby="pg-why-h">
-            <div className="w-strap">{t.whyStrap}</div>
-            <h2 className="w-page-title w-show" id="pg-why-h">{t.whyTitle}</h2>
-            <p className="w-lead">{t.whyLead}</p>
-
-            {/* A real <table> with a real <caption>: this IS tabular data, and
-                a screen reader announcing "column 2, A kosher phone" is the
-                whole comparison working. On a narrow screen it scrolls inside
-                its own box rather than pushing the page sideways. */}
-            <div className="pg-cmp-scroll">
-              <table className="pg-cmp">
-                <caption>{t.cmpCaption}</caption>
-                <thead>
-                  <tr>
-                    {t.cmpCols.map((c, i) => (
-                      <th key={i} scope="col" className={i === 0 ? 'pg-cmp-what' : ''}>
-                        {c || <span className="w-sr">{t.cmpCaption}</span>}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {t.cmpRows.map((row, i) => (
-                    <tr key={i}>
-                      <th scope="row">{row[0]}</th>
-                      <td className="pg-cmp-ours">{row[1]}</td>
-                      <td>{row[2]}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="pg-cmp-note">{t.cmpNote}</p>
-
-            <h3 className="pg-lives-h">{t.livesTitle}</h3>
-            <div className="pg-lives">
-              {t.lives.map((l, i) => {
-                const Scene = SCENES[l.icon]
-                return (
-                  <article className="w-card pg-life" key={`${lang}-l${i}`}>
-                    <div className="pg-life-art" aria-hidden="true">{Scene ? <Scene /> : null}</div>
-                    <h4>{l.title}</h4>
-                    <p>{l.body}</p>
-                  </article>
-                )
-              })}
-            </div>
-            <p className="pg-cmp-note">{t.livesFoot}</p>
           </section>
 
           <section className="w-section pg-list-wrap" aria-label="Phone models">
