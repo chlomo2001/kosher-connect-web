@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **30 of 30 screens written out in full.**
-*As of 27 Aug 2026 · m-2eb5c9e0 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 28 Aug 2026 · m-c7d64519 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -192,7 +192,7 @@ Every phone the shop hires out: what is out with whom, what is due back, and wha
 - **Manage** — Everything that happens to a live hire: extend it, mark it returned, record damage or a missing charger, take the money owing.
 - **Mark returned** — Tick several rows and close them together — the after-Yom-Tov queue, where a family brings four phones back at once.
 - **Phone Inventory** — The handsets themselves, not the hires: what each one is, whose it is, and whether it is out, free or retired.
-- **Manage phones** — Add a handset, retire one, correct a number or an IMEI.
+- **Manage phones** — The handsets themselves. It opens on the inventory with the search box ready, because looking one up is what it is mostly for; “＋ Add a phone” unfolds the form for a new handset and folds it away again. From the list you can retire one, or correct a number or an IMEI.
 - **Pools** — Groups of handsets that are interchangeable, so a booking can be promised a phone without naming which one until it is handed over.
 - **Availability** — The calendar view — which phones are committed on which days. Use it before promising a phone for a date.
 - **✉️ Email receipt** — On the confirmation after a rental is saved. The customer gets their full name, the number they are renting, the dates from and to each on its own line, and what it came to. Under that, the hire drawn as a calendar with the Hebrew date small beneath each day and the free ones shaded, so the chargeable count explains itself instead of having to be trusted — a hire too long to draw says the same thing in a sentence. If they paid, it says how. If they did not, it says what is still owed and the day it is owed by — with a button to pay it online where card payments are switched on. Everything on it is what the shop already recorded; nothing is typed again. It also links the customer to a how-to page for the service — a link and not an attachment, so the day something changes the page changes and every receipt already sent is right again.
@@ -210,6 +210,7 @@ Every phone the shop hires out: what is out with whom, what is due back, and wha
 - **rental-new** — The hire itself: who, which dates, which handset, and what you handed over — phone, SIM, charger. A handset is only offered if it is genuinely free for those dates and genuinely in service: one that is out, broken, unread or living permanently with somebody is never offered, however the form is reached.
 - **rental-none-free** — The same form when nothing is free for the dates in it. A line across the top says so before you have typed anything, and names the first date that would work. Nothing is disabled: booking a hire for a later date is a normal thing to do when the shelf is empty today, and changing the dates makes the line go away by itself.
 - **rental-manage** — The live hire. Returning, extending, damage, missing items, and what is owed.
+- **manage-phones** — The handsets, not the hires. It opens on the inventory with the search ready — number, model, IMEI, country or carrier all find a phone — and the form for adding a new one is folded behind a single button until you have one in your hand.
 - **pool-new** — Creates a pool of interchangeable handsets.
 - **done-panel** — The confirmation after a rental is saved — what was agreed and what to hand over, so it can be read back to the customer. ✉️ Email receipt sends the customer the rental in full.
 

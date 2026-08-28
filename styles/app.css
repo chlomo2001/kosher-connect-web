@@ -2735,6 +2735,17 @@ body.kc-win-dragging .kc-wgrip::after { opacity: 0.55; }
 }
 
 .section-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+/* A control parked on the divider — the "＋ Add a phone" disclosure in Manage
+   phones. order:1 puts it past the ::after hairline, which no amount of source
+   order can do on its own, so the row reads LABEL ──── [button]. The resets
+   are not decoration: the divider sets uppercase and letter-spacing, and both
+   inherit, which turned the button into "＋ ADD A PHONE". */
+.section-divider .divider-action {
+  order: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  flex: 0 0 auto;
+}
 @media (pointer: coarse) {
 
   .action-btn, .card-tool { min-width: 24px; }

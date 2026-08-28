@@ -114,6 +114,10 @@ export const MODALS = [
      // up in every later surface as an unnamed <select>, which is exactly the
      // kind of ghost that makes a sweep report defects the app does not have.
      s.remove()`],
+  // The handset inventory, and the form for a new one folded away behind a
+  // button (owner, 27 Aug). Never swept until now, which is how it kept a
+  // twelve-field form above the list it exists to show.
+  ['manage-phones', 'rentals',  `openManagePhonesModal()`],
   ['business-summary', 'dashboard', `openBusinessSummary()`],
   // Answering a text a customer sent in (owner item 21). From 25 Aug this is
   // the conversation on the Messages screen rather than a composer in the
