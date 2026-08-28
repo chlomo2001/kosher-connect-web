@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **30 of 30 screens written out in full.**
-*As of 28 Aug 2026 · m-963ab726 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 28 Aug 2026 · m-07440734 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -223,6 +223,7 @@ Every phone the shop hires out: what is out with whom, what is due back, and wha
 - A hire moves through five states and the row says which: reserved while it is still on the shelf, collected once it has left the shop but the customer has not flown, active while they are away, home once the dates have ended and the phone has not come back, and closed when it has. Every one of them shows on the customer's card, so a reservation is on their record from the day it is taken.
 - Collecting the phone early does not start the charge. A hire is priced on the travel dates it was booked for, and handing it over sooner is free — the confirmation says which days are being charged and how many are not.
 - On a wide screen the hire list and the phone inventory sit side by side, so you can see what is free without leaving the list you are working in. The inventory keeps the number, the flag and whether it is free, and keeps the one-tap “it’s back” for a phone that is out with nothing to return it against — as an icon on its own. Pool, expiry, Edit and Delete drop out at that width because there is not room for both tables otherwise: clicking the row still opens it, and a narrower screen goes back to the full table underneath.
+- Two screens open on the same rental cannot undo each other's money. If somebody corrects a payment at the counter while an older screen is still open somewhere in the shop, that older screen can no longer write its stale figure back over the corrected one — the recorded amount stands, the screen that tried is put back in step, and it says so on the spot. Everything else that screen was saving still saves.
 - A phone is due back the day AFTER the hire ends — the last day on the hire is a day the customer still has it. From that morning the row turns amber and a task says to go and get it, but nothing is charged: the late fee does not start until the phone is more than a week past its date, and that week is a number in Settings. Nothing is asked about whether the line is still live either, because the customer is home. The handset stays counted as out and off the free list until it is physically back.
 
 **When it goes wrong**

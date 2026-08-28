@@ -430,6 +430,25 @@ async function safeLoadArray(key, url) {
   }
 }
 
+// Re-read the rentals alone.
+//
+// initApp loads everything at once, which is right for a boot and far too much
+// for "this one collection is out of date". The case it exists for is the
+// stale-tab money guard (task #48): the server has just told this tab that its
+// copy of a rental is behind, so the honest next move is to go and get the
+// current one rather than patch two fields and hope the rest agrees.
+//
+// safeLoadArray, not a bare fetch: a failed load must never come back as an
+// empty array here, because the next whole-array save would then delete the
+// shop's rentals.
+async function loadRentals() {
+  const rows = await safeLoadArray('rentals', '/api/rentals');
+  if (loadFailed.rentals) return false;
+  rentals = rows;
+  if (typeof renderRentalsTab === 'function' && currentTab === 'rentals') renderRentalsTab();
+  return true;
+}
+
 async function initApp() {
   // Everything loads in PARALLEL — one round-trip of wall-clock time instead
   // of ten. The three whole-array-saved collections (rentals/phones/sims) go
@@ -2900,6 +2919,37 @@ function saveRentals(data, deletedIds = []) {
           if (p) p.status = 'rented';       // it never came back off hire
         }
         if (typeof renderRentalsTab === 'function' && currentTab === 'rentals') renderRentalsTab();
+      }
+
+      // ── The stale-tab money guard answered back (task #48) ─────────────
+      // This tab tried to change money on a rental whose stored copy had
+      // already moved on without it — the shape that put Teitelbaum's ledger
+      // back to -£90 twice. The server kept the stored figures; this tab is now
+      // the only place the old ones exist, so they go, loudly. Silence here
+      // would leave an operator reading a payment the database does not have.
+      if (res && res.staleMoney && res.staleMoney.length) {
+        for (const m of res.staleMoney) {
+          const r = rentals.find((x) => String(x.id) === String(m.id));
+          if (!r) continue;
+          r.amountPaid = m.keptPaid;
+          r.price = m.keptPrice;
+        }
+        const one = res.staleMoney[0];
+        toast(res.staleMoney.length === 1
+          ? `Somebody else had already changed the money on this rental — ${fmtGbp(one.keptPaid)} received is what is recorded, not ${fmtGbp(one.sentPaid)}. This screen has been put back in step.`
+          : `${res.staleMoney.length} rentals had their money changed elsewhere while this screen was open. The recorded figures have been kept and this screen put back in step.`,
+          'warning', 'blocked');
+        loadRentals().catch(() => null);
+      }
+
+      // Carry the new versions, so this tab stops being stale about its own
+      // writes. Without it the next whole-array save would look, to the guard,
+      // like a stale tab on every row this one had just legitimately changed.
+      if (res && res.revs) {
+        for (const r of rentals) {
+          const rev = res.revs[String(r.id)];
+          if (rev) r._rev = rev;
+        }
       }
       return res;
     });
