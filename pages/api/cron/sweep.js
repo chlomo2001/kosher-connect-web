@@ -334,6 +334,47 @@ async function handler(req, res) {
     const grace = await returnGraceDays()
     counts.returnGraceDays = grace
     const chaseFrom = localDate(-grace)
+
+    // ── Due back, and not yet late ──────────────────────────────────────────
+    //
+    // Owner, 28 Aug: "due date is always a day after arrival - end of rental,
+    // (and come up as task, amber bla bla) but late fees only once past 7 days."
+    // The OVERDUE task below still waits out the window; this one goes up the
+    // morning the phone is due, so somebody is asked to go and get it while it
+    // is still free to the customer. Medium, not high: it is a job, not a fault.
+    const dueBack = await db.select(
+      'rentals',
+      `select=id,legacy_id,end_date,customer_id,customers(first_name,last_name)`
+        + `&status=in.(active,overdue)&is_void=is.false`
+        + `&end_date=lt.${today}&end_date=gte.${chaseFrom}`
+    )
+    const dueWanted = new Set()
+    let dueTasks = 0
+    for (const r of dueBack) {
+      const name = r.customers ? `${r.customers.first_name || ''} ${r.customers.last_name || ''}`.trim() : '?'
+      const ref = `RETURNDUE-${r.id}`
+      dueWanted.add(ref)
+      await upsertOpenTask({
+        reference: ref,
+        title: `Phone due back — ${name} (was due ${displayDate(r.end_date)})`,
+        customerUuid: r.customer_id,
+        priority: 'medium',
+        notes: `The hire ended ${r.end_date}, so the phone was due back the next day. `
+             + `Nothing is charged yet — the late fee starts after ${grace} day${grace === 1 ? '' : 's'}.`,
+        dueDate: r.end_date || null,
+      })
+      dueTasks++
+    }
+    counts.returnDueTasks = dueTasks
+
+    // Closed the moment it comes back, is voided, or tips over into OVERDUE —
+    // two open tasks for one phone is how a queue stops being read.
+    const openDue = await db.select('tasks', 'select=id,reference&done=is.false&reference=like.RETURNDUE-*')
+    let dueClosed = 0
+    for (const t of openDue) {
+      if (!dueWanted.has(t.reference)) dueClosed += await closeOpenTask(t.reference)
+    }
+    counts.returnDueClosed = dueClosed
     const overdue = await db.select(
       'rentals',
       `select=id,legacy_id,end_date,customer_id,customers(first_name,last_name)`

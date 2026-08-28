@@ -2844,9 +2844,13 @@ function countChargeableDays(fromDate, toDate) {
 function calcLateFeeDays(rental) {
   const today = localISO();
   if (rental.status === 'returned' || rental.toDate >= today) return 0;
-  const lateDayStart = parseLocalDate(rental.toDate);
-  lateDayStart.setDate(lateDayStart.getDate() + 1);
-  const days = countChargeableDays(localISO(lateDayStart), today);
+  // NOT the day after the hire ends. Owner, 28 Aug: "late fees only once past
+  // 7 days" — so the first week back is chased and never billed, and counting
+  // starts at lateFeeFrom() rather than at toDate + 1. A customer who is three
+  // days late pays nothing, which is the whole point of the change.
+  const from = KC_STAGE.lateFeeFrom(rental.toDate, returnGraceDays());
+  if (!from || today < from) return 0;
+  const days = countChargeableDays(from, today);
   return days * settingNum('late_fee_per_day', 1);
 }
 
@@ -2973,9 +2977,11 @@ function mgComputeLateFee() {
   const today = localISO();
   if (to >= today) return 0;
   const country = document.getElementById('mgCountry')?.value || 'USA';
-  const lateDayStart = parseLocalDate(to);
-  lateDayStart.setDate(lateDayStart.getDate() + 1);
-  return countChargeableDays(localISO(lateDayStart), today) * settingNum('late_fee_per_day', 1);
+  // Same seven-day free window as calcLateFeeDays — the two must agree, or the
+  // Manage dialog quotes one late fee and the row shows another.
+  const from = KC_STAGE.lateFeeFrom(to, returnGraceDays());
+  if (!from || today < from) return 0;
+  return countChargeableDays(from, today) * settingNum('late_fee_per_day', 1);
 }
 
 // The charger is ONE item to the business (the T&C prices "Charger: £10" —
@@ -3613,7 +3619,7 @@ function getItemStatus(r, item) {
 // Mirrors lib/rentalStage.mjs. Held to it by test/rentalStageMirror.test.mjs.
 const KC_STAGE = (() => {
   const READY_LEAD_DAYS = 1;
-  const RETURN_GRACE_DAYS = 3;
+  const RETURN_GRACE_DAYS = 7;
   const dayBefore = (iso, days) => {
     if (!iso) return null;
     const t = Date.parse(`${iso}T00:00:00Z`);
@@ -3645,11 +3651,22 @@ const KC_STAGE = (() => {
     return !!due && today >= due;
   };
   const readyFrom = (r) => dayBefore(r && r.fromDate, READY_LEAD_DAYS);
+  const dueBackDate = (toDate) => {
+    if (!toDate) return null;
+    const t = Date.parse(`${toDate}T00:00:00Z`);
+    return Number.isFinite(t) ? new Date(t + 86400000).toISOString().slice(0, 10) : null;
+  };
+  const lateFeeFrom = (toDate, graceDays = RETURN_GRACE_DAYS) => {
+    if (!toDate) return null;
+    const grace = Number.isFinite(graceDays) ? Math.max(0, graceDays) : RETURN_GRACE_DAYS;
+    const t = Date.parse(`${toDate}T00:00:00Z`);
+    return Number.isFinite(t) ? new Date(t + (grace + 1) * 86400000).toISOString().slice(0, 10) : null;
+  };
   const stageLabel = (stage) => ({
     reserved: 'Reserved',
     fetched: 'Collected — not travelling yet',
     active: 'Active',
-    ended: 'Home — phone not back yet',
+    ended: 'Due back',
     overdue: 'Overdue',
     returned: 'Closed',
     returned_incomplete: 'Returned — kit unaccounted for',
@@ -3658,13 +3675,14 @@ const KC_STAGE = (() => {
     if (stage === 'overdue') return 'danger';
     if (stage === 'returned_incomplete') return 'warning';
     if (stage === 'fetched') return ready ? 'warning' : 'quiet';
-    if (stage === 'reserved' || stage === 'ended') return 'quiet';
+    if (stage === 'ended') return 'warning';
+    if (stage === 'reserved') return 'quiet';
     return 'normal';
   };
   const ON_CUSTOMER_CARD = ['reserved', 'fetched', 'active', 'ended', 'overdue'];
   const OUT_WITH_CUSTOMER = ['active', 'ended', 'overdue'];
   return { READY_LEAD_DAYS, RETURN_GRACE_DAYS, rentalStage, readinessDue, readyFrom,
-    stageLabel, stageTone, ON_CUSTOMER_CARD, OUT_WITH_CUSTOMER };
+    dueBackDate, lateFeeFrom, stageLabel, stageTone, ON_CUSTOMER_CARD, OUT_WITH_CUSTOMER };
 })();
 // ── KC_STAGE mirror end ──
 

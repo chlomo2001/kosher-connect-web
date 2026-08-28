@@ -31,8 +31,8 @@ test('it renders the groups, their blurbs and their lines', () => {
     T({ title: 'Luftig’s phone was due back Tuesday', reference: 'OVERDUE-1', priority: 'high' }),
   ], { today: '2026-08-21' })
   const t = text(digestEmail(d, { date: '21 Aug' }).html)
-  assert.match(t, /Phones due back/)
-  assert.match(t, /A hire that has run past its day\./)
+  assert.match(t, /Overdue, and now charged/)
+  assert.match(t, /Past the return window: the late fee has started\./)
   assert.match(t, /Luftig’s phone was due back Tuesday/)
   assert.match(t, /Money owed/)
   assert.match(t, /Bleier owes £240/)

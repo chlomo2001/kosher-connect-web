@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **30 of 30 screens written out in full.**
-*As of 27 Aug 2026 · m-da38c702 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 27 Aug 2026 · m-2eb5c9e0 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -222,14 +222,14 @@ Every phone the shop hires out: what is out with whom, what is due back, and wha
 - A hire moves through five states and the row says which: reserved while it is still on the shelf, collected once it has left the shop but the customer has not flown, active while they are away, home once the dates have ended and the phone has not come back, and closed when it has. Every one of them shows on the customer's card, so a reservation is on their record from the day it is taken.
 - Collecting the phone early does not start the charge. A hire is priced on the travel dates it was booked for, and handing it over sooner is free — the confirmation says which days are being charged and how many are not.
 - On a wide screen the hire list and the phone inventory sit side by side, so you can see what is free without leaving the list you are working in. The inventory keeps the number, the flag and whether it is free, and keeps the one-tap “it’s back” for a phone that is out with nothing to return it against — as an icon on its own. Pool, expiry, Edit and Delete drop out at that width because there is not room for both tables otherwise: clicking the row still opens it, and a narrower screen goes back to the full table underneath.
-- Home is not late. A customer who has landed and not yet dropped the phone in is not chased, and nothing is asked about whether their line is still live; the handset stays counted as out and off the free list until it is physically back. It becomes overdue — and raises a task — only after the number of days set in Settings.
+- A phone is due back the day AFTER the hire ends — the last day on the hire is a day the customer still has it. From that morning the row turns amber and a task says to go and get it, but nothing is charged: the late fee does not start until the phone is more than a week past its date, and that week is a number in Settings. Nothing is asked about whether the line is still live either, because the customer is home. The handset stays counted as out and off the free list until it is physically back.
 
 **When it goes wrong**
 
 - **The handset you want is not in the list** — It is on hire, or committed to another booking, over those dates. Availability shows who has it and until when.
 - **The price is not what you expected** — Open the price box in the form — it shows the day rate, the free days it has taken off and the cap it has applied. If the rate itself is wrong, that is Settings, not the rental.
 - **A phone came back but the rental still shows as out** — The return was never saved. Find it, Manage, turn on Returned — late days are worked out from the day you mark it, so do it on the day.
-- **The row says Home rather than Overdue** — The dates have ended and the phone has not come back yet, which is the ordinary end of a hire rather than a problem. It is still counted as out, and the handset is not offered to anybody else. It turns into Overdue, and raises a task, once it has been waiting longer than the shop allows — that number is in Settings.
+- **The row says Due back rather than Overdue** — The hire has ended and the phone has not come in yet. That is the ordinary end of a hire, so it is amber and there is a task to go and get it, but the customer is charged nothing. It turns into Overdue — red, and the late fee starts — once it has been waiting longer than the shop allows. That number is in Settings.
 
 ---
 

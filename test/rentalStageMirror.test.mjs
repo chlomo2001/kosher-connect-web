@@ -17,6 +17,7 @@ import { readFileSync } from 'node:fs'
 import {
   rentalStage, readinessDue, readyFrom, stageLabel, stageTone,
   READY_LEAD_DAYS, RETURN_GRACE_DAYS, ON_CUSTOMER_CARD, OUT_WITH_CUSTOMER,
+  dueBackDate, lateFeeFrom,
 } from '../lib/rentalStage.mjs'
 
 const SRC = readFileSync(new URL('../public/main.js', import.meta.url), 'utf8')
@@ -88,7 +89,9 @@ test('…and it is asked exactly 24 hours before, not sooner', () => {
 
 test('a running or overdue hire is always the shop’s problem', () => {
   assert.ok(readinessDue({ status: 'active', fromDate: '2026-08-20', toDate: '2026-10-10' }, TODAY))
-  assert.ok(readinessDue({ status: 'active', fromDate: '2026-07-01', toDate: '2026-08-25' }, TODAY))
+  // 2026-08-25 against TODAY 2026-09-01 is seven days past — inside the fee
+  // window is 'ended' and quiet on readiness, so this pins the OVERDUE side.
+  assert.ok(readinessDue({ status: 'active', fromDate: '2026-07-01', toDate: '2026-08-20' }, TODAY))
 })
 
 test('a returned hire asks for nothing', () => {
@@ -128,28 +131,29 @@ const HIRE = { status: 'active', fromDate: '2026-08-01', toDate: '2026-08-20' }
 
 test('the day after the dates end the hire is home, not overdue', () => {
   assert.equal(rentalStage(HIRE, '2026-08-20'), 'active', 'the last day is still the trip')
-  assert.equal(rentalStage(HIRE, '2026-08-21'), 'ended')
-  assert.equal(rentalStage(HIRE, '2026-08-23'), 'ended', 'still inside the three-day grace')
-  assert.equal(rentalStage(HIRE, '2026-08-24'), 'overdue', 'past it — now worth chasing')
+  assert.equal(rentalStage(HIRE, '2026-08-21'), 'ended', 'due back the day AFTER the hire ends')
+  assert.equal(rentalStage(HIRE, '2026-08-27'), 'ended', 'still inside the seven-day window')
+  assert.equal(rentalStage(HIRE, '2026-08-28'), 'overdue', 'past it — chased, and now charged')
 })
 
 test('the grace is the owner\'s to set, and zero restores the old behaviour', () => {
   assert.equal(rentalStage(HIRE, '2026-08-21', false, 0), 'overdue')
-  assert.equal(rentalStage(HIRE, '2026-08-27', false, 7), 'ended')
-  assert.equal(rentalStage(HIRE, '2026-08-29', false, 7), 'overdue')
-  // Rubbish in settings must not silently mean "never chase anyone".
-  assert.equal(rentalStage(HIRE, '2026-08-24', false, NaN), 'overdue')
-  assert.equal(rentalStage(HIRE, '2026-08-24', false, -5), 'overdue')
+  assert.equal(rentalStage(HIRE, '2026-08-23', false, 3), 'ended')
+  assert.equal(rentalStage(HIRE, '2026-08-24', false, 3), 'overdue')
+  // Rubbish in settings must not silently mean "never chase anyone" — it falls
+  // back to the default rather than to infinity.
+  assert.equal(rentalStage(HIRE, '2026-08-28', false, NaN), 'overdue')
+  assert.equal(rentalStage(HIRE, '2026-08-28', false, -5), 'overdue')
 })
 
 test('nobody is asked whether the line is live once the customer is home', () => {
   assert.equal(readinessDue(HIRE, '2026-08-20'), true, 'mid-trip the line matters')
   assert.equal(readinessDue(HIRE, '2026-08-21'), false, 'he has landed — the pool is nobody\'s problem')
-  assert.equal(readinessDue(HIRE, '2026-08-23'), false)
+  assert.equal(readinessDue(HIRE, '2026-08-27'), false)
 })
 
 test('the phone is still with the customer, so it is not available to hire out', () => {
-  for (const today of ['2026-08-20', '2026-08-21', '2026-08-23', '2026-08-24']) {
+  for (const today of ['2026-08-20', '2026-08-21', '2026-08-27', '2026-08-28']) {
     assert.ok(OUT_WITH_CUSTOMER.includes(rentalStage(HIRE, today)),
       `${today}: the handset has not come back, so it cannot be free stock`)
   }
@@ -163,8 +167,40 @@ test('every stage of a hire shows on the customer card, ended included', () => {
   }
 })
 
-test('ended reads as a state of affairs, not as a fault', () => {
-  assert.equal(stageTone('ended'), 'quiet')
+test('due back is amber — a job for the shop, not a fault of the customer', () => {
+  // Owner, 28 Aug: "(and come up as task, amber bla bla)". Amber because
+  // somebody has to go and get the phone, not because anybody has done wrong —
+  // and it still costs the customer nothing until the fee window opens.
+  assert.equal(stageTone('ended'), 'warning')
   assert.equal(stageTone('overdue'), 'danger')
   assert.notEqual(stageLabel('ended'), stageLabel('overdue'))
+})
+
+// ── Due back, and the seven days that are not billed ──────────────────────
+//
+// Owner, 28 Aug: "change rental returns rule - due date is always a day after
+// arrival - end of rental, (and come up as task, amber bla bla) but late fees
+// only once past 7 days."
+
+test('a hire is due back the day after it ends, not on the day it ends', () => {
+  assert.equal(dueBackDate('2026-08-20'), '2026-08-21')
+  assert.equal(dueBackDate('2026-12-31'), '2027-01-01', 'and over a year end')
+  assert.equal(dueBackDate(null), null)
+})
+
+test('the late fee does not start until the window has passed', () => {
+  // toDate 20th → due back 21st → first chargeable day the 28th.
+  assert.equal(lateFeeFrom('2026-08-20'), '2026-08-28')
+  assert.equal(lateFeeFrom('2026-08-20', 0), '2026-08-21', 'zero = charge from due back')
+  assert.equal(lateFeeFrom('2026-08-20', 14), '2026-09-04')
+  assert.equal(lateFeeFrom(null), null)
+})
+
+test('due back and the first chargeable day are not the same day', () => {
+  // The whole point of the change: a phone can be late and free at once.
+  const due = dueBackDate('2026-08-20')
+  const billed = lateFeeFrom('2026-08-20')
+  assert.ok(due < billed, `${due} must come before ${billed}`)
+  assert.equal(rentalStage(HIRE, due), 'ended', 'due back, chased, not charged')
+  assert.equal(rentalStage(HIRE, billed), 'overdue', 'and now charged')
 })
