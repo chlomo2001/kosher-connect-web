@@ -548,7 +548,8 @@
       }
     ],
     "lastWeekIn": 48,
-    "monthIn": 1240
+    "monthIn": 1240,
+    "receivedAllTime": 18450.75
   },
   "/api/ledger?report=1": {
     "success": true,

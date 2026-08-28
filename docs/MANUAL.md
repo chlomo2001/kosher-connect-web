@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **30 of 30 screens written out in full.**
-*As of 28 Aug 2026 · m-78e00ef6 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 28 Aug 2026 · m-b074e5fa — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -117,7 +117,7 @@ Everyone on the books: how to reach them, what they owe, and everything they hav
 
 **On the screen**
 
-- **The counts along the top** — How many customers are registered, how many rentals and SIM plans are running, and what the shop has taken from rentals all told.
+- **The counts along the top** — How many customers are registered, how many rentals and SIM plans are running, and what the shop has taken altogether — every payment and top-up in the ledger, not just the rental ones. The money figure waits for the ledger rather than guessing from what is already on screen: while it loads it shows a dash, and for a member of staff who cannot see the wallet it says so instead of showing a number.
 - **Customer List** — The list itself, surname first so it reads the way you would say it. A row shows their number, what they have on the go, and their balance.
 - **The balance column** — Said the same way as everywhere else in the app: owes the amount, holds that much in credit, settled, or not checked yet. The last is not a fault — it means the wallet figures have not arrived on this screen, either because they are still loading or because this member of staff cannot see the wallet. No balance is shown rather than a guess at one.
 - **Filter** — Narrows the list to one kind of customer: an active rental, a flight coming up, a SIM plan, a virtual number, an open repair, money owed, a passport on file, or nobody-can-ring-them — no number of theirs and no SIM of ours either.

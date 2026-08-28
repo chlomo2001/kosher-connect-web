@@ -700,6 +700,13 @@ body.pos-mode .content { padding: 14px 18px; }
   border-radius: var(--radius-lg);
   padding: 22px 24px;
   box-shadow: var(--shadow-1);
+  /* A grid item defaults to min-width:auto, so its widest unbreakable word
+     INFLATES the track. That is how the Customers tab started scrolling
+     sideways at 390px the moment the revenue card stopped showing £410.40 and
+     started showing the real figure: "£18,450.75" needs 192px of the card's
+     169px, the track grew to fit it, and the whole content column went 8px
+     wide. The card may not do that to the row it lives in. */
+  min-width: 0;
 }
 
 .stat-label { font-size: var(--fs-micro); font-weight: 400; letter-spacing: 0.1px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
@@ -707,6 +714,28 @@ body.pos-mode .content { padding: 14px 18px; }
 .stat-value {
   font-size: var(--fs-display-3); font-weight: 300; letter-spacing: -0.4px; line-height: 1.1;
   font-feature-settings: "ss01", "tnum";
+  /* Last resort, and it should never fire at a supported width: a figure that
+     cannot fit at any size WRAPS rather than pushing its card wider. A wrapped
+     number reads badly; a page that scrolls sideways hides the right-hand
+     column of every table on it, which is worse and is silent. */
+  overflow-wrap: anywhere;
+}
+
+/* Money in a stat card is the longest thing on the row: a count is "569", a sum
+   is "£92,129.10" — three characters against ten. Two cards abreast at 390px
+   leaves each one 121px of content, and the sum needs 192px at this size. There
+   is no font size that rescues that and keeps a headline a headline: it fits at
+   18px, which is body text.
+
+   So on a phone the row is one column and each card gets the full width. The
+   cost is real and worth naming — four cards stacked is about 270px more before
+   the list starts — but the alternative is a money figure snapped across two
+   lines after the thousands comma, and a figure you have to reassemble is not a
+   figure you can read at a glance. This is already what happens below 360px,
+   where two 170px tracks stop fitting; this only moves the point at which it
+   starts, so the layout gains no new shape. */
+@media (max-width: 560px) {
+  .stats-row { grid-template-columns: 1fr; }
 }
 
 .stat-sub { font-size: var(--fs-small); color: var(--muted); margin-top: 4px; }

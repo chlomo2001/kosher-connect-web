@@ -22,6 +22,12 @@ async function canTouchWallet(staff) {
   return (await tabAllowedFor(staff, 'wallet')) || (await tabAllowedFor(staff, 'customers'))
 }
 
+// The ledger's beginning, for all-time aggregates. The first entry is Feb 2025;
+// this is deliberately earlier than any row can be rather than a lookup, so the
+// figure cannot quietly start at whatever the oldest surviving row happens to be
+// after a tidy-up.
+const EPOCH = '1970-01-01T00:00:00Z'
+
 const KINDS = {
   payment:       { entry_type: 'payment',           prefix: 'PAY' },
   top_up:        { entry_type: 'top_up',            prefix: 'TOPUP' },
@@ -189,7 +195,8 @@ async function handler(req, res) {
         const lastWeekToUtc = new Date(Date.parse(lastWeekStartUtc) + elapsedMs).toISOString()
         // Month to date, for the target line.
         const monthStartUtc = londonDayStartUtc(since.slice(0, 8) + '01')
-        const [recent, flowRows, totalsRows, arrearsRows, creditRows, lastWeekRows, monthRows] = await Promise.all([
+        const [recent, flowRows, totalsRows, arrearsRows, creditRows, lastWeekRows, monthRows,
+          allTimeRows] = await Promise.all([
           // Names/app-ids ride along on each row's embed, so no whole-table
           // customers read is needed (752 rows and climbing toward the 1000 cap).
           db.select('ledger', `select=*,customers(legacy_id,first_name,last_name)&order=created_at.desc&limit=${recentLimit}`),
@@ -199,6 +206,10 @@ async function handler(req, res) {
           db.select('customer_balances', `select=customer_id,balance&balance=gt.0&order=balance.desc&limit=${LIST_CAP}`),
           db.rpc('ledger_flow_between', { p_from: lastWeekStartUtc, p_to: lastWeekToUtc }),
           db.rpc('ledger_flow_between', { p_from: monthStartUtc, p_to: new Date().toISOString() }),
+          // Everything ever received. Aggregated in the DB by entry_type, so it
+          // is exact however big the ledger gets — summing rows client-side is
+          // what truncated the revenue report at PostgREST's 1000-row cap once.
+          db.rpc('ledger_revenue_since', { p_from: EPOCH }),
         ])
         const flow = (flowRows && flowRows[0]) || { money_in: 0, money_out: 0 }
         const totals = (totalsRows && totalsRows[0]) || { owed: 0, credit: 0 }
@@ -239,6 +250,16 @@ async function handler(req, res) {
           // Same weekday last week to this time of day, and the month so far.
           lastWeekIn: Number((lastWeekRows && lastWeekRows[0]?.money_in) || 0),
           monthIn: Number((monthRows && monthRows[0]?.money_in) || 0),
+          // Money the shop has actually taken, ever — payments and top-ups, the
+          // same definition `received` carries everywhere else in this file. The
+          // Customers tab headlines it; before this it summed `amountPaid` over
+          // the rentals array and showed 0.4% of the business under a heading
+          // saying "All time" (owner's screenshot, 28 Aug: £410.40 against
+          // £92,129.10). NOT netted against refund_payout — that is money out
+          // and has its own line; netting the two would make one number answer
+          // two questions, which is the fault this repo has paid for before.
+          receivedAllTime: Math.round((allTimeRows || [])
+            .reduce((sum, r) => sum + (Number(r.received) || 0), 0) * 100) / 100,
         })
       }
       // A customer's statement is money data — gate it to wallet/customers.

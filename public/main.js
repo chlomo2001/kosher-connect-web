@@ -8256,20 +8256,53 @@ const kcCmpDate = (fn, dir = 1) => (a, b) => dir * String(fn(a) || '').localeCom
 // (bookings, services, SIM/VN, shop — not just rentals). null until loaded. audit U9.
 let customerLedgerBal = null;
 
+// Money the shop has actually received, all time, from the same ledger.
+//   null  — not asked yet / still in flight
+//   false — the ledger is not available to this staff member
+//   number — the figure
+//
+// There is deliberately NO rental-maths fallback here. The card used to read
+// `rentals.reduce((s, r) => s + (r.amountPaid || 0), 0)`, which on 28 Aug was
+// £410.40 against £92,129.10 actually taken — 0.4% of the business, under a
+// heading saying "All time". A number that wrong is not a fallback, it is a
+// second wrong answer to a question the ledger already answers; so the card
+// waits, and says so. Same class of bug as the Balance column, fixed in U9.
+let customerRevenueAllTime = null;
+
+// Repaint just the figure. The balances land after first paint and the stat row
+// is not re-rendered on that (renderTableRows only redraws the tbody), so the
+// card is updated in place rather than by re-running the whole tab.
+function paintCustomerRevenue() {
+  const v = document.getElementById('statRevenue');
+  const sub = document.getElementById('statRevenueSub');
+  if (!v) return;
+  if (customerRevenueAllTime === false) {
+    v.textContent = '\u2014';
+    if (sub) sub.textContent = 'Not available on your account';
+  } else if (customerRevenueAllTime === null) {
+    v.textContent = '\u2026';
+    if (sub) sub.textContent = 'Money received, all time';
+  } else {
+    v.textContent = fmtGbp(customerRevenueAllTime);
+    if (sub) sub.textContent = 'Money received, all time';
+  }
+}
+
 function renderCustomersTab() {
   applySearch();
   // Refresh the authoritative balances; falls back to rental math until it lands
   // (or stays on the fallback if the wallet tab isn't permitted for this staff).
   kcFetch('/api/ledger').then(r => r.ok ? r.json() : null).then(d => {
-    if (!d || !d.success) return;
+    if (!d || !d.success) { customerRevenueAllTime = false; paintCustomerRevenue(); return; }
     const m = new Map();
     for (const b of (d.arrears || [])) if (b.customerId != null) m.set(String(b.customerId), Number(b.balance));
     for (const b of (d.credits || [])) if (b.customerId != null) m.set(String(b.customerId), Number(b.balance));
     customerLedgerBal = m;
+    customerRevenueAllTime = typeof d.receivedAllTime === 'number' ? d.receivedAllTime : false;
+    paintCustomerRevenue();
     if (currentTab === 'customers') renderTableRows();
-  }).catch(() => {});
+  }).catch(() => { customerRevenueAllTime = false; paintCustomerRevenue(); });
   const content = document.getElementById('mainContent');
-  const totalPaid = rentals.reduce((s, r) => s + (r.amountPaid || 0), 0);
 
   content.innerHTML = `
     <div class="stats-row">
@@ -8291,8 +8324,8 @@ function renderCustomersTab() {
       </div>
       <div class="stat-card">
         <div class="stat-label">Total revenue</div>
-        <div class="stat-value purple">${fmtGbp(totalPaid)}</div>
-        <div class="stat-sub">All time</div>
+        <div class="stat-value purple" id="statRevenue">\u2026</div>
+        <div class="stat-sub" id="statRevenueSub">Money received, all time</div>
       </div>
     </div>
 
@@ -8366,6 +8399,9 @@ function renderCustomersTab() {
   if (slot && box) { box.style.display = ''; slot.appendChild(box); }
 
   renderTableRows();
+  // Straight away, so a revisit paints the figure already in hand rather than
+  // blinking through the placeholder while the refetch runs.
+  paintCustomerRevenue();
 
   document.getElementById('btnExportCSV').addEventListener('click', async () => {
     const res = await window.api.exportCSV();
