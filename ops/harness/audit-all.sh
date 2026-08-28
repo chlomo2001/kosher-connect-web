@@ -109,6 +109,12 @@ fi
 run "staff app · sideways overflow, every tab, every width" \
   bash -eo pipefail -c 'for w in 320 390 768 1280 1440; do node ops/harness/render.mjs --audit --width $w | tail -1; done'
 
+# One child of the content column resetting its own inline margins stays pinned
+# to the left gutter while every sibling centres — invisible under ~1300px,
+# which is where the harness usually looks. Two of them shipped on 28 Aug.
+run "staff app · the content column holds its line" \
+  bash -eo pipefail -c 'for w in 1920 1280; do node ops/harness/columns.mjs --width $w | tail -1; done'
+
 run "staff app · contrast, both themes" \
   bash -eo pipefail -c 'for t in light dark; do node ops/harness/render.mjs --contrast --theme $t --width 1280 | tail -1; done'
 

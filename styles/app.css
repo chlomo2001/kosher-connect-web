@@ -1739,6 +1739,12 @@ body.pos-mode #kcNextAction { display: none; }
   .rv-line { grid-template-columns: minmax(0, 1fr); gap: 2px; }
 }
 
+/* A badge that carries a sentence rather than a word — the pool-cover badge
+   says the date and the shortfall now (owner, 28 Aug: "pool ends first isnt
+   enough. need to say 7 days etc. with dates"). .badge is nowrap by design,
+   which is right for "Rented" and wrong for a sentence in a narrow column. */
+.kc-badge-wrap { white-space: normal; text-align: start; line-height: 1.35; }
+
 .badge {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 2px 8px;
@@ -5614,7 +5620,10 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 */
 .kc-subviews {
   display: flex; gap: 4px; align-items: center; flex-wrap: wrap;
-  margin: 0 0 14px; padding-bottom: 10px;
+  /* auto, not 0 — the same shorthand mistake as .kc-toolbar, made the same
+     morning, and found by ops/harness/columns.mjs on its first run: 194px
+     adrift on Rentals at 1920px while every sibling centred. */
+  margin: 0 auto 14px; padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
 }
 .kc-subview {
@@ -5667,9 +5676,21 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 */
 .kc-toolbar {
   display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
-  margin: 0 0 14px;
+  /* `auto`, NOT 0. `.content > *` centres every direct child in a 1220px
+     column, and a four-value shorthand here resets margin-inline to 0 — so on
+     any screen wider than about 1300 the toolbar stayed pinned to the left
+     gutter while the stat cards, the heading and the table drifted right with
+     the column. 194px adrift at 1920, 334px at 2200 (owner's screenshot,
+     28 Aug). The shorthand was the whole bug: only the BOTTOM margin was ever
+     meant to be set here. */
+  margin: 0 auto 14px;
 }
 .kc-toolbar-end { margin-inline-start: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+/* An empty slot still spends a gap. #custInitialChip is a span that only fills
+   when a letter-jump is on, and while empty it pushed the search box 8px right
+   of the heading above it — the kind of misalignment nobody can name and
+   everybody can see. */
+.kc-toolbar > :empty { display: none; }
 /* On a phone there is no "far edge" worth pushing to — the row is already one
    control per line, and auto margins there just open a gap. */
 @media (max-width: 700px) {
