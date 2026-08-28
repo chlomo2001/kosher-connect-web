@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **30 of 30 screens written out in full.**
-*As of 28 Aug 2026 · m-b61eaffa — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 28 Aug 2026 · m-795d1552 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -451,7 +451,7 @@ Stock and the counter: what is on the shelf, what it cost and sells for, and the
 
 - **stock-item** — Adding or editing one item: its category (phone, SIM, charger, cable, earphones, case, power bank, memory card, car accessory, repair part, accessory or other), code, barcode, brand, name, cost, selling price, quantity, and the level to warn at. On an item already on the shelf, Story opens the count’s history.
 - **stock-story** — Every recorded movement behind one item’s count — deliveries in, sales out, newest first — with the arithmetic said in words. It also says what the records cannot itemise (a hand-edited quantity, a supplier return), and if the movements cannot possibly end at the number on the shelf, it says the count and the records disagree rather than smoothing it over.
-- **goods-in** — A delivery being booked in — supplier, date, one line per item, the invoice reference and total, and a note about anything odd.
+- **goods-in** — A delivery being booked in — supplier, date, one line per item, the invoice reference and total, and a note about anything odd. Each line says which stock item it is: type the name and it finds it, or pick it from the box. That link is what makes the delivery count — a line attached to a stock item puts the units on the shelf and shows in that item's story; a line attached to nothing is still on the invoice but changes no count anywhere. The row says which of the two it is before you save, and the confirmation names any line it could not attach.
 - **supplier-return** — Stock going back: the supplier, what is going, what it is worth, and where the claim stands. What is going back is PICKED from the shelf — only items actually in stock, and never more than the count on hand, with the amount clamped as you type. The fault description goes in Notes. Returns recorded before this rule keep their original wording when edited.
 - **supplier-return-manage** — The same return afterwards — moving it along as the supplier replies, and closing it when they settle.
 

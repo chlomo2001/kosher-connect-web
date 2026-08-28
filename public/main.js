@@ -2545,6 +2545,60 @@ const KC_MONEY = (() => {
 })();
 // ── KC_MONEY mirror end ──
 
+// ── KC_STOCKMATCH mirror start ──
+// MIRROR of lib/stockMatch.mjs — which stock item a delivery line is about.
+// test/stockMatch.test.mjs lifts this block and holds it identical to the
+// module. Edit the module first; copy here verbatim.
+const KC_STOCKMATCH = (() => {
+  /**
+   * Everything a person might type for one item, flattened.
+   *
+   * Case, punctuation and runs of space are noise: "QLYX Q8", "qlyx  q8" and
+   * "QLYX-Q8" are one answer. Nothing else is normalised — no stemming, no
+   * abbreviation table, no edit distance. Every one of those invents a match the
+   * typist did not make.
+   */
+  function normaliseStockText(s) {
+    return String(s == null ? '' : s)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+  }
+
+  /** The names one stock item answers to. */
+  function stockItemNames(item) {
+    if (!item) return []
+    const join = (...parts) => parts.filter(Boolean).join(' ')
+    return [...new Set([
+      join(item.company, item.model),
+      item.model,
+      item.description,
+      item.itemCode, item.item_code,
+      item.barcode,
+    ].map(normaliseStockText).filter(Boolean))]
+  }
+
+  /**
+   * matchStockItem(description, items) → item | null
+   *
+   * `items` is the app's stock list. Inactive items are never matched: a line
+   * arriving for something the shop has retired is a question, not an answer.
+   *
+   * Returns null when nothing matches AND when more than one does — the second
+   * is the case worth being careful about, because two items sharing a name is
+   * exactly when a guess is most confident and most wrong.
+   */
+  function matchStockItem(description, items) {
+    const want = normaliseStockText(description)
+    if (!want) return null
+    const hits = (items || []).filter((i) => i && i.active !== false && stockItemNames(i).includes(want))
+    return hits.length === 1 ? hits[0] : null
+  }
+
+  return { normaliseStockText, stockItemNames, matchStockItem };
+})();
+// ── KC_STOCKMATCH mirror end ──
+
 // ── KC_STOCKSTORY mirror start ──
 // MIRROR of lib/stockStory.mjs — the stock trail, derived, never stored twice.
 // test/stockStory.test.mjs lifts this block and holds it identical to the
@@ -18878,10 +18932,56 @@ function giLineRowHtml(idx) {
         <option value="">✍️ Not in stock list</option>
         ${itemOptions}
       </select>
-      <input class="form-input" data-gi="desc" style="flex:3;min-width:140px;" placeholder="What arrived *" aria-label="Description for line ${idx + 1}">
+      <input class="form-input" data-gi="desc" style="flex:3;min-width:140px;" placeholder="What arrived *" aria-label="Description for line ${idx + 1}"
+        oninput="giDescTyped(this)">
       <input class="form-input" data-gi="qty" type="number" min="1" step="1" value="1" style="width:64px;" aria-label="Quantity for line ${idx + 1}">
       <input class="form-input" data-gi="cost" type="number" min="0" step="0.01" placeholder="£/unit" style="width:88px;" aria-label="Unit cost for line ${idx + 1}">
+      ${/* What a line that is not on the stock list actually does — which,
+            until now, was nothing and said nothing. */''}
+      <div class="gi-note" data-gi="note" style="flex-basis:100%;"></div>
     </div>`;
+}
+
+// Typing the name of something the shop already stocks should attach the line
+// to it.
+//
+// The picker's first option is "Not in stock list", so the default answer is
+// the one that does nothing — and the shop's one recorded delivery took it.
+// Its description is "QLYX Q8" and there is a stock item QLYX Q8, so the app
+// held the answer and never offered it. Now the typing finds it.
+//
+// The match is exact and refuses ambiguity (lib/stockMatch.mjs), and it only
+// ever fills a picker the operator has left alone — a deliberate choice, even
+// the deliberate choice of "not in the list", is never overwritten.
+function giDescTyped(input) {
+  const row = input.closest('.gi-line');
+  const sel = row.querySelector('[data-gi="item"]');
+  if (sel.dataset.touched === '1') { giLineNote(row); return; }
+  const hit = KC_STOCKMATCH.matchStockItem(input.value, shopItems);
+  sel.value = hit ? hit.id : '';
+  giLineNote(row);
+}
+
+// A line with nothing picked moves no stock and appears in no trail. Said on
+// the row, while it can still be changed, rather than in a warning after the
+// delivery is already recorded.
+function giLineNote(row) {
+  const note = row.querySelector('[data-gi="note"]');
+  if (!note) return;
+  const sel = row.querySelector('[data-gi="item"]');
+  const desc = row.querySelector('[data-gi="desc"]').value.trim();
+  if (sel.value) {
+    const item = shopItems.find(i => i.id === sel.value);
+    note.className = 'gi-note gi-note-ok';
+    note.textContent = item
+      ? `Adds to ${[item.company, item.model].filter(Boolean).join(' ')} — the shelf count goes up and it shows in that item's story.`
+      : '';
+    return;
+  }
+  note.className = 'gi-note gi-note-warn';
+  note.textContent = desc
+    ? 'Not on the stock list — this line is recorded on the invoice, but no shelf count changes and it will not appear in any item’s story.'
+    : '';
 }
 
 function giItemPicked(sel) {
@@ -18889,10 +18989,15 @@ function giItemPicked(sel) {
   const row = sel.closest('.gi-line');
   const desc = row.querySelector('[data-gi="desc"]');
   const cost = row.querySelector('[data-gi="cost"]');
+  // Once a person has answered this box themselves, typing never moves it
+  // again — including when they answer "not in the stock list", which is a
+  // real answer and not an empty one.
+  sel.dataset.touched = '1';
   if (item) {
     if (!desc.value.trim()) desc.value = [item.company, item.model].filter(Boolean).join(' ');
     if (!cost.value && item.netPrice !== null) cost.value = item.netPrice;
   }
+  giLineNote(row);
 }
 
 function giAddLine() {
@@ -18984,7 +19089,15 @@ async function saveGoodsIn() {
   }).then(r => r.json()).catch(() => null);
   if (!res || !res.success) { toast(res?.error || 'Could not save the delivery.', 'error'); return; }
   closeDynamicModal();
-  toast(res.warning || 'Delivery recorded — stock and costs updated.', res.warning ? 'error' : 'success');
+  // Three different things can have happened, and "saved!" over any of the
+  // last two is the lie that let one delivery change nothing for a fortnight.
+  if (res.warning) toast(res.warning, 'error');
+  else if (res.unlinked && res.unlinked.length) {
+    toast(`Delivery recorded. ${res.unlinked.length === 1
+      ? `“${res.unlinked[0]}” is not on the stock list, so no shelf count changed for it.`
+      : `${res.unlinked.length} lines are not on the stock list, so no shelf count changed for them.`}`,
+      'warning', 'blocked');
+  } else toast('Delivery recorded — stock and costs updated.', 'success');
   renderShopTab();
 }
 

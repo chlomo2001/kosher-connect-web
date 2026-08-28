@@ -110,10 +110,28 @@ they were found — the standing task's own rule.
 - [ ] **P2 · S** 🔒 — **Cash up per shift, not only per day.** `till_counts` is
       one row per date, so two people on one day is one variance nobody can
       attribute. Their end-of-day collection runs at end of shift too.
-- [ ] **P2 · M** — **Stock history and discrepancy as a trail, not a number.**
-      They report stock CHANGES over time; KC knows current stock and nothing
-      about how it got there, so "we are three short" has no answer. Read-side
-      only, built on writes the app already makes.
+- [x] **P2 · M** — **Stock history and discrepancy as a trail, not a number.**
+      They report stock CHANGES over time; KC knew current stock and nothing
+      about how it got there, so "we are three short" had no answer.
+      **The trail shipped as E4** (`lib/stockStory.mjs`, mirrored as
+      KC_STOCKSTORY, `test/stockStory.test.mjs`, the `stock-story` dialog behind
+      the **Story** button on every stock item). Derived from goods-in lines and
+      sales, never stored twice, and it says out loud when the movements cannot
+      possibly end at the number on the shelf. This line stayed open after it
+      landed — the THIRD stale item found on 28 Aug.
+      **But it had nothing to show, and that was a real bug.** Read from
+      production the same day: `goods_in_lines` held one row and its `item_id`
+      was null, because the goods-in form's picker opens on "✍️ Not in stock
+      list" and the default is what the one delivery took. An unlinked line
+      moves no shelf (`/api/goods-in` skips the bump) and appears in no trail
+      (`stockStory` derives "in" from `item_id`), and nothing said so. The
+      description was "QLYX Q8"; there is a stock item QLYX Q8. Fixed 28 Aug —
+      the form matches the typed description to the stock list
+      (`lib/stockMatch.mjs`, exact and refusing ambiguity), the row says what it
+      will do to the shelf before you save, the save names any line it could not
+      link, and the one orphan was backfilled (snapshot
+      `zz_snapshot_goods_in_lines_20260828`; `item_id` only — the shelf already
+      read 5 by hand and bumping would have made it 10).
 - [ ] **P3 · M** — **Customer types.** Their loyalty scheme hangs on customer
       types; KC has no categories at all, so there is no way to say "Kol Torah",
       "trade", "staff family". The types are the useful half for this shop; the

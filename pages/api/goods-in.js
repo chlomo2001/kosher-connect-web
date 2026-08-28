@@ -128,10 +128,20 @@ async function handler(req, res) {
         }
       }
 
+      // A line attached to no stock item moves no shelf and appears in no
+      // item's story — /api/goods-in skips the bump above, and
+      // lib/stockStory.mjs derives "in" from item_id. That used to happen in
+      // silence: the shop's one recorded delivery (QLYX Q8, 5 units) went in
+      // unlinked, changed nothing, and said nothing. The form now finds the
+      // item while it is being typed; this is the backstop for the lines it
+      // could not, so the save states what it did NOT do.
+      const unlinked = lines.filter((l) => !l.item_id).map((l) => l.description)
+
       const [withAll] = await db.select('goods_in', `select=*,suppliers(name),goods_in_lines(*)&id=eq.${row.id}`)
       return res.json({
         success: true,
         delivery: deliveryToApp(withAll || row),
+        unlinked,
         ...(stockWarnings.length ? { warning: `Recorded, but stock didn’t update for: ${stockWarnings.join(', ')}. Adjust those quantities by hand.` } : {}),
       })
     }
