@@ -1,8 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {
   isStopKeyword, isStartKeyword, matchCustomerByPhone, inboundLogRow, inboundSummary, replyTarget,
 } from '../lib/inboundSms.mjs'
+import { needsAnswer, unanswered, unansweredThreads, threadKey } from '../lib/replyQueue.mjs'
 
 test('the stop words carriers and the law recognise', () => {
   for (const w of ['STOP', 'stop', 'Stop.', 'STOPALL', 'unsubscribe', 'CANCEL', 'end', 'QUIT']) {
@@ -154,4 +156,95 @@ test('an unmatched inbound text can still be answered — the person is unknown,
     to_email: '+447700900999', customer_id: '1785069385818',
   })
   assert.equal(legacy.customerId, null)
+})
+
+// ── A conversation, not a pile of messages ────────────────────────────────
+// Owner, 28 Aug: "even after a reply the waiting tag remains!"
+//
+// Production, +447511075011:
+//   27 Aug 21:59  "Hello"  no reply
+//   28 Aug 08:07  "?"      replied to, sent, delivered
+//
+// The screen flagged that thread Waiting because ONE message was unanswered,
+// while the reply box deliberately answers the NEWEST. So the newest was
+// already answered, pressing Send again only re-answered it, and the tag could
+// never come off — the app flagging a state its own controls could not clear.
+test('a conversation waits on its newest text, not its oldest', () => {
+  const inbounds = [
+    { id: 'hello', kind: 'sms_in', status: 'received', at: '2026-08-27T21:59:59Z', to: '+447511075011' },
+    { id: 'qmark', kind: 'sms_in', status: 'received', at: '2026-08-28T08:07:19Z', to: '+447511075011' },
+  ]
+  const replies = [{ repliesTo: 'qmark', status: 'sent', deliveryStatus: 'delivered' }]
+  // Per message the old "Hello" is still unanswered, and that stays true —
+  // the bubble in the thread reads it to mark itself.
+  assert.deepEqual(unanswered(inbounds, replies).map((r) => r.id), ['hello'])
+  // Per conversation, nobody is waiting: their latest message was answered.
+  assert.deepEqual(unansweredThreads(inbounds, replies).map((r) => r.id), [])
+})
+
+test('answering an older text does not clear a newer one', () => {
+  // The mirror of the case above, and the one that must NOT be lost: answering
+  // yesterday's question while today's sits unread is still somebody waiting.
+  const inbounds = [
+    { id: 'old', kind: 'sms_in', status: 'received', at: '2026-08-27T21:59:59Z', to: '+447511075011' },
+    { id: 'new', kind: 'sms_in', status: 'received', at: '2026-08-28T08:07:19Z', to: '+447511075011' },
+  ]
+  const replies = [{ repliesTo: 'old', status: 'sent', deliveryStatus: 'delivered' }]
+  assert.deepEqual(unansweredThreads(inbounds, replies).map((r) => r.id), ['new'])
+})
+
+test('one number is one conversation, however the number is written', () => {
+  const inbounds = [
+    { id: 'a', kind: 'sms_in', status: 'received', at: '2026-08-28T09:00:00Z', to: '+447511075011' },
+    { id: 'b', kind: 'sms_in', status: 'received', at: '2026-08-28T10:00:00Z', to: '07511075011' },
+    { id: 'c', kind: 'sms_in', status: 'received', at: '2026-08-28T11:00:00Z', to: '44 7511 075011' },
+  ]
+  // All one thread, so only the newest is asked about.
+  assert.deepEqual(unansweredThreads(inbounds, []).map((r) => r.id), ['c'])
+  assert.equal(threadKey('+447511075011'), threadKey('07511075011'))
+  assert.equal(threadKey('44 7511 075011'), threadKey('+447511075011'))
+})
+
+test('a row with no number is dropped rather than lumped in with the others', () => {
+  const inbounds = [
+    { id: 'nowhere', kind: 'sms_in', status: 'received', at: '2026-08-28T09:00:00Z', to: '' },
+    { id: 'alsonowhere', kind: 'sms_in', status: 'received', at: '2026-08-28T10:00:00Z', to: null },
+    { id: 'real', kind: 'sms_in', status: 'received', at: '2026-08-28T09:30:00Z', to: '+447511075011' },
+  ]
+  // An empty key is not a person, and two of them are not one conversation.
+  assert.deepEqual(unansweredThreads(inbounds, []).map((r) => r.id), ['real'])
+})
+
+test('the queue is oldest first — the longest ignored comes first', () => {
+  const inbounds = [
+    { id: 'newer', kind: 'sms_in', status: 'received', at: '2026-08-28T10:00:00Z', to: '+447700900001' },
+    { id: 'older', kind: 'sms_in', status: 'received', at: '2026-08-25T10:00:00Z', to: '+447700900002' },
+  ]
+  assert.deepEqual(unansweredThreads(inbounds, []).map((r) => r.id), ['older', 'newer'])
+})
+
+// ── "Seen it, nothing needed" ─────────────────────────────────────────────
+// Owner, 28 Aug: "an option to ignore and not come up as waiting anymore."
+test('a text marked seen leaves the queue without a reply', () => {
+  const row = { id: 's', kind: 'sms_in', status: 'received', at: '2026-08-28T09:00:00Z', to: '+447511075011' }
+  assert.equal(needsAnswer(row), true)
+  assert.deepEqual(unansweredThreads([row], []).map((r) => r.id), ['s'])
+  const seen = { ...row, status: 'seen' }
+  assert.equal(needsAnswer(seen), false)
+  assert.deepEqual(unansweredThreads([seen], []).map((r) => r.id), [])
+  assert.deepEqual(unanswered([seen], []).map((r) => r.id), [])
+})
+
+test('seen is set by a person and never inferred', () => {
+  // The safeguard that keeps the queue honest: no age, no sweep, no heuristic
+  // may empty it — only a button. Asserted on the source because it is a rule
+  // about who writes, not about what a function returns.
+  const api = readFileSync(new URL('../pages/api/message-log.js', import.meta.url), 'utf8')
+  assert.match(api, /op !== 'seen'/, 'the write path no longer names the one action it accepts')
+  // Only an unanswered inbound may be marked — a STOP is already out, an
+  // outbound was never in, and marking one twice must change nothing.
+  assert.match(api, /kind=eq\.sms_in&status=eq\.received/,
+    'the update no longer restricts itself to unanswered inbound texts')
+  const sweep = readFileSync(new URL('../pages/api/cron/sweep.js', import.meta.url), 'utf8')
+  assert.doesNotMatch(sweep, /status:\s*'seen'/, 'the nightly sweep is marking texts seen by itself')
 })

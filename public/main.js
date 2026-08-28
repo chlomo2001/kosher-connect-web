@@ -22659,7 +22659,18 @@ function msgBuildThreads(entries) {
   for (const t of out) {
     t.msgs.sort((a, b) => String(a.at).localeCompare(String(b.at)));
     t.last = t.msgs[t.msgs.length - 1];
-    t.waiting = t.msgs.some(m => m.awaitingAnswer);
+    // Owner, 28 Aug: "even after a reply the waiting tag remains!" It did, and
+    // it could not be cleared. This was `some(m => m.awaitingAnswer)`, so one
+    // older unanswered text kept the tag lit for ever — while the reply box
+    // deliberately answers the NEWEST inbound ("that is the message still on
+    // their screen"), which was already answered. The app flagged a state its
+    // own controls could not clear.
+    //
+    // A conversation waits on its LATEST inbound, the same message the reply
+    // box replies to. /api/message-log counts it the same way, so the tag and
+    // the red number cannot disagree.
+    const newestIn = [...t.msgs].reverse().find(m => m.kind === 'sms_in');
+    t.waiting = !!(newestIn && newestIn.awaitingAnswer);
     // A reply answers the NEWEST inbound, not the oldest: that is the message
     // still on their screen. Nothing to reply to means nothing to reply to —
     // the box says so rather than offering a send that cannot work.
@@ -22840,6 +22851,12 @@ function openThread(key) {
              onclick="sendSmsReply('${escHtml(String(t.replyTo.id))}')">Send reply</button>
            <button class="btn btn-outline kc-ic kc-ic-check" onclick="msgLogTask('${escHtml(String(t.replyTo.id))}')"
              title="For a text that needs doing before it can be answered">Make it a task</button>
+           ${/* Owner, 28 Aug: "an option to ignore and not come up as waiting
+                anymore. like ive seen it, ok, nothing needed." The third way
+                out of the queue, beside answering it and turning it into a
+                job — and the only one for an "ok", a thank-you, or spam. */''}
+           <button class="btn btn-outline kc-ic kc-ic-eye" onclick="msgMarkSeen('${escHtml(String(t.replyTo.id))}')"
+             title="Take it off the waiting list without replying. It stays in the conversation.">Seen, nothing needed</button>
            <span id="smsReplyCount" style="font-size:var(--fs-micro);color:var(--muted);margin-left:auto;">0 / 640</span>
          </div>`;
 
@@ -23077,6 +23094,38 @@ const KC_SUGGEST = (() => {
   return { readIntent, suggestReplies };
 })();
 // ── KC_SUGGEST mirror end ──
+
+// "Seen it, nothing needed."
+//
+// The third way out of the waiting queue. Answering is one, turning it into a
+// task is two, and neither fits an "ok", a thank-you, or referral spam — so
+// those sat in the queue for ever and the red number lied a little more each
+// week. A count nobody can bring to zero is a count people stop reading, which
+// costs the one customer who IS waiting.
+//
+// It marks the message, not the thread: the row stays in the conversation and
+// stays readable, and only its claim on somebody's attention is released. And
+// it asks first, because it is the one action here that makes a customer's
+// message stop asking for an answer.
+async function msgMarkSeen(id) {
+  const ok = await kcConfirm({
+    title: 'Nothing needed here?',
+    icon: 'eye',
+    body: '<p>This text comes off the waiting list without a reply.</p>'
+        + '<p style="color:var(--muted);font-size:var(--fs-small);">It stays in the conversation and stays readable — '
+        + 'it just stops counting as somebody waiting on an answer.</p>',
+    okLabel: 'Yes, nothing needed',
+  });
+  if (!ok) return;
+  const res = await kcFetch('/api/message-log', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, op: 'seen' }),
+  }).then(r => r.json()).catch(() => ({ success: false, error: 'Could not reach the server.' }));
+  if (!res.success) { toast(res.error || 'Could not mark that as seen.', 'error'); return; }
+  closeDynamicModal();
+  toast('Marked as seen — off the waiting list.', 'success', 'check');
+  renderMessagesTab();
+}
 
 // ── Compose ──────────────────────────────────────────────────────────────
 //

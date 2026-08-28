@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **30 of 30 screens written out in full.**
-*As of 28 Aug 2026 · m-fc668a12 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 28 Aug 2026 · m-78e00ef6 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -638,12 +638,13 @@ The texts customers have sent the shop, as conversations — and the place they 
 
 **On the screen**
 
-- **The red number in the menu** — How many people are waiting on an answer. It is on the Messages row from every screen, so an unanswered text cannot sit quietly while somebody works on a different tab. No number means nobody is waiting.
+- **The red number in the menu** — How many PEOPLE are waiting on an answer — one per conversation, not one per text. Answering somebody's latest message answers them, so the number goes down by one however many older texts of theirs are sitting above it. It is on the Messages row from every screen, so an unanswered text cannot sit quietly while somebody works on a different tab. No number means nobody is waiting.
 - **Waiting · All** — Two views and no third. Waiting is the work — the texts nobody has answered, and what the screen opens on. All is every conversation the shop has ever had by text, for looking something up.
 - **A row** — One person, not one message: their name if they are on file, their number, the last thing said and when. "You:" in front of it means the last word was the shop's. Press it to read the whole conversation.
 - **The conversation** — Their texts and the shop's in the order they happened, theirs on the left and the shop's on the right. Under each of the shop's messages, whether it actually reached them — and there are two ways it might not have. The safety gate can hold it, so it never left the building; or the network can refuse it, because the handset is off, the number is dead or the carrier blocked it. A message that did not arrive says "Did not arrive", with the network's own reason behind it.
 - **Suggested** — A row of drafts above the reply box, built from what is actually open on that person's record — a phone due back, a balance, a repair on the shelf, a trip coming up — and from what they wrote, when they wrote something worth reading. Press one and it goes in the box for you to change; nothing is filled in by itself, because a draft already sitting in the box is a draft that gets sent unread. There is always one that fits, even if it is only “ask what they need”.
 - **Your reply** — Type it and send. The number is never typed here — it is read off the message they sent, so a reply cannot go to the wrong person. The counter beside the box warns before the reply becomes two texts, because a text is billed by the part.
+- **Seen, nothing needed** — The third way out of the waiting list, and the only one that fits an “ok”, a thank-you or a piece of spam: it takes the text off the list without a reply. The message stays in the conversation and stays readable — it just stops counting as somebody waiting on an answer. Only a person can do this; nothing ages off the list by itself.
 - **Make it a task** — For a text that needs something DOING before it can be answered — a phone to come back from repair, a price to check. It joins the task list named after the reply it needs, with their words underneath.
 - **Texts arrive by themselves** — The app checks once a minute, wherever you are in it. A text landing pops up for a few seconds naming who sent it, the red number goes up, and if you are looking at this screen the list refreshes underneath. It never refreshes while a reply is open — a half-typed answer is not worth losing for a fresher list. Nothing pops up for texts that were already waiting when you signed in: those are the list's job, not an interruption's.
 - **Check now** — Asks straight away rather than waiting for the next minute. Worth pressing if somebody is standing there saying they have just texted.
