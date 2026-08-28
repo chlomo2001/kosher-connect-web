@@ -2834,7 +2834,38 @@ const KC_POOL = (() => {
     }
   };
   const poolCoverNeedsAction = (state) => state === 'expired' || state === 'short' || state === 'soon';
-  return { WARN_WITHIN_DAYS, daysBetween, poolCover, poolCoverNote, poolCoverNeedsAction };
+  function poolCoverLabel(state, poolExpiry, returnDate, today, fmt = {}) {
+    const date = fmt.date || ((v) => String(v || ''))
+    const days = (n) => `${Math.abs(n)} day${Math.abs(n) === 1 ? '' : 's'}`
+    switch (state) {
+      case 'expired': {
+        const ago = daysBetween(today, poolExpiry)
+        // A pool that ran out TODAY is not "0 days ago" — it ran out today.
+        return ago === 0
+          ? `Pool ended today, ${date(poolExpiry)}`
+          : `Pool ended ${date(poolExpiry)} — ${days(ago)} ago`
+      }
+      case 'short': {
+        const gap = daysBetween(poolExpiry, returnDate)
+        // The number that matters here is the SHORTFALL, not the time left: it is
+        // how long the customer is abroad with a dead line.
+        return gap === 0
+          ? `Pool ends ${date(poolExpiry)} — the day it is due back`
+          : `Pool ends ${date(poolExpiry)} — ${days(gap)} before it is back`
+      }
+      case 'soon': {
+        const left = daysBetween(today, poolExpiry)
+        return left === 0
+          ? `Pool ends today, ${date(poolExpiry)}`
+          : `Pool ends ${date(poolExpiry)} — in ${days(left)}`
+      }
+      case 'unknown':
+        return 'Pool expiry not recorded'
+      default:
+        return ''
+    }
+  }
+  return { WARN_WITHIN_DAYS, daysBetween, poolCover, poolCoverNote, poolCoverLabel, poolCoverNeedsAction };
 })();
 // ── KC_POOL mirror end ──
 
@@ -2869,9 +2900,16 @@ function poolCoverBadge(r) {
   // expired and short are red: the customer loses service abroad. soon is amber:
   // the shop loses a renewal it meant to do.
   const red = state === 'expired' || state === 'short';
-  const label = state === 'expired' ? 'Pool expired' : state === 'short' ? 'Pool ends first' : 'Pool ends soon';
-  return `<span class="badge kc-ic kc-ic-alert" title="${escHtml(note)}"
-    style="margin-top:3px;background:${red ? 'var(--danger-wash)' : 'var(--warning-wash)'};color:${red ? 'var(--danger-ink)' : 'var(--warning-ink)'};">${label}</span>`;
+  // Owner, 28 Aug: "pool ends first isnt enough. need to say 7 days etc. with
+  // dates." The count and the date were already worked out — they sat in
+  // `note`, which is the title attribute, and a title never appears on the
+  // counter tablet at all. So the badge said the least useful part of what the
+  // app already knew, and said the same three words about a pool one day short
+  // and one three weeks short. The sentence goes ON the badge; the tooltip
+  // keeps the longer "what to do about it".
+  const label = KC_POOL.poolCoverLabel(state, p.poolExpiry || null, r.toDate || null, localISO(), { date: fmtDate });
+  return `<span class="badge kc-ic kc-ic-alert kc-badge-wrap" title="${escHtml(note)}"
+    style="margin-top:3px;background:${red ? 'var(--danger-wash)' : 'var(--warning-wash)'};color:${red ? 'var(--danger-ink)' : 'var(--warning-ink)'};">${escHtml(label)}</span>`;
 }
 
 function poolReason(overlap, alreadyActive) {

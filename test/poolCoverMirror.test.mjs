@@ -9,7 +9,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { poolCover, poolCoverNote, poolCoverNeedsAction, WARN_WITHIN_DAYS } from '../lib/poolCover.mjs'
+import { poolCover, poolCoverNote, poolCoverLabel, poolCoverNeedsAction, WARN_WITHIN_DAYS } from '../lib/poolCover.mjs'
 
 const SRC = readFileSync(new URL('../public/main.js', import.meta.url), 'utf8')
 
@@ -58,4 +58,57 @@ test('the digest has somewhere to put the task the sweep raises', async () => {
   const { groupOf } = await import('../lib/dailyDigest.mjs')
   assert.equal(groupOf('POOLEXP-abc'), 'POOLEXP',
     'a POOLEXP task must not fall into "other"')
+})
+
+// ── The badge's own sentence ──────────────────────────────────────────────
+// Owner, 28 Aug: "rentals, pool ends first isnt enough. need to say 7 days etc.
+// with dates." The three words were true of a pool ending one day early and of
+// one ending three weeks early, which are not the same problem — and the count
+// and the date the app had already worked out sat in the `title` attribute,
+// which never appears on the counter tablet at all.
+test('the badge carries the date and the number, not just the state', () => {
+  const fmt = { date: (v) => `D(${v})` }
+  const T = '2026-08-28'
+  const say = (pe, rd) => poolCoverLabel(poolCover(pe, rd, T), pe, rd, T, fmt)
+
+  // Short: the number that matters is the SHORTFALL — how long they are abroad
+  // with a dead line — not how long the pool has left.
+  assert.equal(say('2026-09-04', '2026-09-11'), 'Pool ends D(2026-09-04) — 7 days before it is back')
+  assert.equal(say('2026-09-10', '2026-09-11'), 'Pool ends D(2026-09-10) — 1 day before it is back')
+  // Expired: how long it has been dead.
+  assert.equal(say('2026-08-25', '2026-09-10'), 'Pool ended D(2026-08-25) — 3 days ago')
+  // Soon: how long is left.
+  assert.equal(say('2026-09-02', '2026-08-30'), 'Pool ends D(2026-09-02) — in 5 days')
+})
+
+test('"today" is said as today, never as zero days', () => {
+  const fmt = { date: (v) => `D(${v})` }
+  const T = '2026-08-28'
+  // A pool that ran out this morning is not "0 days ago", and one ending
+  // tonight is not "in 0 days".
+  assert.equal(poolCoverLabel('expired', '2026-08-28', '2026-09-10', T, fmt), 'Pool ended today, D(2026-08-28)')
+  assert.equal(poolCoverLabel('soon', '2026-08-28', '2026-08-20', T, fmt), 'Pool ends today, D(2026-08-28)')
+  // And a pool ending exactly on the return day is not "0 days before".
+  assert.equal(poolCoverLabel('short', '2026-09-10', '2026-09-10', T, fmt),
+    'Pool ends D(2026-09-10) — the day it is due back')
+})
+
+test('the browser mirror says exactly what the lib says', () => {
+  const B = liftMirror()
+  const fmt = { date: (v) => `D(${v})` }
+  const T = '2026-08-28'
+  const DATES = ['2026-08-20', '2026-08-28', '2026-09-02', '2026-09-04', '2026-09-10', '2026-09-30', null]
+  for (const pe of DATES) {
+    for (const rd of DATES) {
+      const st = poolCover(pe, rd, T)
+      assert.equal(B.poolCoverLabel(st, pe, rd, T, fmt), poolCoverLabel(st, pe, rd, T, fmt),
+        `${st}: expiry ${pe}, back ${rd}`)
+    }
+  }
+})
+
+test('the badge no longer says only the state', () => {
+  assert.doesNotMatch(SRC, /'Pool ends first'/, 'the wordless badge label is back')
+  assert.match(SRC, /KC_POOL\.poolCoverLabel\(state,/,
+    'the badge is not asking for the sentence with the numbers in it')
 })
