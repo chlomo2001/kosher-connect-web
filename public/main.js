@@ -5311,7 +5311,7 @@ async function saveMultiPhoneRental(customerId, phoneIds, addAnother) {
       name: `Phone rental ${fmtPhone(r.phoneNumber)} · ${fmtDate(from)} → ${fmtDate(to)}`,
       qty: 1, total: r.price,
     })),
-    smsText: `Hi ${customer.firstName}, ${created.length} phones are booked ${fmtDate(from)} → ${fmtDate(to)}. Total ${fmtGbp(total)}. Kosher Connect, 0161 531 1386.`,
+    smsText: buildBatchRentalReceiptSms(customer, created, from, to, total, isReservation),
     again: { label: 'Another phone', icon: 'phone', sub: `for ${customer.firstName}`, run: () => openNewRentalModal(customerId) },
   });
 }
@@ -5742,7 +5742,7 @@ async function saveNewRental(addAnother = false) {
       paidAmount: paidNow ? payAmt : 0,
       reservation: isReservation,
     },
-    smsText: buildRentalSms(rental),
+    smsText: buildRentalReceiptSms(rental),
     again: {
       label: 'Another phone', icon: 'phone', sub: `for ${customer.firstName}`,
       run: () => {
@@ -11936,6 +11936,155 @@ function waChaseCustomer(customerId) {
   recordComm(customerId, { type: 'message', text: 'Chase message opened in WhatsApp' });
 }
 
+// ── KC_RSMS mirror start ──
+// Mirrors lib/rentalReceipt.mjs. Held to it by test/rentalReceiptSms.test.mjs.
+const KC_RSMS = (() => {
+  const round2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
+  function rentalPayState(total, paidAmount) {
+    const t = round2(total);
+    const p = Math.max(0, round2(paidAmount));
+    if (!(t > 0)) return { state: 'paid', owed: 0 };
+    if (p >= t) return { state: 'paid', owed: 0 };
+    if (p > 0) return { state: 'part', owed: round2(t - p) };
+    return { state: 'unpaid', owed: t };
+  }
+  function addDays(iso, n) {
+    const [y, m, d] = iso.split('-').map(Number);
+    const t = Date.UTC(y, m - 1, d) + n * 86400000;
+    const out = new Date(t);
+    const p = (v) => String(v).padStart(2, '0');
+    return `${out.getUTCFullYear()}-${p(out.getUTCMonth() + 1)}-${p(out.getUTCDate())}`;
+  }
+  function rentalPayBy(returnISO, todayISO, floorDays = 7) {
+    const today = String(todayISO || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) return null;
+    const days = Math.min(90, Math.max(0, Math.round(Number(floorDays) || 0)));
+    const floor = addDays(today, days);
+    const ret = String(returnISO || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ret)) return floor;
+    return ret > floor ? ret : floor;
+  }
+  function rentalReceiptSms(f = {}, fmt = {}) {
+    const date = fmt.date || ((v) => String(v || ''));
+    const gbp = fmt.gbp || ((v) => `\u00a3${(Number(v) || 0).toFixed(2)}`);
+    const phone = fmt.phone || ((v) => String(v || ''));
+
+    const who = String(f.firstName || '').trim().split(/\s+/)[0] || 'there';
+    const lines = [];
+
+    lines.push(`Hi ${who}, your Kosher Connect phone hire is ${f.reserved ? 'reserved' : 'confirmed'}.`);
+
+    if (f.number) lines.push(`Phone: ${phone(f.number)}`);
+
+    if (f.from && f.to) {
+      const days = Number(f.chargeableDays);
+      const total = Number(f.totalDays);
+      let l = `${date(f.from)} to ${date(f.to)}`;
+      if (Number.isFinite(days) && days > 0) {
+        l += `, ${days} chargeable day${days === 1 ? '' : 's'}`;
+        if (Number.isFinite(total) && total > days) {
+          l += ` (${f.freeLabel || 'Shabbos and Yom Tov'} are not charged)`;
+        }
+      }
+      lines.push(`${l}.`);
+    }
+
+    const { state, owed } = rentalPayState(f.total, f.paid);
+    if (Number(f.total) > 0) {
+      const how = f.method ? ` by ${f.method}` : '';
+      if (state === 'paid') lines.push(`${gbp(f.total)} received${how}, paid in full. Thank you.`);
+      else if (state === 'part') {
+        lines.push(`Total ${gbp(f.total)}. ${gbp(f.paid)} received${how}, ${gbp(owed)} to pay${f.payBy ? ` by ${date(f.payBy)}` : ''}.`);
+      } else lines.push(`Total ${gbp(f.total)}, to pay${f.payBy ? ` by ${date(f.payBy)}` : ''}.`);
+    }
+
+    const r = f.rate || null;
+    if (r && Number(r.perDay) > 0) {
+      const bits = [`Standard rate ${gbp(r.perDay)}/day`];
+      if (Number(r.min) > 0) bits.push(`minimum ${gbp(r.min)}`);
+      if (Number(r.cap) > 0) bits.push(`capped ${gbp(r.cap)} per ${Math.round(Number(r.capDays) || 30)} days`);
+      lines.push(`${bits.join(', ')}.`);
+    }
+
+    if (f.dueBack) lines.push(`Please have the phone back by ${date(f.dueBack)}.`);
+    if (f.shopPhone) lines.push(`Questions: ${f.shopPhone}.`);
+    lines.push('- the Kosher Connect team');
+    return lines.join('\n');
+  }
+  return { rentalPayState, rentalPayBy, rentalReceiptSms };
+})();
+// ── KC_RSMS mirror end ──
+
+// The receipt SMS for a hire that has just been saved \u2014 what it costs, what
+// was taken, the rate it was priced on, and the number itself. Distinct from
+// buildRentalSms below, which drafts a STATUS text for a hire already running.
+//
+// The rate is read through rateFor, so it comes from Settings and never from a
+// second price list living in a message template.
+function buildRentalReceiptSms(r) {
+  const simGiven = r.equipmentGiven ? r.equipmentGiven.sim !== false : true;
+  const rate = rateFor(r.country, r.ukPlan, simGiven) || null;
+  const total = rentalGrandTotal(r);
+  const paid = Number(r.amountPaid) || 0;
+  const owed = Math.max(0, total - paid);
+  return KC_RSMS.rentalReceiptSms({
+    firstName: r.customerName || '',
+    number: r.phoneNumber || '',
+    from: r.fromDate, to: r.toDate,
+    chargeableDays: r.chargeableDays, totalDays: r.totalDays,
+    total, paid,
+    method: r.paymentMethod || null,
+    // Only when there is something left to pay: a date to settle by on a
+    // receipt that is already settled reads as a demand for money twice.
+    payBy: owed > 0.005
+      ? KC_RSMS.rentalPayBy(r.toDate, localISO(), settingNum('rental_pay_days', 7))
+      : null,
+    dueBack: KC_STAGE.dueBackDate(r.toDate),
+    reserved: getComputedStatus(r) === 'booked',
+    shopPhone: '0161 531 1386',
+    rate: rate ? {
+      perDay: rate.ratePerDay, min: rate.minCharge,
+      cap: rate.cap, capDays: rate.capPeriodDays || 30,
+    } : null,
+  }, { date: fmtDate, gbp: fmtGbp, phone: fmtPhone });
+}
+
+// The same receipt for a batch of phones taken together. Every number is
+// named \u2014 four phones on one hire is the after-Yom-Tov family, and a receipt
+// that says "4 phones" tells nobody which four.
+//
+// The rate line is printed ONLY when every phone in the batch prices the same.
+// Two countries on one hire have two standard rates, and one of them printed
+// as "the" rate is a wrong fact rather than a missing one.
+function buildBatchRentalReceiptSms(customer, created, from, to, total, reserved) {
+  const codes = new Set(created.map(r => pricedCountryCode(
+    r.country, r.ukPlan, r.equipmentGiven ? r.equipmentGiven.sim !== false : true)));
+  const rate = codes.size === 1 ? rateFor(created[0].country, created[0].ukPlan,
+    created[0].equipmentGiven ? created[0].equipmentGiven.sim !== false : true) : null;
+  const paid = created.reduce((n, r) => n + (Number(r.amountPaid) || 0), 0);
+  const owed = Math.max(0, total - paid);
+  return KC_RSMS.rentalReceiptSms({
+    firstName: customer.firstName || '',
+    number: created.map(r => fmtPhone(r.phoneNumber || '')).filter(Boolean).join(', '),
+    from, to,
+    chargeableDays: created[0]?.chargeableDays, totalDays: created[0]?.totalDays,
+    total, paid,
+    method: created.find(r => r.paymentMethod)?.paymentMethod || null,
+    payBy: owed > 0.005
+      ? KC_RSMS.rentalPayBy(to, localISO(), settingNum('rental_pay_days', 7))
+      : null,
+    dueBack: KC_STAGE.dueBackDate(to),
+    reserved: !!reserved,
+    shopPhone: '0161 531 1386',
+    rate: rate ? {
+      perDay: rate.ratePerDay, min: rate.minCharge,
+      cap: rate.cap, capDays: rate.capPeriodDays || 30,
+    } : null,
+    // The phone number is already formatted above; a second pass would strip
+    // the spacing back off.
+  }, { date: fmtDate, gbp: fmtGbp, phone: (v) => v });
+}
+
 // Status SMS for a single rental, drafted not sent (same HOLD as reminders:
 // staff copy it into their own SMS/WhatsApp; the app never messages anyone).
 // The message tracks where the rental actually is in its lifecycle.
@@ -11950,17 +12099,17 @@ function buildRentalSms(r) {
   if (status === 'booked') {
     body = `your ${r.country || ''} phone is reserved and ready — pickup ${fmtDate(r.fromDate)}. See you then!`;
   } else if (status === 'overdue') {
-    body = `your rental phone ${r.phoneNumber || ''} was due back ${fmtDate(r.toDate)}. Please return it, or call us on 0161 531 1386 to extend — late fees may apply.`;
+    body = `your rental phone ${fmtPhone(r.phoneNumber || '')} was due back ${fmtDate(r.toDate)}. Please return it, or call us on 0161 531 1386 to extend — late fees may apply.`;
   } else if (r.status === 'returned') {
     body = `thanks for returning the phone!${owedLine || ' All settled — see you next trip!'}`;
   } else if (r.toDate === today) {
-    body = `a quick reminder — your rental phone ${r.phoneNumber || ''} is due back today.`;
+    body = `a quick reminder — your rental phone ${fmtPhone(r.phoneNumber || '')} is due back today.`;
   } else if (r.toDate === tomorrow) {
-    body = `a quick reminder — your rental phone ${r.phoneNumber || ''} is due back tomorrow (${fmtDate(r.toDate)}).`;
+    body = `a quick reminder — your rental phone ${fmtPhone(r.phoneNumber || '')} is due back tomorrow (${fmtDate(r.toDate)}).`;
   } else {
-    body = `your rental of ${r.phoneNumber || 'the phone'} runs until ${fmtDate(r.toDate)}.${owedLine}`;
+    body = `your rental of ${fmtPhone(r.phoneNumber || '') || 'the phone'} runs until ${fmtDate(r.toDate)}.${owedLine}`;
   }
-  return `Hi ${first}, ${body}\n— Kosher Connect`;
+  return `Hi ${first}, ${body}\n- the Kosher Connect team`;
 }
 function openRentalSmsModal(rentalId) {
   const r = rentals.find(x => x.id === rentalId);

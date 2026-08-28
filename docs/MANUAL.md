@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **30 of 30 screens written out in full.**
-*As of 28 Aug 2026 · m-c7d64519 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 28 Aug 2026 · m-5d968727 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -212,7 +212,7 @@ Every phone the shop hires out: what is out with whom, what is due back, and wha
 - **rental-manage** — The live hire. Returning, extending, damage, missing items, and what is owed.
 - **manage-phones** — The handsets, not the hires. It opens on the inventory with the search ready — number, model, IMEI, country or carrier all find a phone — and the form for adding a new one is folded behind a single button until you have one in your hand.
 - **pool-new** — Creates a pool of interchangeable handsets.
-- **done-panel** — The confirmation after a rental is saved — what was agreed and what to hand over, so it can be read back to the customer. ✉️ Email receipt sends the customer the rental in full.
+- **done-panel** — The confirmation after a rental is saved — what was agreed and what to hand over, so it can be read back to the customer. ✉️ Email receipt sends the customer the rental in full. Text does the short version: the number they rented, the dates and how many days are chargeable, what was received and what is left to pay by when, the standard rate it was priced on, and the day the phone is due back — signed from the Kosher Connect team. It opens as a draft, so it can be read and edited before it goes.
 
 **Rules that bite here**
 
