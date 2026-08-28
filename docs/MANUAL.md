@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **30 of 30 screens written out in full.**
-*As of 28 Aug 2026 · m-795d1552 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 28 Aug 2026 · m-fc668a12 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -287,7 +287,7 @@ The money side of the shop: what came in today, who owes, who is in credit, and 
 - **Bank & card reconciliation** — Owner only. What the bank says arrived, matched against what the books say was taken.
 - **In arrears** — Everyone who owes, largest first. Take the payment straight from the row, or press the name to open them.
 - **In credit** — Everyone the shop is holding money for, so a prepayment is never quietly forgotten when they come in.
-- **Recent activity** — The last payments and charges in order, each showing the customer, what it was for and how they paid.
+- **Recent activity** — The last payments and charges in order, each showing the customer, what it was for and how they paid. Every row opens with a round mark saying which way the money went — money in, money out, charged to the account, or the balance adjusted with no cash moving. It carries an arrow as well as a colour, and a name a screen reader can say, so it does not depend on being able to tell green from red.
 
 **Worked example — £280 lands in the bank from someone you cannot place**
 

@@ -5629,8 +5629,21 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 }
 .kc-subview:hover { background: var(--bg-secondary); color: var(--text); }
 .kc-subview.is-on {
-  background: var(--primary-subdued); color: var(--accent);
+  background: var(--primary-subdued);
+  /* NOT var(--accent): the brand blue on the subdued fill measures 4.14:1 and
+     WCAG 1.4.3 (AA) wants 4.5 — caught by the full light contrast sweep, which
+     the per-ship smoke does not run, one day after these pills shipped. The
+     fill is what marks the pill; the ink only has to be readable on it, and
+     the navy already in the palette is 10.06:1 there. The brand blue itself
+     does not move — standard.json decides that. */
+  color: var(--kc-navy);
   border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+:root[data-theme="dark"] .kc-subview.is-on,
+:root:not([data-theme="light"]) .kc-subview.is-on {
+  /* Dark flips it: --primary-subdued is #143247 there, so navy on navy would
+     vanish. The accent's dark-theme voice is what reads. */
+  color: var(--accent);
 }
 .kc-subview-count {
   font-size: var(--fs-micro); font-weight: 600;
@@ -5711,3 +5724,28 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 .gi-note:empty { display: none; }
 .gi-note-ok { color: var(--success-ink); }
 .gi-note-warn { color: var(--gold); }
+
+/* ─── Direction badge on a ledger row (AHT item 3) ───
+   Replaces .history-dot, which was 8px of colour and nothing else: no name, no
+   shape, and — because it read the SIGN — the wrong colour on a refund. This
+   one carries a glyph as well as a hue, so it survives colour-blindness and a
+   failed icon sheet, and an aria-label so it survives having no eyes at all
+   (WCAG 1.4.1: colour is never the only carrier).
+
+   Sized to the text, not to a touch target: it is a label, not a control, and
+   the row around it is what gets pressed. em rather than px so Simple Mode
+   grows it with the words it sits beside. */
+.kc-dir {
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.45em; height: 1.45em; margin-right: 8px;
+  border-radius: 50%;
+  font-size: var(--fs-micro); font-weight: 700; line-height: 1;
+  /* The glyphs are arrows and a bidirectional mark — direction in the physical
+     sense, not the reading sense — so they must not flip in an RTL row. */
+  direction: ltr;
+}
+.kc-dir-in     { background: color-mix(in srgb, var(--success-ink) 15%, transparent); color: var(--success-ink); }
+.kc-dir-out    { background: color-mix(in srgb, var(--danger-ink) 15%, transparent);  color: var(--danger-ink); }
+.kc-dir-charge { background: color-mix(in srgb, var(--accent) 14%, transparent);      color: var(--accent); }
+.kc-dir-adjust { background: var(--surface2);                                          color: var(--muted); }

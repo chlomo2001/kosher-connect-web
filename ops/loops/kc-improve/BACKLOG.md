@@ -258,8 +258,27 @@ in the design note; the loop-safe (no money-read / no nav / no auth) items:
       it on 19 Aug — "the counter screens" — shipped the same day (`bc3e273`): a
       SIM's renewal, a rental's due-back day, a flight's travel date and the day
       a repair came in. It sat unticked here for two days after it shipped.
-- [ ] **P2 · S** — **Direction badges** for ledger/till type — round colour-coded
-      in/out/transfer/bank glyph in place of the text word. Pure display.
+- [x] **P2 · S** — **Direction badges** for ledger/till type — round
+      colour-coded glyph ~~in place of~~ **beside** the text word.
+      Done 28 Aug (`lib/ledgerDirection.mjs`, mirrored, `test/ledgerDirection.test.mjs`).
+      Half the ask was done and half refused. The words STAY: "Rental adj.",
+      "Loss", "Void credit" and "Refund paid out" are four things one shape
+      cannot tell apart, and replacing them would be a second, vaguer answer to
+      "what is this row". And "in/out/transfer/bank" is the TILL's vocabulary,
+      not the ledger's — the ledger's four are money in, money out, charged,
+      adjusted, and that is what the badge says.
+      It fixed a live defect rather than only decorating. Three renderers read
+      direction off the SIGN (`amount >= 0 ? green : blue`) and, counted against
+      Kc-Live, the sign does not mean that: `refund` is 14 rows all POSITIVE (a
+      credit onto the balance) and `refund_payout` is 3 rows all NEGATIVE (cash
+      actually handed back) — so two rows a person reads as "refund" were
+      painted opposite colours, and the one that IS money leaving the shop got
+      the same blue as an ordinary charge.
+      The badge carries a glyph and a spoken name as well as a hue (WCAG 1.4.1)
+      and is sized in `em`, so Simple Mode grows it with the words beside it.
+      One regression caught on the way: the sub-view pills shipped that morning
+      put `--accent` on `--primary-subdued` at **4.14:1**, under AA. The full
+      light contrast sweep found it; the per-ship smoke runs only the dark one.
 - [x] **P3 · S** — **"(N loaded)" count** in list search boxes — **DONE 21 Aug.**
       Landed as "12 of 797": a filtered list and an empty list looked identical,
       and with 797 SIMs and 788 customers that matters. Turned out the SIM tab

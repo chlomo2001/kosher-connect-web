@@ -11534,6 +11534,80 @@ function dismissCustomerCard(slot) {
 // rebuild the entry they belong to at click time.
 const walletEntriesCache = {};
 
+// ── KC_LEDGERDIR mirror start ──
+// MIRROR of lib/ledgerDirection.mjs — which way the money went on a ledger row.
+// test/ledgerDirection.test.mjs lifts this block and holds it identical to the
+// module. Edit the module first; copy here verbatim.
+const KC_LEDGERDIR = (() => {
+  /** Money the shop received. */
+  const IN_TYPES = new Set(['payment', 'top_up'])
+
+  /** Money the shop handed back — cash out of the till, not a credit note. */
+  const OUT_TYPES = new Set(['refund_payout'])
+
+  /**
+   * The balance moved but no cash did: a correction, a void, or a refund posted
+   * as credit rather than paid out. Both signs occur and both are this.
+   */
+  const ADJUST_TYPES = new Set([
+    'manual_adjustment', 'rental_adjustment', 'rental_void', 'refund',
+  ])
+
+  /**
+   * ledgerDirection(entry) → 'in' | 'out' | 'charge' | 'adjust'
+   *
+   * `entry` needs `type` and, for the fallback only, `amount`.
+   *
+   * An entry_type nobody has taught this falls back to the sign, which is what
+   * the app did for everything before — so a type added later is no worse off
+   * than it is today, and never blank.
+   */
+  function ledgerDirection(entry) {
+    const type = String((entry && entry.type) || '')
+    if (IN_TYPES.has(type)) return 'in'
+    if (OUT_TYPES.has(type)) return 'out'
+    if (ADJUST_TYPES.has(type)) return 'adjust'
+    if (KNOWN_CHARGES.has(type)) return 'charge'
+    return (Number(entry && entry.amount) || 0) >= 0 ? 'in' : 'charge'
+  }
+
+  /**
+   * Every type that is a charge raised against the customer. Listed rather than
+   * inferred from the sign: a charge is a charge whichever way a correction to it
+   * later points, and an explicit list is a thing a person can check against the
+   * ledger.
+   */
+  const KNOWN_CHARGES = new Set([
+    'booking', 'rental', 'rental_loss', 'repair', 'online_service',
+    'phone_sale', 'stock_sale', 'virtual_number', 'extra_charge',
+    'sim_charge', 'sim_annual', 'sim_additional', 'sim_replacement', 'sim_service',
+  ])
+
+  /**
+   * How each direction is drawn and, more importantly, said.
+   *
+   * `label` is what a screen reader announces — the badge is a coloured shape,
+   * and colour is never the only carrier of meaning (WCAG 1.4.1). `glyph` is a
+   * plain character rather than an icon font so the badge survives the icon
+   * sheet failing to load, which is the one thing a direction mark must not do.
+   */
+  const DIRECTIONS = {
+    in: { glyph: '↓', label: 'Money in', tone: 'in' },
+    out: { glyph: '↑', label: 'Money out', tone: 'out' },
+    charge: { glyph: '•', label: 'Charged to the account', tone: 'charge' },
+    adjust: { glyph: '⇄', label: 'Balance adjusted, no cash moved', tone: 'adjust' },
+  }
+
+  /** The direction, ready to draw. Never returns nothing. */
+  function directionOf(entry) {
+    const key = ledgerDirection(entry)
+    return { key, ...DIRECTIONS[key] }
+  }
+
+  return { ledgerDirection, directionOf, DIRECTIONS };
+})();
+// ── KC_LEDGERDIR mirror end ──
+
 const LEDGER_TYPE_LABELS = {
   payment: '<i class="kc-ic kc-ic-pound" aria-hidden="true"></i> Payment', top_up: '<i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Top-up', refund: '<i class="kc-ic kc-ic-undo" aria-hidden="true"></i> Refund',
   refund_payout: '<i class="kc-ic kc-ic-undo" aria-hidden="true"></i> Refund paid out',
@@ -11544,6 +11618,16 @@ const LEDGER_TYPE_LABELS = {
   sim_service: '<i class="kc-ic kc-ic-card" aria-hidden="true"></i> SIM service', phone_sale: '<i class="kc-ic kc-ic-package" aria-hidden="true"></i> Phone sale', stock_sale: '<i class="kc-ic kc-ic-package" aria-hidden="true"></i> Sale',
   virtual_number: '<i class="kc-ic kc-ic-digits" aria-hidden="true"></i> Virtual number', extra_charge: '<i class="kc-ic kc-ic-plus" aria-hidden="true"></i> Extra charge',
 };
+
+// The round direction badge that replaces the sign-only dot. One helper so the
+// three places that draw a ledger row cannot drift — they already had, in the
+// smallest way: all three read the sign, and the sign says the wrong thing
+// about a refund (see lib/ledgerDirection.mjs).
+function ledgerDirDot(e) {
+  const d = KC_LEDGERDIR.directionOf(e);
+  return `<span class="kc-dir kc-dir-${d.key}" role="img" aria-label="${escHtml(d.label)}"
+    title="${escHtml(d.label)}">${d.glyph}</span>`;
+}
 
 async function loadWalletSection(customerId) {
   const el = document.getElementById(`walletSection-${customerId}`);
@@ -11581,7 +11665,7 @@ async function loadWalletSection(customerId) {
     : data.entries.slice(0, 8).map((e, i) => `
         <div class="history-item">
           <div class="history-main">
-            <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>
+            ${ledgerDirDot(e)}
             <div class="history-desc">${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}</div>
           </div>
           <div class="history-date" style="margin:0 16px;">${fmtDate(e.at)}</div>
@@ -12464,7 +12548,7 @@ async function renderWalletTab() {
         <div class="history-item history-flat${e.customerId ? ' dash-link' : ''}"
           ${e.customerId ? `onclick="goToTab('customers',{customerId:'${escHtml(String(e.customerId))}'})" title="Open customer"` : ''}>
           <div class="history-main">
-            <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>
+            ${ledgerDirDot(e)}
             <div class="history-desc kc-clamp-2">
               <strong>${escName(e.customerName || '—')}</strong> · ${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}${e.method ? ` <span style="color:var(--muted);">(${escHtml(e.method.replace('_', ' '))})</span>` : ''}</div>
           </div>
@@ -24965,7 +25049,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
         <div class="history-item history-flat${e.customerId ? ' dash-link' : ''}"
           ${e.customerId ? `onclick="goToTab('customers',{customerId:'${escHtml(String(e.customerId))}'})" title="Open customer"` : ''}>
           <div class="history-main">
-            <div class="history-dot ${e.amount >= 0 ? 'dot-green' : 'dot-blue'}"></div>
+            ${ledgerDirDot(e)}
             <div class="history-desc kc-clamp-2">
               ${escName(e.customerName || '—')} · ${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}</div>
           </div>
