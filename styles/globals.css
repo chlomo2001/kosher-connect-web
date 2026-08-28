@@ -40,6 +40,34 @@
   unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
 }
 
+/* ── The LATIN face, added 28 Aug ─────────────────────────────────────────
+   Every self-hosted face here was Hebrew-only, so the Latin — nearly everything
+   on screen — came from the operating system: SF Pro on a Mac, Segoe UI on
+   Windows; Helvetica Neue against Arial on the public site. Two machines, two
+   faces (docs/FONT-DIFFERENCE-2026-08-28.md).
+
+   INTER, because the owner picked which of the two he wanted to keep: "i liked
+   mine more" — the Mac rendering, SF Pro in the app and Helvetica Neue on the
+   site. Neither can be self-hosted (Apple's, and Linotype's), and Inter is the
+   nearest thing that can: a neo-grotesque drawn for screen UI, with SF Pro's
+   proportions and Helvetica's skeleton. Tried Heebo first, since it was already
+   here for the Hebrew — it is a Roboto companion and reads noticeably rounder
+   and wider than either of the faces he was choosing between.
+
+   Two subsets, both gated by unicode-range: `latin` is what nearly everyone
+   downloads, `latin-ext` only arrives if a name needs it. Variable 100-900, so
+   the whole ramp is one file. SIL Open Font License, same as the Hebrew. */
+@font-face {
+  font-family: 'Inter KC'; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url('/fonts/inter-var-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter KC'; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url('/fonts/inter-var-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 :root {
   /* ── Surfaces — light-gray app canvas, white cards, flat recessed panels ── */
   /* Warm "paper" canvas — a whisper of the logo's gold in off-white. Pure
@@ -318,7 +346,13 @@ body {
   /* 'David Libre KC' covers ONLY the Hebrew unicode-range (see @font-face
      above) and sits FIRST: Hebrew glyphs — dates, names, notes, full niqqud —
      render in the classic David face; Latin falls straight through. */
-  font-family: 'David Libre KC', 'SF Pro Display', system-ui, -apple-system, sans-serif;
+  /* 'SF Pro Display' used to sit second and it exists on exactly one of the two
+     machines this shop uses. 'Heebo KC' now carries the Latin as well as the
+     Hebrew, so the staff app renders the same on both — and the same as the
+     public site, which already asked for Heebo first. David stays FIRST because
+     it is Hebrew-only and should win for Hebrew; Heebo picks up everything it
+     does not claim. */
+  font-family: 'David Libre KC', 'Inter KC', system-ui, -apple-system, sans-serif;
   /* Through --fs-scale like every step of the ramp, because this is a ramp step
      too — it is what any element WITHOUT its own font-size inherits. Left as a
      bare 15px it was the one size Simple Mode could not reach: measured 08-16
@@ -808,8 +842,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
      on-screen movement eases both ends. Values verbatim — do not approximate. */
   --sk-ease-out:cubic-bezier(0.23, 1, 0.32, 1);
   --sk-ease-io:cubic-bezier(0.77, 0, 0.175, 1);
-  --sk-fdisp:"Heebo KC","Helvetica Neue",Arial,system-ui,-apple-system,"Segoe UI",sans-serif;
-  --sk-fbody:"Heebo KC",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --sk-fdisp:"Heebo KC","Inter KC","Helvetica Neue",Arial,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --sk-fbody:"Heebo KC","Inter KC",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
 }
 /* On dark the gold already clears AA, so text reverts to the decorative tan. */
 :root[data-theme="dark"]{
@@ -1130,7 +1164,7 @@ html { scroll-behavior: smooth; }
 .login-card[dir="rtl"] :is(button, input, select, textarea),
 .pd-shell[dir="rtl"],
 .pd-shell[dir="rtl"] :is(button, input, select, textarea) {
-  font-family: 'Heebo KC', system-ui, -apple-system, sans-serif;
+  font-family: 'Heebo KC', 'Inter KC', system-ui, -apple-system, sans-serif;
 }
 
 .w-footer2 {

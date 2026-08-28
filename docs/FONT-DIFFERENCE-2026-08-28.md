@@ -58,7 +58,7 @@ That is a brand decision now rather than a technical one, because
 | Leave it | nothing | Every machine renders in its own native face. Fast, and each looks "right" locally — but the shop's own screens do not match each other, and neither will a screenshot in a document |
 | Self-host one Latin face | ~2 × 25KB woff2, subset to Latin, `font-display: swap` | Identical everywhere, brand pinned, the standard's type ramp becomes true rather than aspirational |
 
-**Recommendation: self-host.** The Hebrew argument applies to the Latin without
+**Done, 28 Aug: self-hosted.** The Hebrew argument applies to the Latin without
 change — a shop whose whole positioning is "you can hand me your number and
 your money" should not present two different faces depending on which counter
 you are standing at. The cost is one small file on first load, already paid
@@ -66,3 +66,35 @@ twice over for Hebrew.
 
 Not done yet, because it changes the typeface of every screen and that is the
 owner's call to look at rather than mine to ship.
+
+---
+
+## What was actually done
+
+The owner picked which of the two to keep — *"i liked mine more"*, meaning the
+Mac rendering: SF Pro in the app, Helvetica Neue on the site.
+
+Neither can be self-hosted. SF Pro is Apple's and licensed for Apple platforms;
+Helvetica Neue is Linotype's. **Inter** is the nearest face that can be — a
+neo-grotesque drawn for screen UI, with SF Pro's proportions and Helvetica's
+skeleton, under the SIL Open Font License.
+
+**Heebo was tried first and rejected on looking at it.** It was the tidier
+argument: already self-hosted for the Hebrew, and drawn as Roboto's Hebrew
+companion, so one design would have covered both scripts. But it is a Roboto
+relative — rounder and wider than either of the two faces the owner was
+choosing between, which is the opposite of what he asked for.
+
+- `public/fonts/inter-var-latin.woff2` — 48KB, variable 100-900, what nearly
+  everyone downloads
+- `public/fonts/inter-var-latin-ext.woff2` — 85KB, fetched only if a name needs it
+
+Hebrew is untouched: David Libre still leads the app's stack and Heebo still
+leads the public site's, both Hebrew-only by `unicode-range`, so Inter picks up
+exactly what they do not claim.
+
+Verified against a real server rather than the offline harness, which serves
+`file://` and cannot resolve `/fonts/...`: the woff2 returns 200,
+`document.fonts.check('40px "Inter KC"')` is true, and the `/welcome` hero
+measures 858px — Inter — against 829 for Arial and 753 for the fallback. Only
+the `latin` subset is fetched, so the `unicode-range` gating is working.
