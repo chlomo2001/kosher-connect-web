@@ -792,9 +792,20 @@ not been re-checked against the code and may have drifted the same way.
       forwards into `/api/inbound/mail`, pairs to a SIM on the per-SIM recipient
       address (417 exactly, 317 via the number in the message), and the daily
       sweep raises SIMNEW for numbers that are live at a carrier but absent from
-      the app. Setup steps in `docs/INBOUND-MAIL.md`. Remaining: the owner's
-      three config steps, then a queue screen for the unpaired pile
-      (`sim_mail.resolved_at` is written by nothing yet).
+      the app. Setup steps in `docs/INBOUND-MAIL.md`.
+      **The screen half of this is done, and this line was stale.** It said a
+      queue screen was still to build and that `sim_mail.resolved_at` was
+      written by nothing. Both were true on 16 Aug when it was written and
+      neither is now: the Carrier Mail tab's "Needs a human" filter IS that
+      queue — candidates ranked, pair, dismiss, undo a wrong match, bulk-clear
+      a run of circulars — and `/api/sim-mail` writes `resolved_at` on resolve,
+      on pair and on unpair. Corrected 28 Aug, when the note nearly bought a
+      second screen beside the first.
+      What the queue genuinely could not do was reach the bottom of the pile:
+      it read 60 rows against 180 waiting and never said it was a page. Fixed
+      the same day — the list says how many of how many it is showing and
+      offers the rest.
+      **What remains is the owner's three config steps, and nothing else.**
 
 ### Money not being collected
 

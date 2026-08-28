@@ -285,10 +285,27 @@ async function handler(req, res) {
       selectAllPaged('sim_mail', 'id', 'order=id.asc'),
     ])
 
+    // How many this filter actually has, beside how many are on this page.
+    //
+    // The list is a PAGE and never said so. With 180 rows waiting and a limit
+    // of 60 the screen showed a third of the queue, said "Select all 60" as
+    // though that were all of them, and offered no way to reach the other 120 —
+    // so the pile could be worked at for an afternoon and not go down. The
+    // counts were right the whole time, which is what made it invisible: the
+    // card said 180 and the list underneath it quietly disagreed.
+    //
+    // Exact, not a guess. The three counts are already read in full above for
+    // the header, so naming which one this filter is showing costs nothing.
+    const matching = filter === 'paired' ? paired.length
+      : filter === 'all' ? total.length
+        : pending.length
+
     return res.json({
       success: true,
       counts: { pending: pending.length, paired: paired.length, total: total.length },
       messages,
+      shown: messages.length,
+      matching,
     })
   }
 

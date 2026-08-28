@@ -174,7 +174,7 @@ window.api = {
   // Booleans only — never the payment-method ids. See pages/api/payment-methods.js.
   getPaymentMethods: () => kcFetch('/api/payment-methods')
     .then(r => r.ok ? r.json() : null).catch(() => null),
-  getCarrierMail: (filter = 'pending') => kcFetch(`/api/sim-mail?filter=${encodeURIComponent(filter)}&limit=60`).then(r => r.ok ? r.json() : null),
+  getCarrierMail: (filter = 'pending', limit = 60) => kcFetch(`/api/sim-mail?filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}`).then(r => r.ok ? r.json() : null),
   getSimMail: (simLegacyId) => kcFetch(`/api/sim-mail?simLegacyId=${encodeURIComponent(simLegacyId)}`)
     .then(r => r.ok ? r.json() : null).catch(() => null),
   settleCarrierMail: (body) => kcFetch('/api/sim-mail', {
@@ -23134,7 +23134,12 @@ function kcPaintMsgBadge() {
 //              is nothing to pick — the SIM does not exist yet — so the row
 //              says so plainly and links to the customer search.
 let cmFilter = 'pending';
-let cmData = { counts: { pending: 0, paired: 0, total: 0 }, messages: [] };
+// How many of the queue this screen has asked for. The list has always been a
+// PAGE — 180 messages were waiting and 60 were on screen — and nothing said so,
+// which is why the pile could be worked at and not go down. See cmMore().
+const CM_PAGE = 60;
+let cmLimit = CM_PAGE;
+let cmData = { counts: { pending: 0, paired: 0, total: 0 }, messages: [], shown: 0, matching: 0 };
 
 // Inbound texts nobody has answered. Kept here rather than read off the message
 // log, because the log only loads when somebody opens Settings and presses a
@@ -23147,14 +23152,23 @@ async function renderCarrierMailTab() {
   const content = document.getElementById('mainContent');
   kcSkeleton('stats');
   let data = null;
-  try { data = await window.api.getCarrierMail(cmFilter); }
+  try { data = await window.api.getCarrierMail(cmFilter, cmLimit); }
   catch { content.innerHTML = errorHtml('Couldn’t load carrier mail'); return; }
   if (!data || !data.success) { content.innerHTML = errorHtml('Couldn’t load carrier mail'); return; }
   cmData = data;
   paintCarrierMail();
 }
 
-function cmSetFilter(f) { cmFilter = f; renderCarrierMailTab(); }
+function cmSetFilter(f) { cmFilter = f; cmLimit = CM_PAGE; renderCarrierMailTab(); }
+
+// Another page of the queue. Deliberately a button and not an infinite scroll:
+// this is a work list somebody is clearing, and a list that grows as you look
+// at it takes away the one thing that makes a pile finishable — being able to
+// see the bottom of what you took on.
+function cmMore() {
+  cmLimit += CM_PAGE;
+  renderCarrierMailTab();
+}
 
 function paintCarrierMail() {
   const content = document.getElementById('mainContent');
@@ -23164,6 +23178,14 @@ function paintCarrierMail() {
   // at 3.24:1 in light and 2.62:1 in dark. The harness caught it.
   const chip = (f, label) => `<button class="cm-chip ${cmFilter === f ? 'on' : ''}"
       onclick="cmSetFilter('${f}')" ${cmFilter === f ? 'aria-current="true"' : ''}>${label}</button>`;
+
+  // Is the list a page? `matching` is the count for THIS filter, read in full
+  // server-side beside the header counts, so this is exact rather than the
+  // usual "we got a full page, there is probably more".
+  const more = Number(cmData.matching || 0) > cmData.messages.length;
+  const matchWord = cmFilter === 'pending' ? 'that need a human'
+    : cmFilter === 'paired' ? 'already filed on a SIM'
+      : 'received';
 
   const rows = cmData.messages.length === 0
     ? `<div class="empty-state"><div class="emoji kc-ic ${cmFilter === 'pending' ? 'kc-ic-check' : 'kc-ic-postbox'}" aria-hidden="true"></div>
@@ -23207,9 +23229,22 @@ function paintCarrierMail() {
       ${cmData.messages.length ? `<label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-small);color:var(--muted);padding:2px 0 6px;">
         <input type="checkbox" class="tm-check"
           ${cmData.messages.every(m => cmSelected.has(String(m.id))) ? 'checked' : ''}
-          onclick="cmSelectAll(this.checked)"> Select all ${cmData.messages.length}
+          onclick="cmSelectAll(this.checked)"> ${more
+            ? `Select all ${cmData.messages.length} on this page`
+            : `Select all ${cmData.messages.length}`}
       </label>` : ''}
       <div class="cm-list">${rows}</div>
+      ${/* Say what is on screen, and offer the rest. Without this the list
+            showed 60 of 180 and read as the whole queue — the counts card said
+            180 the whole time and the list underneath it quietly disagreed,
+            which is the worst version of wrong: nothing looks broken. */''}
+      ${more ? `
+        <div class="cm-more">
+          <p>Showing the newest <strong>${cmData.messages.length}</strong> of
+             <strong>${cmData.matching}</strong> ${matchWord}.</p>
+          <button class="btn btn-outline" onclick="cmMore()">
+            Show ${Math.min(CM_PAGE, cmData.matching - cmData.messages.length)} more</button>
+        </div>` : ''}
     </div>`;
 }
 

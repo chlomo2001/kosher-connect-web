@@ -1758,9 +1758,9 @@
   "/api/sim-mail": {
     "success": true,
     "counts": {
-      "pending": 2,
-      "paired": 118,
-      "total": 120
+      "pending": 180,
+      "paired": 316,
+      "total": 504
     },
     "messages": [
       {
@@ -1884,7 +1884,9 @@
         "kindLabel": "Renewed",
         "candidatesTotal": 0
       }
-    ]
+    ],
+    "shown": 5,
+    "matching": 180
   },
   "/api/sim-mail?simLegacyId": {
     "success": true,

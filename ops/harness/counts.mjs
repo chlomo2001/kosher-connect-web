@@ -72,6 +72,42 @@ if (!tile) {
     console.log('· no overdue banner in this seed')
   }
 }
+// ── Carrier mail: the card against the queue under it ────────────────────
+//
+// The same promise, and it was being broken quietly. "Needs a human" read 180
+// while the list under it held 60, with nothing saying the list was a page and
+// no way to reach the other 120 — so the pile could be worked at all afternoon
+// and not go down. The counts were right the whole time, which is what made it
+// invisible.
+//
+// The rule is not "the card must equal the rows": a long queue SHOULD be paged.
+// It is that a screen showing part of a list has to say so. Either the numbers
+// agree, or the page says how many of how many it is showing.
+await page.evaluate(() => goToTab('mail'))
+await page.waitForTimeout(900)
+
+const cm = await page.evaluate(() => {
+  const card = [...document.querySelectorAll('.stat-card')]
+    .find((c) => /needs a human/i.test(c.querySelector('.stat-label')?.textContent || ''))
+  const more = document.querySelector('.cm-more')
+  return {
+    value: card ? Number(card.querySelector('.stat-value').textContent.trim()) : null,
+    rows: document.querySelectorAll('.cm-row').length,
+    says: more ? more.textContent.replace(/\s+/g, ' ').trim() : null,
+  }
+})
+
+if (cm.value === null) {
+  console.log('· no "Needs a human" card in this seed')
+} else if (cm.rows === cm.value) {
+  console.log(`✓ Needs a human: card says ${cm.value}, the queue holds ${cm.rows}`)
+} else if (cm.says && cm.says.includes(String(cm.rows)) && cm.says.includes(String(cm.value))) {
+  console.log(`✓ Needs a human: ${cm.value} waiting, ${cm.rows} on the page, and it says so — "${cm.says}"`)
+} else {
+  console.log(`✗ Needs a human: card says ${cm.value}, the queue shows ${cm.rows}, and nothing on the page says it is a page`)
+  bad = 1
+}
+
 await browser.close()
 console.log(bad ? 'counts: a headline disagrees with its own list' : 'counts: every headline matches the list it opens')
 process.exit(bad)
