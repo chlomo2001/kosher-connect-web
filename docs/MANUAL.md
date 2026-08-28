@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **30 of 30 screens written out in full.**
-*As of 28 Aug 2026 · m-07440734 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 28 Aug 2026 · m-ee66d1ab — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -789,6 +789,7 @@ Every handset the shop sells and stands behind, compared honestly, for the custo
 
 **On the screen**
 
+- **Why a kosher phone** — The case for the thing, above the choice between versions of it. A table of what actually differs from an ordinary smartphone — browser, app store, camera, bank codes, the filter that is not needed, the battery, and what is lost with the phone — and four drawn cards for where it fits in a day. Every row is a fact a customer can check in the shop in ten seconds, which is the point: the page is not arguing, it is describing. This part is written in the page and does not come from Settings.
 - **The handsets** — Each phone with its price and the facts people actually ask at the counter — whether it takes two SIMs, whether it does Hebrew, whether it texts, whether the screen is a touch screen.
 - **The owner's own pros and cons** — Written by the shop, not lifted from a brochure. It is the honest comparison the counter conversation would give.
 - **English / lashon hakodesh** — The page chrome turns over with the language choice shared across the public pages.
@@ -796,6 +797,7 @@ Every handset the shop sells and stands behind, compared honestly, for the custo
 **Rules that bite here**
 
 - The content comes from the phone guide in Settings. Adding a handset or correcting a price is a change the shop makes itself, with no code change and no waiting.
+- The drawings are objects and places — a shtender, licht, a case, a satchel — and never people. That is a decision, not a limitation: community norms rule out the lifestyle photography retail leans on, so the line art carries the scene instead, and it is drawn in the shop's own hand rather than bought in.
 - It is a comparison, not a sales page. The honest note about a handset's weakness is the reason a customer trusts the rest of it.
 
 **When it goes wrong**
