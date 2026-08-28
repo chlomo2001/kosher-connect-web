@@ -448,7 +448,40 @@ async function handler(req, res) {
       resolved_at: now,
     })
     if (!rows.length) return res.status(404).json({ success: false, error: 'No such message.' })
-    return res.json({ success: true, paired: true, sim })
+
+    // ── And REMEMBER the tag, which is the whole difference ─────────────────
+    //
+    // Owner, 28 Aug, on a Lebara notice offering 12 SIMs to choose from: "this
+    // cant be true - cuz each line has its own email variation - how come it
+    // didnt match??" It is true, and the reason was amnesia rather than a bad
+    // matcher. On 28 Aug: 376 of 488 carrier mails had arrived at a +tag
+    // address, 257 of those had been paired to a SIM by hand — and FIVE SIMs
+    // had a tag recorded. Every pairing taught the app which line owns that
+    // tag, and every pairing threw it away, so the same 23 candidates came
+    // back next month.
+    //
+    // Pairing now learns, exactly as `op: 'learn'` does. Best effort: if the
+    // address is already another line's, the pairing still stands — the human
+    // said which SIM this message is, and that answer is not conditional on
+    // whether we can also file the address.
+    //
+    // ONLY A TAGGED ADDRESS. A bare base like gitt.bilig@gmail.com is the
+    // shop's postbox — 308 SIMs deep — and recording it on one line would hand
+    // that line everybody else's mail. The tag is the part that names a line;
+    // the base names a building.
+    let learned = null
+    try {
+      const msgs = await db.select('sim_mail', `select=recipient,route&id=eq.${enc(id)}&limit=1`)
+      const msg = msgs[0] || {}
+      const routeFirst = Array.isArray(msg.route) ? String(msg.route[0] || '').split(/\s+/)[0] : ''
+      const address = (routeFirst.includes('@') ? routeFirst : String(msg.recipient || '')).trim()
+      if (addressTag(address)) {
+        const claim = await claimAddress(sim, address)
+        if (!claim.error) learned = address
+      }
+    } catch { /* pairing already stands; learning is a bonus */ }
+
+    return res.json({ success: true, paired: true, sim, learned })
   }
 
   res.status(405).end()
