@@ -103,13 +103,25 @@ they were found — the standing task's own rule.
       flip. 🔒
       <!-- backlog-ok: code complete and scheduled; open only for the two
       owner-held env flips, DIGEST_TO and MAIL_LIVE -->
-- [ ] **P2 · M** 🔒 — **A credit limit, and a real statement.** Their Customer
-      Credit carries a per-customer limit, a balance owed, and a statement over a
-      date range with an amount due and a due date. KC's wallet has no line at
-      which somebody says stop — see the £10,925 of unbilled bookings (#12).
+- [x] **P2 · M** — **A credit limit, and a real statement.** ~~KC's wallet has
+      no line at which somebody says stop~~ — it has, since 23 Aug.
+      `posOverCreditLimit` draws the line and WARNS rather than refusing (the
+      counter can see the person standing there, the till cannot): once in the
+      tender panel the moment the sale would cross it, and again on a red
+      confirm at Charge, because a panel line scrolls past a busy counter.
+      `test/creditLimit.test.mjs` lifts the arithmetic and runs it. House
+      statements print from the customer card (`printHouseStatement`).
+      Audited 28 Aug, two things worth knowing rather than reopening: **no
+      customer has a limit set yet** (0 of 571), so the line exists and nothing
+      is standing behind it; and the statement is house-account shaped rather
+      than "any customer over a date range". Both are the owner's to want.
 - [ ] **P2 · S** 🔒 — **Cash up per shift, not only per day.** `till_counts` is
-      one row per date, so two people on one day is one variance nobody can
-      attribute. Their end-of-day collection runs at end of shift too.
+      one row per date (`pages/api/cashup.js` upserts on `count_date`), so two
+      people on one day is one variance nobody can attribute.
+      Audited 28 Aug: **`till_counts` holds 0 rows.** Nobody has cashed up in
+      the app at all, so "per shift rather than per day" is a refinement of
+      something not yet in use. Worth asking whether the shop wants to cash up
+      here before the shape of the row is argued about.
 - [x] **P2 · M** — **Stock history and discrepancy as a trail, not a number.**
       They report stock CHANGES over time; KC knew current stock and nothing
       about how it got there, so "we are three short" had no answer.
@@ -223,6 +235,13 @@ Safe (loop-eligible), ranked value ÷ effort:
       done") + **reply-to-approve**. (RepairShopr.) **Drafts BUILT 08-04** and
       HOLD-gated — they generate but never send. Genuinely open only in the sense
       that the send is off; unblocks with the email/SMS go-live decision below.
+      Audited 28 Aug. Two corrections. The repair draft
+      (`buildRepairSms` / "Ready to collect") offers **copy and WhatsApp only —
+      no Send button at all**, unlike the reminder and reply paths which post to
+      `/api/sms` and let the server gate decide; its blurb still says "nothing
+      is sent from here", which stopped being true of the app around it on
+      25 Aug. And **reply-to-approve does not exist** in any form — it is a
+      second feature wearing this one's name.
 - [x] **P2 · S** ⚠ — ~~Non-refundable damage waiver~~ — built 17 Jul, then **REMOVED
       by owner decision 20 Jul** (never confirmed; damage-charges schedule covers it).
       **Do not rebuild.**
@@ -339,8 +358,18 @@ reply box on the message log, #13 wiring lib/identity.mjs to the Duplicates tool
 - [ ] **P1 · S** — Owner live-test pass on this session's work (dark theme retune,
       login backdrop, dashboard clock+charts, dotted cards, ⌘K quick-actions,
       floating timer). All offline-verified; needs the real-browser sign-off.
-- [ ] **P2 · M** — Dashboard metric-card **sparklines** (needs a trend data
-      source — 30-day series per metric). Design the lightweight data feed first.
+- [x] **P2 · M** — Dashboard metric-card **sparklines**. ~~Needs a trend data
+      source; design the lightweight data feed first~~ — both exist.
+      `lib/sparkline.mjs` + its mirror + `test/sparkline.test.mjs`, fed by
+      `GET /api/ledger?series=30` over the `ledger_daily_series` RPC — the same
+      ledger read with the same split, deliberately, so the line under a figure
+      is that figure's own history and not a second definition of "money in".
+      It draws on the dashboard money card and opens the business summary when
+      pressed.
+      Audited 28 Aug: it is ONE sparkline on the money card, not one per metric
+      card. If the owner wants the others that is a new ask with its own data
+      question — and `dashSparkHtml` deliberately draws nothing on a flat
+      series, because a picture of a trend that is not there is a lie.
 - [ ] **P2 · S** — ⌘K as the one global search + "Start timer" now in it; confirm
       it feels like the everywhere-search on the owner's machine, tune ranking.
 - [ ] **P3 · S** — Optional: warm the sidebar navy a touch if it reads monotone
@@ -753,7 +782,11 @@ supplies the figures or that mailbox gets connected. Also unexplained: `XU2WWH`
 appears twice in the eleven (£360 and £145), so a ref-keyed reversal is
 ambiguous until that's resolved.
 
-- [ ] **P2 · S** 🔒 — **Check-in + travel-requirements: built, never used.** 0 of
+- [ ] **P2 · S** 🔒 — **Check-in + travel-requirements: built, never used.**
+      Re-counted 28 Aug and the case is STRONGER, not weaker: **404 bookings
+      now** (this line said 101), still **0** with `checkin_done` and **1** with
+      `destination_country`. Three hundred more bookings and nobody has touched
+      it once. The original count, for the record: 0 of
       101 bookings have `checkin_done` set and 0 have `destination_country`, so
       the whole 🛂 per-passenger visa/passport screen has never rendered a
       requirement. Owner to say whether the shop works this way at all before
@@ -861,16 +894,30 @@ not been re-checked against the code and may have drifted the same way.
 
 ### ELID leftovers (detail in `docs/ELID-IMPORT-2026-08-06.md`)
 
-- [ ] **P2 · S** — mrs-feld's number sits on two devices (hers and a
+- [ ] **P2 · S** ⚠ **the numbers do not reproduce — re-derive before acting.**
+      Checked 28 Aug against today's customers table: **no two customers share a
+      national number**, and **no customer carries a non-+44 country code** (433
+      are +44, 138 have none set). Whatever this described on 6 Aug it does not
+      describe the data now — it was written against the import and the import
+      has been worked since. — mrs-feld's number sits on two devices (hers and a
       Phone-Rentals one); 3 customers have two UK numbers each; 15 have only a
       foreign number, where a `1…`/`972…` is as likely to be a forwarding
       destination as a contact number.
-- [ ] **P2 · S** — 12 DIDs whose owner is ambiguous (Grinfeld ×15, Gross ×9,
+- [ ] **P2 · S** ⚠ **may already be resolved** — all 77 `virtual_numbers` rows
+      carry a customer as of 28 Aug, so "owner is ambiguous" has no obvious
+      referent left. Re-derive before acting. — 12 DIDs whose owner is ambiguous (Grinfeld ×15, Gross ×9,
       Glick ×8 candidates). `chaskel lamm` → probably **Yechezkel Lamm**, but
       that is an inference.
-- [ ] **P2 · S** — The 3 pre-existing `virtual_numbers` rows on `+44 20 7000 100X`
-      match no real DID. Placeholders; confirm before overwriting.
+- [x] **P2 · S** — The 3 pre-existing `virtual_numbers` rows on
+      `+44 20 7000 100X` match no real DID. **Gone.** Counted 28 Aug: zero rows
+      match that pattern, and all 77 virtual numbers carry a customer.
 - [ ] **P2 · S** — Drop the undo/staging tables once the above are signed off.
+      Counted 28 Aug: **59 of them** — 56 `zz_snapshot_*` and 3 `undo_*` — and
+      the count rises every time a bulk write is made safely, by three today
+      alone. All RLS-locked (`20260806210000_lock_snapshot_tables.sql`, re-run
+      after each new one), so this is housekeeping rather than exposure; but 59
+      tables nobody can name is its own kind of risk, and the July ones are past
+      being useful.
       **Counted 21 Aug 2026: there are 61 of them** — 3 `undo_*` and 58 `zz_*`,
       the oldest from 29 July. The entry used to name two patterns and read as a
       tidy-up; at 61 tables it is most of what `list_tables` returns, which is
@@ -902,8 +949,11 @@ not been re-checked against the code and may have drifted the same way.
       reading it instead of the blob. The unique index cannot go on while that
       one pair stands, which makes the task above the real first step.
 - [ ] **P2 · S** — Supabase auth: **leaked-password protection is off** (one
-      toggle), and `current_staff_role()` is a `SECURITY DEFINER` function any
-      signed-in user can call over RPC. Check that's intended.
+      toggle, 🔒 owner), and `current_staff_role()` is a `SECURITY DEFINER`
+      function any signed-in user can call over RPC. Check that's intended.
+      Confirmed still true 28 Aug: the function is `prosecdef`. The RLS half of
+      the neighbouring P1 is clean — zero public tables sit without row-level
+      security.
 - [x] **P1 · S** — **16 public tables had RLS off and full `anon` CRUD** —
       **FIXED 08-06**. Every ad-hoc snapshot since 07-29, including a complete
       copy of the customers table, was readable and writable by anyone holding
