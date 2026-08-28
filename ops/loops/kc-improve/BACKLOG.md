@@ -800,9 +800,22 @@ not been re-checked against the code and may have drifted the same way.
 
 - [ ] **P1 · M** 🔒 — **77 virtual numbers bill nobody.** `billing_enabled` is
       false on every row. The ELID subscription list shows roughly **£772/month**
-      of recurring revenue across ~30 accounts. Blocked on the balance question
-      below — turning billing on before that is settled risks double-charging
-      people who already pay in the shop.
+      of recurring revenue across ~30 accounts.
+      **The blocker this item named is gone.** It said "blocked on the balance
+      question below", and the owner answered that question on 21 Aug — the
+      per-customer ELID balances are ELID's own accrual meter, not a debt to KC,
+      so nothing is at risk of being double-charged and the ~30 accounts are not
+      held back by customer debt. Nobody came back to this line to say so; it sat
+      for a week naming a dependency that had been settled. Corrected 28 Aug.
+      What is actually left is a **decision, not a dependency**: switching
+      `billing_enabled` on starts charging real people roughly £772 a month, and
+      that is the owner's call to make and his date to pick. It stays 🔒 for that
+      reason and no other.
+      Before it is flipped, two things are worth having in hand — who exactly
+      the ~30 accounts belong to (the ambiguous-owner DIDs below are part of the
+      same pile), and what the first month's charge looks like on paper for one
+      of them, so the first invoice is checked before it is sent rather than
+      after.
 - [x] **P1 · S — ANSWERED by the owner, 21 Aug.** **The −£3,330.09 question.**
       There are TWO layers on ELID, which is what the import could not see:
       every customer has their own ELID account, and Shloime sits above them on
