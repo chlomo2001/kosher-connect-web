@@ -4879,6 +4879,17 @@ function renderNrPhoneChips() {
   }
 }
 
+// Three steps. The first is the rental — who, which handset, which days — and
+// it is the only one that is always needed; the price line appears inside it as
+// soon as the dates say something. The second is what else goes out of the door
+// with the phone, the third is how it is paid for and what was agreed. 18 fields
+// over 1.6 screens at 390px.
+const RENTAL_STEPS = [
+  { title: 'Phone and dates' },
+  { title: 'What goes with it' },
+  { title: 'Money and terms' },
+];
+
 function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null) {
   nrPhones = [];
 
@@ -4889,13 +4900,14 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
          made this worth an issue. Hidden until refreshRentalPhoneOptions has
          something to say, and it re-decides on every date change. */''}
     <div class="kc-note kc-note-warn" id="rNoneFree" role="status" hidden></div>
+    ${kcStepsHtml(RENTAL_STEPS)}
     <div class="form-grid">
-      <div class="form-group form-full">
+      <div class="form-group form-full" data-step="1">
         <label class="form-label">Customer *</label>
         ${customerPicker('rCustomer', { onPick: 'rentalCustomerChanged()' })}
       </div>
 
-      <div class="form-group form-full">
+      <div class="form-group form-full" data-step="1">
         <label class="form-label">Phone * <span style="color:var(--muted);font-weight:400;" id="rPhoneHint">(pick dates to see availability)</span></label>
         <div class="customer-search-wrap phone-search-wrap">
           <input type="hidden" id="rPhone">
@@ -4910,30 +4922,30 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
         <div id="rPhoneInfo" style="font-size:var(--fs-small);color:var(--muted);margin-top:4px;"></div>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" data-step="1">
         <label class="form-label">From Date *</label>
         <input class="form-input" type="date" id="rFrom" onchange="refreshRentalPhoneOptions(); updateRentalCalc(); nrSetGivenDefaults(); showHebrewDate('rFrom','rFromHeb')">
         <div class="hebrew-date-label" id="rFromHeb"></div>
       </div>
-      <div class="form-group">
+      <div class="form-group" data-step="1">
         <label class="form-label">To Date * (inclusive)</label>
         <input class="form-input" type="date" id="rTo" onchange="refreshRentalPhoneOptions(); updateRentalCalc(); showHebrewDate('rTo','rToHeb')">
         <div class="hebrew-date-label" id="rToHeb"></div>
       </div>
 
-      <div class="form-group form-full" id="rCalcBox" style="display:none;">
+      <div class="form-group form-full" id="rCalcBox" style="display:none;" data-step="1">
         <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:var(--fs-body);">
           <div id="rCalcText"></div>
         </div>
       </div>
 
-      <div class="form-group form-full" style="flex-direction:row;align-items:center;gap:10px;">
+      <div class="form-group form-full" style="flex-direction:row;align-items:center;gap:10px;" data-step="2">
         <input type="checkbox" id="rAddVN" style="cursor:pointer;accent-color:var(--accent);"
           onchange="document.getElementById('rVNSection').style.display=this.checked?'contents':'none'">
         <label for="rAddVN" style="font-size:var(--fs-ui);cursor:pointer;"><i class="kc-ic kc-ic-digits" aria-hidden="true"></i> Add Virtual Number</label>
       </div>
 
-      <div id="rVNSection" style="display:none;" class="form-full">
+      <div id="rVNSection" style="display:none;" class="form-full" data-step="2">
         <div class="form-grid" style="margin-top:0;">
           <div class="form-group">
             <label class="form-label">Prefix / City</label>
@@ -4965,7 +4977,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
         </div>
       </div>
 
-      <div class="form-group form-full">
+      <div class="form-group form-full" data-step="2">
         <div class="section-divider" style="margin-bottom:8px;">Equipment given to customer</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <div class="eq-btn" tabindex="0" role="button" id="nrGiven_phone" data-given="0" onclick="nrToggleGiven('phone')"><i class="kc-ic kc-ic-phone" aria-hidden="true"></i> Phone</div>
@@ -4975,7 +4987,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
         <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:6px;">Tap to toggle — bright = given</div>
       </div>
 
-      <div class="form-group form-full" id="rDiscountRow">
+      <div class="form-group form-full" id="rDiscountRow" data-step="3">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--fs-body);">
           <input type="checkbox" id="rAddDiscount" style="accent-color:var(--accent);"
             onchange="document.getElementById('rDiscountBox').style.display=this.checked?'flex':'none'; updateRentalCalc()"><i class="kc-ic kc-ic-tag" aria-hidden="true"></i> Apply discount
@@ -4990,12 +5002,12 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
         </div>
       </div>
 
-      <div class="form-group form-full">
+      <div class="form-group form-full" data-step="3">
         <label class="form-label">Notes</label>
         <input class="form-input" type="text" id="rNotes" placeholder="Any notes...">
       </div>
 
-      <div class="form-group form-full">
+      <div class="form-group form-full" data-step="3">
         <div class="section-divider" style="margin-bottom:8px;">Payment</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <select class="form-input" id="rPay" style="width:210px;" onchange="rPayMethodChange()">
@@ -5012,7 +5024,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
         <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">"Paid now" settles the rental immediately — leave on account to bill it to the wallet.</div>
       </div>
 
-      <div class="form-group form-full">
+      <div class="form-group form-full" data-step="3">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--fs-body);">
           <input type="checkbox" id="rDeposit" style="accent-color:var(--accent);"
             onchange="document.getElementById('rDepositBox').style.display=this.checked?'flex':'none'"><i class="kc-ic kc-ic-lock" aria-hidden="true"></i> Hold a refundable deposit
@@ -5023,7 +5035,7 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
         </div>
       </div>
 
-      <div class="form-group form-full">
+      <div class="form-group form-full" data-step="3">
         <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:var(--fs-body);">
           <input type="checkbox" id="rTerms" style="accent-color:var(--accent);margin-top:2px;"
             onchange="document.getElementById('rTermsName').style.display=this.checked?'block':'none'">
@@ -5035,8 +5047,8 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-outline kc-ic kc-ic-save" onclick="saveNewRental(true)" title="Save, then reopen prefilled with the same customer and dates — for the family renting several phones">Save + another phone</button>
-      <button class="btn btn-primary kc-ic kc-ic-save" onclick="saveNewRental()">Save rental</button>
+      <button class="btn btn-outline kc-ic kc-ic-save" data-step-final onclick="saveNewRental(true)" title="Save, then reopen prefilled with the same customer and dates — for the family renting several phones">Save + another phone</button>
+      <button class="btn btn-primary kc-ic kc-ic-save" data-step-final onclick="saveNewRental()">Save rental</button>
     </div>
   `);
 
@@ -5068,6 +5080,9 @@ function openNewRentalModal(preselectCustomerId = null, preselectPhoneId = null)
   updateRentalCalc();
   showHebrewDate('rFrom','rFromHeb');
   showHebrewDate('rTo','rToHeb');
+  // Last, so the setup above — which reads and writes fields on every step —
+  // runs against the whole form rather than only the visible third of it.
+  kcStepInit(RENTAL_STEPS);
 }
 
 function updateRentalPhoneInfo() {
@@ -5301,7 +5316,7 @@ async function saveMultiPhoneRental(customerId, phoneIds, addAnother) {
   const from  = document.getElementById('rFrom').value;
   const to    = document.getElementById('rTo').value;
   const notes = document.getElementById('rNotes').value.trim();
-  if (!from || !to || to <= from) { toast('Please enter valid dates.', 'error'); return; }
+  if (!from || !to || to <= from) { kcStepReveal(!from ? 'rFrom' : 'rTo'); toast('Please enter valid dates.', 'error'); return; }
 
   const customer = customers.find(c => c.id === customerId);
   const today = localISO();
@@ -5643,13 +5658,13 @@ async function saveNewRental(addAnother = false) {
   const notes      = document.getElementById('rNotes').value.trim();
   const addVN      = document.getElementById('rAddVN').checked;
 
-  if (!customerId) { toast('Please select a customer.', 'error'); return; }
-  if (!phoneId)    { toast('Please select a phone.', 'error'); return; }
+  if (!customerId) { kcStepReveal('rCustomer'); toast('Please select a customer.', 'error'); return; }
+  if (!phoneId)    { kcStepReveal('rPhoneSearch'); toast('Please select a phone.', 'error'); return; }
   // Several phones for one customer: each becomes its own rental record, but
   // the operator answers the questions once. Handled by its own path so the
   // single-phone flow below is untouched.
   if (nrPhones.length > 1) return saveMultiPhoneRental(customerId, [...nrPhones], addAnother);
-  if (!from || !to || to <= from) { toast('Please enter valid dates.', 'error'); return; }
+  if (!from || !to || to <= from) { kcStepReveal(!from ? 'rFrom' : 'rTo'); toast('Please enter valid dates.', 'error'); return; }
 
   // Hard double-booking guard — a phone can hold one rental per date window.
   const clash = phoneConflicts(rentals, phoneId, from, to, localISO())[0];
@@ -7746,7 +7761,137 @@ window.addEventListener('resize', () => {
  * written asking for 720 and rendered at 560, which is the kind of thing that
  * is only ever noticed by measuring. Silent no-ops are worse than errors.
  */
+// ─────────────────────────────────────────────
+//  WIZARD STEPPER
+// ─────────────────────────────────────────────
+// One long form, shown a step at a time.
+//
+// The form itself does not change. Every field stays in the DOM with its id and
+// its value all the way through — the stepper only sets `hidden` on the groups
+// that belong to other steps. So saveNewRental() and saveNewBooking() read
+// exactly what they always read, and NOTHING about what gets posted moves. That
+// is deliberate: this is a change to how a form is looked at, and a change to
+// how a form is looked at should not be able to alter what it saves.
+//
+// Two decisions worth arguing with later:
+//
+// · NEXT NEVER BLOCKS. The backlog's warning about this component is that "a
+//   stepper on a flow staff already do fast is a cost, not a help", and a Next
+//   button that refuses is exactly that cost — it stops someone filling a form
+//   in the order the customer is talking. Steps are also all clickable, both
+//   directions, from the first moment.
+// · SAVE ROUTES. The guard that would have justified blocking is better placed
+//   at the end: when a save fails its checks, kcStepReveal() opens the step the
+//   offending field is on and puts the cursor in it. You never hunt for what it
+//   is complaining about, and you were never stopped on the way there.
+//
+// One dialog is open at a time (showDynamicModal replaces #dynamicModal's
+// innerHTML), so one piece of state is enough — and it is cleared on every
+// open, so a plain modal can never inherit the last wizard's.
+let kcStep = null;
+
+/** The step rail. Rendered by the form, above its fields. */
+function kcStepsHtml(steps) {
+  return `<ol class="kc-steps" id="kcStepRail">${steps.map((s, i) => `
+    <li><button type="button" class="kc-step-btn" data-go="${i}" onclick="kcStepGo(${i})">
+      <span class="kc-step-n">${i + 1}</span><span class="kc-step-t">${escHtml(s.title)}</span>
+    </button></li>`).join('')}</ol>`;
+}
+
+/**
+ * kcStepInit(steps) — after showDynamicModal, with the markup already carrying
+ * `data-step="N"` on each group and `data-step-final` on the buttons that only
+ * make sense at the end.
+ */
+function kcStepInit(steps) {
+  const root = document.querySelector('#dynamicModal .modal');
+  if (!root || !steps || !steps.length) return;
+  kcStep = { root, steps, i: 0 };
+  const actions = root.querySelector('.modal-actions');
+  if (actions) {
+    actions.insertAdjacentHTML('afterbegin',
+      `<button type="button" class="btn btn-outline kc-step-back" onclick="kcStepBack()">Back</button>`);
+    actions.insertAdjacentHTML('beforeend',
+      `<button type="button" class="btn btn-primary kc-step-next" onclick="kcStepNext()">Next</button>`);
+  }
+  kcStepGo(0, { focus: false });
+}
+
+/** Show step `n`. Clamped, so Back on the first step and Next on the last are no-ops. */
+function kcStepGo(n, { focus = true } = {}) {
+  if (!kcStep) return;
+  const { root, steps } = kcStep;
+  const i = Math.max(0, Math.min(steps.length - 1, Number(n) || 0));
+  kcStep.i = i;
+  // `hidden` rather than a style, so a group that manages its own display —
+  // #rCalcBox appears when there are dates, #rVNSection uses display:contents —
+  // keeps its own logic and gets it back untouched when its step comes round.
+  // globals.css carries `[hidden] { display: none !important }` for exactly the
+  // second case, where an inline display would otherwise win.
+  for (const el of root.querySelectorAll('[data-step]')) el.hidden = Number(el.dataset.step) !== i + 1;
+  for (const b of root.querySelectorAll('.kc-step-btn')) {
+    const k = Number(b.dataset.go);
+    b.classList.toggle('is-on', k === i);
+    b.classList.toggle('is-done', k < i);
+    if (k === i) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+  }
+  const back = root.querySelector('.kc-step-back');
+  const next = root.querySelector('.kc-step-next');
+  if (back) back.hidden = i === 0;
+  if (next) next.hidden = i === steps.length - 1;
+  // The save buttons belong to the end of the form, not to every step of it.
+  for (const el of root.querySelectorAll('[data-step-final]')) el.hidden = i !== steps.length - 1;
+  const rail = root.querySelector('#kcStepRail');
+  if (rail) rail.setAttribute('aria-label', `Step ${i + 1} of ${steps.length}: ${steps[i].title}`);
+  if (focus) {
+    const box = root.querySelector('.modal-body') || root;
+    box.scrollTop = 0;
+    const first = root.querySelector(`[data-step="${i + 1}"] input:not([type=hidden]):not([readonly]):not([disabled]), [data-step="${i + 1}"] select, [data-step="${i + 1}"] textarea`);
+    if (first) { try { first.focus({ preventScroll: true }); } catch { first.focus(); } }
+  }
+}
+
+/** Back and Next. Named rather than inline arithmetic on kcStep, because an
+    inline handler that reads a top-level `let` is reaching into a binding that
+    is not a property of window — it resolves today and is a trap tomorrow. */
+function kcStepBack() { if (kcStep) kcStepGo(kcStep.i - 1); }
+function kcStepNext() { if (kcStep) kcStepGo(kcStep.i + 1); }
+
+/** What step is showing, for the harness and for anything that needs to ask. */
+function kcStepCurrent() { return kcStep ? kcStep.i : -1; }
+
+/**
+ * kcStepReveal(id) — put the named field in front of the person.
+ *
+ * Called from the save functions beside each failing check, so "Route is
+ * required" lands you on the step with Route on it with the cursor already
+ * there. Harmless on a form with no stepper, which is why the save functions
+ * can call it unconditionally.
+ */
+function kcStepReveal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (kcStep) {
+    const group = el.closest('[data-step]');
+    const n = group ? Number(group.dataset.step) - 1 : -1;
+    if (n >= 0 && n !== kcStep.i) kcStepGo(n, { focus: false });
+  }
+  // Some of these fields are hidden inputs behind a picker — bkCustomer and
+  // rCustomer both are, and they are the two most likely to be the thing
+  // missing. A hidden input takes no focus and throws nothing, so it would have
+  // left the cursor wherever it happened to be. Focus the control a person can
+  // actually type in, which is the visible one in the same group.
+  const typeable = (n) => n && n.type !== 'hidden' && !n.disabled && !n.readOnly && n.offsetParent !== null;
+  const target = typeable(el)
+    ? el
+    : [...(el.closest('.form-group') || el.parentElement || el).querySelectorAll('input, select, textarea, button')].find(typeable) || el;
+  try { target.focus({ preventScroll: false }); } catch { /* nothing typeable here; the step change already did the work */ }
+  const seen = typeable(target) ? target : el;
+  if (typeof seen.scrollIntoView === 'function') seen.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
 function showDynamicModal(html, { width = 560 } = {}) {
+  kcStep = null;   // this dialog is not a wizard until it says it is
   let overlay = document.getElementById('dynamicModal');
   let wasOpen = false;
   if (!overlay) {
@@ -16431,6 +16576,17 @@ async function savePassengers(bookingId) {
   renderBookingsTab();
 }
 
+// Four steps, and the seams are where the answers come from rather than where
+// the form happens to be long: who is going, what they are flying, what it
+// costs, and what has to happen before the day. 27 fields over 2.5 screens at
+// 390px was the measurement that made this worth doing.
+const BOOKING_STEPS = [
+  { title: 'Who' },
+  { title: 'The flight' },
+  { title: 'Money' },
+  { title: 'Before they fly' },
+];
+
 /**
  * The New Booking form.
  *
@@ -16472,31 +16628,32 @@ async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
         ? `<br><strong>${(prefill.passengers || []).length} passengers</strong> read from the email — pick the service below and the fee prices for all ${(prefill.passengers || []).length}.`
         : ''
     }${prefill.returnDate ? `<br><i class="kc-ic kc-ic-undo" aria-hidden="true"></i> Round trip — returning ${escHtml(fmtDate(prefill.returnDate))}.` : ''}</div>` : ''}
+    ${kcStepsHtml(BOOKING_STEPS)}
     <div class="form-grid">
-      <div class="form-group form-full">
+      <div class="form-group form-full" data-step="1">
         <label class="form-label">Customer *</label>
         ${customerPicker('bkCustomer', { selected: preselectCustomerId, onPick: 'bkOnCustomerChange()' })}
       </div>
-      <div class="form-group form-full">
+      <div class="form-group form-full" data-step="1">
         <label class="form-label">Passengers <span style="color:var(--muted);font-weight:400;">(name · date of birth · passport)</span></label>
         <div id="bkReuseWrap" style="margin-bottom:8px;"></div>
         <div id="bkPaxEditor">${paxEditorHtml()}</div>
         <button type="button" class="btn btn-outline" onclick="bkAddPax()"
           style="padding:5px 12px;font-size:var(--fs-small);margin-top:2px;">+ Add passenger</button>
       </div>
-      <div class="form-group">
+      <div class="form-group" data-step="2">
         <label class="form-label">Route *</label>
         <input class="form-input" id="bkRoute" placeholder="e.g. LTN → TLV">
       </div>
-      <div class="form-group">
+      <div class="form-group" data-step="2">
         <label class="form-label">Airline</label>
         <input class="form-input" id="bkAirline" placeholder="e.g. Wizz Air">
       </div>
-      <div class="form-group">
+      <div class="form-group" data-step="2">
         <label class="form-label">Booking Reference</label>
         <input class="form-input" id="bkRef" placeholder="Airline ref (may come later)">
       </div>
-      <div class="form-group">
+      <div class="form-group" data-step="2">
         <label class="form-label">Travel Date *</label>
         <input class="form-input" type="date" id="bkTravelDate" onchange="showHebrewDate('bkTravelDate','bkTravelHeb')">
         <div class="hebrew-date" id="bkTravelHeb"></div>
@@ -16504,27 +16661,27 @@ async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
       ${/* One booking, two dates — a return is one purchase with one reference
            and one fee, not two rows in the register. Optional, because most of
            the book is one-way. */''}
-      <div class="form-group">
+      <div class="form-group" data-step="2">
         <label class="form-label">Return Date <span style="color:var(--muted);font-weight:400;">(round trip only)</span></label>
         <input class="form-input" type="date" id="bkReturnDate" onchange="showHebrewDate('bkReturnDate','bkReturnHeb'); bkCheckinToggle();">
         <div class="hebrew-date" id="bkReturnHeb"></div>
       </div>
-      <div class="form-group">
+      <div class="form-group" data-step="2">
         <label class="form-label">Departure / Arrival</label>
         <div style="display:flex;gap:6px;">
           <input class="form-input" type="time" id="bkDep" aria-label="Departure time">
           <input class="form-input" type="time" id="bkArr" aria-label="Arrival time">
         </div>
       </div>
-      <div class="form-group">
+      <div class="form-group" data-step="3">
         <label class="form-label">Ticket Price (£) *</label>
         <input class="form-input" type="number" min="0" step="0.01" id="bkPrice">
       </div>
-      <div class="form-group">
+      <div class="form-group" data-step="3">
         <label class="form-label">Booking Fee (£)</label>
         <input class="form-input" type="number" min="0" step="0.01" id="bkFee" value="10">
       </div>
-      <div class="form-group form-full">
+      <div class="form-group form-full" data-step="3">
         <label class="form-label">Payment</label>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <select class="form-input" id="bkPay" style="width:200px;">
@@ -16538,7 +16695,7 @@ async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
         </div>
       </div>
       ${svcOptions ? `
-      <div class="form-group form-full">
+      <div class="form-group form-full" data-step="3">
         <label class="form-label">Fee calculator <span style="color:var(--muted);font-weight:400;">(passenger tiers — fills Booking Fee)</span></label>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <select class="form-input" id="bkSvc" onchange="bkCalcFee()" style="flex:2;min-width:200px;">
@@ -16552,7 +16709,7 @@ async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
         </div>
         <div id="bkFeeBreakdown" role="status" style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;"></div>
       </div>` : ''}
-      <div class="form-group">
+      <div class="form-group" data-step="4">
         <label class="form-label">Passport photocopy held?</label>
         <div style="display:flex;gap:8px;align-items:center;">
           <input type="checkbox" id="bkPassport" onchange="document.getElementById('bkPassportExpiryWrap').style.display=this.checked?'block':'none'">
@@ -16561,7 +16718,7 @@ async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
           </div>
         </div>
       </div>
-      <div class="form-group form-full">
+      <div class="form-group form-full" data-step="4">
         <label class="form-label">Online check-in</label>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <select class="form-input" id="bkCheckinBy" style="width:180px;" onchange="bkCheckinToggle()">
@@ -16582,20 +16739,21 @@ async function openNewBookingModal(preselectCustomerId = null, prefill = null) {
         </div>
         <div style="font-size:var(--fs-micro);color:var(--muted);margin-top:4px;">"We do check-in" + a date raises a task reminder for that day.</div>
       </div>
-      ${bkLegBlockHtml('bkLegs', 'bkLegEditor')}
-      <div class="form-group form-full">
+      <div class="form-group form-full" data-step="2">${bkLegBlockHtml('bkLegs', 'bkLegEditor')}</div>
+      <div class="form-group form-full" data-step="4">
         <label class="form-label">Notes</label>
         <input class="form-input" id="bkNotes">
       </div>
     </div>
-    <div style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-secondary);font-size:var(--fs-small);color:var(--muted);">
+    <div data-step-final style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-secondary);font-size:var(--fs-small);color:var(--muted);">
       Saving posts one wallet charge of <strong>price + fee</strong> to the customer's ledger (reference <code>BOOKING-…</code>).
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
-      <button class="btn btn-primary kc-ic kc-ic-plane" onclick="saveNewBooking()">Save booking</button>
+      <button class="btn btn-primary kc-ic kc-ic-plane" data-step-final onclick="saveNewBooking()">Save booking</button>
     </div>
   `);
+  kcStepInit(BOOKING_STEPS);
   if (preselectCustomerId) bkOnCustomerChange(); // #48 — offer passenger reuse straight away
 
   // Filled after the markup exists, rather than interpolated into it: these
@@ -16784,13 +16942,13 @@ async function saveNewBooking() {
                         ? (document.getElementById('bkRetCheckinDate')?.value || '') : '',
     notes:            document.getElementById('bkNotes').value.trim(),
   };
-  if (!payload.customerId) { toast('Select a customer.', 'error'); return; }
-  if (!payload.route)      { toast('Route is required.', 'error'); return; }
-  if (!payload.travelDate) { toast('Travel date is required.', 'error'); return; }
+  if (!payload.customerId) { kcStepReveal('bkCustomer'); toast('Select a customer.', 'error'); return; }
+  if (!payload.route)      { kcStepReveal('bkRoute'); toast('Route is required.', 'error'); return; }
+  if (!payload.travelDate) { kcStepReveal('bkTravelDate'); toast('Travel date is required.', 'error'); return; }
   if (payload.returnDate && payload.returnDate < payload.travelDate) {
-    toast('The return date is before the outbound date.', 'error'); return;
+    kcStepReveal('bkReturnDate'); toast('The return date is before the outbound date.', 'error'); return;
   }
-  if (!Number.isFinite(payload.price) || payload.price < 0) { toast('Enter a valid ticket price.', 'error'); return; }
+  if (!Number.isFinite(payload.price) || payload.price < 0) { kcStepReveal('bkPrice'); toast('Enter a valid ticket price.', 'error'); return; }
 
   // Idempotent booking: one token for this submit (dedupes a retry server-side) and
   // an in-flight guard so a double-click can't create two bookings / two charges.

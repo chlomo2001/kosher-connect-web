@@ -48,9 +48,16 @@ be weighed for UX. The note ranks nine lifts; this is where they wait.
 - **6 · Grouped sidebar with sub-labels.** The owner re-ordered the sidebar on
   17 Aug. Grouping is a navigation decision, not a finding — the same rule the
   port plan applies to any nav cut.
-- **7 · Wizard stepper for multi-step flows.** New Booking, New Rental, a POS
-  order. The component is loop-eligible; adopting it per flow is judgement,
-  because a stepper on a flow staff already do fast is a cost, not a help.
+- **7 · Wizard stepper for multi-step flows.** ~~New Booking, New Rental~~, a
+  POS order. **Decided and built, 28 Aug** — the owner chose New Booking (four
+  steps) and New Rental (three). The measurements that framed the choice: New
+  Booking 27 fields over 2.5 screens at 390px, New Rental 18 over 1.6. **The POS
+  order is NOT adopted and stays here**, because that is the flow the original
+  objection was about: a stepper on a flow staff already do fast is a cost, not
+  a help, and the till is the fastest thing in the app.
+  The two guarantees are pinned by `test/stepper.test.mjs`: the stepper only
+  sets `hidden`, so it cannot change what is saved; and Next never refuses, with
+  the guard moved to the end where a failed save routes to the offending step.
 - **9 · Share affordance ("Send this to the customer").** The button is safe.
   The send stays HOLD-gated until the owner flips live comms on, and the button
   must not imply otherwise — see `docs/claims-audit.md`.

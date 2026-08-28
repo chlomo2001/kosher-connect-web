@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **30 of 30 screens written out in full.**
-*As of 28 Aug 2026 · m-b074e5fa — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 28 Aug 2026 · m-b3882956 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -185,7 +185,7 @@ Every phone the shop hires out: what is out with whom, what is due back, and wha
 
 **On the screen**
 
-- **New rental** — Starts a hire. Customer, then dates, then handset — in that order, because the phone list only offers handsets that are actually free for those days. The dates start filled in, so the form knows from the moment it opens how many are free: it says so beside the phone box, and if the answer is none it says that across the top before you have typed anything, along with the first date that would work. It does not stop you — a hire booked for a later date is a normal thing to take when the shelf is empty today.
+- **New rental** — Starts a hire, in three steps: the phone and the dates, then what else goes out of the door with it, then the money and the terms. The steps are a rail across the top and every one of them is a button — you can jump forward or back at any point, and Next never refuses, because a form that stops you filling it in the order the customer is talking is slower than the scroll it replaced. If a save is refused, the complaint takes you to the step and the box it is about rather than leaving you to find it. Customer, then dates, then handset — in that order, because the phone list only offers handsets that are actually free for those days. The dates start filled in, so the form knows from the moment it opens how many are free: it says so beside the phone box, and if the answer is none it says that across the top before you have typed anything, along with the first date that would work. It does not stop you — a hire booked for a later date is a normal thing to take when the shelf is empty today.
 - **Scan IMEI — out or back** — Scanning the phone finds its rental for you, whether it is going out or coming back. Faster than searching, and it cannot pick the wrong record.
 - **Search rentals + inventory** — One box over both lists: a customer name finds the hire, a phone number or IMEI finds the handset.
 - **Active & Recent Rentals** — The working list. Filters sit above it, and Upcoming travel narrows it to customers who are away or about to be — a customer stays on that list until the day they land back, not the day they fly.
@@ -330,7 +330,7 @@ Flights booked for customers: the ticket and what it cost, who is travelling, wh
 
 **On the screen**
 
-- **+ New booking** — The ticket: customer, passengers, route, airline, the airline's reference when it comes, the travel date, the return date if it is a round trip, the price and the shop's fee, and whether they paid or it goes on account.
+- **+ New booking** — The ticket, in four steps: who is going, the flight, the money, and what has to happen before the day. The steps are a rail across the top and every one is a button, forwards or back, at any point — Next never refuses, so the form can be filled in whatever order the customer is talking. If a save is refused, the complaint takes you to the step and the box it is about. Across the four: customer, passengers, route, airline, the airline's reference when it comes, the travel date, the return date if it is a round trip, the price and the shop's fee, and whether they paid or it goes on account. Every box is filled in before anything is saved — moving between steps is only a change of view, and nothing is posted until Save booking on the last one.
 - **✉️ Email receipt** — On the confirmation after a booking is saved. It puts the passenger name, the route, the airline, the travel and return dates and the airline reference in front of the customer while the booking is still easy to change — the two things worth checking on the day are the names against the passports and the dates, and the email says so. What is still owed carries a button to pay it.
 - **Travel documents panel** — The check that runs on every booking as you fill it in. It blocks a booking where the passport dies before they are home, asks you to verify what it cannot see, and passes what is genuinely fine.
 - **Filter and sort** — Upcoming travel is the working list — and a customer already abroad stays on it until they land back, because they are still away.

@@ -5799,3 +5799,71 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 .kc-dir-out    { background: color-mix(in srgb, var(--danger-ink) 15%, transparent);  color: var(--danger-ink); }
 .kc-dir-charge { background: color-mix(in srgb, var(--accent) 14%, transparent);      color: var(--accent); }
 .kc-dir-adjust { background: var(--surface2);                                          color: var(--muted); }
+
+/* ── Wizard stepper ───────────────────────────────────────────────────────
+   A rail of numbered steps above a long form. Every step is a real button and
+   every one is reachable at any time, forwards or back — the rail is navigation
+   as well as progress, because a form you can only walk in one direction is
+   slower than the scroll it replaced.
+
+   Colour is never the only thing saying where you are (WCAG 1.4.1): the current
+   step is heavier, ringed, and carries aria-current="step"; a finished one gets
+   a tick in the numeral's place. On a coarse pointer each button clears 44×44
+   (2.5.5 AAA), which is what forces the min-height rather than padding alone. */
+.kc-steps {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  list-style: none; margin: 0 0 16px; padding: 0;
+  border-bottom: 1px solid var(--border); padding-bottom: 12px;
+}
+
+.kc-step-btn {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 34px; padding: 5px 12px 5px 6px;
+  background: none; border: 1px solid transparent; border-radius: 999px;
+  font: inherit; font-size: var(--fs-small); color: var(--muted);
+  cursor: pointer; transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+
+.kc-step-btn:hover { color: var(--text); background: var(--bg-secondary); }
+.kc-step-btn:focus-visible { box-shadow: var(--ring); }
+
+.kc-step-n {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; flex: 0 0 22px;
+  border-radius: 50%; background: var(--bg-secondary); border: 1px solid var(--border);
+  font-size: var(--fs-micro); font-variant-numeric: tabular-nums; line-height: 1;
+}
+
+.kc-step-btn.is-on { color: var(--kc-navy); font-weight: 600; border-color: var(--border); background: var(--surface); }
+.kc-step-btn.is-on .kc-step-n { background: var(--kc-navy); border-color: var(--kc-navy); color: #fff; }
+
+/* Done: the numeral is spent, so the tick takes its place. Set in CSS rather
+   than swapped in the DOM so the rail redraws with no markup churn. */
+.kc-step-btn.is-done { color: var(--text); }
+.kc-step-btn.is-done .kc-step-n { background: var(--bg-secondary); border-color: var(--success); color: transparent; position: relative; }
+.kc-step-btn.is-done .kc-step-n::after {
+  content: "\2713"; position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--success-ink); font-size: 12px;
+}
+
+:root[data-theme="dark"] .kc-step-btn.is-on,
+:root:not([data-theme="light"]) .kc-step-btn.is-on { color: var(--accent); }
+:root[data-theme="dark"] .kc-step-btn.is-on .kc-step-n,
+:root:not([data-theme="light"]) .kc-step-btn.is-on .kc-step-n { background: var(--accent); border-color: var(--accent); color: var(--kc-navy); }
+
+/* The counter is a touchscreen. 2.5.5 asks for 44×44 where the pointer is
+   coarse, and a pill this size only reaches it with the extra height. */
+@media (pointer: coarse) {
+  .kc-step-btn { min-height: 44px; padding-inline: 14px; }
+}
+
+/* On a phone the step NAMES do not fit four abreast, so the rail keeps the
+   numerals and the name of the step you are actually on. Progress is still
+   legible — "3 of 4" is what the numerals say — and the current step is still
+   named, which is the part that has to survive. */
+@media (max-width: 560px) {
+  .kc-steps { gap: 4px; }
+  .kc-step-btn:not(.is-on) .kc-step-t { display: none; }
+  .kc-step-btn:not(.is-on) { padding: 5px 6px; }
+}
