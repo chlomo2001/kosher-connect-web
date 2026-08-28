@@ -504,7 +504,7 @@
 
 .search-box:focus { border-color: var(--accent); box-shadow: var(--ring); }
 
-.search-box::placeholder { color: var(--muted); }
+.search-box::placeholder { color: var(--placeholder); }
 
 /* Still the small one — for row actions and inline tools — but 34px rather
    than ~26px. Small should mean "secondary", not "hard to hit". */

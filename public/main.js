@@ -10020,7 +10020,7 @@ async function kcMountCardField(res, custId) {
         color: cs.getPropertyValue('--text').trim() || '#0f172a',
         fontFamily: cs.fontFamily,
         fontSize: '15px',
-        '::placeholder': { color: cs.getPropertyValue('--muted').trim() || '#64748b' },
+        '::placeholder': { color: cs.getPropertyValue('--placeholder').trim() || '#666b72' },
       },
       invalid: { color: cs.getPropertyValue('--danger-ink').trim() || '#b91c1c' },
     },

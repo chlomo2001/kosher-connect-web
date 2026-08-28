@@ -152,6 +152,15 @@
      --surface2, which is darker — 4.38:1 on 11px text across nine tabs.
      Six points darker clears both: 5.14:1 on --bg, 4.79:1 on --surface2. */
   --muted: #4a4d50;             /* muted (warm slate) — 8.37:1 on the card, 7.16:1 on the band: WCAG 1.4.6 (AAA) on both */
+  /* Placeholder ink. NOT --muted: at 8.37:1 an example number sat at the same
+     weight as a real one, and staff read "07911 123456" as a number already on
+     file (owner, 28 Aug). This is a plain step lighter — 5.28:1 on --surface,
+     4.85:1 on --bg, 4.52:1 on --surface2 — so it still clears WCAG 1.4.3 (AA)
+     everywhere a field can sit, while reading as a hint rather than as data.
+     Placeholders are exempt from the AAA 7:1 the rest of the ink holds: the
+     <label> carries the meaning, and a hint that looks like content is the
+     accessibility problem here, not the contrast. */
+  --placeholder: #666b72;
 
   /* ── Semantic ── */
   --gold: #7c5d24;              /* warm accent text (AA on cream) */
@@ -305,6 +314,7 @@
   --text: #f2f0ea;
   --ink-secondary: #cacdc9;
   --muted: #a6adb5;            /* lifted for AAA on dark cards: 7.22:1 on the card, 8.21:1 on the canvas */
+  --placeholder: #868e98;      /* the same step down, dark side: 4.94:1 on the card, 5.87:1 on the canvas */
 
   --gold: #e0a94a;
   --sim: #38bdf8;
@@ -604,7 +614,10 @@ tbody tr:hover td { background: var(--bg); }
 }
 .form-input:focus { border-color: var(--accent); box-shadow: var(--ring); }
 .form-input.error { border-color: var(--danger); }
-.form-input::placeholder { color: var(--muted); }
+/* Every field, not just .form-input: <textarea>s, the quick-add inputs and the
+   search boxes all show examples, and an example that reads as ink is the bug
+   the token above exists to fix. */
+input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 1; }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 /* Checkboxes and radios are sized here, not inline at each of seven call
    sites — inline wins over any stylesheet rule, which is what stopped the
@@ -885,6 +898,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   --text: var(--sk-text);
   --ink-secondary: var(--sk-text);
   --muted: var(--sk-muted);
+  /* --sk-muted is 6.28:1 on the public paper, close enough to real ink to read
+     as one. A hint on the sign-in and welcome forms lands here instead: 4.66:1
+     on --sk-paper, still AA. */
+  --placeholder: #6b748c;
 }
 
 /* ─── The secondary public pages: /repair and /phone-guide ───
