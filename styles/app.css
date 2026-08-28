@@ -3195,7 +3195,21 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 
 .rentals-split-col { display: flex; flex-direction: column; min-width: 0; }
 
-.rentals-split-col .table-wrap { overflow-y: auto; max-height: 420px; }
+/* NO inner cap by default any more. Owner, 27 Aug: "scroll expand in rentals is
+   not feeling right. filling the page, scrolling down the card - i dunno -
+   something's not right there." What was wrong is nested scrolling: the list sat
+   in a 420px window inside a page that also scrolled, so reaching row twelve
+   meant scrolling the page, arriving at the card, and then scrolling again
+   inside it — and a wheel that stops working when the inner box bottoms out is
+   the specific thing that feels broken.
+   The 420 was there so "the two halves of the rentals split stay comparable",
+   and there are no two halves now: sub-views give each list the whole view, so
+   it can simply be as long as it is and the page does the scrolling.
+   The grip still works and still remembers — invApplyHeight sets max-height on
+   the element, and invCurrentCap already falls back to the painted height when
+   there is no cap to read. It is now something you opt into rather than
+   something you have to fight. */
+.rentals-split-col .table-wrap { overflow-y: auto; }
 
 
 /* The rentals column carries a filter/sort toolbar. The Phone Inventory column
