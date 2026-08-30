@@ -5718,8 +5718,17 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
 /* An empty slot still spends a gap. #custInitialChip is a span that only fills
    when a letter-jump is on, and while empty it pushed the search box 8px right
    of the heading above it — the kind of misalignment nobody can name and
-   everybody can see. */
-.kc-toolbar > :empty { display: none; }
+   everybody can see.
+
+   SCOPED TO THE THINGS THAT CAN HOLD SOMETHING. `> :empty` also matched every
+   <input> in the toolbar, because an input has no child nodes and so is always
+   :empty by the selector's reckoning — so the first toolbar to put a search box
+   in as a direct child lost it entirely. Found on the rentals toolbar, 30 Aug,
+   by looking at a screenshot: Scan IMEI and Search rentals had both gone, with
+   nothing in the console to say so. Customers never showed it because its
+   search box is moved into a wrapper div. */
+.kc-toolbar > div:empty,
+.kc-toolbar > span:empty { display: none; }
 /* On a phone there is no "far edge" worth pushing to — the row is already one
    control per line, and auto margins there just open a gap. */
 @media (max-width: 700px) {
@@ -5866,4 +5875,68 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
   .kc-steps { gap: 4px; }
   .kc-step-btn:not(.is-on) .kc-step-t { display: none; }
   .kc-step-btn:not(.is-on) { padding: 5px 6px; }
+}
+
+/* ── Folding the top of a tab ─────────────────────────────────────────────
+   One control, and folded it IS the summary: the figures read along the
+   button, so putting the stat cards away hides no information. That is why
+   there is no second "3 things hidden" row — a fold that needs a caption
+   explaining itself has not saved anything.
+
+   It leads the toolbar rather than sitting on its own line, because a row
+   spent on a control that saves rows would be a poor trade. */
+/* The line the control sits on. Open, it is a quiet right-aligned "Hide the
+   counts" and costs about 24px; folded, it is the summary and replaces roughly
+   150px of cards. The negative bottom margin is what keeps the open cost that
+   low — the row is pulled up into the stat row's own top margin rather than
+   pushing everything below it down. */
+.kc-fold-bar {
+  display: flex; justify-content: flex-end;
+  margin: 0 auto -4px; max-width: 1220px;
+}
+
+.kc-fold-bar[data-folded="1"] { justify-content: flex-start; margin-bottom: 20px; }
+
+.kc-fold-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 30px; padding: 4px 12px 4px 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font: inherit; font-size: var(--fs-small); color: var(--muted);
+  cursor: pointer; white-space: nowrap;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+
+.kc-fold-btn:hover { color: var(--text); border-color: var(--accent); }
+.kc-fold-btn:focus-visible { box-shadow: var(--ring); }
+
+/* Open it is chrome, so it is drawn as chrome: no border, no surface, nothing
+   competing with the cards it sits above. */
+.kc-fold-bar[data-folded="0"] .kc-fold-btn { background: none; border-color: transparent; }
+.kc-fold-bar[data-folded="0"] .kc-fold-btn:hover { border-color: var(--border); }
+
+/* Folded, the button carries real figures and stops being a piece of chrome —
+   so it takes the ink of something worth reading, and it is allowed to wrap
+   rather than truncate: a summary with the end cut off is a summary that has
+   hidden something, which is the one thing this must not do. */
+.kc-fold-btn.is-folded {
+  color: var(--text); font-variant-numeric: tabular-nums;
+  min-height: 38px; padding: 7px 14px 7px 10px;
+  text-align: start; white-space: normal; line-height: 1.4;
+}
+
+.kc-fold-chev {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; font-size: 15px; line-height: 1; color: var(--muted);
+}
+
+@media (pointer: coarse) {
+  .kc-fold-btn { min-height: 44px; }
+}
+
+/* On a phone the folded summary is the longest thing on the screen, so it gets
+   the full width and reads as a band rather than a pill straining to be one. */
+@media (max-width: 560px) {
+  .kc-fold-bar { max-width: none; }
+  .kc-fold-btn.is-folded { width: 100%; }
 }

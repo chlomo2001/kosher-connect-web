@@ -1339,10 +1339,144 @@ function kcNextFacts() {
   };
 }
 
+// ─────────────────────────────────────────────
+//  FOLDING THE TOP OF A TAB
+// ─────────────────────────────────────────────
+// Owner, 30 Aug, with a red box drawn round the whole top of Phone Rentals:
+// "i wanna be able to collapse the top thing to a few buttons, so most of the
+// screen should be the list."
+//
+// He is right about the arithmetic. On that screenshot the list starts 740px
+// down a 1290px window — the stat cards, the toolbar, the view pills, a heading
+// and a filter row, all above four visible rentals out of twelve. Every one of
+// those earns its place the first time you look at the screen and none of them
+// earns it the fiftieth, when you already know there are 7 out and you came to
+// find a row.
+//
+// WHAT FOLDS AND WHAT DOES NOT. The numbers fold, because a number you have
+// read is a number you have read. The buttons stay, because they are what
+// somebody presses. The view pills stay, because they are the way off this
+// view and hiding them would make the fold a trap. The next-action row folds
+// only when it is CLEAR — "nothing waiting on you here" is a result worth one
+// line the first time and worth nothing the fiftieth, but a row that says two
+// phones are overdue is the whole reason the screen exists and must not be
+// foldable away.
+//
+// The fold is remembered per tab. Somebody who wants the list wants the list
+// every morning, not once.
+
+const kcFoldKey = (tab) => `kc.fold.${tab}`;
+
+/** Is this tab's header folded? Defaults to open — the fold is opt-in. */
+function kcFolded(tab) {
+  try { return localStorage.getItem(kcFoldKey(tab)) === '1'; } catch { return false; }
+}
+
+function kcFoldSet(tab, on) {
+  try { localStorage.setItem(kcFoldKey(tab), on ? '1' : '0'); } catch { /* private window: it just will not stick */ }
+}
+
+/**
+ * The summary, read off the cards themselves rather than passed in by each tab.
+ *
+ * This is the whole reason the fold could be adopted on thirteen screens in an
+ * afternoon: no tab has to know how to describe itself, and the summary cannot
+ * drift from the cards it stands in for, because it IS the cards.
+ */
+function kcFoldSummary(row) {
+  if (!row) return '';
+  return [...row.querySelectorAll('.stat-card')].map((c) => {
+    const label = (c.querySelector('.stat-label')?.textContent || '').trim();
+    const value = (c.querySelector('.stat-value')?.textContent || '').trim();
+    return label && value ? `${label} ${value}` : (value || label);
+  }).filter(Boolean).join('  \u00b7  ');
+}
+
+/**
+ * The one control, and it never goes away — folding hides the cards, not the
+ * way back to them (owner, 30 Aug: "it shouldnt vanish the cards entirely but
+ * leave a small button for it to cum back").
+ *
+ * Folded, the button IS the summary: the figures read along it, so nothing is
+ * hidden without being said and no second row is spent explaining what went.
+ * Open, it is small, quiet and off to the right, because a control that saves
+ * room should not be the loudest thing in the room it saved.
+ */
+function kcFoldBtnHtml(tab, summary) {
+  const on = kcFolded(tab);
+  return `<button type="button" class="kc-fold-btn${on ? ' is-folded' : ''}" id="kcFoldBtn"
+    aria-expanded="${on ? 'false' : 'true'}" aria-controls="kcFoldRegion"
+    onclick="kcFoldToggle('${escJs(tab)}')"
+    title="${on ? 'Show the counts along the top' : 'Put the counts away and give the room to the list'}">
+    <span class="kc-fold-chev" aria-hidden="true">${on ? '\u25B8' : '\u25BE'}</span>
+    <span class="kc-fold-text">${on ? escHtml(summary || 'Show the counts') : 'Hide the counts'}</span>
+  </button>`;
+}
+
+/**
+ * Apply the fold to whatever the tab just rendered, and put the control there
+ * if it is not there already. Called at the end of a tab's render.
+ *
+ * Adoption is this one call. A tab with a .stats-row gets the fold for free;
+ * anything else a tab wants folded it marks `data-fold`, and `data-fold="clear"`
+ * folds only while the thing is a quiet result — which is the next-action row.
+ */
+function kcFoldApply(tab) {
+  const content = document.getElementById('mainContent');
+  if (!content) return;
+  const on = kcFolded(tab);
+  const row = content.querySelector('.stats-row');
+  if (row) {
+    row.id = 'kcFoldRegion';
+    let bar = content.querySelector('.kc-fold-bar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.className = 'kc-fold-bar';
+      row.parentNode.insertBefore(bar, row);
+    }
+    // Read the summary BEFORE hiding: textContent survives `hidden`, but a
+    // reader of this later should not have to know that.
+    const summary = kcFoldSummary(row);
+    bar.dataset.folded = on ? '1' : '0';
+    bar.innerHTML = kcFoldBtnHtml(tab, summary);
+    row.hidden = on;
+  }
+  for (const el of content.querySelectorAll('[data-fold]')) {
+    if (el.dataset.fold === 'clear') {
+      // Only a quiet row folds. A row asking for something stays put whatever
+      // the fold says, which is the one rule that keeps this safe.
+      el.hidden = on && !!el.querySelector('.kc-next-clear');
+    } else {
+      el.hidden = on;
+    }
+  }
+  // The next-action row lives OUTSIDE #mainContent (components/AppShell.js says
+  // why: every tab owns mainContent.innerHTML outright and would destroy it).
+  // So it is folded from here, by hand, and only when it is a clear result.
+  const na = document.getElementById('kcNextAction');
+  if (na) na.hidden = on && !!na.querySelector('.kc-next-clear');
+}
+
+/**
+ * Flip it. This re-applies rather than re-rendering the tab: a fold is a change
+ * of view, and re-running the render would throw away the scroll position and
+ * any half-typed search on the way.
+ */
+function kcFoldToggle(tab) {
+  kcFoldSet(tab, !kcFolded(tab));
+  kcFoldApply(tab);
+  const btn = document.getElementById('kcFoldBtn');
+  if (btn) { try { btn.focus({ preventScroll: true }); } catch { btn.focus(); } }
+}
+
 /** Paint the row for the screen currently showing. */
 function kcPaintNextAction(tab) {
   const slot = document.getElementById('kcNextAction');
   if (!slot) return;
+  // This repaints the row from scratch, which would undo the fold that had put
+  // a clear one away. Re-applied on every exit rather than at the one below,
+  // because there are three of them.
+  const refold = () => { if (typeof kcFoldApply === 'function') kcFoldApply(tab); };
   let row;
   try {
     row = KC_NEXT.screenNextAction(tab, kcNextFacts());
@@ -1352,6 +1486,7 @@ function kcPaintNextAction(tab) {
     // the cost of one slipping through is a missing row and a console line.
     console.error('[next-action]', e.message);
     slot.innerHTML = '';
+    refold();
     return;
   }
   if (row.clear) {
@@ -1361,6 +1496,7 @@ function kcPaintNextAction(tab) {
     // result should be quiet — otherwise the row it shares a shape with stops
     // meaning anything.
     slot.innerHTML = `<div class="kc-next-clear"><span class="kc-next-tick" aria-hidden="true">✓</span>${escHtml(row.text)}</div>`;
+    refold();
     return;
   }
   slot.innerHTML = `
@@ -1368,6 +1504,7 @@ function kcPaintNextAction(tab) {
       <span class="kc-next-text">${escHtml(row.text)}</span>
       <button class="btn btn-primary btn-sm kc-next-go" onclick="kcNextDo('${escJs(row.do)}')">${escHtml(row.label)}</button>
     </div>`;
+  refold();
 }
 
 // ─────────────────────────────────────────────
@@ -3428,7 +3565,7 @@ function renderRentalsTab() {
       </div>
     </div>
 
-    <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+    <div class="kc-toolbar">
       ${/* The create action lives in the topbar, on every tab, in the same
              place (#58). It was ALSO here, in the same blue, so three screens
              carried two identical primary buttons ~250px apart — measured
@@ -3466,7 +3603,7 @@ function renderRentalsTab() {
     <div class="rentals-split" data-sub="${escHtml(rentalSub())}"
       style="${rentalSub() === 'avail' ? 'display:none;' : ''}">
       <div class="rentals-split-col" data-view="hires">
-        <div class="section-header">
+        <div class="section-header" data-fold>
           <div class="section-title">Active &amp; Recent Rentals
             <span id="rentalCount" style="font-size:var(--fs-small);color:var(--muted);font-weight:400;margin-left:8px;"></span></div>
         </div>
@@ -3555,6 +3692,7 @@ function renderRentalsTab() {
 
   renderRentalRows();
   renderPhoneRows();
+  kcFoldApply('rentals');
 }
 
 // ── Availability calendar (rental-industry pattern) ─────────────────────
@@ -8595,6 +8733,7 @@ function renderCustomersTab() {
     const res = await window.api.exportCSV();
     if (res.success) toast('Customer list exported.', 'success');
   });
+  kcFoldApply('customers');
 }
 
 // The customer's authoritative wallet balance (negative = owes), or null until the
@@ -12865,6 +13004,7 @@ async function renderWalletTab() {
         <div>${feedHtml}</div>
       </div>
     </div>`;
+  kcFoldApply('wallet');
 }
 
 // ── End-of-day cash-up (the Z-report) ────────────────────────────────────
@@ -14266,6 +14406,7 @@ function renderSimsTab() {
     </div>`;
 
   renderSimRows();
+  kcFoldApply('sim');
 }
 
 /**
@@ -16399,6 +16540,7 @@ function renderBookingsTab() {
   // The email queue loads after the register paints, so a slow network delays
   // nothing that is already on the screen.
   tmEnsure();
+  kcFoldApply('bookings');
 }
 
 // Bulk selection for bookings — same shape as rentals/SIMs. The single-row
@@ -17661,6 +17803,7 @@ async function renderRepairsTab() {
         <tbody>${rows}</tbody>
       </table>
     </div>`;
+  kcFoldApply('repairs');
 }
 
 function openNewRepairModal(preselectCustomerId = null) {
@@ -18442,6 +18585,7 @@ async function renderServicesTab() {
     tick();
     if (running.runningSince) svcTimerInterval = setInterval(tick, 1000); // frozen while paused
   }
+  kcFoldApply('services');
 }
 
 async function openNewServiceModal(preselectCustomerId = null) {
@@ -19114,6 +19258,7 @@ async function renderShopTab() {
         </div>
       </div>
     </div>`;
+  kcFoldApply('shop');
 }
 
 // ── Returns to supplier (RMA) — create + manage in one modal ──
@@ -23764,6 +23909,7 @@ function paintCarrierMail() {
             Show ${Math.min(CM_PAGE, cmData.matching - cmData.messages.length)} more</button>
         </div>` : ''}
     </div>`;
+  kcFoldApply('mail');
 }
 
 // "Which SIM is this?" — the shortlist, not the phone book.
@@ -24619,6 +24765,7 @@ function paintConfirm() {
         <span class="rv-hint">Only what is on this screen, and only if you know all ${confirmQueue.length} are right.</span>
       </div>` : ''}
     </div>`;
+  kcFoldApply('review');
 }
 
 /**
@@ -24904,6 +25051,7 @@ async function renderTasksTab() {
       <div class="section-divider" style="margin-top:10px;">✓ Completed <span style="color:var(--muted);font-weight:400;">· ${doneTasks.length}</span></div>
       ${doneTasks.slice(0, 10).map(card).join('')}
     </div>` : ''}`;
+  kcFoldApply('tasks');
 }
 
 async function saveNewTask() {
@@ -25531,6 +25679,7 @@ async function renderVirtualTab() {
           </tr>`).join('')}</tbody>
       </table>
     </div>` : ''}`;
+  kcFoldApply('virtual');
 }
 
 function openNewVNModal(preselectCustomerId) {
