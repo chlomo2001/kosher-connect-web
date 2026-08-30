@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **30 of 30 screens written out in full.**
-*As of 30 Aug 2026 · m-f508614b — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 30 Aug 2026 · m-16d4b121 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -301,7 +301,7 @@ The money side of the shop: what came in today, who owes, who is in credit, and 
 
 **Boxes that open on top of it**
 
-- **wallet** — Recording money: payment (settles what they owe) or top-up (credit for later), the amount, how they paid — cash, card, bank transfer, voucher — and a note. There is a button that fills in exactly what they owe.
+- **wallet** — Recording money: payment (settles what they owe) or top-up (credit for later), the amount, how they paid — cash, card, bank transfer, voucher — and a note. There is a button that fills in exactly what they owe. “Day the money was taken” is today unless you change it: money reaches the counter before it reaches the app, and cash taken on Friday and typed in on Sunday belongs in Friday’s takings, not Sunday’s. Change it and the entry counts on that day everywhere the shop counts money — the day’s total, the trend line, the revenue report. It will not take a day that has not happened, nor one so far back that it is almost certainly a mistyped year. Nothing is hidden by doing it: the row in the statement sits under the day the money moved and says how long after the money the entry was made, beside the date, so the record still shows both when the money came in and when somebody wrote it down.
 - **cashup** — The day's count: what came in by method, what you counted in cash, the difference either way, and room for a note. It can count an earlier day, and says clearly when it is doing so.
 - **bank-recon** — Owner only. Bank lines beside the shop's own record, with a suggested match and how confident it is, filtered by account or by what is still open. A match is only made when you confirm it.
 - **bank-pick** — Choosing the sender yourself when the suggestions are wrong or there are none. Type a name to search the book. If nobody matches, it offers to add that person as a new customer and post the payment to them in one step — it asks once, shows the amount and what the bank called them, and keeps their email when the row carries one.

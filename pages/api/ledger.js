@@ -71,8 +71,42 @@ const toAppEntry = (row) => ({
   method: row.method || '',
   reference: row.charge_reference,
   description: row.description || '',
+  // `at` is when the MONEY moved and `enteredAt` is when somebody typed it. For
+  // every entry that is not backdated they are the same instant; where they are
+  // not, a screen showing one without the other is telling half the story.
   at: row.created_at,
+  enteredAt: row.entered_at || row.created_at,
 })
+
+/**
+ * How far back a payment may be dated. Two years covers "the cash from before
+ * Pesach that never got entered" and stops a typo in the year putting money in
+ * a period nobody is looking at any more.
+ */
+const BACKDATE_MAX_DAYS = 730
+
+/**
+ * paidOn (YYYY-MM-DD) → the timestamp to stamp the entry with, or null for now.
+ *
+ * NOON of that London day, not midnight: it lands the entry unambiguously
+ * inside the right shop day whichever side of a clock change it falls, and
+ * every report here groups by London day.
+ *
+ * Throws a plain message, which the caller turns into a 400 — the counter needs
+ * to be told which of the three things is wrong with the date it typed.
+ */
+function backdateStamp(paidOn) {
+  if (!paidOn) return null
+  const day = String(paidOn)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new Error('That date is not a date.')
+  const today = londonDate()
+  if (day > today) throw new Error('A payment cannot be recorded for a day that has not happened yet.')
+  if (day === today) return null   // ordinary case: let the database stamp it
+  if (day < londonDate(-BACKDATE_MAX_DAYS)) {
+    throw new Error(`That is more than ${Math.round(BACKDATE_MAX_DAYS / 365)} years ago — check the year.`)
+  }
+  return new Date(Date.parse(londonDayStartUtc(day)) + 12 * 3600 * 1000).toISOString()
+}
 
 async function handler(req, res) {
   if (!tablesMode) {
@@ -339,6 +373,17 @@ async function handler(req, res) {
         return res.status(400).json({ success: false, error: 'Missing idempotency token — refresh and try again.' })
       }
       const chargeRef = `${kind.prefix}-${token}`
+      // Money reaches a counter before it reaches the app: cash taken on Friday
+      // and entered on Sunday belongs in Friday's takings (owner, 30 Aug). The
+      // day the money moved goes in created_at, which is the column every report
+      // here already groups by; entered_at keeps the moment it was typed, and
+      // the database sets that one, not this code.
+      let createdAt = null
+      try {
+        createdAt = backdateStamp(b.paidOn)
+      } catch (e) {
+        return res.status(400).json({ success: false, error: e.message })
+      }
       const inserted = await db.insertIgnoreDup('ledger', [{
         customer_id: uuid,
         charge_reference: chargeRef,
@@ -347,6 +392,7 @@ async function handler(req, res) {
         method,
         description: b.note || null,
         created_by: req.staff?.id || null, // #46 — who moved the money
+        ...(createdAt ? { created_at: createdAt } : {}),
       }], 'charge_reference')
       let row = inserted && inserted[0]
       if (!row) {

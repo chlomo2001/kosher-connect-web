@@ -12024,6 +12024,25 @@ const LEDGER_TYPE_LABELS = {
 // three places that draw a ledger row cannot drift — they already had, in the
 // smallest way: all three read the sign, and the sign says the wrong thing
 // about a refund (see lib/ledgerDirection.mjs).
+/**
+ * "entered 2 days later" — only when the two dates differ.
+ *
+ * A backdated entry sits in the list under the day the money moved, which is
+ * right and is the whole point. But a row that quietly appeared in last week
+ * with nothing saying when it was typed is a row somebody will eventually have
+ * to argue about. This is the witness, and it costs nothing on the ordinary
+ * entry, where the two dates are the same instant and it prints nothing.
+ */
+function ledgerEnteredNote(e) {
+  const moved = String(e && e.at || '').slice(0, 10);
+  const typed = String(e && e.enteredAt || '').slice(0, 10);
+  if (!moved || !typed || moved === typed) return '';
+  const days = Math.round((Date.parse(typed + 'T12:00:00Z') - Date.parse(moved + 'T12:00:00Z')) / 86400000);
+  if (!Number.isFinite(days) || days <= 0) return '';
+  return `<span class="kc-entered-note" title="The money is dated ${escHtml(fmtDate(moved))}; the entry was made on ${escHtml(fmtDate(typed))}">`
+    + `entered ${days} day${days === 1 ? '' : 's'} later</span>`;
+}
+
 function ledgerDirDot(e) {
   const d = KC_LEDGERDIR.directionOf(e);
   return `<span class="kc-dir kc-dir-${d.key}" role="img" aria-label="${escHtml(d.label)}"
@@ -12069,7 +12088,7 @@ async function loadWalletSection(customerId) {
             ${ledgerDirDot(e)}
             <div class="history-desc">${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}</div>
           </div>
-          <div class="history-date" style="margin:0 16px;">${fmtDate(e.at)}</div>
+          <div class="history-date" style="margin:0 16px;">${fmtDate(e.at)}${ledgerEnteredNote(e)}</div>
           <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--danger-ink)'};">
             ${e.amount >= 0 ? '+' : '−'}${fmtGbp(Math.abs(e.amount))}</div>
           ${RECEIPTABLE[e.type] && Math.abs(e.amount) >= 0.005 ? `<button class="btn btn-secondary" style="font-size:var(--fs-micro);padding:3px 8px;margin-left:10px;"
@@ -12811,6 +12830,21 @@ function openWalletModal(customerId, balance = null) {
         <label class="form-label">Note</label>
         <input class="form-input" id="wlNote" placeholder="What is this for?">
       </div>
+      ${/* Money reaches the counter before it reaches the app: cash taken on
+             Friday and entered on Sunday, a transfer noticed three days later
+             (owner, 30 Aug). Left alone this is today, which is the ordinary
+             case and wants no thought; changed, it is the day the money moved,
+             and that is the day it counts in the takings. It cannot be set
+             forward — a payment that has not happened is not a payment. */''}
+      <div class="form-group form-full">
+        <label class="form-label" for="wlPaidOn">Day the money was taken</label>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <input class="form-input" type="date" id="wlPaidOn" style="width:190px;"
+            value="${escHtml(localISO())}" max="${escHtml(localISO())}"
+            onchange="wlPaidOnNote()">
+          <span id="wlPaidOnNote" class="gi-note" role="status"></span>
+        </div>
+      </div>
       ${c && c.email && !isOwnAccountEmail(c.email) ? `<div class="form-group form-full">
         <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:var(--fs-body);">
           <input type="checkbox" id="wlEmail"> <span style="min-width:0;overflow-wrap:anywhere;"><i class="kc-ic kc-ic-mail" aria-hidden="true"></i> Email a receipt to ${escHtml(c.email)}</span>
@@ -12824,12 +12858,34 @@ function openWalletModal(customerId, balance = null) {
   `);
 }
 
+/**
+ * Say what a backdated date means, on the spot. A date field on a money form is
+ * ambiguous — is it when it was paid, or when it should be counted? — and the
+ * answer here is "both", so the line says so rather than leaving it to be
+ * guessed after the money is already recorded.
+ */
+function wlPaidOnNote() {
+  const el = document.getElementById('wlPaidOn');
+  const out = document.getElementById('wlPaidOnNote');
+  if (!el || !out) return;
+  const today = localISO();
+  const v = el.value;
+  out.classList.remove('gi-note-ok', 'gi-note-warn');
+  if (!v || v === today) { out.textContent = ''; return; }
+  if (v > today) { out.textContent = 'That day has not happened yet.'; out.classList.add('gi-note-warn'); return; }
+  const days = Math.round((Date.parse(today + 'T12:00:00Z') - Date.parse(v + 'T12:00:00Z')) / 86400000);
+  out.textContent = `Counts in the takings for ${fmtDate(v)} — ${days} day${days === 1 ? '' : 's'} ago.`;
+  out.classList.add('gi-note-ok');
+}
+
 async function saveWalletEntry(customerId) {
   const kind = document.getElementById('wlKind').value;
   const amount = parseFloat(document.getElementById('wlAmount').value);
   if (!Number.isFinite(amount) || amount === 0) { toast('Enter a non-zero amount.', 'error'); return; }
   const method = document.getElementById('wlMethod').value;
   const note = document.getElementById('wlNote').value.trim();
+  const paidOn = document.getElementById('wlPaidOn')?.value || '';
+  if (paidOn && paidOn > localISO()) { toast('That day has not happened yet.', 'error'); return; }
   const wantEmail = !!document.getElementById('wlEmail')?.checked;
   // Stop a double-click from recording the money twice while the first save is in
   // flight; the clientRef makes any retry idempotent server-side too.
@@ -12862,13 +12918,15 @@ async function saveWalletEntry(customerId) {
     // expected drawer cash. A payout does carry one — it lowers the drawer by the
     // same rule, which is why cash-up nets cash rows by sign.
     const tenderMethod = ['payment', 'top_up', 'refund_payout'].includes(kind) ? method : null;
-    res = await window.api.addLedgerEntry({ customerId, kind, amount, method: tenderMethod, note, clientRef: kcRef() });
+    res = await window.api.addLedgerEntry({ customerId, kind, amount, method: tenderMethod, note, paidOn, clientRef: kcRef() });
   } finally {
     kcEndWrite(guardKey);
   }
   if (!res.success) { toast(res.error || 'Could not record it.', 'error'); return; }
   closeDynamicModal();
-  toast(`Recorded — wallet balance now ${fmtGbp(res.balance)}.`, 'success');
+  toast(paidOn && paidOn !== localISO()
+    ? `Recorded as taken on ${fmtDate(paidOn)} — wallet balance now ${fmtGbp(res.balance)}.`
+    : `Recorded — wallet balance now ${fmtGbp(res.balance)}.`, 'success');
   // The receipt template says "payment received", so it only fits money coming
   // in. A payout going the other way would thank them for money they were given.
   if (wantEmail && amount > 0 && (kind === 'payment' || kind === 'top_up')) {
@@ -12953,7 +13011,7 @@ async function renderWalletTab() {
             <div class="history-desc kc-clamp-2">
               <strong>${escName(e.customerName || '—')}</strong> · ${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}${e.method ? ` <span style="color:var(--muted);">(${escHtml(e.method.replace('_', ' '))})</span>` : ''}</div>
           </div>
-          <div class="history-date" style="margin:0 12px;">${fmtDate(e.at)}</div>
+          <div class="history-date" style="margin:0 12px;">${fmtDate(e.at)}${ledgerEnteredNote(e)}</div>
           <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--text)'};font-feature-settings:'tnum';">
             ${e.amount >= 0 ? '+' : '−'}${fmtGbp(Math.abs(e.amount))}</div>
           ${e.customerId ? '<span class="feed-go">›</span>' : ''}
@@ -25522,7 +25580,7 @@ function dashPaint(money, tasksList2, stillLoading, shopList, returnsList) {
             <div class="history-desc kc-clamp-2">
               ${escName(e.customerName || '—')} · ${LEDGER_TYPE_LABELS[e.type] || escHtml(e.type)}${e.description ? ' · ' + escHtml(e.description) : ''}</div>
           </div>
-          <div class="history-date" style="margin:0 12px;">${fmtDate(e.at)}</div>
+          <div class="history-date" style="margin:0 12px;">${fmtDate(e.at)}${ledgerEnteredNote(e)}</div>
           <div class="history-amount" style="color:${e.amount >= 0 ? 'var(--success)' : 'var(--text)'};">
             ${e.amount >= 0 ? '+' : '−'}${fmtGbp(Math.abs(e.amount))}</div>
           ${e.customerId ? '<span class="feed-go">›</span>' : ''}
