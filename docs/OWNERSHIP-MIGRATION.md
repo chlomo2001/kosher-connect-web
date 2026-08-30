@@ -405,15 +405,47 @@ A green settings page proves nothing. The test is a real deploy:
 
 Claude can check 1–3 through the Vercel and Supabase tools; ask.
 
-**Before-state for comparison**, captured **26 Aug 2026, 14:03 UTC** — use this
-one, the 17 Aug row below is superseded:
+**Before-state for comparison**, captured **30 Aug 2026, 17:07 UTC**, minutes
+before the repo was repointed — use this one; the 26 Aug and 17 Aug rows below
+are superseded:
 
 | | |
 | --- | --- |
-| Production deployment | `dpl_EcRmkUHSaFQrJ3tQUu9C2ZwxXZPm` |
-| Commit | `04e115e` on `main` |
-| State | `READY`, built from `psic770-ai` |
-| Health | `ok: true`, `mode: tables`, `email` live, `sms` live, `stripe` live, `digest: "on"`, `vault: "on"`, `env: production` |
+| Production deployment | `dpl_BHsPPRxLxtbvaxsVfLKa5gxEXcri` |
+| Commit | `a3ed580` on `main` |
+| State | `READY`, target `production`, `githubCommitOrg: psic770-ai` |
+| Health | `ok: true`, `mode: tables`, `env: production` |
+| Email | `resend`, `mode: live`, `webhook: armed` |
+| SMS | `twilio`, `mode: live`, `deliveryTracking: on` |
+| Stripe | `mode: live`, `keysMatch: true`, `webhook: true` |
+| Also | `digest: on`, `ai.configured: true`, `vault: on` |
+
+Every line of that health block is there to be compared against, not admired.
+`keysMatch`, `webhook: armed` and `vault: on` are the three that fail QUIETLY —
+a deploy stays green while live card payments, inbound mail or the encrypted
+fields stop working, and the only symptom is at a counter days later.
+
+**The copy that preceded the repoint**, verified 30 Aug 18:04 UTC. The mirror
+push carried everything and the numbers were checked against the source rather
+than assumed:
+
+| | `psic770-ai` | `hatsluche` |
+| --- | --- | --- |
+| Commits on `main` | 1,262 | 1,262 |
+| HEAD | `a3ed580` | `a3ed580` |
+| Branches | 6 | 6 |
+| Tags | 0 | 0 — none have ever existed, so nothing was lost |
+| Visibility | Private | Private |
+
+Made with the bare-mirror recipe rather than `push --all`, because no local
+clone existed and `--mirror` carries every ref exactly:
+`git clone --bare <source> && git push --mirror <destination>`, then delete the
+bare clone. Safe here for one reason worth stating: `--mirror` makes the
+destination match the source EXACTLY, deletions included, so it is only ever
+run at a repo created empty moments earlier.
+
+*(Superseded: 26 Aug 2026 — `dpl_EcRmkUHSaFQrJ3tQUu9C2ZwxXZPm`, commit
+`04e115e`, `READY`, `psic770-ai`.)*
 
 If `/api/health` comes back with any of those flipped after a move, an
 environment variable did not survive — that is the whole reason the probe
