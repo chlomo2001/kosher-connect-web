@@ -38,6 +38,38 @@ be weighed for UX. The note ranks nine lifts; this is where they wait.
 
 ### Owner-held — do not start without a decision
 
+- **14 · The fourteen `sub-sim-*` lines bill nobody, and nothing says what they
+  should bill.** Found 30 Aug while answering "why was Mehler credited £20".
+  Counted against Kc-Live that day:
+
+  | | |
+  |---|---|
+  | SIM lines in total | 797 (772 active) |
+  | `billing_option` = `per_service` | **all 797** — the field distinguishes nothing |
+  | `paymentType: direct` — customer pays the carrier | 757 active |
+  | …of those, no renewal cycle and no next renewal date | 489 |
+  | `paymentType: monthly`, `paid_by: kc` | **14** |
+  | SIM charges in the ledger, ever | **3**, £80 — one of them posted that day |
+
+  The 489 are fine as they are: on a `direct` line the customer pays Lebara, so
+  no monthly charge is what should happen. The gap only bites when the shop does
+  something chargeable — a top-up, a replacement, an annual fee — and there is
+  nothing to raise it. That is exactly how a £20 card payment sat as credit for
+  a week with no charge to meet it.
+
+  The 14 are the ones to decide about. Every one has a monthly figure, no
+  renewal cycle, no next renewal date, and no ledger entry ever; ten carry a
+  figure totalling **£242/month**, four sit at £0. They have been on the books
+  since the 13 July import.
+
+  **The decision is what that figure means**, and it cannot be inferred: the
+  column is `provider_monthly_cost`, which reads as what the SHOP pays the
+  carrier, and there is no customer price anywhere on those rows. If it is what
+  the customer pays, roughly £390 has gone uninvoiced since July and is
+  climbing. If it is the shop's own cost, no money is missing and the 14 simply
+  need a customer price before anything can be wired up. Owner asked to leave
+  them alone for now (30 Aug) — nothing has been changed.
+
 - **2 · בעזהשי״ת (or a chosen phrase) in the header / on printed documents.**
   Tiny to build. The owner picks the phrase and the placement; neither is a
   thing to infer.
