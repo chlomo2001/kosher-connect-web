@@ -356,6 +356,12 @@ GitHub connection is remade — otherwise it gets remade twice.
 
 #### Relinking: how to do §4c.3, and the last time it was needed
 
+0. **Removing the connection is not free, and nothing tells you.** Remove
+   Connection unlinks immediately; from that moment pushes to `main` are
+   ignored, with no error, no email and no failed build to notice. Verified
+   30 Aug (§6a). So do not press it until the destination is ready to connect
+   — and if you already have, reconnect to something before walking away,
+   even if that means reconnecting to where you started.
 1. Vercel → project **kosher-connect-web** → **Settings → Git**.
    - Shows the repo at its new address → nothing to do.
    - Shows *"Project Link not found"* → this exact thing happened before
@@ -508,9 +514,29 @@ Halfway, deliberately, and nothing is broken.
 - [x] **The code is in it** — `hatsluche/kosher-connect-web`, private, verified
       against the source rather than assumed: 1,262 commits, HEAD `a3ed580`,
       6 branches, 0 tags on both sides. Method and the case-fix are in §4a/§5.
-- [ ] **Vercel is NOT repointed.** Blocked on the plan (see the Hobby section).
-      Production still deploys from `psic770-ai`, which is correct and safe —
-      the copy deploys nothing and harms nothing while it waits.
+- [ ] **Vercel is NOT repointed** — blocked on the plan (see the Hobby section)
+      — **and the attempt left the project with NO Git connection at all.**
+      Timed from the API rather than remembered:
+
+      | 17:08:46 UTC | `f7c25ee` deploys — the last automatic one |
+      | 17:17:05 UTC | Remove Connection pressed; `project.link` becomes `null` |
+      | 17:28 UTC | `0e51978` pushed, **never deployed** |
+
+      **This is the failure §4c.3 calls "the step that silently stops `main`
+      deploying", and it fires on Remove Connection ALONE** — not only after a
+      project transfer, which is the only place this file warned about it. There
+      is no error and no notice: pushes are simply ignored. Production sat on
+      `f7c25ee` while `main` moved on, and the only reason it cost nothing is
+      that the commit left behind was documentation.
+
+      Caught because the owner asked "didn't I disconnect it?" against my own
+      claim that production was still deploying — a claim I had not checked.
+      **Check `project.link` rather than assuming it; `list_projects` shows it
+      in one line.**
+
+      Recovery while the plan question is parked: reconnect to
+      `psic770-ai/kosher-connect-web`. Hobby accepts it because that owner is a
+      personal account, which is the whole reason the org broke it.
 - [ ] **The old repo is NOT archived**, and must not be until Vercel has moved
       and a deploy is verified. Archiving first leaves no live repo.
 
