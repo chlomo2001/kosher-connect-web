@@ -5982,3 +5982,54 @@ body.kc-resizing, body.kc-resizing * { user-select: none !important; cursor: ns-
   font-size: var(--fs-micro); color: var(--muted);
   font-weight: 400; white-space: nowrap;
 }
+
+/* ── A handset's history ──────────────────────────────────────────────────
+   Under the fields in the edit dialog and folded shut: that dialog is opened
+   to change something far more often than to read the trail, and a handset
+   with twenty hires would otherwise push Save off the screen. The summary
+   carries the useful one-liner, so the fold still answers "how long have we
+   had this, and has it earned its keep" without being opened. */
+.ph-story-wrap {
+  margin: 14px 0 4px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--bg-secondary);
+}
+
+.ph-story-wrap > summary {
+  cursor: pointer; font-size: var(--fs-small); color: var(--muted);
+  min-height: 24px; display: flex; align-items: center;
+}
+
+.ph-story-wrap > summary:hover { color: var(--text); }
+.ph-story-wrap > summary:focus-visible { box-shadow: var(--ring); border-radius: 4px; }
+
+.ph-story { list-style: none; margin: 10px 0 0; padding: 0; }
+
+.ph-story-row {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 7px 0; border-top: 1px solid var(--border);
+  font-size: var(--fs-small);
+}
+
+.ph-story-when {
+  flex: 0 0 96px; color: var(--muted);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
+.ph-story-what { flex: 1 1 auto; min-width: 0; }
+.ph-story-detail { display: block; color: var(--muted); font-size: var(--fs-micro); }
+.ph-story-go { flex: 0 0 auto; }
+
+/* Each kind takes a stripe on its date, so the trail scans without reading:
+   out, back, arrived, retired. Never colour alone — the words carry it, and
+   these only reinforce (WCAG 1.4.1). */
+.ph-story-out  .ph-story-when { border-inline-start: 3px solid var(--accent); padding-inline-start: 7px; }
+.ph-story-back .ph-story-when { border-inline-start: 3px solid var(--success); padding-inline-start: 7px; }
+.ph-story-added .ph-story-when { border-inline-start: 3px solid var(--border); padding-inline-start: 7px; }
+.ph-story-retired .ph-story-when { border-inline-start: 3px solid var(--muted); padding-inline-start: 7px; }
+
+.ph-story-empty { margin-top: 10px; font-size: var(--fs-small); color: var(--muted); line-height: 1.5; }
+
+@media (pointer: coarse) {
+  .ph-story-wrap > summary { min-height: 44px; }
+}

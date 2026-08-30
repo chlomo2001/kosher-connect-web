@@ -6656,6 +6656,111 @@ function clearReviewFlags(p, codes) {
   p.needsReview = p.reviewReasons.length > 0;
 }
 
+// ── KC_PHONESTORY mirror start ──
+// Mirrors lib/phoneStory.mjs. Held to it by test/phoneStoryMirror.test.mjs.
+const KC_PHONESTORY = (() => {
+  function daysBetween(a, b) {
+    const x = Date.parse(`${String(a).slice(0, 10)}T00:00:00Z`);
+    const y = Date.parse(`${String(b).slice(0, 10)}T00:00:00Z`);
+    return Number.isFinite(x) && Number.isFinite(y) ? Math.round((y - x) / 86400000) : null;
+  }
+  const iso = (v) => (v ? String(v).slice(0, 10) : null);
+  function phoneStory(phone, rentals = [], today = null, fmt = {}) {
+    if (!phone) return [];
+    const out = [];
+    const date = (d) => (fmt.date ? fmt.date(d) : d);
+    const mine = (rentals || []).filter((r) => r && !r.voided && String(r.phoneId) === String(phone.id));
+    const added = iso(phone.addedAt);
+    if (added) {
+      const earliest = mine.map((r) => iso(r.fromDate)).filter(Boolean).sort()[0] || null;
+      const usedBefore = earliest && earliest < added;
+      out.push({
+        date: added,
+        kind: 'added',
+        title: 'Added to the inventory',
+        detail: [
+          phone.dataSource === 'import'
+            ? 'Came in with an import, so this is the day the app learned about it'
+            : 'Entered here by hand',
+          usedBefore
+            ? `it was already out on hire from ${date(earliest)}, before there was a record of it`
+            : null,
+        ].filter(Boolean).join(' \u2014 '),
+      });
+    }
+    for (const r of mine) {
+      const from = iso(r.fromDate);
+      if (from) {
+        const nights = daysBetween(from, iso(r.toDate));
+        out.push({
+          date: from,
+          kind: 'out',
+          rentalId: r.id,
+          title: `Out with ${r.customerName || 'a customer'}`,
+          detail: [
+            iso(r.toDate) ? `until ${date(iso(r.toDate))}` : null,
+            Number.isFinite(nights) && nights > 0 ? `${nights} day${nights === 1 ? '' : 's'}` : null,
+          ].filter(Boolean).join(' \u00b7 '),
+        });
+      }
+      const back = iso(r.returnedDate || (r.status === 'returned' ? r.toDate : null));
+      if (back) {
+        out.push({
+          date: back,
+          kind: 'back',
+          rentalId: r.id,
+          title: 'Back on the shelf',
+          detail: r.customerName ? `returned by ${r.customerName}` : '',
+        });
+      }
+    }
+    if (phone.status === 'retired') {
+      out.push({ date: null, kind: 'retired', title: 'Retired', detail: 'No longer offered for hire' });
+    }
+    const rank = { out: 0, back: 1, added: 2, retired: 3 };
+    return out.sort((a, b) => {
+      if (!a.date && !b.date) return 0;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+      return (rank[a.kind] ?? 9) - (rank[b.kind] ?? 9);
+    });
+  }
+  function phoneStoryLine(phone, rentals = [], fmt = {}) {
+    const date = (d) => (fmt.date ? fmt.date(d) : d);
+    const events = phoneStory(phone, rentals, null, fmt);
+    const hires = events.filter((e) => e.kind === 'out').length;
+    const added = events.find((e) => e.kind === 'added');
+    const parts = [];
+    parts.push(hires ? `${hires} hire${hires === 1 ? '' : 's'}` : 'never been out');
+    if (added) parts.push(`on the books here since ${date(added.date)}`);
+    return parts.join(' \u00b7 ');
+  }
+  return { phoneStory, phoneStoryLine };
+})();
+// ── KC_PHONESTORY mirror end ──
+
+/**
+ * The handset's own trail, drawn. Newest first, because "where is it now" is
+ * the question asked most and it is the top row.
+ */
+function phoneStoryHtml(p) {
+  const events = KC_PHONESTORY.phoneStory(p, rentals, localISO(), { date: fmtDate });
+  if (!events.length) {
+    return `<div class="ph-story-empty">Nothing recorded for this handset yet \u2014 not even the day it arrived, which means it predates the app keeping that.</div>`;
+  }
+  const rows = events.map((e) => `
+    <li class="ph-story-row ph-story-${escHtml(e.kind)}">
+      <span class="ph-story-when">${e.date ? escHtml(fmtDate(e.date)) : '\u2014'}</span>
+      <span class="ph-story-what">
+        <strong>${escHtml(e.title)}</strong>${e.detail ? `<span class="ph-story-detail">${escHtml(e.detail)}</span>` : ''}
+      </span>
+      ${e.rentalId ? `<button type="button" class="btn btn-outline btn-sm ph-story-go"
+        onclick="closeDynamicModal();openManageRentalModal('${escJs(String(e.rentalId))}')">Open</button>` : ''}
+    </li>`).join('');
+  return `<ul class="ph-story">${rows}</ul>`;
+}
+
 function openEditPhoneModal(phoneId) {
   const p = phones.find(x => x.id === phoneId);
   if (!p) return;
@@ -6751,6 +6856,15 @@ function openEditPhoneModal(phoneId) {
         </select>
       </div>` : ''}
     </div>
+    ${/* The handset's own trail, under its fields rather than over them: this
+           dialog is opened to CHANGE something far more often than to read the
+           history, so the history goes where it does not stand between the
+           operator and the thing they came for. Folded shut, because a handset
+           with twenty hires would otherwise push Save off the screen. */''}
+    <details class="ph-story-wrap">
+      <summary>History \u2014 ${escHtml(KC_PHONESTORY.phoneStoryLine(p, rentals, { date: fmtDate }))}</summary>
+      ${phoneStoryHtml(p)}
+    </details>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeDynamicModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveEditPhone('${phoneId}')">Save</button>

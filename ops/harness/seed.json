@@ -127,7 +127,9 @@
       "country": "USA",
       "status": "rented",
       "imei": "356938035643809",
-      "pool": "US"
+      "pool": "US",
+      "addedAt": "2026-07-13T09:14:00Z",
+      "dataSource": "import"
     },
     {
       "id": "p2",
@@ -135,7 +137,8 @@
       "country": "USA",
       "status": "available",
       "imei": "356938035643810",
-      "pool": "US"
+      "pool": "US",
+      "addedAt": "2026-08-26T15:57:34Z"
     },
     {
       "id": "p3",
@@ -143,7 +146,8 @@
       "country": "Israel",
       "status": "rented",
       "imei": "356938035643811",
-      "pool": "IL"
+      "pool": "IL",
+      "addedAt": "2026-08-27T12:29:11Z"
     },
     {
       "id": "p4",
@@ -152,7 +156,9 @@
       "status": "maintenance",
       "maintenanceReason": "Screen cracked",
       "imei": "356938035643812",
-      "pool": "UK"
+      "pool": "UK",
+      "addedAt": "2026-08-30T14:50:51Z",
+      "dataSource": "import"
     }
   ],
   "/api/sims": [
