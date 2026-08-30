@@ -3714,6 +3714,13 @@ let calMonth = null; // 'YYYY-MM'; defaults to the current month
 // rental, pool window and renewal is stored as an ISO date — so the Hebrew
 // view changes only which days are on screen and what the columns are called.
 let calSystem = 'gregorian';   // 'gregorian' | 'hebrew'
+// The availability grid opens on TODAY, not on the 1st (owner, 30 Aug). Off by
+// choice, per session, for the rare look back at a month already spent.
+let calFromToday = true;
+// Short enough to stay one screen, long enough to answer "can I promise this
+// phone for the trip" without pressing anything. A fortnight is the shortest
+// window in which that question has ever been asked at this counter.
+const MIN_AVAIL_DAYS = 21;
 let calHebAnchor = null;       // an ISO date inside the shown Hebrew month
 
 // Every Gregorian date in the Hebrew month containing `anchorIso`. Walked a
@@ -3743,6 +3750,11 @@ function calToggleSystem() {
   // your place instead of jumping to today.
   if (calSystem === 'hebrew') calHebAnchor = calHebAnchor || `${calMonth || localISO().slice(0, 7)}-15`;
   else if (calHebAnchor) calMonth = calHebAnchor.slice(0, 7);
+  renderRentalsTab();
+}
+
+function calToggleFromToday() {
+  calFromToday = !calFromToday;
   renderRentalsTab();
 }
 
@@ -3802,7 +3814,7 @@ function availabilityCalendarHtml() {
   // this list, so the grid, the header and the empty state can never disagree
   // about how many days are on screen.
   const heb = calSystem === 'hebrew' ? hebrewMonthDays(calHebAnchor) : null;
-  const days = heb
+  let days = heb
     ? heb.days.map(x => ({
         iso: x.iso, dObj: x.dObj,
         // A Hebrew month crosses a Gregorian one, so the small line has to
@@ -3822,6 +3834,41 @@ function availabilityCalendarHtml() {
           roshChodesh: hp.day === 1,
         };
       });
+
+  // THE PAST IS NOT AVAILABILITY. Owner, 30 Aug: "maybe the view of avalibity
+  // should start with today instead of begiining of the month." Opened on the
+  // 30th, the grid was twenty-nine columns of days nobody can book followed by
+  // two that matter — and the question this screen exists to answer is always
+  // about a day that has not happened yet.
+  //
+  // Only the month CONTAINING today is trimmed. Navigate back deliberately and
+  // you get that month whole, because looking at what happened in July is a
+  // different question and the answer to it is the whole of July.
+  const trimmed = calFromToday && days.length && days[0].iso < today && days[days.length - 1].iso >= today;
+  if (trimmed) {
+    days = days.filter(d => d.iso >= today);
+    // …AND NOT A GRID TWO COLUMNS WIDE. Trimming alone answers the letter of the
+    // ask and fails its point: opened on the 30th it leaves two bookable days,
+    // and the question is nearly always about a date further out than that. So
+    // when the rest of the month is too short to plan in, the window runs on
+    // into the next one. The grid already scrolls sideways, so the extra
+    // columns cost nothing but the width they use.
+    if (calSystem !== 'hebrew' && days.length < MIN_AVAIL_DAYS) {
+      const [ny, nm] = calMonth.split('-').map(Number);
+      const next = new Date(ny, nm, 1);   // the 1st of the following month
+      const nMonth = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+      const nDays = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+      for (let i = 1; i <= nDays && days.length < MIN_AVAIL_DAYS; i++) {
+        const dObj = new Date(next.getFullYear(), next.getMonth(), i);
+        const hp = hebrewParts(dObj);
+        days.push({
+          iso: `${nMonth}-${String(i).padStart(2, '0')}`, dObj, en: String(i),
+          hebLabel: hp.day === 1 ? hp.month : numToHebrew(hp.day),
+          roshChodesh: hp.day === 1,
+        });
+      }
+    }
+  }
 
   // In the Hebrew view the sub-line carries the Gregorian dates it spans,
   // since that is what every other screen in the app is dated in.
@@ -3912,11 +3959,23 @@ function availabilityCalendarHtml() {
           ? `<span class="heb">${escHtml(heb.month)} ${escHtml(numToHebrew(heb.year))}</span>
              <span dir="ltr" style="display:block;font-size:var(--fs-small);font-weight:600;color:var(--muted);">${escHtml(gregSpan)}</span>`
           : `${monthName}${hebMonthName
-              ? `<span class="heb" style="display:block;font-size:var(--fs-small);font-weight:600;color:var(--muted);">${escHtml(hebMonthName)}</span>` : ''}`}</strong>
+              ? `<span class="heb" style="display:block;font-size:var(--fs-small);font-weight:600;color:var(--muted);">${escHtml(hebMonthName)}</span>` : ''}`}${
+          /* Said out loud, or a month that starts on the 30th reads as a fault
+             rather than as the point. */
+          trimmed ? `<span style="display:block;font-size:var(--fs-micro);font-weight:600;color:var(--muted);">${escHtml(gregSpan)}</span>` : ''}</strong>
         <button class="btn btn-outline btn-sm" aria-label="Next month" onclick="calShift(1)">${heb ? '←' : '→'}</button>
         </div>
         ${(heb ? !days.some(d => d.iso === today) : calMonth !== today.slice(0, 7))
           ? `<button class="btn btn-outline btn-sm" onclick="calToday()">Today</button>` : ''}
+        ${/* Trimming the past is right for the question this screen answers and
+              wrong for the rarer one — "what did the fleet do this month". So it
+              is a choice, and the button says which way it is set rather than
+              leaving a short month looking like a fault. */''}
+        ${trimmed || (!calFromToday && calMonth === today.slice(0, 7))
+          ? `<button class="btn btn-outline btn-sm" onclick="calToggleFromToday()"
+              aria-pressed="${calFromToday ? 'true' : 'false'}"
+              title="${calFromToday ? 'Show the days already gone as well' : 'Hide the days already gone'}"
+              >${calFromToday ? 'Whole month' : 'From today'}</button>` : ''}
         ${/* Counting in Hebrew months is the natural frame for a customer who
               books "from Rosh Chodesh Elul" — but the fleet's data is
               Gregorian, so this switches the COLUMNS, never the dates. */''}
