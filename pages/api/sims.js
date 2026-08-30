@@ -58,6 +58,24 @@ async function handler(req, res) {
     res.status(405).end()
   } catch (e) {
     console.error('[api/sims]', e)
+    // A constraint the database refused is a fact about the data, and the
+    // person who typed it is the only one who can fix it — so it comes back in
+    // words rather than as STORAGE_ERROR, which sent a counter looking at its
+    // wifi while a direct-debit day of 0 sat in the payload (30 Aug).
+    // Staff-only route (withTab('sim')), so naming the column leaks nothing.
+    const msg = String(e && e.message || '')
+    if (/violates check constraint "sims_dd_collection_day_check"/.test(msg)) {
+      return res.status(400).json({
+        success: false,
+        error: 'A SIM has a direct-debit day outside 1-31. Open that SIM, set a day between 1 and 31, and save again.',
+      })
+    }
+    if (/violates check constraint|violates foreign key|duplicate key/.test(msg)) {
+      return res.status(400).json({
+        success: false,
+        error: `The database refused one of the SIM rows: ${msg.split('\n')[0].slice(0, 180)}`,
+      })
+    }
     return res.status(500).json({ success: false, error: STORAGE_ERROR })
   }
 }

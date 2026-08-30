@@ -3239,7 +3239,16 @@ function reportSave(label, promise) {
   return promise
     .then(res => {
       if (!res || res.success === false) {
-        toast(`Couldn’t save ${label} — reload to check nothing was lost.`, 'error');
+        // SAY WHAT THE SERVER SAID. This printed the same fixed sentence
+        // whatever went wrong, so on 30 Aug a broken SIM save — one row with a
+        // direct-debit day of 0 against a CHECK of 1-31 — read exactly like a
+        // dropped connection, and the reason was only ever in a Vercel log
+        // nobody at a counter can open. The generic line stays as the fallback
+        // for a genuinely silent failure.
+        const why = res && res.error ? String(res.error) : '';
+        toast(why
+          ? `Couldn’t save ${label} — ${why}`
+          : `Couldn’t save ${label} — reload to check nothing was lost.`, 'error');
       } else if (res.conflicts && res.conflicts.length) {
         // #8 — the server caught a double-booking a racing tab slipped past.
         const c = res.conflicts[0];
