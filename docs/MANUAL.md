@@ -11,7 +11,7 @@ BUSINESS_RULES.md and in Settings, never here, so there is only ever one price
 list.
 
 **30 of 30 screens written out in full.**
-*As of 28 Aug 2026 · m-b3882956 — the code changes whenever the words do, so a printout can be checked against this line.*
+*As of 30 Aug 2026 · m-b0091245 — the code changes whenever the words do, so a printout can be checked against this line.*
 
 ---
 
@@ -543,6 +543,7 @@ The shop's own to-do list, including the jobs the app files by itself when somet
 - **Sort: Smart** — The default. It puts what is due and what is urgent at the top instead of making you read the whole list to find them.
 - **The buttons on a task** — A task about a person carries the action with it: add them as a customer, confirm a booking's details, record a payment, or message them. The work happens from the task, not after hunting for the screen.
 - **Snooze · Wake now** — Puts a task out of sight until a date, and brings it back early when the reason disappears. Snoozed tasks are off the dashboard on purpose.
+- **Tasks the app files for Shabbos or yom tov** — It does not. When the day a job is needed for falls on Shabbos or yom tov, the app asks three days earlier instead — and keeps stepping back if that day is one too, so a three-day yom tov is cleared in one go. The date of the thing itself never moves and the task still says it: a pool expiring on Shabbos is still a pool expiring on Shabbos, it is just put in front of somebody while there is still a working day to do something about it.
 
 **Rules that bite here**
 

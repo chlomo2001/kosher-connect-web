@@ -13,6 +13,49 @@ function kcFetch(url, opts) {
   });
 }
 
+/**
+ * POST some JSON and come back with something a person can act on.
+ *
+ * `.then(r => r.json()).catch(() => ({ error: 'Could not reach the server.' }))`
+ * was the pattern, and it tells the counter the wrong thing. On 30 Aug the
+ * database refused a write ('seen' was missing from a CHECK constraint), the
+ * API answered with a 500 HTML page, r.json() threw on the HTML, and the toast
+ * said the server could not be reached. It had been reached. Somebody looking
+ * at their wifi was looking in the wrong place, and the real cause — one
+ * missing word in a migration — was nowhere on the screen.
+ *
+ * So the three cases are told apart:
+ *   the request never left        "could not reach"
+ *   an answer came, unreadable    "the server answered with something…"
+ *   an answer came, a refusal     "the server refused that (500)"
+ *
+ * Always resolves. The caller checks .success like it did before.
+ */
+async function kcSendJson(url, body, opts = {}) {
+  let r;
+  try {
+    r = await kcFetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      ...opts,
+    });
+  } catch {
+    return { success: false, error: 'Could not reach the server — nothing was sent. Check the connection and try again.' };
+  }
+  const text = await r.text().catch(() => '');
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {
+      success: false,
+      error: r.ok
+        ? 'The server answered with something this screen could not read. Nothing was changed.'
+        : `The server refused that (${r.status}). Nothing was changed — the details are in the server log.`,
+    };
+  }
+}
+
 // Idempotency token for money writes: a stable id sent with the request so a
 // replayed / retried POST dedupes server-side (the ledger charge_reference is unique).
 function kcRef() {
@@ -23311,10 +23354,7 @@ async function msgMarkSeen(id) {
     okLabel: 'Yes, nothing needed',
   });
   if (!ok) return;
-  const res = await kcFetch('/api/message-log', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, op: 'seen' }),
-  }).then(r => r.json()).catch(() => ({ success: false, error: 'Could not reach the server.' }));
+  const res = await kcSendJson('/api/message-log', { id, op: 'seen' });
   if (!res.success) { toast(res.error || 'Could not mark that as seen.', 'error'); return; }
   closeDynamicModal();
   toast('Marked as seen — off the waiting list.', 'success', 'check');

@@ -41,17 +41,28 @@ async function handler(req, res) {
   // Only 'received' rows may be marked. A STOP is already out of the queue, an
   // outbound is not in it, and one already seen is a no-op — so a double press,
   // or two people pressing at once, changes nothing the second time.
+  // INSIDE a try, and that is the point of this comment. It was not, and on
+  // 30 Aug the database refused the write — 'seen' was missing from
+  // email_log_status_chk — so the throw escaped the handler, Next answered with
+  // a 500 HTML page, the browser's r.json() threw on it, and the counter was
+  // told "Could not reach the server." The server was reached and it had a
+  // perfectly good reason; nothing was left to carry it back.
   if (req.method === 'POST') {
     const { id, op } = req.body || {}
     if (op !== 'seen') return res.status(400).json({ success: false, error: 'Unknown action.' })
     if (!UUID.test(String(id || ''))) return res.status(400).json({ success: false, error: 'That message id is not one of ours.' })
-    const rows = await db.update('email_log',
-      `id=eq.${encodeURIComponent(String(id))}&kind=eq.sms_in&status=eq.received`,
-      { status: 'seen' })
-    if (!rows || !rows.length) {
-      return res.status(400).json({ success: false, error: 'That message is not an unanswered text — nothing to mark.' })
+    try {
+      const rows = await db.update('email_log',
+        `id=eq.${encodeURIComponent(String(id))}&kind=eq.sms_in&status=eq.received`,
+        { status: 'seen' })
+      if (!rows || !rows.length) {
+        return res.status(400).json({ success: false, error: 'That message is not an unanswered text — nothing to mark.' })
+      }
+      return res.json({ success: true, id: rows[0].id })
+    } catch (e) {
+      console.error('[api/message-log seen]', e)
+      return res.status(502).json({ success: false, error: 'The message could not be marked as seen. It is still on the waiting list.' })
     }
-    return res.json({ success: true, id: rows[0].id })
   }
 
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 100, 1), 300)

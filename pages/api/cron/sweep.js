@@ -26,6 +26,7 @@
 import crypto from 'node:crypto'
 import { db, tablesMode } from '../../../lib/db.js'
 import { poolCover, poolCoverNote, poolCoverNeedsAction } from '../../../lib/poolCover.mjs'
+import { workingDueDate } from '../../../lib/yomTov.mjs'
 import { rentalStage, readinessDue, RETURN_GRACE_DAYS } from '../../../lib/rentalStage.mjs'
 
 // The stage rule speaks the app's shape; the sweep reads database rows. One
@@ -89,18 +90,29 @@ async function allDebtorBalances() {
   return selectAllPaged('customer_balances', 'customer_id,balance', 'balance=lt.0&order=customer_id.asc')
 }
 
+/**
+ * Every auto-raised task comes through here, which is why the quiet-day rule
+ * lives here and not at thirty call sites. A task dated Shabbos or yom tov is a
+ * task nobody sees until it is too late — the pool expires with a customer's
+ * phone on it and the first anybody knows is Sunday. So it is asked for
+ * QUIET_LEAD_DAYS earlier instead (owner, 30 Aug). The date in the TITLE is
+ * untouched: the thing still happens when it happens, somebody is just asked in
+ * time to do something about it.
+ */
 async function upsertOpenTask({ reference, title, customerUuid = null, priority = 'high', notes = '', dueDate = null }) {
+  const today = localDate()
+  const due = dueDate ? workingDueDate(dueDate, today) : null
   const open = await db.select('tasks', `select=id&reference=eq.${enc(reference)}&done=is.false`)
   if (open.length) {
     await db.update('tasks', `id=eq.${open[0].id}`, {
-      title, raw_text: notes || null, priority, ...(dueDate ? { due_date: dueDate } : {}),
+      title, raw_text: notes || null, priority, ...(due ? { due_date: due } : {}),
     })
     return 'updated'
   }
   await db.insert('tasks', [{
     title,
     customer_id: customerUuid,
-    due_date: dueDate || localDate(),
+    due_date: due || today,
     source: 'auto',
     priority,
     raw_text: notes || null,
