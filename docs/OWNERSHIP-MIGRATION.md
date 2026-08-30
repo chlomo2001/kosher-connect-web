@@ -552,6 +552,39 @@ Two consequences of the half-state, both easy to trip over:
    `hatsluche` at all. After the repoint, work continues in a NEW session
    sourced from the new repo. Worth knowing before the switch, not after.
 
+## 6b · The thing this file did not record, and it decided everything
+
+**Which GitHub identity the Vercel app is installed as.** Not who owns the repo,
+not who owns the Vercel team, not who owns the Supabase org — all three of which
+are written down above. The installation is what actually decides whether `main`
+deploys, and it was nowhere.
+
+Found 30 Aug while trying to reconnect. The Vercel GitHub App is installed on
+**`earothbart-ai`** — the developer's personal account, four days old — and the
+repo it needs to see belongs to **`psic770-ai`**. Vercel's repository picker
+lists what the installation can see, so it offered the new `hatsluche` repo and
+not the one production had been building from for months.
+
+`psic770-ai` does not appear in the developer's "Switch settings context", which
+settles it: that is Psic's own personal account. Collaborator access is enough
+to clone and push; it is not enough to configure an App installation on it. So:
+
+> **The business cannot restore its own deploys without the contractor.**
+
+Both roads out are blocked on somebody who is not the business — Psic for the
+old repo, Shloime's £20 for the new one. That is precisely the dependency this
+file exists to remove, and it appeared in the middle of removing it.
+
+**It also reprices §7's open question.** Pro is not a subscription for nicer
+logs; it is the price of the business not being locked out of its own software.
+Alongside the terms, the third cron, and the cron logs that could not show a
+five-day digest failure, that is now four reasons and one of them is structural.
+
+**For whoever writes the next version of this file:** record the App
+installation account beside the three ownerships. An installation is not
+ownership and does not move with a transfer, which is exactly why it is the one
+that surprises you.
+
 ## 7 · Decided, 26 Aug 2026
 
 - [x] **Who owns it** — **Hatsluche Ltd (Shloime)**, across GitHub, Vercel and
