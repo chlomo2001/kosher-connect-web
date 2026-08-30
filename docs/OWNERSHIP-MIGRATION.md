@@ -67,7 +67,41 @@ and his £20 a month:
   class of question.
 
 A new team created for the business starts on Hobby and can be upgraded when
-Shloime decides. Nothing in the move requires Pro; the terms question does.
+Shloime decides.
+
+**"Nothing in the move requires Pro" was wrong, and 30 Aug proved it.** With the
+repo copied into the `hatsluche` org and Vercel asked to connect to it:
+
+> The repository "Kosher-connect-web" is private and owned by an organization,
+> which is not supported on the Hobby plan. Upgrade to Pro to continue.
+
+**Hobby allows a private repo owned by a PERSON and refuses one owned by an
+ORG.** `psic770-ai` is a personal user account — checked against GitHub the same
+day, not assumed — so this project has been inside the rule by accident of who
+held it. Moving the code to an organisation, which is the entire point of §4b
+and the thing §7 decided, is precisely what trips the restriction.
+
+So the plan question is no longer parallel to the move. **§4c is BLOCKED on it**,
+and it is Shloime's decision because it is his company and his £20 a month. What
+the money buys, in one place:
+
+| | |
+| --- | --- |
+| The terms | Hobby is for personal, non-commercial use; Hatsluche Ltd trades |
+| The org repo | The blocker above — there is no free way round it that keeps the code in an org |
+| A third cron | Two is the Hobby ceiling and both are spent — sweep 06:00, digest 06:30 |
+| Cron logs | Hobby does not reliably capture them; that cost five silent days of a failed digest in August |
+
+**Do not upgrade "Touch Design projects" to unblock this.** That team is Psic's
+studio (§4c's opening paragraph) and upgrading it means the business paying for
+the contractor's team. The order is: business team created → project transferred
+into it (§4c) → THAT team upgraded → then connect to `hatsluche`.
+
+The free alternative, recorded because it will be suggested: put the repo in
+Shloime's personal GitHub account rather than the org. Hobby accepts it. §4b
+already rejected it and the reasons have not changed — one owner is one bus
+factor, and access becomes another transfer rather than a membership. It trades
+a monthly cost for a structural one.
 
 ---
 
@@ -465,6 +499,32 @@ reports them.
 - **Wrong deployment writing to Kc-Live** → delete the second Vercel project or
   clear its Supabase env vars *first*, then work out what it wrote. Rule 1
   exists to keep this hypothetical.
+
+## 6a · Where this actually stands, 30 Aug 2026 18:10 UTC
+
+Halfway, deliberately, and nothing is broken.
+
+- [x] **The org exists** — `github.com/hatsluche`, 2 members.
+- [x] **The code is in it** — `hatsluche/kosher-connect-web`, private, verified
+      against the source rather than assumed: 1,262 commits, HEAD `a3ed580`,
+      6 branches, 0 tags on both sides. Method and the case-fix are in §4a/§5.
+- [ ] **Vercel is NOT repointed.** Blocked on the plan (see the Hobby section).
+      Production still deploys from `psic770-ai`, which is correct and safe —
+      the copy deploys nothing and harms nothing while it waits.
+- [ ] **The old repo is NOT archived**, and must not be until Vercel has moved
+      and a deploy is verified. Archiving first leaves no live repo.
+
+Two consequences of the half-state, both easy to trip over:
+
+1. **The copy goes stale the moment work lands in `psic770-ai`** — Rule 2's
+   corollary, and it already has: the copy was made at `a3ed580` and the same
+   session pushed `f7c25ee` an hour later. Re-run the mirror before repointing,
+   and check the new repo's `main` shows the newer commit.
+2. **A Claude session is locked to the owner it started with.** Adding a repo
+   from a different owner is refused — "cross-tier adds are not supported in
+   v1" — so the session that has been doing this work cannot push to
+   `hatsluche` at all. After the repoint, work continues in a NEW session
+   sourced from the new repo. Worth knowing before the switch, not after.
 
 ## 7 · Decided, 26 Aug 2026
 
