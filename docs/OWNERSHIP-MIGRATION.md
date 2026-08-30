@@ -155,12 +155,64 @@ Do these **one at a time**, on separate days if possible, verifying between.
 Changing GitHub, Vercel and Supabase in one sitting means a broken deploy has
 three possible causes.
 
-### 4a · Duplicate the repo — NOT the chosen route, kept for reference
+### 4a · Duplicate into the org and repoint Vercel — a real alternative to §4b
 
-Superseded by the 26 Aug decision to transfer (§4b). Left here because it is
-still the right move for a one-off snapshot, and because the reason it was
-rejected is worth keeping: a duplicate carries **no issues**, deploys nothing,
-and diverges the first time work lands in one repo and not the other.
+**Revisited 30 Aug 2026.** The owner asked whether a duplicate would do, "and
+then repointing to it". It would — and the rejection recorded on 26 Aug does not
+land on that question, because it was written about a copy kept ALONGSIDE the
+original: "diverges the first time work lands in one repo and not the other".
+Once Vercel deploys from the copy, the copy IS the live one and that objection
+dissolves. §7's tick stays as the record of what was decided on the day; this is
+the variant, with what it actually costs.
+
+**It reaches the same end state as §4b** — the code in an org the business owns,
+deploying the shop's site — and it needs one thing less: psic never has to click
+Transfer. What it does NOT skip is creating the org, which both routes need.
+
+**Destination is the same as §4b** and this is the whole point: an organisation
+owned by Shloime's account. A duplicate into the developer's own account would
+move the code from the contractor's-adjacent account to the contractor's, which
+is further from the business owning it than today. Confirmed 30 Aug: the org.
+
+What a duplicate costs that a transfer does not:
+
+| | |
+| --- | --- |
+| **Open issues stay behind** | 5 of them on 30 Aug, including **#9, the handover itself**. Nothing carries them; recreate the ones still live by hand. |
+| **No redirect** | A transfer forwards the old URL. A duplicate leaves two repos, same name, same history, and nothing saying which is real. **Mitigation: archive `psic770-ai/kosher-connect-web` once a deploy from the new one is verified** — read-only and visibly labelled is not a redirect, but it is unambiguous. |
+| **Claude's access** | This tooling is scoped per repo and the git remote points at the old address. After the move, `add_repo` the new one and repoint the remote, or pushes land in a repo nothing deploys from. The branch instruction in the session config needs the new address too. |
+
+What it does **not** cost, checked on 30 Aug rather than assumed:
+
+- **CI keeps working.** `.github/workflows/ci.yml` references no secrets at all,
+  so there is nothing to re-add on the copy.
+- **Env vars, the domain and deployment history are untouched.** They live on
+  the Vercel *project*, and a Git relink does not move the project.
+
+#### The steps
+
+0. Create the org first (§4b's first paragraph), and an **empty** repo in it —
+   no README, no .gitignore, or the push is refused.
+1. Push everything, from a clone that is up to date:
+
+   ```sh
+   git remote add biz https://github.com/<org>/kosher-connect-web.git
+   git push biz --all
+   git push biz --tags
+   ```
+
+2. Vercel → project **kosher-connect-web** → **Settings → Git** → **Remove
+   Connection** (the dialog confirms settings, env vars, domains and
+   deployments are preserved) → **Connect Git Repository → GitHub →
+   `<org>/kosher-connect-web`**.
+3. **Verify with §5 before touching anything else** — a real deploy, not a green
+   settings page. Its metadata must say `githubOrg: <org>`.
+4. Recreate any still-live issues from the old repo, then **archive** it.
+5. The Vercel project itself still belongs to Psic's team; moving it is §4c and
+   is a separate day.
+
+<details>
+<summary>The original snapshot-only steps, superseded by the above</summary>
 
 <details>
 <summary>The duplicate steps, if ever needed</summary>
@@ -185,6 +237,10 @@ removed from `psic770-ai`.
    pushed to.
 
 </details>
+
+> Rule 2 is unchanged and still governs: **copy the code freely, never copy the
+> data.** This whole section is about the repo. Kc-Live is not duplicated in any
+> variant of any of this — it is transferred, once, in §4d.
 
 ### 4b · Transfer the GitHub repo to the business's ORGANISATION — destination FIRST
 
@@ -384,9 +440,14 @@ reports them.
       Supabase. The developer stays on as a member with full access. This
       replaces the earlier same-day answer of `earothbart-ai`, which was wrong
       for one reason: the business is not the developer's.
-- [x] **Code** — transfer into a business-owned GitHub **organisation** (§4b).
-      Not a duplicate; the tracker decided that. Not a personal account; an org
-      can have more than one owner and outlives any of them.
+- [x] **Code** — into a business-owned GitHub **organisation**. Not a personal
+      account; an org can have more than one owner and outlives any of them.
+      *Transfer* (§4b) was the method decided on the day; on 30 Aug the owner
+      asked about duplicating into that org and repointing Vercel instead, and
+      §4a now carries that as a real alternative — same destination, same end
+      state, one fewer person needed, at the cost of the open issues and the
+      redirect. Either method satisfies this tick; the destination is the part
+      that was decided.
 - [x] **Hosting** — transfer the **project** into a business-owned Vercel team
       (§4c). Not the team: that team is Psic's studio.
 - [x] **Database** — transfer the Supabase org to the business (§4d).
