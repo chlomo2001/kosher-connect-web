@@ -3972,17 +3972,28 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
 
 .cal-cell { width: 22px; height: 24px; border: 1px solid var(--border); padding: 0 !important; }
 
-.cal-free { background: var(--surface); cursor: pointer; }
+/* ── EVERY CELL'S COLOUR LIVES IN --cal-bg, AND ONE RULE PAINTS IT ───────────
+   globals.css carries `tbody tr:hover td { background: var(--bg) }` for every
+   data table in the app. Its specificity is (0,1,3) — one pseudo-class, three
+   elements — and a plain `.cal-active` is (0,1,0), so the generic row hover
+   BEAT the availability colours. Point at a phone's number and its whole row
+   went pale: a fortnight of hires and an overdue handset all washed to the same
+   nothing, on the one screen whose entire job is that colour.
 
-/* var(--kc-blue), not a hard-coded rgba of the OLD blue — this still carried
-   #0060a8, which the owner retired on 24 Aug. */
-.cal-free:hover { background: color-mix(in srgb, var(--kc-blue) 12%, var(--surface)); }
+   The 27 Aug hover fix only ever cured the cell under the pointer, because
+   `td.cal-active:hover` is (0,2,1) and squeaks past the global rule. The other
+   thirty cells in the row were never covered (owner, 30 Aug).
+
+   So the state declares a VARIABLE and one rule paints it, at a specificity the
+   generic hover cannot reach. One place to change a colour, and the row hover
+   can no longer overwrite any of them. */
+.cal-cell            { --cal-bg: var(--surface); }
+.cal-free            { --cal-bg: var(--surface); cursor: pointer; }
 
 /* Owner #5 — a free day still covered by the phone's ACTIVE pool window gets
    a teal wash, so pool time left after a rental's due-back date is visible
    at a glance (tinted days trailing the coloured block). */
-.cal-free.cal-pooled { background: color-mix(in srgb, var(--sim) 16%, var(--surface)); }
-.cal-free.cal-pooled:hover { background: color-mix(in srgb, var(--sim) 30%, var(--surface)); }
+.cal-free.cal-pooled { --cal-bg: color-mix(in srgb, var(--sim) 16%, var(--surface)); }
 
 /* Owner #4 — the day numbers freeze while the fleet scrolls: the grid lives
    in a capped-height scroll box (.cal-scroll) and the header row sticks to
@@ -3998,11 +4009,11 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
    falling on Shabbos) shows as Shabbos — the tooltip still names both. */
 .cal-table thead th.cal-yomtov { background: var(--canvas-cream); }
 
-.cal-active  { background: var(--accent); cursor: pointer; }
+.cal-active  { --cal-bg: var(--accent); cursor: pointer; }
 
-.cal-booked  { background: #e8b93c; cursor: pointer; }
+.cal-booked  { --cal-bg: #e8b93c; cursor: pointer; }
 
-.cal-overdue { background: var(--danger); cursor: pointer; }
+.cal-overdue { --cal-bg: var(--danger); cursor: pointer; }
 
 /* A filled cell is as clickable as an empty one and said nothing when you
    pointed at it — owner, 27 Aug: "when hovering in dates availability on a blue
@@ -4013,15 +4024,37 @@ body.pos-mode .toast { font-size: var(--fs-title); font-weight: 500; padding: 16
    what is on the grid. Scoped to
    td, so the LEGEND swatches below the grid do not react — they carry the same
    classes and are not clickable. */
-td.cal-active:hover  { background: color-mix(in srgb, var(--accent) 78%, var(--kc-navy)); }
-td.cal-booked:hover  { background: color-mix(in srgb, #e8b93c 78%, var(--kc-navy)); }
-td.cal-overdue:hover { background: color-mix(in srgb, var(--danger) 78%, var(--kc-navy)); }
+td.cal-shabbat { --cal-bg: var(--bg-secondary); }
+th.cal-shabbat { background: var(--bg-secondary); }
 
-td.cal-shabbat, th.cal-shabbat { background: var(--bg-secondary); }
+td.cal-yomtov { --cal-bg: var(--canvas-cream); }
+th.cal-yomtov { background: var(--canvas-cream); }
 
-td.cal-yomtov, th.cal-yomtov { background: var(--canvas-cream); }
+td.cal-active.cal-shabbat { --cal-bg: var(--accent); }
 
-td.cal-active.cal-shabbat { background: var(--accent); }
+/* The one painter. (0,3,3) — it outranks globals.css's `tbody tr:hover td`,
+   so a cell keeps its own colour however the row is being pointed at. */
+.cal-table tbody tr td.cal-cell { background: var(--cal-bg); }
+
+/* Pointed at directly, a filled cell DARKENS — owner, 27 Aug: "when hovering in
+   dates availability on a blue box, it becomes light. shouldnt it instead
+   become darker?" Right on both counts: lightening a filled swatch reads as
+   switching it off, darkening reads as pressing it. Mixed toward the ink rather
+   than to black, so each state keeps its own hue and the legend still matches
+   the grid. Written against --cal-bg, so it now covers every state including
+   ones added later, instead of the three that were listed by hand. */
+.cal-table tbody tr td.cal-cell:hover { background: color-mix(in srgb, var(--cal-bg) 78%, var(--kc-navy)); }
+
+/* A free day is the exception and always was: there is nothing there to press
+   down, so it takes a light tint that reads as "you could put something here".
+   After the rule above, so it wins the tie. */
+.cal-table tbody tr td.cal-free:hover { background: color-mix(in srgb, var(--kc-blue) 12%, var(--surface)); }
+.cal-table tbody tr td.cal-free.cal-pooled:hover { background: color-mix(in srgb, var(--sim) 30%, var(--surface)); }
+
+/* The row still answers to the pointer — it just says so in the one cell that
+   is not carrying availability. Tracking a phone across thirty columns is a
+   real need; repainting the answer to do it is not the way. */
+.cal-table tbody tr:hover th.cal-phone { background: var(--bg); }
 
 .cal-today { outline: 2px solid var(--accent); outline-offset: -2px; }
  
