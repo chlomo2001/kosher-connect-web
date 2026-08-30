@@ -26,10 +26,15 @@ be weighed for UX. The note ranks nine lifts; this is where they wait.
 
 ### Loop-safe — the 03:00 loop may take these
 
-- **3 · Direction badges for ledger/till type.** Replace the text type word with
-  a round colour-coded in/out/transfer/bank glyph. Pure display; amounts are
-  already coloured, so this extends an existing convention rather than
-  inventing one. Verify at 390px and 320px, both themes, three text sizes.
+> **3 · Direction badges** has left this list. Shipped 28 Aug (`68a19dc`), and
+> half of it was refused on purpose: the badge JOINED the type word rather than
+> replacing it, because "Rental adj.", "Loss", "Void credit" and "Refund paid
+> out" are four things one glyph cannot tell apart. The half that was right
+> mattered more than the note knew — the row already carried a direction mark
+> and it read the SIGN, which against Kc-Live means `refund` (14 rows, all
+> positive) and `refund_payout` (3 rows, all negative) were painted opposite
+> colours. Held by `test/ledgerDirection.test.mjs`.
+
 - **4 · "(N loaded)" count in list search boxes.** Tells staff how much is in
   hand before they trust a search. Cheap and honest.
 - **8 · Live "Preview" pattern.** Show the computed result inline as settings
